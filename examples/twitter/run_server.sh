@@ -38,6 +38,9 @@ OPT_PROPS=""
 #
 java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Xmx600m -classpath target/druid-examples-twitter-*-selfcontained.jar $OPT_PROPS -Dtwitter4j.http.useSSL=true -Ddruid.realtime.specFile=twitter_realtime.spec druid.examples.RealtimeStandaloneMain  >RealtimeNode.out 2>&1  &
 PID=$!
+
+trap "${PF_CLEANUP} ; kill ${PID} ; exit 1" 1 2 3 15
+
 sleep 4
 grep com.metamx.druid.realtime.TwitterSpritzerFirehoseFactory RealtimeNode.out | awk '{ print $7,$8,$9,$10,$11,$12,$13,$14,$15 }'
 sleep 17
