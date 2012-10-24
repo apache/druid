@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 echo "  commandline query to RealtimeStandaloneMain service using curl"
-echo "    before running this, do:  run_server.sh &"
+echo "    before running this, do:  run_server.sh"
 
 set +u
 shopt -s xpg_echo

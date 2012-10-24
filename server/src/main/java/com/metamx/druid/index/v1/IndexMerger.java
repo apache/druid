@@ -57,7 +57,6 @@ import com.metamx.druid.kv.TmpFileIOPeon;
 import com.metamx.druid.kv.VSizeIndexedWriter;
 import com.metamx.druid.utils.JodaUtils;
 import com.metamx.druid.utils.SerializerUtils;
-import com.sun.tools.javac.resources.version;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.apache.commons.io.FileUtils;
