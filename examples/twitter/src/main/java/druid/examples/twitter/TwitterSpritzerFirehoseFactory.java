@@ -40,6 +40,17 @@ import static java.lang.Thread.*;
  * is UTC):
  * <pre>
  * </pre>
+ *
+ *
+ * Notes on twitter.com HTTP (REST) API: v1.0 will be disabled around 2013-03 so v1.1 should be used;
+ * twitter4j 3.0 (not yet released) will support the v1.1 api.
+ * Specifically, we should be using https://stream.twitter.com/1.1/statuses/sample.json
+ * See: http://jira.twitter4j.org/browse/TFJ-186
+ *
+ *  Notes on JSON parsing: as of twitter4j 2.2.x, the json parser has some bugs (ex: Status.toString()
+ *  can have number format exceptions), so it might be necessary to extract raw json and process it
+ *  separately.  If so, set twitter4.jsonStoreEnabled=true and look at DataObjectFactory#getRawJSON();
+ *  org.codehaus.jackson.map.ObjectMapper should be used to parse.
  * @author pbaclace
  */
 @JsonTypeName("twitzer")
@@ -106,12 +117,12 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
     final long startMsec = System.currentTimeMillis();
 
     dimensions.add("htags");
-    dimensions.add("retweetCount");
-    dimensions.add("followerCount");
-    dimensions.add("friendsCount");
+    dimensions.add("retweet_count");
+    dimensions.add("follower_count");
+    dimensions.add("friends_count");
     dimensions.add("lang");
-    dimensions.add("utcOffset");
-    dimensions.add("statusesCount");
+    dimensions.add("utc_offset");
+    dimensions.add("statuses_count");
 
     //
     //   set up Twitter Spritzer
@@ -185,7 +196,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
         if (maxRunMinutes <= 0) {
           return false;
         } else {
-          return (System.currentTimeMillis() - startMsec) / 10000L >= maxRunMinutes;
+          return (System.currentTimeMillis() - startMsec) / 60000L >= maxRunMinutes;
         }
       }
 
@@ -249,23 +260,23 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
         }
 
         long retweetCount = status.getRetweetCount();
-        theMap.put("retweetCount", retweetCount);
+        theMap.put("retweet_count", retweetCount);
         User u = status.getUser();
         if (u != null) {
-          theMap.put("followerCount", u.getFollowersCount());
-          theMap.put("friendsCount", u.getFriendsCount());
+          theMap.put("follower_count", u.getFollowersCount());
+          theMap.put("friends_count", u.getFriendsCount());
           theMap.put("lang", u.getLang());
-          theMap.put("utcOffset", u.getUtcOffset());  // resolution in seconds, -1 if not available?
-          theMap.put("statusesCount", u.getStatusesCount());
+          theMap.put("utc_offset", u.getUtcOffset());  // resolution in seconds, -1 if not available?
+          theMap.put("statuses_count", u.getStatusesCount());
         } else {
           log.error("status.getUser() is null");
         }
         if (rowCount % 10 == 0) {
           log.info("" + status.getCreatedAt() +
-              " followerCount=" + u.getFollowersCount() +
-              " friendsCount=" + u.getFriendsCount() +
-              " statusesCount=" + u.getStatusesCount() +
-              " retweetCount=" + retweetCount
+              " follower_count=" + u.getFollowersCount() +
+              " friends_count=" + u.getFriendsCount() +
+              " statuses_count=" + u.getStatusesCount() +
+              " retweet_count=" + retweetCount
           );
         }
 

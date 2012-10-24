@@ -1,17 +1,19 @@
 {
-    "queryType": "topN",
+    "queryType": "groupBy",
     "dataSource": "randSeq",
     "granularity": "all",
-    "dimension": "target",
-    "threshold": 10,
-    "metric": "randomNumberSum",
+    "dimensions": [],
     "aggregations":[
     { "type": "count", "name": "rows"},
     { "type": "doubleSum", "fieldName": "events", "name": "e"},
     { "type": "doubleSum", "fieldName": "outColumn", "name": "randomNumberSum"}
     ],
     "postAggregations":[
-    {"type":"arithmetic","name":"avg_random","fn":"/","fields":[{"type":"fieldAccess","name":"randomNumberSum","fieldName":"randomNumberSum"},{"type":"fieldAccess","name":"rows","fieldName":"rows"}]}
+    {  "type":"arithmetic",
+       "name":"avg_random",
+       "fn":"/",
+       "fields":[ {"type":"fieldAccess","name":"randomNumberSum","fieldName":"randomNumberSum"},
+                  {"type":"fieldAccess","name":"rows","fieldName":"rows"} ]}
     ],
     "intervals":["2012-10-01T00:00/2020-01-01T00"]
 }

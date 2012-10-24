@@ -18,7 +18,8 @@ import org.codehaus.jackson.map.jsontype.NamedType;
 import java.io.File;
 import java.io.IOException;
 
-/** Standalone Demo Realtime process.
+/**
+ * Standalone Demo Realtime process.
  * Created: 20121009T2050
  *
  * @author pbaclace

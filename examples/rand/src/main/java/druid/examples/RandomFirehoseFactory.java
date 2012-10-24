@@ -18,7 +18,8 @@ import java.util.Random;
 import static java.lang.Thread.sleep;
 
 
-/** Random value sequence Firehost Factory named "rand".
+/**
+ * Random value sequence Firehost Factory named "rand".
  * Builds a Firehose that emits a stream of random numbers (outColumn, a positive double)
  * with timestamps along with an associated token (target).  This provides a timeseries
  * that requires no network access for demonstration, characterization, and testing.
@@ -42,9 +43,9 @@ import static java.lang.Thread.sleep;
  [{
    "schema" : { "dataSource":"randseq",
                 "aggregators":[ {"type":"count", "name":"events"},
- 	       		       {"type":"doubleSum","name":"outColumn","fieldName":"inColumn"} ],
+ 	       		                    {"type":"doubleSum","name":"outColumn","fieldName":"inColumn"} ],
                 "indexGranularity":"minute",
- 	       "shardSpec" : { "type": "none" } },
+ 	              "shardSpec" : { "type": "none" } },
    "config" : { "maxRowsInMemory" : 50000,
                 "intermediatePersistPeriod" : "PT2m" },
 
@@ -63,25 +64,26 @@ import static java.lang.Thread.sleep;
  }]
  * </pre>
  *
- * Example query using POST to /druid/v2/?w  (where w is an arbitrary parameter and the UTC date and time
- * MUST be adjusted for the current hour):
+ * Example query using POST to /druid/v2/  (where UTC date and time MUST include the current hour):
  * <pre>
  {
-     "queryType": "topN",
+     "queryType": "groupBy",
      "dataSource": "randSeq",
      "granularity": "all",
-     "dimension": "target",
-     "threshold": 10,
-     "metric": "randomNumberSum",
+     "dimensions": [],
      "aggregations":[
      { "type": "count", "name": "rows"},
      { "type": "doubleSum", "fieldName": "events", "name": "e"},
      { "type": "doubleSum", "fieldName": "outColumn", "name": "randomNumberSum"}
      ],
      "postAggregations":[
-     {"type":"arithmetic","name":"avg_random","fn":"/","fields":[{"type":"fieldAccess","name":"randomNumberSum","fieldName":"randomNumberSum"},{"type":"fieldAccess","name":"rows","fieldName":"rows"}]}
+     {  "type":"arithmetic",
+        "name":"avg_random",
+        "fn":"/",
+        "fields":[ {"type":"fieldAccess","name":"randomNumberSum","fieldName":"randomNumberSum"},
+                   {"type":"fieldAccess","name":"rows","fieldName":"rows"} ]}
      ],
-     "intervals":["2012-10-16T20:03/2012-10-16T21"]
+     "intervals":["2012-10-01T00:00/2020-01-01T00"]
  }
  * </pre>
  */

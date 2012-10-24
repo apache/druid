@@ -25,9 +25,6 @@ else
 fi
 trap "${PF_CLEANUP} ; exit 1" 1 2 3 15
 
-# be sure to use UTC
-export TZ=UTC
-
 # props are set in src/main/resources/runtime.properties
 
 [ -d /tmp/twitter_realtime ]  &&  echo "cleaning up from previous run.."  &&  /bin/rm -fr /tmp/twitter_realtime
@@ -39,7 +36,7 @@ OPT_PROPS=""
 
 #  start RealtimeNode process
 #
-java -Xmx600m -classpath target/druid-examples-twitter-*-selfcontained.jar $OPT_PROPS -Dtwitter4j.http.useSSL=true -Ddruid.realtime.specFile=twitter_realtime.spec druid.examples.RealtimeStandaloneMain  >RealtimeNode.out 2>&1  &
+java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Xmx600m -classpath target/druid-examples-twitter-*-selfcontained.jar $OPT_PROPS -Dtwitter4j.http.useSSL=true -Ddruid.realtime.specFile=twitter_realtime.spec druid.examples.RealtimeStandaloneMain  >RealtimeNode.out 2>&1  &
 PID=$!
 sleep 4
 grep com.metamx.druid.realtime.TwitterSpritzerFirehoseFactory RealtimeNode.out | awk '{ print $7,$8,$9,$10,$11,$12,$13,$14,$15 }'

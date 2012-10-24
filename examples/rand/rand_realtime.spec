@@ -1,9 +1,9 @@
 [{
   "schema" : { "dataSource":"randseq",
                "aggregators":[ {"type":"count", "name":"events"},
-	       		       {"type":"doubleSum","name":"outColumn","fieldName":"inColumn"} ],
+	       		                   {"type":"doubleSum","name":"outColumn","fieldName":"inColumn"} ],
                "indexGranularity":"minute",
-	       "shardSpec" : { "type": "none" } },
+	             "shardSpec" : { "type": "none" } },
   "config" : { "maxRowsInMemory" : 50000,
                "intermediatePersistPeriod" : "PT2m" },
  

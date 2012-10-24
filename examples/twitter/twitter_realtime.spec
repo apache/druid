@@ -1,33 +1,32 @@
 [{
   "schema" : { "dataSource":"twitterstream",
                "aggregators":[ 
-                       {"type":"count", "name":"events"},
-	       		       {"type":"doubleSum","fieldName":"followerCount","name":"totalFollowerCount"},
-	       		       {"type":"doubleSum","fieldName":"retweetCount","name":"totalRetweetCount"},
-	       		       {"type":"doubleSum","fieldName":"friendsCount","name":"totalFriendsCount"},
-	       		       {"type":"doubleSum","fieldName":"statusesCount","name":"totalStatusesCount"},
+                       {"type":"count", "name":"tweets"},
+    	       		       {"type":"doubleSum","fieldName":"follower_count","name":"total_follower_count"},
+    	       		       {"type":"doubleSum","fieldName":"retweet_count","name":"tota_retweet_count"},
+    	       		       {"type":"doubleSum","fieldName":"friends_count","name":"total_friends_count"},
+	          		       {"type":"doubleSum","fieldName":"statuses_count","name":"total_statuses_count"},
 
-	       		       {"type":"min","fieldName":"followerCount","name":"minFollowerCount"},
-	       		       {"type":"max","fieldName":"followerCount","name":"maxFollowerCount"},
+	       	    	       {"type":"min","fieldName":"follower_count","name":"min_follower_count"},
+	       		           {"type":"max","fieldName":"follower_count","name":"max_follower_count"},
 
-	       		       {"type":"min","fieldName":"friendsCount","name":"minFriendsCount"},
-	       		       {"type":"max","fieldName":"friendsCount","name":"maxFriendsCount"},
+	       		           {"type":"min","fieldName":"friends_count","name":"min_friends_count"},
+	       		           {"type":"max","fieldName":"friends_count","name":"max_friends_count"},
 
-	       		       {"type":"min","fieldName":"statusesCount","name":"minStatusesCount"},
-	       		       {"type":"max","fieldName":"statusesCount","name":"maxStatusesCount"},
+	       		           {"type":"min","fieldName":"statuses_count","name":"min_statuses_count"},
+	       		           {"type":"max","fieldName":"statuses_count","name":"max_statuses_count"},
 
-	       		       {"type":"min","fieldName":"retweetCount","name":"minRetweetCount"},
-	       		       {"type":"max","fieldName":"retweetCount","name":"maxRetweetCount"}
-
-                              ],
+	       		           {"type":"min","fieldName":"retweet_count","name":"min_retweet_count"},
+	       		           {"type":"max","fieldName":"retweet_count","name":"max_retweet_count"}
+               ],
                "indexGranularity":"minute",
-	       "shardSpec" : { "type": "none" } },
+	             "shardSpec" : { "type": "none" } },
   "config" : { "maxRowsInMemory" : 50000,
                "intermediatePersistPeriod" : "PT2m" },
  
   "firehose" : { "type" : "twitzer",
-                 "maxEventCount": 10000,
-                 "maxRunMinutes" : 5
+                 "maxEventCount": 50000,
+                 "maxRunMinutes" : 10
                 },
 
   "plumber" : { "type" : "realtime",

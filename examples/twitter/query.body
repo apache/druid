@@ -1,25 +1,22 @@
 {
-    "queryType": "topN",
+    "queryType": "groupBy",
     "dataSource": "twitterstream",
     "granularity": "all",
-    "dimension": "lang",
+    "dimension": ["lang"],
     "threshold": 10,
     "metric": "totally",
     "aggregations":[
     { "type": "count", "name": "rows"},
-    { "type": "doubleSum", "fieldName": "events", "name": "e"},
+    { "type": "doubleSum", "fieldName": "tweets", "name": "tweets"},
 
-    { "type": "max", "fieldName": "maxStatusesCount", "name": "theMaxStatusesCount"},
-    { "type": "max", "fieldName": "maxRetweetCount", "name": "theMaxRetweetCount"},
+    { "type": "max", "fieldName": "max_statuses_count", "name": "theMaxStatusesCount"},
+    { "type": "max", "fieldName": "max_retweet_count", "name": "theMaxRetweetCount"},
 
-    { "type": "max", "fieldName": "maxFriendsCount", "name": "theMaxFriendsCount"},
-    { "type": "max", "fieldName": "maxFollowerCount", "name": "theMaxFollowerCount"},
+    { "type": "max", "fieldName": "max_friends_count", "name": "theMaxFriendsCount"},
+    { "type": "max", "fieldName": "max_follower_count", "name": "theMaxFollowerCount"},
 
-    { "type": "doubleSum", "fieldName": "totalStatusesCount", "name": "totally"}
+    { "type": "doubleSum", "fieldName": "total_statuses_count", "name": "total_tweets_all_time"}
 
-    ],
-    "postAggregations":[
-    {"type":"arithmetic","name":"avg_f","fn":"/","fields":[{"type":"fieldAccess","name":"dummy","fieldName":"totally"},{"type":"fieldAccess","name":"rows","fieldName":"rows"}]}
     ],
     "intervals":["2012-10-01T00:00/2020-01-01T00"]
 }
