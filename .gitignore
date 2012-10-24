@@ -14,3 +14,5 @@ target
 client/.settings/org.eclipse.jdt.core.prefs
 common/.settings/org.eclipse.jdt.core.prefs
 server/.settings/org.eclipse.jdt.core.prefs
+examples/rand/RealtimeNode.out
+examples/twitter/RealtimeNode.out
