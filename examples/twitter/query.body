@@ -1,0 +1,25 @@
+{
+    "queryType": "topN",
+    "dataSource": "twitterstream",
+    "granularity": "all",
+    "dimension": "lang",
+    "threshold": 10,
+    "metric": "totally",
+    "aggregations":[
+    { "type": "count", "name": "rows"},
+    { "type": "doubleSum", "fieldName": "events", "name": "e"},
+
+    { "type": "max", "fieldName": "maxStatusesCount", "name": "theMaxStatusesCount"},
+    { "type": "max", "fieldName": "maxRetweetCount", "name": "theMaxRetweetCount"},
+
+    { "type": "max", "fieldName": "maxFriendsCount", "name": "theMaxFriendsCount"},
+    { "type": "max", "fieldName": "maxFollowerCount", "name": "theMaxFollowerCount"},
+
+    { "type": "doubleSum", "fieldName": "totalStatusesCount", "name": "totally"}
+
+    ],
+    "postAggregations":[
+    {"type":"arithmetic","name":"avg_f","fn":"/","fields":[{"type":"fieldAccess","name":"dummy","fieldName":"totally"},{"type":"fieldAccess","name":"rows","fieldName":"rows"}]}
+    ],
+    "intervals":["2012-10-01T00:00/2020-01-01T00"]
+}

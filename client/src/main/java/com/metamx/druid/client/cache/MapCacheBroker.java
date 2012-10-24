@@ -1,0 +1,144 @@
+package com.metamx.druid.client.cache;
+
+import com.google.common.collect.Maps;
+import com.google.common.primitives.Ints;
+import com.metamx.common.ISE;
+
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ */
+public class MapCacheBroker implements CacheBroker
+{
+  private final Map<ByteBuffer, byte[]> baseMap;
+  private final ByteCountingLRUMap byteCountingLRUMap;
+
+  private final Map<String, Cache> cacheCache;
+  private final AtomicInteger ids;
+
+  private final Object clearLock = new Object();
+
+  private final AtomicLong hitCount = new AtomicLong(0);
+  private final AtomicLong missCount = new AtomicLong(0);
+
+  public static CacheBroker create(final MapCacheBrokerConfig config)
+  {
+    return new MapCacheBroker(
+        new ByteCountingLRUMap(
+            config.getInitialSize(),
+            config.getLogEvictionCount(),
+            config.getSizeInBytes()
+        )
+    );
+  }
+
+  MapCacheBroker(
+      ByteCountingLRUMap byteCountingLRUMap
+  )
+  {
+    this.byteCountingLRUMap = byteCountingLRUMap;
+
+    this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
+
+    cacheCache = Maps.newHashMap();
+    ids = new AtomicInteger();
+  }
+
+
+  @Override
+  public CacheStats getStats()
+  {
+    return new CacheStats(
+        hitCount.get(),
+        missCount.get(),
+        byteCountingLRUMap.size(),
+        byteCountingLRUMap.getNumBytes(),
+        byteCountingLRUMap.getEvictionCount()
+    );
+  }
+
+  @Override
+  public Cache provideCache(final String identifier)
+  {
+    synchronized (cacheCache) {
+      final Cache cachedCache = cacheCache.get(identifier);
+      if (cachedCache != null) {
+        return cachedCache;
+      }
+
+      final byte[] myIdBytes = Ints.toByteArray(ids.getAndIncrement());
+
+      final Cache theCache = new Cache()
+      {
+        volatile boolean open = true;
+
+        @Override
+        public byte[] get(byte[] key)
+        {
+          if (open) {
+            final byte[] retVal = baseMap.get(computeKey(key));
+            if (retVal == null) {
+              missCount.incrementAndGet();
+            } else {
+              hitCount.incrementAndGet();
+            }
+            return retVal;
+          }
+          throw new ISE("Cache for identifier[%s] is closed.", identifier);
+        }
+
+        @Override
+        public byte[] put(byte[] key, byte[] value)
+        {
+          synchronized (clearLock) {
+            if (open) {
+              return baseMap.put(computeKey(key), value);
+            }
+          }
+          throw new ISE("Cache for identifier[%s] is closed.", identifier);
+        }
+
+        @Override
+        public void close()
+        {
+          synchronized (cacheCache) {
+            cacheCache.remove(identifier);
+          }
+          synchronized (clearLock) {
+            if (open) {
+              open = false;
+
+              Iterator<ByteBuffer> iter = baseMap.keySet().iterator();
+              while (iter.hasNext()) {
+                ByteBuffer next = iter.next();
+
+                if (next.get(0) == myIdBytes[0]
+                    && next.get(1) == myIdBytes[1]
+                    && next.get(2) == myIdBytes[2]
+                    && next.get(3) == myIdBytes[3]) {
+                  iter.remove();
+                }
+              }
+            }
+          }
+        }
+
+        private ByteBuffer computeKey(byte[] key)
+        {
+          final ByteBuffer retVal = ByteBuffer.allocate(key.length + 4).put(myIdBytes).put(key);
+          retVal.rewind();
+          return retVal;
+        }
+      };
+
+      cacheCache.put(identifier, theCache);
+
+      return theCache;
+    }
+  }
+}

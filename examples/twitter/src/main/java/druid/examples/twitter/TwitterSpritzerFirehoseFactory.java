@@ -1,0 +1,290 @@
+package druid.examples.twitter;
+
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.input.InputRow;
+import com.metamx.druid.input.MapBasedInputRow;
+import com.metamx.druid.realtime.Firehose;
+import com.metamx.druid.realtime.FirehoseFactory;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonTypeName;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.map.ObjectMapper;
+import twitter4j.*;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import static java.lang.Thread.*;
+
+
+/**
+ * Twitter "spritzer" Firehost Factory named "twitzer".
+ * Builds a Firehose that emits a stream of
+ * ??
+ * with timestamps along with ??.
+ * The generated tuples have the form (timestamp, ????)
+ * where the timestamp is from the twitter event.
+ * <p>
+ * <p/>
+ * </p>
+ * Example spec file:
+ * <pre>
+ * </pre>
+ * <p/>
+ * Example query using POST to /druid/v2/?w  (where w is an arbitrary parameter and the date and time
+ * is UTC):
+ * <pre>
+ * </pre>
+ * @author pbaclace
+ */
+@JsonTypeName("twitzer")
+public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
+  private static final Logger log = new Logger(TwitterSpritzerFirehoseFactory.class);
+  /**
+   * max events to receive, -1 is infinite, 0 means nothing is delivered; use this to prevent
+   * infinite space consumption or to prevent getting throttled at an inconvenient time
+   * or to see what happens when a Firehose stops delivering
+   * values, or to have hasMore() return false.  The Twitter Spritzer can deliver about
+   * 1000 events per minute.
+   */
+  private final int maxEventCount;
+  /**
+   * maximum number of minutes to fetch Twitter events.  Use this to prevent getting
+   * throttled at an inconvenient time. If zero or less, no time limit for run.
+   */
+  private final int maxRunMinutes;
+
+  @JsonCreator
+  public TwitterSpritzerFirehoseFactory(
+      @JsonProperty("maxEventCount") Integer maxEventCount,
+      @JsonProperty("maxRunMinutes") Integer maxRunMinutes
+  )
+  {
+    this.maxEventCount = maxEventCount;
+    this.maxRunMinutes = maxRunMinutes;
+    log.info("maxEventCount=" + ((maxEventCount <= 0) ? "no limit" : maxEventCount));
+    log.info("maxRunMinutes=" + ((maxRunMinutes <= 0) ? "no limit" : maxRunMinutes));
+  }
+
+  @Override
+  public Firehose connect() throws IOException
+  {
+    final ConnectionLifeCycleListener connectionLifeCycleListener = new ConnectionLifeCycleListener() {
+      @Override
+      public void onConnect()
+      {
+        log.info("Connected_to_Twitter");
+      }
+
+      @Override
+      public void onDisconnect()
+      {
+        log.info("Disconnect_from_Twitter");
+      }
+
+      /**
+       * called before thread gets cleaned up
+       */
+      @Override
+      public void onCleanUp()
+      {
+        log.info("Cleanup_twitter_stream");
+      }
+    }; // ConnectionLifeCycleListener
+
+    final TwitterStream twitterStream;
+    final StatusListener statusListener;
+    final int QUEUE_SIZE = 2000;
+    /** This queue is used to move twitter events from the twitter4j thread to the druid ingest thread.   */
+    final BlockingQueue<Status> queue = new ArrayBlockingQueue<Status>(QUEUE_SIZE);
+    final LinkedList<String> dimensions = new LinkedList<String>();
+    final long startMsec = System.currentTimeMillis();
+
+    dimensions.add("htags");
+    dimensions.add("retweetCount");
+    dimensions.add("followerCount");
+    dimensions.add("friendsCount");
+    dimensions.add("lang");
+    dimensions.add("utcOffset");
+    dimensions.add("statusesCount");
+
+    //
+    //   set up Twitter Spritzer
+    //
+    twitterStream = new TwitterStreamFactory().getInstance();
+    twitterStream.addConnectionLifeCycleListener(connectionLifeCycleListener);
+    statusListener = new StatusListener() {  // This is what really gets called to deliver stuff from twitter4j
+      @Override
+      public void onStatus(Status status)
+      {
+        // time to stop?
+        if (Thread.currentThread().isInterrupted()) {
+          throw new RuntimeException("Interrupted, time to stop");
+        }
+        try {
+          boolean success = queue.offer(status, 15L, TimeUnit.SECONDS);
+          if (!success) {
+            log.warn("queue too slow!");
+          }
+        } catch (InterruptedException e) {
+          throw new RuntimeException("InterruptedException", e);
+        }
+      }
+
+      @Override
+      public void onDeletionNotice(StatusDeletionNotice statusDeletionNotice)
+      {
+        //log.info("Got a status deletion notice id:" + statusDeletionNotice.getStatusId());
+      }
+
+      @Override
+      public void onTrackLimitationNotice(int numberOfLimitedStatuses)
+      {
+        // This notice will be sent each time a limited stream becomes unlimited.
+        // If this number is high and or rapidly increasing, it is an indication that your predicate is too broad, and you should consider a predicate with higher selectivity.
+        log.warn("Got track limitation notice:" + numberOfLimitedStatuses);
+      }
+
+      @Override
+      public void onScrubGeo(long userId, long upToStatusId)
+      {
+        //log.info("Got scrub_geo event userId:" + userId + " upToStatusId:" + upToStatusId);
+      }
+
+      @Override
+      public void onException(Exception ex)
+      {
+        ex.printStackTrace();
+      }
+    }; // new StatusListener()
+
+    twitterStream.addListener(statusListener);
+    twitterStream.sample(); // creates a generic StatusStream
+    log.info("returned from sample()");
+
+    return new Firehose() {
+
+      private final Runnable doNothingRunnable = new Runnable() {
+        public void run()
+        {
+        }
+      };
+
+      private long rowCount = 0L;
+      private boolean waitIfmax = (maxEventCount < 0L);
+      private final Map<String, Object> theMap = new HashMap<String, Object>(2);
+      // DIY json parsing // private final ObjectMapper omapper = new ObjectMapper();
+
+      private boolean maxTimeReached()
+      {
+        if (maxRunMinutes <= 0) {
+          return false;
+        } else {
+          return (System.currentTimeMillis() - startMsec) / 10000L >= maxRunMinutes;
+        }
+      }
+
+      private boolean maxCountReached()
+      {
+        return maxEventCount >= 0 && rowCount >= maxEventCount;
+      }
+
+      @Override
+      public boolean hasMore()
+      {
+        if (maxCountReached() || maxTimeReached()) {
+          return waitIfmax;
+        } else {
+          return true;
+        }
+      }
+
+      @Override
+      public InputRow nextRow()
+      {
+        // Interrupted to stop?
+        if (Thread.currentThread().isInterrupted()) {
+          throw new RuntimeException("Interrupted, time to stop");
+        }
+
+        // all done?
+        if (maxCountReached() || maxTimeReached()) {
+          if (waitIfmax) {
+            // sleep a long time instead of terminating
+            try {
+              log.info("reached limit, sleeping a long time...");
+              sleep(2000000000L);
+            } catch (InterruptedException e) {
+              throw new RuntimeException("InterruptedException", e);
+            }
+          } else {
+            // allow this event through, and the next hasMore() call will be false
+          }
+        }
+        rowCount++;
+        if (rowCount % 100 == 0) log.info("nextRow() has returned " + rowCount + " InputRows");
+        Status status;
+        try {
+          status = queue.take();
+        } catch (InterruptedException e) {
+          throw new RuntimeException("InterruptedException", e);
+        }
+        //log.info("twitterStatus: "+ status.getCreatedAt() + " @" + status.getUser().getScreenName() + " - " + status.getText());//DEBUG
+
+        // theMap.put("twid", status.getUser().getScreenName());
+        // theMap.put("msg", status.getText());  // ToDo:  verify encoding
+
+        HashtagEntity[] hts = status.getHashtagEntities();
+        if (hts != null && hts.length > 0) {
+          // ToDo: get all the hash tags instead of just the first one
+          theMap.put("htags", hts[0].getText());
+          log.info("htags=" + hts[0].getText()); // about 16%
+        } else {
+          theMap.put("htags", null);
+        }
+
+        long retweetCount = status.getRetweetCount();
+        theMap.put("retweetCount", retweetCount);
+        User u = status.getUser();
+        if (u != null) {
+          theMap.put("followerCount", u.getFollowersCount());
+          theMap.put("friendsCount", u.getFriendsCount());
+          theMap.put("lang", u.getLang());
+          theMap.put("utcOffset", u.getUtcOffset());  // resolution in seconds, -1 if not available?
+          theMap.put("statusesCount", u.getStatusesCount());
+        } else {
+          log.error("status.getUser() is null");
+        }
+        if (rowCount % 10 == 0) {
+          log.info("" + status.getCreatedAt() +
+              " followerCount=" + u.getFollowersCount() +
+              " friendsCount=" + u.getFriendsCount() +
+              " statusesCount=" + u.getStatusesCount() +
+              " retweetCount=" + retweetCount
+          );
+        }
+
+        return new MapBasedInputRow(status.getCreatedAt().getTime(), dimensions, theMap);
+      }
+
+      @Override
+      public Runnable commit()
+      {
+        // ephemera in, ephemera out.
+        return doNothingRunnable; // reuse the same object each time
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        log.info("CLOSE twitterstream");
+        twitterStream.shutdown(); // invokes twitterStream.cleanUp()
+      }
+    };
+  }
+}

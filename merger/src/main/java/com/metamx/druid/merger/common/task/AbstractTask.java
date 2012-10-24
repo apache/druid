@@ -1,0 +1,86 @@
+package com.metamx.druid.merger.common.task;
+
+import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
+import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.coordinator.TaskContext;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.joda.time.Interval;
+
+public abstract class AbstractTask implements Task
+{
+  private final String id;
+  private final String groupId;
+  private final String dataSource;
+  private final Interval interval;
+
+  public AbstractTask(String id, String dataSource, Interval interval)
+  {
+    this(id, id, dataSource, interval);
+  }
+
+  @JsonCreator
+  public AbstractTask(
+      @JsonProperty("id") String id,
+      @JsonProperty("groupId") String groupId,
+      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("interval") Interval interval
+  )
+  {
+    Preconditions.checkNotNull(id, "id");
+    Preconditions.checkNotNull(groupId, "groupId");
+    Preconditions.checkNotNull(dataSource, "dataSource");
+    Preconditions.checkNotNull(interval, "interval");
+
+    this.id = id;
+    this.groupId = groupId;
+    this.dataSource = dataSource;
+    this.interval = interval;
+  }
+
+  @JsonProperty
+  @Override
+  public String getId()
+  {
+    return id;
+  }
+
+  @JsonProperty
+  @Override
+  public String getGroupId()
+  {
+    return groupId;
+  }
+
+  @JsonProperty
+  @Override
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  @JsonProperty
+  @Override
+  public Interval getInterval()
+  {
+    return interval;
+  }
+
+  @Override
+  public TaskStatus preflight(TaskContext context) throws Exception
+  {
+    return TaskStatus.running(id);
+  }
+
+  @Override
+  public String toString()
+  {
+    return Objects.toStringHelper(this)
+                  .add("id", id)
+                  .add("type", getType())
+                  .add("dataSource", dataSource)
+                  .add("interval", getInterval())
+                  .toString();
+  }
+}

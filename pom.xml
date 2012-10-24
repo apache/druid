@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.metamx</groupId>
+    <artifactId>druid</artifactId>
+    <packaging>pom</packaging>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>druid</name>
+    <description>druid</description>
+    <scm>
+        <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
+        <url>http://www.github.com/metamx/druid</url>
+    </scm>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <modules>
+        <module>server</module>
+        <module>client</module>
+        <module>common</module>
+        <module>indexer</module>
+        <module>index-common</module>
+        <module>merger</module>
+        <module>realtime</module>
+        <module>examples</module>
+    </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.7.2</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <user.timezone>UTC</user.timezone>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+	<repository>
+          <id>pub-libs</id>
+          <name>pub-libs-local</name>
+          <url>https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local</url>
+    </repository>
+	<repository>
+            <id>repo.codahale.com</id>
+            <url>http://repo.codahale.com</url>
+        </repository>
+        <repository>
+            <id>nativelibs4java</id>
+            <url>http://nativelibs4java.sourceforge.net/maven</url>
+        </repository>
+        <repository>
+          <id>thirdparty-uploads</id>
+          <name>JBoss Thirdparty Uploads</name>
+          <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads</url>
+        </repository>
+    </repositories>
+    <distributionManagement>
+        <repository>
+            <id>central-local</id>
+            <name>Central</name>
+            <url>https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local</url>
+        </repository>
+    </distributionManagement>
+</project>

@@ -1,0 +1,16 @@
+dist
+target
+*.iml
+*.ipr
+*.iws
+*.tar.gz
+*.swp
+*.swo
+.classpath
+.idea
+.project
+.settings/org.eclipse.jdt.core.prefs
+.settings/org.maven.ide.eclipse.prefs
+client/.settings/org.eclipse.jdt.core.prefs
+common/.settings/org.eclipse.jdt.core.prefs
+server/.settings/org.eclipse.jdt.core.prefs

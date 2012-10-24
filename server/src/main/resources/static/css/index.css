@@ -1,0 +1,7 @@
+.loading {
+  display: none;
+}
+
+span {
+  cursor: pointer;
+}

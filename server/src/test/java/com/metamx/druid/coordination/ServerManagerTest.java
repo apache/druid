@@ -1,0 +1,438 @@
+package com.metamx.druid.coordination;
+
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.common.MapUtils;
+import com.metamx.common.Pair;
+import com.metamx.common.guava.ConcatSequence;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
+import com.metamx.druid.Capabilities;
+import com.metamx.druid.Druids;
+import com.metamx.druid.Query;
+import com.metamx.druid.QueryGranularity;
+import com.metamx.druid.StorageAdapter;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.brita.Filter;
+import com.metamx.druid.index.v1.SegmentIdAttachedStorageAdapter;
+import com.metamx.druid.index.v1.processing.Cursor;
+import com.metamx.druid.loading.StorageAdapterLoader;
+import com.metamx.druid.loading.StorageAdapterLoadingException;
+import com.metamx.druid.metrics.NoopServiceEmitter;
+import com.metamx.druid.query.CacheStrategy;
+import com.metamx.druid.query.ConcatQueryRunner;
+import com.metamx.druid.query.MetricManipulationFn;
+import com.metamx.druid.query.NoopQueryRunner;
+import com.metamx.druid.query.QueryRunner;
+import com.metamx.druid.query.QueryRunnerFactory;
+import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
+import com.metamx.druid.query.QueryToolChest;
+import com.metamx.druid.query.search.SearchHit;
+import com.metamx.druid.query.search.SearchQuery;
+import com.metamx.druid.result.Result;
+import com.metamx.druid.result.SearchResultValue;
+import com.metamx.druid.shard.NoneShardSpec;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.service.ServiceMetricEvent;
+import org.codehaus.jackson.type.TypeReference;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+
+/**
+ */
+public class ServerManagerTest
+{
+  ServerManager serverManager;
+  MyQueryRunnerFactory factory;
+
+  @Before
+  public void setUp() throws IOException
+  {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+
+    factory = new MyQueryRunnerFactory();
+    serverManager = new ServerManager(
+        new StorageAdapterLoader()
+        {
+          @Override
+          public StorageAdapter getAdapter(final Map<String, Object> loadSpec)
+          {
+            return new StorageAdapterForTesting(
+                MapUtils.getString(loadSpec, "version"),
+                (Interval) loadSpec.get("interval")
+            );
+          }
+
+          @Override
+          public void cleanupAdapter(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+          {
+
+          }
+        },
+        new QueryRunnerFactoryConglomerate()
+        {
+          @Override
+          public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
+          {
+            return (QueryRunnerFactory) factory;
+          }
+        },
+        new NoopServiceEmitter(),
+        MoreExecutors.sameThreadExecutor()
+    );
+
+    loadQueryable("test", "1", new Interval("P1d/2011-04-01"));
+    loadQueryable("test", "1", new Interval("P1d/2011-04-02"));
+    loadQueryable("test", "2", new Interval("P1d/2011-04-02"));
+    loadQueryable("test", "1", new Interval("P1d/2011-04-03"));
+    loadQueryable("test", "1", new Interval("P1d/2011-04-04"));
+    loadQueryable("test", "1", new Interval("P1d/2011-04-05"));
+    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T01"));
+    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T02"));
+    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T03"));
+    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T05"));
+    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T06"));
+    loadQueryable("test2", "1", new Interval("P1d/2011-04-01"));
+    loadQueryable("test2", "1", new Interval("P1d/2011-04-02"));
+  }
+
+  @Test
+  public void testSimpleGet()
+  {
+    assertQueryable(
+        QueryGranularity.DAY,
+        "test",
+        new Interval("P1d/2011-04-01"),
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("1", new Interval("P1d/2011-04-01"))
+        )
+    );
+
+    assertQueryable(
+        QueryGranularity.DAY,
+        "test", new Interval("P2d/2011-04-02"),
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("1", new Interval("P1d/2011-04-01")),
+            new Pair<String, Interval>("2", new Interval("P1d/2011-04-02"))
+        )
+    );
+  }
+
+  @Test
+  public void testDelete1() throws Exception
+  {
+    final String dataSouce = "test";
+    final Interval interval = new Interval("2011-04-01/2011-04-02");
+
+    assertQueryable(
+        QueryGranularity.DAY,
+        dataSouce, interval,
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("2", interval)
+        )
+    );
+
+    dropQueryable(dataSouce, "2", interval);
+    assertQueryable(
+        QueryGranularity.DAY,
+        dataSouce, interval,
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("1", interval)
+        )
+    );
+  }
+
+  @Test
+  public void testDelete2() throws Exception
+  {
+    loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+
+    assertQueryable(
+        QueryGranularity.DAY,
+        "test", new Interval("2011-04-04/2011-04-06"),
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
+        )
+    );
+
+    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    dropQueryable("test", "1", new Interval("2011-04-04/2011-04-05"));
+
+    assertQueryable(
+        QueryGranularity.HOUR,
+        "test", new Interval("2011-04-04/2011-04-04T06"),
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("2", new Interval("2011-04-04T00/2011-04-04T01")),
+            new Pair<String, Interval>("2", new Interval("2011-04-04T01/2011-04-04T02")),
+            new Pair<String, Interval>("2", new Interval("2011-04-04T02/2011-04-04T03")),
+            new Pair<String, Interval>("2", new Interval("2011-04-04T04/2011-04-04T05")),
+            new Pair<String, Interval>("2", new Interval("2011-04-04T05/2011-04-04T06"))
+        )
+    );
+
+
+    assertQueryable(
+        QueryGranularity.HOUR,
+        "test", new Interval("2011-04-04/2011-04-04T03"),
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("2", new Interval("2011-04-04T00/2011-04-04T01")),
+            new Pair<String, Interval>("2", new Interval("2011-04-04T01/2011-04-04T02")),
+            new Pair<String, Interval>("2", new Interval("2011-04-04T02/2011-04-04T03"))
+        )
+    );
+
+    assertQueryable(
+        QueryGranularity.HOUR,
+        "test", new Interval("2011-04-04T04/2011-04-04T06"),
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("2", new Interval("2011-04-04T04/2011-04-04T05")),
+            new Pair<String, Interval>("2", new Interval("2011-04-04T05/2011-04-04T06"))
+        )
+    );
+  }
+
+  private void loadQueryable(String dataSource, String version, Interval interval) throws IOException
+  {
+    try {
+      serverManager.loadSegment(
+          new DataSegment(
+              dataSource,
+              interval,
+              version,
+              ImmutableMap.<String, Object>of("version", version, "interval", interval),
+              Arrays.asList("dim1", "dim2", "dim3"),
+              Arrays.asList("metric1", "metric2"),
+              new NoneShardSpec(),
+              123l
+          )
+      );
+    }
+    catch (StorageAdapterLoadingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void dropQueryable(String dataSource, String version, Interval interval)
+  {
+    try {
+      serverManager.dropSegment(
+          new DataSegment(
+              dataSource,
+              interval,
+              version,
+              ImmutableMap.<String, Object>of("version", version, "interval", interval),
+              Arrays.asList("dim1", "dim2", "dim3"),
+              Arrays.asList("metric1", "metric2"),
+              new NoneShardSpec(),
+              123l
+          )
+      );
+    }
+    catch (StorageAdapterLoadingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private <T> void assertQueryable(
+      QueryGranularity granularity,
+      String dataSource,
+      Interval interval,
+      List<Pair<String, Interval>> expected
+  )
+  {
+    Iterator<Pair<String, Interval>> expectedIter = expected.iterator();
+    final List<Interval> intervals = Arrays.asList(interval);
+    final SearchQuery query = Druids.newSearchQueryBuilder()
+                                  .dataSource(dataSource)
+                                  .intervals(intervals)
+                                  .granularity(granularity)
+                                  .limit(10000)
+                                  .query("wow")
+                                  .build();
+    QueryRunner<Result<SearchResultValue>> runner = serverManager.getQueryRunnerForIntervals(query, intervals);
+    final Sequence<Result<SearchResultValue>> seq = runner.run(query);
+    Sequences.toList(seq, Lists.<Result<SearchResultValue>>newArrayList());
+    Iterator<StorageAdapterForTesting> adaptersIter = factory.getAdapters().iterator();
+
+    while (expectedIter.hasNext() && adaptersIter.hasNext()) {
+      Pair<String, Interval> expectedVals = expectedIter.next();
+      StorageAdapterForTesting value = adaptersIter.next();
+
+      Assert.assertEquals(expectedVals.lhs, value.getVersion());
+      Assert.assertEquals(expectedVals.rhs, value.getInterval());
+    }
+
+    Assert.assertFalse(expectedIter.hasNext());
+    Assert.assertFalse(adaptersIter.hasNext());
+
+    factory.clearAdapters();
+  }
+
+  private static class StorageAdapterForTesting implements StorageAdapter
+  {
+    private final String version;
+    private final Interval interval;
+
+    StorageAdapterForTesting(
+        String version,
+        Interval interval
+    )
+    {
+      this.version = version;
+      this.interval = interval;
+    }
+
+    public String getVersion()
+    {
+      return version;
+    }
+
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    @Override
+    public String getSegmentIdentifier()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int getDimensionCardinality(String dimension)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public DateTime getMinTime()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public DateTime getMaxTime()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Capabilities getCapabilities()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Iterable<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Iterable<SearchHit> searchDimensions(SearchQuery query, Filter filter)
+    {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  public static class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
+  {
+    private List<StorageAdapterForTesting> adapters = Lists.newArrayList();
+
+    @Override
+    public QueryRunner<Result<SearchResultValue>> createRunner(StorageAdapter adapter)
+    {
+      adapters.add((StorageAdapterForTesting) ((SegmentIdAttachedStorageAdapter) adapter).getDelegate());
+      return new NoopQueryRunner<Result<SearchResultValue>>();
+    }
+
+    @Override
+    public QueryRunner<Result<SearchResultValue>> mergeRunners(
+        ExecutorService queryExecutor, Iterable<QueryRunner<Result<SearchResultValue>>> queryRunners
+    )
+    {
+      return new ConcatQueryRunner<Result<SearchResultValue>>(Sequences.simple(queryRunners));
+    }
+
+    @Override
+    public QueryToolChest<Result<SearchResultValue>, SearchQuery> getToolchest()
+    {
+      return new NoopQueryToolChest<Result<SearchResultValue>, SearchQuery>();
+    }
+
+    public List<StorageAdapterForTesting> getAdapters()
+    {
+      return adapters;
+    }
+
+    public void clearAdapters()
+    {
+      adapters.clear();
+    }
+  }
+
+  public static class NoopQueryToolChest<T, QueryType extends Query<T>> implements QueryToolChest<T, QueryType>
+  {
+    @Override
+    public QueryRunner<T> mergeResults(QueryRunner<T> runner)
+    {
+      return runner;
+    }
+
+    @Override
+    public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences)
+    {
+      return new ConcatSequence<T>(seqOfSequences);
+    }
+
+    @Override
+    public ServiceMetricEvent.Builder makeMetricBuilder(QueryType query)
+    {
+      return new ServiceMetricEvent.Builder();
+    }
+
+    @Override
+    public Function<T, T> makeMetricManipulatorFn(QueryType query, MetricManipulationFn fn)
+    {
+      return Functions.identity();
+    }
+
+    @Override
+    public TypeReference<T> getResultTypeReference()
+    {
+      return new TypeReference<T>(){};
+    }
+
+    @Override
+    public CacheStrategy<T, QueryType> getCacheStrategy(QueryType query)
+    {
+      return null;
+    }
+
+    @Override
+    public QueryRunner<T> preMergeQueryDecoration(QueryRunner<T> runner)
+    {
+      return runner;
+    }
+
+    @Override
+    public QueryRunner<T> postMergeQueryDecoration(QueryRunner<T> runner)
+    {
+      return runner;
+    }
+  }
+}

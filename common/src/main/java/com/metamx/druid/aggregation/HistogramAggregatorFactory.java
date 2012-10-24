@@ -1,0 +1,157 @@
+package com.metamx.druid.aggregation;
+
+import com.google.common.base.Charsets;
+import com.google.common.primitives.Floats;
+import com.google.common.primitives.Longs;
+import com.metamx.druid.processing.MetricSelectorFactory;
+import org.apache.commons.codec.binary.Base64;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+
+public class HistogramAggregatorFactory implements AggregatorFactory
+{
+  private static final byte CACHE_TYPE_ID = 0x7;
+
+  private final String name;
+  private final String fieldName;
+  private final List<Float> breaksList;
+
+  private final float[] breaks;
+
+  @JsonCreator
+  public HistogramAggregatorFactory(
+      @JsonProperty("name") String name,
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("breaks") final List<Float> breaksList
+  )
+  {
+    this.name = name;
+    this.fieldName = fieldName;
+    this.breaksList = breaksList;
+    this.breaks = new float[breaksList.size()];
+    for(int i = 0; i < breaksList.size(); ++i) this.breaks[i] = breaksList.get(i);
+  }
+  @Override
+  public Aggregator factorize(MetricSelectorFactory metricFactory)
+  {
+    return new HistogramAggregator(
+        name,
+        metricFactory.makeFloatMetricSelector(fieldName),
+        breaks
+    );
+  }
+
+  @Override
+  public BufferAggregator factorizeBuffered(MetricSelectorFactory metricFactory)
+  {
+    return new HistogramBufferAggregator(
+        metricFactory.makeFloatMetricSelector(fieldName),
+        breaks
+    );
+  }
+
+  @Override
+  public Comparator getComparator()
+  {
+    return HistogramAggregator.COMPARATOR;
+  }
+
+  @Override
+  public Object combine(Object lhs, Object rhs)
+  {
+    return HistogramAggregator.combineHistograms(lhs, rhs);
+  }
+
+  @Override
+  public AggregatorFactory getCombiningFactory()
+  {
+    return new HistogramAggregatorFactory(name, name, breaksList);
+  }
+
+  @Override
+  public Object deserialize(Object object)
+  {
+    if (object instanceof byte []) {
+      return Histogram.fromBytes((byte []) object);
+    }
+    else if (object instanceof ByteBuffer) {
+      return Histogram.fromBytes((ByteBuffer) object);
+    }
+    else if(object instanceof String) {
+      byte[] bytes = Base64.decodeBase64(((String)object).getBytes(Charsets.UTF_8));
+      return Histogram.fromBytes(bytes);
+    }
+    return object;
+  }
+
+  @Override
+  public Object finalizeComputation(Object object)
+  {
+    return ((Histogram)object).asVisual();
+  }
+
+  @Override
+  @JsonProperty
+  public String getName()
+  {
+    return name;
+  }
+
+  @JsonProperty
+  public String getFieldName()
+  {
+    return fieldName;
+  }
+
+  @JsonProperty
+  public List<Float> getBreaks()
+  {
+    return breaksList;
+  }
+
+  @Override
+  public List<String> requiredFields()
+  {
+    return Arrays.asList(fieldName);
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    byte[] fieldNameBytes = fieldName.getBytes();
+    return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
+  }
+
+  @Override
+  public String getTypeName()
+  {
+     throw new UnsupportedOperationException("HistogramAggregatorFactory does not support getTypeName()");
+  }
+
+  @Override
+  public int getMaxIntermediateSize()
+  {
+    return Longs.BYTES * (breaks.length + 1) + Floats.BYTES * 2;
+  }
+
+  @Override
+  public Object getAggregatorStartValue()
+  {
+    return new Histogram(breaks);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "HistogramAggregatorFactory{" +
+           "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
+           ", breaks=" + Arrays.toString(breaks) +
+           '}';
+  }
+}
