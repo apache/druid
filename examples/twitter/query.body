@@ -2,7 +2,7 @@
     "queryType": "groupBy",
     "dataSource": "twitterstream",
     "granularity": "all",
-    "dimension": ["lang"],
+    "dimensions": ["lang"],
     "threshold": 10,
     "metric": "totally",
     "aggregations":[
