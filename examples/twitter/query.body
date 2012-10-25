@@ -3,8 +3,6 @@
     "dataSource": "twitterstream",
     "granularity": "all",
     "dimensions": ["lang"],
-    "threshold": 10,
-    "metric": "totally",
     "aggregations":[
     { "type": "count", "name": "rows"},
     { "type": "doubleSum", "fieldName": "tweets", "name": "tweets"},
