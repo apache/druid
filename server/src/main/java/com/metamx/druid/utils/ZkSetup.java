@@ -64,8 +64,13 @@ public class ZkSetup
       private final String password;
 
       {
-        username = args[3].split(":")[0];
-        password = args[3].split(":")[1];
+        String[] splitArgs = args[3].split(":");
+        username = splitArgs[0];
+        if (splitArgs.length > 1) {
+          password = splitArgs[1];
+        } else {
+          password = "";
+        }
       }
 
       @Override
