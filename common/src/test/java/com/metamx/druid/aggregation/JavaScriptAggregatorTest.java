@@ -21,10 +21,12 @@ package com.metamx.druid.aggregation;
 
 
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Doubles;
 import com.metamx.druid.processing.FloatMetricSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class JavaScriptAggregatorTest
@@ -46,6 +48,16 @@ public class JavaScriptAggregatorTest
     selector2.increment();
   }
 
+  private void aggregateBuffer(TestFloatMetricSelector selector1,
+                               TestFloatMetricSelector selector2,
+                               BufferAggregator agg,
+                               ByteBuffer buf, int position)
+  {
+    agg.aggregate(buf, position);
+    selector1.increment();
+    selector2.increment();
+  }
+
   private static void aggregate(TestFloatMetricSelector selector, Aggregator agg)
   {
     agg.aggregate();
@@ -53,7 +65,7 @@ public class JavaScriptAggregatorTest
   }
 
   @Test
-  public void testJavaScriptAggregator()
+  public void testAggregate()
   {
     final TestFloatMetricSelector selector1 = new TestFloatMetricSelector(new float[]{42.12f, 9f});
     final TestFloatMetricSelector selector2 = new TestFloatMetricSelector(new float[]{2f, 3f});
@@ -84,6 +96,39 @@ public class JavaScriptAggregatorTest
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
+  }
+
+  @Test
+  public void testBufferAggregate()
+  {
+    final TestFloatMetricSelector selector1 = new TestFloatMetricSelector(new float[]{42.12f, 9f});
+    final TestFloatMetricSelector selector2 = new TestFloatMetricSelector(new float[]{2f, 3f});
+
+    JavaScriptBufferAggregator agg = new JavaScriptBufferAggregator(
+      Arrays.<FloatMetricSelector>asList(selector1, selector2),
+      JavaScriptAggregatorFactory.compileScript(sumLogATimesBPlusTen)
+    );
+
+    ByteBuffer buf = ByteBuffer.allocateDirect(32);
+    final int position = 4;
+    agg.init(buf, position);
+
+    double val = 10.;
+    Assert.assertEquals(val, agg.get(buf, position));
+    Assert.assertEquals(val, agg.get(buf, position));
+    Assert.assertEquals(val, agg.get(buf, position));
+    aggregateBuffer(selector1, selector2, agg, buf, position);
+
+    val += Math.log(42.12f) * 2f;
+    Assert.assertEquals(val, agg.get(buf, position));
+    Assert.assertEquals(val, agg.get(buf, position));
+    Assert.assertEquals(val, agg.get(buf, position));
+
+    aggregateBuffer(selector1, selector2, agg, buf, position);
+    val += Math.log(9f) * 3f;
+    Assert.assertEquals(val, agg.get(buf, position));
+    Assert.assertEquals(val, agg.get(buf, position));
+    Assert.assertEquals(val, agg.get(buf, position));
   }
 
   public static void main(String... args) throws Exception {
@@ -170,7 +215,9 @@ public class JavaScriptAggregatorTest
     public void increment()
     {
       ++index;
-      if(index < 0) index = 0;
+      if (index < 0) {
+        index = 0;
+      }
     }
   }
 }
