@@ -21,6 +21,7 @@ package com.metamx.druid.aggregation;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Doubles;
 import com.metamx.common.IAE;
 import com.metamx.druid.processing.FloatMetricSelector;
 import com.metamx.druid.processing.MetricSelectorFactory;
@@ -79,9 +80,22 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(MetricSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(final MetricSelectorFactory metricFactory)
   {
-    throw new UnsupportedOperationException("Non-buffered not working right now either...");
+    return new JavaScriptBufferAggregator(
+        Lists.transform(
+            fieldNames,
+            new com.google.common.base.Function<String, FloatMetricSelector>()
+            {
+              @Override
+              public FloatMetricSelector apply(@Nullable String s)
+              {
+                return metricFactory.makeFloatMetricSelector(s);
+              }
+            }
+        ),
+        compileScript(script)
+    );
   }
 
   @Override
@@ -165,7 +179,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    throw new UnsupportedOperationException("Not sure.");
+    return Doubles.BYTES;
   }
 
   @Override
