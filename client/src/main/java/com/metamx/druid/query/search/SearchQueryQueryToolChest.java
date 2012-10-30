@@ -79,7 +79,7 @@ public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchRe
     // I dislike this static loading of properies, but it's the only mechanism available right now.
     Properties props = Initialization.loadProperties();
 
-    maxSearchLimit = PropUtils.getPropertyAsInt(props, "com.metamx.query.topN.minSearchLimit", 1000);
+    maxSearchLimit = PropUtils.getPropertyAsInt(props, "com.metamx.query.search.maxSearchLimit", 1000);
   }
 
   @Override
