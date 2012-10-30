@@ -307,16 +307,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
                             DataSegment segment = segmentPusher.push(
                                 mergedFile,
-                                new DataSegment(
-                                    schema.getDataSource(),
-                                    interval,
-                                    interval.getStart().toString(),
-                                    null,
-                                    Lists.newArrayList(index.getAvailableDimensions()),
-                                    Lists.newArrayList(index.getAvailableMetrics()),
-                                    new NoneShardSpec(),
-                                    0
-                                )
+                                sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
                             );
 
                             metadataUpdater.publishSegment(segment);
@@ -325,7 +316,6 @@ public class RealtimePlumberSchool implements PlumberSchool
                             log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
                                .addData("interval", interval)
                                .emit();
-                            return;
                           }
                         }
                       }

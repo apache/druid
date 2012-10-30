@@ -194,6 +194,11 @@ public class DataSegment implements Comparable<DataSegment>
     return builder(this).loadSpec(loadSpec).build();
   }
 
+  public DataSegment withDimensions(List<String> dimensions)
+  {
+    return builder(this).dimensions(dimensions).build();
+  }
+
   public DataSegment withSize(long size)
   {
     return builder(this).size(size).build();
