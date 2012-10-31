@@ -36,9 +36,9 @@ import java.util.Iterator;
 /**
  * A generic, flat storage mechanism.  Use static methods fromArray() or fromIterable() to construct.  If input
  * is sorted, supports binary search index lookups.  If input is not sorted, only supports array-like index lookups.
- *
+ * <p/>
  * V1 Storage Format:
- *
+ * <p/>
  * byte 1: version (0x1)
  * byte 2 == 0x1 => allowReverseLookup
  * bytes 3-6 => numBytesUsed
@@ -253,6 +253,9 @@ public class GenericIndexed<T> implements Indexed<T>
     @Override
     public byte[] toBytes(String val)
     {
+      if (val == null) {
+        return new byte[]{};
+      }
       return val.getBytes(Charsets.UTF_8);
     }
 

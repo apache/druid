@@ -70,6 +70,7 @@ public abstract class BaseStorageAdapter implements StorageAdapter
       Iterable<String> dims = getDimValueLookup(dimension);
       if (dims != null) {
         for (String dimVal : dims) {
+          dimVal = dimVal == null ? "" : dimVal;
           if (searchQuerySpec.accept(dimVal)) {
             if (filterOffset != null) {
               Offset lhs = new ConciseOffset(getInvertedIndex(dimension, dimVal));

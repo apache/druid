@@ -469,12 +469,34 @@ public class IndexMerger
       }
 
       Iterable<String> dimensionValues = CombiningIterable.createSplatted(
-          dimValueLookups,
+          Iterables.transform(
+              dimValueLookups,
+              new Function<Indexed<String>, Iterable<String>>()
+              {
+                @Override
+                public Iterable<String> apply(@Nullable Indexed<String> indexed)
+                {
+                  return Iterables.transform(
+                      indexed,
+                      new Function<String, String>()
+                      {
+                        @Override
+                        public String apply(@Nullable String input)
+                        {
+                          return (input == null) ? "" : input;
+                        }
+                      }
+                  );
+                }
+              }
+          )
+          ,
           Ordering.<String>natural().nullsFirst()
       );
 
       int count = 0;
       for (String value : dimensionValues) {
+        value = value == null ? "" : value;
         writer.write(value);
 
         for (int i = 0; i < indexes.size(); i++) {
@@ -855,6 +877,7 @@ public class IndexMerger
         ++currIndex;
         if (currIndex == dimSet.size()) {
           lastVal = value;
+          return;
         }
         currValue = dimSet.get(currIndex);
       }
