@@ -211,7 +211,6 @@ public class ServerManager implements QuerySegmentWalker
             new Function<TimelineObjectHolder<String, StorageAdapter>, Iterable<QueryRunner<T>>>()
             {
               @Override
-              @SuppressWarnings("unchecked")
               public Iterable<QueryRunner<T>> apply(@Nullable final TimelineObjectHolder<String, StorageAdapter> holder)
               {
                 if (holder == null) {

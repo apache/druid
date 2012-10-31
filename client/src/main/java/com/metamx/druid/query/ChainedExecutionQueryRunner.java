@@ -141,32 +141,4 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
         }
     );
   }
-
-  private static class ThreadNamingCallable<T> implements Callable<T>
-  {
-    private final Callable<T> baseCallable;
-    private final String name;
-
-    ThreadNamingCallable(
-        Callable<T> baseCallable,
-        String name
-    )
-    {
-      this.baseCallable = baseCallable;
-      this.name = name;
-    }
-
-    @Override
-    public T call() throws Exception
-    {
-      String oldName = Thread.currentThread().getName();
-      try {
-        Thread.currentThread().setName(name);
-        return baseCallable.call();
-      }
-      finally {
-        Thread.currentThread().setName(oldName);
-      }
-    }
-  }
 }
