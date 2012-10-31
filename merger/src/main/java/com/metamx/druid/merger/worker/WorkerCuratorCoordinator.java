@@ -28,6 +28,8 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.state.ConnectionState;
+import com.netflix.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
@@ -93,6 +95,28 @@ public class WorkerCuratorCoordinator
           getAnnouncementsPathForWorker(),
           CreateMode.EPHEMERAL,
           worker
+      );
+
+      curatorFramework.getConnectionStateListenable().addListener(
+          new ConnectionStateListener()
+          {
+            @Override
+            public void stateChanged(CuratorFramework client, ConnectionState newState)
+            {
+              try {
+                if (newState.equals(ConnectionState.RECONNECTED)) {
+                  makePathIfNotExisting(
+                      getAnnouncementsPathForWorker(),
+                      CreateMode.EPHEMERAL,
+                      worker
+                  );
+                }
+              }
+              catch (Exception e) {
+                throw Throwables.propagate(e);
+              }
+            }
+          }
       );
 
       started = true;

@@ -230,10 +230,6 @@ public class IndexerCoordinatorNode
     root.addFilter(
         new FilterHolder(
             new RedirectFilter(
-                HttpClientInit.createClient(
-                    HttpClientConfig.builder().withNumConnections(1).build(),
-                    new Lifecycle()
-                ),
                 new ToStringResponseHandler(Charsets.UTF_8),
                 new RedirectInfo()
                 {

@@ -207,6 +207,9 @@ public class RemoteTaskRunner implements TaskRunner
       WorkerWrapper workerWrapper;
       if ((workerWrapper = findWorkerRunningTask(taskWrapper)) != null) {
         final Worker worker = workerWrapper.getWorker();
+
+        log.info("Worker[%s] is already running task{%s].", worker.getHost(), taskWrapper.getTask().getId());
+
         TaskStatus taskStatus = jsonMapper.readValue(
             cf.getData().forPath(JOINER.join(config.getStatusPath(), worker.getHost(), taskWrapper.getTask().getId())),
             TaskStatus.class
@@ -454,7 +457,7 @@ public class RemoteTaskRunner implements TaskRunner
    * Creates a ZK entry under a specific path associated with a worker. The worker is responsible for
    * removing the task ZK entry and creating a task status ZK entry.
    *
-   * @param theWorker The worker the task is assigned to
+   * @param theWorker   The worker the task is assigned to
    * @param taskWrapper The task to be assigned
    */
   private void announceTask(Worker theWorker, TaskWrapper taskWrapper)

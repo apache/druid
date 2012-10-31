@@ -65,7 +65,9 @@ public class RedirectServlet extends DefaultServlet
     } else {
       URL url = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());
       log.info("Forwarding request to [%s]", url);
-      response.sendRedirect(url.toString());
+
+      response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
+      response.setHeader("Location", url.toString());
     }
   }
 }
