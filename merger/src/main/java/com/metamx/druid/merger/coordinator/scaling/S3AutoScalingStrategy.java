@@ -36,6 +36,7 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.merger.coordinator.WorkerWrapper;
 import com.metamx.druid.merger.coordinator.config.S3AutoScalingStrategyConfig;
 import com.metamx.emitter.EmittingLogger;
+import org.joda.time.DateTime;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -65,7 +66,7 @@ public class S3AutoScalingStrategy implements ScalingStrategy
   }
 
   @Override
-  public void provisionIfNeeded(Map<String, WorkerWrapper> zkWorkers)
+  public void provision(Map<String, WorkerWrapper> zkWorkers)
   {
     synchronized (lock) {
       if (zkWorkers.containsKey(currentlyProvisioning)) {
@@ -80,39 +81,26 @@ public class S3AutoScalingStrategy implements ScalingStrategy
         return;
       }
 
-      Iterable<WorkerWrapper> availableWorkers = FunctionalIterable.create(zkWorkers.values()).filter(
-          new Predicate<WorkerWrapper>()
-          {
-            @Override
-            public boolean apply(WorkerWrapper input)
-            {
-              return !input.isAtCapacity();
-            }
-          }
-      );
+      try {
+        log.info("Creating a new instance");
+        RunInstancesResult result = amazonEC2Client.runInstances(
+            new RunInstancesRequest(config.getAmiId(), 1, 1)
+                .withInstanceType(InstanceType.fromValue(config.getInstanceType()))
+        );
 
-      if (Iterables.size(availableWorkers) == 0) {
-        try {
-          log.info("Creating a new instance");
-          RunInstancesResult result = amazonEC2Client.runInstances(
-              new RunInstancesRequest(config.getAmiId(), 1, 1)
-                  .withInstanceType(InstanceType.fromValue(config.getInstanceType()))
-          );
-
-          if (result.getReservation().getInstances().size() != 1) {
-            throw new ISE("Created more than one instance, WTF?!");
-          }
-
-          Instance instance = result.getReservation().getInstances().get(0);
-          log.info("Created instance: %s", instance.getInstanceId());
-          log.debug("%s", instance);
-
-          currentlyProvisioning = String.format("%s:%s", instance.getPrivateIpAddress(), config.getWorkerPort());
+        if (result.getReservation().getInstances().size() != 1) {
+          throw new ISE("Created more than one instance, WTF?!");
         }
-        catch (Exception e) {
-          log.error(e, "Unable to create instance");
-          currentlyProvisioning = null;
-        }
+
+        Instance instance = result.getReservation().getInstances().get(0);
+        log.info("Created instance: %s", instance.getInstanceId());
+        log.debug("%s", instance);
+
+        currentlyProvisioning = String.format("%s:%s", instance.getPrivateIpAddress(), config.getWorkerPort());
+      }
+      catch (Exception e) {
+        log.error(e, "Unable to create instance");
+        currentlyProvisioning = null;
       }
     }
   }
@@ -136,7 +124,9 @@ public class S3AutoScalingStrategy implements ScalingStrategy
             @Override
             public int compare(WorkerWrapper w1, WorkerWrapper w2)
             {
-              return w1.getLastCompletedTaskTime().compareTo(w2.getLastCompletedTaskTime());
+              DateTime w1Time = (w1 == null) ? new DateTime(0) : w1.getLastCompletedTaskTime();
+              DateTime w2Time = (w2 == null) ? new DateTime(0) : w2.getLastCompletedTaskTime();
+              return w1Time.compareTo(w2Time);
             }
           }
       ).create(

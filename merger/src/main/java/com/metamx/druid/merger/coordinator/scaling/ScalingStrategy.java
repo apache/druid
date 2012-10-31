@@ -28,7 +28,7 @@ import java.util.Map;
  */
 public interface ScalingStrategy
 {
-  public void provisionIfNeeded(Map<String, WorkerWrapper> zkWorkers);
+  public void provision(Map<String, WorkerWrapper> zkWorkers);
 
   public Instance terminateIfNeeded(Map<String, WorkerWrapper> zkWorkers);
 }

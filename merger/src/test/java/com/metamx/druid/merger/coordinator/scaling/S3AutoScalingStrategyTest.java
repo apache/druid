@@ -152,7 +152,7 @@ public class S3AutoScalingStrategyTest
 
     Assert.assertTrue(worker.isAtCapacity());
 
-    strategy.provisionIfNeeded(zkWorkers);
+    strategy.provision(zkWorkers);
 
     worker.getRunningTasks().remove("task1");
     worker.getRunningTasks().remove("task2");

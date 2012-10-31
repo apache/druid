@@ -439,7 +439,7 @@ public class RemoteTaskRunner implements TaskRunner
 
       if (workerQueue.isEmpty()) {
         log.makeAlert("There are no worker nodes with capacity to run task!").emit();
-        strategy.provisionIfNeeded(zkWorkers);
+        strategy.provision(zkWorkers);
         return null;
       }
 

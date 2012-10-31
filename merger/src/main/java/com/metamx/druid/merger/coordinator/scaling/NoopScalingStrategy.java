@@ -9,6 +9,7 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.merger.coordinator.WorkerWrapper;
 import com.metamx.druid.merger.coordinator.config.S3AutoScalingStrategyConfig;
 import com.metamx.emitter.EmittingLogger;
+import org.joda.time.DateTime;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -35,7 +36,7 @@ public class NoopScalingStrategy implements ScalingStrategy
   }
 
   @Override
-  public void provisionIfNeeded(Map<String, WorkerWrapper> zkWorkers)
+  public void provision(Map<String, WorkerWrapper> zkWorkers)
   {
     synchronized (lock) {
       if (currentlyProvisioning != null) {
@@ -48,26 +49,13 @@ public class NoopScalingStrategy implements ScalingStrategy
         }
       }
 
-      Iterable<WorkerWrapper> availableWorkers = FunctionalIterable.create(zkWorkers.values()).filter(
-          new Predicate<WorkerWrapper>()
-          {
-            @Override
-            public boolean apply(WorkerWrapper input)
-            {
-              return !input.isAtCapacity();
-            }
-          }
-      );
-
-      if (Iterables.size(availableWorkers) == 0) {
-        try {
-          log.info("If I were a real strategy I'd create something now");
-          currentlyProvisioning = "willNeverBeTrue";
-        }
-        catch (Exception e) {
-          log.error(e, "Unable to create instance");
-          currentlyProvisioning = null;
-        }
+      try {
+        log.info("If I were a real strategy I'd create something now");
+        currentlyProvisioning = "willNeverBeTrue";
+      }
+      catch (Exception e) {
+        log.error(e, "Unable to create instance");
+        currentlyProvisioning = null;
       }
     }
   }
@@ -89,9 +77,9 @@ public class NoopScalingStrategy implements ScalingStrategy
             @Override
             public int compare(WorkerWrapper w1, WorkerWrapper w2)
             {
-              return Ordering.natural()
-                             .nullsFirst()
-                             .compare(w1.getLastCompletedTaskTime(), w2.getLastCompletedTaskTime());
+              DateTime w1Time = (w1 == null) ? new DateTime(0) : w1.getLastCompletedTaskTime();
+              DateTime w2Time = (w2 == null) ? new DateTime(0) : w2.getLastCompletedTaskTime();
+              return w1Time.compareTo(w2Time);
             }
           }
       ).create(
