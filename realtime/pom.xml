@@ -22,14 +22,8 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metamx.druid</groupId>
     <artifactId>druid-realtime</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
     <name>druid-realtime</name>
     <description>druid-realtime</description>
-    <scm>
-        <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
-        <url>http://www.github.com/metamx/druid</url>
-    </scm>
 
     <parent>
         <groupId>com.metamx</groupId>
@@ -139,18 +133,7 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
-                <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>1.6</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -166,19 +149,8 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>2.2</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-help-plugin</artifactId>
-                <version>2.1.1</version>
-            </plugin>
-            <plugin>
                 <groupId>org.scala-tools</groupId>
                 <artifactId>maven-scala-plugin</artifactId>
-                <version>2.15.2</version>
                 <configuration>
                     <args>
                         <arg>-unchecked</arg>
@@ -207,16 +179,6 @@
                         <phase>process-resources</phase>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.7.2</version>
-                <configuration>
-                    <systemPropertyVariables>
-                        <user.timezone>UTC</user.timezone>
-                    </systemPropertyVariables>
-                </configuration>
             </plugin>
         </plugins>
     </build>
