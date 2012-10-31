@@ -19,6 +19,8 @@
 
 package com.metamx.druid.merger.coordinator.http;
 
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
@@ -42,7 +44,6 @@ import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
-import com.metamx.druid.initialization.ZkClientConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
@@ -53,15 +54,21 @@ import com.metamx.druid.merger.coordinator.LocalTaskStorage;
 import com.metamx.druid.merger.coordinator.MergerDBCoordinator;
 import com.metamx.druid.merger.coordinator.RemoteTaskRunner;
 import com.metamx.druid.merger.coordinator.RetryPolicyFactory;
-import com.metamx.druid.merger.coordinator.TaskInventoryManager;
 import com.metamx.druid.merger.coordinator.TaskMaster;
 import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.TaskRunner;
 import com.metamx.druid.merger.coordinator.TaskRunnerFactory;
 import com.metamx.druid.merger.coordinator.TaskStorage;
+import com.metamx.druid.merger.coordinator.TaskWrapper;
+import com.metamx.druid.merger.coordinator.WorkerWrapper;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
+import com.metamx.druid.merger.coordinator.config.S3AutoScalingStrategyConfig;
+import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
+import com.metamx.druid.merger.coordinator.scaling.NoopScalingStrategy;
+import com.metamx.druid.merger.coordinator.scaling.S3AutoScalingStrategy;
+import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
 import com.metamx.druid.realtime.S3SegmentPusher;
 import com.metamx.druid.realtime.S3SegmentPusherConfig;
 import com.metamx.druid.realtime.SegmentPusher;
@@ -78,9 +85,8 @@ import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
-import com.metamx.phonebook.PhoneBook;
 import com.netflix.curator.framework.CuratorFramework;
-import org.I0Itec.zkclient.ZkClient;
+import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import org.codehaus.jackson.map.InjectableValues;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.jets3t.service.S3ServiceException;
@@ -96,6 +102,7 @@ import org.skife.config.ConfigurationObjectFactory;
 import java.net.URL;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -126,7 +133,6 @@ public class IndexerCoordinatorNode
   private CuratorFramework curatorFramework = null;
   private ScheduledExecutorFactory scheduledExecutorFactory = null;
   private IndexerZkConfig indexerZkConfig;
-  private TaskInventoryManager taskInventoryManager;
   private TaskRunnerFactory taskRunnerFactory = null;
   private TaskMaster taskMaster = null;
   private Server server = null;
@@ -194,7 +200,6 @@ public class IndexerCoordinatorNode
     initializeJacksonSubtypes();
     initializeCurator();
     initializeIndexerZkConfig();
-    initializeTaskInventoryManager();
     initializeTaskRunnerFactory();
     initializeTaskMaster();
     initializeServer();
@@ -225,10 +230,6 @@ public class IndexerCoordinatorNode
     root.addFilter(
         new FilterHolder(
             new RedirectFilter(
-                HttpClientInit.createClient(
-                    HttpClientConfig.builder().withNumConnections(1).build(),
-                    new Lifecycle()
-                ),
                 new ToStringResponseHandler(Charsets.UTF_8),
                 new RedirectInfo()
                 {
@@ -265,7 +266,7 @@ public class IndexerCoordinatorNode
 
   private void initializeTaskMaster()
   {
-    if(taskMaster == null) {
+    if (taskMaster == null) {
       final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
       taskMaster = new TaskMaster(
           taskQueue,
@@ -417,7 +418,7 @@ public class IndexerCoordinatorNode
     if (curatorFramework == null) {
       final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
       curatorFramework = Initialization.makeCuratorFrameworkClient(
-          serviceDiscoveryConfig.getZkHosts(),
+          serviceDiscoveryConfig,
           lifecycle
       );
     }
@@ -430,28 +431,10 @@ public class IndexerCoordinatorNode
     }
   }
 
-  public void initializeTaskInventoryManager()
-  {
-    if (taskInventoryManager == null) {
-      final ZkClient zkClient = Initialization.makeZkClient(configFactory.build(ZkClientConfig.class), lifecycle);
-      final PhoneBook masterYp = Initialization.createYellowPages(
-          jsonMapper,
-          zkClient,
-          "Master-ZKYP--%s",
-          lifecycle
-      );
-      taskInventoryManager = new TaskInventoryManager(
-          indexerZkConfig,
-          masterYp
-      );
-      lifecycle.addManagedInstance(taskInventoryManager);
-    }
-  }
-
   public void initializeTaskStorage()
   {
     if (taskStorage == null) {
-      if(config.getStorageImpl().equals("local")) {
+      if (config.getStorageImpl().equals("local")) {
         taskStorage = new LocalTaskStorage();
       } else if (config.getStorageImpl().equals("db")) {
         final IndexerDbConnectorConfig dbConnectorConfig = configFactory.build(IndexerDbConnectorConfig.class);
@@ -481,13 +464,28 @@ public class IndexerCoordinatorNode
                     .build()
             );
 
+            ScalingStrategy strategy = new S3AutoScalingStrategy(
+                new AmazonEC2Client(
+                    new BasicAWSCredentials(
+                        props.getProperty("com.metamx.aws.accessKey"),
+                        props.getProperty("com.metamx.aws.secretKey")
+                    )
+                ),
+                configFactory.build(S3AutoScalingStrategyConfig.class)
+            );
+            // TODO: remove this when AMI is ready
+            strategy = new NoopScalingStrategy(configFactory.build(S3AutoScalingStrategyConfig.class));
+
             return new RemoteTaskRunner(
                 jsonMapper,
-                taskInventoryManager,
-                indexerZkConfig,
+                configFactory.build(RemoteTaskRunnerConfig.class),
                 curatorFramework,
+                new PathChildrenCache(curatorFramework, indexerZkConfig.getAnnouncementPath(), false),
                 retryScheduledExec,
-                new RetryPolicyFactory(configFactory.build(RetryPolicyConfig.class))
+                new RetryPolicyFactory(configFactory.build(RetryPolicyConfig.class)),
+                new ConcurrentHashMap<String, WorkerWrapper>(),
+                new ConcurrentHashMap<String, TaskWrapper>(),
+                strategy
             );
           }
         };

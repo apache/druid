@@ -161,14 +161,19 @@ public class Initialization
   }
 
   public static CuratorFramework makeCuratorFrameworkClient(
-      String zkHosts,
+      CuratorConfig curatorConfig,
       Lifecycle lifecycle
   ) throws IOException
   {
     final CuratorFramework framework =
         CuratorFrameworkFactory.builder()
-                               .connectString(zkHosts)
-                               .retryPolicy(new ExponentialBackoffRetry(1000, 30))
+                               .connectString(curatorConfig.getZkHosts())
+                               .retryPolicy(
+                                   new ExponentialBackoffRetry(
+                                       1000,
+                                       30
+                                   )
+                               )
                                .build();
 
     lifecycle.addHandler(
