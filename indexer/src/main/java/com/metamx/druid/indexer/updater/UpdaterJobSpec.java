@@ -19,8 +19,6 @@
 
 package com.metamx.druid.indexer.updater;
 
-import com.metamx.druid.indexer.DbUpdaterJob;
-import com.metamx.druid.indexer.ZkUpdaterJob;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 

@@ -19,15 +19,15 @@
 
 package com.metamx.druid.client;
 
+import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
-
-import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 /**
  */

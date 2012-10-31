@@ -19,20 +19,6 @@
 
 package com.metamx.druid.realtime;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableMap;
-import com.metamx.common.exception.FormattedException;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.indexer.data.StringInputRowParser;
-import com.metamx.druid.input.InputRow;
-import kafka.consumer.Consumer;
-import kafka.consumer.ConsumerConfig;
-import kafka.consumer.KafkaMessageStream;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.message.Message;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import java.io.IOException;
 import java.nio.CharBuffer;
 import java.nio.charset.CoderResult;
@@ -41,6 +27,22 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import kafka.consumer.Consumer;
+import kafka.consumer.ConsumerConfig;
+import kafka.consumer.KafkaMessageStream;
+import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.message.Message;
+
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
+import com.metamx.common.exception.FormattedException;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.indexer.data.StringInputRowParser;
+import com.metamx.druid.input.InputRow;
 
 /**
  */

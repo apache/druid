@@ -19,16 +19,17 @@
 
 package com.metamx.druid.master;
 
+import java.net.URL;
+import java.util.List;
+
+import org.codehaus.jackson.map.ObjectMapper;
+
 import com.google.common.base.Throwables;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merge.ClientAppendQuery;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.netflix.curator.x.discovery.ServiceProvider;
-import org.codehaus.jackson.map.ObjectMapper;
-
-import java.net.URL;
-import java.util.List;
 
 public class HttpMergerClient implements MergerClient
 {

@@ -19,11 +19,12 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import com.metamx.druid.client.DataSegment;
+import java.util.Set;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import java.util.Set;
+import com.metamx.druid.client.DataSegment;
 
 /**
  * Information gathered by the coordinator, after acquiring a lock, that may be useful to a task.

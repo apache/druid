@@ -19,16 +19,16 @@
 
 package com.metamx.druid.master;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
 
 /**
  * The BalancerAnalyzer keeps the state of the highest and lowest percent used servers. It will update

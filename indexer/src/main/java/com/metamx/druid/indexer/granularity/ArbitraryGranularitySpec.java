@@ -19,19 +19,20 @@
 
 package com.metamx.druid.indexer.granularity;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.PeekingIterator;
-import com.google.common.collect.Sets;
-import com.metamx.common.guava.Comparators;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import com.google.common.base.Optional;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.Sets;
+import com.metamx.common.guava.Comparators;
 
 public class ArbitraryGranularitySpec implements GranularitySpec
 {

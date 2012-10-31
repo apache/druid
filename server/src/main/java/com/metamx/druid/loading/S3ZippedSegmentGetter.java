@@ -19,18 +19,6 @@
 
 package com.metamx.druid.loading;
 
-import com.google.common.io.Closeables;
-import com.metamx.common.MapUtils;
-import com.metamx.common.StreamUtils;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.common.s3.S3Utils;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Bucket;
-import org.jets3t.service.model.S3Object;
-import org.joda.time.DateTime;
-
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,6 +28,19 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.model.S3Bucket;
+import org.jets3t.service.model.S3Object;
+import org.joda.time.DateTime;
+
+import com.google.common.io.Closeables;
+import com.metamx.common.MapUtils;
+import com.metamx.common.StreamUtils;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.common.s3.S3Utils;
 
 /**
  */

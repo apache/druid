@@ -19,6 +19,9 @@
 
 package com.metamx.druid.guava;
 
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.google.common.collect.Ordering;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
@@ -26,9 +29,6 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.Yielders;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.nary.BinaryFn;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */

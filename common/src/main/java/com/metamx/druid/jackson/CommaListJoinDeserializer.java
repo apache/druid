@@ -19,14 +19,14 @@
 
 package com.metamx.druid.jackson;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.DeserializationContext;
 import org.codehaus.jackson.map.deser.std.StdScalarDeserializer;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  */

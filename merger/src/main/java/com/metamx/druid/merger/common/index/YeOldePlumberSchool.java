@@ -19,6 +19,16 @@
 
 package com.metamx.druid.merger.common.index;
 
+import java.io.File;
+import java.util.List;
+import java.util.Set;
+
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.annotate.JsonTypeName;
+import org.codehaus.jackson.map.annotate.JacksonInject;
+import org.joda.time.Interval;
+
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -38,15 +48,6 @@ import com.metamx.druid.realtime.PlumberSchool;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.SegmentPusher;
 import com.metamx.druid.realtime.Sink;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonTypeName;
-import org.codehaus.jackson.map.annotate.JacksonInject;
-import org.joda.time.Interval;
-
-import java.io.File;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Trains plumbers that create a single historical segment.

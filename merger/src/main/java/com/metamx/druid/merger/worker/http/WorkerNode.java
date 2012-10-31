@@ -19,6 +19,24 @@
 
 package com.metamx.druid.merger.worker.http;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
+import org.codehaus.jackson.map.InjectableValues;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.security.AWSCredentials;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.DefaultServlet;
+import org.mortbay.jetty.servlet.ServletHolder;
+import org.skife.config.ConfigurationObjectFactory;
+
 import com.google.common.collect.Lists;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
@@ -57,23 +75,6 @@ import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
-import org.codehaus.jackson.map.InjectableValues;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.security.AWSCredentials;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.skife.config.ConfigurationObjectFactory;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */

@@ -19,22 +19,19 @@
 
 package com.metamx.druid.jackson;
 
+import java.io.IOException;
+
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.map.DeserializationContext;
 import org.codehaus.jackson.map.KeyDeserializer;
 import org.codehaus.jackson.map.deser.std.StdDeserializer;
-import org.codehaus.jackson.map.ext.JodaDeserializers;
 import org.codehaus.jackson.map.module.SimpleModule;
 import org.codehaus.jackson.map.ser.std.ToStringSerializer;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
-import org.joda.time.ReadableInstant;
 import org.joda.time.format.ISODateTimeFormat;
-
-import java.io.IOException;
 
 /**
  */

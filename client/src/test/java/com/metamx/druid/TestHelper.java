@@ -19,13 +19,14 @@
 
 package com.metamx.druid;
 
+import java.util.Iterator;
+
+import org.junit.Assert;
+
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.result.Result;
-import org.junit.Assert;
-
-import java.util.Iterator;
 
 /**
  */

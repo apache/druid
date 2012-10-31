@@ -19,13 +19,13 @@
 
 package com.metamx.druid.utils;
 
-import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import org.joda.time.Interval;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  */

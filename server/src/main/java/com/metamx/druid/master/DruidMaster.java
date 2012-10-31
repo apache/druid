@@ -19,6 +19,19 @@
 
 package com.metamx.druid.master;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ScheduledExecutorService;
+
+import org.I0Itec.zkclient.exception.ZkNodeExistsException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.joda.time.Duration;
+
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -47,18 +60,6 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
 import com.netflix.curator.x.discovery.ServiceProvider;
-import org.I0Itec.zkclient.exception.ZkNodeExistsException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.joda.time.Duration;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */

@@ -19,6 +19,13 @@
 
 package com.metamx.druid.index.v1;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.WritableByteChannel;
+
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.io.InputSupplier;
@@ -33,14 +40,6 @@ import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedFloats;
 import com.metamx.druid.kv.ObjectStrategy;
 import com.metamx.druid.utils.SerializerUtils;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.Channels;
-import java.nio.channels.WritableByteChannel;
 
 /**
  */

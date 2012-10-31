@@ -19,12 +19,13 @@
 
 package com.metamx.druid.indexer.path;
 
-import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
+import java.io.IOException;
+
 import org.apache.hadoop.mapreduce.Job;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 
-import java.io.IOException;
+import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
 
 /**
  */

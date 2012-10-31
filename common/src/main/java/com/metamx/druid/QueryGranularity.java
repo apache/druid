@@ -19,12 +19,13 @@
 
 package com.metamx.druid;
 
-import com.metamx.common.IAE;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 import org.joda.time.DateTime;
 import org.joda.time.ReadableDuration;
+
+import com.metamx.common.IAE;
 
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, property = "type", defaultImpl = QueryGranularity.class)
 @JsonSubTypes(value = {

@@ -19,16 +19,17 @@
 
 package com.metamx.druid;
 
-import com.metamx.common.guava.nary.BinaryFn;
-import com.metamx.druid.result.Result;
-import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+
+import org.joda.time.DateTime;
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.metamx.common.guava.nary.BinaryFn;
+import com.metamx.druid.result.Result;
 
 /**
  */

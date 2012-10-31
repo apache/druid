@@ -19,6 +19,15 @@
 
 package com.metamx.druid.query;
 
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.annotation.Nullable;
+
+import org.joda.time.Interval;
+import org.joda.time.Period;
+
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.FunctionalIterable;
@@ -27,13 +36,6 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.druid.PeriodGranularity;
 import com.metamx.druid.Query;
 import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
-import org.joda.time.Interval;
-import org.joda.time.Period;
-
-import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  */

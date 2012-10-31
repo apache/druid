@@ -19,12 +19,12 @@
 
 package com.metamx.druid.index.v1;
 
-import com.google.common.io.Files;
-import com.metamx.druid.kv.IOPeon;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
+
+import com.google.common.io.Files;
+import com.metamx.druid.kv.IOPeon;
 
 /**
  */

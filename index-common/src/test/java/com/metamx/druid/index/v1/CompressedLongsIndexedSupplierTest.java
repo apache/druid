@@ -19,19 +19,20 @@
 
 package com.metamx.druid.index.v1;
 
-import com.google.common.io.Closeables;
-import com.google.common.primitives.Longs;
-import com.metamx.druid.kv.IndexedLongs;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.nio.ByteOrder;
 import java.nio.LongBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.google.common.io.Closeables;
+import com.google.common.primitives.Longs;
+import com.metamx.druid.kv.IndexedLongs;
 
 /**
  */

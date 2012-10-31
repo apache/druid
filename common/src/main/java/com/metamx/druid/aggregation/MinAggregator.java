@@ -19,9 +19,9 @@
 
 package com.metamx.druid.aggregation;
 
-import com.metamx.druid.processing.FloatMetricSelector;
-
 import java.util.Comparator;
+
+import com.metamx.druid.processing.FloatMetricSelector;
 
 /**
  */

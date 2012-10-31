@@ -19,16 +19,17 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.joda.time.Interval;
+
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.druid.merger.common.task.Task;
-import org.joda.time.Interval;
-
-import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * Represents a transaction as well as the lock it holds. Not immutable: the task set can change.

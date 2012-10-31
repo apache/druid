@@ -19,13 +19,13 @@
 
 package com.metamx.druid.metrics;
 
+import java.util.Map;
+
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
-
-import java.util.Map;
 
 public class ServerMonitor extends AbstractMonitor
 {

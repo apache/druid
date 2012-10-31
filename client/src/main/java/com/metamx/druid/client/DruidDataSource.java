@@ -19,13 +19,14 @@
 
 package com.metamx.druid.client;
 
-import com.google.common.collect.Maps;
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
+
+import org.codehaus.jackson.annotate.JsonProperty;
+
+import com.google.common.collect.Maps;
 
 /**
  */

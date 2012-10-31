@@ -19,11 +19,12 @@
 
 package com.metamx.druid.query.filter;
 
-import com.google.common.base.Charsets;
+import java.nio.ByteBuffer;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import java.nio.ByteBuffer;
+import com.google.common.base.Charsets;
 
 /**
  */

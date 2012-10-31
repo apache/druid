@@ -19,18 +19,12 @@
 
 package com.metamx.druid.client;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.metamx.common.Granularity;
-import com.metamx.druid.jackson.CommaListJoinDeserializer;
-import com.metamx.druid.jackson.CommaListJoinSerializer;
-import com.metamx.druid.query.segment.SegmentDescriptor;
-import com.metamx.druid.shard.NoneShardSpec;
-import com.metamx.druid.shard.ShardSpec;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nullable;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.annotate.JsonDeserialize;
@@ -38,10 +32,17 @@ import org.codehaus.jackson.map.annotate.JsonSerialize;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.metamx.common.Granularity;
+import com.metamx.druid.jackson.CommaListJoinDeserializer;
+import com.metamx.druid.jackson.CommaListJoinSerializer;
+import com.metamx.druid.query.segment.SegmentDescriptor;
+import com.metamx.druid.shard.NoneShardSpec;
+import com.metamx.druid.shard.ShardSpec;
 
 /**
  */

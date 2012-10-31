@@ -19,6 +19,10 @@
 
 package com.metamx.druid.master;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
@@ -27,10 +31,6 @@ import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
-
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
 
 /**
  */

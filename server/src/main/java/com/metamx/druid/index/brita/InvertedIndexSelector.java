@@ -19,9 +19,10 @@
 
 package com.metamx.druid.index.brita;
 
+import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+
 import com.metamx.druid.index.v1.processing.Offset;
 import com.metamx.druid.kv.Indexed;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**
  */

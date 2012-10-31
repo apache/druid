@@ -19,11 +19,12 @@
 
 package com.metamx.druid.query.extraction;
 
-import com.google.common.collect.Sets;
+import java.util.Set;
+
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Set;
+import com.google.common.collect.Sets;
 
 /**
  */

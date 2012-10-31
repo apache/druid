@@ -19,12 +19,13 @@
 
 package com.metamx.druid.aggregation;
 
-import com.google.common.collect.Lists;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import com.google.common.collect.Lists;
 
 public class HistogramAggregatorTest
 {

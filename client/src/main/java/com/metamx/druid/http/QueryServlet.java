@@ -19,6 +19,20 @@
 
 package com.metamx.druid.http;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectWriter;
+import org.joda.time.DateTime;
+import org.mortbay.jetty.Request;
+
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
@@ -31,18 +45,6 @@ import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
-import org.joda.time.DateTime;
-import org.mortbay.jetty.Request;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.Charset;
 
 /**
  */

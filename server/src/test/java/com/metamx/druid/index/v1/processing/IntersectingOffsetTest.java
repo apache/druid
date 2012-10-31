@@ -19,11 +19,12 @@
 
 package com.metamx.druid.index.v1.processing;
 
-import com.google.common.collect.Lists;
+import java.util.LinkedList;
+
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.LinkedList;
+import com.google.common.collect.Lists;
 
 /**
  */

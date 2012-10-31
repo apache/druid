@@ -19,16 +19,17 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import java.io.File;
+import java.util.concurrent.ExecutorService;
+
+import org.apache.commons.io.FileUtils;
+
 import com.google.common.base.Throwables;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.task.Task;
-import org.apache.commons.io.FileUtils;
-
-import java.io.File;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Runs tasks in a JVM thread using an ExecutorService.
