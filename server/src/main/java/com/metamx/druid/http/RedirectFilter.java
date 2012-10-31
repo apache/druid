@@ -19,11 +19,8 @@
 
 package com.metamx.druid.http;
 
-import com.google.common.base.Throwables;
-import com.google.common.io.ByteStreams;
-import com.metamx.common.logger.Logger;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.response.HttpResponseHandler;
+import java.io.IOException;
+import java.net.URL;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -34,8 +31,12 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
-import java.io.IOException;
-import java.net.URL;
+
+import com.google.common.base.Throwables;
+import com.google.common.io.ByteStreams;
+import com.metamx.common.logger.Logger;
+import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.response.HttpResponseHandler;
 
 /**
  */

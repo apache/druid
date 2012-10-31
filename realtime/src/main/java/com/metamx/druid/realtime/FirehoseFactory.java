@@ -19,10 +19,10 @@
 
 package com.metamx.druid.realtime;
 
+import java.io.IOException;
+
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
-
-import java.io.IOException;
 
 /**
  */

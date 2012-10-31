@@ -19,13 +19,14 @@
 
 package com.metamx.druid.result;
 
-import com.metamx.common.IAE;
-import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
+import java.util.Map;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonValue;
 import org.joda.time.DateTime;
 
-import java.util.Map;
+import com.metamx.common.IAE;
+import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 
 /**
  */

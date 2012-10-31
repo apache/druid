@@ -19,12 +19,13 @@
 
 package com.metamx.druid.index.brita;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.metamx.common.guava.FunctionalIterable;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import javax.annotation.Nullable;
+
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.metamx.common.guava.FunctionalIterable;
 
 /**
  */

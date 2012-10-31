@@ -19,15 +19,16 @@
 
 package com.metamx.druid.index.v1;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.TreeSet;
+
+import org.joda.time.DateTime;
+
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import org.joda.time.DateTime;
-
-import java.util.Arrays;
-import java.util.Map;
-import java.util.TreeSet;
 
 public class Rowboat implements Comparable<Rowboat>
 {

@@ -19,19 +19,20 @@
 
 package com.metamx.druid;
 
+import java.util.List;
+import java.util.Map;
+
+import org.codehaus.jackson.annotate.JsonSubTypes;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.joda.time.Duration;
+import org.joda.time.Interval;
+
 import com.metamx.common.guava.Sequence;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-import org.joda.time.Duration;
-import org.joda.time.Interval;
-
-import java.util.List;
-import java.util.Map;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "queryType")
 @JsonSubTypes(value = {

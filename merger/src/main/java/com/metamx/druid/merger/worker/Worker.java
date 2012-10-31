@@ -19,15 +19,16 @@
 
 package com.metamx.druid.merger.worker;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */

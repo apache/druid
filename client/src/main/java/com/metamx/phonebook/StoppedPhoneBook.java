@@ -19,6 +19,12 @@
 
 package com.metamx.phonebook;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.google.common.base.Supplier;
 import com.google.common.collect.Constraint;
 import com.google.common.collect.Constraints;
@@ -28,12 +34,6 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
 import com.metamx.common.logger.Logger;
-
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * A class that collects announcements for you.  Can be used to simplify start/stop logic

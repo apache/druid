@@ -19,11 +19,11 @@
 
 package com.metamx.druid.client;
 
+import java.util.concurrent.Executor;
+
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.query.QueryRunner;
-
-import java.util.concurrent.Executor;
 
 /**
  */

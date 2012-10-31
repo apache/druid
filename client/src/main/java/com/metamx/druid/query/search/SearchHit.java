@@ -19,10 +19,10 @@
 
 package com.metamx.druid.query.search;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  */

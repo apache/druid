@@ -20,13 +20,15 @@
 package com.metamx.druid.kv;
 
 
-import com.google.common.collect.Ordering;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import it.uniroma3.mat.extendedset.intset.IntSet;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+
+import javax.annotation.Nullable;
+
+import com.google.common.collect.Ordering;
 
 /**
  */

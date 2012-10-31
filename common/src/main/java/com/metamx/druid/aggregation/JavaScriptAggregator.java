@@ -19,10 +19,10 @@
 
 package com.metamx.druid.aggregation;
 
+import java.util.List;
+
 import com.google.common.collect.Lists;
 import com.metamx.druid.processing.FloatMetricSelector;
-
-import java.util.List;
 
 public class JavaScriptAggregator implements Aggregator
 {

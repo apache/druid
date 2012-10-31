@@ -19,15 +19,16 @@
 
 package com.metamx.druid.coordination.legacy;
 
+import java.io.IOException;
+import java.util.Map;
+
+import org.I0Itec.zkclient.ZkClient;
+import org.codehaus.jackson.map.ObjectMapper;
+
 import com.google.common.base.Joiner;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
-import org.I0Itec.zkclient.ZkClient;
-import org.codehaus.jackson.map.ObjectMapper;
-
-import java.io.IOException;
-import java.util.Map;
 
 /**
  */

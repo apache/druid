@@ -19,18 +19,6 @@
 
 package com.metamx.druid.master;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.coordination.DataSegmentChangeRequest;
-import com.metamx.druid.coordination.SegmentChangeRequestDrop;
-import com.metamx.druid.coordination.SegmentChangeRequestLoad;
-import com.metamx.phonebook.PhoneBook;
-import com.metamx.phonebook.PhoneBookPeon;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -42,6 +30,18 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
+import com.metamx.common.guava.Comparators;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.coordination.DataSegmentChangeRequest;
+import com.metamx.druid.coordination.SegmentChangeRequestDrop;
+import com.metamx.druid.coordination.SegmentChangeRequestLoad;
+import com.metamx.phonebook.PhoneBook;
+import com.metamx.phonebook.PhoneBookPeon;
 
 /**
  */

@@ -19,10 +19,10 @@
 
 package com.metamx.druid.query.search;
 
+import java.util.Comparator;
+
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
-
-import java.util.Comparator;
 
 /**
  */

@@ -19,28 +19,14 @@
 
 package com.metamx.druid.indexer;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.PeekingIterator;
-import com.google.common.io.Closeables;
-import com.metamx.common.IAE;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.nary.BinaryFn;
-import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.Parser;
-import com.metamx.common.parsers.ParserUtils;
-import com.metamx.druid.CombiningIterable;
-import com.metamx.druid.shard.NoneShardSpec;
-import com.metamx.druid.shard.ShardSpec;
-import com.metamx.druid.shard.SingleDimensionShardSpec;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -63,13 +49,28 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import com.google.common.base.Charsets;
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.PeekingIterator;
+import com.google.common.io.Closeables;
+import com.metamx.common.IAE;
+import com.metamx.common.Pair;
+import com.metamx.common.guava.nary.BinaryFn;
+import com.metamx.common.logger.Logger;
+import com.metamx.common.parsers.Parser;
+import com.metamx.common.parsers.ParserUtils;
+import com.metamx.druid.CombiningIterable;
+import com.metamx.druid.shard.NoneShardSpec;
+import com.metamx.druid.shard.ShardSpec;
+import com.metamx.druid.shard.SingleDimensionShardSpec;
 
 /**
  */

@@ -19,16 +19,17 @@
 
 package com.metamx.druid.index.v1;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.aggregation.AggregatorFactory;
+import java.io.File;
+import java.util.ArrayList;
+
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.File;
-import java.util.ArrayList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.metamx.druid.QueryGranularity;
+import com.metamx.druid.aggregation.AggregatorFactory;
 
 public class EmptyIndexTest
 {

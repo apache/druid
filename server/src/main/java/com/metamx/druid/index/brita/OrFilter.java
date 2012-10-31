@@ -19,10 +19,11 @@
 
 package com.metamx.druid.index.brita;
 
-import com.google.common.collect.Lists;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import java.util.List;
+
+import com.google.common.collect.Lists;
 
 /**
  */

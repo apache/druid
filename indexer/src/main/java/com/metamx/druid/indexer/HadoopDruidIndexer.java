@@ -19,17 +19,18 @@
 
 package com.metamx.druid.indexer;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import java.io.File;
+import java.util.Arrays;
+import java.util.List;
+
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.List;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.metamx.common.Pair;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 
 /**
  */

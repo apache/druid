@@ -19,6 +19,12 @@
 
 package com.metamx.druid.merger.worker;
 
+import java.io.File;
+import java.util.concurrent.ExecutorService;
+
+import org.apache.commons.io.FileUtils;
+import org.codehaus.jackson.map.ObjectMapper;
+
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.merger.common.TaskHolder;
@@ -31,11 +37,6 @@ import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.commons.io.FileUtils;
-import org.codehaus.jackson.map.ObjectMapper;
-
-import java.io.File;
-import java.util.concurrent.ExecutorService;
 
 /**
  * The monitor watches ZK at a specified path for new tasks to appear. Upon starting the monitor, a listener will be
