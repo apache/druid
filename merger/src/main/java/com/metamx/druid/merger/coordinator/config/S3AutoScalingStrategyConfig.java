@@ -24,17 +24,24 @@ import org.skife.config.Default;
 
 /**
  */
-public abstract class RetryPolicyConfig
+public abstract class S3AutoScalingStrategyConfig
 {
-  @Config("druid.indexer.retry.minWaitMillis")
-  @Default("60000") // 1 minute
-  public abstract long getRetryMinMillis();
+  @Config("druid.indexer.amiId")
+  public abstract String getAmiId();
 
-  @Config("druid.indexer.retry.maxWaitMillis")
-  @Default("600000") // 10 minutes
-  public abstract long getRetryMaxMillis();
+  @Config("druid.indexer.worker.port")
+  @Default("8080")
+  public abstract String getWorkerPort();
 
-  @Config("druid.indexer.retry.maxRetryCount")
-  @Default("10")
-  public abstract long getMaxRetryCount();
+  @Config("druid.indexer.instanceType")
+  public abstract String getInstanceType();
+
+  @Config("druid.indexer.millisToWaitBeforeTerminating")
+  @Default("1800000") // 30 mins
+  public abstract long getMillisToWaitBeforeTerminating();
+
+  // minimum number of workers that must always be running
+  @Config("druid.indexer.minNumWorkers")
+  @Default("1")
+  public abstract int getMinNuMWorkers();
 }

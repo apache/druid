@@ -17,24 +17,44 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator.config;
+package com.metamx.druid.merger.coordinator;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.metamx.druid.merger.common.task.Task;
 
 /**
  */
-public abstract class RetryPolicyConfig
+public class TaskWrapper
 {
-  @Config("druid.indexer.retry.minWaitMillis")
-  @Default("60000") // 1 minute
-  public abstract long getRetryMinMillis();
+  private final Task task;
+  private final TaskContext taskContext;
+  private final TaskCallback callback;
+  private final RetryPolicy retryPolicy;
 
-  @Config("druid.indexer.retry.maxWaitMillis")
-  @Default("600000") // 10 minutes
-  public abstract long getRetryMaxMillis();
+  public TaskWrapper(Task task, TaskContext taskContext, TaskCallback callback, RetryPolicy retryPolicy)
+  {
+    this.task = task;
+    this.taskContext = taskContext;
+    this.callback = callback;
+    this.retryPolicy = retryPolicy;
+  }
 
-  @Config("druid.indexer.retry.maxRetryCount")
-  @Default("10")
-  public abstract long getMaxRetryCount();
+  public Task getTask()
+  {
+    return task;
+  }
+
+  public TaskContext getTaskContext()
+  {
+    return taskContext;
+  }
+
+  public TaskCallback getCallback()
+  {
+    return callback;
+  }
+
+  public RetryPolicy getRetryPolicy()
+  {
+    return retryPolicy;
+  }
 }

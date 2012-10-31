@@ -19,22 +19,22 @@
 
 package com.metamx.druid.merger.coordinator.config;
 
+import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
 /**
  */
-public abstract class RetryPolicyConfig
+public abstract class RemoteTaskRunnerConfig extends IndexerZkConfig
 {
-  @Config("druid.indexer.retry.minWaitMillis")
-  @Default("60000") // 1 minute
-  public abstract long getRetryMinMillis();
+  @Config("druid.indexer.terminateResources.periodMs")
+  @Default("3600000") // 1 hr
+  public abstract long getTerminateResourcesPeriodMs();
 
-  @Config("druid.indexer.retry.maxWaitMillis")
-  @Default("600000") // 10 minutes
-  public abstract long getRetryMaxMillis();
+  @Config("druid.indexer.terminateResources.windowMs")
+  @Default("300000") // 5 mins
+  public abstract long getTerminateResourcesWindowMs();
 
-  @Config("druid.indexer.retry.maxRetryCount")
-  @Default("10")
-  public abstract long getMaxRetryCount();
+  @Config("druid.indexer.minWorkerVersion")
+  public abstract String getMinWorkerVersion();
 }

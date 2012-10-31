@@ -29,6 +29,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.http.StatusServlet;
+import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -294,8 +295,9 @@ public class WorkerNode
 
   public void initializeCuratorFramework() throws IOException
   {
+    final CuratorConfig curatorConfig = configFactory.build(CuratorConfig.class);
     curatorFramework = Initialization.makeCuratorFrameworkClient(
-        props.getProperty("druid.zk.service.host"),
+        curatorConfig,
         lifecycle
     );
   }

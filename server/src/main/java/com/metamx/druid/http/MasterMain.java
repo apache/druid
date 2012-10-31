@@ -155,13 +155,13 @@ public class MasterMain
 
     final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
     CuratorFramework curatorFramework = Initialization.makeCuratorFrameworkClient(
-        serviceDiscoveryConfig.getZkHosts(),
+        serviceDiscoveryConfig,
         lifecycle
     );
 
     final ServiceDiscovery serviceDiscovery = Initialization.makeServiceDiscoveryClient(
         curatorFramework,
-        configFactory.build(ServiceDiscoveryConfig.class),
+        serviceDiscoveryConfig,
         lifecycle
     );
 

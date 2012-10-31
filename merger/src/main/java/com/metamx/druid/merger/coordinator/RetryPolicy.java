@@ -48,23 +48,6 @@ public class RetryPolicy
     this.retryCount = 0;
   }
 
-  /**
-   * Register runnables that can be run at any point in a given retry.
-   * @param runnable
-   */
-  public void registerRunnable(Runnable runnable)
-  {
-    runnables.add(runnable);
-  }
-
-  public void runRunnables()
-  {
-    for (Runnable runnable : runnables) {
-      runnable.run();
-    }
-    runnables.clear();
-  }
-
   public long getAndIncrementRetryDelay()
   {
     long retVal = currRetryDelay;

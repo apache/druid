@@ -141,7 +141,7 @@ public class BrokerMain
 
     final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
     CuratorFramework curatorFramework = Initialization.makeCuratorFrameworkClient(
-        serviceDiscoveryConfig.getZkHosts(),
+        serviceDiscoveryConfig,
         lifecycle
     );
 

@@ -19,42 +19,44 @@
 
 package com.metamx.druid.merger.worker;
 
-import com.google.common.collect.ImmutableMap;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
+ * A container for worker metadata.
  */
 public class Worker
 {
-  private static final Logger log = new Logger(Worker.class);
-
   private final String host;
-
-  private final ConcurrentHashMap<String, TaskStatus> runningTasks;
+  private final String ip;
+  private final int capacity;
+  private final String version;
 
   public Worker(
       WorkerConfig config
   )
   {
     this(
-        config.getHost()
+        config.getHost(),
+        config.getIp(),
+        config.getCapacity(),
+        config.getVersion()
     );
   }
 
   @JsonCreator
   public Worker(
-      @JsonProperty("host") String host
+      @JsonProperty("host") String host,
+      @JsonProperty("ip") String ip,
+      @JsonProperty("capacity") int capacity,
+      @JsonProperty("version") String version
   )
   {
     this.host = host;
-    this.runningTasks = new ConcurrentHashMap<String, TaskStatus>();
+    this.ip = ip;
+    this.capacity = capacity;
+    this.version = version;
   }
 
   @JsonProperty
@@ -63,25 +65,21 @@ public class Worker
     return host;
   }
 
-  public Map<String, TaskStatus> getTasks()
+  @JsonProperty
+  public String getIp()
   {
-    return runningTasks;
+    return ip;
   }
 
-  public Map<String, String> getStringProps()
+  @JsonProperty
+  public int getCapacity()
   {
-    return ImmutableMap.<String, String>of(
-        "host", host
-    );
+    return capacity;
   }
 
-  public TaskStatus addTask(TaskStatus status)
+  @JsonProperty
+  public String getVersion()
   {
-    return runningTasks.put(status.getId(), status);
-  }
-
-  public TaskStatus removeTask(String taskId)
-  {
-    return runningTasks.remove(taskId);
+    return version;
   }
 }

@@ -111,6 +111,7 @@ public class TaskMonitor
 
                         TaskStatus taskStatus;
                         try {
+                          workerCuratorCoordinator.unannounceTask(task.getId());
                           workerCuratorCoordinator.announceStatus(TaskStatus.running(task.getId()));
                           taskStatus = task.run(taskContext, toolbox);
                         }
@@ -165,6 +166,7 @@ public class TaskMonitor
   {
     try {
       pathChildrenCache.close();
+      exec.shutdown();
     }
     catch (Exception e) {
       log.makeAlert(e, "Exception stopping TaskMonitor")

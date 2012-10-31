@@ -92,7 +92,7 @@ public class WorkerCuratorCoordinator
       makePathIfNotExisting(
           getAnnouncementsPathForWorker(),
           CreateMode.EPHEMERAL,
-          worker.getStringProps()
+          worker
       );
 
       started = true;
@@ -168,6 +168,16 @@ public class WorkerCuratorCoordinator
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
+    }
+  }
+
+  public void unannounceTask(String taskId)
+  {
+    try {
+      curatorFramework.delete().guaranteed().forPath(getTaskPathForId(taskId));
+    }
+    catch (Exception e) {
+      log.warn("Could not delete task path for task[%s], looks like it already went away", taskId);
     }
   }
 
