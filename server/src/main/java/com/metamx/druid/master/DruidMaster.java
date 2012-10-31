@@ -359,7 +359,7 @@ public class DruidMaster
 
         DataSegment newDataSegment = sizeAdjuster.updateDescriptor(dataSegment);
 
-        if (dataSegment == null) {
+        if (newDataSegment == null) {
           log.warn("newDataSegment was null with old dataSegment[%s].  Skipping.", dataSegment);
           continue;
         }
