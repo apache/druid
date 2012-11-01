@@ -19,14 +19,15 @@
 
 package com.metamx.druid.indexer;
 
-import com.google.common.base.Charsets;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Partitioner;
 
-import java.nio.ByteBuffer;
-import java.util.Arrays;
+import com.google.common.base.Charsets;
 
 /**
  */

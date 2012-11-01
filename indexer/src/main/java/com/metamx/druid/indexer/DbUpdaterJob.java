@@ -19,11 +19,11 @@
 
 package com.metamx.druid.indexer;
 
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.db.DbConnector;
-import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -32,10 +32,11 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.db.DbConnector;
+import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 
 /**
  */

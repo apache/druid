@@ -19,6 +19,11 @@
 
 package com.metamx.druid.collect;
 
+import java.io.IOException;
+import java.util.PriorityQueue;
+
+import javax.annotation.Nullable;
+
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
@@ -29,10 +34,6 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.Yielders;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingAccumulators;
-
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.PriorityQueue;
 
 /**
  * An OrderedMergeIterator is an iterator that merges together multiple sorted iterators.  It is written assuming

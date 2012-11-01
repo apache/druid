@@ -19,23 +19,23 @@
 
 package com.metamx.druid.master;
 
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.ServerInventoryManager;
-import com.metamx.druid.client.ZKPhoneBook;
-import com.metamx.druid.coordination.legacy.TheSizeAdjuster;
-import com.metamx.druid.db.DatabaseSegmentManager;
-import com.metamx.druid.metrics.NoopServiceEmitter;
-import com.metamx.phonebook.PhoneBook;
+import java.util.Map;
+
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Map;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.client.DruidServer;
+import com.metamx.druid.client.ServerInventoryManager;
+import com.metamx.druid.client.ZKPhoneBook;
+import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.metrics.NoopServiceEmitter;
+import com.metamx.phonebook.PhoneBook;
 
 /**
  */
@@ -47,7 +47,6 @@ public class DruidMasterTest
   private PhoneBook yp;
   private DatabaseSegmentManager databaseSegmentManager;
   private ServerInventoryManager serverInventoryManager;
-  private TheSizeAdjuster theSizeAdjuster;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
   private DataSegment segment;
@@ -68,9 +67,6 @@ public class DruidMasterTest
 
     databaseSegmentManager = EasyMock.createNiceMock(DatabaseSegmentManager.class);
     EasyMock.replay(databaseSegmentManager);
-
-    theSizeAdjuster = EasyMock.createNiceMock(TheSizeAdjuster.class);
-    EasyMock.replay(theSizeAdjuster);
 
     scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
     EasyMock.replay(scheduledExecutorFactory);
@@ -143,7 +139,6 @@ public class DruidMasterTest
         null,
         databaseSegmentManager,
         serverInventoryManager,
-        theSizeAdjuster,
         yp,
         new NoopServiceEmitter(),
         scheduledExecutorFactory,

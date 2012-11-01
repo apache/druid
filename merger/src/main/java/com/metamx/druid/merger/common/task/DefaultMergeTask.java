@@ -19,6 +19,15 @@
 
 package com.metamx.druid.merger.common.task;
 
+import java.io.File;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nullable;
+
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -28,13 +37,6 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.index.v1.MMappedIndex;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-
-import javax.annotation.Nullable;
-import java.io.File;
-import java.util.List;
-import java.util.Map;
 
 /**
  */

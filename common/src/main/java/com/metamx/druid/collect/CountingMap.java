@@ -19,12 +19,12 @@
 
 package com.metamx.druid.collect;
 
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.guava.DefaultingHashMap;
-
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */

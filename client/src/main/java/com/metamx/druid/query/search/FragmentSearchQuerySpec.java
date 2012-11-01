@@ -19,13 +19,14 @@
 
 package com.metamx.druid.query.search;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import java.nio.ByteBuffer;
+import java.util.List;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import java.nio.ByteBuffer;
-import java.util.List;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 
 /**
  */

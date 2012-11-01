@@ -19,12 +19,6 @@
 
 package com.metamx.druid.kv;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.Ordering;
-import com.google.common.io.Closeables;
-import com.google.common.primitives.Ints;
-import com.metamx.common.IAE;
-
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
@@ -32,6 +26,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 import java.util.Iterator;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.Ordering;
+import com.google.common.io.Closeables;
+import com.google.common.primitives.Ints;
+import com.metamx.common.IAE;
 
 /**
  * A generic, flat storage mechanism.  Use static methods fromArray() or fromIterable() to construct.  If input

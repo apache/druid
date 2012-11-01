@@ -19,10 +19,11 @@
 
 package com.metamx.druid;
 
-import com.metamx.druid.index.v1.Searchable;
-import com.metamx.druid.index.v1.processing.CursorFactory;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+
+import com.metamx.druid.index.v1.Searchable;
+import com.metamx.druid.index.v1.processing.CursorFactory;
 
 /**
  */

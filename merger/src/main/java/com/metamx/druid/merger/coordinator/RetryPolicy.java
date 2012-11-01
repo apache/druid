@@ -19,11 +19,11 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import java.util.List;
+
 import com.google.common.collect.Lists;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
 import com.metamx.emitter.EmittingLogger;
-
-import java.util.List;
 
 /**
  */

@@ -19,12 +19,13 @@
 
 package com.metamx.druid.shard;
 
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.partition.PartitionChunk;
+import java.util.Map;
+
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 
-import java.util.Map;
+import com.metamx.druid.input.InputRow;
+import com.metamx.druid.partition.PartitionChunk;
 
 /**
  * A Marker interface that exists to combine ShardSpec objects together for Jackson

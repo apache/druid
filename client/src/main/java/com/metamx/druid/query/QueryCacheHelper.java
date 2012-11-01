@@ -19,11 +19,11 @@
 
 package com.metamx.druid.query;
 
-import com.google.common.collect.Lists;
-import com.metamx.druid.aggregation.AggregatorFactory;
-
 import java.nio.ByteBuffer;
 import java.util.List;
+
+import com.google.common.collect.Lists;
+import com.metamx.druid.aggregation.AggregatorFactory;
 
 /**
  */

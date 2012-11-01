@@ -19,9 +19,9 @@
 
 package com.metamx.druid.coordination;
 
-import org.skife.config.Config;
-
 import java.io.File;
+
+import org.skife.config.Config;
 
 /**
  */

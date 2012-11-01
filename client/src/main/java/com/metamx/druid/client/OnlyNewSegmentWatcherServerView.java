@@ -19,16 +19,16 @@
 
 package com.metamx.druid.client;
 
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
+
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.query.QueryRunner;
-
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
 
 /**
  */

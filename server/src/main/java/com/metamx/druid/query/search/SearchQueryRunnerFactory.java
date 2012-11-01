@@ -19,6 +19,9 @@
 
 package com.metamx.druid.query.search;
 
+import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
@@ -34,9 +37,6 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
-
-import java.util.Iterator;
-import java.util.concurrent.ExecutorService;
 
 /**
  */

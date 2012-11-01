@@ -19,11 +19,12 @@
 
 package com.metamx.druid.query.filter;
 
-import com.google.common.base.Joiner;
+import java.util.List;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import java.util.List;
+import com.google.common.base.Joiner;
 
 /**
  */

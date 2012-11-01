@@ -1,15 +1,6 @@
 package druid.examples.twitter;
 
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.realtime.Firehose;
-import com.metamx.druid.realtime.FirehoseFactory;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonTypeName;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.ObjectMapper;
-import twitter4j.*;
+import static java.lang.Thread.sleep;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -19,7 +10,24 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static java.lang.Thread.*;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.annotate.JsonTypeName;
+
+import twitter4j.ConnectionLifeCycleListener;
+import twitter4j.HashtagEntity;
+import twitter4j.Status;
+import twitter4j.StatusDeletionNotice;
+import twitter4j.StatusListener;
+import twitter4j.TwitterStream;
+import twitter4j.TwitterStreamFactory;
+import twitter4j.User;
+
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.input.InputRow;
+import com.metamx.druid.input.MapBasedInputRow;
+import com.metamx.druid.realtime.Firehose;
+import com.metamx.druid.realtime.FirehoseFactory;
 
 
 /**

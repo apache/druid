@@ -19,10 +19,10 @@
 
 package com.metamx.druid.master;
 
+import java.util.Set;
+
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
-
-import java.util.Set;
 
 public class DruidMasterSegmentInfoLoader implements DruidMasterHelper
 {

@@ -19,11 +19,11 @@
 
 package com.metamx.druid;
 
-import com.metamx.common.guava.MergeIterable;
-import com.metamx.common.guava.nary.BinaryFn;
-
 import java.util.Comparator;
 import java.util.Iterator;
+
+import com.metamx.common.guava.MergeIterable;
+import com.metamx.common.guava.nary.BinaryFn;
 
 /**
  */

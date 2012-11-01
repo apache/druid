@@ -19,6 +19,12 @@
 
 package com.metamx.druid.merger.common;
 
+import java.io.File;
+import java.util.Map;
+
+import org.codehaus.jackson.map.ObjectMapper;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+
 import com.google.common.collect.ImmutableMap;
 import com.metamx.druid.loading.S3SegmentGetter;
 import com.metamx.druid.loading.S3SegmentGetterConfig;
@@ -28,11 +34,6 @@ import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.realtime.SegmentPusher;
 import com.metamx.emitter.service.ServiceEmitter;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-
-import java.io.File;
-import java.util.Map;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.

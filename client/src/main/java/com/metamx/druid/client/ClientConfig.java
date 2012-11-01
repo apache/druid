@@ -23,19 +23,18 @@ import org.skife.config.Config;
 
 /**
  */
-public abstract class ClientConfig
+public abstract class ClientConfig extends InventoryManagerConfig
 {
-  @Config("druid.zk.paths.announcementsPath")
-  public abstract String getAnnouncementsPath();
-
-  @Config("druid.zk.paths.servedSegmentsPath")
-  public abstract String getServedSegmentsPath();
-
-  public InventoryManagerConfig getClientInventoryManagerConfig()
+  public ClientConfig()
   {
-    return new InventoryManagerConfig(
-        getAnnouncementsPath(),
-        getServedSegmentsPath()        
-    );
+    super(null, null);
   }
+
+  @Override
+  @Config("druid.zk.paths.announcementsPath")
+  public abstract String getInventoryIdPath();
+
+  @Override
+  @Config("druid.zk.paths.servedSegmentsPath")
+  public abstract String getInventoryPath();
 }

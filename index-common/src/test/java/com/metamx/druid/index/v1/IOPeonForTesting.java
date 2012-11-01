@@ -19,9 +19,6 @@
 
 package com.metamx.druid.index.v1;
 
-import com.google.common.collect.Maps;
-import com.metamx.druid.kv.IOPeon;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
@@ -29,6 +26,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
+
+import com.google.common.collect.Maps;
+import com.metamx.druid.kv.IOPeon;
 
 /**
 */

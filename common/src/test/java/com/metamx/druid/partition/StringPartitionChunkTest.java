@@ -19,10 +19,10 @@
 
 package com.metamx.druid.partition;
 
+import static com.metamx.druid.partition.StringPartitionChunk.make;
+
 import org.junit.Assert;
 import org.junit.Test;
-
-import static com.metamx.druid.partition.StringPartitionChunk.make;
 
 /**
  */

@@ -19,10 +19,11 @@
 
 package com.metamx.druid.index.brita;
 
-import com.google.common.base.Predicate;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
-import java.util.regex.Pattern;
+
+import com.google.common.base.Predicate;
 
 
 /**

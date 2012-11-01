@@ -19,15 +19,16 @@
 
 package com.metamx.druid.histogram;
 
-import com.google.common.collect.Maps;
-import com.metamx.druid.aggregation.Histogram;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import java.util.Arrays;
+import java.util.Map;
+
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Map;
+import com.google.common.collect.Maps;
+import com.metamx.druid.aggregation.Histogram;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 
 public class HistogramTest
 {

@@ -19,15 +19,6 @@
 
 package com.metamx.druid;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.partition.ImmutablePartitionHolder;
-import com.metamx.druid.partition.PartitionChunk;
-import com.metamx.druid.partition.PartitionHolder;
-import org.joda.time.Interval;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -36,6 +27,16 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.joda.time.Interval;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.metamx.common.guava.Comparators;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.partition.ImmutablePartitionHolder;
+import com.metamx.druid.partition.PartitionChunk;
+import com.metamx.druid.partition.PartitionHolder;
 
 /**
  * VersionedIntervalTimeline is a data structure that manages objects on a specific timeline.

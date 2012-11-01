@@ -19,10 +19,26 @@
 
 package com.metamx.druid.http;
 
+import java.net.URL;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+
+import org.I0Itec.zkclient.ZkClient;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.security.AWSCredentials;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.DefaultServlet;
+import org.mortbay.jetty.servlet.FilterHolder;
+import org.mortbay.jetty.servlet.ServletHolder;
+import org.skife.config.ConfigurationObjectFactory;
+import org.skife.jdbi.v2.DBI;
+
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
@@ -37,10 +53,6 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.client.ServerInventoryManagerConfig;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.coordination.DruidClusterInfoConfig;
-import com.metamx.druid.coordination.legacy.S3SizeLookup;
-import com.metamx.druid.coordination.legacy.SizeLookup;
-import com.metamx.druid.coordination.legacy.TheSizeAdjuster;
-import com.metamx.druid.coordination.legacy.TheSizeAdjusterConfig;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.db.DatabaseSegmentManagerConfig;
 import com.metamx.druid.db.DbConnector;
@@ -54,6 +66,7 @@ import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterConfig;
 import com.metamx.druid.master.LoadQueuePeon;
+import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.core.Emitters;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
@@ -71,8 +84,6 @@ import com.netflix.curator.x.discovery.ServiceDiscovery;
 import com.netflix.curator.x.discovery.ServiceProvider;
 import org.I0Itec.zkclient.ZkClient;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.security.AWSCredentials;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -106,21 +117,14 @@ public class MasterMain
     );
 
     final ServiceEmitter emitter = new ServiceEmitter(
-        props.getProperty("druid.service"),
-        props.getProperty("druid.host"),
+        PropUtils.getProperty(props, "druid.service"),
+        PropUtils.getProperty(props, "druid.host"),
         Emitters.create(props, httpClient, jsonMapper, lifecycle)
-    );
-
-    final RestS3Service s3Client = new RestS3Service(
-        new AWSCredentials(
-            props.getProperty("com.metamx.aws.accessKey"),
-            props.getProperty("com.metamx.aws.secretKey")
-        )
     );
 
     final ZkClient zkClient = Initialization.makeZkClient(configFactory.build(ZkClientConfig.class), lifecycle);
 
-    final PhoneBook masterYp = Initialization.createYellowPages(jsonMapper, zkClient, "Master-ZKYP--%s", lifecycle);
+    final PhoneBook masterYp = Initialization.createPhoneBook(jsonMapper, zkClient, "Master-ZKYP--%s", lifecycle);
     final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
 
     final SegmentInventoryManager segmentInventoryManager =
@@ -183,14 +187,6 @@ public class MasterMain
         jsonMapper,
         databaseSegmentManager,
         serverInventoryManager,
-        new TheSizeAdjuster(
-            configFactory.build(TheSizeAdjusterConfig.class),
-            jsonMapper,
-            ImmutableMap.<String, SizeLookup>of(
-                "s3", new S3SizeLookup(s3Client)
-            ),
-            zkClient
-        ),
         masterYp,
         emitter,
         scheduledExecutorFactory,

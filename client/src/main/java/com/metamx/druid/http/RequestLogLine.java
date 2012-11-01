@@ -19,11 +19,12 @@
 
 package com.metamx.druid.http;
 
-import com.google.common.base.Joiner;
-import com.metamx.druid.Query;
+import java.util.Arrays;
+
 import org.joda.time.DateTime;
 
-import java.util.Arrays;
+import com.google.common.base.Joiner;
+import com.metamx.druid.Query;
 
 public class RequestLogLine
 {

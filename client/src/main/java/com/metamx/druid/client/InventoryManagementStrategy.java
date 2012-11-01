@@ -19,10 +19,10 @@
 
 package com.metamx.druid.client;
 
+import java.util.Map;
+
 import com.metamx.common.Pair;
 import com.metamx.phonebook.PhoneBookPeon;
-
-import java.util.Map;
 
 /**
  */

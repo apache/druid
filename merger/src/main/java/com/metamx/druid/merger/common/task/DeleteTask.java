@@ -19,6 +19,14 @@
 
 package com.metamx.druid.merger.common.task;
 
+import java.io.File;
+import java.util.ArrayList;
+
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
 import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryGranularity;
@@ -28,19 +36,10 @@ import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.index.v1.IncrementalIndexAdapter;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.index.v1.IndexableAdapter;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.coordinator.TaskContext;
 import com.metamx.druid.shard.NoneShardSpec;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
-import java.io.File;
-import java.util.ArrayList;
 
 public class DeleteTask extends AbstractTask
 {

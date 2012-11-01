@@ -19,6 +19,19 @@
 
 package com.metamx.druid.master;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ScheduledExecutorService;
+
+import org.I0Itec.zkclient.exception.ZkNodeExistsException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.joda.time.Duration;
+
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,25 +53,12 @@ import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.SegmentInventoryManager;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
-import com.metamx.druid.coordination.legacy.TheSizeAdjuster;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
 import com.netflix.curator.x.discovery.ServiceProvider;
-import org.I0Itec.zkclient.exception.ZkNodeExistsException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.joda.time.Duration;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -77,7 +77,6 @@ public class DruidMaster
   private final DruidClusterInfo clusterInfo;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final ServerInventoryManager serverInventoryManager;
-  private final TheSizeAdjuster sizeAdjuster;
   private final PhoneBook yp;
   private final ServiceEmitter emitter;
   private final ScheduledExecutorService exec;
@@ -97,7 +96,6 @@ public class DruidMaster
       ObjectMapper jsonMapper,
       DatabaseSegmentManager databaseSegmentManager,
       ServerInventoryManager serverInventoryManager,
-      TheSizeAdjuster sizeAdjuster,
       PhoneBook zkPhoneBook,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
@@ -113,7 +111,6 @@ public class DruidMaster
 
     this.databaseSegmentManager = databaseSegmentManager;
     this.serverInventoryManager = serverInventoryManager;
-    this.sizeAdjuster = sizeAdjuster;
     this.yp = zkPhoneBook;
     this.emitter = emitter;
 
@@ -354,16 +351,7 @@ public class DruidMaster
 
     for (DataSegment dataSegment : dataSegments) {
       if (dataSegment.getSize() < 0) {
-        log.info("No size on Segment[%s], setting.", dataSegment);
-
-        DataSegment newDataSegment = sizeAdjuster.updateDescriptor(dataSegment);
-
-        if (dataSegment == null) {
-          log.warn("newDataSegment was null with old dataSegment[%s].  Skipping.", dataSegment);
-          continue;
-        }
-
-        dataSegment = newDataSegment;
+        log.warn("No size on Segment[%s], wtf?", dataSegment);
       }
       availableSegments.add(dataSegment);
     }

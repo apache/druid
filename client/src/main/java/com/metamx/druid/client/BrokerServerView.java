@@ -19,6 +19,15 @@
 
 package com.metamx.druid.client;
 
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
+
+import javax.annotation.Nullable;
+
+import org.codehaus.jackson.map.ObjectMapper;
+
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -28,19 +37,12 @@ import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChestWarehouse;
 import com.metamx.http.client.HttpClient;
-import org.codehaus.jackson.map.ObjectMapper;
-
-import javax.annotation.Nullable;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
 
 /**
  */
-public class ClientSideServerView implements MutableServerView
+public class BrokerServerView implements MutableServerView
 {
-  private static final Logger log = new Logger(ClientSideServerView.class);
+  private static final Logger log = new Logger(BrokerServerView.class);
 
   private final Object lock = new Object();
 
@@ -53,7 +55,7 @@ public class ClientSideServerView implements MutableServerView
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
 
-  public ClientSideServerView(
+  public BrokerServerView(
       QueryToolChestWarehouse warehose,
       ObjectMapper smileMapper,
       HttpClient httpClient

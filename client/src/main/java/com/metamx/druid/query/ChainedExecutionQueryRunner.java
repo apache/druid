@@ -19,6 +19,14 @@
 
 package com.metamx.druid.query;
 
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -28,14 +36,6 @@ import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Query;
-
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 /**
  * A QueryRunner that combines a list of other QueryRunners and executes them in parallel on an executor.
@@ -140,33 +140,5 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
           }
         }
     );
-  }
-
-  private static class ThreadNamingCallable<T> implements Callable<T>
-  {
-    private final Callable<T> baseCallable;
-    private final String name;
-
-    ThreadNamingCallable(
-        Callable<T> baseCallable,
-        String name
-    )
-    {
-      this.baseCallable = baseCallable;
-      this.name = name;
-    }
-
-    @Override
-    public T call() throws Exception
-    {
-      String oldName = Thread.currentThread().getName();
-      try {
-        Thread.currentThread().setName(name);
-        return baseCallable.call();
-      }
-      finally {
-        Thread.currentThread().setName(oldName);
-      }
-    }
   }
 }

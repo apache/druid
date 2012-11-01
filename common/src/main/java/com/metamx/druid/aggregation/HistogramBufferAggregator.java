@@ -20,12 +20,12 @@
 package com.metamx.druid.aggregation;
 
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
 import com.metamx.druid.processing.FloatMetricSelector;
-
-import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 public class HistogramBufferAggregator implements BufferAggregator
 {
