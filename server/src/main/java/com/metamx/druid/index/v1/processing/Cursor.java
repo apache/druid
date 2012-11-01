@@ -19,8 +19,9 @@
 
 package com.metamx.druid.index.v1.processing;
 
-import com.metamx.druid.processing.MetricSelectorFactory;
 import org.joda.time.DateTime;
+
+import com.metamx.druid.processing.MetricSelectorFactory;
 
 /**
  */

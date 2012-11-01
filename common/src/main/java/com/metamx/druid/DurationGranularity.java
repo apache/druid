@@ -19,12 +19,13 @@
 
 package com.metamx.druid;
 
-import com.google.common.primitives.Longs;
+import java.nio.ByteBuffer;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.joda.time.DateTime;
 
-import java.nio.ByteBuffer;
+import com.google.common.primitives.Longs;
 
 public class DurationGranularity extends BaseQueryGranularity
 {

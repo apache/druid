@@ -19,16 +19,17 @@
 
 package com.metamx.druid.merger.coordinator.http;
 
+import javax.inject.Singleton;
+
+import org.codehaus.jackson.jaxrs.JacksonJsonProvider;
+import org.codehaus.jackson.map.ObjectMapper;
+
 import com.google.inject.Provides;
 import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import org.codehaus.jackson.jaxrs.JacksonJsonProvider;
-import org.codehaus.jackson.map.ObjectMapper;
-
-import javax.inject.Singleton;
 
 /**
  */

@@ -19,6 +19,17 @@
 
 package com.metamx.druid.http;
 
+import java.util.Properties;
+import java.util.concurrent.ScheduledExecutorService;
+
+import org.I0Itec.zkclient.ZkClient;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.smile.SmileFactory;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.ServletHolder;
+import org.skife.config.ConfigurationObjectFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
@@ -58,16 +69,6 @@ import com.metamx.metrics.SysMonitor;
 import com.metamx.phonebook.PhoneBook;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.x.discovery.ServiceDiscovery;
-import org.I0Itec.zkclient.ZkClient;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.smile.SmileFactory;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.skife.config.ConfigurationObjectFactory;
-
-import java.util.Properties;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */

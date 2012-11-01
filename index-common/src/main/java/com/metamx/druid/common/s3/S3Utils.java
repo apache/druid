@@ -19,19 +19,20 @@
 
 package com.metamx.druid.common.s3;
 
-import com.google.common.io.CharStreams;
-import com.metamx.common.logger.Logger;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.security.NoSuchAlgorithmException;
+import java.util.regex.Pattern;
+
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.security.NoSuchAlgorithmException;
-import java.util.regex.Pattern;
+import com.google.common.io.CharStreams;
+import com.metamx.common.logger.Logger;
 
 /**
  *

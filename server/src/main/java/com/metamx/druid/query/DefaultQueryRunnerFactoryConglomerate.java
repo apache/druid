@@ -19,9 +19,9 @@
 
 package com.metamx.druid.query;
 
-import com.metamx.druid.Query;
-
 import java.util.Map;
+
+import com.metamx.druid.Query;
 
 /**
 */

@@ -19,6 +19,13 @@
 
 package com.metamx.druid.index.v1;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.LongBuffer;
+import java.nio.channels.WritableByteChannel;
+import java.util.Iterator;
+
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.io.Closeables;
@@ -28,15 +35,7 @@ import com.metamx.common.IAE;
 import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.collect.StupidResourceHolder;
 import com.metamx.druid.kv.GenericIndexed;
-import com.metamx.druid.kv.IndexedIterable;
 import com.metamx.druid.kv.IndexedLongs;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.LongBuffer;
-import java.nio.channels.WritableByteChannel;
-import java.util.Iterator;
 
 /**
  */

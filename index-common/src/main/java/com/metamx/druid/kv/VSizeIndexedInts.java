@@ -19,12 +19,12 @@
 
 package com.metamx.druid.kv;
 
-import com.google.common.primitives.Ints;
-import com.metamx.common.IAE;
-
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
+
+import com.google.common.primitives.Ints;
+import com.metamx.common.IAE;
 
 /**
  */

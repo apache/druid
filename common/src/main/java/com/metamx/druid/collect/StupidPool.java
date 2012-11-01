@@ -19,13 +19,13 @@
 
 package com.metamx.druid.collect;
 
+import java.io.IOException;
+import java.util.LinkedList;
+
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-
-import java.io.IOException;
-import java.util.LinkedList;
 
 /**
  */

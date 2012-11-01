@@ -19,6 +19,14 @@
 
 package com.metamx.druid.query.timeboundary;
 
+import java.nio.ByteBuffer;
+import java.util.List;
+
+import javax.annotation.Nullable;
+
+import org.codehaus.jackson.type.TypeReference;
+import org.joda.time.DateTime;
+
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
@@ -36,12 +44,6 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.type.TypeReference;
-import org.joda.time.DateTime;
-
-import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
-import java.util.List;
 
 /**
  */

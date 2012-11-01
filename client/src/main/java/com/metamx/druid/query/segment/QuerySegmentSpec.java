@@ -19,13 +19,14 @@
 
 package com.metamx.druid.query.segment;
 
-import com.metamx.druid.Query;
-import com.metamx.druid.query.QueryRunner;
+import java.util.List;
+
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 import org.joda.time.Interval;
 
-import java.util.List;
+import com.metamx.druid.Query;
+import com.metamx.druid.query.QueryRunner;
 
 /**
  */

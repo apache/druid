@@ -19,16 +19,12 @@
 
 package com.metamx.druid.utils;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
-import com.metamx.common.Granularity;
-import com.metamx.common.MapUtils;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.common.s3.S3Utils;
-import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.zk.StringZkSerializer;
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.TreeSet;
+
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.ZkConnection;
 import org.apache.commons.cli.CommandLine;
@@ -44,11 +40,16 @@ import org.jets3t.service.security.AWSCredentials;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.TreeSet;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
+import com.metamx.common.Granularity;
+import com.metamx.common.MapUtils;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.common.s3.S3Utils;
+import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.zk.StringZkSerializer;
 
 /**
  */

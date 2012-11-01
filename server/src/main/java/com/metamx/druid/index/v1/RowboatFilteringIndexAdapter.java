@@ -19,11 +19,12 @@
 
 package com.metamx.druid.index.v1;
 
+import org.joda.time.Interval;
+
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedInts;
-import org.joda.time.Interval;
 
 /**
  */

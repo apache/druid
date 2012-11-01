@@ -19,12 +19,14 @@
 
 package com.metamx.druid.index.v1;
 
-import com.metamx.common.logger.Logger;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-import org.joda.time.Interval;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import org.joda.time.Interval;
+
+import com.metamx.common.logger.Logger;
 
 /**
  * In-memory representation of a segment

@@ -19,6 +19,8 @@
 
 package com.metamx.druid.query;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -28,8 +30,6 @@ import com.metamx.druid.Query;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
-
-import javax.annotation.Nullable;
 
 /**
  */

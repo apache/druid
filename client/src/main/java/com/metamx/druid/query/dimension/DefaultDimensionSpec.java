@@ -19,11 +19,12 @@
 
 package com.metamx.druid.query.dimension;
 
-import com.metamx.druid.query.extraction.DimExtractionFn;
+import java.nio.ByteBuffer;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import java.nio.ByteBuffer;
+import com.metamx.druid.query.extraction.DimExtractionFn;
 
 /**
  */

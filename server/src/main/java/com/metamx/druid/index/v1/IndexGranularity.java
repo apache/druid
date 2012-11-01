@@ -19,7 +19,6 @@
 
 package com.metamx.druid.index.v1;
 
-import com.metamx.druid.QueryGranularity;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
@@ -31,6 +30,8 @@ import org.joda.time.ReadableInterval;
 import org.joda.time.Weeks;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+
+import com.metamx.druid.QueryGranularity;
 
 /**
  */

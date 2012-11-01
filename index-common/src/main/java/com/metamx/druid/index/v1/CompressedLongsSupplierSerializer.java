@@ -19,6 +19,11 @@
 
 package com.metamx.druid.index.v1;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteOrder;
+import java.nio.LongBuffer;
+
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.io.OutputSupplier;
@@ -28,11 +33,6 @@ import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.collect.StupidResourceHolder;
 import com.metamx.druid.kv.FlattenedArrayWriter;
 import com.metamx.druid.kv.IOPeon;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.ByteOrder;
-import java.nio.LongBuffer;
 
 /**
  */

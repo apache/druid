@@ -19,16 +19,13 @@
 
 package com.metamx.druid.merger.common.task;
 
+import org.codehaus.jackson.annotate.JsonSubTypes;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.joda.time.Interval;
+
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.coordinator.TaskContext;
-import com.metamx.druid.merger.common.task.IndexDeterminePartitionsTask;
-import com.metamx.druid.merger.common.task.IndexGeneratorTask;
-import com.metamx.druid.merger.common.task.IndexTask;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 /**
  * Represents a task that can run on a worker. Immutable.

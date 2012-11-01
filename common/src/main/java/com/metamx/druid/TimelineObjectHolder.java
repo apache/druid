@@ -19,8 +19,9 @@
 
 package com.metamx.druid;
 
-import com.metamx.druid.partition.PartitionHolder;
 import org.joda.time.Interval;
+
+import com.metamx.druid.partition.PartitionHolder;
 
 /**
 */

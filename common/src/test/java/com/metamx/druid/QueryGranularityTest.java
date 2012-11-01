@@ -19,9 +19,9 @@
 
 package com.metamx.druid;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import java.util.Iterator;
+import java.util.List;
+
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -34,8 +34,9 @@ import org.joda.time.Weeks;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Iterator;
-import java.util.List;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 
 /**
  */

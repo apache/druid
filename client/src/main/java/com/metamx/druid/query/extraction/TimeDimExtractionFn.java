@@ -19,13 +19,14 @@
 
 package com.metamx.druid.query.extraction;
 
-import com.ibm.icu.text.SimpleDateFormat;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.util.Date;
+
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
+import com.ibm.icu.text.SimpleDateFormat;
 
 /**
  */

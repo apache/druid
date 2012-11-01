@@ -19,15 +19,16 @@
 
 package com.metamx.druid.aggregation.post;
 
-import com.google.common.collect.Lists;
-import com.metamx.druid.aggregation.CountAggregator;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.google.common.collect.Lists;
+import com.metamx.druid.aggregation.CountAggregator;
 
 /**
  */

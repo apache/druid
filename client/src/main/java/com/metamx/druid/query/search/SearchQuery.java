@@ -19,6 +19,14 @@
 
 package com.metamx.druid.query.search;
 
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nullable;
+
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -29,12 +37,6 @@ import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Map;
 
 /**
  */

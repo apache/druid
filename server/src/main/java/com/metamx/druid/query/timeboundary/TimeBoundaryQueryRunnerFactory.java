@@ -19,12 +19,14 @@
 
 package com.metamx.druid.query.timeboundary;
 
+import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.druid.Query;
 import com.metamx.druid.StorageAdapter;
-import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.query.ChainedExecutionQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
@@ -32,10 +34,6 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
-
-import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.concurrent.ExecutorService;
 
 /**
  */

@@ -19,6 +19,9 @@
 
 package com.metamx.druid.guava;
 
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.google.common.collect.Ordering;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
@@ -26,9 +29,6 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.Yielders;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.nary.BinaryFn;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -59,7 +59,6 @@ public class CombiningSequence<T> implements Sequence<T>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public <OutType> OutType accumulate(OutType initValue, final Accumulator<OutType, T> accumulator)
   {
     final AtomicReference<OutType> retVal = new AtomicReference<OutType>(initValue);

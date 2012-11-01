@@ -19,16 +19,18 @@
 
 package com.metamx.druid.master;
 
+import java.util.Collection;
+import java.util.List;
+
+import junit.framework.Assert;
+
+import org.joda.time.Interval;
+import org.junit.Test;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.metamx.druid.client.DataSegment;
-import junit.framework.Assert;
-import org.joda.time.Interval;
-import org.junit.Test;
-
-import java.util.Collection;
-import java.util.List;
 
 public class DruidMasterSegmentMergerTest
 {

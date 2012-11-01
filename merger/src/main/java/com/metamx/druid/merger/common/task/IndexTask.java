@@ -19,6 +19,13 @@
 
 package com.metamx.druid.merger.common.task;
 
+import java.util.List;
+
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
@@ -31,12 +38,6 @@ import com.metamx.druid.merger.coordinator.TaskContext;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
-import java.util.List;
 
 public class IndexTask extends AbstractTask
 {

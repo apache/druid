@@ -19,10 +19,11 @@
 
 package com.metamx.druid.query.dimension;
 
-import com.metamx.common.IAE;
+import java.util.Map;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 
-import java.util.Map;
+import com.metamx.common.IAE;
 
 /**
  */
