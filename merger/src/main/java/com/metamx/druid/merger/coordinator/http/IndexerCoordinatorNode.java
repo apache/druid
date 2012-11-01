@@ -380,8 +380,8 @@ public class IndexerCoordinatorNode
     if (taskToolbox == null) {
       final RestS3Service s3Client = new RestS3Service(
           new AWSCredentials(
-              props.getProperty("com.metamx.aws.accessKey"),
-              props.getProperty("com.metamx.aws.secretKey")
+              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
           )
       );
       final SegmentPusher segmentPusher = new S3SegmentPusher(
@@ -435,7 +435,7 @@ public class IndexerCoordinatorNode
   {
     if (taskInventoryManager == null) {
       final ZkClient zkClient = Initialization.makeZkClient(configFactory.build(ZkClientConfig.class), lifecycle);
-      final PhoneBook masterYp = Initialization.createYellowPages(
+      final PhoneBook masterYp = Initialization.createPhoneBook(
           jsonMapper,
           zkClient,
           "Master-ZKYP--%s",

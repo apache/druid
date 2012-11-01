@@ -30,6 +30,7 @@ import org.joda.time.Interval;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Ordering;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.Query;
 import com.metamx.druid.StorageAdapter;
@@ -94,12 +95,16 @@ public class ServerManager implements QuerySegmentWalker
 
   public Map<String, Long> getDataSourceSizes()
   {
-    return dataSourceSizes.snapshot();
+    synchronized (dataSourceSizes) {
+      return dataSourceSizes.snapshot();
+    }
   }
 
   public Map<String, Long> getDataSourceCounts()
   {
-    return dataSourceCounts.snapshot();
+    synchronized (dataSourceCounts) {
+      return dataSourceCounts.snapshot();
+    }
   }
 
   public void loadSegment(final DataSegment segment) throws StorageAdapterLoadingException
@@ -109,7 +114,12 @@ public class ServerManager implements QuerySegmentWalker
       adapter = storageAdapterLoader.getAdapter(segment.getLoadSpec());
     }
     catch (StorageAdapterLoadingException e) {
-      storageAdapterLoader.cleanupAdapter(segment.getLoadSpec());
+      try {
+        storageAdapterLoader.cleanupAdapter(segment.getLoadSpec());
+      }
+      catch (StorageAdapterLoadingException e1) {
+        // ignore
+      }
       throw e;
     }
 
@@ -140,8 +150,12 @@ public class ServerManager implements QuerySegmentWalker
       loadedIntervals.add(
           segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(adapter)
       );
-      dataSourceSizes.add(dataSource, segment.getSize());
-      dataSourceCounts.add(dataSource, 1L);
+      synchronized (dataSourceSizes) {
+        dataSourceSizes.add(dataSource, segment.getSize());
+      }
+      synchronized (dataSourceCounts) {
+        dataSourceCounts.add(dataSource, 1L);
+      }
     }
   }
 
@@ -162,8 +176,12 @@ public class ServerManager implements QuerySegmentWalker
       StorageAdapter oldQueryable = (removed == null) ? null : removed.getObject();
 
       if (oldQueryable != null) {
-        dataSourceSizes.add(dataSource, -segment.getSize());
-        dataSourceCounts.add(dataSource, -1L);
+        synchronized (dataSourceSizes) {
+          dataSourceSizes.add(dataSource, -segment.getSize());
+        }
+        synchronized (dataSourceCounts) {
+          dataSourceCounts.add(dataSource, -1L);
+        }
       } else {
         log.info(
             "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
@@ -181,10 +199,7 @@ public class ServerManager implements QuerySegmentWalker
   {
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
-      log.makeAlert("Unknown query type, [%s]", query.getClass())
-         .addData("dataSource", query.getDataSource())
-         .emit();
-      return new NoopQueryRunner<T>();
+      throw new ISE("Unknown query type[%s].", query.getClass());
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();

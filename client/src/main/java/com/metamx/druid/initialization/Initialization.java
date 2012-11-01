@@ -38,11 +38,13 @@ import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.ISE;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.ZKPhoneBook;
 import com.metamx.druid.http.FileRequestLogger;
 import com.metamx.druid.http.RequestLogger;
+import com.metamx.druid.utils.PropUtils;
 import com.metamx.druid.zk.StringZkSerializer;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
@@ -88,7 +90,7 @@ public class Initialization
     return retVal;
   }
 
-  public static ZKPhoneBook createYellowPages(
+  public static ZKPhoneBook createPhoneBook(
       ObjectMapper jsonMapper, ZkClient zkClient, String threadNameFormat, Lifecycle lifecycle
   )
   {
@@ -271,15 +273,11 @@ public class Initialization
     return serviceProvider;
   }
 
-  public static RequestLogger makeRequestLogger(ScheduledExecutorService exec, Properties props) throws IOException
+  public static RequestLogger makeRequestLogger(ScheduledExecutorFactory factory, Properties props) throws IOException
   {
-    final String property = "druid.request.logging.dir";
-    final String loggingDir = props.getProperty(property);
-
-    if (loggingDir == null) {
-      throw new ISE("property[%s] not set.", property);
-    }
-
-    return new FileRequestLogger(exec, new File(loggingDir));
+    return new FileRequestLogger(
+        factory.create(1, "RequestLogger-%s"),
+        new File(PropUtils.getProperty(props, "druid.request.logging.dir"))
+    );
   }
 }

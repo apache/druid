@@ -40,9 +40,9 @@ import com.metamx.http.client.HttpClient;
 
 /**
  */
-public class ClientSideServerView implements MutableServerView
+public class BrokerServerView implements MutableServerView
 {
-  private static final Logger log = new Logger(ClientSideServerView.class);
+  private static final Logger log = new Logger(BrokerServerView.class);
 
   private final Object lock = new Object();
 
@@ -55,7 +55,7 @@ public class ClientSideServerView implements MutableServerView
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
 
-  public ClientSideServerView(
+  public BrokerServerView(
       QueryToolChestWarehouse warehose,
       ObjectMapper smileMapper,
       HttpClient httpClient

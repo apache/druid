@@ -77,7 +77,7 @@ public class IndexIO
 
   public static void registerHandler(IndexIOHandler handler)
   {
-    if (handler == null) {
+    if (IndexIO.handler == null) {
       IndexIO.handler = handler;
     }
     else {

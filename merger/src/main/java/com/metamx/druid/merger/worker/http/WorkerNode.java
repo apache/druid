@@ -280,8 +280,8 @@ public class WorkerNode
     if (taskToolbox == null) {
       final RestS3Service s3Client = new RestS3Service(
           new AWSCredentials(
-              props.getProperty("com.metamx.aws.accessKey"),
-              props.getProperty("com.metamx.aws.secretKey")
+              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
           )
       );
       final SegmentPusher segmentPusher = new S3SegmentPusher(
@@ -296,7 +296,7 @@ public class WorkerNode
   public void initializeCuratorFramework() throws IOException
   {
     curatorFramework = Initialization.makeCuratorFrameworkClient(
-        props.getProperty("druid.zk.service.host"),
+        PropUtils.getProperty(props, "druid.zk.service.host"),
         lifecycle
     );
   }
