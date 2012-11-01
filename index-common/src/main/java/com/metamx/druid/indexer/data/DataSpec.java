@@ -19,12 +19,11 @@
 
 package com.metamx.druid.indexer.data;
 
-import java.util.List;
-
+import com.metamx.common.parsers.Parser;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 
-import com.metamx.common.parsers.Parser;
+import java.util.List;
 
 /**
  */

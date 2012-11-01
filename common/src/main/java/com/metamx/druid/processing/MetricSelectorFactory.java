@@ -19,6 +19,7 @@
 
 package com.metamx.druid.processing;
 
+import java.io.Closeable;
 
 /**
  * Factory class for MetricSelectors

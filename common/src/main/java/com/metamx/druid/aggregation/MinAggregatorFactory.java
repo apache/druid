@@ -19,16 +19,15 @@
 
 package com.metamx.druid.aggregation;
 
+import com.google.common.primitives.Doubles;
+import com.metamx.druid.processing.MetricSelectorFactory;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-
-import com.google.common.primitives.Doubles;
-import com.metamx.druid.processing.MetricSelectorFactory;
 
 /**
  */

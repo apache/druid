@@ -19,9 +19,10 @@
 
 package com.metamx.druid.query.search;
 
-import java.util.Comparator;
-
 import org.codehaus.jackson.annotate.JsonCreator;
+
+import java.util.Comparator;
+import java.util.Map;
 
 /**
  */

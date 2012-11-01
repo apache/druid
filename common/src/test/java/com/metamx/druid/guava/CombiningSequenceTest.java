@@ -19,15 +19,6 @@
 
 package com.metamx.druid.guava;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
-import junit.framework.Assert;
-
-import org.junit.Test;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.common.Pair;
@@ -36,6 +27,13 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.nary.BinaryFn;
+import junit.framework.Assert;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  */

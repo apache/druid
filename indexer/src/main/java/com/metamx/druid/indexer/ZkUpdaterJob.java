@@ -19,12 +19,6 @@
 
 package com.metamx.druid.indexer;
 
-import org.I0Itec.zkclient.ZkClient;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.joda.time.DateTime;
-
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.lifecycle.Lifecycle;
@@ -34,6 +28,11 @@ import com.metamx.druid.indexer.updater.ZkUpdaterJobSpec;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ZkClientConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import org.I0Itec.zkclient.ZkClient;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.joda.time.DateTime;
 
 /**
  */

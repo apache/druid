@@ -19,10 +19,9 @@
 
 package com.metamx.druid.query.segment;
 
-import org.joda.time.Interval;
-
 import com.metamx.druid.Query;
 import com.metamx.druid.query.QueryRunner;
+import org.joda.time.Interval;
 
 /**
  */

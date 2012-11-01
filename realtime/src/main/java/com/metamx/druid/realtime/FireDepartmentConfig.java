@@ -19,10 +19,9 @@
 
 package com.metamx.druid.realtime;
 
+import com.google.common.base.Preconditions;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.joda.time.Period;
-
-import com.google.common.base.Preconditions;
 
 /**
  */

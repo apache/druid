@@ -19,15 +19,6 @@
 
 package com.metamx.druid.client;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
-
-import javax.annotation.Nullable;
-
-import org.codehaus.jackson.map.ObjectMapper;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -37,6 +28,13 @@ import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChestWarehouse;
 import com.metamx.http.client.HttpClient;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import javax.annotation.Nullable;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 
 /**
  */

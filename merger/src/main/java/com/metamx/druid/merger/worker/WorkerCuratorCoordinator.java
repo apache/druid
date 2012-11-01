@@ -19,12 +19,6 @@
 
 package com.metamx.druid.merger.worker;
 
-import java.util.Arrays;
-
-import org.apache.zookeeper.CreateMode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.joda.time.DateTime;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -34,6 +28,11 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.netflix.curator.framework.CuratorFramework;
+import org.apache.zookeeper.CreateMode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.joda.time.DateTime;
+
+import java.util.Arrays;
 
 /**
  * The CuratorCoordinator provides methods to use Curator. Persistent ZK paths are created on {@link #start()}.

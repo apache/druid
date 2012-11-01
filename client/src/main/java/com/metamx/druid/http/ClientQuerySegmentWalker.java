@@ -19,10 +19,6 @@
 
 package com.metamx.druid.http;
 
-import javax.annotation.Nullable;
-
-import org.joda.time.Interval;
-
 import com.google.common.base.Function;
 import com.metamx.druid.Query;
 import com.metamx.druid.client.CachingClusteredClient;
@@ -35,6 +31,9 @@ import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
 
 /**
 */

@@ -19,10 +19,10 @@
 
 package com.metamx.druid.input;
 
-import java.util.List;
-
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+import java.util.List;
 
 /**
  */

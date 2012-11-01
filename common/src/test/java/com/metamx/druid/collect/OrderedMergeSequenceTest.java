@@ -19,17 +19,6 @@
 
 package com.metamx.druid.collect;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
-import javax.annotation.Nullable;
-
-import junit.framework.Assert;
-
-import org.junit.Test;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -38,6 +27,14 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.SequenceTestHelper;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.TestSequence;
+import junit.framework.Assert;
+import org.junit.Test;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  */

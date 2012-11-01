@@ -19,16 +19,15 @@
 
 package com.metamx.druid.client;
 
+import com.google.common.collect.ImmutableMap;
+import com.metamx.common.logger.Logger;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-
-import com.google.common.collect.ImmutableMap;
-import com.metamx.common.logger.Logger;
 
 /**
  */

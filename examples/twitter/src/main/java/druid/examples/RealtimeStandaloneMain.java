@@ -1,10 +1,5 @@
 package druid.examples;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.codehaus.jackson.map.jsontype.NamedType;
-
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -18,8 +13,11 @@ import com.metamx.druid.realtime.MetadataUpdaterConfig;
 import com.metamx.druid.realtime.RealtimeNode;
 import com.metamx.druid.realtime.SegmentPusher;
 import com.metamx.phonebook.PhoneBook;
-
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
+import org.codehaus.jackson.map.jsontype.NamedType;
+
+import java.io.File;
+import java.io.IOException;
 
 /** Standalone Demo Realtime process.
  * Created: 20121009T2050

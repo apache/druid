@@ -19,16 +19,15 @@
 
 package com.metamx.druid.query.segment;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.joda.time.Interval;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.joda.time.Interval;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
  */

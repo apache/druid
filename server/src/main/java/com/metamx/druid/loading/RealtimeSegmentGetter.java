@@ -19,11 +19,11 @@
 
 package com.metamx.druid.loading;
 
-import java.io.File;
-import java.util.Map;
-
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+
+import java.io.File;
+import java.util.Map;
 
 /**
  */

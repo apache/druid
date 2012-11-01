@@ -19,15 +19,6 @@
 
 package com.metamx.druid.realtime;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.Period;
-
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
@@ -46,6 +37,14 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.emitter.EmittingLogger;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.joda.time.Period;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 /**
  */

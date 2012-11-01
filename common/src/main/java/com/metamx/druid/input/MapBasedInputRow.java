@@ -19,10 +19,10 @@
 
 package com.metamx.druid.input;
 
+import org.joda.time.DateTime;
+
 import java.util.List;
 import java.util.Map;
-
-import org.joda.time.DateTime;
 
 /**
  */

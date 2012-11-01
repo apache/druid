@@ -19,11 +19,11 @@
 
 package com.metamx.phonebook;
 
+import org.apache.commons.codec.digest.DigestUtils;
+
 import java.math.BigInteger;
 import java.util.Map;
 import java.util.TreeMap;
-
-import org.apache.commons.codec.digest.DigestUtils;
 
 /**
  */

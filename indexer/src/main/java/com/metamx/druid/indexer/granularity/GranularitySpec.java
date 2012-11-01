@@ -19,14 +19,13 @@
 
 package com.metamx.druid.indexer.granularity;
 
-import java.util.SortedSet;
-
+import com.google.common.base.Optional;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import com.google.common.base.Optional;
+import java.util.SortedSet;
 
 /**
  * Tells the indexer how to group events based on timestamp. The events may then be further partitioned based

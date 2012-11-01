@@ -19,18 +19,6 @@
 
 package com.metamx.druid.index.v1;
 
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Map;
-
-import org.joda.time.Interval;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
@@ -43,6 +31,18 @@ import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.IndexedIterable;
 import com.metamx.druid.kv.VSizeIndexed;
 import com.metamx.druid.utils.SerializerUtils;
+import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import org.joda.time.Interval;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
+import java.util.Map;
 
 /**
  * This should be changed to use DI instead of a static reference...

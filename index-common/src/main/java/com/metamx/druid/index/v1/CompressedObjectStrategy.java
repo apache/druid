@@ -19,11 +19,6 @@
 
 package com.metamx.druid.index.v1;
 
-import java.io.IOException;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 import com.metamx.druid.collect.ResourceHolder;
@@ -31,6 +26,11 @@ import com.metamx.druid.kv.ObjectStrategy;
 import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFDecoder;
+
+import java.io.IOException;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
 */

@@ -19,10 +19,9 @@
 
 package com.metamx.druid.coordination;
 
+import com.metamx.druid.client.DataSegment;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
-
-import com.metamx.druid.client.DataSegment;
 
 /**
  */

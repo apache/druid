@@ -19,12 +19,6 @@
 
 package com.metamx.druid.query.group;
 
-import java.util.List;
-import java.util.Map;
-
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -39,6 +33,11 @@ import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.segment.LegacySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  */

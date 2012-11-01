@@ -19,11 +19,10 @@
 
 package com.metamx.druid.coordination;
 
+import com.metamx.druid.client.DataSegment;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.annotate.JsonUnwrapped;
-
-import com.metamx.druid.client.DataSegment;
 
 /**
  */

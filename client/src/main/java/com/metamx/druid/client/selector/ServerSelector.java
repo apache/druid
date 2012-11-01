@@ -19,13 +19,13 @@
 
 package com.metamx.druid.client.selector;
 
-import java.util.LinkedHashSet;
-import java.util.Random;
-
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
+
+import java.util.LinkedHashSet;
+import java.util.Random;
 
 /**
  */

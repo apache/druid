@@ -19,27 +19,29 @@
 
 package com.metamx.druid.indexer.path;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.Job;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Comparators;
+import com.metamx.druid.common.s3.S3Utils;
 import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.hadoop.FSSpideringIterator;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Job;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.jets3t.service.model.S3Object;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  */

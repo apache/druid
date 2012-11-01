@@ -19,11 +19,11 @@
 
 package com.metamx.druid.client.cache;
 
+import com.metamx.common.logger.Logger;
+
 import java.nio.ByteBuffer;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import com.metamx.common.logger.Logger;
 
 /**
 */

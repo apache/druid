@@ -19,9 +19,9 @@
 
 package com.metamx.druid.realtime;
 
-import java.io.Closeable;
-
 import com.metamx.druid.input.InputRow;
+
+import java.io.Closeable;
 
 /**
  * This is an interface that holds onto the stream of incoming data.  Realtime data ingestion is built around this

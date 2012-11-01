@@ -19,19 +19,6 @@
 
 package com.metamx.druid.client;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
-
-import org.codehaus.jackson.map.ObjectMapper;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -65,6 +52,18 @@ import com.metamx.druid.query.segment.MultipleSpecificSegmentSpec;
 import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executors;
 
 /**
  */

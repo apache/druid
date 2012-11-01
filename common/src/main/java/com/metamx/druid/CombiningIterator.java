@@ -19,13 +19,13 @@
 
 package com.metamx.druid;
 
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.metamx.common.guava.nary.BinaryFn;
+
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  */

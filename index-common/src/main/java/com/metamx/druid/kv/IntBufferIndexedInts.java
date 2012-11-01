@@ -19,13 +19,13 @@
 
 package com.metamx.druid.kv;
 
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.util.Iterator;
-
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.metamx.druid.IntList;
+
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.util.Iterator;
 
 /**
  */

@@ -19,18 +19,17 @@
 
 package com.metamx.druid;
 
-import java.util.List;
-import java.util.Map;
-
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.joda.time.Duration;
-import org.joda.time.Interval;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.joda.time.Duration;
+import org.joda.time.Interval;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  */

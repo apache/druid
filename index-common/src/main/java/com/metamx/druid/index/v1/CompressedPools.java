@@ -19,15 +19,15 @@
 
 package com.metamx.druid.index.v1;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.google.common.base.Supplier;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.collect.StupidPool;
 import com.ning.compress.lzf.ChunkEncoder;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */

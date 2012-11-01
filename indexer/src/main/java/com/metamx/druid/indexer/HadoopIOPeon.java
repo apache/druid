@@ -19,14 +19,13 @@
 
 package com.metamx.druid.indexer;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
+import com.metamx.druid.kv.IOPeon;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobContext;
 
-import com.metamx.druid.kv.IOPeon;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  */

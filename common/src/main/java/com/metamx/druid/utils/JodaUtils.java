@@ -19,16 +19,15 @@
 
 package com.metamx.druid.utils;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.TreeSet;
-
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.TreeSet;
 
 /**
  */

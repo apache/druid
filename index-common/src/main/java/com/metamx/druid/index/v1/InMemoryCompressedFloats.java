@@ -19,13 +19,6 @@
 
 package com.metamx.druid.index.v1;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
-import java.util.Arrays;
-import java.util.List;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -34,6 +27,13 @@ import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.collect.StupidResourceHolder;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.IndexedFloats;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  */

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.aggregation;
 
+import java.util.Comparator;
 
 /**
  * An Aggregator is an object that can aggregate metrics.  Its aggregation-related methods (namely, aggregate() and get())

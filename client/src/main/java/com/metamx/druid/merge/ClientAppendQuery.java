@@ -19,12 +19,11 @@
 
 package com.metamx.druid.merge;
 
-import java.util.List;
-
+import com.metamx.druid.client.DataSegment;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import com.metamx.druid.client.DataSegment;
+import java.util.List;
 
 /**
  */

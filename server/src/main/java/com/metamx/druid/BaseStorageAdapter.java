@@ -19,11 +19,6 @@
 
 package com.metamx.druid;
 
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-
-import java.util.List;
-import java.util.TreeSet;
-
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.index.brita.Filter;
@@ -34,6 +29,10 @@ import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.query.search.SearchQuerySpec;
+import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+
+import java.util.List;
+import java.util.TreeSet;
 
 /**
  */

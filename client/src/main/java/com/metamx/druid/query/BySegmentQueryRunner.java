@@ -19,10 +19,6 @@
 
 package com.metamx.druid.query;
 
-import java.util.List;
-
-import org.joda.time.DateTime;
-
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
@@ -33,6 +29,9 @@ import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.druid.Query;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
+import org.joda.time.DateTime;
+
+import java.util.List;
 
 /**
  */

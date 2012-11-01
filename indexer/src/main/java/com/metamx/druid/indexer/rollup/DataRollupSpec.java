@@ -19,12 +19,12 @@
 
 package com.metamx.druid.indexer.rollup;
 
-import java.util.List;
-
-import org.codehaus.jackson.annotate.JsonProperty;
-
+import com.metamx.common.Granularity;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
+import org.codehaus.jackson.annotate.JsonProperty;
+
+import java.util.List;
 
 /**
  * Class uses public fields to work around http://jira.codehaus.org/browse/MSHADE-92

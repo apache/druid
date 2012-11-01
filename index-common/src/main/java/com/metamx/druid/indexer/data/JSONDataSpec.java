@@ -19,17 +19,15 @@
 
 package com.metamx.druid.indexer.data;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.common.parsers.JSONParser;
 import com.metamx.common.parsers.Parser;
 import com.metamx.common.parsers.ToLowerCaseParser;
+import org.codehaus.jackson.annotate.JsonProperty;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  */

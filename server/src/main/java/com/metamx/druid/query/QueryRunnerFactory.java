@@ -19,10 +19,10 @@
 
 package com.metamx.druid.query;
 
-import java.util.concurrent.ExecutorService;
-
 import com.metamx.druid.Query;
 import com.metamx.druid.StorageAdapter;
+
+import java.util.concurrent.ExecutorService;
 
 /**
  */

@@ -19,8 +19,6 @@
 
 package com.metamx.druid.query;
 
-import java.io.IOException;
-
 import com.google.common.base.Function;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
@@ -29,6 +27,8 @@ import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.druid.Query;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+
+import java.io.IOException;
 
 /**
  */

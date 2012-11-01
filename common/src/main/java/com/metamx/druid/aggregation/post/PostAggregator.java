@@ -19,11 +19,11 @@
 
 package com.metamx.druid.aggregation.post;
 
-import java.util.Comparator;
-import java.util.Map;
-
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+import java.util.Comparator;
+import java.util.Map;
 
 /**
  * Functionally similar to an Aggregator. See the Aggregator interface for more comments.

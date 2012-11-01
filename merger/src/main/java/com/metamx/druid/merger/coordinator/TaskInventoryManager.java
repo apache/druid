@@ -19,8 +19,6 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import java.util.Map;
-
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.InventoryManagementStrategy;
@@ -31,6 +29,8 @@ import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
+
+import java.util.Map;
 
 /**
  * A simple {@link InventoryManager} that monitors ZK for the creation and deletion of new Workers and the

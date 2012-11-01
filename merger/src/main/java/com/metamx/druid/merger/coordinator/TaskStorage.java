@@ -19,11 +19,11 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import java.util.List;
-
 import com.google.common.base.Optional;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
+
+import java.util.List;
 
 public interface TaskStorage
 {

@@ -19,9 +19,10 @@
 
 package com.metamx.druid.jackson;
 
-import java.io.IOException;
-import java.util.TimeZone;
-
+import com.google.common.base.Throwables;
+import com.metamx.common.Granularity;
+import com.metamx.common.guava.Accumulator;
+import com.metamx.common.guava.Sequence;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
@@ -37,10 +38,8 @@ import org.codehaus.jackson.map.SerializerProvider;
 import org.codehaus.jackson.map.module.SimpleModule;
 import org.joda.time.DateTimeZone;
 
-import com.google.common.base.Throwables;
-import com.metamx.common.Granularity;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.Sequence;
+import java.io.IOException;
+import java.util.TimeZone;
 
 /**
  */

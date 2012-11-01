@@ -19,17 +19,6 @@
 
 package com.metamx.druid;
 
-import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.TreeMap;
-
-import javax.annotation.Nullable;
-
-import org.joda.time.Interval;
-
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
@@ -54,6 +43,15 @@ import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.group.GroupByQuery;
+import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.TreeMap;
 
 /**
  */

@@ -19,18 +19,20 @@
 
 package com.metamx.druid.indexer;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.metamx.common.Granularity;
+import com.metamx.common.MapUtils;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.indexer.path.GranularityPathSpec;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.metamx.common.MapUtils;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  */

@@ -20,6 +20,7 @@
 package com.metamx.druid.query.search;
 
 import java.util.Comparator;
+import java.util.Map;
 
 /**
  */

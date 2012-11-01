@@ -19,11 +19,10 @@
 
 package com.metamx.druid.client.cache;
 
+import com.google.common.primitives.Ints;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.google.common.primitives.Ints;
 
 /**
  */

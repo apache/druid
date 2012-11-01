@@ -19,10 +19,10 @@
 
 package com.metamx.druid.aggregation;
 
-import java.util.Comparator;
-
 import com.google.common.primitives.Longs;
 import com.metamx.druid.processing.FloatMetricSelector;
+
+import java.util.Comparator;
 
 public class HistogramAggregator implements Aggregator
 {

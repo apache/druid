@@ -19,14 +19,13 @@
 
 package com.metamx.druid.loading;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.apache.commons.io.FileUtils;
-
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.index.v1.IndexIO;
+import org.apache.commons.io.FileUtils;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  */

@@ -19,10 +19,10 @@
 
 package com.metamx.druid.index.v1.serde;
 
-import java.util.Map;
-
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
+
+import java.util.Map;
 
 /**
  */

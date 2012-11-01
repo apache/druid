@@ -19,16 +19,6 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import java.util.Comparator;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.zookeeper.CreateMode;
-import org.codehaus.jackson.map.ObjectMapper;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
@@ -38,6 +28,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.merger.common.TaskHolder;
 import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.worker.Worker;
@@ -46,6 +37,15 @@ import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.zookeeper.CreateMode;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import java.util.Comparator;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
