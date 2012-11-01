@@ -19,19 +19,17 @@
 
 package com.metamx.druid;
 
-import java.util.Iterator;
-
-import junit.framework.Assert;
-
-import org.joda.time.DateTime;
-import org.junit.Test;
-
 import com.google.common.collect.ImmutableList;
 import com.metamx.druid.query.search.LexicographicSearchSortSpec;
 import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.StrlenSearchSortSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
+import junit.framework.Assert;
+import org.joda.time.DateTime;
+import org.junit.Test;
+
+import java.util.Iterator;
 
 /**
  */

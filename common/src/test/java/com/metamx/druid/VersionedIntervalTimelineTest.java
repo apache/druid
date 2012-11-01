@@ -19,18 +19,6 @@
 
 package com.metamx.druid;
 
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
-import org.joda.time.DateTime;
-import org.joda.time.Days;
-import org.joda.time.Hours;
-import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.metamx.common.Pair;
@@ -39,6 +27,17 @@ import com.metamx.druid.partition.IntegerPartitionChunk;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.partition.PartitionHolder;
 import com.metamx.druid.partition.SingleElementPartitionChunk;
+import org.joda.time.DateTime;
+import org.joda.time.Days;
+import org.joda.time.Hours;
+import org.joda.time.Interval;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  */

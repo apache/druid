@@ -19,13 +19,12 @@
 
 package com.metamx.druid.loading;
 
-import java.util.Map;
-
-import javax.inject.Inject;
-
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.StorageAdapter;
+
+import javax.inject.Inject;
+import java.util.Map;
 
 /**
  */

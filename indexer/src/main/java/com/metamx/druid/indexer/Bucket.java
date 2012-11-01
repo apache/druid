@@ -19,11 +19,10 @@
 
 package com.metamx.druid.indexer;
 
-import java.nio.ByteBuffer;
-
+import com.metamx.common.Pair;
 import org.joda.time.DateTime;
 
-import com.metamx.common.Pair;
+import java.nio.ByteBuffer;
 
 public class Bucket
 {

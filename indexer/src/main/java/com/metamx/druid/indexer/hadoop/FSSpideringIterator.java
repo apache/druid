@@ -19,13 +19,13 @@
 
 package com.metamx.druid.indexer.hadoop;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  */

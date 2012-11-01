@@ -19,12 +19,6 @@
 
 package com.metamx.druid.index.v1;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
-
-import org.joda.time.Interval;
-
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
@@ -32,6 +26,11 @@ import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedFloats;
 import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.IndexedLongs;
+import org.joda.time.Interval;
+
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  */

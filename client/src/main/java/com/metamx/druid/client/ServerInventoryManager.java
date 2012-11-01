@@ -19,14 +19,14 @@
 
 package com.metamx.druid.client;
 
-import java.util.Iterator;
-import java.util.Map;
-
 import com.google.common.collect.Maps;
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
+
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  */

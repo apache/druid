@@ -19,18 +19,6 @@
 
 package com.metamx.druid.http;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-
-import org.joda.time.Interval;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -41,6 +29,16 @@ import com.metamx.druid.client.ClientInventoryManager;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
+import org.joda.time.Interval;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  */

@@ -19,11 +19,11 @@
 
 package com.metamx.druid.aggregation;
 
-import java.nio.ByteBuffer;
-import java.util.List;
-
 import com.google.common.collect.Lists;
 import com.metamx.druid.processing.FloatMetricSelector;
+
+import java.nio.ByteBuffer;
+import java.util.List;
 
 public class JavaScriptBufferAggregator implements BufferAggregator
 {

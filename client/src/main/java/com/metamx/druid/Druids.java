@@ -19,12 +19,6 @@
 
 package com.metamx.druid;
 
-import java.util.List;
-import java.util.Map;
-
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
 import com.google.common.collect.Lists;
 import com.metamx.druid.query.filter.AndDimFilter;
 import com.metamx.druid.query.filter.DimFilter;
@@ -41,6 +35,11 @@ import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
 import com.metamx.druid.result.TimeBoundaryResultValue;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  */

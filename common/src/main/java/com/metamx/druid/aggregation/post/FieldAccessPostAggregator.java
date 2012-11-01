@@ -19,11 +19,11 @@
 
 package com.metamx.druid.aggregation.post;
 
-import java.util.Comparator;
-import java.util.Map;
-
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
+
+import java.util.Comparator;
+import java.util.Map;
 
 /**
  */

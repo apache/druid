@@ -19,6 +19,11 @@
 
 package com.metamx.druid.utils;
 
+import com.google.common.io.ByteStreams;
+import com.google.common.io.Closeables;
+import com.google.common.io.OutputSupplier;
+import com.metamx.druid.IntList;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -27,11 +32,6 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
-
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
-import com.google.common.io.OutputSupplier;
-import com.metamx.druid.IntList;
 
 public class SerializerUtils
 {

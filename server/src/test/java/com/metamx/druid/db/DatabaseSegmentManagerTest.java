@@ -19,11 +19,9 @@
 
 package com.metamx.druid.db;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
-
+import com.google.common.base.Throwables;
+import com.google.common.collect.Maps;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.junit.After;
@@ -32,8 +30,12 @@ import org.junit.Test;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import com.google.common.collect.Maps;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  */

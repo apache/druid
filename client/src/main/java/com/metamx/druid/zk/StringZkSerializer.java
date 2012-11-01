@@ -19,12 +19,11 @@
 
 package com.metamx.druid.zk;
 
-import java.nio.charset.Charset;
-
+import com.metamx.common.IAE;
 import org.I0Itec.zkclient.exception.ZkMarshallingError;
 import org.I0Itec.zkclient.serialize.ZkSerializer;
 
-import com.metamx.common.IAE;
+import java.nio.charset.Charset;
 
 /**
 */

@@ -19,17 +19,15 @@
 
 package com.metamx.druid.db;
 
-import java.util.List;
-import java.util.Map;
-
-import javax.sql.DataSource;
-
+import com.metamx.common.logger.Logger;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import com.metamx.common.logger.Logger;
+import javax.sql.DataSource;
+import java.util.List;
+import java.util.Map;
 
 /**
  */

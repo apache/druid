@@ -19,15 +19,6 @@
 
 package com.metamx.druid.coordination;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-
-import javax.annotation.Nullable;
-
-import org.joda.time.Interval;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Ordering;
 import com.metamx.common.ISE;
@@ -59,6 +50,13 @@ import com.metamx.druid.query.segment.SpecificSegmentSpec;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  */

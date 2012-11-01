@@ -19,13 +19,12 @@
 
 package com.metamx.druid.aggregation;
 
-import java.util.Comparator;
-import java.util.List;
-
+import com.metamx.druid.processing.MetricSelectorFactory;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 
-import com.metamx.druid.processing.MetricSelectorFactory;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Processing related interface

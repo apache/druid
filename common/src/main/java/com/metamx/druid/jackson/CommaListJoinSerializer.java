@@ -19,15 +19,14 @@
 
 package com.metamx.druid.jackson;
 
-import java.io.IOException;
-import java.util.List;
-
+import com.google.common.base.Joiner;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.map.SerializerProvider;
 import org.codehaus.jackson.map.ser.std.ScalarSerializerBase;
 
-import com.google.common.base.Joiner;
+import java.io.IOException;
+import java.util.List;
 
 /**
  */

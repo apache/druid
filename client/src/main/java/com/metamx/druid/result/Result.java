@@ -21,6 +21,7 @@ package com.metamx.druid.result;
 
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.annotate.JsonUnwrapped;
 import org.joda.time.DateTime;
 
 /**

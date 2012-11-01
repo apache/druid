@@ -19,18 +19,17 @@
 
 package com.metamx.druid.kv;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 import java.util.List;
-
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 
 /**
  */

@@ -19,10 +19,10 @@
 
 package com.metamx.druid.realtime;
 
+import com.metamx.druid.client.DataSegment;
+
 import java.io.File;
 import java.io.IOException;
-
-import com.metamx.druid.client.DataSegment;
 
 /**
  */

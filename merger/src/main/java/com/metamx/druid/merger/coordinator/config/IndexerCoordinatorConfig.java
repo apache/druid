@@ -19,15 +19,14 @@
 
 package com.metamx.druid.merger.coordinator.config;
 
-import java.io.File;
-import java.util.Set;
-
-import org.skife.config.Config;
-import org.skife.config.Default;
-
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.druid.merger.common.task.Task;
+import org.skife.config.Config;
+import org.skife.config.Default;
+
+import java.io.File;
+import java.util.Set;
 
 /**
  */

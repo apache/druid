@@ -19,18 +19,16 @@
 
 package com.metamx.druid.http;
 
-import java.io.IOException;
-import java.net.URL;
+import com.metamx.common.logger.Logger;
+import org.mortbay.jetty.servlet.DefaultServlet;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.mortbay.jetty.servlet.DefaultServlet;
-
-import com.metamx.common.logger.Logger;
+import java.io.IOException;
+import java.net.URL;
 
 /**
  */

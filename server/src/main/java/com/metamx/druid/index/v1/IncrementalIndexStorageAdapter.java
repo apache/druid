@@ -19,18 +19,6 @@
 
 package com.metamx.druid.index.v1;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentNavigableMap;
-
-import javax.annotation.Nullable;
-
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -58,6 +46,16 @@ import com.metamx.druid.processing.FloatMetricSelector;
 import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.query.search.SearchQuerySpec;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentNavigableMap;
 
 /**
  */

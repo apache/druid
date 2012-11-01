@@ -19,18 +19,17 @@
 
 package com.metamx.druid.collect;
 
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.PriorityQueue;
-
-import javax.annotation.Nullable;
-
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.metamx.common.guava.FunctionalIterator;
+
+import javax.annotation.Nullable;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.PriorityQueue;
 
 /**
  * An OrderedMergeIterator is an iterator that merges together multiple sorted iterators.  It is written assuming

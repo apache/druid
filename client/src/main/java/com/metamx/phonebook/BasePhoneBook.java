@@ -19,12 +19,12 @@
 
 package com.metamx.phonebook;
 
-import java.util.List;
-import java.util.Map;
-
 import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  */

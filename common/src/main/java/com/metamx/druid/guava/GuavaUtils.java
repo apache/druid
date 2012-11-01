@@ -19,6 +19,13 @@
 
 package com.metamx.druid.guava;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
+import com.google.common.io.CharStreams;
+import com.google.common.io.InputSupplier;
+
+import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,14 +35,6 @@ import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
-
-import javax.annotation.Nullable;
-
-import com.google.common.base.Charsets;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.io.CharStreams;
-import com.google.common.io.InputSupplier;
 
 /**
  */

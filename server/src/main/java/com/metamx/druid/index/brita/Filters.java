@@ -19,10 +19,6 @@
 
 package com.metamx.druid.index.brita;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.druid.query.filter.AndDimFilter;
@@ -32,6 +28,9 @@ import com.metamx.druid.query.filter.NotDimFilter;
 import com.metamx.druid.query.filter.OrDimFilter;
 import com.metamx.druid.query.filter.RegexDimFilter;
 import com.metamx.druid.query.filter.SelectorDimFilter;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  */

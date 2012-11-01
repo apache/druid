@@ -19,8 +19,11 @@
 
 package com.metamx.druid.query.search;
 
+import com.google.common.base.Predicate;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+import java.util.List;
 
 /**
  */

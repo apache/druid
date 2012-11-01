@@ -19,13 +19,6 @@
 
 package com.metamx.druid.initialization;
 
-import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.skife.config.ConfigurationObjectFactory;
-
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -51,6 +44,12 @@ import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.query.search.SearchQueryRunnerFactory;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.skife.config.ConfigurationObjectFactory;
+
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */

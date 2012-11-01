@@ -19,10 +19,10 @@
 
 package com.metamx.druid.query.search;
 
-import java.nio.ByteBuffer;
-
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
+
+import java.nio.ByteBuffer;
 
 /**
  */

@@ -19,16 +19,6 @@
 
 package com.metamx.druid.merger.common.task;
 
-import java.io.File;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.joda.time.Interval;
-
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -43,6 +33,14 @@ import com.metamx.druid.index.v1.IndexableAdapter;
 import com.metamx.druid.index.v1.MMappedIndexAdapter;
 import com.metamx.druid.index.v1.Rowboat;
 import com.metamx.druid.index.v1.RowboatFilteringIndexAdapter;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
+import java.io.File;
+import java.util.List;
+import java.util.Map;
 
 /**
  */

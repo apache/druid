@@ -19,12 +19,12 @@
 
 package com.metamx.druid.index.v1;
 
+import com.google.common.collect.Ordering;
+import com.google.common.primitives.Floats;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Floats;
 
 /**
 */

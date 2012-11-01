@@ -19,20 +19,6 @@
 
 package com.metamx.druid.coordination;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-
-import org.codehaus.jackson.type.TypeReference;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
@@ -71,6 +57,19 @@ import com.metamx.druid.result.SearchResultValue;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import org.codehaus.jackson.type.TypeReference;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  */

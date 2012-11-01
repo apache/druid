@@ -19,13 +19,12 @@
 
 package com.metamx.druid.index.v1;
 
-import java.nio.ByteOrder;
-
+import com.metamx.druid.kv.IndexedFloats;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.metamx.druid.kv.IndexedFloats;
+import java.nio.ByteOrder;
 
 /**
  */

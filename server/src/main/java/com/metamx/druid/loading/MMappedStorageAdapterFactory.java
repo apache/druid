@@ -19,12 +19,12 @@
 
 package com.metamx.druid.loading;
 
-import java.io.File;
-import java.io.IOException;
-
 import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.MMappedIndexStorageAdapter;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  */

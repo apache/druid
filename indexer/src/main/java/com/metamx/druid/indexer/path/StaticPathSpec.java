@@ -19,14 +19,13 @@
 
 package com.metamx.druid.indexer.path;
 
-import java.io.IOException;
-
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
+import java.io.IOException;
 
 /**
  * Class uses public fields to work around http://jira.codehaus.org/browse/MSHADE-92

@@ -19,9 +19,8 @@
 
 package com.metamx.druid.indexer.updater;
 
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import com.metamx.druid.db.DbConnectorConfig;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  */

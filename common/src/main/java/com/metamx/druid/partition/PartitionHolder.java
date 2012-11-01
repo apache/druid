@@ -19,15 +19,15 @@
 
 package com.metamx.druid.partition;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.TreeSet;
-
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.TreeSet;
 
 /**
  * An object that clumps together multiple other objects which each represent a shard of some space.

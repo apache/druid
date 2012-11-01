@@ -19,13 +19,10 @@
 
 package com.metamx.druid.indexer;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
+import com.metamx.common.ISE;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -36,10 +33,12 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
-import com.metamx.common.ISE;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  */

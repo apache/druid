@@ -19,6 +19,20 @@
 
 package com.metamx.druid.realtime;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Closeables;
+import com.metamx.common.ISE;
+import com.metamx.common.StreamUtils;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.emitter.EmittingLogger;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.model.S3Object;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -27,21 +41,6 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Object;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Closeables;
-import com.metamx.common.ISE;
-import com.metamx.common.StreamUtils;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.emitter.EmittingLogger;
 
 /**
  */

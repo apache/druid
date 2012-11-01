@@ -19,12 +19,11 @@
 
 package com.metamx.druid.result;
 
-import java.util.List;
-
+import com.metamx.druid.query.search.SearchHit;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.annotate.JsonValue;
 
-import com.metamx.druid.query.search.SearchHit;
+import java.util.List;
 
 /**
  */

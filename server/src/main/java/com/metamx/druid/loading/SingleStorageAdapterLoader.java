@@ -19,10 +19,10 @@
 
 package com.metamx.druid.loading;
 
-import java.util.Map;
-
 import com.google.inject.Inject;
 import com.metamx.druid.StorageAdapter;
+
+import java.util.Map;
 
 /**
  */

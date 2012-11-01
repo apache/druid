@@ -19,9 +19,9 @@
 
 package com.metamx.druid.master;
 
-import java.util.List;
-
 import com.metamx.druid.client.DataSegment;
+
+import java.util.List;
 
 /**
  */

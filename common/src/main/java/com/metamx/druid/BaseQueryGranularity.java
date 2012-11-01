@@ -19,11 +19,11 @@
 
 package com.metamx.druid;
 
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public abstract class BaseQueryGranularity extends QueryGranularity
 {

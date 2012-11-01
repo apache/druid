@@ -19,9 +19,6 @@
 
 package com.metamx.druid.master;
 
-import java.util.Map;
-import java.util.Set;
-
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
@@ -29,6 +26,9 @@ import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.collect.CountingMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+
+import java.util.Map;
+import java.util.Set;
 
 /**
  */

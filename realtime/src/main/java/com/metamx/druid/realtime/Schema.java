@@ -19,16 +19,16 @@
 
 package com.metamx.druid.realtime;
 
-import java.util.Arrays;
-
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-
 import com.google.common.base.Preconditions;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
+import java.util.Arrays;
 
 /**
  */

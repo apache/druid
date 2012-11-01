@@ -19,13 +19,12 @@
 
 package com.metamx.druid.aggregation.post;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import com.metamx.druid.aggregation.CountAggregator;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.metamx.druid.aggregation.CountAggregator;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  */

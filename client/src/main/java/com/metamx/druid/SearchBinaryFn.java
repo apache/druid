@@ -19,8 +19,6 @@
 
 package com.metamx.druid;
 
-import java.util.TreeSet;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.nary.BinaryFn;
@@ -28,6 +26,9 @@ import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchSortSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
+import org.joda.time.DateTime;
+
+import java.util.TreeSet;
 
 /**
  */

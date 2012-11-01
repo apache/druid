@@ -19,13 +19,6 @@
 
 package com.metamx.druid.kv;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.List;
-
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
@@ -34,6 +27,13 @@ import com.google.common.io.Closeables;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Streams arrays of objects out in the binary format described by VSizeIndexed

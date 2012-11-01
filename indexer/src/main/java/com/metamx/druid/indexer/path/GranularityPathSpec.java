@@ -19,10 +19,12 @@
 
 package com.metamx.druid.indexer.path;
 
-import java.io.IOException;
-import java.util.Set;
-import java.util.regex.Pattern;
-
+import com.google.common.collect.Sets;
+import com.metamx.common.Granularity;
+import com.metamx.common.guava.Comparators;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
+import com.metamx.druid.indexer.hadoop.FSSpideringIterator;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,12 +36,9 @@ import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
-import com.google.common.collect.Sets;
-import com.metamx.common.Granularity;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
-import com.metamx.druid.indexer.hadoop.FSSpideringIterator;
+import java.io.IOException;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  */

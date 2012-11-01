@@ -19,11 +19,6 @@
 
 package com.metamx.druid.master;
 
-import java.util.Comparator;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
@@ -32,6 +27,11 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
+
+import java.util.Comparator;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */

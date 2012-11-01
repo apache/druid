@@ -19,11 +19,11 @@
 
 package com.metamx.druid.coordination;
 
-import java.util.Arrays;
-import java.util.Map;
-
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.phonebook.PhoneBook;
+
+import java.util.Arrays;
+import java.util.Map;
 
 /**
  */

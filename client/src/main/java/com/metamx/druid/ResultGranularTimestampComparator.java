@@ -19,10 +19,10 @@
 
 package com.metamx.druid;
 
-import java.util.Comparator;
-
 import com.google.common.primitives.Longs;
 import com.metamx.druid.result.Result;
+
+import java.util.Comparator;
 
 /**
  */

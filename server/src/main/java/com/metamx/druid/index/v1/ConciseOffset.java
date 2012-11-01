@@ -19,10 +19,9 @@
 
 package com.metamx.druid.index.v1;
 
+import com.metamx.druid.index.v1.processing.Offset;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import it.uniroma3.mat.extendedset.intset.IntSet;
-
-import com.metamx.druid.index.v1.processing.Offset;
 
 /**
  */

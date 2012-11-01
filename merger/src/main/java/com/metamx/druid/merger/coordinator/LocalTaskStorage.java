@@ -19,16 +19,19 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import java.util.List;
-import java.util.Map;
-
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Implements an in-heap TaskStorage facility, with no persistence across restarts. This class is not

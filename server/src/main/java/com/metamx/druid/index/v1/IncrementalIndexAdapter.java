@@ -19,17 +19,6 @@
 
 package com.metamx.druid.index.v1;
 
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
-import it.uniroma3.mat.extendedset.intset.IntSet;
-
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
-import org.joda.time.Interval;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.FunctionalIterable;
@@ -40,6 +29,14 @@ import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.IndexedIterable;
 import com.metamx.druid.kv.ListIndexed;
+import it.uniroma3.mat.extendedset.intset.ConciseSet;
+import it.uniroma3.mat.extendedset.intset.IntSet;
+import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  */

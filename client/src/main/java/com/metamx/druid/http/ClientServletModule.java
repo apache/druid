@@ -19,16 +19,15 @@
 
 package com.metamx.druid.http;
 
-import javax.inject.Singleton;
-
-import org.codehaus.jackson.jaxrs.JacksonJsonProvider;
-import org.codehaus.jackson.map.ObjectMapper;
-
 import com.google.inject.Provides;
 import com.metamx.druid.client.ClientInventoryManager;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import org.codehaus.jackson.jaxrs.JacksonJsonProvider;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import javax.inject.Singleton;
 
 /**
  */

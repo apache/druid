@@ -19,15 +19,6 @@
 
 package com.metamx.druid.index.v1;
 
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-
-import java.io.Closeable;
-import java.util.Iterator;
-import java.util.Map;
-
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
@@ -50,6 +41,13 @@ import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.IndexedLongs;
 import com.metamx.druid.processing.ComplexMetricSelector;
 import com.metamx.druid.processing.FloatMetricSelector;
+import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
+import java.io.Closeable;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  */

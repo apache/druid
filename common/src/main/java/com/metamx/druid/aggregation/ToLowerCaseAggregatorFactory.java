@@ -19,10 +19,10 @@
 
 package com.metamx.druid.aggregation;
 
+import com.metamx.druid.processing.MetricSelectorFactory;
+
 import java.util.Comparator;
 import java.util.List;
-
-import com.metamx.druid.processing.MetricSelectorFactory;
 
 /**
  */

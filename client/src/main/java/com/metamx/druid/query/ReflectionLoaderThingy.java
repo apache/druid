@@ -19,11 +19,11 @@
 
 package com.metamx.druid.query;
 
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
+
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */

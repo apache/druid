@@ -19,14 +19,13 @@
 
 package com.metamx.druid.indexer.data;
 
-import java.util.Map;
-
+import com.google.common.base.Function;
+import com.metamx.common.parsers.ParserUtils;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.joda.time.DateTime;
 
-import com.google.common.base.Function;
-import com.metamx.common.parsers.ParserUtils;
+import java.util.Map;
 
 /**
  */

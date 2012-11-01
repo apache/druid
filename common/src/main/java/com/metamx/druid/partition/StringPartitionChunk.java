@@ -19,9 +19,9 @@
 
 package com.metamx.druid.partition;
 
-import java.util.Comparator;
-
 import com.google.common.collect.Ordering;
+
+import java.util.Comparator;
 
 /**
  */

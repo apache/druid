@@ -19,12 +19,11 @@
 
 package com.metamx.druid.aggregation;
 
-import java.util.Arrays;
-
+import com.google.common.base.Preconditions;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import com.google.common.base.Preconditions;
+import java.util.Arrays;
 
 public class HistogramVisual
 {

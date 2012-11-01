@@ -20,14 +20,14 @@
 package com.metamx.druid.aggregation;
 
 
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Doubles;
+import com.metamx.druid.processing.FloatMetricSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
-import com.metamx.druid.processing.FloatMetricSelector;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class JavaScriptAggregatorTest
 {

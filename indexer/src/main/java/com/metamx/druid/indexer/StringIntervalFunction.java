@@ -19,9 +19,8 @@
 
 package com.metamx.druid.indexer;
 
-import org.joda.time.Interval;
-
 import com.google.common.base.Function;
+import org.joda.time.Interval;
 
 /**
 */

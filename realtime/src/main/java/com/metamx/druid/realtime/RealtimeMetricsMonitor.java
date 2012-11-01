@@ -19,13 +19,13 @@
 
 package com.metamx.druid.realtime;
 
-import java.util.List;
-import java.util.Map;
-
 import com.google.common.collect.Maps;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
+
+import java.util.List;
+import java.util.Map;
 
 /**
 */

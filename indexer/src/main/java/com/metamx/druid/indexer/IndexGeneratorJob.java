@@ -19,22 +19,34 @@
 
 package com.metamx.druid.indexer;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
-
-import javax.annotation.Nullable;
-
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.hash.Hashing;
+import com.google.common.io.Closeables;
+import com.google.common.primitives.Longs;
+import com.metamx.common.ISE;
+import com.metamx.common.RE;
+import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.common.logger.Logger;
+import com.metamx.common.parsers.Parser;
+import com.metamx.common.parsers.ParserUtils;
+import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.v1.IncrementalIndex;
+import com.metamx.druid.index.v1.IndexIO;
+import com.metamx.druid.index.v1.IndexMerger;
+import com.metamx.druid.index.v1.MMappedIndex;
+import com.metamx.druid.index.v1.serde.ComplexMetrics;
+import com.metamx.druid.input.MapBasedInputRow;
+import com.metamx.druid.indexer.rollup.DataRollupSpec;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -59,32 +71,20 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
-import com.google.common.primitives.Longs;
-import com.metamx.common.ISE;
-import com.metamx.common.RE;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.Parser;
-import com.metamx.common.parsers.ParserUtils;
-import com.metamx.druid.aggregation.AggregatorFactory;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.v1.IncrementalIndex;
-import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.index.v1.MMappedIndex;
-import com.metamx.druid.indexer.rollup.DataRollupSpec;
-import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import javax.annotation.Nullable;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  */

@@ -19,12 +19,12 @@
 
 package com.metamx.druid.guava;
 
+import com.google.common.io.OutputSupplier;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-
-import com.google.common.io.OutputSupplier;
 
 /**
 */

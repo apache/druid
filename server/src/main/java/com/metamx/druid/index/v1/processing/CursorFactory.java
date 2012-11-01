@@ -19,10 +19,9 @@
 
 package com.metamx.druid.index.v1.processing;
 
-import org.joda.time.Interval;
-
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.index.brita.Filter;
+import org.joda.time.Interval;
 
 /**
  */

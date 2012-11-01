@@ -19,10 +19,10 @@
 
 package com.metamx.druid.realtime;
 
-import java.io.IOException;
-
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
+
+import java.io.IOException;
 
 /**
  * A Fire Department has a Firehose and a Plumber.
