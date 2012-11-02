@@ -24,7 +24,7 @@ import org.skife.config.Default;
 
 /**
  */
-public abstract class S3AutoScalingStrategyConfig
+public abstract class EC2AutoScalingStrategyConfig
 {
   @Config("druid.indexer.amiId")
   public abstract String getAmiId();
@@ -36,12 +36,11 @@ public abstract class S3AutoScalingStrategyConfig
   @Config("druid.indexer.instanceType")
   public abstract String getInstanceType();
 
-  @Config("druid.indexer.millisToWaitBeforeTerminating")
-  @Default("1800000") // 30 mins
-  public abstract long getMillisToWaitBeforeTerminating();
-
-  // minimum number of workers that must always be running
-  @Config("druid.indexer.minNumWorkers")
+  @Config("druid.indexer.minNumInstancesToProvision")
   @Default("1")
-  public abstract int getMinNuMWorkers();
+  public abstract int getMinNumInstancesToProvision();
+
+  @Config("druid.indexer.maxNumInstancesToProvision")
+  @Default("1")
+  public abstract int getMaxNumInstancesToProvision();
 }

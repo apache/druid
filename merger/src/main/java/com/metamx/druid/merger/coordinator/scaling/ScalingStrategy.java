@@ -19,16 +19,13 @@
 
 package com.metamx.druid.merger.coordinator.scaling;
 
-import com.amazonaws.services.ec2.model.Instance;
-import com.metamx.druid.merger.coordinator.WorkerWrapper;
-
-import java.util.Map;
+import java.util.List;
 
 /**
  */
-public interface ScalingStrategy
+public interface ScalingStrategy<T>
 {
-  public void provision(Map<String, WorkerWrapper> zkWorkers);
+  public AutoScalingData<T> provision();
 
-  public Instance terminateIfNeeded(Map<String, WorkerWrapper> zkWorkers);
+  public AutoScalingData<T> terminate(List<String> nodeIds);
 }

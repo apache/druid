@@ -37,4 +37,12 @@ public abstract class RemoteTaskRunnerConfig extends IndexerZkConfig
 
   @Config("druid.indexer.minWorkerVersion")
   public abstract String getMinWorkerVersion();
+
+  @Config("druid.indexer.minNumWorkers")
+  @Default("1")
+  public abstract int getMinNumWorkers();
+
+  @Config("druid.indexer.maxWorkerIdleTimeMillisBeforeDeletion")
+  @Default("1")
+  public abstract int getmaxWorkerIdleTimeMillisBeforeDeletion();
 }

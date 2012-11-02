@@ -23,6 +23,7 @@ import com.metamx.druid.merger.worker.Worker;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import org.joda.time.DateTime;
 
+import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -32,15 +33,15 @@ public class WorkerWrapper
 {
   private final Worker worker;
   private final ConcurrentSkipListSet<String> runningTasks;
-  private final PathChildrenCache watcher;
+  private final PathChildrenCache statusCache;
 
   private volatile DateTime lastCompletedTaskTime;
 
-  public WorkerWrapper(Worker worker, ConcurrentSkipListSet<String> runningTasks, PathChildrenCache watcher)
+  public WorkerWrapper(Worker worker, ConcurrentSkipListSet<String> runningTasks, PathChildrenCache statusCache)
   {
     this.worker = worker;
     this.runningTasks = runningTasks;
-    this.watcher = watcher;
+    this.statusCache = statusCache;
   }
 
   public Worker getWorker()
@@ -53,9 +54,9 @@ public class WorkerWrapper
     return runningTasks;
   }
 
-  public PathChildrenCache getWatcher()
+  public PathChildrenCache getStatusCache()
   {
-    return watcher;
+    return statusCache;
   }
 
   public DateTime getLastCompletedTaskTime()
@@ -76,5 +77,10 @@ public class WorkerWrapper
   public void removeTask(String taskId)
   {
     runningTasks.remove(taskId);
+  }
+
+  public void close() throws IOException
+  {
+    statusCache.close();
   }
 }

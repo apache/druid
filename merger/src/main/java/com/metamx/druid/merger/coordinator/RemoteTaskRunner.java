@@ -19,9 +19,11 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.primitives.Ints;
 import com.metamx.common.ISE;
@@ -34,10 +36,12 @@ import com.metamx.druid.merger.common.TaskHolder;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
+import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
 import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
@@ -47,8 +51,10 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ScheduledExecutorService;
@@ -76,13 +82,18 @@ public class RemoteTaskRunner implements TaskRunner
   private final ObjectMapper jsonMapper;
   private final RemoteTaskRunnerConfig config;
   private final CuratorFramework cf;
-  private final PathChildrenCache workerListener;
+  private final PathChildrenCache workerPathCache;
   private final ScheduledExecutorService scheduledExec;
   private final RetryPolicyFactory retryPolicyFactory;
-  private final ConcurrentHashMap<String, WorkerWrapper> zkWorkers; // all workers that exist in ZK
-  private final ConcurrentHashMap<String, TaskWrapper> tasks; // all tasks that are assigned or need to be assigned
   private final ScalingStrategy strategy;
 
+  // all workers that exist in ZK
+  private final ConcurrentHashMap<String, WorkerWrapper> zkWorkers = new ConcurrentHashMap<String, WorkerWrapper>();
+  // all tasks that are assigned or need to be assigned
+  private final ConcurrentHashMap<String, TaskWrapper> tasks = new ConcurrentHashMap<String, TaskWrapper>();
+
+  private final ConcurrentSkipListSet<String> currentlyProvisioning = new ConcurrentSkipListSet<String>();
+  private final ConcurrentSkipListSet<String> currentlyTerminating = new ConcurrentSkipListSet<String>();
   private final Object statusLock = new Object();
 
   private volatile boolean started = false;
@@ -91,22 +102,18 @@ public class RemoteTaskRunner implements TaskRunner
       ObjectMapper jsonMapper,
       RemoteTaskRunnerConfig config,
       CuratorFramework cf,
-      PathChildrenCache workerListener,
+      PathChildrenCache workerPathCache,
       ScheduledExecutorService scheduledExec,
       RetryPolicyFactory retryPolicyFactory,
-      ConcurrentHashMap<String, WorkerWrapper> zkWorkers,
-      ConcurrentHashMap<String, TaskWrapper> tasks,
       ScalingStrategy strategy
   )
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.cf = cf;
-    this.workerListener = workerListener;
+    this.workerPathCache = workerPathCache;
     this.scheduledExec = scheduledExec;
     this.retryPolicyFactory = retryPolicyFactory;
-    this.zkWorkers = zkWorkers;
-    this.tasks = tasks;
     this.strategy = strategy;
   }
 
@@ -114,27 +121,23 @@ public class RemoteTaskRunner implements TaskRunner
   public void start()
   {
     try {
-      workerListener.start();
-      workerListener.getListenable().addListener(
+      workerPathCache.start();
+      workerPathCache.getListenable().addListener(
           new PathChildrenCacheListener()
           {
             @Override
             public void childEvent(CuratorFramework client, final PathChildrenCacheEvent event) throws Exception
             {
+              final Worker worker = jsonMapper.readValue(
+                  event.getData().getData(),
+                  Worker.class
+              );
               if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
-                final Worker worker = jsonMapper.readValue(
-                    cf.getData().forPath(event.getData().getPath()),
-                    Worker.class
-                );
-
                 log.info("New worker[%s] found!", worker.getHost());
                 addWorker(worker);
               } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_REMOVED)) {
-                // Get the worker host from the path
-                String workerHost = event.getData().getPath().substring(event.getData().getPath().lastIndexOf("/") + 1);
-
-                log.info("Worker[%s] removed!", workerHost);
-                removeWorker(workerHost);
+                log.info("Worker[%s] removed!", worker.getHost());
+                removeWorker(worker.getHost());
               }
             }
           }
@@ -157,11 +160,51 @@ public class RemoteTaskRunner implements TaskRunner
             @Override
             public void run()
             {
-              strategy.terminateIfNeeded(zkWorkers);
+              if (currentlyTerminating.isEmpty()) {
+                if (zkWorkers.size() <= config.getMinNumWorkers()) {
+                  return;
+                }
+
+                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList(
+                    FunctionalIterable
+                        .create(zkWorkers.values())
+                        .filter(
+                            new Predicate<WorkerWrapper>()
+                            {
+                              @Override
+                              public boolean apply(@Nullable WorkerWrapper input)
+                              {
+                                return System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
+                                       > config.getmaxWorkerIdleTimeMillisBeforeDeletion();
+                              }
+                            }
+                        )
+                );
+
+                AutoScalingData terminated = strategy.terminate(
+                    Lists.transform(
+                        thoseLazyWorkers,
+                        new Function<WorkerWrapper, String>()
+                        {
+                          @Override
+                          public String apply(@Nullable WorkerWrapper input)
+                          {
+                            return input.getWorker().getHost();
+                          }
+                        }
+                    )
+                );
+
+                currentlyTerminating.addAll(terminated.getNodeIds());
+              } else {
+                log.info(
+                    "[%s] still terminating. Wait for all nodes to terminate before trying again.",
+                    currentlyTerminating
+                );
+              }
             }
           }
       );
-
       started = true;
     }
     catch (Exception e) {
@@ -174,7 +217,7 @@ public class RemoteTaskRunner implements TaskRunner
   {
     try {
       for (WorkerWrapper workerWrapper : zkWorkers.values()) {
-        workerWrapper.getWatcher().close();
+        workerWrapper.close();
       }
     }
     catch (Exception e) {
@@ -202,16 +245,24 @@ public class RemoteTaskRunner implements TaskRunner
 
   private boolean assignTask(TaskWrapper taskWrapper)
   {
-    // If the task already exists, we don't need to announce it
     try {
-      WorkerWrapper workerWrapper;
-      if ((workerWrapper = findWorkerRunningTask(taskWrapper)) != null) {
+      WorkerWrapper workerWrapper = findWorkerRunningTask(taskWrapper);
+      // If the task already exists, we don't need to announce it
+      if (workerWrapper != null) {
         final Worker worker = workerWrapper.getWorker();
 
-        log.info("Worker[%s] is already running task{%s].", worker.getHost(), taskWrapper.getTask().getId());
+        log.info("Worker[%s] is already running task[%s].", worker.getHost(), taskWrapper.getTask().getId());
 
         TaskStatus taskStatus = jsonMapper.readValue(
-            cf.getData().forPath(JOINER.join(config.getStatusPath(), worker.getHost(), taskWrapper.getTask().getId())),
+            workerWrapper.getStatusCache()
+                         .getCurrentData(
+                             JOINER.join(
+                                 config.getStatusPath(),
+                                 worker.getHost(),
+                                 taskWrapper.getTask().getId()
+                             )
+                         )
+                         .getData(),
             TaskStatus.class
         );
 
@@ -222,7 +273,7 @@ public class RemoteTaskRunner implements TaskRunner
           }
           new CleanupPaths(worker.getHost(), taskWrapper.getTask().getId()).run();
         } else {
-          tasks.put(taskWrapper.getTask().getId(), taskWrapper);
+          tasks.putIfAbsent(taskWrapper.getTask().getId(), taskWrapper);
         }
         return true;
       }
@@ -301,19 +352,36 @@ public class RemoteTaskRunner implements TaskRunner
   private void addWorker(final Worker worker)
   {
     try {
-      final String workerStatus = JOINER.join(config.getStatusPath(), worker.getHost());
+      currentlyProvisioning.remove(worker.getHost());
+
+      final String workerStatusPath = JOINER.join(config.getStatusPath(), worker.getHost());
+      final PathChildrenCache statusCache = new PathChildrenCache(cf, workerStatusPath, true);
       final ConcurrentSkipListSet<String> runningTasks = new ConcurrentSkipListSet<String>(
-          cf.getChildren().forPath(workerStatus)
+          Lists.transform(
+              statusCache.getCurrentData(),
+              new Function<ChildData, String>()
+              {
+                @Override
+                public String apply(@Nullable ChildData input)
+                {
+                  try {
+                    return jsonMapper.readValue(input.getData(), TaskStatus.class).getId();
+                  }
+                  catch (Exception e) {
+                    throw Throwables.propagate(e);
+                  }
+                }
+              }
+          )
       );
-      final PathChildrenCache watcher = new PathChildrenCache(cf, workerStatus, false);
       final WorkerWrapper workerWrapper = new WorkerWrapper(
           worker,
           runningTasks,
-          watcher
+          statusCache
       );
 
       // Add status listener to the watcher for status changes
-      watcher.getListenable().addListener(
+      statusCache.getListenable().addListener(
           new PathChildrenCacheListener()
           {
             @Override
@@ -323,9 +391,8 @@ public class RemoteTaskRunner implements TaskRunner
                 String taskId = null;
                 try {
                   if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
-                    String statusPath = event.getData().getPath();
                     TaskStatus taskStatus = jsonMapper.readValue(
-                        cf.getData().forPath(statusPath), TaskStatus.class
+                        event.getData().getData(), TaskStatus.class
                     );
                     taskId = taskStatus.getId();
 
@@ -335,7 +402,7 @@ public class RemoteTaskRunner implements TaskRunner
                   } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_UPDATED)) {
                     String statusPath = event.getData().getPath();
                     TaskStatus taskStatus = jsonMapper.readValue(
-                        cf.getData().forPath(statusPath), TaskStatus.class
+                        event.getData().getData(), TaskStatus.class
                     );
                     taskId = taskStatus.getId();
 
@@ -369,7 +436,7 @@ public class RemoteTaskRunner implements TaskRunner
           }
       );
       zkWorkers.put(worker.getHost(), workerWrapper);
-      watcher.start();
+      statusCache.start();
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -394,6 +461,8 @@ public class RemoteTaskRunner implements TaskRunner
    */
   private void removeWorker(final String workerId)
   {
+    currentlyTerminating.remove(workerId);
+
     WorkerWrapper workerWrapper = zkWorkers.get(workerId);
     if (workerWrapper != null) {
       for (String taskId : workerWrapper.getRunningTasks()) {
@@ -405,7 +474,7 @@ public class RemoteTaskRunner implements TaskRunner
       }
 
       try {
-        workerWrapper.getWatcher().close();
+        workerWrapper.getStatusCache().close();
       }
       catch (IOException e) {
         log.error("Failed to close watcher associated with worker[%s]", workerWrapper.getWorker().getHost());
@@ -441,8 +510,19 @@ public class RemoteTaskRunner implements TaskRunner
       );
 
       if (workerQueue.isEmpty()) {
-        log.makeAlert("There are no worker nodes with capacity to run task!").emit();
-        strategy.provision(zkWorkers);
+        log.info("Worker nodes do not have capacity to run any more tasks!");
+
+        if (currentlyProvisioning.isEmpty()) {
+          AutoScalingData provisioned = strategy.provision();
+          if (provisioned != null) {
+            currentlyProvisioning.addAll(provisioned.getNodeIds());
+          }
+        } else {
+          log.info(
+              "[%s] still provisioning. Wait for all provisioned nodes to complete before requesting new worker.",
+              currentlyProvisioning
+          );
+        }
         return null;
       }
 
@@ -471,7 +551,6 @@ public class RemoteTaskRunner implements TaskRunner
         tasks.put(task.getId(), taskWrapper);
 
         cf.create()
-          .creatingParentsIfNeeded()
           .withMode(CreateMode.EPHEMERAL)
           .forPath(
               JOINER.join(

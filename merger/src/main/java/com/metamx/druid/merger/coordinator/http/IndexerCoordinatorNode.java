@@ -59,15 +59,13 @@ import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.TaskRunner;
 import com.metamx.druid.merger.coordinator.TaskRunnerFactory;
 import com.metamx.druid.merger.coordinator.TaskStorage;
-import com.metamx.druid.merger.coordinator.TaskWrapper;
-import com.metamx.druid.merger.coordinator.WorkerWrapper;
+import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
-import com.metamx.druid.merger.coordinator.config.S3AutoScalingStrategyConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
+import com.metamx.druid.merger.coordinator.scaling.EC2AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.NoopScalingStrategy;
-import com.metamx.druid.merger.coordinator.scaling.S3AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
 import com.metamx.druid.realtime.S3SegmentPusher;
 import com.metamx.druid.realtime.S3SegmentPusherConfig;
@@ -102,7 +100,6 @@ import org.skife.config.ConfigurationObjectFactory;
 import java.net.URL;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -464,27 +461,25 @@ public class IndexerCoordinatorNode
                     .build()
             );
 
-            ScalingStrategy strategy = new S3AutoScalingStrategy(
+            ScalingStrategy strategy = new EC2AutoScalingStrategy(
                 new AmazonEC2Client(
                     new BasicAWSCredentials(
                         props.getProperty("com.metamx.aws.accessKey"),
                         props.getProperty("com.metamx.aws.secretKey")
                     )
                 ),
-                configFactory.build(S3AutoScalingStrategyConfig.class)
+                configFactory.build(EC2AutoScalingStrategyConfig.class)
             );
-            // TODO: remove this when AMI is ready
-            strategy = new NoopScalingStrategy(configFactory.build(S3AutoScalingStrategyConfig.class));
+            // TODO: use real strategy before actual deployment
+            strategy = new NoopScalingStrategy();
 
             return new RemoteTaskRunner(
                 jsonMapper,
                 configFactory.build(RemoteTaskRunnerConfig.class),
                 curatorFramework,
-                new PathChildrenCache(curatorFramework, indexerZkConfig.getAnnouncementPath(), false),
+                new PathChildrenCache(curatorFramework, indexerZkConfig.getAnnouncementPath(), true),
                 retryScheduledExec,
                 new RetryPolicyFactory(configFactory.build(RetryPolicyConfig.class)),
-                new ConcurrentHashMap<String, WorkerWrapper>(),
-                new ConcurrentHashMap<String, TaskWrapper>(),
                 strategy
             );
           }
