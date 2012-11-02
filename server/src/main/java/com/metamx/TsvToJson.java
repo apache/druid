@@ -68,42 +68,51 @@ public class TsvToJson
       }
     }
 
-    BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8));
-    BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8));
-    String line = null;
-    int count = 0;
-    long currTime = System.currentTimeMillis();
-    long startTime = currTime;
-    while ((line = in.readLine()) != null) {
-      if (count % 1000000 == 0) {
-        long nowTime = System.currentTimeMillis();
-        System.out.printf("Processed [%,d] lines in %,d millis.  Incremental time %,d millis.%n", count, nowTime - startTime, nowTime - currTime);
-        currTime = nowTime;
-      }
-      ++count;
-      String[] splits = line.split("\t");
+    BufferedReader in = null;
+    BufferedWriter out = null;
+    try {
+      in = new BufferedReader(new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8));
+      out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8));
+      String line = null;
+      int count = 0;
+      long currTime = System.currentTimeMillis();
+      long startTime = currTime;
+      while ((line = in.readLine()) != null) {
+        if (count % 1000000 == 0) {
+          long nowTime = System.currentTimeMillis();
+          System.out.printf("Processed [%,d] lines in %,d millis.  Incremental time %,d millis.%n", count, nowTime - startTime, nowTime - currTime);
+          currTime = nowTime;
+        }
+        ++count;
+        String[] splits = line.split("\t");
 
-      if (splits.length == 30) {
-        continue;
-      }
+        if (splits.length == 30) {
+          continue;
+        }
 
-      if (splits.length != handlers.length) {
-        throw new IAE("splits.length[%d] != handlers.length[%d]; line[%s]", splits.length, handlers.length, line);
-      }
+        if (splits.length != handlers.length) {
+          throw new IAE("splits.length[%d] != handlers.length[%d]; line[%s]", splits.length, handlers.length, line);
+        }
 
-      Map<String, Object> jsonMap = Maps.newLinkedHashMap();
-      for (int i = 0; i < handlers.length; ++i) {
-        jsonMap.put(handlers[i].getFieldName(), handlers[i].process(splits[i]));
-      }
+        Map<String, Object> jsonMap = Maps.newLinkedHashMap();
+        for (int i = 0; i < handlers.length; ++i) {
+          jsonMap.put(handlers[i].getFieldName(), handlers[i].process(splits[i]));
+        }
 
-      final String str = mapper.writeValueAsString(jsonMap);
-      out.write(str);
-      out.write("\n");
+        final String str = mapper.writeValueAsString(jsonMap);
+        out.write(str);
+        out.write("\n");
+      }
+      System.out.printf("Completed %,d lines in %,d millis.%n", count, System.currentTimeMillis() - startTime);
+      out.flush();
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+      if (in != null) {
+        in.close();
+      }
     }
-    System.out.printf("Completed %,d lines in %,d millis.%n", count, System.currentTimeMillis() - startTime);
-    out.flush();
-    out.close();
-    in.close();
   }
 
   public static interface FieldHandler

@@ -413,9 +413,11 @@ public class IndexMerger
     long startTime = System.currentTimeMillis();
     File indexFile = new File(outDir, "index.drd");
 
+    FileOutputStream fileOutputStream = null;
     FileChannel channel = null;
     try {
-      channel = new FileOutputStream(indexFile).getChannel();
+      fileOutputStream = new FileOutputStream(indexFile);
+      channel = fileOutputStream.getChannel();
       channel.write(ByteBuffer.wrap(new byte[]{IndexIO.CURRENT_VERSION_ID}));
 
       GenericIndexed.fromIterable(mergedDimensions, GenericIndexed.stringStrategy).writeToChannel(channel);
@@ -435,6 +437,8 @@ public class IndexMerger
     finally {
       Closeables.closeQuietly(channel);
       channel = null;
+      Closeables.closeQuietly(fileOutputStream);
+      fileOutputStream = null;
     }
     IndexIO.checkFileSize(indexFile);
     log.info("outDir[%s] completed index.drd in %,d millis.", outDir, System.currentTimeMillis() - startTime);

@@ -19,74 +19,53 @@
 
 package com.metamx.druid.realtime;
 
-import com.google.common.collect.Lists;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.BaseServerNode;
 import com.metamx.druid.client.ClientConfig;
 import com.metamx.druid.client.ClientInventoryManager;
 import com.metamx.druid.client.MutableServerView;
 import com.metamx.druid.client.OnlyNewSegmentWatcherServerView;
 import com.metamx.druid.client.ServerView;
-import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.QueryServlet;
-import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ServerInit;
-import com.metamx.druid.initialization.ZkClientConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.utils.PropUtils;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.Emitters;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.HttpClientConfig;
-import com.metamx.http.client.HttpClientInit;
-import com.metamx.metrics.JvmMonitor;
 import com.metamx.metrics.Monitor;
-import com.metamx.metrics.MonitorScheduler;
-import com.metamx.metrics.MonitorSchedulerConfig;
-import com.metamx.metrics.SysMonitor;
-import com.metamx.phonebook.PhoneBook;
-import org.I0Itec.zkclient.ZkClient;
 import org.codehaus.jackson.map.BeanProperty;
 import org.codehaus.jackson.map.DeserializationContext;
 import org.codehaus.jackson.map.InjectableValues;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.jsontype.NamedType;
 import org.codehaus.jackson.smile.SmileFactory;
 import org.codehaus.jackson.type.TypeReference;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
-import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class RealtimeNode
+public class RealtimeNode extends BaseServerNode<RealtimeNode>
 {
   private static final Logger log = new Logger(RealtimeNode.class);
 
@@ -95,155 +74,112 @@ public class RealtimeNode
     return new Builder();
   }
 
-  private final Lifecycle lifecycle;
-  private final ObjectMapper jsonMapper;
-  private final ObjectMapper smileMapper;
-  private final Properties props;
-  private final ConfigurationObjectFactory configFactory;
-
   private final Map<String, Object> injectablesMap = Maps.newLinkedHashMap();
 
-  private PhoneBook phoneBook = null;
-  private ServiceEmitter emitter = null;
-  private ServerView view = null;
   private MetadataUpdater metadataUpdater = null;
-  private QueryRunnerFactoryConglomerate conglomerate = null;
   private SegmentPusher segmentPusher = null;
   private List<FireDepartment> fireDepartments = null;
-  private List<Monitor> monitors = null;
-  private Server server = null;
+  private ServerView view = null;
 
   private boolean initialized = false;
 
   public RealtimeNode(
-    ObjectMapper jsonMapper,
-    ObjectMapper smileMapper,
-    Lifecycle lifecycle,
-    Properties props,
-    ConfigurationObjectFactory configFactory
+      Properties props,
+      Lifecycle lifecycle,
+      ObjectMapper jsonMapper,
+      ObjectMapper smileMapper,
+      ConfigurationObjectFactory configFactory
   )
   {
-    this.jsonMapper = jsonMapper;
-    this.smileMapper = smileMapper;
-    this.lifecycle = lifecycle;
-    this.props = props;
-    this.configFactory = configFactory;
-  }
-
-  public RealtimeNode setPhoneBook(PhoneBook phoneBook)
-  {
-    this.phoneBook = phoneBook;
-    return this;
-  }
-
-  public RealtimeNode setEmitter(ServiceEmitter emitter)
-  {
-    this.emitter = emitter;
-    return this;
+    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
   public RealtimeNode setView(ServerView view)
   {
+    Preconditions.checkState(this.view == null, "Cannot set view once it has already been set.");
     this.view = view;
     return this;
   }
 
   public RealtimeNode setMetadataUpdater(MetadataUpdater metadataUpdater)
   {
+    Preconditions.checkState(this.metadataUpdater == null, "Cannot set metadataUpdater once it has already been set.");
     this.metadataUpdater = metadataUpdater;
-    return this;
-  }
-
-  public RealtimeNode setConglomerate(QueryRunnerFactoryConglomerate conglomerate)
-  {
-    this.conglomerate = conglomerate;
     return this;
   }
 
   public RealtimeNode setSegmentPusher(SegmentPusher segmentPusher)
   {
+    Preconditions.checkState(this.segmentPusher == null, "Cannot set segmentPusher once it has already been set.");
     this.segmentPusher = segmentPusher;
     return this;
   }
 
   public RealtimeNode setFireDepartments(List<FireDepartment> fireDepartments)
   {
+    Preconditions.checkState(this.fireDepartments == null, "Cannot set fireDepartments once it has already been set.");
     this.fireDepartments = fireDepartments;
     return this;
   }
 
-  public RealtimeNode setMonitors(List<Monitor> monitors)
-  {
-    this.monitors = Lists.newArrayList(monitors);
-    return this;
-  }
-
-  public void setServer(Server server)
-  {
-    this.server = server;
-  }
-
   public RealtimeNode registerJacksonInjectable(String name, Object object)
   {
+    Preconditions.checkState(injectablesMap.containsKey(name), "Already registered jackson object[%s]", name);
     injectablesMap.put(name, object);
     return this;
   }
 
-  public RealtimeNode registerJacksonSubtype(Class<?>... clazzes)
+  public MetadataUpdater getMetadataUpdater()
   {
-    jsonMapper.registerSubtypes(clazzes);
-    return this;
+    initializeMetadataUpdater();
+    return metadataUpdater;
   }
 
-  public RealtimeNode registerJacksonSubtype(NamedType... namedTypes)
+  public SegmentPusher getSegmentPusher()
   {
-    jsonMapper.registerSubtypes(namedTypes);
-    return this;
+    initializeSegmentPusher();
+    return segmentPusher;
   }
 
-  private void init() throws Exception
+  public List<FireDepartment> getFireDepartments()
   {
-    if (phoneBook == null) {
-      final ZkClient zkClient = Initialization.makeZkClient(configFactory.build(ZkClientConfig.class), lifecycle);
-      phoneBook = Initialization.createYellowPages(
-          jsonMapper,
-          zkClient,
-          "Realtime-ZKYP--%s",
-          lifecycle
-      );
-    }
+    initializeFireDepartments();
+    return fireDepartments;
+  }
 
-    initializeEmitter();
+  public ServerView getView()
+  {
+    initializeView();
+    return view;
+  }
+
+  protected void doInit() throws Exception
+  {
     initializeView();
     initializeMetadataUpdater();
-    initializeQueryRunnerFactoryConglomerate();
     initializeSegmentPusher();
-    initializeMonitors();
-    initializeServer();
     initializeJacksonInjectables();
+
     initializeFireDepartments();
+
+    final Lifecycle lifecycle = getLifecycle();
+    final ServiceEmitter emitter = getEmitter();
+    final QueryRunnerFactoryConglomerate conglomerate = getConglomerate();
+    final List<Monitor> monitors = getMonitors();
+
     monitors.add(new RealtimeMetricsMonitor(fireDepartments));
 
     final RealtimeManager realtimeManager = new RealtimeManager(fireDepartments, conglomerate);
     lifecycle.addManagedInstance(realtimeManager);
 
-    final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
-    final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
-    final MonitorScheduler monitorScheduler = new MonitorScheduler(
-        configFactory.build(MonitorSchedulerConfig.class),
-        globalScheduledExec,
-        emitter,
-        monitors
-    );
-    lifecycle.addManagedInstance(monitorScheduler);
+    startMonitoring(monitors);
 
-    final RequestLogger requestLogger = Initialization.makeRequestLogger(globalScheduledExec, props);
-    lifecycle.addManagedInstance(requestLogger);
-
-    final Context v2Druid = new Context(server, "/druid/v2", Context.SESSIONS);
+    final Context v2Druid = new Context(getServer(), "/druid/v2", Context.SESSIONS);
     v2Druid.addServlet(new ServletHolder(new StatusServlet()), "/status");
     v2Druid.addServlet(
-        new ServletHolder(new QueryServlet(jsonMapper, smileMapper, realtimeManager, emitter, requestLogger)),
+        new ServletHolder(
+            new QueryServlet(getJsonMapper(), getSmileMapper(), realtimeManager, emitter, getRequestLogger())
+        ),
         "/*"
     );
 
@@ -257,47 +193,16 @@ public class RealtimeNode
       init();
     }
 
-    lifecycle.start();
+    getLifecycle().start();
   }
 
   @LifecycleStop
   public synchronized void stop()
   {
-    lifecycle.stop();
+    getLifecycle().stop();
   }
 
-  private void initializeServer()
-  {
-    if (server == null) {
-      server = Initialization.makeJettyServer(configFactory.build(ServerConfig.class));
-
-      lifecycle.addHandler(
-          new Lifecycle.Handler()
-          {
-            @Override
-            public void start() throws Exception
-            {
-              log.info("Starting Jetty");
-              server.start();
-            }
-
-            @Override
-            public void stop()
-            {
-              log.info("Stopping Jetty");
-              try {
-                server.stop();
-              }
-              catch (Exception e) {
-                log.error(e, "Exception thrown while stopping Jetty");
-              }
-            }
-          }
-      );
-    }
-  }
-
-  private void initializeJacksonInjectables()
+  protected void initializeJacksonInjectables()
   {
     final Map<String, Object> injectables = Maps.newHashMap();
 
@@ -305,13 +210,13 @@ public class RealtimeNode
       injectables.put(entry.getKey(), entry.getValue());
     }
 
-    injectables.put("queryRunnerFactoryConglomerate", conglomerate);
+    injectables.put("queryRunnerFactoryConglomerate", getConglomerate());
     injectables.put("segmentPusher", segmentPusher);
     injectables.put("metadataUpdater", metadataUpdater);
     injectables.put("serverView", view);
-    injectables.put("serviceEmitter", emitter);
+    injectables.put("serviceEmitter", getEmitter());
 
-    jsonMapper.setInjectableValues(
+    getJsonMapper().setInjectableValues(
         new InjectableValues()
         {
           @Override
@@ -325,94 +230,68 @@ public class RealtimeNode
     );
   }
 
-  private void initializeMonitors()
-  {
-    if (monitors == null) {
-      monitors = Lists.newArrayList();
-      monitors.add(new JvmMonitor());
-      monitors.add(new SysMonitor());
-    }
-  }
-
-  private void initializeFireDepartments() throws IOException
+  private void initializeFireDepartments()
   {
     if (fireDepartments == null) {
-      fireDepartments = jsonMapper.readValue(
-          new File(PropUtils.getProperty(props, "druid.realtime.specFile")),
-          new TypeReference<List<FireDepartment>>(){}
-      );
+      try {
+        fireDepartments = getJsonMapper().readValue(
+            new File(PropUtils.getProperty(getProps(), "druid.realtime.specFile")),
+            new TypeReference<List<FireDepartment>>(){}
+        );
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
     }
   }
 
-  private void initializeSegmentPusher() throws S3ServiceException
+  private void initializeSegmentPusher()
   {
     if (segmentPusher == null) {
-      final RestS3Service s3Client = new RestS3Service(
-          new AWSCredentials(
-              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
-          )
-      );
+      final Properties props = getProps();
+      final RestS3Service s3Client;
+      try {
+        s3Client = new RestS3Service(
+            new AWSCredentials(
+                PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+                PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+            )
+        );
+      }
+      catch (S3ServiceException e) {
+        throw Throwables.propagate(e);
+      }
 
-      segmentPusher = new S3SegmentPusher(s3Client, configFactory.build(S3SegmentPusherConfig.class), jsonMapper);
+      segmentPusher = new S3SegmentPusher(s3Client, getConfigFactory().build(S3SegmentPusherConfig.class), getJsonMapper());
     }
   }
 
-  private void initializeQueryRunnerFactoryConglomerate()
-  {
-    if (conglomerate == null) {
-      StupidPool<ByteBuffer> computationBufferPool = ServerInit.makeComputeScratchPool(
-          PropUtils.getPropertyAsInt(props, "druid.computation.buffer.size", 1024 * 1024 * 1024)
-      );
-      conglomerate = new DefaultQueryRunnerFactoryConglomerate(
-          ServerInit.initDefaultQueryTypes(configFactory, computationBufferPool)
-      );
-    }
-  }
-
-  private void initializeMetadataUpdater()
+  protected void initializeMetadataUpdater()
   {
     if (metadataUpdater == null) {
       metadataUpdater = new MetadataUpdater(
-          jsonMapper,
-          configFactory.build(MetadataUpdaterConfig.class),
-          phoneBook,
-          new DbConnector(configFactory.build(DbConnectorConfig.class)).getDBI()
+          getJsonMapper(),
+          getConfigFactory().build(MetadataUpdaterConfig.class),
+          getPhoneBook(),
+          new DbConnector(getConfigFactory().build(DbConnectorConfig.class)).getDBI()
       );
-      lifecycle.addManagedInstance(metadataUpdater);
+      getLifecycle().addManagedInstance(metadataUpdater);
     }
   }
 
   private void initializeView()
   {
     if (view == null) {
-      final ClientConfig clientConfig = configFactory.build(ClientConfig.class);
       final MutableServerView view = new OnlyNewSegmentWatcherServerView();
       final ClientInventoryManager clientInventoryManager = new ClientInventoryManager(
-          clientConfig.getClientInventoryManagerConfig(),
-          phoneBook,
+          getConfigFactory().build(ClientConfig.class),
+          getPhoneBook(),
           view
       );
-      lifecycle.addManagedInstance(clientInventoryManager);
+      getLifecycle().addManagedInstance(clientInventoryManager);
 
       this.view = view;
     }
-  }
-
-  private void initializeEmitter()
-  {
-    if (emitter == null) {
-      final HttpClient httpClient = HttpClientInit.createClient(
-          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
-      );
-
-      emitter = new ServiceEmitter(
-          PropUtils.getProperty(props, "druid.service"),
-          PropUtils.getProperty(props, "druid.host"),
-          Emitters.create(props, httpClient, jsonMapper, lifecycle)
-      );
-    }
-    EmittingLogger.registerEmitter(emitter);
   }
 
   public static class Builder
@@ -465,7 +344,7 @@ public class RealtimeNode
         configFactory = Config.createFactory(props);
       }
 
-      return new RealtimeNode(jsonMapper, smileMapper, lifecycle, props, configFactory);
+      return new RealtimeNode(props, lifecycle, jsonMapper, smileMapper, configFactory);
     }
   }
 }

@@ -83,7 +83,6 @@ public class JodaStuff
         super(DateTime.class);
       }
 
-      @SuppressWarnings("unchecked")
       @Override
       public DateTime deserialize(JsonParser jp, DeserializationContext ctxt)
           throws IOException, JsonProcessingException

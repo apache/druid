@@ -40,7 +40,6 @@ import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.SegmentInventoryManager;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
-import com.metamx.druid.coordination.legacy.TheSizeAdjuster;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -77,7 +76,6 @@ public class DruidMaster
   private final DruidClusterInfo clusterInfo;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final ServerInventoryManager serverInventoryManager;
-  private final TheSizeAdjuster sizeAdjuster;
   private final PhoneBook yp;
   private final ServiceEmitter emitter;
   private final ScheduledExecutorService exec;
@@ -97,7 +95,6 @@ public class DruidMaster
       ObjectMapper jsonMapper,
       DatabaseSegmentManager databaseSegmentManager,
       ServerInventoryManager serverInventoryManager,
-      TheSizeAdjuster sizeAdjuster,
       PhoneBook zkPhoneBook,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
@@ -113,7 +110,6 @@ public class DruidMaster
 
     this.databaseSegmentManager = databaseSegmentManager;
     this.serverInventoryManager = serverInventoryManager;
-    this.sizeAdjuster = sizeAdjuster;
     this.yp = zkPhoneBook;
     this.emitter = emitter;
 
@@ -354,16 +350,7 @@ public class DruidMaster
 
     for (DataSegment dataSegment : dataSegments) {
       if (dataSegment.getSize() < 0) {
-        log.info("No size on Segment[%s], setting.", dataSegment);
-
-        DataSegment newDataSegment = sizeAdjuster.updateDescriptor(dataSegment);
-
-        if (dataSegment == null) {
-          log.warn("newDataSegment was null with old dataSegment[%s].  Skipping.", dataSegment);
-          continue;
-        }
-
-        dataSegment = newDataSegment;
+        log.warn("No size on Segment[%s], wtf?", dataSegment);
       }
       availableSegments.add(dataSegment);
     }

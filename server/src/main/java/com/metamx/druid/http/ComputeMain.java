@@ -17,13 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.coordination.legacy;
+package com.metamx.druid.http;
 
-import java.util.Map;
+import com.metamx.common.lifecycle.Lifecycle;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.log.LogLevelAdjuster;
 
 /**
  */
-public interface SizeLookup
+public class ComputeMain
 {
-  public Long lookupSize(Map<String, Object> descriptor);
+  private static final Logger log = new Logger(ComputeMain.class);
+
+  public static void main(String[] args) throws Exception
+  {
+    LogLevelAdjuster.register();
+
+    Lifecycle lifecycle = new Lifecycle();
+
+    lifecycle.addManagedInstance(
+        ComputeNode.builder().build()
+    );
+
+    try {
+      lifecycle.start();
+    }
+    catch (Throwable t) {
+      log.info(t, "Throwable caught at startup, committing seppuku");
+      System.exit(2);
+    }
+
+    lifecycle.join();
+  }
 }

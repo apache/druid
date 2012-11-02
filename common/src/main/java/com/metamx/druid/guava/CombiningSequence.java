@@ -59,7 +59,6 @@ public class CombiningSequence<T> implements Sequence<T>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public <OutType> OutType accumulate(OutType initValue, final Accumulator<OutType, T> accumulator)
   {
     final AtomicReference<OutType> retVal = new AtomicReference<OutType>(initValue);
