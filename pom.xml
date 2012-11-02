@@ -34,7 +34,7 @@
     </scm>
 
     <prerequisites>
-        <maven>2.2.1</maven>
+        <maven>3.0.3</maven>
     </prerequisites>
 
     <properties>
