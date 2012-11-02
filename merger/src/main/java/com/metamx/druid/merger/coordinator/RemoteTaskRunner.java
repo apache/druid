@@ -144,17 +144,17 @@ public class RemoteTaskRunner implements TaskRunner
       );
 
       // Schedule termination of worker nodes periodically
-      Period period = new Period(config.getTerminateResourcesPeriodMs());
-      PeriodGranularity granularity = new PeriodGranularity(period, null, null);
-      final long truncatedNow = granularity.truncate(new DateTime().getMillis());
+      Period period = new Period(config.getTerminateResourcesDuration());
+      PeriodGranularity granularity = new PeriodGranularity(period, config.getTerminateResourcesOriginDateTime(), null);
+      final long startTime = granularity.next(granularity.truncate(new DateTime().getMillis()));
 
       ScheduledExecutors.scheduleAtFixedRate(
           scheduledExec,
           new Duration(
               System.currentTimeMillis(),
-              granularity.next(truncatedNow) - config.getTerminateResourcesWindowMs()
+              startTime
           ),
-          new Duration(config.getTerminateResourcesPeriodMs()),
+          config.getTerminateResourcesDuration(),
           new Runnable()
           {
             @Override
@@ -588,12 +588,18 @@ public class RemoteTaskRunner implements TaskRunner
     {
       try {
         final String statusPath = JOINER.join(config.getStatusPath(), workerId, taskId);
-        final String taskPath = JOINER.join(config.getTaskPath(), workerId, taskId);
         cf.delete().guaranteed().forPath(statusPath);
+      }
+      catch (Exception e) {
+        log.warn("Tried to delete a status path that didn't exist! Must've gone away already?");
+      }
+
+      try {
+        final String taskPath = JOINER.join(config.getTaskPath(), workerId, taskId);
         cf.delete().guaranteed().forPath(taskPath);
       }
       catch (Exception e) {
-        log.warn("Tried to delete a path that didn't exist! Must've gone away already!");
+        log.warn("Tried to delete a task path that didn't exist! Must've gone away already?");
       }
     }
   }

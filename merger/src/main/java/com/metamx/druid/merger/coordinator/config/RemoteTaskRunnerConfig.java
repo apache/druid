@@ -20,6 +20,8 @@
 package com.metamx.druid.merger.coordinator.config;
 
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
@@ -27,13 +29,13 @@ import org.skife.config.Default;
  */
 public abstract class RemoteTaskRunnerConfig extends IndexerZkConfig
 {
-  @Config("druid.indexer.terminateResources.periodMs")
-  @Default("3600000") // 1 hr
-  public abstract long getTerminateResourcesPeriodMs();
+  @Config("druid.indexer.terminateResources.duration")
+  @Default("PT1H")
+  public abstract Duration getTerminateResourcesDuration();
 
-  @Config("druid.indexer.terminateResources.windowMs")
-  @Default("300000") // 5 mins
-  public abstract long getTerminateResourcesWindowMs();
+  @Config("druid.indexer.terminateResources.originDateTime")
+  @Default("2012-01-01T00:55:00.000Z")
+  public abstract DateTime getTerminateResourcesOriginDateTime();
 
   @Config("druid.indexer.minWorkerVersion")
   public abstract String getMinWorkerVersion();
