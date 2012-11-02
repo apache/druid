@@ -61,13 +61,13 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
 
-  final NavigableMap<Interval, TimelineEntry<VersionType, ObjectType>> completePartitionsTimeline = Maps.newTreeMap(
+  final NavigableMap<Interval, TimelineEntry> completePartitionsTimeline = new TreeMap<Interval, TimelineEntry>(
       Comparators.intervalsByStartThenEnd()
   );
-  final NavigableMap<Interval, TimelineEntry<VersionType, ObjectType>> incompletePartitionsTimeline = Maps.newTreeMap(
+  final NavigableMap<Interval, TimelineEntry> incompletePartitionsTimeline = new TreeMap<Interval, TimelineEntry>(
       Comparators.intervalsByStartThenEnd()
   );
-  private final Map<Interval, TreeMap<VersionType, TimelineEntry<VersionType, ObjectType>>> allTimelineEntries = Maps.newHashMap();
+  private final Map<Interval, TreeMap<VersionType, TimelineEntry>> allTimelineEntries = Maps.newHashMap();
 
   private final Comparator<? super VersionType> versionComparator;
 
@@ -83,23 +83,19 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
     try {
       lock.writeLock().lock();
 
-      Map<VersionType, TimelineEntry<VersionType, ObjectType>> exists = allTimelineEntries.get(interval);
-      TimelineEntry<VersionType, ObjectType> entry = null;
+      Map<VersionType, TimelineEntry> exists = allTimelineEntries.get(interval);
+      TimelineEntry entry = null;
 
       if (exists == null) {
-        entry = new TimelineEntry<VersionType, ObjectType>(interval, version, new PartitionHolder<ObjectType>(object));
-        TreeMap<VersionType, TimelineEntry<VersionType, ObjectType>> versionEntry = Maps.newTreeMap(versionComparator);
+        entry = new TimelineEntry(interval, version, new PartitionHolder<ObjectType>(object));
+        TreeMap<VersionType, TimelineEntry> versionEntry = Maps.newTreeMap(versionComparator);
         versionEntry.put(version, entry);
         allTimelineEntries.put(interval, versionEntry);
       } else {
         entry = exists.get(version);
 
         if (entry == null) {
-          entry = new TimelineEntry<VersionType, ObjectType>(
-              interval,
-              version,
-              new PartitionHolder<ObjectType>(object)
-          );
+          entry = new TimelineEntry(interval, version, new PartitionHolder<ObjectType>(object));
           exists.put(version, entry);
         } else {
           PartitionHolder<ObjectType> partitionHolder = entry.getPartitionHolder();
@@ -123,12 +119,12 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
     try {
       lock.writeLock().lock();
 
-      Map<VersionType, TimelineEntry<VersionType, ObjectType>> versionEntries = allTimelineEntries.get(interval);
+      Map<VersionType, TimelineEntry> versionEntries = allTimelineEntries.get(interval);
       if (versionEntries == null) {
         return null;
       }
 
-      TimelineEntry<VersionType, ObjectType> entry = versionEntries.get(version);
+      TimelineEntry entry = versionEntries.get(version);
       if (entry == null) {
         return null;
       }
@@ -156,7 +152,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
   {
     try {
       lock.readLock().lock();
-      for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry<VersionType, ObjectType>>> entry : allTimelineEntries.entrySet()) {
+      for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : allTimelineEntries.entrySet()) {
         if (entry.getKey().equals(interval) || entry.getKey().contains(interval)) {
           TimelineEntry foundEntry = entry.getValue().get(version);
           if (foundEntry != null) {
@@ -201,14 +197,13 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
       List<TimelineObjectHolder<VersionType, ObjectType>> retVal = new ArrayList<TimelineObjectHolder<VersionType, ObjectType>>();
 
       Map<Interval, Map<VersionType, TimelineEntry>> overShadowed = Maps.newHashMap();
-      for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry<VersionType, ObjectType>>> versionEntry : allTimelineEntries
-          .entrySet()) {
+      for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry>> versionEntry : allTimelineEntries.entrySet()) {
         Map<VersionType, TimelineEntry> versionCopy = Maps.newHashMap();
         versionCopy.putAll(versionEntry.getValue());
         overShadowed.put(versionEntry.getKey(), versionCopy);
       }
 
-      for (Map.Entry<Interval, TimelineEntry<VersionType, ObjectType>> entry : completePartitionsTimeline.entrySet()) {
+      for (Map.Entry<Interval, TimelineEntry> entry : completePartitionsTimeline.entrySet()) {
         Map<VersionType, TimelineEntry> versionEntry = overShadowed.get(entry.getValue().getTrueInterval());
         if (versionEntry != null) {
           versionEntry.remove(entry.getValue().getVersion());
@@ -218,7 +213,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
         }
       }
 
-      for (Map.Entry<Interval, TimelineEntry<VersionType, ObjectType>> entry : incompletePartitionsTimeline.entrySet()) {
+      for (Map.Entry<Interval, TimelineEntry> entry : incompletePartitionsTimeline.entrySet()) {
         Map<VersionType, TimelineEntry> versionEntry = overShadowed.get(entry.getValue().getTrueInterval());
         if (versionEntry != null) {
           versionEntry.remove(entry.getValue().getVersion());
@@ -230,7 +225,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
 
       for (Map.Entry<Interval, Map<VersionType, TimelineEntry>> versionEntry : overShadowed.entrySet()) {
         for (Map.Entry<VersionType, TimelineEntry> entry : versionEntry.getValue().entrySet()) {
-          TimelineEntry<VersionType, ObjectType> object = entry.getValue();
+          TimelineEntry object = entry.getValue();
           retVal.add(
               new TimelineObjectHolder<VersionType, ObjectType>(
                   object.getTrueInterval(),
@@ -249,12 +244,12 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
   }
 
   private void add(
-      NavigableMap<Interval, TimelineEntry<VersionType, ObjectType>> timeline,
+      NavigableMap<Interval, TimelineEntry> timeline,
       Interval interval,
-      TimelineEntry<VersionType, ObjectType> entry
+      TimelineEntry entry
   )
   {
-    TimelineEntry<VersionType, ObjectType> existsInTimeline = timeline.get(interval);
+    TimelineEntry existsInTimeline = timeline.get(interval);
 
     if (existsInTimeline != null) {
       int compare = versionComparator.compare(entry.getVersion(), existsInTimeline.getVersion());
@@ -284,9 +279,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
   }
 
   private boolean addAtKey(
-      NavigableMap<Interval, TimelineEntry<VersionType, ObjectType>> timeline,
+      NavigableMap<Interval, TimelineEntry> timeline,
       Interval key,
-      TimelineEntry<VersionType, ObjectType> entry
+      TimelineEntry entry
   )
   {
     boolean retVal = false;
@@ -320,7 +315,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
           }
         }
       } else if (versionCompare > 0) {
-        TimelineEntry<VersionType, ObjectType> oldEntry = timeline.remove(currKey);
+        TimelineEntry oldEntry = timeline.remove(currKey);
 
         if (currKey.contains(entryInterval)) {
           addIntervalToTimeline(new Interval(currKey.getStart(), entryInterval.getStart()), oldEntry, timeline);
@@ -360,8 +355,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
 
   private void addIntervalToTimeline(
       Interval interval,
-      TimelineEntry<VersionType, ObjectType> entry,
-      NavigableMap<Interval, TimelineEntry<VersionType, ObjectType>> timeline
+      TimelineEntry entry,
+      NavigableMap<Interval, TimelineEntry> timeline
   )
   {
     if (interval != null && interval.toDurationMillis() > 0) {
@@ -370,9 +365,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
   }
 
   private void remove(
-      NavigableMap<Interval, TimelineEntry<VersionType, ObjectType>> timeline,
+      NavigableMap<Interval, TimelineEntry> timeline,
       Interval interval,
-      TimelineEntry<VersionType, ObjectType> entry,
+      TimelineEntry entry,
       boolean incompleteOk
   )
   {
@@ -380,9 +375,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
     TimelineEntry removed = timeline.get(interval);
 
     if (removed == null) {
-      Iterator<Map.Entry<Interval, TimelineEntry<VersionType, ObjectType>>> iter = timeline.entrySet().iterator();
+      Iterator<Map.Entry<Interval, TimelineEntry>> iter = timeline.entrySet().iterator();
       while (iter.hasNext()) {
-        Map.Entry<Interval, TimelineEntry<VersionType, ObjectType>> timelineEntry = iter.next();
+        Map.Entry<Interval, TimelineEntry> timelineEntry = iter.next();
         if (timelineEntry.getValue() == entry) {
           intervalsToRemove.add(timelineEntry.getKey());
         }
@@ -397,15 +392,14 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
   }
 
   private void remove(
-      NavigableMap<Interval, TimelineEntry<VersionType, ObjectType>> timeline,
+      NavigableMap<Interval, TimelineEntry> timeline,
       Interval interval,
       boolean incompleteOk
   )
   {
     timeline.remove(interval);
 
-    for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry<VersionType, ObjectType>>> versionEntry : allTimelineEntries
-        .entrySet()) {
+    for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry>> versionEntry : allTimelineEntries.entrySet()) {
       if (versionEntry.getKey().overlap(interval) != null) {
         TimelineEntry timelineEntry = versionEntry.getValue().lastEntry().getValue();
         if (timelineEntry.getPartitionHolder().isComplete() || incompleteOk) {
@@ -418,18 +412,20 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
   private List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval, boolean incompleteOk)
   {
     List<TimelineObjectHolder<VersionType, ObjectType>> retVal = new ArrayList<TimelineObjectHolder<VersionType, ObjectType>>();
-    NavigableMap<Interval, TimelineEntry<VersionType, ObjectType>> timeline = (incompleteOk)
-                                                                              ? incompletePartitionsTimeline
-                                                                              : completePartitionsTimeline;
+    NavigableMap<Interval, TimelineEntry> timeline = (incompleteOk)
+                                                     ? incompletePartitionsTimeline
+                                                     : completePartitionsTimeline;
 
-    for (Map.Entry<Interval, TimelineEntry<VersionType, ObjectType>> entry : timeline.entrySet()) {
+    for (Map.Entry<Interval, TimelineEntry> entry : timeline.entrySet()) {
       Interval timelineInterval = entry.getKey();
-      TimelineEntry<VersionType, ObjectType> val = entry.getValue();
+      TimelineEntry val = entry.getValue();
 
       if (timelineInterval.overlaps(interval)) {
         retVal.add(
             new TimelineObjectHolder<VersionType, ObjectType>(
-                timelineInterval, val.getVersion(), val.getPartitionHolder()
+                timelineInterval,
+                val.getVersion(),
+                val.getPartitionHolder()
             )
         );
       }
@@ -467,30 +463,30 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
     return retVal;
   }
 
-  private static class TimelineEntry<VersionType, ObjectType>
+  public class TimelineEntry
   {
     private final Interval trueInterval;
     private final VersionType version;
     private final PartitionHolder<ObjectType> partitionHolder;
 
-    private TimelineEntry(Interval trueInterval, VersionType version, PartitionHolder<ObjectType> partitionHolder)
+    public TimelineEntry(Interval trueInterval, VersionType version, PartitionHolder<ObjectType> partitionHolder)
     {
       this.trueInterval = trueInterval;
       this.version = version;
       this.partitionHolder = partitionHolder;
     }
 
-    private Interval getTrueInterval()
+    public Interval getTrueInterval()
     {
       return trueInterval;
     }
 
-    private VersionType getVersion()
+    public VersionType getVersion()
     {
       return version;
     }
 
-    private PartitionHolder<ObjectType> getPartitionHolder()
+    public PartitionHolder<ObjectType> getPartitionHolder()
     {
       return partitionHolder;
     }
