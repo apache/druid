@@ -21,6 +21,7 @@ package com.metamx.druid;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.druid.partition.ImmutablePartitionHolder;
 import com.metamx.druid.partition.IntegerPartitionChunk;
@@ -28,6 +29,7 @@ import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.partition.PartitionHolder;
 import com.metamx.druid.partition.SingleElementPartitionChunk;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
 import org.joda.time.Hours;
 import org.joda.time.Interval;
@@ -48,6 +50,10 @@ public class VersionedIntervalTimelineTest
   @Before
   public void setUp() throws Exception
   {
+    if (! "UTC".equals(DateTimeZone.getDefault().getID())) {
+      throw new ISE("Tests assume default timezone of UTC, please set -Duser.timezone=UTC");
+    }
+
     timeline = makeStringIntegerTimeline();
 
     add("2011-04-01/2011-04-03", "1", 2);
