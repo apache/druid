@@ -44,6 +44,8 @@ import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.query.search.SearchQueryRunnerFactory;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
+import com.metamx.druid.query.timeseries.TimeseriesQuery;
+import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.skife.config.ConfigurationObjectFactory;
 
@@ -94,6 +96,7 @@ public class ServerInit
   )
   {
     Map<Class<? extends Query>, QueryRunnerFactory> queryRunners = Maps.newLinkedHashMap();
+    queryRunners.put(TimeseriesQuery.class, new TimeseriesQueryRunnerFactory());
     queryRunners.put(GroupByQuery.class, new GroupByQueryRunnerFactory(new GroupByQueryEngine(configFactory.build(GroupByQueryEngineConfig.class), computationBufferPool)));
     queryRunners.put(SearchQuery.class, new SearchQueryRunnerFactory());
     queryRunners.put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory());
