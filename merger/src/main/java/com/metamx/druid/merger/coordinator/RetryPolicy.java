@@ -19,11 +19,8 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import com.google.common.collect.Lists;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
 import com.metamx.emitter.EmittingLogger;
-
-import java.util.List;
 
 /**
  */
@@ -33,8 +30,6 @@ public class RetryPolicy
 
   private final long MAX_NUM_RETRIES;
   private final long MAX_RETRY_DELAY_MILLIS;
-
-  private final List<Runnable> runnables = Lists.newArrayList();
 
   private volatile long currRetryDelay;
   private volatile int retryCount;

@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.primitives.Ints;
-import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -174,6 +173,9 @@ public class RemoteTaskRunner implements TaskRunner
                               @Override
                               public boolean apply(@Nullable WorkerWrapper input)
                               {
+                                if (!input.getRunningTasks().isEmpty()) {
+                                  return false;
+                                }
                                 return System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
                                        > config.getmaxWorkerIdleTimeMillisBeforeDeletion();
                               }
@@ -243,13 +245,15 @@ public class RemoteTaskRunner implements TaskRunner
     );
   }
 
-  private boolean assignTask(TaskWrapper taskWrapper)
+  private void assignTask(TaskWrapper taskWrapper)
   {
-    try {
-      WorkerWrapper workerWrapper = findWorkerRunningTask(taskWrapper);
-      // If the task already exists, we don't need to announce it
-      if (workerWrapper != null) {
-        final Worker worker = workerWrapper.getWorker();
+    tasks.putIfAbsent(taskWrapper.getTask().getId(), taskWrapper);
+    WorkerWrapper workerWrapper = findWorkerRunningTask(taskWrapper);
+
+    // If the task already exists, we don't need to announce it
+    if (workerWrapper != null) {
+      final Worker worker = workerWrapper.getWorker();
+      try {
 
         log.info("Worker[%s] is already running task[%s].", worker.getHost(), taskWrapper.getTask().getId());
 
@@ -272,24 +276,20 @@ public class RemoteTaskRunner implements TaskRunner
             callback.notify(taskStatus);
           }
           new CleanupPaths(worker.getHost(), taskWrapper.getTask().getId()).run();
-        } else {
-          tasks.putIfAbsent(taskWrapper.getTask().getId(), taskWrapper);
         }
-        return true;
+      }
+      catch (Exception e) {
+        log.error(e, "Task exists, but hit exception!");
+        retryTask(new CleanupPaths(worker.getHost(), taskWrapper.getTask().getId()), taskWrapper);
+      }
+    } else { // Announce the task
+      workerWrapper = getWorkerForTask();
+      if (workerWrapper != null) {
+        announceTask(workerWrapper.getWorker(), taskWrapper);
+      } else {
+        retryTask(null, taskWrapper);
       }
     }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    // Announce the task
-    WorkerWrapper workerWrapper = getWorkerForTask();
-    if (workerWrapper != null) {
-      announceTask(workerWrapper.getWorker(), taskWrapper);
-      return true;
-    }
-
-    return false;
   }
 
   /**
@@ -320,20 +320,13 @@ public class RemoteTaskRunner implements TaskRunner
           @Override
           public void run()
           {
-            try {
-              if (pre != null) {
-                pre.run();
-              }
-
-              if (tasks.containsKey(task.getId())) {
-                log.info("Retry[%d] for task[%s]", retryPolicy.getNumRetries(), task.getId());
-                if (!assignTask(taskWrapper)) {
-                  throw new ISE("Unable to find worker to send retry request to for task[%s]", task.getId());
-                }
-              }
+            if (pre != null) {
+              pre.run();
             }
-            catch (Exception e) {
-              retryTask(null, taskWrapper);
+
+            if (tasks.containsKey(task.getId())) {
+              log.info("Retry[%d] for task[%s]", retryPolicy.getNumRetries(), task.getId());
+              assignTask(taskWrapper);
             }
           }
         },

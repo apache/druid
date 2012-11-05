@@ -35,7 +35,7 @@ public class WorkerWrapper
   private final ConcurrentSkipListSet<String> runningTasks;
   private final PathChildrenCache statusCache;
 
-  private volatile DateTime lastCompletedTaskTime;
+  private volatile DateTime lastCompletedTaskTime = new DateTime();
 
   public WorkerWrapper(Worker worker, ConcurrentSkipListSet<String> runningTasks, PathChildrenCache statusCache)
   {
