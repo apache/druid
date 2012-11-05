@@ -29,6 +29,7 @@ public class HistogramVisual
 {
   @JsonProperty final public double[] breaks;
   @JsonProperty final public double[] counts;
+  @JsonProperty final public double[] quantiles;
   @JsonProperty final double min;
   @JsonProperty final double max;
 
@@ -36,6 +37,7 @@ public class HistogramVisual
   public HistogramVisual(
       @JsonProperty double[] breaks,
       @JsonProperty double[] counts,
+      @JsonProperty double[] quantiles,
       @JsonProperty double min,
       @JsonProperty double max
   )
@@ -46,6 +48,7 @@ public class HistogramVisual
 
     this.breaks = breaks;
     this.counts = counts;
+    this.quantiles = quantiles;
     this.min = min;
     this.max = max;
   }
@@ -53,6 +56,7 @@ public class HistogramVisual
   public HistogramVisual(
         float[] breaks,
         float[] counts,
+        float[] quantiles,
         float min,
         float max
   )
@@ -63,8 +67,10 @@ public class HistogramVisual
 
     this.breaks = new double[breaks.length];
     this.counts = new double[counts.length];
+    this.quantiles = new double[quantiles.length];
     for(int i = 0; i < breaks.length; ++i) this.breaks[i] = breaks[i];
     for(int i = 0; i < counts.length; ++i) this.counts[i] = counts[i];
+    for(int i = 0; i < quantiles.length; ++i) this.quantiles[i] = quantiles[i];
     this.min = min;
     this.max = max;
   }
@@ -76,6 +82,7 @@ public class HistogramVisual
            "counts=" + Arrays.toString(counts) +
            ", breaks=" + Arrays.toString(breaks) +
            ", min=" + min +
+           ", quantiles=" + Arrays.toString(quantiles) +
            ", max=" + max +
            '}';
   }

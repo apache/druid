@@ -68,6 +68,7 @@ public class HistogramTest
     Map<String,Object> expectedObj = Maps.newLinkedHashMap();
     expectedObj.put("breaks", Arrays.asList(visualBreaks));
     expectedObj.put("counts", Arrays.asList(visualCounts));
+    expectedObj.put("quantiles", Arrays.asList(new Double[]{}));
     expectedObj.put("min", -1.0);
     expectedObj.put("max", 1.0);
 
