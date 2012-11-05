@@ -29,6 +29,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.http.StatusServlet;
+import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
@@ -144,6 +145,12 @@ public class WorkerNode
   public WorkerNode setTaskMonitor(TaskMonitor taskMonitor)
   {
     this.taskMonitor = taskMonitor;
+    return this;
+  }
+
+  public WorkerNode registerHandler(Registererer registererer)
+  {
+    registererer.register();
     return this;
   }
 

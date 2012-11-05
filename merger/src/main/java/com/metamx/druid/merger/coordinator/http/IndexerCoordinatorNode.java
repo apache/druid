@@ -41,6 +41,7 @@ import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
+import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
@@ -180,6 +181,12 @@ public class IndexerCoordinatorNode
   public void setTaskRunnerFactory(TaskRunnerFactory taskRunnerFactory)
   {
     this.taskRunnerFactory = taskRunnerFactory;
+  }
+
+  public IndexerCoordinatorNode registerHandler(Registererer registererer)
+  {
+    registererer.register();
+    return this;
   }
 
   public void init() throws Exception
