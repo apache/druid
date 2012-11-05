@@ -173,11 +173,9 @@ public class RemoteTaskRunner implements TaskRunner
                               @Override
                               public boolean apply(@Nullable WorkerWrapper input)
                               {
-                                if (!input.getRunningTasks().isEmpty()) {
-                                  return false;
-                                }
-                                return System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
-                                       > config.getmaxWorkerIdleTimeMillisBeforeDeletion();
+                                return input.getRunningTasks().isEmpty()
+                                       && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
+                                          > config.getmaxWorkerIdleTimeMillisBeforeDeletion();
                               }
                             }
                         )
