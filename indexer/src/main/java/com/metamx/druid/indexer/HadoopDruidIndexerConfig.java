@@ -359,24 +359,9 @@ public class HadoopDruidIndexerConfig
     return registererers;
   }
 
-  public void setRegistererers(List<String> registererers)
+  public void setRegistererers(List<Registererer> registererers)
   {
-    this.registererers = Lists.transform(
-        registererers,
-        new Function<String, Registererer>()
-        {
-          @Override
-          public Registererer apply(@Nullable String input)
-          {
-            try {
-              return (Registererer) Class.forName(input).newInstance();
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
-          }
-        }
-    );
+    this.registererers = registererers;
   }
 /********************************************
  Granularity/Bucket Helper Methods

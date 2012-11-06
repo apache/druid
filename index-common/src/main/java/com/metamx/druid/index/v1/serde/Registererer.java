@@ -19,6 +19,8 @@
 
 package com.metamx.druid.index.v1.serde;
 
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+
 /**
  * This is a "factory" interface for registering handlers in the system.  It exists because I'm unaware of
  * another way to register the complex serdes in the MR jobs that run on Hadoop.  As such, instances of this interface
@@ -27,6 +29,7 @@ package com.metamx.druid.index.v1.serde;
  *
  * The name is not a typo, I felt that it needed an extra "er" to make the pronunciation that much more difficult.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface Registererer
 {
   public void register();
