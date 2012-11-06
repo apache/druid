@@ -15,7 +15,7 @@ echo "cleaning up previous run, if any"
 
 #  start RealtimeNode process
 #
-java -Xmx400m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath target/druid-examples-rand-2.5.72-SNAPSHOT-selfcontained.jar  druid.examples.RealtimeStandaloneMain  >RealtimeNode.out 2>&1  &
+java -Xmx400m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath target/druid-examples-rand-*-selfcontained.jar  druid.examples.RealtimeStandaloneMain  >RealtimeNode.out 2>&1  &
 PID=$!
 
 trap "kill $PID" 1 2 3 15

@@ -21,11 +21,13 @@ package com.metamx.druid.utils;
 
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
+import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.zk.StringZkSerializer;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.ZkConnection;
 
 /**
+ * @deprecated see DruidSetup
  */
 public class ZkSetup
 {
@@ -33,12 +35,11 @@ public class ZkSetup
   {
     if (args.length != 5) {
       System.out.println("Usage: <java invocation> zkConnect baseZkPath dbConnectionUrl dbUsername:password tableName");
+      System.out.println("This utility is deprecated, see DruidSetup instead.");
       System.exit(1);
     }
 
     String path = args[1];
-
-    String[] subPaths = new String[]{"announcements", "servedSegments", "loadQueue", "master"};
 
     final ZkClient zkClient = new ZkClient(
         new ZkConnection(args[0]),
@@ -47,7 +48,7 @@ public class ZkSetup
     );
 
     zkClient.createPersistent(path, true);
-    for (String subPath : subPaths) {
+    for (String subPath : Initialization.SUB_PATHS) {
       final String thePath = String.format("%s/%s", path, subPath);
       if (zkClient.exists(thePath)) {
         System.out.printf("Path[%s] exists already%n", thePath);
