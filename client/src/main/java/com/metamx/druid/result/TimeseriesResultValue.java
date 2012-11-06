@@ -17,37 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.http;
+package com.metamx.druid.result;
 
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.log.LogLevelAdjuster;
+import org.codehaus.jackson.annotate.JsonCreator;
+
+import java.util.Map;
 
 /**
  */
-
-public class BrokerMain
+public class TimeseriesResultValue extends MetricValueExtractor
 {
-  private static final Logger log = new Logger(BrokerMain.class);
+  @JsonCreator
+  public TimeseriesResultValue(
+      Map<String, Object> value
+  )
+  {
+    super(value);
+  }
 
-    public static void main(String[] args) throws Exception
-    {
-      LogLevelAdjuster.register();
-
-      Lifecycle lifecycle = new Lifecycle();
-
-      lifecycle.addManagedInstance(
-          BrokerNode.builder().build()
-      );
-
-      try {
-        lifecycle.start();
-      }
-      catch (Throwable t) {
-        log.info(t, "Throwable caught at startup, committing seppuku");
-        System.exit(2);
-      }
-
-      lifecycle.join();
-    }
+  @Override
+  public String toString()
+  {
+    return "TimeseriesResultValue{" +
+           "value=" + super.toString() +
+           '}';
+  }
 }
