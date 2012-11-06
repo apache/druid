@@ -119,14 +119,16 @@ public class HadoopDruidIndexerNode
     return argumentSpec;
   }
 
-  public void setIntervalSpec(String intervalSpec)
+  public HadoopDruidIndexerNode setIntervalSpec(String intervalSpec)
   {
     this.intervalSpec = intervalSpec;
+    return this;
   }
 
-  public void setArgumentSpec(String argumentSpec)
+  public HadoopDruidIndexerNode setArgumentSpec(String argumentSpec)
   {
     this.argumentSpec = argumentSpec;
+    return this;
   }
 
   @SuppressWarnings("unchecked")
