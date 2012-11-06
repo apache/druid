@@ -27,10 +27,12 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.indexer.data.DataSpec;
 import com.metamx.druid.indexer.granularity.GranularitySpec;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
@@ -50,6 +52,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.ISODateTimeFormat;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Collections;
@@ -74,7 +77,10 @@ public class HadoopDruidIndexerConfig
     jsonMapper.configure(JsonGenerator.Feature.ESCAPE_NON_ASCII, true);
   }
 
-  public static enum IndexJobCounters { INVALID_ROW_COUNTER }
+  public static enum IndexJobCounters
+  {
+    INVALID_ROW_COUNTER
+  }
 
   private static final Logger log = new Logger(HadoopDruidIndexerConfig.class);
 
@@ -100,6 +106,7 @@ public class HadoopDruidIndexerConfig
   private volatile DataRollupSpec rollupSpec;
   private volatile UpdaterJobSpec updaterJobSpec;
   private volatile boolean ignoreInvalidRows = false;
+  private volatile List<Registererer> registererers;
 
   public List<Interval> getIntervals()
   {
@@ -114,7 +121,7 @@ public class HadoopDruidIndexerConfig
 
     // For backwards compatibility
     this.intervals = intervals;
-    if(this.segmentGranularity != null) {
+    if (this.segmentGranularity != null) {
       this.granularitySpec = new UniformGranularitySpec(this.segmentGranularity, this.intervals);
     }
   }
@@ -171,7 +178,7 @@ public class HadoopDruidIndexerConfig
 
     // For backwards compatibility
     this.segmentGranularity = segmentGranularity;
-    if(this.intervals != null) {
+    if (this.intervals != null) {
       this.granularitySpec = new UniformGranularitySpec(this.segmentGranularity, this.intervals);
     }
   }
@@ -184,8 +191,11 @@ public class HadoopDruidIndexerConfig
 
   public void setGranularitySpec(GranularitySpec granularitySpec)
   {
-    Preconditions.checkState(this.intervals == null,          "Use setGranularitySpec instead of setIntervals");
-    Preconditions.checkState(this.segmentGranularity == null, "Use setGranularitySpec instead of setSegmentGranularity");
+    Preconditions.checkState(this.intervals == null, "Use setGranularitySpec instead of setIntervals");
+    Preconditions.checkState(
+        this.segmentGranularity == null,
+        "Use setGranularitySpec instead of setSegmentGranularity"
+    );
 
     this.granularitySpec = granularitySpec;
   }
@@ -343,9 +353,34 @@ public class HadoopDruidIndexerConfig
     this.ignoreInvalidRows = ignoreInvalidRows;
   }
 
-  /********************************************
-   Granularity/Bucket Helper Methods
-   ********************************************/
+  @JsonProperty
+  public List<Registererer> getRegistererers()
+  {
+    return registererers;
+  }
+
+  public void setRegistererers(List<String> registererers)
+  {
+    this.registererers = Lists.transform(
+        registererers,
+        new Function<String, Registererer>()
+        {
+          @Override
+          public Registererer apply(@Nullable String input)
+          {
+            try {
+              return (Registererer) Class.forName(input).newInstance();
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
+            }
+          }
+        }
+    );
+  }
+/********************************************
+ Granularity/Bucket Helper Methods
+ ********************************************/
 
   /**
    * Get the proper bucket for this "row"

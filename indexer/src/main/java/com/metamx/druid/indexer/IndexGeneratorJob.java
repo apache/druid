@@ -28,7 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.hash.Hashing;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Longs;
 import com.metamx.common.ISE;
@@ -43,7 +42,7 @@ import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.index.v1.MMappedIndex;
-import com.metamx.druid.index.v1.serde.ComplexMetrics;
+import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -271,6 +270,10 @@ public class IndexGeneratorJob implements Jobby
       }
       timestampConverter = ParserUtils.createTimestampParser(config.getTimestampFormat());
       parser = config.getDataSpec().getParser();
+
+      for (Registererer registererer : config.getRegistererers()) {
+        registererer.register();
+      }
     }
 
     @Override

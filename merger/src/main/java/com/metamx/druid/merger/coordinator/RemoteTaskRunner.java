@@ -195,7 +195,9 @@ public class RemoteTaskRunner implements TaskRunner
                     )
                 );
 
-                currentlyTerminating.addAll(terminated.getNodeIds());
+                if (terminated != null) {
+                  currentlyTerminating.addAll(terminated.getNodeIds());
+                }
               } else {
                 log.info(
                     "[%s] still terminating. Wait for all nodes to terminate before trying again.",
