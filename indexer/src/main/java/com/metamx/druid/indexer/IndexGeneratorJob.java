@@ -174,10 +174,6 @@ public class IndexGeneratorJob implements Jobby
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
       parser = config.getDataSpec().getParser();
       timestampConverter = ParserUtils.createTimestampParser(config.getTimestampFormat());
-
-      for (Registererer registererer : config.getRegistererers()) {
-        registererer.register();
-      }
     }
 
     @Override
@@ -274,10 +270,6 @@ public class IndexGeneratorJob implements Jobby
       }
       timestampConverter = ParserUtils.createTimestampParser(config.getTimestampFormat());
       parser = config.getDataSpec().getParser();
-
-      for (Registererer registererer : config.getRegistererers()) {
-        registererer.register();
-      }
     }
 
     @Override

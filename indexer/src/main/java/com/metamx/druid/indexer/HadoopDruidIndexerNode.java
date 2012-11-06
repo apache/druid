@@ -1,34 +1,23 @@
 package com.metamx.druid.indexer;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.metamx.common.ISE;
 import com.metamx.common.Pair;
-import com.metamx.common.config.Config;
-import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.jackson.DefaultObjectMapper;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.jsontype.NamedType;
-import org.codehaus.jackson.smile.SmileFactory;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.skife.config.ConfigurationObjectFactory;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Properties;
 
 /**
  */
 public class HadoopDruidIndexerNode
 {
-  private static final Logger log = new Logger(HadoopDruidIndexerNode.class);
-
   private static final List<Pair<String, String>> expectedFields =
       ImmutableList.<Pair<String, String>>builder()
                    .add(Pair.of("dataSource", "Name of dataSource"))
@@ -99,15 +88,8 @@ public class HadoopDruidIndexerNode
     return new Builder();
   }
 
-  private final ObjectMapper jsonMapper;
-
   private String intervalSpec = null;
   private String argumentSpec = null;
-
-  public HadoopDruidIndexerNode(ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
 
   public String getIntervalSpec()
   {
@@ -134,25 +116,27 @@ public class HadoopDruidIndexerNode
   @SuppressWarnings("unchecked")
   public HadoopDruidIndexerNode registerJacksonSubtype(Class<?>... clazzes)
   {
-    jsonMapper.registerSubtypes(clazzes);
+    HadoopDruidIndexerConfig.jsonMapper.registerSubtypes(clazzes);
     return this;
   }
 
   @SuppressWarnings("unchecked")
   public HadoopDruidIndexerNode registerJacksonSubtype(NamedType... namedTypes)
   {
-    jsonMapper.registerSubtypes(namedTypes);
+    HadoopDruidIndexerConfig.jsonMapper.registerSubtypes(namedTypes);
     return this;
   }
 
   @LifecycleStart
-  public synchronized void start() throws Exception
+  public void start() throws Exception
   {
+    Preconditions.checkNotNull(argumentSpec, "argumentSpec");
+
     final HadoopDruidIndexerConfig config;
     if (argumentSpec.startsWith("{")) {
-      config = jsonMapper.readValue(argumentSpec, HadoopDruidIndexerConfig.class);
+      config = HadoopDruidIndexerConfig.fromString(argumentSpec);
     } else {
-      config = jsonMapper.readValue(new File(argumentSpec), HadoopDruidIndexerConfig.class);
+      config = HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
     }
 
     final List<Interval> dataInterval;
@@ -170,51 +154,15 @@ public class HadoopDruidIndexerNode
   }
 
   @LifecycleStop
-  public synchronized void stop()
+  public void stop()
   {
   }
 
   public static class Builder
   {
-    private ObjectMapper jsonMapper = null;
-    private ObjectMapper smileMapper = null;
-    private Lifecycle lifecycle = null;
-    private Properties props = null;
-    private ConfigurationObjectFactory configFactory = null;
-
-    public Builder withMapper(ObjectMapper jsonMapper)
-    {
-      this.jsonMapper = jsonMapper;
-      return this;
-    }
-
     public HadoopDruidIndexerNode build()
     {
-      if (jsonMapper == null && smileMapper == null) {
-        jsonMapper = new DefaultObjectMapper();
-        smileMapper = new DefaultObjectMapper(new SmileFactory());
-        smileMapper.getJsonFactory().setCodec(smileMapper);
-      } else if (jsonMapper == null || smileMapper == null) {
-        throw new ISE(
-            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
-            jsonMapper,
-            smileMapper
-        );
-      }
-
-      if (lifecycle == null) {
-        lifecycle = new Lifecycle();
-      }
-
-      if (props == null) {
-        props = Initialization.loadProperties();
-      }
-
-      if (configFactory == null) {
-        configFactory = Config.createFactory(props);
-      }
-
-      return new HadoopDruidIndexerNode(jsonMapper);
+      return new HadoopDruidIndexerNode();
     }
   }
 }

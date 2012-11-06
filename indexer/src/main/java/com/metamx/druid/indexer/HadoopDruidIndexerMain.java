@@ -37,8 +37,8 @@ public class HadoopDruidIndexerMain
 
     HadoopDruidIndexerNode node = HadoopDruidIndexerNode.builder().build();
 
-    node.setIntervalSpec(args.length == 1 ? null : args[0]);
-    node.setArgumentSpec(args[args.length == 1 ? 0 : 1]);
+    node.setIntervalSpec(args.length == 1 ? null : args[0])
+        .setArgumentSpec(args[args.length == 1 ? 0 : 1]);
 
     Lifecycle lifecycle = new Lifecycle();
     lifecycle.addManagedInstance(node);
