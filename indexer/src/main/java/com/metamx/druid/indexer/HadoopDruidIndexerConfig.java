@@ -109,11 +109,7 @@ public class HadoopDruidIndexerConfig
       }
     }
 
-    final HadoopDruidIndexerConfig retVal = jsonMapper.convertValue(
-        argSpec, new TypeReference<Map<String, Object>>()
-    {
-    }
-    );
+    final HadoopDruidIndexerConfig retVal = jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
     retVal.verify();
     return retVal;
   }
