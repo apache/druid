@@ -313,7 +313,7 @@ public class HadoopDruidIndexerConfig
 
   public void setVersion(DateTime version)
   {
-    this.version = version;
+    this.version = version == null ? new DateTime() : version;
   }
 
   @JsonProperty
