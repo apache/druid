@@ -87,9 +87,9 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
-    if (argSpec.containsKey("registerers")) {
+    if (argSpec.containsKey("registererers")) {
       List<Registererer> registererers = Lists.transform(
-          MapUtils.getList(argSpec, "registerers"),
+          MapUtils.getList(argSpec, "registererers"),
           new Function<Object, Registererer>()
           {
             @Override
@@ -179,6 +179,7 @@ public class HadoopDruidIndexerConfig
   private volatile DataRollupSpec rollupSpec;
   private volatile UpdaterJobSpec updaterJobSpec;
   private volatile boolean ignoreInvalidRows = false;
+  private volatile List<String> registererers = Lists.newArrayList();
 
   public List<Interval> getIntervals()
   {
@@ -425,9 +426,20 @@ public class HadoopDruidIndexerConfig
     this.ignoreInvalidRows = ignoreInvalidRows;
   }
 
-/********************************************
- Granularity/Bucket Helper Methods
- ********************************************/
+  @JsonProperty
+  public List<String> getRegistererers()
+  {
+    return registererers;
+  }
+
+  public void setRegistererers(List<String> registererers)
+  {
+    this.registererers = registererers;
+  }
+
+  /********************************************
+   Granularity/Bucket Helper Methods
+   ********************************************/
 
   /**
    * Get the proper bucket for this "row"
