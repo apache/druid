@@ -177,10 +177,10 @@ public class DruidSetup
         out.println();
       }
     }
-    out.println("Zookeeper znodes and zpaths for " + zkConnect + " (showing all zpaths)");
+    //out.println("Zookeeper znodes and zpaths for " + zkConnect + " (showing all zpaths)");
     // list all znodes
     //   (not ideal since recursive listing starts at / instead of at baseZkPath)
-    zkClient.showFolders(out);
+    //zkClient.showFolders(out);
   }
 
   /**
@@ -399,7 +399,7 @@ public class DruidSetup
         + "                   and should be equal to property druid.zk.paths.base\n"
         + "    propfile:  Java properties file with common properties for all services in ensemble\n"
         + "  Notes:\n"
-        + "    dump command makes no modifications and shows zk path listing and zk properties.\n"
+        + "    dump command makes no modifications and shows zk properties at baseZkPath.\n"
         + "    put command can safely be invoked more than once, will not disturb existing queues,\n"
         + "              and properties are not cumulative.\n"
         + "    A zookeeper can service more than one Druid ensemble if baseZkPath is distinct.\n"
