@@ -169,7 +169,7 @@ public class HadoopDruidIndexerConfig
   private volatile PathSpec pathSpec;
   private volatile String jobOutputDir;
   private volatile String segmentOutputDir;
-  private volatile DateTime version;
+  private volatile DateTime version = new DateTime();
   private volatile String partitionDimension;
   private volatile Long targetPartitionSize;
   private volatile boolean leaveIntermediate = false;
@@ -313,7 +313,7 @@ public class HadoopDruidIndexerConfig
 
   public void setVersion(DateTime version)
   {
-    this.version = version == null ? new DateTime() : version;
+    this.version = version;
   }
 
   @JsonProperty
