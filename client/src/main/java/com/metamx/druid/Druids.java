@@ -20,6 +20,8 @@
 package com.metamx.druid;
 
 import com.google.common.collect.Lists;
+import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.query.filter.AndDimFilter;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.filter.NoopDimFilter;
@@ -32,6 +34,7 @@ import com.metamx.druid.query.search.SearchQuerySpec;
 import com.metamx.druid.query.segment.LegacySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
+import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
 import com.metamx.druid.result.TimeBoundaryResultValue;
@@ -276,6 +279,197 @@ public class Druids
     return new NoopDimFilterBuilder();
   }
 
+  /**
+   * A Builder for TimeseriesQuery.
+   * <p/>
+   * Required: dataSource(), intervals(), and aggregators() must be called before build()
+   * Optional: filters(), granularity(), postAggregators(), and context() can be called before build()
+   * <p/>
+   * Usage example:
+   * <pre><code>
+   *   TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+   *                                        .dataSource("Example")
+   *                                        .intervals("2012-01-01/2012-01-02")
+   *                                        .aggregators(listofAggregators)
+   *                                        .build();
+   * </code></pre>
+   *
+   * @see com.metamx.druid.query.timeseries.TimeseriesQuery
+   */
+  public static class TimeseriesQueryBuilder
+  {
+    private String dataSource;
+    private QuerySegmentSpec querySegmentSpec;
+    private DimFilter dimFilter;
+    private QueryGranularity granularity;
+    private List<AggregatorFactory> aggregatorSpecs;
+    private List<PostAggregator> postAggregatorSpecs;
+    private Map<String, String> context;
+
+    private TimeseriesQueryBuilder()
+    {
+      dataSource = "";
+      querySegmentSpec = null;
+      dimFilter = null;
+      granularity = QueryGranularity.ALL;
+      aggregatorSpecs = Lists.newArrayList();
+      postAggregatorSpecs = Lists.newArrayList();
+      context = null;
+    }
+
+    public TimeseriesQuery build()
+    {
+      return new TimeseriesQuery(
+          dataSource,
+          querySegmentSpec,
+          dimFilter,
+          granularity,
+          aggregatorSpecs,
+          postAggregatorSpecs,
+          context
+      );
+    }
+
+    public TimeseriesQueryBuilder copy(TimeseriesQuery query)
+    {
+      return new TimeseriesQueryBuilder()
+          .dataSource(query.getDataSource())
+          .intervals(query.getIntervals())
+          .filters(query.getDimensionsFilter())
+          .granularity(query.getGranularity())
+          .aggregators(query.getAggregatorSpecs())
+          .postAggregators(query.getPostAggregatorSpecs())
+          .context(query.getContext());
+    }
+
+    public TimeseriesQueryBuilder copy(TimeseriesQueryBuilder builder)
+    {
+      return new TimeseriesQueryBuilder()
+          .dataSource(builder.dataSource)
+          .intervals(builder.querySegmentSpec)
+          .filters(builder.dimFilter)
+          .granularity(builder.granularity)
+          .aggregators(builder.aggregatorSpecs)
+          .postAggregators(builder.postAggregatorSpecs)
+          .context(builder.context);
+    }
+
+    public String getDataSource()
+    {
+      return dataSource;
+    }
+
+    public QuerySegmentSpec getQuerySegmentSpec()
+    {
+      return querySegmentSpec;
+    }
+
+    public DimFilter getDimFilter()
+    {
+      return dimFilter;
+    }
+
+    public QueryGranularity getGranularity()
+    {
+      return granularity;
+    }
+
+    public List<AggregatorFactory> getAggregatorSpecs()
+    {
+      return aggregatorSpecs;
+    }
+
+    public List<PostAggregator> getPostAggregatorSpecs()
+    {
+      return postAggregatorSpecs;
+    }
+
+    public Map<String, String> getContext()
+    {
+      return context;
+    }
+
+    public TimeseriesQueryBuilder dataSource(String ds)
+    {
+      dataSource = ds;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder intervals(QuerySegmentSpec q)
+    {
+      querySegmentSpec = q;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder intervals(String s)
+    {
+      querySegmentSpec = new LegacySegmentSpec(s);
+      return this;
+    }
+
+    public TimeseriesQueryBuilder intervals(List<Interval> l)
+    {
+      querySegmentSpec = new LegacySegmentSpec(l);
+      return this;
+    }
+
+    public TimeseriesQueryBuilder filters(String dimensionName, String value)
+    {
+      dimFilter = new SelectorDimFilter(dimensionName, value);
+      return this;
+    }
+
+    public TimeseriesQueryBuilder filters(String dimensionName, String value, String... values)
+    {
+      List<DimFilter> fields = Lists.<DimFilter>newArrayList(new SelectorDimFilter(dimensionName, value));
+      for (String val : values) {
+        fields.add(new SelectorDimFilter(dimensionName, val));
+      }
+      dimFilter = new OrDimFilter(fields);
+      return this;
+    }
+
+    public TimeseriesQueryBuilder filters(DimFilter f)
+    {
+      dimFilter = f;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder granularity(String g)
+    {
+      granularity = QueryGranularity.fromString(g);
+      return this;
+    }
+
+    public TimeseriesQueryBuilder granularity(QueryGranularity g)
+    {
+      granularity = g;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder aggregators(List<AggregatorFactory> a)
+    {
+      aggregatorSpecs = a;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder postAggregators(List<PostAggregator> p)
+    {
+      postAggregatorSpecs = p;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder context(Map<String, String> c)
+    {
+      context = c;
+      return this;
+    }
+  }
+
+  public static TimeseriesQueryBuilder newTimeseriesQueryBuilder()
+  {
+    return new TimeseriesQueryBuilder();
+  }
 
   /**
    * A Builder for SearchQuery.
