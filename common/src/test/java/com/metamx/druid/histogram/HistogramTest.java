@@ -68,8 +68,7 @@ public class HistogramTest
     Map<String,Object> expectedObj = Maps.newLinkedHashMap();
     expectedObj.put("breaks", Arrays.asList(visualBreaks));
     expectedObj.put("counts", Arrays.asList(visualCounts));
-    expectedObj.put("min", -1.0);
-    expectedObj.put("max", 1.0);
+    expectedObj.put("quantiles", Arrays.asList(new Double[]{-1.0, 1.0}));
 
     Map<String,Object> obj = (Map<String, Object>)objectMapper.readValue(json, Object.class);
     Assert.assertEquals(expectedObj, obj);

@@ -50,6 +50,7 @@
         <module>merger</module>
         <module>realtime</module>
         <module>examples</module>
+        <module>druid-services</module>
     </modules>
 
     <dependencyManagement>
