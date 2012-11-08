@@ -17,17 +17,30 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.index.v1.serde;
+package com.metamx.druid.merger.coordinator.config;
+
+import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
- * This is a "factory" interface for registering complex metrics in the system.  It exists because I'm unaware of
- * another way to register the complex serdes in the MR jobs that run on Hadoop.  As such, instances of this interface
- * must be instantiatable via a no argument default constructor (the MR jobs on Hadoop use reflection to instantiate
- * instances).
- *
- * The name is not a typo, I felt that it needed an extra "er" to make the pronunciation that much more difficult.
  */
-public interface ComplexMetricRegistererer
+public abstract class EC2AutoScalingStrategyConfig
 {
-  public void register();
+  @Config("druid.indexer.amiId")
+  public abstract String getAmiId();
+
+  @Config("druid.indexer.worker.port")
+  @Default("8080")
+  public abstract String getWorkerPort();
+
+  @Config("druid.indexer.instanceType")
+  public abstract String getInstanceType();
+
+  @Config("druid.indexer.minNumInstancesToProvision")
+  @Default("1")
+  public abstract int getMinNumInstancesToProvision();
+
+  @Config("druid.indexer.maxNumInstancesToProvision")
+  @Default("1")
+  public abstract int getMaxNumInstancesToProvision();
 }

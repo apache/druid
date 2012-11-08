@@ -29,6 +29,8 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.http.StatusServlet;
+import com.metamx.druid.index.v1.serde.Registererer;
+import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -143,6 +145,12 @@ public class WorkerNode
   public WorkerNode setTaskMonitor(TaskMonitor taskMonitor)
   {
     this.taskMonitor = taskMonitor;
+    return this;
+  }
+
+  public WorkerNode registerHandler(Registererer registererer)
+  {
+    registererer.register();
     return this;
   }
 
@@ -294,8 +302,9 @@ public class WorkerNode
 
   public void initializeCuratorFramework() throws IOException
   {
+    final CuratorConfig curatorConfig = configFactory.build(CuratorConfig.class);
     curatorFramework = Initialization.makeCuratorFrameworkClient(
-        PropUtils.getProperty(props, "druid.zk.service.host"),
+        curatorConfig,
         lifecycle
     );
   }
@@ -325,7 +334,6 @@ public class WorkerNode
       taskMonitor = new TaskMonitor(
           pathChildrenCache,
           curatorFramework,
-          jsonMapper,
           workerCuratorCoordinator,
           taskToolbox,
           workerExec

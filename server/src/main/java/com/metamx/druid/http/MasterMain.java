@@ -159,13 +159,13 @@ public class MasterMain
 
     final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
     CuratorFramework curatorFramework = Initialization.makeCuratorFrameworkClient(
-        serviceDiscoveryConfig.getZkHosts(),
+        serviceDiscoveryConfig,
         lifecycle
     );
 
     final ServiceDiscovery serviceDiscovery = Initialization.makeServiceDiscoveryClient(
         curatorFramework,
-        configFactory.build(ServiceDiscoveryConfig.class),
+        serviceDiscoveryConfig,
         lifecycle
     );
 
@@ -263,10 +263,6 @@ public class MasterMain
     root.addFilter(
         new FilterHolder(
             new RedirectFilter(
-                HttpClientInit.createClient(
-                    HttpClientConfig.builder().withNumConnections(1).build(),
-                    new Lifecycle()
-                ),
                 new ToStringResponseHandler(Charsets.UTF_8),
                 redirectInfo
             )

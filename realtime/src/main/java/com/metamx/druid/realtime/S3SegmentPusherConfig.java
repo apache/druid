@@ -26,7 +26,6 @@ import org.skife.config.Default;
  */
 public abstract class S3SegmentPusherConfig
 {
-
   @Config("druid.pusher.s3.bucket")
   public abstract String getBucket();
 

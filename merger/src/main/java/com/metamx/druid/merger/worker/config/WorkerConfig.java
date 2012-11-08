@@ -32,4 +32,15 @@ public abstract class WorkerConfig
 
   @Config("druid.host")
   public abstract String getHost();
+
+  @Config("druid.worker.ip")
+  public abstract String getIp();
+
+  @Config("druid.worker.version")
+  public abstract String getVersion();
+
+  public int getCapacity()
+  {
+    return Runtime.getRuntime().availableProcessors() - 1;
+  }
 }

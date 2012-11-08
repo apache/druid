@@ -47,7 +47,6 @@ public class TaskMonitor
 
   private final PathChildrenCache pathChildrenCache;
   private final CuratorFramework cf;
-  private final ObjectMapper jsonMapper;
   private final WorkerCuratorCoordinator workerCuratorCoordinator;
   private final TaskToolbox toolbox;
   private final ExecutorService exec;
@@ -55,7 +54,6 @@ public class TaskMonitor
   public TaskMonitor(
       PathChildrenCache pathChildrenCache,
       CuratorFramework cf,
-      ObjectMapper jsonMapper,
       WorkerCuratorCoordinator workerCuratorCoordinator,
       TaskToolbox toolbox,
       ExecutorService exec
@@ -63,7 +61,6 @@ public class TaskMonitor
   {
     this.pathChildrenCache = pathChildrenCache;
     this.cf = cf;
-    this.jsonMapper = jsonMapper;
     this.workerCuratorCoordinator = workerCuratorCoordinator;
     this.toolbox = toolbox;
     this.exec = exec;
@@ -87,7 +84,7 @@ public class TaskMonitor
                 throws Exception
             {
               if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
-                final TaskHolder taskHolder = jsonMapper.readValue(
+                final TaskHolder taskHolder = toolbox.getObjectMapper().readValue(
                     cf.getData().forPath(pathChildrenCacheEvent.getData().getPath()),
                     TaskHolder.class
                 );
@@ -111,6 +108,7 @@ public class TaskMonitor
 
                         TaskStatus taskStatus;
                         try {
+                          workerCuratorCoordinator.unannounceTask(task.getId());
                           workerCuratorCoordinator.announceStatus(TaskStatus.running(task.getId()));
                           taskStatus = task.run(taskContext, toolbox);
                         }
@@ -165,6 +163,7 @@ public class TaskMonitor
   {
     try {
       pathChildrenCache.close();
+      exec.shutdown();
     }
     catch (Exception e) {
       log.makeAlert(e, "Exception stopping TaskMonitor")

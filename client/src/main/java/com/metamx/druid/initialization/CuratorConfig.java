@@ -17,25 +17,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator.config;
+package com.metamx.druid.initialization;
 
-import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
 /**
  */
-public abstract class RetryPolicyConfig
+public abstract class CuratorConfig
 {
-  @Config("druid.indexer.retry.minWaitMillis")
-  @Default("PT1M") // 1 minute
-  public abstract Duration getRetryMinDuration();
+  @Config("druid.zk.service.host")
+  public abstract String getZkHosts();
 
-  @Config("druid.indexer.retry.maxWaitMillis")
-  @Default("PT10M") // 10 minutes
-  public abstract Duration getRetryMaxDuration();
-
-  @Config("druid.indexer.retry.maxRetryCount")
-  @Default("10")
-  public abstract long getMaxRetryCount();
+  @Config("druid.zk.service.sessionTimeoutMs")
+  @Default("15000")
+  public abstract int getZkSessionTimeoutMs();
 }

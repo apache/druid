@@ -17,25 +17,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator.config;
-
-import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
+package com.metamx.druid.index.v1.serde;
 
 /**
+ * This is a "factory" interface for registering handlers in the system.  It exists because I'm unaware of
+ * another way to register the complex serdes in the MR jobs that run on Hadoop.  As such, instances of this interface
+ * must be instantiatable via a no argument default constructor (the MR jobs on Hadoop use reflection to instantiate
+ * instances).
+ *
+ * The name is not a typo, I felt that it needed an extra "er" to make the pronunciation that much more difficult.
  */
-public abstract class RetryPolicyConfig
+public interface Registererer
 {
-  @Config("druid.indexer.retry.minWaitMillis")
-  @Default("PT1M") // 1 minute
-  public abstract Duration getRetryMinDuration();
-
-  @Config("druid.indexer.retry.maxWaitMillis")
-  @Default("PT10M") // 10 minutes
-  public abstract Duration getRetryMaxDuration();
-
-  @Config("druid.indexer.retry.maxRetryCount")
-  @Default("10")
-  public abstract long getMaxRetryCount();
+  public void register();
 }
