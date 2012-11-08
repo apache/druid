@@ -145,7 +145,6 @@ public class WorkerCuratorCoordinator
     if (curatorFramework.checkExists().forPath(path) == null) {
       try {
         curatorFramework.create()
-                        .creatingParentsIfNeeded()
                         .withMode(mode)
                         .forPath(path, jsonMapper.writeValueAsBytes(data));
       }
@@ -201,7 +200,7 @@ public class WorkerCuratorCoordinator
       curatorFramework.delete().guaranteed().forPath(getTaskPathForId(taskId));
     }
     catch (Exception e) {
-      log.warn("Could not delete task path for task[%s], looks like it already went away", taskId);
+      log.warn(e, "Could not delete task path for task[%s]", taskId);
     }
   }
 
@@ -214,7 +213,6 @@ public class WorkerCuratorCoordinator
 
       try {
         curatorFramework.create()
-                        .creatingParentsIfNeeded()
                         .withMode(CreateMode.EPHEMERAL)
                         .forPath(
                             getStatusPathForId(status.getId()),

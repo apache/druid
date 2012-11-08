@@ -30,7 +30,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.http.RequestLogger;
-import com.metamx.druid.index.v1.serde.ComplexMetricRegistererer;
+import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ZkClientConfig;
@@ -174,7 +174,7 @@ public abstract class BaseNode<T extends BaseNode>
   }
 
   @SuppressWarnings("unchecked")
-  public T registerComplexMetric(ComplexMetricRegistererer registererer)
+  public T registerHandler(Registererer registererer)
   {
     registererer.register();
     return (T) this;

@@ -19,28 +19,49 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.google.common.base.Function;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.worker.Worker;
+import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  */
-public class WorkerWrapper
+public class WorkerWrapper implements Closeable
 {
   private final Worker worker;
-  private final ConcurrentSkipListSet<String> runningTasks;
-  private final PathChildrenCache watcher;
+  private final PathChildrenCache statusCache;
+  private final Function<ChildData, String> cacheConverter;
 
-  private volatile DateTime lastCompletedTaskTime;
+  private volatile DateTime lastCompletedTaskTime = new DateTime();
 
-  public WorkerWrapper(Worker worker, ConcurrentSkipListSet<String> runningTasks, PathChildrenCache watcher)
+  public WorkerWrapper(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
     this.worker = worker;
-    this.runningTasks = runningTasks;
-    this.watcher = watcher;
+    this.statusCache = statusCache;
+    this.cacheConverter = new Function<ChildData, String>()
+    {
+      @Override
+      public String apply(@Nullable ChildData input)
+      {
+        try {
+          return jsonMapper.readValue(input.getData(), TaskStatus.class).getId();
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
+      }
+    };
   }
 
   public Worker getWorker()
@@ -50,12 +71,17 @@ public class WorkerWrapper
 
   public Set<String> getRunningTasks()
   {
-    return runningTasks;
+    return Sets.newHashSet(
+        Lists.transform(
+            statusCache.getCurrentData(),
+            cacheConverter
+        )
+    );
   }
 
-  public PathChildrenCache getWatcher()
+  public PathChildrenCache getStatusCache()
   {
-    return watcher;
+    return statusCache;
   }
 
   public DateTime getLastCompletedTaskTime()
@@ -65,7 +91,7 @@ public class WorkerWrapper
 
   public boolean isAtCapacity()
   {
-    return runningTasks.size() >= worker.getCapacity();
+    return statusCache.getCurrentData().size() >= worker.getCapacity();
   }
 
   public void setLastCompletedTaskTime(DateTime completedTaskTime)
@@ -73,8 +99,9 @@ public class WorkerWrapper
     lastCompletedTaskTime = completedTaskTime;
   }
 
-  public void removeTask(String taskId)
+  @Override
+  public void close() throws IOException
   {
-    runningTasks.remove(taskId);
+    statusCache.close();
   }
 }

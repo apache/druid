@@ -39,7 +39,8 @@ public abstract class WorkerConfig
   @Config("druid.worker.version")
   public abstract String getVersion();
 
-  @Config("druid.worker.capacity")
-  @Default("3")
-  public abstract int getCapacity();
+  public int getCapacity()
+  {
+    return Runtime.getRuntime().availableProcessors() - 1;
+  }
 }

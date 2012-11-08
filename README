@@ -1,1 +1,6 @@
-See the "Wiki":https://github.com/metamx/druid/wiki
+See the "Wiki" https://github.com/metamx/druid/wiki
+
+Build with build.sh
+
+See examples/rand 
+See examples/twitter

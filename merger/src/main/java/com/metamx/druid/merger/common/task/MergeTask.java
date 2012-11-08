@@ -88,7 +88,7 @@ public abstract class MergeTask extends AbstractTask
                   @Override
                   public boolean apply(@Nullable DataSegment segment)
                   {
-                    return segment == null || !segment.getDataSource().equals(dataSource);
+                    return segment == null || !segment.getDataSource().equalsIgnoreCase(dataSource);
                   }
                 }
             )

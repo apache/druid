@@ -32,7 +32,7 @@ public class RealtimeStandaloneMain
   {
     LogLevelAdjuster.register();
 
-    Lifecycle lifecycle = new Lifecycle();
+    final Lifecycle lifecycle = new Lifecycle();
 
     RealtimeNode rn = RealtimeNode.builder().build();
     lifecycle.addManagedInstance(rn);
@@ -84,6 +84,20 @@ public class RealtimeStandaloneMain
             return segment;
           }
         }
+    );
+
+    Runtime.getRuntime().addShutdownHook(
+        new Thread(
+            new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                log.info("Running shutdown hook");
+                lifecycle.stop();
+              }
+            }
+        )
     );
 
     try {

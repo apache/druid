@@ -88,7 +88,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
 
       if (exists == null) {
         entry = new TimelineEntry(interval, version, new PartitionHolder<ObjectType>(object));
-        TreeMap<VersionType, TimelineEntry> versionEntry = Maps.newTreeMap(versionComparator);
+        TreeMap<VersionType, TimelineEntry> versionEntry = new TreeMap<VersionType, TimelineEntry>(versionComparator);
         versionEntry.put(version, entry);
         allTimelineEntries.put(interval, versionEntry);
       } else {

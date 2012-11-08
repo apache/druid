@@ -27,12 +27,8 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
-import com.google.common.collect.Maps;
-import com.metamx.druid.merger.coordinator.WorkerWrapper;
-import com.metamx.druid.merger.coordinator.config.S3AutoScalingStrategyConfig;
-import com.metamx.druid.merger.worker.Worker;
+import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,23 +36,21 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  */
-public class S3AutoScalingStrategyTest
+public class EC2AutoScalingStrategyTest
 {
   private static final String AMI_ID = "dummy";
   private static final String INSTANCE_ID = "theInstance";
+  private static final String IP = "dummyIP";
 
   private AmazonEC2Client amazonEC2Client;
   private RunInstancesResult runInstancesResult;
   private DescribeInstancesResult describeInstancesResult;
   private Reservation reservation;
   private Instance instance;
-  private WorkerWrapper worker;
-  private S3AutoScalingStrategy strategy;
+  private EC2AutoScalingStrategy strategy;
 
   @Before
   public void setUp() throws Exception
@@ -66,16 +60,14 @@ public class S3AutoScalingStrategyTest
     describeInstancesResult = EasyMock.createMock(DescribeInstancesResult.class);
     reservation = EasyMock.createMock(Reservation.class);
 
-    instance = new Instance().withInstanceId(INSTANCE_ID).withLaunchTime(new Date()).withImageId(AMI_ID);
+    instance = new Instance()
+        .withInstanceId(INSTANCE_ID)
+        .withLaunchTime(new Date())
+        .withImageId(AMI_ID)
+        .withPrivateIpAddress(IP);
 
-    worker = new WorkerWrapper(
-        new Worker("dummyHost", "dummyIP", 2, "0"),
-        new ConcurrentSkipListSet<String>(),
-        null
-    );
-    worker.setLastCompletedTaskTime(new DateTime(0));
-    strategy = new S3AutoScalingStrategy(
-        amazonEC2Client, new S3AutoScalingStrategyConfig()
+    strategy = new EC2AutoScalingStrategy(
+        amazonEC2Client, new EC2AutoScalingStrategyConfig()
     {
       @Override
       public String getAmiId()
@@ -96,15 +88,15 @@ public class S3AutoScalingStrategyTest
       }
 
       @Override
-      public long getMillisToWaitBeforeTerminating()
+      public int getMinNumInstancesToProvision()
       {
-        return 0;
+        return 1;
       }
 
       @Override
-      public int getMinNuMWorkers()
+      public int getMaxNumInstancesToProvision()
       {
-        return 0;
+        return 1;
       }
     }
     );
@@ -140,25 +132,16 @@ public class S3AutoScalingStrategyTest
     EasyMock.expect(reservation.getInstances()).andReturn(Arrays.asList(instance)).atLeastOnce();
     EasyMock.replay(reservation);
 
-    Map<String, WorkerWrapper> zkWorkers = Maps.newHashMap();
+    AutoScalingData created = strategy.provision();
 
-    zkWorkers.put(worker.getWorker().getHost(), worker);
+    Assert.assertEquals(created.getNodeIds().size(), 1);
+    Assert.assertEquals(created.getNodes().size(), 1);
+    Assert.assertEquals(String.format("%s:8080", IP), created.getNodeIds().get(0));
 
-    worker.getRunningTasks().add("task1");
+    AutoScalingData deleted = strategy.terminate(Arrays.asList("dummyHost"));
 
-    Assert.assertFalse(worker.isAtCapacity());
-
-    worker.getRunningTasks().add("task2");
-
-    Assert.assertTrue(worker.isAtCapacity());
-
-    strategy.provision(zkWorkers);
-
-    worker.getRunningTasks().remove("task1");
-    worker.getRunningTasks().remove("task2");
-
-    Instance deleted = strategy.terminateIfNeeded(zkWorkers);
-
-    Assert.assertEquals(deleted.getInstanceId(), INSTANCE_ID);
+    Assert.assertEquals(deleted.getNodeIds().size(), 1);
+    Assert.assertEquals(deleted.getNodes().size(), 1);
+    Assert.assertEquals(String.format("%s:8080", IP), deleted.getNodeIds().get(0));
   }
 }

@@ -30,24 +30,24 @@ public class BrokerMain
 {
   private static final Logger log = new Logger(BrokerMain.class);
 
-    public static void main(String[] args) throws Exception
-    {
-      LogLevelAdjuster.register();
+  public static void main(String[] args) throws Exception
+  {
+    LogLevelAdjuster.register();
 
-      Lifecycle lifecycle = new Lifecycle();
+    Lifecycle lifecycle = new Lifecycle();
 
-      lifecycle.addManagedInstance(
-          BrokerNode.builder().build()
-      );
+    lifecycle.addManagedInstance(
+        BrokerNode.builder().build()
+    );
 
-      try {
-        lifecycle.start();
-      }
-      catch (Throwable t) {
-        log.info(t, "Throwable caught at startup, committing seppuku");
-        System.exit(2);
-      }
-
-      lifecycle.join();
+    try {
+      lifecycle.start();
     }
+    catch (Throwable t) {
+      log.info(t, "Throwable caught at startup, committing seppuku");
+      System.exit(2);
+    }
+
+    lifecycle.join();
+  }
 }
