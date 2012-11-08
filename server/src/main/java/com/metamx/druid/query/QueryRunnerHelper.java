@@ -37,9 +37,9 @@ import java.util.List;
 
 /**
  */
-public class QueryRunnerFactories
+public class QueryRunnerHelper
 {
-  private static final Logger log = new Logger(QueryRunnerFactories.class);
+  private static final Logger log = new Logger(QueryRunnerHelper.class);
 
   public static Aggregator[] makeAggregators(Cursor cursor, List<AggregatorFactory> aggregatorSpecs)
   {
