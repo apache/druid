@@ -25,7 +25,7 @@ import java.util.List;
  */
 public interface ScalingStrategy<T>
 {
-  public AutoScalingData<T> provision();
+  public AutoScalingData<T> provision(long numUnassignedTasks);
 
   public AutoScalingData<T> terminate(List<String> nodeIds);
 }

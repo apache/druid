@@ -56,7 +56,7 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
   }
 
   @Override
-  public AutoScalingData<Instance> provision()
+  public AutoScalingData<Instance> provision(long numUnassignedTasks)
   {
     try {
       log.info("Creating new instance(s)...");

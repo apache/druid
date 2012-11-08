@@ -27,12 +27,8 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
-import com.google.common.collect.Maps;
-import com.metamx.druid.merger.coordinator.WorkerWrapper;
 import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
-import com.metamx.druid.merger.worker.Worker;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,8 +36,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  */
@@ -56,7 +50,6 @@ public class EC2AutoScalingStrategyTest
   private DescribeInstancesResult describeInstancesResult;
   private Reservation reservation;
   private Instance instance;
-  private WorkerWrapper worker;
   private EC2AutoScalingStrategy strategy;
 
   @Before
@@ -73,12 +66,6 @@ public class EC2AutoScalingStrategyTest
         .withImageId(AMI_ID)
         .withPrivateIpAddress(IP);
 
-    worker = new WorkerWrapper(
-        new Worker("dummyHost", IP, 2, "0"),
-        new ConcurrentSkipListSet<String>(),
-        null
-    );
-    worker.setLastCompletedTaskTime(new DateTime(0));
     strategy = new EC2AutoScalingStrategy(
         amazonEC2Client, new EC2AutoScalingStrategyConfig()
     {
@@ -145,22 +132,11 @@ public class EC2AutoScalingStrategyTest
     EasyMock.expect(reservation.getInstances()).andReturn(Arrays.asList(instance)).atLeastOnce();
     EasyMock.replay(reservation);
 
-    worker.getRunningTasks().add("task1");
-
-    Assert.assertFalse(worker.isAtCapacity());
-
-    worker.getRunningTasks().add("task2");
-
-    Assert.assertTrue(worker.isAtCapacity());
-
-    AutoScalingData created = strategy.provision();
+    AutoScalingData created = strategy.provision(0);
 
     Assert.assertEquals(created.getNodeIds().size(), 1);
     Assert.assertEquals(created.getNodes().size(), 1);
     Assert.assertEquals(String.format("%s:8080", IP), created.getNodeIds().get(0));
-
-    worker.getRunningTasks().remove("task1");
-    worker.getRunningTasks().remove("task2");
 
     AutoScalingData deleted = strategy.terminate(Arrays.asList("dummyHost"));
 
