@@ -3,7 +3,7 @@
                "aggregators":[ 
                        {"type":"count", "name":"tweets"},
     	       		       {"type":"doubleSum","fieldName":"follower_count","name":"total_follower_count"},
-    	       		       {"type":"doubleSum","fieldName":"retweet_count","name":"tota_retweet_count"},
+    	       		       {"type":"doubleSum","fieldName":"retweet_count","name":"total_retweet_count"},
     	       		       {"type":"doubleSum","fieldName":"friends_count","name":"total_friends_count"},
 	          		       {"type":"doubleSum","fieldName":"statuses_count","name":"total_statuses_count"},
 

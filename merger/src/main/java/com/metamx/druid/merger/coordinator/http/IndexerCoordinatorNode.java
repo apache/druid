@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
@@ -384,8 +385,8 @@ public class IndexerCoordinatorNode
     if (taskToolbox == null) {
       final RestS3Service s3Client = new RestS3Service(
           new AWSCredentials(
-              props.getProperty("com.metamx.aws.accessKey"),
-              props.getProperty("com.metamx.aws.secretKey")
+              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
           )
       );
       final SegmentPusher segmentPusher = new S3SegmentPusher(
@@ -444,7 +445,7 @@ public class IndexerCoordinatorNode
         final IndexerDbConnectorConfig dbConnectorConfig = configFactory.build(IndexerDbConnectorConfig.class);
         taskStorage = new DbTaskStorage(jsonMapper, dbConnectorConfig, new DbConnector(dbConnectorConfig).getDBI());
       } else {
-        throw new IllegalStateException(String.format("Invalid storage implementation: %s", config.getStorageImpl()));
+        throw new ISE("Invalid storage implementation: %s", config.getStorageImpl());
       }
     }
   }
@@ -468,17 +469,22 @@ public class IndexerCoordinatorNode
                     .build()
             );
 
-            ScalingStrategy strategy = new EC2AutoScalingStrategy(
-                new AmazonEC2Client(
-                    new BasicAWSCredentials(
-                        props.getProperty("com.metamx.aws.accessKey"),
-                        props.getProperty("com.metamx.aws.secretKey")
-                    )
-                ),
-                configFactory.build(EC2AutoScalingStrategyConfig.class)
-            );
-            // TODO: use real strategy before actual deployment
-            strategy = new NoopScalingStrategy();
+            ScalingStrategy strategy;
+            if (config.getStrategyImpl().equalsIgnoreCase("ec2")) {
+              strategy = new EC2AutoScalingStrategy(
+                  new AmazonEC2Client(
+                      new BasicAWSCredentials(
+                          PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+                          PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+                      )
+                  ),
+                  configFactory.build(EC2AutoScalingStrategyConfig.class)
+              );
+            } else if (config.getStorageImpl().equalsIgnoreCase("noop")) {
+              strategy = new NoopScalingStrategy();
+            } else {
+              throw new ISE("Invalid strategy implementation: %s",config.getStrategyImpl());
+            }
 
             return new RemoteTaskRunner(
                 jsonMapper,
@@ -503,7 +509,7 @@ public class IndexerCoordinatorNode
           }
         };
       } else {
-        throw new IllegalStateException(String.format("Invalid runner implementation: %s", config.getRunnerImpl()));
+        throw new ISE("Invalid runner implementation: %s", config.getRunnerImpl());
       }
     }
   }

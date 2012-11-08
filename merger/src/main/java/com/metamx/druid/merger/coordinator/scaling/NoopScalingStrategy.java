@@ -1,15 +1,8 @@
 package com.metamx.druid.merger.coordinator.scaling;
 
-import com.amazonaws.services.ec2.model.Instance;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.druid.merger.coordinator.WorkerWrapper;
-import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.emitter.EmittingLogger;
-import org.joda.time.DateTime;
 
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * This class just logs when scaling should occur.

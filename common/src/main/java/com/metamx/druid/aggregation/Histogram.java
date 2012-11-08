@@ -132,10 +132,15 @@ public class Histogram
     return buf.array();
   }
 
+  /**
+   * Returns a visual representation of a histogram object.
+   * Initially returns an array of just the min. and max. values
+   * but can also support the addition of quantiles.
+   */
   public HistogramVisual asVisual() {
     float[] visualCounts = new float[bins.length - 2];
     for(int i = 0; i < visualCounts.length; ++i) visualCounts[i] = (float)bins[i + 1];
-    return new HistogramVisual(breaks, visualCounts, min, max);
+    return new HistogramVisual(breaks, visualCounts, new float[]{min, max});
   }
 
   public static Histogram fromBytes(byte[] bytes) {

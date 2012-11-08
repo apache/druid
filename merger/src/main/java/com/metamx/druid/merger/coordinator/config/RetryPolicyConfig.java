@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator.config;
 
+import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
@@ -27,12 +28,12 @@ import org.skife.config.Default;
 public abstract class RetryPolicyConfig
 {
   @Config("druid.indexer.retry.minWaitMillis")
-  @Default("60000") // 1 minute
-  public abstract long getRetryMinMillis();
+  @Default("PT1M") // 1 minute
+  public abstract Duration getRetryMinDuration();
 
   @Config("druid.indexer.retry.maxWaitMillis")
-  @Default("600000") // 10 minutes
-  public abstract long getRetryMaxMillis();
+  @Default("PT10M") // 10 minutes
+  public abstract Duration getRetryMaxDuration();
 
   @Config("druid.indexer.retry.maxRetryCount")
   @Default("10")
