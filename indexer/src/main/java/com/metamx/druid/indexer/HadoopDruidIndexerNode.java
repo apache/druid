@@ -1,11 +1,15 @@
 package com.metamx.druid.indexer;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import org.codehaus.jackson.map.jsontype.NamedType;
+import org.joda.time.Interval;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  */
@@ -65,6 +69,15 @@ public class HadoopDruidIndexerNode
       config = HadoopDruidIndexerConfig.fromString(argumentSpec);
     } else {
       config = HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
+    }
+
+    if (intervalSpec != null) {
+      final List<Interval> dataInterval = Lists.transform(
+          Arrays.asList(intervalSpec.split(",")),
+          new StringIntervalFunction()
+      );
+
+      config.setIntervals(dataInterval);
     }
 
     new HadoopDruidIndexerJob(config).run();
