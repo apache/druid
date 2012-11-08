@@ -73,6 +73,11 @@ public class IndexIO
     handler.storeLatest(index, file);
   }
 
+  public static boolean hasHandler()
+  {
+    return (IndexIO.handler != null);
+  }
+
   public static void registerHandler(IndexIOHandler handler)
   {
     if (IndexIO.handler == null) {

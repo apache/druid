@@ -22,29 +22,26 @@ package com.metamx.druid.indexer;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.druid.jackson.DefaultObjectMapper;
-import org.codehaus.jackson.map.ObjectMapper;
+import com.metamx.common.logger.Logger;
 
 import java.util.List;
 
 /**
  */
-@Deprecated
-public class HadoopDruidIndexer
+public class HadoopDruidIndexerMain
 {
+  private static final Logger log = new Logger(HadoopDruidIndexerMain.class);
+
   public static void main(String[] args) throws Exception
   {
-    if (args.length < 1 || args.length > 2) {
+    if (args.length != 1) {
       printHelp();
       System.exit(2);
     }
 
     HadoopDruidIndexerNode node = HadoopDruidIndexerNode.builder().build();
 
-    if (args.length == 2) {
-      node.setIntervalSpec(args[0]);
-    }
-    node.setArgumentSpec(args[args.length == 1 ? 0 : 1]);
+    node.setArgumentSpec(args[0]);
 
     Lifecycle lifecycle = new Lifecycle();
     lifecycle.addManagedInstance(node);
@@ -52,8 +49,8 @@ public class HadoopDruidIndexer
     try {
       lifecycle.start();
     }
-    catch (Exception e) {
-      e.printStackTrace();
+    catch (Throwable t) {
+      log.info(t, "Throwable caught at startup, committing seppuku");
       Thread.sleep(500);
       printHelp();
       System.exit(1);
@@ -79,12 +76,7 @@ public class HadoopDruidIndexer
                            "delimiter=delimiter of the data (only for tsv format)"
                        )
                    )
-                   .add(
-                       Pair.of(
-                           "granularitySpec",
-                           "A JSON object indicating the Granularity that segments should be created at."
-                       )
-                   )
+                   .add(Pair.of("granularitySpec", "A JSON object indicating the Granularity that segments should be created at."))
                    .add(
                        Pair.of(
                            "pathSpec",
@@ -116,10 +108,9 @@ public class HadoopDruidIndexer
                    )
                    .build();
 
-  private static void printHelp()
+  public static void printHelp()
   {
-    System.out.println("Usage: <java invocation> <time_interval> <config_spec>");
-    System.out.println("<time_interval> is the ISO8601 interval of data to run over.");
+    System.out.println("Usage: <java invocation> <config_spec>");
     System.out.println("<config_spec> is either a JSON object or the path to a file that contains a JSON object.");
     System.out.println();
     System.out.println("JSON object description:");
@@ -129,5 +120,4 @@ public class HadoopDruidIndexer
     }
     System.out.println("}");
   }
-
 }
