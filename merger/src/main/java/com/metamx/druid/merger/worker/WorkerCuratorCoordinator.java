@@ -28,6 +28,8 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.state.ConnectionState;
+import com.netflix.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
@@ -92,7 +94,29 @@ public class WorkerCuratorCoordinator
       makePathIfNotExisting(
           getAnnouncementsPathForWorker(),
           CreateMode.EPHEMERAL,
-          worker.getStringProps()
+          worker
+      );
+
+      curatorFramework.getConnectionStateListenable().addListener(
+          new ConnectionStateListener()
+          {
+            @Override
+            public void stateChanged(CuratorFramework client, ConnectionState newState)
+            {
+              try {
+                if (newState.equals(ConnectionState.RECONNECTED)) {
+                  makePathIfNotExisting(
+                      getAnnouncementsPathForWorker(),
+                      CreateMode.EPHEMERAL,
+                      worker
+                  );
+                }
+              }
+              catch (Exception e) {
+                throw Throwables.propagate(e);
+              }
+            }
+          }
       );
 
       started = true;
@@ -121,7 +145,6 @@ public class WorkerCuratorCoordinator
     if (curatorFramework.checkExists().forPath(path) == null) {
       try {
         curatorFramework.create()
-                        .creatingParentsIfNeeded()
                         .withMode(mode)
                         .forPath(path, jsonMapper.writeValueAsBytes(data));
       }
@@ -171,6 +194,16 @@ public class WorkerCuratorCoordinator
     }
   }
 
+  public void unannounceTask(String taskId)
+  {
+    try {
+      curatorFramework.delete().guaranteed().forPath(getTaskPathForId(taskId));
+    }
+    catch (Exception e) {
+      log.warn(e, "Could not delete task path for task[%s]", taskId);
+    }
+  }
+
   public void announceStatus(TaskStatus status)
   {
     synchronized (lock) {
@@ -180,7 +213,6 @@ public class WorkerCuratorCoordinator
 
       try {
         curatorFramework.create()
-                        .creatingParentsIfNeeded()
                         .withMode(CreateMode.EPHEMERAL)
                         .forPath(
                             getStatusPathForId(status.getId()),

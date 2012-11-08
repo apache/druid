@@ -43,17 +43,14 @@ public class RedirectFilter implements Filter
 {
   private static final Logger log = new Logger(RedirectFilter.class);
 
-  private final HttpClient httpClient;
   private final HttpResponseHandler<StringBuilder, String> responseHandler;
   private final RedirectInfo redirectInfo;
 
   public RedirectFilter(
-      HttpClient httpClient,
       HttpResponseHandler<StringBuilder, String> responseHandler,
       RedirectInfo redirectInfo
   )
   {
-    this.httpClient = httpClient;
     this.responseHandler = responseHandler;
     this.redirectInfo = redirectInfo;
   }
@@ -82,28 +79,11 @@ public class RedirectFilter implements Filter
       URL url = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());
       log.info("Forwarding request to [%s]", url);
 
-      if (request.getMethod().equals(HttpMethod.POST)) {
-        try {
-          forward(request, url);
-        }
-        catch (Exception e) {
-          throw Throwables.propagate(e);
-        }
-      } else {
-        response.sendRedirect(url.toString());
-      }
+      response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
+      response.setHeader("Location", url.toString());
     }
   }
 
   @Override
   public void destroy() {}
-
-  private void forward(HttpServletRequest req, URL url) throws Exception
-  {
-    byte[] requestQuery = ByteStreams.toByteArray(req.getInputStream());
-    httpClient.post(url)
-              .setContent("application/json", requestQuery)
-              .go(responseHandler)
-              .get();
-  }
 }

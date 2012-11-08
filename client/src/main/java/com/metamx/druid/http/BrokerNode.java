@@ -221,7 +221,7 @@ public class BrokerNode extends BaseNode<BrokerNode>
 
       final ServiceDiscoveryConfig serviceDiscoveryConfig = getConfigFactory().build(ServiceDiscoveryConfig.class);
       CuratorFramework curatorFramework = Initialization.makeCuratorFrameworkClient(
-          serviceDiscoveryConfig.getZkHosts(), lifecycle
+          serviceDiscoveryConfig, lifecycle
       );
 
       final ServiceDiscovery serviceDiscovery = Initialization.makeServiceDiscoveryClient(
