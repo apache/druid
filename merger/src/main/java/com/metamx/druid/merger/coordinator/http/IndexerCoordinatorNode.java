@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
@@ -444,7 +445,7 @@ public class IndexerCoordinatorNode
         final IndexerDbConnectorConfig dbConnectorConfig = configFactory.build(IndexerDbConnectorConfig.class);
         taskStorage = new DbTaskStorage(jsonMapper, dbConnectorConfig, new DbConnector(dbConnectorConfig).getDBI());
       } else {
-        throw new IllegalStateException(String.format("Invalid storage implementation: %s", config.getStorageImpl()));
+        throw new ISE("Invalid storage implementation: %s", config.getStorageImpl());
       }
     }
   }
@@ -482,12 +483,7 @@ public class IndexerCoordinatorNode
             } else if (config.getStorageImpl().equalsIgnoreCase("noop")) {
               strategy = new NoopScalingStrategy();
             } else {
-              throw new IllegalStateException(
-                  String.format(
-                      "Invalid strategy implementation: %s",
-                      config.getStrategyImpl()
-                  )
-              );
+              throw new ISE("Invalid strategy implementation: %s",config.getStrategyImpl());
             }
 
             return new RemoteTaskRunner(
@@ -513,7 +509,7 @@ public class IndexerCoordinatorNode
           }
         };
       } else {
-        throw new IllegalStateException(String.format("Invalid runner implementation: %s", config.getRunnerImpl()));
+        throw new ISE("Invalid runner implementation: %s", config.getRunnerImpl());
       }
     }
   }

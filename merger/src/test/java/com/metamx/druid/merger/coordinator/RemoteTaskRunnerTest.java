@@ -245,6 +245,13 @@ public class RemoteTaskRunnerTest
               {
                 return 0;
               }
+
+
+              @Override
+              public String getStrategyImpl()
+              {
+                return null;
+              }
             }, null, null, null, jsonMapper
         ),
         Executors.newSingleThreadExecutor()
@@ -319,7 +326,7 @@ public class RemoteTaskRunnerTest
   private static class TestScalingStrategy<T> implements ScalingStrategy<T>
   {
     @Override
-    public AutoScalingData provision(long numUnassignedTasks)
+    public AutoScalingData provision()
     {
       return null;
     }

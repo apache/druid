@@ -132,7 +132,7 @@ public class EC2AutoScalingStrategyTest
     EasyMock.expect(reservation.getInstances()).andReturn(Arrays.asList(instance)).atLeastOnce();
     EasyMock.replay(reservation);
 
-    AutoScalingData created = strategy.provision(0);
+    AutoScalingData created = strategy.provision();
 
     Assert.assertEquals(created.getNodeIds().size(), 1);
     Assert.assertEquals(created.getNodes().size(), 1);
