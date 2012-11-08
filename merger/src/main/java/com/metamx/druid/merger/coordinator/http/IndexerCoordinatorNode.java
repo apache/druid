@@ -468,17 +468,27 @@ public class IndexerCoordinatorNode
                     .build()
             );
 
-            ScalingStrategy strategy = new EC2AutoScalingStrategy(
-                new AmazonEC2Client(
-                    new BasicAWSCredentials(
-                        props.getProperty("com.metamx.aws.accessKey"),
-                        props.getProperty("com.metamx.aws.secretKey")
-                    )
-                ),
-                configFactory.build(EC2AutoScalingStrategyConfig.class)
-            );
-            // TODO: use real strategy before actual deployment
-            strategy = new NoopScalingStrategy();
+            ScalingStrategy strategy;
+            if (config.getStrategyImpl().equalsIgnoreCase("ec2")) {
+              strategy = new EC2AutoScalingStrategy(
+                  new AmazonEC2Client(
+                      new BasicAWSCredentials(
+                          props.getProperty("com.metamx.aws.accessKey"),
+                          props.getProperty("com.metamx.aws.secretKey")
+                      )
+                  ),
+                  configFactory.build(EC2AutoScalingStrategyConfig.class)
+              );
+            } else if (config.getStorageImpl().equalsIgnoreCase("noop")) {
+              strategy = new NoopScalingStrategy();
+            } else {
+              throw new IllegalStateException(
+                  String.format(
+                      "Invalid strategy implementation: %s",
+                      config.getStrategyImpl()
+                  )
+              );
+            }
 
             return new RemoteTaskRunner(
                 jsonMapper,

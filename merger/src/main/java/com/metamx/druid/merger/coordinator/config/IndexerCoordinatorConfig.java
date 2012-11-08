@@ -83,4 +83,8 @@ public abstract class IndexerCoordinatorConfig
   @Config("druid.merger.rowFlushBoundary")
   @Default("500000")
   public abstract long getRowFlushBoundary();
+
+  @Config("druid.indexer.strategy")
+  @Default("noop")
+  public abstract String getStrategyImpl();
 }
