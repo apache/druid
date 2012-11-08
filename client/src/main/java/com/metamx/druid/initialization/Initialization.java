@@ -69,7 +69,8 @@ public class Initialization
       "druid.zk.paths.announcementsPath",
       "druid.zk.paths.servedSegmentsPath",
       "druid.zk.paths.loadQueuePath",
-      "druid.zk.paths.masterPath"};
+      "druid.zk.paths.masterPath"
+  };
   public static final String DEFAULT_ZPATH = "/druid";
 
   public static ZkClient makeZkClient(ZkClientConfig config, Lifecycle lifecycle)
@@ -119,10 +120,12 @@ public class Initialization
   }
 
 
-  /** Load properties.
+  /**
+   * Load properties.
    * Properties are layered, high to low precedence:  cmdLine -D, runtime.properties file, stored in zookeeper.
    * Idempotent. Thread-safe.  Properties are only loaded once.
    * If property druid.zk.service.host=none then do not load properties from zookeeper.
+   *
    * @return Properties ready to use.
    */
   public synchronized static Properties loadProperties()
@@ -139,7 +142,9 @@ public class Initialization
 
     final InputStream stream = ClassLoader.getSystemResourceAsStream("runtime.properties");
     if (stream == null) {
-      log.info("runtime.properties not found as a resource in classpath, relying only on system properties, and zookeeper now.");
+      log.info(
+          "runtime.properties not found as a resource in classpath, relying only on system properties, and zookeeper now."
+      );
     } else {
       log.info("Loading properties from runtime.properties");
       try {
@@ -202,7 +207,7 @@ public class Initialization
       log.warn("property druid.zk.service.host is not set, so no way to contact zookeeper for coordination.");
     }
     // validate properties now that all levels of precedence are loaded
-    if (! validateResolveProps(tmp_props)) {
+    if (!validateResolveProps(tmp_props)) {
       log.error("Properties failed to validate, cannot continue");
       throw new RuntimeException("Properties failed to validate");
     }
@@ -358,12 +363,15 @@ public class Initialization
     return String.format("%s/%s", basePath, PROP_SUBPATH);
   }
 
-  /** Validate and Resolve Properties.
+  /**
+   * Validate and Resolve Properties.
    * Resolve zpaths with props like druid.zk.paths.*Path using druid.zk.paths.base value.
    * Check validity so that if druid.zk.paths.*Path props are set, all are set,
    * if none set, then construct defaults relative to druid.zk.paths.base and add these
    * to the properties chain.
+   *
    * @param props
+   *
    * @return true if valid zpath properties.
    */
   public static boolean validateResolveProps(Properties props)
@@ -379,7 +387,9 @@ public class Initialization
 
     final String propertiesZpathOverride = props.getProperty("druid.zk.paths.propertiesPath");
 
-    if (!zpathValidateFailed) System.out.println("Effective zpath prefix=" + zpathEffective);
+    if (!zpathValidateFailed) {
+      System.out.println("Effective zpath prefix=" + zpathEffective);
+    }
 
     //    validate druid.zk.paths.*Path properties
     //
@@ -408,22 +418,25 @@ public class Initialization
       }
     }
     if (zpathOverridesNotAbs) {
-      System.err.println("When overriding zk zpaths, with properties like druid.zk.paths.*Path " +
-          "the znode path must start with '/' (slash) ; problem overrides:");
+      System.err.println(
+          "When overriding zk zpaths, with properties like druid.zk.paths.*Path " +
+          "the znode path must start with '/' (slash) ; problem overrides:"
+      );
       System.err.print(sbErrors.toString());
     }
     if (zpathOverrideCount > 0) {
-      if (zpathOverrideCount < SUB_PATH_PROPS.length + 1) {
+      if (zpathOverrideCount < SUB_PATH_PROPS.length) {
         zpathValidateFailed = true;
-        System.err.println("When overriding zk zpaths, with properties of form druid.zk.paths.*Path " +
-            "all must be overridden together; missing overrides:");
+        System.err.println(
+            "When overriding zk zpaths, with properties of form druid.zk.paths.*Path " +
+            "all must be overridden together; missing overrides:"
+        );
         for (int i = 0; i < SUB_PATH_PROPS.length; i++) {
           String val = props.getProperty(SUB_PATH_PROPS[i]);
           if (val == null) {
             System.err.println("  " + SUB_PATH_PROPS[i]);
           }
         }
-        if (propertiesZpathOverride == null) System.err.println("  " + "druid.zk.paths.propertiesPath");
       } else { // proper overrides
         // do not prefix with property druid.zk.paths.base
         ; // fallthru
@@ -440,13 +453,16 @@ public class Initialization
       }
       props.setProperty("druid.zk.paths.propertiesPath", zpathEffective + "/properties");
     }
-    return ! zpathValidateFailed;
+    return !zpathValidateFailed;
   }
 
-  /** Check znode zpath base for proper slash, no trailing slash.
-   * @param zpathBase          znode base path, if null then this method does nothing.
+  /**
+   * Check znode zpath base for proper slash, no trailing slash.
+   *
+   * @param zpathBase      znode base path, if null then this method does nothing.
    * @param errorMsgPrefix error context to use if errors are emitted, should indicate
    *                       where the zpathBase value came from.
+   *
    * @return true if validate failed.
    */
   public static boolean zpathBaseCheck(String zpathBase, String errorMsgPrefix)

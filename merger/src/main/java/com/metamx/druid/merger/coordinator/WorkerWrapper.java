@@ -20,13 +20,17 @@
 package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.worker.Worker;
 import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Set;
@@ -41,11 +45,23 @@ public class WorkerWrapper implements Closeable
 
   private volatile DateTime lastCompletedTaskTime = new DateTime();
 
-  public WorkerWrapper(Worker worker, PathChildrenCache statusCache, Function<ChildData, String> cacheConverter)
+  public WorkerWrapper(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
     this.worker = worker;
     this.statusCache = statusCache;
-    this.cacheConverter = cacheConverter;
+    this.cacheConverter = new Function<ChildData, String>()
+    {
+      @Override
+      public String apply(@Nullable ChildData input)
+      {
+        try {
+          return jsonMapper.readValue(input.getData(), TaskStatus.class).getId();
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
+      }
+    };
   }
 
   public Worker getWorker()

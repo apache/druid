@@ -42,7 +42,6 @@ import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
@@ -53,7 +52,6 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -373,19 +371,7 @@ public class RemoteTaskRunner implements TaskRunner
       final WorkerWrapper workerWrapper = new WorkerWrapper(
           worker,
           statusCache,
-          new Function<ChildData, String>()
-          {
-            @Override
-            public String apply(@Nullable ChildData input)
-            {
-              try {
-                return jsonMapper.readValue(input.getData(), TaskStatus.class).getId();
-              }
-              catch (Exception e) {
-                throw Throwables.propagate(e);
-              }
-            }
-          }
+          jsonMapper
       );
 
       // Add status listener to the watcher for status changes
@@ -520,7 +506,7 @@ public class RemoteTaskRunner implements TaskRunner
         log.info("Worker nodes do not have capacity to run any more tasks!");
 
         if (currentlyProvisioning.isEmpty()) {
-          AutoScalingData provisioned = strategy.provision(currentlyProvisioning.size());
+          AutoScalingData provisioned = strategy.provision();
           if (provisioned != null) {
             currentlyProvisioning.addAll(provisioned.getNodeIds());
             lastProvisionTime = new DateTime();

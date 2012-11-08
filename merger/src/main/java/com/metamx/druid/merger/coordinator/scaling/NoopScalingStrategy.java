@@ -12,7 +12,7 @@ public class NoopScalingStrategy implements ScalingStrategy<String>
   private static final EmittingLogger log = new EmittingLogger(NoopScalingStrategy.class);
 
   @Override
-  public AutoScalingData<String> provision(long numUnassignedTasks)
+  public AutoScalingData<String> provision()
   {
     log.info("If I were a real strategy I'd create something now");
     return null;
