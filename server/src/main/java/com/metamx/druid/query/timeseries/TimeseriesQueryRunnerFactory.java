@@ -20,12 +20,10 @@
 package com.metamx.druid.query.timeseries;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.druid.Query;
-import com.metamx.druid.SearchResultBuilder;
 import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.TimeseriesResultBuilder;
 import com.metamx.druid.aggregation.Aggregator;
@@ -35,14 +33,11 @@ import com.metamx.druid.index.brita.Filters;
 import com.metamx.druid.index.v1.processing.Cursor;
 import com.metamx.druid.query.ChainedExecutionQueryRunner;
 import com.metamx.druid.query.QueryRunner;
-import com.metamx.druid.query.QueryRunnerFactories;
+import com.metamx.druid.query.QueryRunnerHelper;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.group.GroupByQuery;
-import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
-import com.metamx.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import com.metamx.druid.result.Result;
-import com.metamx.druid.result.TimeBoundaryResultValue;
 import com.metamx.druid.result.TimeseriesResultValue;
 
 import java.util.Iterator;
@@ -76,7 +71,7 @@ public class TimeseriesQueryRunnerFactory
               @Override
               public Iterator<Result<TimeseriesResultValue>> make()
               {
-                return QueryRunnerFactories.makeCursorBasedQuery(
+                return QueryRunnerHelper.makeCursorBasedQuery(
                     adapter,
                     query.getQuerySegmentSpec().getIntervals(),
                     Filters.convertDimensionFilters(query.getDimensionsFilter()),
@@ -89,7 +84,7 @@ public class TimeseriesQueryRunnerFactory
                       @Override
                       public Result<TimeseriesResultValue> apply(Cursor cursor)
                       {
-                        Aggregator[] aggregators = QueryRunnerFactories.makeAggregators(cursor, aggregatorSpecs);
+                        Aggregator[] aggregators = QueryRunnerHelper.makeAggregators(cursor, aggregatorSpecs);
 
                         while (!cursor.isDone()) {
                           for (Aggregator aggregator : aggregators) {
