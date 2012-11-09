@@ -81,7 +81,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
                 new BySegmentResultValueClass(
                     Lists.transform(resultsClass.getResults(), baseFinalizer),
                     resultsClass.getSegmentId(),
-                    resultsClass.getIntervalString()
+                    resultsClass.getInterval()
                 )
             );
           }

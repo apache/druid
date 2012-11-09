@@ -72,7 +72,7 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
                   new BySegmentResultValueClass<T>(
                       results,
                       segmentIdentifier,
-                      query.getIntervals().get(0).toString()
+                      query.getIntervals().get(0)
                   )
               )
           );
@@ -90,7 +90,7 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
                   new BySegmentResultValueClass<T>(
                       results,
                       segmentIdentifier,
-                      query.getIntervals().get(0).toString()
+                      query.getIntervals().get(0)
                   )
               )
           );

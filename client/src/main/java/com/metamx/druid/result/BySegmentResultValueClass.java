@@ -20,6 +20,7 @@
 package com.metamx.druid.result;
 
 import org.codehaus.jackson.annotate.JsonProperty;
+import org.joda.time.Interval;
 
 import java.util.List;
 
@@ -29,17 +30,17 @@ public class BySegmentResultValueClass<T>
 {
   private final List<T> results;
   private final String segmentId;
-  private final String intervalString;
+  private final Interval interval;
 
   public BySegmentResultValueClass(
       @JsonProperty("results") List<T> results,
       @JsonProperty("segment") String segmentId,
-      @JsonProperty("interval") String intervalString
+      @JsonProperty("interval") Interval interval
   )
   {
     this.results = results;
     this.segmentId = segmentId;
-    this.intervalString = intervalString;
+    this.interval = interval;
   }
 
   @JsonProperty("results")
@@ -55,9 +56,9 @@ public class BySegmentResultValueClass<T>
   }
 
   @JsonProperty("interval")
-  public String getIntervalString()
+  public Interval getInterval()
   {
-    return intervalString;
+    return interval;
   }
 
   @Override
@@ -66,7 +67,7 @@ public class BySegmentResultValueClass<T>
     return "BySegmentTimeseriesResultValue{" +
            "results=" + results +
            ", segmentId='" + segmentId + '\'' +
-           ", intervalString='" + intervalString + '\'' +
+           ", interval='" + interval + '\'' +
            '}';
   }
 }

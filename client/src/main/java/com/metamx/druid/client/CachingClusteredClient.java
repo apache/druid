@@ -291,7 +291,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                             final Iterable<T> segmentResults = value.getResults();
 
                             cachePopulatorMap.get(
-                                String.format("%s_%s", segmentIdentifier, value.getIntervalString())
+                                String.format("%s_%s", segmentIdentifier, value.getInterval())
                             ).populate(Iterables.transform(segmentResults, prepareForCache));
 
                             return Sequences.simple(
