@@ -12,3 +12,4 @@ target
 .settings/
 examples/rand/RealtimeNode.out
 examples/twitter/RealtimeNode.out
+*.log

@@ -19,19 +19,15 @@
 
 package com.metamx.druid.common.s3;
 
-import com.google.common.io.CharStreams;
 import com.metamx.common.logger.Logger;
 import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.security.NoSuchAlgorithmException;
-import java.util.regex.Pattern;
 
 /**
  *
@@ -83,47 +79,5 @@ public class S3Utils
     catch (IOException e) {
 
     }
-  }
-
-  public static String getContentAsString(RestS3Service s3Client, S3Object s3Obj) throws ServiceException, IOException
-  {
-    S3Object obj = s3Client.getObject(new S3Bucket(s3Obj.getBucketName()), s3Obj.getKey());
-
-    try {
-      return CharStreams.toString(new InputStreamReader(obj.getDataInputStream()));
-    }
-    finally {
-      closeStreamsQuietly(s3Obj);
-    }
-  }
-
-  public static S3Object getLexicographicTop(RestS3Service s3Client, String bucketName, String basePath)
-      throws ServiceException
-  {
-    return getLexicographicTop(s3Client, bucketName, basePath, ".*");
-  }
-
-  public static S3Object getLexicographicTop(RestS3Service s3Client, String bucketName, String basePath, String keyPattern)
-      throws ServiceException
-  {
-    Pattern pat = Pattern.compile(keyPattern);
-    S3Object[] s3Objs = s3Client.listObjects(new S3Bucket(bucketName), basePath, null);
-
-    S3Object maxObj = null;
-    for (S3Object s3Obj : s3Objs) {
-      if (!pat.matcher(s3Obj.getKey()).matches()) {
-        continue;
-      }
-
-      if (maxObj == null) {
-        maxObj = s3Obj;
-      } else {
-        if (maxObj.getKey().compareTo(s3Obj.getKey()) < 0) {
-          maxObj = s3Obj;
-        }
-      }
-    }
-
-    return maxObj;
   }
 }

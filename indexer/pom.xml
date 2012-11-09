@@ -97,6 +97,12 @@
             <groupId>com.github.sgroschupf</groupId>
             <artifactId>zkclient</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.java.dev.jets3t</groupId>
+            <artifactId>jets3t</artifactId>
+            <version>0.7.1</version>
+        </dependency>
+
 
         <!-- Tests -->
         <dependency>
