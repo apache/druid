@@ -480,7 +480,7 @@ public class IndexerCoordinatorNode
                   ),
                   configFactory.build(EC2AutoScalingStrategyConfig.class)
               );
-            } else if (config.getStorageImpl().equalsIgnoreCase("noop")) {
+            } else if (config.getStrategyImpl().equalsIgnoreCase("noop")) {
               strategy = new NoopScalingStrategy();
             } else {
               throw new ISE("Invalid strategy implementation: %s",config.getStrategyImpl());
