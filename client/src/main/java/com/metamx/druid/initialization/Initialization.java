@@ -393,16 +393,14 @@ public class Initialization
 
     //    validate druid.zk.paths.*Path properties
     //
-    // if any zpath overrides are set in properties, all must be set, and they must start with /
+    // if any zpath overrides are set in properties, they must start with /
     int zpathOverrideCount = 0;
-    boolean zpathOverridesNotAbs = false;
     StringBuilder sbErrors = new StringBuilder(100);
     for (int i = 0; i < SUB_PATH_PROPS.length; i++) {
       String val = props.getProperty(SUB_PATH_PROPS[i]);
       if (val != null) {
         zpathOverrideCount++;
         if (!val.startsWith("/")) {
-          zpathOverridesNotAbs = true;
           sbErrors.append(SUB_PATH_PROPS[i]).append("=").append(val).append("\n");
           zpathValidateFailed = true;
         }
@@ -412,36 +410,11 @@ public class Initialization
     if (propertiesZpathOverride != null) {
       zpathOverrideCount++;
       if (!propertiesZpathOverride.startsWith("/")) {
-        zpathOverridesNotAbs = true;
         sbErrors.append("druid.zk.paths.propertiesPath").append("=").append(propertiesZpathOverride).append("\n");
         zpathValidateFailed = true;
       }
     }
-    if (zpathOverridesNotAbs) {
-      System.err.println(
-          "When overriding zk zpaths, with properties like druid.zk.paths.*Path " +
-          "the znode path must start with '/' (slash) ; problem overrides:"
-      );
-      System.err.print(sbErrors.toString());
-    }
-    if (zpathOverrideCount > 0) {
-      if (zpathOverrideCount < SUB_PATH_PROPS.length) {
-        zpathValidateFailed = true;
-        System.err.println(
-            "When overriding zk zpaths, with properties of form druid.zk.paths.*Path " +
-            "all must be overridden together; missing overrides:"
-        );
-        for (int i = 0; i < SUB_PATH_PROPS.length; i++) {
-          String val = props.getProperty(SUB_PATH_PROPS[i]);
-          if (val == null) {
-            System.err.println("  " + SUB_PATH_PROPS[i]);
-          }
-        }
-      } else { // proper overrides
-        // do not prefix with property druid.zk.paths.base
-        ; // fallthru
-      }
-    } else { // no overrides
+    if (zpathOverrideCount == 0) {
       if (propertyZpath == null) { // if default base is used, store it as documentation
         props.setProperty("druid.zk.paths.base", zpathEffective);
       }
@@ -453,6 +426,15 @@ public class Initialization
       }
       props.setProperty("druid.zk.paths.propertiesPath", zpathEffective + "/properties");
     }
+
+    if (zpathValidateFailed) {
+      System.err.println(
+          "When overriding zk zpaths, with properties like druid.zk.paths.*Path " +
+          "the znode path must start with '/' (slash) ; problem overrides:"
+      );
+      System.err.print(sbErrors.toString());
+    }
+
     return !zpathValidateFailed;
   }
 
