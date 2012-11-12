@@ -19,6 +19,8 @@
 
 package com.metamx.druid.index.v1.serde;
 
+import org.codehaus.jackson.map.ObjectMapper;
+
 /**
  * This is a "factory" interface for registering handlers in the system.  It exists because I'm unaware of
  * another way to register the complex serdes in the MR jobs that run on Hadoop.  As such, instances of this interface
@@ -29,5 +31,7 @@ package com.metamx.druid.index.v1.serde;
  */
 public interface Registererer
 {
-  public void register();
+  public void registerSerde();
+
+  public void registerSubType(ObjectMapper jsonMapper);
 }

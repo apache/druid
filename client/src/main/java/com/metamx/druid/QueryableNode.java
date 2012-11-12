@@ -62,7 +62,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public abstract class BaseNode<T extends BaseNode>
+public abstract class QueryableNode<T extends QueryableNode> implements RegisteringNode
 {
   private final Logger log;
 
@@ -82,7 +82,7 @@ public abstract class BaseNode<T extends BaseNode>
 
   private boolean initialized = false;
 
-  public BaseNode(
+  public QueryableNode(
       Logger log,
       Properties props,
       Lifecycle lifecycle,
@@ -176,8 +176,18 @@ public abstract class BaseNode<T extends BaseNode>
   @SuppressWarnings("unchecked")
   public T registerHandler(Registererer registererer)
   {
-    registererer.register();
+    registererer.registerSerde();
     return (T) this;
+  }
+
+  @Override
+  public void registerHandlers(Registererer... registererers)
+  {
+    for (Registererer registererer : registererers) {
+      registererer.registerSerde();
+      registererer.registerSubType(jsonMapper);
+      registererer.registerSubType(smileMapper);
+    }
   }
 
   public Lifecycle getLifecycle()

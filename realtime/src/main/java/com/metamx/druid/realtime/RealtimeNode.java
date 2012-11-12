@@ -28,7 +28,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.BaseServerNode;
+import com.metamx.druid.ServerNode;
 import com.metamx.druid.client.ClientConfig;
 import com.metamx.druid.client.ClientInventoryManager;
 import com.metamx.druid.client.MutableServerView;
@@ -65,7 +65,7 @@ import java.util.Properties;
 
 /**
  */
-public class RealtimeNode extends BaseServerNode<RealtimeNode>
+public class RealtimeNode extends ServerNode<RealtimeNode>
 {
   private static final Logger log = new Logger(RealtimeNode.class);
 

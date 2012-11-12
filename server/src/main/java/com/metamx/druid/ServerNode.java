@@ -38,13 +38,13 @@ import java.util.Properties;
 
 /**
  */
-public abstract class BaseServerNode<T extends BaseNode> extends BaseNode<T>
+public abstract class ServerNode<T extends QueryableNode> extends QueryableNode<T>
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> additionalFactories = Maps.newLinkedHashMap();
   private QueryRunnerFactoryConglomerate conglomerate = null;
   private StupidPool<ByteBuffer> computeScratchPool = null;
 
-  public BaseServerNode(
+  public ServerNode(
       Logger log,
       Properties props,
       Lifecycle lifecycle,

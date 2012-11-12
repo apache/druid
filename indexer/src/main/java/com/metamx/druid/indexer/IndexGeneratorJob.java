@@ -253,7 +253,6 @@ public class IndexGeneratorJob implements Jobby
   public static class IndexGeneratorReducer extends Reducer<BytesWritable, Text, BytesWritable, Text>
   {
     private HadoopDruidIndexerConfig config;
-    private final DefaultObjectMapper jsonMapper = new DefaultObjectMapper();
     private List<String> metricNames = Lists.newArrayList();
     private Function<String, DateTime> timestampConverter;
     private Parser parser;
@@ -573,7 +572,7 @@ public class IndexGeneratorJob implements Jobby
 
       final FSDataOutputStream descriptorOut = outputFS.create(descriptorPath);
       try {
-        jsonMapper.writeValue(descriptorOut, segment);
+        HadoopDruidIndexerConfig.jsonMapper.writeValue(descriptorOut, segment);
       }
       finally {
         descriptorOut.close();

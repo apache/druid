@@ -28,7 +28,7 @@ import com.metamx.common.concurrent.ExecutorServices;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.BaseServerNode;
+import com.metamx.druid.ServerNode;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.coordination.ServerManager;
@@ -59,7 +59,7 @@ import java.util.concurrent.ExecutorService;
 
 /**
  */
-public class ComputeNode extends BaseServerNode<ComputeNode>
+public class ComputeNode extends ServerNode<ComputeNode>
 {
   private static final Logger log = new Logger(ComputeNode.class);
 

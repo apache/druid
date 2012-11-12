@@ -29,7 +29,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.BaseNode;
+import com.metamx.druid.QueryableNode;
 import com.metamx.druid.client.BrokerServerView;
 import com.metamx.druid.client.CachingClusteredClient;
 import com.metamx.druid.client.ClientConfig;
@@ -62,7 +62,7 @@ import java.util.Properties;
 /**
  */
 
-public class BrokerNode extends BaseNode<BrokerNode>
+public class BrokerNode extends QueryableNode<BrokerNode>
 {
   private static final Logger log = new Logger(BrokerNode.class);
 

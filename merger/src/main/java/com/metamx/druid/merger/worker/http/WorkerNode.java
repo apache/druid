@@ -28,6 +28,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.RegisteringNode;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.initialization.CuratorConfig;
@@ -79,7 +80,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class WorkerNode
+public class WorkerNode implements RegisteringNode
 {
   private static final Logger log = new Logger(WorkerNode.class);
 
@@ -150,8 +151,17 @@ public class WorkerNode
 
   public WorkerNode registerHandler(Registererer registererer)
   {
-    registererer.register();
+    registererer.registerSerde();
     return this;
+  }
+
+  @Override
+  public void registerHandlers(Registererer... registererers)
+  {
+    for (Registererer registererer : registererers) {
+      registererer.registerSerde();
+      registererer.registerSubType(jsonMapper);
+    }
   }
 
   public void init() throws Exception

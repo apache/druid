@@ -36,6 +36,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.RegisteringNode;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.GuiceServletConfig;
@@ -108,7 +109,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class IndexerCoordinatorNode
+public class IndexerCoordinatorNode implements RegisteringNode
 {
   private static final Logger log = new Logger(IndexerCoordinatorNode.class);
 
@@ -186,8 +187,17 @@ public class IndexerCoordinatorNode
 
   public IndexerCoordinatorNode registerHandler(Registererer registererer)
   {
-    registererer.register();
+    registererer.registerSerde();
     return this;
+  }
+
+  @Override
+  public void registerHandlers(Registererer... registererers)
+  {
+    for (Registererer registererer : registererers) {
+      registererer.registerSerde();
+      registererer.registerSubType(this.jsonMapper);
+    }
   }
 
   public void init() throws Exception
