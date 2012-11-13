@@ -72,6 +72,7 @@ import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -113,7 +114,7 @@ public class WorkerNode extends RegisteringNode
       ConfigurationObjectFactory configFactory
   )
   {
-    super(jsonMapper);
+    super(Arrays.asList(jsonMapper));
 
     this.jsonMapper = jsonMapper;
     this.lifecycle = lifecycle;

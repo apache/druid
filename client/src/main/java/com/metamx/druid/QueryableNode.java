@@ -55,6 +55,7 @@ import org.skife.config.ConfigurationObjectFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ScheduledExecutorService;
@@ -90,7 +91,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       ConfigurationObjectFactory configFactory
   )
   {
-    super(jsonMapper, smileMapper);
+    super(Arrays.asList(jsonMapper, smileMapper));
 
     this.log = log;
     this.configFactory = configFactory;

@@ -23,6 +23,7 @@ import com.metamx.druid.index.v1.serde.Registererer;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  */
@@ -43,16 +44,16 @@ public class RegisteringNode
 
   private static boolean doneRegister = false;
 
-  private final ObjectMapper[] mappers;
+  private final List<ObjectMapper> mappers;
 
-  public RegisteringNode(ObjectMapper... mappers)
+  public RegisteringNode(List<ObjectMapper> mappers)
   {
     this.mappers = mappers;
   }
 
   public RegisteringNode registerHandlers(Registererer... registererers)
   {
-    registerHandlers(Arrays.asList(registererers), Arrays.asList(mappers));
+    registerHandlers(Arrays.asList(registererers), mappers);
     return this;
   }
 }
