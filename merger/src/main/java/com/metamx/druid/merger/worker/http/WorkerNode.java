@@ -28,6 +28,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.RegisteringNode;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.initialization.CuratorConfig;
@@ -71,6 +72,7 @@ import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -79,7 +81,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class WorkerNode
+public class WorkerNode extends RegisteringNode
 {
   private static final Logger log = new Logger(WorkerNode.class);
 
@@ -112,6 +114,8 @@ public class WorkerNode
       ConfigurationObjectFactory configFactory
   )
   {
+    super(Arrays.asList(jsonMapper));
+
     this.jsonMapper = jsonMapper;
     this.lifecycle = lifecycle;
     this.props = props;
@@ -145,12 +149,6 @@ public class WorkerNode
   public WorkerNode setTaskMonitor(TaskMonitor taskMonitor)
   {
     this.taskMonitor = taskMonitor;
-    return this;
-  }
-
-  public WorkerNode registerHandler(Registererer registererer)
-  {
-    registererer.register();
     return this;
   }
 

@@ -33,6 +33,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.RegisteringNode;
 import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.indexer.data.DataSpec;
 import com.metamx.druid.indexer.granularity.GranularitySpec;
@@ -58,6 +59,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -104,9 +106,8 @@ public class HadoopDruidIndexerConfig
             }
           }
       );
-      for (Registererer registererer : registererers) {
-        registererer.register();
-      }
+
+      RegisteringNode.registerHandlers(registererers, Arrays.asList(jsonMapper));
     }
 
     final HadoopDruidIndexerConfig retVal = jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
