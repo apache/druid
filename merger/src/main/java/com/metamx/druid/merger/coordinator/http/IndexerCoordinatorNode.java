@@ -185,18 +185,12 @@ public class IndexerCoordinatorNode implements RegisteringNode
     this.taskRunnerFactory = taskRunnerFactory;
   }
 
-  public IndexerCoordinatorNode registerHandler(Registererer registererer)
-  {
-    registererer.registerSerde();
-    return this;
-  }
-
   @Override
   public void registerHandlers(Registererer... registererers)
   {
     for (Registererer registererer : registererers) {
-      registererer.registerSerde();
-      registererer.registerSubType(this.jsonMapper);
+      registererer.register();
+      registererer.registerSubType(jsonMapper);
     }
   }
 

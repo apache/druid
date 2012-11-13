@@ -6,7 +6,6 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.RegisteringNode;
 import com.metamx.druid.index.v1.serde.Registererer;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.jsontype.NamedType;
 import org.joda.time.Interval;
 
@@ -66,7 +65,7 @@ public class HadoopDruidIndexerNode implements RegisteringNode
   public void registerHandlers(Registererer... registererers)
   {
     for (Registererer registererer : registererers) {
-      registererer.registerSerde();
+      registererer.register();
       registererer.registerSubType(HadoopDruidIndexerConfig.jsonMapper);
     }
   }

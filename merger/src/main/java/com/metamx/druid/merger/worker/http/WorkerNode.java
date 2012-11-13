@@ -149,17 +149,11 @@ public class WorkerNode implements RegisteringNode
     return this;
   }
 
-  public WorkerNode registerHandler(Registererer registererer)
-  {
-    registererer.registerSerde();
-    return this;
-  }
-
   @Override
   public void registerHandlers(Registererer... registererers)
   {
     for (Registererer registererer : registererers) {
-      registererer.registerSerde();
+      registererer.register();
       registererer.registerSubType(jsonMapper);
     }
   }

@@ -173,18 +173,11 @@ public abstract class QueryableNode<T extends QueryableNode> implements Register
     return (T) this;
   }
 
-  @SuppressWarnings("unchecked")
-  public T registerHandler(Registererer registererer)
-  {
-    registererer.registerSerde();
-    return (T) this;
-  }
-
   @Override
   public void registerHandlers(Registererer... registererers)
   {
     for (Registererer registererer : registererers) {
-      registererer.registerSerde();
+      registererer.register();
       registererer.registerSubType(jsonMapper);
       registererer.registerSubType(smileMapper);
     }

@@ -105,7 +105,7 @@ public class HadoopDruidIndexerConfig
           }
       );
       for (Registererer registererer : registererers) {
-        registererer.registerSerde();
+        registererer.register();
       }
     }
 

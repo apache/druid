@@ -31,7 +31,7 @@ import org.codehaus.jackson.map.ObjectMapper;
  */
 public interface Registererer
 {
-  public void registerSerde();
+  public void register();
 
   public void registerSubType(ObjectMapper jsonMapper);
 }
