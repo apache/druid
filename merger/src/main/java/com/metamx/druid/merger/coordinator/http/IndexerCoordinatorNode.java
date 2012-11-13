@@ -43,7 +43,6 @@ import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
-import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
@@ -109,7 +108,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class IndexerCoordinatorNode implements RegisteringNode
+public class IndexerCoordinatorNode extends RegisteringNode
 {
   private static final Logger log = new Logger(IndexerCoordinatorNode.class);
 
@@ -146,6 +145,8 @@ public class IndexerCoordinatorNode implements RegisteringNode
       ConfigurationObjectFactory configFactory
   )
   {
+    super(jsonMapper);
+
     this.jsonMapper = jsonMapper;
     this.lifecycle = lifecycle;
     this.props = props;
@@ -183,15 +184,6 @@ public class IndexerCoordinatorNode implements RegisteringNode
   public void setTaskRunnerFactory(TaskRunnerFactory taskRunnerFactory)
   {
     this.taskRunnerFactory = taskRunnerFactory;
-  }
-
-  @Override
-  public void registerHandlers(Registererer... registererers)
-  {
-    for (Registererer registererer : registererers) {
-      registererer.register();
-      registererer.registerSubType(jsonMapper);
-    }
   }
 
   public void init() throws Exception

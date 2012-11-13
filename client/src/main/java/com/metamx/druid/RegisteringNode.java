@@ -20,10 +20,39 @@
 package com.metamx.druid;
 
 import com.metamx.druid.index.v1.serde.Registererer;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import java.util.Arrays;
 
 /**
  */
-public interface RegisteringNode
+public class RegisteringNode
 {
-  public void registerHandlers(Registererer... registererers);
+  public static void registerHandlers(Iterable<Registererer> registererers, Iterable<ObjectMapper> mappers)
+  {
+    for (Registererer registererer : registererers) {
+      if (!doneRegister) {
+        registererer.register();
+      }
+      for (ObjectMapper mapper : mappers) {
+        registererer.registerSubType(mapper);
+      }
+    }
+    doneRegister = true;
+  }
+
+  private static boolean doneRegister = false;
+
+  private final ObjectMapper[] mappers;
+
+  public RegisteringNode(ObjectMapper... mappers)
+  {
+    this.mappers = mappers;
+  }
+
+  public RegisteringNode registerHandlers(Registererer... registererers)
+  {
+    registerHandlers(Arrays.asList(registererers), Arrays.asList(mappers));
+    return this;
+  }
 }

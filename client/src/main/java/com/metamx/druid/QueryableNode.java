@@ -30,7 +30,6 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.http.RequestLogger;
-import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ZkClientConfig;
@@ -62,7 +61,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public abstract class QueryableNode<T extends QueryableNode> implements RegisteringNode
+public abstract class QueryableNode<T extends QueryableNode> extends RegisteringNode
 {
   private final Logger log;
 
@@ -91,6 +90,8 @@ public abstract class QueryableNode<T extends QueryableNode> implements Register
       ConfigurationObjectFactory configFactory
   )
   {
+    super(jsonMapper, smileMapper);
+
     this.log = log;
     this.configFactory = configFactory;
     this.props = props;
@@ -156,7 +157,6 @@ public abstract class QueryableNode<T extends QueryableNode> implements Register
     return (T) this;
   }
 
-
   @SuppressWarnings("unchecked")
   public T registerJacksonSubtype(Class<?>... clazzes)
   {
@@ -171,16 +171,6 @@ public abstract class QueryableNode<T extends QueryableNode> implements Register
     jsonMapper.registerSubtypes(namedTypes);
     smileMapper.registerSubtypes(namedTypes);
     return (T) this;
-  }
-
-  @Override
-  public void registerHandlers(Registererer... registererers)
-  {
-    for (Registererer registererer : registererers) {
-      registererer.register();
-      registererer.registerSubType(jsonMapper);
-      registererer.registerSubType(smileMapper);
-    }
   }
 
   public Lifecycle getLifecycle()

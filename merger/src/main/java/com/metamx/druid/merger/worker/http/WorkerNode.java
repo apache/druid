@@ -80,7 +80,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class WorkerNode implements RegisteringNode
+public class WorkerNode extends RegisteringNode
 {
   private static final Logger log = new Logger(WorkerNode.class);
 
@@ -113,6 +113,8 @@ public class WorkerNode implements RegisteringNode
       ConfigurationObjectFactory configFactory
   )
   {
+    super(jsonMapper);
+
     this.jsonMapper = jsonMapper;
     this.lifecycle = lifecycle;
     this.props = props;
@@ -147,15 +149,6 @@ public class WorkerNode implements RegisteringNode
   {
     this.taskMonitor = taskMonitor;
     return this;
-  }
-
-  @Override
-  public void registerHandlers(Registererer... registererers)
-  {
-    for (Registererer registererer : registererers) {
-      registererer.register();
-      registererer.registerSubType(jsonMapper);
-    }
   }
 
   public void init() throws Exception
