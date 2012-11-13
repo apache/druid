@@ -36,13 +36,13 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.RegisteringNode;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
-import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
@@ -100,6 +100,7 @@ import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -108,7 +109,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class IndexerCoordinatorNode
+public class IndexerCoordinatorNode extends RegisteringNode
 {
   private static final Logger log = new Logger(IndexerCoordinatorNode.class);
 
@@ -145,6 +146,8 @@ public class IndexerCoordinatorNode
       ConfigurationObjectFactory configFactory
   )
   {
+    super(Arrays.asList(jsonMapper));
+
     this.jsonMapper = jsonMapper;
     this.lifecycle = lifecycle;
     this.props = props;
@@ -182,12 +185,6 @@ public class IndexerCoordinatorNode
   public void setTaskRunnerFactory(TaskRunnerFactory taskRunnerFactory)
   {
     this.taskRunnerFactory = taskRunnerFactory;
-  }
-
-  public IndexerCoordinatorNode registerHandler(Registererer registererer)
-  {
-    registererer.register();
-    return this;
   }
 
   public void init() throws Exception

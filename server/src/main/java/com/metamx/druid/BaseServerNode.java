@@ -38,7 +38,7 @@ import java.util.Properties;
 
 /**
  */
-public abstract class BaseServerNode<T extends BaseNode> extends BaseNode<T>
+public abstract class BaseServerNode<T extends QueryableNode> extends QueryableNode<T>
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> additionalFactories = Maps.newLinkedHashMap();
   private QueryRunnerFactoryConglomerate conglomerate = null;

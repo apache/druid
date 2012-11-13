@@ -17,21 +17,43 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.index.v1.serde;
+package com.metamx.druid;
 
+import com.metamx.druid.index.v1.serde.Registererer;
 import org.codehaus.jackson.map.ObjectMapper;
 
-/**
- * This is a "factory" interface for registering handlers in the system.  It exists because I'm unaware of
- * another way to register the complex serdes in the MR jobs that run on Hadoop.  As such, instances of this interface
- * must be instantiatable via a no argument default constructor (the MR jobs on Hadoop use reflection to instantiate
- * instances).
- *
- * The name is not a typo, I felt that it needed an extra "er" to make the pronunciation that much more difficult.
- */
-public interface Registererer
-{
-  public void register();
+import java.util.Arrays;
+import java.util.List;
 
-  public void registerSubType(ObjectMapper jsonMapper);
+/**
+ */
+public class RegisteringNode
+{
+  public static void registerHandlers(Iterable<Registererer> registererers, Iterable<ObjectMapper> mappers)
+  {
+    for (Registererer registererer : registererers) {
+      if (!doneRegister) {
+        registererer.register();
+      }
+      for (ObjectMapper mapper : mappers) {
+        registererer.registerSubType(mapper);
+      }
+    }
+    doneRegister = true;
+  }
+
+  private static boolean doneRegister = false;
+
+  private final List<ObjectMapper> mappers;
+
+  public RegisteringNode(List<ObjectMapper> mappers)
+  {
+    this.mappers = mappers;
+  }
+
+  public RegisteringNode registerHandlers(Registererer... registererers)
+  {
+    registerHandlers(Arrays.asList(registererers), mappers);
+    return this;
+  }
 }
