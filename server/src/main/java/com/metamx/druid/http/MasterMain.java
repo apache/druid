@@ -169,11 +169,14 @@ public class MasterMain
         lifecycle
     );
 
-    final ServiceProvider serviceProvider = Initialization.makeServiceProvider(
-        druidMasterConfig.getMergerServiceName(),
-        serviceDiscovery,
-        lifecycle
-    );
+    ServiceProvider serviceProvider = null;
+    if (druidMasterConfig.getMergerServiceName() != null) {
+      serviceProvider = Initialization.makeServiceProvider(
+          druidMasterConfig.getMergerServiceName(),
+          serviceDiscovery,
+          lifecycle
+      );
+    }
 
     final DruidClusterInfo druidClusterInfo = new DruidClusterInfo(
         configFactory.build(DruidClusterInfoConfig.class),

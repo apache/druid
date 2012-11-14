@@ -20,6 +20,7 @@
 package com.metamx.druid;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -28,7 +29,6 @@ import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
-import com.metamx.druid.utils.PropUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.skife.config.ConfigurationObjectFactory;
 
@@ -41,6 +41,7 @@ import java.util.Properties;
 public abstract class BaseServerNode<T extends QueryableNode> extends QueryableNode<T>
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> additionalFactories = Maps.newLinkedHashMap();
+  private DruidProcessingConfig processingConfig = null;
   private QueryRunnerFactoryConglomerate conglomerate = null;
   private StupidPool<ByteBuffer> computeScratchPool = null;
 
@@ -68,6 +69,12 @@ public abstract class BaseServerNode<T extends QueryableNode> extends QueryableN
     return computeScratchPool;
   }
 
+  public DruidProcessingConfig getProcessingConfig()
+  {
+    initializeProcessingConfig();
+    return processingConfig;
+  }
+
   @SuppressWarnings("unchecked")
   public T setConglomerate(QueryRunnerFactoryConglomerate conglomerate)
   {
@@ -79,6 +86,13 @@ public abstract class BaseServerNode<T extends QueryableNode> extends QueryableN
   public T setComputeScratchPool(StupidPool<ByteBuffer> computeScratchPool)
   {
     checkFieldNotSetAndSet("computeScratchPool", computeScratchPool);
+    return (T) this;
+  }
+
+  @SuppressWarnings("unchecked")
+  public T setProcessingConfig(DruidProcessingConfig processingConfig)
+  {
+    checkFieldNotSetAndSet("processingConfig", processingConfig);
     return (T) this;
   }
 
@@ -99,11 +113,7 @@ public abstract class BaseServerNode<T extends QueryableNode> extends QueryableN
   private void initializeComputeScratchPool()
   {
     if (computeScratchPool == null) {
-      setComputeScratchPool(
-          ServerInit.makeComputeScratchPool(
-              PropUtils.getPropertyAsInt(getProps(), "druid.computation.buffer.size", 1024 * 1024 * 1024)
-          )
-      );
+      setComputeScratchPool(ServerInit.makeComputeScratchPool(getProcessingConfig()));
     }
   }
 
@@ -119,6 +129,17 @@ public abstract class BaseServerNode<T extends QueryableNode> extends QueryableN
       }
 
       setConglomerate(new DefaultQueryRunnerFactoryConglomerate(factories));
+    }
+  }
+
+  private void initializeProcessingConfig()
+  {
+    if (processingConfig == null) {
+      setProcessingConfig(
+          getConfigFactory().buildWithReplacements(
+              DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing")
+          )
+      );
     }
   }
 }

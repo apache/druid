@@ -64,7 +64,10 @@ public abstract class DruidMasterConfig
   }
 
   @Config("druid.master.merger.service")
-  public abstract String getMergerServiceName();
+  public String getMergerServiceName()
+  {
+    return null;
+  }
 
   @Config("druid.master.merge.threshold")
   public long getMergeThreshold()

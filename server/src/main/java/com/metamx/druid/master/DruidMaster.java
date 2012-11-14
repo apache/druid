@@ -426,7 +426,7 @@ public class DruidMaster
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
 
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
-        if (config.isMergeSegments()){
+        if (config.isMergeSegments() && serviceProvider != null){
             masterRunnables.add(Pair.of(new MasterSegmentMergerRunnable(), config.getMasterSegmentMergerPeriod()));
         }
 

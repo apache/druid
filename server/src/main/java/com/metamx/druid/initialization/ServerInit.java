@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.DruidProcessingConfig;
 import com.metamx.druid.GroupByQueryEngine;
 import com.metamx.druid.GroupByQueryEngineConfig;
 import com.metamx.druid.Query;
@@ -49,6 +50,7 @@ import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.skife.config.ConfigurationObjectFactory;
 
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -57,6 +59,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ServerInit
 {
+  private static Logger log = new Logger(ServerInit.class);
+
   public static StorageAdapterLoader makeDefaultQueryableLoader(
       RestS3Service s3Client,
       QueryableLoaderConfig config
@@ -85,9 +89,41 @@ public class ServerInit
     return delegateLoader;
   }
 
-  public static StupidPool<ByteBuffer> makeComputeScratchPool(int computationBufferSize)
+  public static StupidPool<ByteBuffer> makeComputeScratchPool(DruidProcessingConfig config)
   {
-    return new ComputeScratchPool(computationBufferSize);
+    try {
+      Class<?> vmClass = Class.forName("sun.misc.VM");
+      Object maxDirectMemoryObj = vmClass.getMethod("maxDirectMemory").invoke(null);
+
+      if (maxDirectMemoryObj == null || !(maxDirectMemoryObj instanceof Number)) {
+        log.info("Cannot determine maxDirectMemory from[%s]", maxDirectMemoryObj);
+      } else {
+        long maxDirectMemory = ((Number) maxDirectMemoryObj).longValue();
+
+        final long memoryNeeded = (long) config.intermediateComputeSizeBytes() * (config.getNumThreads() + 1);
+        if (maxDirectMemory < memoryNeeded) {
+          throw new ISE(
+              "Not enough direct memory.  Please adjust -XX:MaxDirectMemory or druid.computation.buffer.size: "
+              + "maxDirectMemory[%,d], memoryNeeded[%,d], druid.computation.buffer.size[%,d], numThreads[%,d]",
+              maxDirectMemory, memoryNeeded, config.intermediateComputeSizeBytes(), config.getNumThreads()
+          );
+        }
+      }
+    }
+    catch (ClassNotFoundException e) {
+      log.info("No VM class, cannot do memory check.");
+    }
+    catch (NoSuchMethodException e) {
+      log.info("VM.maxDirectMemory doesn't exist, cannot do memory check.");
+    }
+    catch (InvocationTargetException e) {
+      log.warn(e, "static method shouldn't throw this");
+    }
+    catch (IllegalAccessException e) {
+      log.warn(e, "public method, shouldn't throw this");
+    }
+
+    return new ComputeScratchPool(config.intermediateComputeSizeBytes());
   }
 
   public static Map<Class<? extends Query>, QueryRunnerFactory> initDefaultQueryTypes(
@@ -97,7 +133,15 @@ public class ServerInit
   {
     Map<Class<? extends Query>, QueryRunnerFactory> queryRunners = Maps.newLinkedHashMap();
     queryRunners.put(TimeseriesQuery.class, new TimeseriesQueryRunnerFactory());
-    queryRunners.put(GroupByQuery.class, new GroupByQueryRunnerFactory(new GroupByQueryEngine(configFactory.build(GroupByQueryEngineConfig.class), computationBufferPool)));
+    queryRunners.put(
+        GroupByQuery.class,
+        new GroupByQueryRunnerFactory(
+            new GroupByQueryEngine(
+                configFactory.build(GroupByQueryEngineConfig.class),
+                computationBufferPool
+            )
+        )
+    );
     queryRunners.put(SearchQuery.class, new SearchQueryRunnerFactory());
     queryRunners.put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory());
     return queryRunners;
