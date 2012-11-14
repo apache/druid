@@ -27,6 +27,6 @@
         "type": "realtime",
         "windowPeriod": "PT5m",
         "segmentGranularity": "hour",
-        "basePersistDirectory": "/tmp/realtime/basePersist"
+        "basePersistDirectory": "/tmp/rand_realtime/basePersist"
     }
 }]
