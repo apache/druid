@@ -19,16 +19,21 @@
 
 package com.metamx.druid.index.v1;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Closeables;
+import com.google.common.io.InputSupplier;
 import com.google.common.io.LineProcessor;
 import com.google.common.primitives.Ints;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.parsers.DelimitedParser;
+import com.metamx.common.parsers.Parser;
+import com.metamx.common.parsers.ToLowerCaseParser;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
@@ -36,7 +41,11 @@ import com.metamx.druid.client.RangeIterable;
 import com.metamx.druid.guava.GuavaUtils;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
+import com.metamx.druid.indexer.data.DelimitedDataSpec;
+import com.metamx.druid.indexer.data.StringInputRowParser;
+import com.metamx.druid.indexer.data.TimestampSpec;
 import com.metamx.druid.input.InputRow;
+import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.kv.ArrayIndexed;
 import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedFloats;
@@ -50,6 +59,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -71,8 +81,9 @@ public class TestIndex
   private static MMappedIndex mmappedIndex = null;
   private static MMappedIndex mergedRealtime = null;
 
-  public static final String[] DIMENSIONS = new String[]{"provider", "quality", "placement", "placementish"};
-  public static final String[] METRICS = new String[]{"index"};
+  public static final String[] COLUMNS = new String[]{"ts", "provider", "quALIty", "plAcEmEnT", "pLacementish", "iNdEx"};
+  public static final String[] DIMENSIONS = new String[]{"provider", "quALIty", "plAcEmEnT", "pLacementish"};
+  public static final String[] METRICS = new String[]{"iNdEx"};
   public static final Map<String, Integer> dimIds = Maps.uniqueIndex(
       new RangeIterable(4),
       new Function<Integer, String>()
@@ -310,7 +321,9 @@ public class TestIndex
                 Arrays.asList(
                     com.metamx.druid.index.v1.IndexIO.mapDir(topFile),
                     com.metamx.druid.index.v1.IndexIO.mapDir(bottomFile)
-                ), METRIC_AGGS, mergedFile
+                ),
+                METRIC_AGGS,
+                mergedFile
             )
         );
 
@@ -324,9 +337,8 @@ public class TestIndex
 
   private static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
   {
-    URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
-    String filename = resource.getFile();
-    log.info("Realtime loading index file[%s]", filename);
+    final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
+    log.info("Realtime loading index file[%s]", resource);
 
     final IncrementalIndex retVal = new IncrementalIndex(
         new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularity.NONE, METRIC_AGGS
@@ -336,9 +348,24 @@ public class TestIndex
     int lineCount;
     try {
       lineCount = CharStreams.readLines(
-          GuavaUtils.joinFiles(new File(filename)),
+          CharStreams.newReaderSupplier(
+              new InputSupplier<InputStream>()
+              {
+                @Override
+                public InputStream getInput() throws IOException
+                {
+                  return resource.openStream();
+                }
+              },
+              Charsets.UTF_8
+          ),
           new LineProcessor<Integer>()
           {
+            StringInputRowParser parser = new StringInputRowParser(
+                new TimestampSpec("ts", "iso"),
+                new DelimitedDataSpec("\t", Arrays.asList(COLUMNS), Arrays.asList(DIMENSIONS)),
+                Arrays.<String>asList()
+            );
             boolean runOnce = false;
             int lineCount = 0;
 
@@ -352,35 +379,7 @@ public class TestIndex
 
               final String[] splits = line.split("\t");
 
-              retVal.add(
-                  new InputRow()
-                  {
-                    @Override
-                    public long getTimestampFromEpoch()
-                    {
-                      return new DateTime(splits[0]).getMillis();
-                    }
-
-                    @Override
-                    public List<String> getDimensions()
-                    {
-                      return Arrays.asList(DIMENSIONS);
-                    }
-
-                    @Override
-                    public List<String> getDimension(String dimension)
-                    {
-                      return Arrays.asList(splits[dimIds.get(dimension) + 1].split("\u0001"));
-                    }
-
-                    @Override
-                    public float getFloatMetric(String metric)
-                    {
-                      Preconditions.checkArgument(METRICS[0].equals(metric), "WTF!?");
-                      return Float.parseFloat(splits[5]);
-                    }
-                  }
-              );
+              retVal.add(parser.parse(line));
 
               ++lineCount;
               return true;

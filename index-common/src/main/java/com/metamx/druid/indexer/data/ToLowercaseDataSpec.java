@@ -19,46 +19,52 @@
 
 package com.metamx.druid.indexer.data;
 
-import com.metamx.common.parsers.JSONParser;
 import com.metamx.common.parsers.Parser;
-import org.codehaus.jackson.annotate.JsonProperty;
+import com.metamx.common.parsers.ToLowerCaseParser;
+import org.codehaus.jackson.annotate.JsonValue;
 
 import java.util.List;
 
 /**
  */
-public class JSONDataSpec implements DataSpec
+public class ToLowercaseDataSpec implements DataSpec
 {
-  private final List<String> dimensions;
+  private final DataSpec delegate;
 
-  public JSONDataSpec(
-      @JsonProperty("dimensions") List<String> dimensions
+  public ToLowercaseDataSpec(
+      DataSpec delegate
   )
   {
-    this.dimensions = dimensions;
-  }
-
-  @JsonProperty("dimensions")
-  @Override
-  public List<String> getDimensions()
-  {
-    return dimensions;
+    this.delegate = delegate;
   }
 
   @Override
   public void verify(List<String> usedCols)
   {
+    delegate.verify(usedCols);
   }
 
   @Override
   public boolean hasCustomDimensions()
   {
-    return !(dimensions == null || dimensions.isEmpty());
+    return delegate.hasCustomDimensions();
+  }
+
+  @Override
+  public List<String> getDimensions()
+  {
+    return delegate.getDimensions();
   }
 
   @Override
   public Parser<String, Object> getParser()
   {
-    return new JSONParser();
+    return new ToLowerCaseParser(delegate.getParser());
+  }
+
+  @JsonValue
+  public DataSpec getDelegate()
+  {
+    return delegate;
   }
 }

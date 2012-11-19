@@ -61,9 +61,7 @@ public class TimeseriesQueryRunnerTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.makeQueryRunners(
-        new TimeseriesQueryRunnerFactory()
-    );
+    return QueryRunnerTestHelper.makeQueryRunners(new TimeseriesQueryRunnerFactory());
   }
 
   private final QueryRunner runner;

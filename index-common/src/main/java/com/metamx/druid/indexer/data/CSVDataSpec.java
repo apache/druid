@@ -19,17 +19,12 @@
 
 package com.metamx.druid.indexer.data;
 
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.metamx.common.parsers.CSVParser;
 import com.metamx.common.parsers.Parser;
-import com.metamx.common.parsers.ToLowerCaseParser;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -45,33 +40,13 @@ public class CSVDataSpec implements DataSpec
       @JsonProperty("dimensions") List<String> dimensions
   )
   {
-    Preconditions.checkNotNull(columns);
-    Preconditions.checkArgument(
-        !Joiner.on("_").join(columns).contains(","), "Columns must not have commas in them"
-    );
+    Preconditions.checkNotNull(columns, "columns");
+    for (String column : columns) {
+      Preconditions.checkArgument(!column.contains(","), "Column[%s] has a comma, it cannot", column);
+    }
 
-    this.columns = Lists.transform(
-        columns,
-        new Function<String, String>()
-        {
-          @Override
-          public String apply(@Nullable String input)
-          {
-            return input.toLowerCase();
-          }
-        }
-    );
-    this.dimensions = (dimensions == null) ? dimensions : Lists.transform(
-        dimensions,
-        new Function<String, String>()
-        {
-          @Override
-          public String apply(@Nullable String input)
-          {
-            return input.toLowerCase();
-          }
-        }
-    );
+    this.columns = columns;
+    this.dimensions = dimensions;
   }
 
   @JsonProperty("columns")
@@ -102,8 +77,8 @@ public class CSVDataSpec implements DataSpec
   }
 
   @Override
-  public Parser getParser()
+  public Parser<String, Object> getParser()
   {
-    return new ToLowerCaseParser(new CSVParser(columns));
+    return new CSVParser(columns);
   }
 }

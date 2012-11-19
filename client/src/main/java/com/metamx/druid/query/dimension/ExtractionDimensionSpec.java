@@ -42,7 +42,7 @@ public class ExtractionDimensionSpec implements DimensionSpec
       @JsonProperty("dimExtractionFn") DimExtractionFn dimExtractionFn
   )
   {
-    this.dimension = dimension.toLowerCase();
+    this.dimension = dimension;
     this.dimExtractionFn = dimExtractionFn;
 
     // Do null check for backwards compatibility

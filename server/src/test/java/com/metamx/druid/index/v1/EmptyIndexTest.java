@@ -45,12 +45,7 @@ public class EmptyIndexTest
     tmpDir.deleteOnExit();
 
     IncrementalIndex emptyIndex = new IncrementalIndex(0, QueryGranularity.NONE, new AggregatorFactory[0]);
-    IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
-        new Interval("2012-08-01/P3D"),
-        emptyIndex,
-        new ArrayList<String>(),
-        new ArrayList<String>()
-    );
+    IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(new Interval("2012-08-01/P3D"), emptyIndex);
     IndexMerger.merge(Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter), new AggregatorFactory[0], tmpDir);
 
     MMappedIndex emptyIndexMMapped = IndexIO.mapDir(tmpDir);

@@ -36,6 +36,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.RegisteringNode;
 import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.indexer.data.DataSpec;
+import com.metamx.druid.indexer.data.ToLowercaseDataSpec;
 import com.metamx.druid.indexer.granularity.GranularitySpec;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.path.PathSpec;
@@ -219,7 +220,7 @@ public class HadoopDruidIndexerConfig
 
   public void setTimestampColumnName(String timestampColumnName)
   {
-    this.timestampColumnName = timestampColumnName.toLowerCase();
+    this.timestampColumnName = timestampColumnName;
   }
 
   @JsonProperty()
@@ -241,7 +242,7 @@ public class HadoopDruidIndexerConfig
 
   public void setDataSpec(DataSpec dataSpec)
   {
-    this.dataSpec = dataSpec;
+    this.dataSpec = new ToLowercaseDataSpec(dataSpec);
   }
 
   @Deprecated
@@ -326,7 +327,7 @@ public class HadoopDruidIndexerConfig
 
   public void setPartitionDimension(String partitionDimension)
   {
-    this.partitionDimension = (partitionDimension == null) ? partitionDimension : partitionDimension.toLowerCase();
+    this.partitionDimension = (partitionDimension == null) ? partitionDimension : partitionDimension;
   }
 
   public boolean partitionByDimension()

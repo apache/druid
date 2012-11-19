@@ -45,7 +45,7 @@ public class MaxAggregatorFactory implements AggregatorFactory
   )
   {
     this.name = name;
-    this.fieldName = fieldName.toLowerCase();
+    this.fieldName = fieldName;
   }
 
   @Override

@@ -112,8 +112,8 @@ public class IndexMerger
       final IncrementalIndex index, final Interval dataInterval, File outDir, ProgressIndicator progress
   ) throws IOException
   {
-    final long firstTimestamp = index.facts.firstKey().getTimestamp();
-    final long lastTimestamp = index.facts.lastKey().getTimestamp();
+    final long firstTimestamp = index.getMinTime().getMillis();
+    final long lastTimestamp = index.getMaxTime().getMillis();
     if (!(dataInterval.contains(firstTimestamp) && dataInterval.contains(lastTimestamp))) {
       throw new IAE(
           "interval[%s] does not encapsulate the full range of timestamps[%s, %s]",
@@ -130,26 +130,10 @@ public class IndexMerger
       throw new ISE("Can only persist to directories, [%s] wasn't a directory", outDir);
     }
 
-    final List<String> dimensions = Lists.transform(
-        Lists.newArrayList(index.dimensionOrder.keySet()),
-        new Function<String, String>()
-        {
-          @Override
-          public String apply(@Nullable String input)
-          {
-            return input.toLowerCase();
-          }
-        }
-    );
-    final List<String> metrics = Lists.newArrayListWithCapacity(index.metrics.length);
-    for (int i = 0; i < index.metrics.length; ++i) {
-      metrics.add(index.metrics[i].getName().toLowerCase());
-    }
-
     log.info("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return merge(
-        Arrays.<IndexableAdapter>asList(new IncrementalIndexAdapter(dataInterval, index, dimensions, metrics)),
-        index.metrics,
+        Arrays.<IndexableAdapter>asList(new IncrementalIndexAdapter(dataInterval, index)),
+        index.getMetricAggs(),
         outDir,
         progress
     );

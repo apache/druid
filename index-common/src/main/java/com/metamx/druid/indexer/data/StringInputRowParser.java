@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.common.parsers.Parser;
+import com.metamx.common.parsers.ToLowerCaseParser;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import org.codehaus.jackson.annotate.JsonCreator;
@@ -59,7 +60,7 @@ public class StringInputRowParser
     }
     this.dimensionExclusions.add(timestampSpec.getTimestampColumn());
 
-    this.parser = dataSpec.getParser();
+    this.parser = new ToLowerCaseParser(dataSpec.getParser());
   }
 
   public StringInputRowParser addDimensionExclusion(String dimension)

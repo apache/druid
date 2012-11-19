@@ -57,7 +57,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   )
   {
     this.name = name;
-    this.script = expression.toLowerCase();
+    this.script = expression;
     this.fieldNames = fieldNames;
     this.combiner = compileScript(script);
   }

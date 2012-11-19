@@ -162,8 +162,8 @@ public class RandomFirehoseFactory implements FirehoseFactory
       private final Runnable commitRunnable = new Runnable() { public void run() {} };
       private final java.util.Random rand = (seed == 0L) ? new Random() : new Random(seed);
       private final LinkedList<String> dimensions = new LinkedList<String>();
-      private final boolean placeholderForAdd = dimensions.add("inColumn".toLowerCase());
-      private final boolean placeholderForAdd2 = dimensions.add("target".toLowerCase());
+      private final boolean placeholderForAdd = dimensions.add("inColumn");
+      private final boolean placeholderForAdd2 = dimensions.add("target");
 
       private final Map<String, Object> theMap = new HashMap<String, Object>(2);
       private long rowCount = 0L;
@@ -200,7 +200,7 @@ public class RandomFirehoseFactory implements FirehoseFactory
           }
         }
         rowCount++;
-        theMap.put("inColumn".toLowerCase(), anotherRand((int)nth));
+        theMap.put("inColumn", anotherRand((int)nth));
         theMap.put("target", ("a" + nth));
         return new MapBasedInputRow(System.currentTimeMillis(), dimensions, theMap);
       }

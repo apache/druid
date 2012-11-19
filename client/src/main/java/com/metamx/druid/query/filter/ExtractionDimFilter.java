@@ -42,7 +42,7 @@ public class ExtractionDimFilter implements DimFilter
       @JsonProperty("dimExtractionFn") DimExtractionFn dimExtractionFn
   )
   {
-    this.dimension = dimension.toLowerCase();
+    this.dimension = dimension;
     this.value = value;
     this.dimExtractionFn = dimExtractionFn;
   }

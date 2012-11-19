@@ -39,7 +39,7 @@ public class SelectorFilter implements Filter
   }
 
   @Override
-  public ImmutableConciseSet goConcise(InvertedIndexSelector selector)
+  public ImmutableConciseSet goConcise(BitmapIndexSelector selector)
   {
     return selector.getConciseInvertedIndex(dimension, value);
   }
