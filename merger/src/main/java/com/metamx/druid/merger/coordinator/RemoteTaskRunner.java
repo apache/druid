@@ -552,6 +552,12 @@ public class RemoteTaskRunner implements TaskRunner
 
         tasks.put(task.getId(), taskWrapper);
 
+        byte[] rawBytes = jsonMapper.writeValueAsBytes(new TaskHolder(task, taskContext));
+
+        if (rawBytes.length > config.getMaxNumBytes()) {
+          throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
+        }
+
         cf.create()
           .withMode(CreateMode.EPHEMERAL)
           .forPath(

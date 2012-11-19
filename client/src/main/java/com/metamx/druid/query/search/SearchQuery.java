@@ -168,7 +168,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   @Override
   public String toString()
   {
-    return "SearchResultValue{" +
+    return "SearchQuery{" +
            "dataSource='" + getDataSource() + '\'' +
            ", dimFilter=" + dimFilter +
            ", granularity='" + granularity + '\'' +
