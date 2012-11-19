@@ -27,6 +27,7 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -67,6 +68,7 @@ public class EC2AutoScalingStrategyTest
         .withPrivateIpAddress(IP);
 
     strategy = new EC2AutoScalingStrategy(
+        new DefaultObjectMapper(),
         amazonEC2Client, new EC2AutoScalingStrategyConfig()
     {
       @Override
@@ -97,6 +99,12 @@ public class EC2AutoScalingStrategyTest
       public int getMaxNumInstancesToProvision()
       {
         return 1;
+      }
+
+      @Override
+      public String getUserDataFile()
+      {
+        return "";
       }
     }
     );

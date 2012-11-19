@@ -22,6 +22,7 @@ package com.metamx.druid.merger.worker;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
@@ -49,6 +50,7 @@ public class WorkerCuratorCoordinator
   private final ObjectMapper jsonMapper;
   private final CuratorFramework curatorFramework;
   private final Worker worker;
+  private final IndexerZkConfig config;
 
   private final String baseAnnouncementsPath;
   private final String baseTaskPath;
@@ -66,6 +68,7 @@ public class WorkerCuratorCoordinator
     this.jsonMapper = jsonMapper;
     this.curatorFramework = curatorFramework;
     this.worker = worker;
+    this.config = config;
 
     this.baseAnnouncementsPath = getPath(Arrays.asList(config.getAnnouncementPath(), worker.getHost()));
     this.baseTaskPath = getPath(Arrays.asList(config.getTaskPath(), worker.getHost()));
@@ -144,9 +147,14 @@ public class WorkerCuratorCoordinator
   {
     if (curatorFramework.checkExists().forPath(path) == null) {
       try {
+        byte[] rawBytes = jsonMapper.writeValueAsBytes(data);
+        if (rawBytes.length > config.getMaxNumBytes()) {
+          throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
+        }
+
         curatorFramework.create()
                         .withMode(mode)
-                        .forPath(path, jsonMapper.writeValueAsBytes(data));
+                        .forPath(path, rawBytes);
       }
       catch (Exception e) {
         log.warn(e, "Could not create path[%s], perhaps it already exists?", path);
@@ -212,11 +220,15 @@ public class WorkerCuratorCoordinator
       }
 
       try {
+        byte[] rawBytes = jsonMapper.writeValueAsBytes(status);
+        if (rawBytes.length > config.getMaxNumBytes()) {
+          throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
+        }
+
         curatorFramework.create()
                         .withMode(CreateMode.EPHEMERAL)
                         .forPath(
-                            getStatusPathForId(status.getId()),
-                            jsonMapper.writeValueAsBytes(status)
+                            getStatusPathForId(status.getId()), rawBytes
                         );
       }
       catch (Exception e) {
@@ -237,11 +249,14 @@ public class WorkerCuratorCoordinator
           announceStatus(status);
           return;
         }
+        byte[] rawBytes = jsonMapper.writeValueAsBytes(status);
+        if (rawBytes.length > config.getMaxNumBytes()) {
+          throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
+        }
 
         curatorFramework.setData()
                         .forPath(
-                            getStatusPathForId(status.getId()),
-                            jsonMapper.writeValueAsBytes(status)
+                            getStatusPathForId(status.getId()), rawBytes
                         );
       }
       catch (Exception e) {

@@ -33,8 +33,10 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.emitter.EmittingLogger;
+import org.codehaus.jackson.map.ObjectMapper;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.List;
 
 /**
@@ -43,14 +45,17 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
 {
   private static final EmittingLogger log = new EmittingLogger(EC2AutoScalingStrategy.class);
 
+  private final ObjectMapper jsonMapper;
   private final AmazonEC2Client amazonEC2Client;
   private final EC2AutoScalingStrategyConfig config;
 
   public EC2AutoScalingStrategy(
+      ObjectMapper jsonMapper,
       AmazonEC2Client amazonEC2Client,
       EC2AutoScalingStrategyConfig config
   )
   {
+    this.jsonMapper = jsonMapper;
     this.amazonEC2Client = amazonEC2Client;
     this.config = config;
   }
@@ -67,6 +72,7 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
               config.getMaxNumInstancesToProvision()
           )
               .withInstanceType(InstanceType.fromValue(config.getInstanceType()))
+              .withUserData(jsonMapper.writeValueAsString(new File(config.getUserDataFile())))
       );
 
       List<String> instanceIds = Lists.transform(

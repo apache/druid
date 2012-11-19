@@ -563,7 +563,8 @@ public class DruidMaster
                                     .withLoadManagementPeons(loadManagementPeons)
                                     .withMillisToWaitBeforeDeleting(config.getMillisToWaitBeforeDeleting())
                                     .withEmitter(emitter)
-                                    .withMergeThreshold(config.getMergeThreshold())
+                                    .withMergeBytesLimit(config.getMergeBytesLimit())
+                                    .withMergeSegmentsLimit(config.getMergeSegmentsLimit())
                                     .build();
 
         for (DruidMasterHelper helper : helpers) {

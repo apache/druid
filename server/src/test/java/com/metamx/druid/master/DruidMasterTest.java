@@ -126,12 +126,6 @@ public class DruidMasterTest
           {
             return "";
           }
-
-          @Override
-          public long getMergeThreshold()
-          {
-            return super.getMergeThreshold();
-          }
         },
         null,
         null,
