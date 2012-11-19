@@ -43,7 +43,7 @@ class DimensionPredicateFilter implements Filter
   }
 
   @Override
-  public ImmutableConciseSet goConcise(final InvertedIndexSelector selector)
+  public ImmutableConciseSet goConcise(final BitmapIndexSelector selector)
   {
     return ImmutableConciseSet.union(
         FunctionalIterable.create(selector.getDimensionValues(dimension))

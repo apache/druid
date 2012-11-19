@@ -106,7 +106,7 @@ public class TaskConsumer implements Runnable
         catch (Exception e) {
           log.makeAlert(e, "Failed to hand off task")
              .addData("task", task.getId())
-             .addData("type", task.getType().toString().toLowerCase())
+             .addData("type", task.getType().toString())
              .addData("dataSource", task.getDataSource())
              .addData("interval", task.getInterval())
              .emit();
@@ -136,7 +136,7 @@ public class TaskConsumer implements Runnable
     );
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
         .setUser2(task.getDataSource())
-        .setUser4(task.getType().toString().toLowerCase())
+        .setUser4(task.getType().toString())
         .setUser5(task.getInterval().toString());
 
     // Run preflight checks
@@ -233,7 +233,7 @@ public class TaskConsumer implements Runnable
           bytes += segment.getSize();
         }
 
-        builder.setUser3(status.getStatusCode().toString().toLowerCase());
+        builder.setUser3(status.getStatusCode().toString());
 
         emitter.emit(builder.build("indexer/time/run/millis", status.getDuration()));
         emitter.emit(builder.build("indexer/segment/count", status.getSegments().size()));
@@ -245,7 +245,7 @@ public class TaskConsumer implements Runnable
                   String.format("Failed to index: %s", task.getDataSource()),
                   ImmutableMap.<String, Object>builder()
                               .put("task", task.getId())
-                              .put("type", task.getType().toString().toLowerCase())
+                              .put("type", task.getType().toString())
                               .put("dataSource", task.getDataSource())
                               .put("interval", task.getInterval())
                               .build()

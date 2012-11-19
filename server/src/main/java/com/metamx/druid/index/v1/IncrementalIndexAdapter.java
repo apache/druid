@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.aggregation.Aggregator;
+import com.metamx.druid.input.Row;
 import com.metamx.druid.kv.EmptyIndexedInts;
 import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedInts;
@@ -46,39 +47,36 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
   private final Interval dataInterval;
   private final IncrementalIndex index;
-  private final List<String> dimensions;
-  private final List<String> metrics;
 
   private final Map<String, Map<String, ConciseSet>> invertedIndexes;
 
   public IncrementalIndexAdapter(
-      Interval dataInterval, IncrementalIndex index, List<String> dimensions, List<String> metrics
+      Interval dataInterval, IncrementalIndex index
   )
   {
     this.dataInterval = dataInterval;
     this.index = index;
-    this.dimensions = dimensions;
-    this.metrics = metrics;
 
     this.invertedIndexes = Maps.newHashMap();
 
-    for (String dimension : dimensions) {
+    for (String dimension : index.getDimensions()) {
       invertedIndexes.put(dimension, Maps.<String, ConciseSet>newHashMap());
     }
 
     int rowNum = 0;
-    for (IncrementalIndex.TimeAndDims timeAndDims : index.facts.keySet()) {
+    for (Row row : index) {
+
+    }
+    for (IncrementalIndex.TimeAndDims timeAndDims : index.getFacts().keySet()) {
       final String[][] dims = timeAndDims.getDims();
 
-      for (String dimension : dimensions) {
-        if (index.dimensionOrder == null || invertedIndexes == null) {
-          log.error("wtf, dimensionOrder and indvertedIndexes are null");
-        }
-        int dimIndex = index.dimensionOrder.get(dimension);
+      for (String dimension : index.getDimensions()) {
+        int dimIndex = index.getDimensionIndex(dimension);
         Map<String, ConciseSet> conciseSets = invertedIndexes.get(dimension);
 
         if (conciseSets == null || dims == null) {
           log.error("conciseSets and dims are null!");
+          continue;
         }
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
           continue;
@@ -120,19 +118,19 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return new ListIndexed<String>(dimensions, String.class);
+    return new ListIndexed<String>(index.getDimensions(), String.class);
   }
 
   @Override
   public Indexed<String> getAvailableMetrics()
   {
-    return new ListIndexed<String>(metrics, String.class);
+    return new ListIndexed<String>(index.getMetricNames(), String.class);
   }
 
   @Override
   public Indexed<String> getDimValueLookup(String dimension)
   {
-    final IncrementalIndex.DimDim dimDim = index.dimValues.get(dimension);
+    final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
     dimDim.sort();
 
     return new Indexed<String>()
@@ -173,7 +171,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public Iterable<Rowboat> getRows()
   {
     return FunctionalIterable
-        .create(index.facts.entrySet())
+        .create(index.getFacts().entrySet())
         .transform(
             new Function<Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]>, Rowboat>()
             {
@@ -189,9 +187,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                 final Aggregator[] aggs = input.getValue();
 
                 int[][] dims = new int[dimValues.length][];
-                for (String dimension : dimensions) {
-                  int dimIndex = index.dimensionOrder.get(dimension);
-                  final IncrementalIndex.DimDim dimDim = index.dimValues.get(dimension);
+                for (String dimension : index.getDimensions()) {
+                  int dimIndex = index.getDimensionIndex(dimension);
+                  final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
                   dimDim.sort();
 
                   if (dimIndex >= dimValues.length || dimValues[dimIndex] == null) {

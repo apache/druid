@@ -69,7 +69,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
           @Override
           public String apply(@Nullable String input)
           {
-            return input.toLowerCase();
+            return input;
           }
         }
     );

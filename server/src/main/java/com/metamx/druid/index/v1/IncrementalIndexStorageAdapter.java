@@ -85,7 +85,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public int getDimensionCardinality(String dimension)
   {
-    IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
+    IncrementalIndex.DimDim dimDim = index.getDimension(dimension.toLowerCase());
     if (dimDim == null) {
       return 0;
     }
@@ -232,8 +232,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       }
 
                       @Override
-                      public DimensionSelector makeDimensionSelector(String dimensionName)
+                      public DimensionSelector makeDimensionSelector(String dimension)
                       {
+                        final String dimensionName = dimension.toLowerCase();
                         final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimensionName);
                         if (dimValLookup == null) {
                           return null;
@@ -303,8 +304,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       }
 
                       @Override
-                      public FloatMetricSelector makeFloatMetricSelector(String metricName)
+                      public FloatMetricSelector makeFloatMetricSelector(String metric)
                       {
+                        final String metricName = metric.toLowerCase();
                         final Integer metricIndexInt = index.getMetricIndex(metricName);
                         if (metricIndexInt == null) {
                           return new FloatMetricSelector()
@@ -330,8 +332,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       }
 
                       @Override
-                      public ComplexMetricSelector makeComplexMetricSelector(String metricName)
+                      public ComplexMetricSelector makeComplexMetricSelector(String metric)
                       {
+                        final String metricName = metric.toLowerCase();
                         final Integer metricIndexInt = index.getMetricIndex(metricName);
                         if (metricIndexInt == null) {
                           return null;
@@ -385,7 +388,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       String[] tmpDimensionNames = new String[dimensions.size()];
       int i = 0;
       for (String dimension : dimensions) {
-        Integer dimIndex = index.getDimensionIndex(dimension);
+        Integer dimIndex = index.getDimensionIndex(dimension.toLowerCase());
         if (dimIndex != null) {
           tmpDimensionNames[i] = dimension;
           tmpDimensionIndexes[i] = dimIndex;
@@ -495,11 +498,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(String dimension, String value)
     {
-      Integer dimIndexObject = index.getDimensionIndex(dimension);
+      Integer dimIndexObject = index.getDimensionIndex(dimension.toLowerCase());
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(false);
       }
-      String idObject = index.getDimension(dimension).get(value);
+      String idObject = index.getDimension(dimension.toLowerCase()).get(value);
       if (idObject == null) {
         return new BooleanValueMatcher(false);
       }
@@ -530,7 +533,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final Predicate<String> predicate)
     {
-      Integer dimIndexObject = index.getDimensionIndex(dimension);
+      Integer dimIndexObject = index.getDimensionIndex(dimension.toLowerCase());
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(false);
       }

@@ -76,12 +76,7 @@ public class DeleteTask extends AbstractTask
   {
     // Strategy: Create an empty segment covering the interval to be deleted
     final IncrementalIndex empty = new IncrementalIndex(0, QueryGranularity.NONE, new AggregatorFactory[0]);
-    final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(
-        this.getInterval(),
-        empty,
-        new ArrayList<String>(),
-        new ArrayList<String>()
-    );
+    final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(this.getInterval(), empty);
 
     // Create DataSegment
     final DataSegment segment =

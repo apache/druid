@@ -41,11 +41,11 @@
     </properties>
 
     <modules>
-        <module>server</module>
-        <module>client</module>
         <module>common</module>
-        <module>indexer</module>
         <module>index-common</module>
+        <module>client</module>
+        <module>indexer</module>
+        <module>server</module>
         <module>merger</module>
         <module>realtime</module>
         <module>examples</module>

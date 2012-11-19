@@ -30,8 +30,8 @@ import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.druid.BaseStorageAdapter;
 import com.metamx.druid.Capabilities;
 import com.metamx.druid.QueryGranularity;
+import com.metamx.druid.index.brita.BitmapIndexSelector;
 import com.metamx.druid.index.brita.Filter;
-import com.metamx.druid.index.brita.InvertedIndexSelector;
 import com.metamx.druid.index.v1.processing.Cursor;
 import com.metamx.druid.index.v1.processing.DimensionSelector;
 import com.metamx.druid.index.v1.processing.Offset;
@@ -77,7 +77,7 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
   @Override
   public int getDimensionCardinality(String dimension)
   {
-    final Indexed<String> dimValueLookup = index.getDimValueLookup(dimension);
+    final Indexed<String> dimValueLookup = index.getDimValueLookup(dimension.toLowerCase());
     if (dimValueLookup == null) {
       return 0;
     }
@@ -127,7 +127,7 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
     if (filter == null) {
       iterable = new NoFilterCursorIterable(index, actualInterval, gran);
     } else {
-      Offset offset = new ConciseOffset(filter.goConcise(new MMappedInvertedIndexSelector(index)));
+      Offset offset = new ConciseOffset(filter.goConcise(new MMappedBitmapIndexSelector(index)));
 
       iterable = new CursorIterable(index, actualInterval, gran, offset);
     }
@@ -144,13 +144,13 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
   @Override
   public Indexed<String> getDimValueLookup(String dimension)
   {
-    return index.getDimValueLookup(dimension);
+    return index.getDimValueLookup(dimension.toLowerCase());
   }
 
   @Override
   public ImmutableConciseSet getInvertedIndex(String dimension, String dimVal)
   {
-    return index.getInvertedIndex(dimension, dimVal);
+    return index.getInvertedIndex(dimension.toLowerCase(), dimVal);
   }
 
   @Override
@@ -158,7 +158,7 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
   {
     return new ConciseOffset(
         filter.goConcise(
-            new MMappedInvertedIndexSelector(index)
+            new MMappedBitmapIndexSelector(index)
         )
     );
   }
@@ -241,8 +241,9 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
                     }
 
                     @Override
-                    public DimensionSelector makeDimensionSelector(final String dimensionName)
+                    public DimensionSelector makeDimensionSelector(String dimension)
                     {
+                      final String dimensionName = dimension;
                       final Indexed<? extends IndexedInts> rowVals = index.getDimColumn(dimensionName);
                       final Indexed<String> dimValueLookup = index.getDimValueLookup(dimensionName);
 
@@ -280,8 +281,9 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
                     }
 
                     @Override
-                    public FloatMetricSelector makeFloatMetricSelector(String metricName)
+                    public FloatMetricSelector makeFloatMetricSelector(String metric)
                     {
+                      final String metricName = metric.toLowerCase();
                       IndexedFloats cachedMetricVals = (IndexedFloats) metricHolderCache.get(metricName);
 
                       if (cachedMetricVals == null) {
@@ -315,8 +317,9 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
                     }
 
                     @Override
-                    public ComplexMetricSelector makeComplexMetricSelector(String metricName)
+                    public ComplexMetricSelector makeComplexMetricSelector(String metric)
                     {
+                      final String metricName = metric.toLowerCase();
                       Indexed cachedMetricVals = (Indexed) metricHolderCache.get(metricName);
 
                       if (cachedMetricVals == null) {
@@ -490,8 +493,9 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
                     }
 
                     @Override
-                    public DimensionSelector makeDimensionSelector(final String dimensionName)
+                    public DimensionSelector makeDimensionSelector(final String dimension)
                     {
+                      final String dimensionName = dimension.toLowerCase();
                       final Indexed<? extends IndexedInts> rowVals = index.getDimColumn(dimensionName);
                       final Indexed<String> dimValueLookup = index.getDimValueLookup(dimensionName);
 
@@ -529,8 +533,9 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
                     }
 
                     @Override
-                    public FloatMetricSelector makeFloatMetricSelector(String metricName)
+                    public FloatMetricSelector makeFloatMetricSelector(String metric)
                     {
+                      final String metricName = metric.toLowerCase();
                       IndexedFloats cachedMetricVals = (IndexedFloats) metricCacheMap.get(metricName);
 
                       if (cachedMetricVals == null) {
@@ -566,8 +571,9 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
                     }
 
                     @Override
-                    public ComplexMetricSelector makeComplexMetricSelector(String metricName)
+                    public ComplexMetricSelector makeComplexMetricSelector(String metric)
                     {
+                      final String metricName = metric.toLowerCase();
                       Indexed cachedMetricVals = (Indexed) metricCacheMap.get(metricName);
 
                       if (cachedMetricVals == null) {
@@ -625,11 +631,11 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
     }
   }
 
-  private static class MMappedInvertedIndexSelector implements InvertedIndexSelector
+  private static class MMappedBitmapIndexSelector implements BitmapIndexSelector
   {
     private final MMappedIndex index;
 
-    public MMappedInvertedIndexSelector(final MMappedIndex index)
+    public MMappedBitmapIndexSelector(final MMappedIndex index)
     {
       this.index = index;
     }
@@ -637,7 +643,7 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
     @Override
     public Indexed<String> getDimensionValues(String dimension)
     {
-      return index.getDimValueLookup(dimension);
+      return index.getDimValueLookup(dimension.toLowerCase());
     }
 
     @Override
@@ -647,21 +653,9 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
     }
 
     @Override
-    public int[] getInvertedIndex(String dimension, String value)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Offset getInvertedIndexOffset(String dimension, String value)
-    {
-      return new ConciseOffset(index.getInvertedIndex(dimension, value));
-    }
-
-    @Override
     public ImmutableConciseSet getConciseInvertedIndex(String dimension, String value)
     {
-      return index.getInvertedIndex(dimension, value);
+      return index.getInvertedIndex(dimension.toLowerCase(), value);
     }
   }
 }

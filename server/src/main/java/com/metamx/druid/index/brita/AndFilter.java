@@ -38,7 +38,7 @@ public class AndFilter implements Filter
   }
 
   @Override
-  public ImmutableConciseSet goConcise(InvertedIndexSelector selector)
+  public ImmutableConciseSet goConcise(BitmapIndexSelector selector)
   {
     if (filters.size() == 1) {
       return filters.get(0).goConcise(selector);

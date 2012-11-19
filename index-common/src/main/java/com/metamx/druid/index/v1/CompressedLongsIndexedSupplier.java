@@ -59,6 +59,11 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     this.baseLongBuffers = baseLongBuffers;
   }
 
+  public int size()
+  {
+    return totalSize;
+  }
+
   @Override
   public IndexedLongs get()
   {

@@ -35,7 +35,7 @@ public class NotFilter implements Filter
   }
 
   @Override
-  public ImmutableConciseSet goConcise(InvertedIndexSelector selector)
+  public ImmutableConciseSet goConcise(BitmapIndexSelector selector)
   {
     return ImmutableConciseSet.complement(
         baseFilter.goConcise(selector),

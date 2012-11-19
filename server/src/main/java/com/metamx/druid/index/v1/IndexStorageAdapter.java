@@ -31,8 +31,8 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.BaseStorageAdapter;
 import com.metamx.druid.Capabilities;
 import com.metamx.druid.QueryGranularity;
+import com.metamx.druid.index.brita.BitmapIndexSelector;
 import com.metamx.druid.index.brita.Filter;
-import com.metamx.druid.index.brita.InvertedIndexSelector;
 import com.metamx.druid.index.v1.processing.ArrayBasedOffset;
 import com.metamx.druid.index.v1.processing.Cursor;
 import com.metamx.druid.index.v1.processing.DimensionSelector;
@@ -143,7 +143,7 @@ public class IndexStorageAdapter extends BaseStorageAdapter
           baseOffset = new ArrayBasedOffset(ids, intervalStartAndEnd.lhs);
         } else {
           baseOffset = new StartLimitedOffset(
-              new ConciseOffset(filter.goConcise(new IndexBasedInvertedIndexSelector(index))),
+              new ConciseOffset(filter.goConcise(new IndexBasedBitmapIndexSelector(index))),
               intervalStartAndEnd.lhs
           );
         }
@@ -199,8 +199,9 @@ public class IndexStorageAdapter extends BaseStorageAdapter
                           }
 
                           @Override
-                          public DimensionSelector makeDimensionSelector(final String dimensionName)
+                          public DimensionSelector makeDimensionSelector(String dimension)
                           {
+                            final String dimensionName = dimension.toLowerCase();
                             final String[] nameLookup = index.reverseDimLookup.get(dimensionName);
                             if (nameLookup == null) {
                               return null;
@@ -242,9 +243,10 @@ public class IndexStorageAdapter extends BaseStorageAdapter
                           }
 
                           @Override
-                          public FloatMetricSelector makeFloatMetricSelector(String metricName)
+                          public FloatMetricSelector makeFloatMetricSelector(String metric)
                           {
-                            IndexedFloats cachedFloats = (IndexedFloats) metricHolderCache.get(metricName);
+                            String metricName = metric.toLowerCase();
+                            IndexedFloats cachedFloats = (IndexedFloats) metricHolderCache.get(metric);
                             if (cachedFloats == null) {
                               MetricHolder holder = index.metricVals.get(metricName);
                               if (holder == null) {
@@ -274,8 +276,9 @@ public class IndexStorageAdapter extends BaseStorageAdapter
                           }
 
                           @Override
-                          public ComplexMetricSelector makeComplexMetricSelector(String metricName)
+                          public ComplexMetricSelector makeComplexMetricSelector(String metric)
                           {
+                            final String metricName = metric.toLowerCase();
                             Indexed cachedComplex = (Indexed) metricHolderCache.get(metricName);
                             if (cachedComplex == null) {
                               MetricHolder holder = index.metricVals.get(metricName);
@@ -335,23 +338,21 @@ public class IndexStorageAdapter extends BaseStorageAdapter
   @Override
   public Indexed<String> getDimValueLookup(String dimension)
   {
-    return new ListIndexed<String>(Lists.newArrayList(index.dimIdLookup.get(dimension).keySet()), String.class);
+    return new ListIndexed<String>(
+        Lists.newArrayList(index.dimIdLookup.get(dimension.toLowerCase()).keySet()), String.class
+    );
   }
 
   @Override
   public ImmutableConciseSet getInvertedIndex(String dimension, String dimVal)
   {
-    return index.getInvertedIndex(dimension, dimVal);
+    return index.getInvertedIndex(dimension.toLowerCase(), dimVal);
   }
 
   @Override
   public Offset getFilterOffset(Filter filter)
   {
-    return new ConciseOffset(
-        filter.goConcise(
-            new IndexBasedInvertedIndexSelector(index)
-        )
-    );
+    return new ConciseOffset(filter.goConcise(new IndexBasedBitmapIndexSelector(index)));
   }
 
   @Override
@@ -459,11 +460,11 @@ public class IndexStorageAdapter extends BaseStorageAdapter
     }
   }
 
-  private static class IndexBasedInvertedIndexSelector implements InvertedIndexSelector
+  private static class IndexBasedBitmapIndexSelector implements BitmapIndexSelector
   {
     private final Index index;
 
-    public IndexBasedInvertedIndexSelector(final Index index)
+    public IndexBasedBitmapIndexSelector(final Index index)
     {
       this.index = index;
     }
@@ -473,7 +474,7 @@ public class IndexStorageAdapter extends BaseStorageAdapter
     {
       return new Indexed<String>()
       {
-        private final String[] dimVals = index.reverseDimLookup.get(dimension);
+        private final String[] dimVals = index.reverseDimLookup.get(dimension.toLowerCase());
 
         @Override
         public Class<? extends String> getClazz()
@@ -514,21 +515,9 @@ public class IndexStorageAdapter extends BaseStorageAdapter
     }
 
     @Override
-    public int[] getInvertedIndex(String dimension, String value)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Offset getInvertedIndexOffset(String dimension, String value)
-    {
-      return new ArrayBasedOffset(getInvertedIndex(dimension, value));
-    }
-
-    @Override
     public ImmutableConciseSet getConciseInvertedIndex(String dimension, String value)
     {
-      return index.getInvertedIndex(dimension, value);
+      return index.getInvertedIndex(dimension.toLowerCase(), value);
     }
   }
 }

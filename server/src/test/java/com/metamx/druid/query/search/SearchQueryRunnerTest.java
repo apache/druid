@@ -21,6 +21,7 @@ package com.metamx.druid.query.search;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Druids;
@@ -42,6 +43,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  */
@@ -75,12 +77,12 @@ public class SearchQueryRunnerTest
                                     .query("a")
                                     .build();
 
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.put(
         QueryRunnerTestHelper.qualityDimension,
         Sets.newHashSet("automotive", "mezzanine", "travel", "health", "entertainment")
     );
-    expectedResults.put(QueryRunnerTestHelper.providerDimension, Sets.newHashSet("total_market"));
+    expectedResults.put(QueryRunnerTestHelper.providerDimension.toLowerCase(), Sets.newHashSet("total_market"));
     expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("a"));
 
     checkSearchQuery(searchQuery, expectedResults);
@@ -96,7 +98,7 @@ public class SearchQueryRunnerTest
                                     .query(new FragmentSearchQuerySpec(Arrays.asList("auto", "ve"), null))
                                     .build();
 
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.put(QueryRunnerTestHelper.qualityDimension, Sets.newHashSet("automotive"));
 
     checkSearchQuery(searchQuery, expectedResults);
@@ -129,7 +131,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithDimension2()
   {
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.put(QueryRunnerTestHelper.providerDimension, new HashSet<String>(Arrays.asList("total_market")));
 
     checkSearchQuery(
@@ -147,7 +149,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithDimensions1()
   {
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.putAll(
         ImmutableMap.<String, Set<String>>of(
             QueryRunnerTestHelper.qualityDimension,
@@ -167,7 +169,12 @@ public class SearchQueryRunnerTest
         Druids.newSearchQueryBuilder()
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
-              .dimensions(Arrays.asList(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.providerDimension))
+              .dimensions(
+                  Arrays.asList(
+                      QueryRunnerTestHelper.qualityDimension,
+                      QueryRunnerTestHelper.providerDimension
+                  )
+              )
               .intervals(QueryRunnerTestHelper.fullOnInterval)
               .query("a")
               .build(),
@@ -178,14 +185,19 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithDimensions2()
   {
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.put(QueryRunnerTestHelper.providerDimension, new HashSet<String>(Arrays.asList("total_market")));
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
-              .dimensions(Arrays.asList(QueryRunnerTestHelper.placementishDimension, QueryRunnerTestHelper.providerDimension))
+              .dimensions(
+                  Arrays.asList(
+                      QueryRunnerTestHelper.placementishDimension,
+                      QueryRunnerTestHelper.providerDimension
+                  )
+              )
               .intervals(QueryRunnerTestHelper.fullOnInterval)
               .query("mark")
               .build(),
@@ -196,7 +208,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithSingleFilter1()
   {
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.put(
         QueryRunnerTestHelper.qualityDimension, new HashSet<String>(Arrays.asList("automotive"))
     );
@@ -217,7 +229,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithSingleFilter2()
   {
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.put(QueryRunnerTestHelper.providerDimension, new HashSet<String>(Arrays.asList("total_market")));
 
     checkSearchQuery(
@@ -236,7 +248,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchMultiAndFilter()
   {
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.put(QueryRunnerTestHelper.qualityDimension, new HashSet<String>(Arrays.asList("automotive")));
 
     DimFilter filter = Druids.newAndDimFilterBuilder()
@@ -270,7 +282,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithMultiOrFilter()
   {
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.put(QueryRunnerTestHelper.qualityDimension, new HashSet<String>(Arrays.asList("automotive")));
 
     DimFilter filter = Druids.newOrDimFilterBuilder()
@@ -304,7 +316,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithEmptyResults()
   {
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
@@ -320,7 +332,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithFilterEmptyResults()
   {
-    Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
 
     DimFilter filter = Druids.newAndDimFilterBuilder()
                              .fields(
@@ -364,7 +376,10 @@ public class SearchQueryRunnerTest
       for (SearchHit resultValue : resultValues) {
         String dimension = resultValue.getDimension();
         String theValue = resultValue.getValue();
-        Assert.assertTrue(expectedResults.containsKey(dimension));
+        Assert.assertTrue(
+            String.format("Result had unknown dimension[%s]", dimension),
+            expectedResults.containsKey(dimension)
+        );
 
         Set<String> expectedSet = expectedResults.get(dimension);
         Assert.assertTrue(

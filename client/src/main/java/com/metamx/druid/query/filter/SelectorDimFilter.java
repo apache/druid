@@ -39,7 +39,7 @@ public class SelectorDimFilter implements DimFilter
       @JsonProperty("value") String value
   )
   {
-    this.dimension = dimension.toLowerCase();
+    this.dimension = dimension;
     this.value = value;
   }
 

@@ -47,7 +47,7 @@ public class ExtractionFilter implements Filter
     this.fn = fn;
   }
 
-  private List<Filter> makeFilters(InvertedIndexSelector selector)
+  private List<Filter> makeFilters(BitmapIndexSelector selector)
   {
     final Indexed<String> allDimVals = selector.getDimensionValues(dimension);
     final List<Filter> filters = Lists.newArrayList();
@@ -63,7 +63,7 @@ public class ExtractionFilter implements Filter
   }
 
   @Override
-  public ImmutableConciseSet goConcise(InvertedIndexSelector selector)
+  public ImmutableConciseSet goConcise(BitmapIndexSelector selector)
   {
     return new OrFilter(makeFilters(selector)).goConcise(selector);
   }

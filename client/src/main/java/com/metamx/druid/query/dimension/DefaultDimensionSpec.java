@@ -39,7 +39,7 @@ public class DefaultDimensionSpec implements DimensionSpec
       @JsonProperty("outputName") String outputName
   )
   {
-    this.dimension = dimension.toLowerCase();
+    this.dimension = dimension;
 
     // Do null check for legacy backwards compatibility, callers should be setting the value.
     this.outputName = outputName == null ? dimension : outputName;
