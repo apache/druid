@@ -469,6 +469,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             ScalingStrategy strategy;
             if (config.getStrategyImpl().equalsIgnoreCase("ec2")) {
               strategy = new EC2AutoScalingStrategy(
+                  jsonMapper,
                   new AmazonEC2Client(
                       new BasicAWSCredentials(
                           PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
@@ -480,7 +481,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             } else if (config.getStrategyImpl().equalsIgnoreCase("noop")) {
               strategy = new NoopScalingStrategy();
             } else {
-              throw new ISE("Invalid strategy implementation: %s",config.getStrategyImpl());
+              throw new ISE("Invalid strategy implementation: %s", config.getStrategyImpl());
             }
 
             return new RemoteTaskRunner(

@@ -43,4 +43,7 @@ public abstract class EC2AutoScalingStrategyConfig
   @Config("druid.indexer.maxNumInstancesToProvision")
   @Default("1")
   public abstract int getMaxNumInstancesToProvision();
+
+  @Config("druid.indexer.userDataFile")
+  public abstract String getUserDataFile();
 }

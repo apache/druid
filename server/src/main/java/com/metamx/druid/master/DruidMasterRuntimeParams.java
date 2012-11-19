@@ -56,7 +56,8 @@ public class DruidMasterRuntimeParams
   private final int movedCount;
   private final int createdReplicantCount;
   private final int destroyedReplicantCount;
-  private final long mergeThreshold;
+  private final long mergeBytesLimit;
+  private final int mergeSegmentsLimit;
   private final int mergedSegmentCount;
 
   public DruidMasterRuntimeParams(
@@ -78,7 +79,8 @@ public class DruidMasterRuntimeParams
       int movedCount,
       int createdReplicantCount,
       int destroyedReplicantCount,
-      long mergeThreshold,
+      long mergeBytesLimit,
+      int mergeSegmentsLimit,
       int mergedSegmentCount
   )
   {
@@ -100,7 +102,8 @@ public class DruidMasterRuntimeParams
     this.movedCount = movedCount;
     this.createdReplicantCount = createdReplicantCount;
     this.destroyedReplicantCount = destroyedReplicantCount;
-    this.mergeThreshold = mergeThreshold;
+    this.mergeBytesLimit = mergeBytesLimit;
+    this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.mergedSegmentCount = mergedSegmentCount;
   }
 
@@ -194,9 +197,14 @@ public class DruidMasterRuntimeParams
     return destroyedReplicantCount;
   }
 
-  public long getMergeThreshold()
+  public long getMergeBytesLimit()
   {
-    return mergeThreshold;
+    return mergeBytesLimit;
+  }
+
+  public int getMergeSegmentsLimit()
+  {
+    return mergeSegmentsLimit;
   }
 
   public int getMergedSegmentCount()
@@ -230,7 +238,8 @@ public class DruidMasterRuntimeParams
         movedCount,
         createdReplicantCount,
         destroyedReplicantCount,
-        mergeThreshold,
+        mergeBytesLimit,
+        mergeSegmentsLimit,
         mergedSegmentCount
     );
   }
@@ -255,7 +264,8 @@ public class DruidMasterRuntimeParams
     private int movedCount;
     private int createdReplicantCount;
     private int destroyedReplicantCount;
-    private long mergeThreshold;
+    private long mergeBytesLimit;
+    private int mergeSegmentsLimit;
     private int mergedSegmentCount;
 
     Builder()
@@ -278,7 +288,8 @@ public class DruidMasterRuntimeParams
       this.movedCount = 0;
       this.createdReplicantCount = 0;
       this.destroyedReplicantCount = 0;
-      this.mergeThreshold = 0;
+      this.mergeBytesLimit = 0;
+      this.mergeSegmentsLimit = 0;
       this.mergedSegmentCount = 0;
     }
 
@@ -301,7 +312,8 @@ public class DruidMasterRuntimeParams
         int movedCount,
         int createdReplicantCount,
         int destroyedReplicantCount,
-        long mergeThreshold,
+        long mergeBytesLimit,
+        int mergeSegmentsLimit,
         int mergedSegmentCount
     )
     {
@@ -323,7 +335,8 @@ public class DruidMasterRuntimeParams
       this.movedCount = movedCount;
       this.createdReplicantCount = createdReplicantCount;
       this.destroyedReplicantCount = destroyedReplicantCount;
-      this.mergeThreshold = mergeThreshold;
+      this.mergeBytesLimit = mergeBytesLimit;
+      this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.mergedSegmentCount = mergedSegmentCount;
     }
 
@@ -348,7 +361,8 @@ public class DruidMasterRuntimeParams
           movedCount,
           createdReplicantCount,
           destroyedReplicantCount,
-          mergeThreshold,
+          mergeBytesLimit,
+          mergeSegmentsLimit,
           mergedSegmentCount
       );
     }
@@ -467,9 +481,15 @@ public class DruidMasterRuntimeParams
       return this;
     }
 
-    public Builder withMergeThreshold(long mergeThreshold)
+    public Builder withMergeBytesLimit(long mergeBytesLimit)
     {
-      this.mergeThreshold = mergeThreshold;
+      this.mergeBytesLimit = mergeBytesLimit;
+      return this;
+    }
+
+    public Builder withMergeSegmentsLimit(int mergeSegmentsLimit)
+    {
+      this.mergeSegmentsLimit = mergeSegmentsLimit;
       return this;
     }
 

@@ -94,6 +94,23 @@ public class RemoteTaskRunnerTest
         "0"
     );
 
+    task1 = new TestTask(
+        "task1",
+        "dummyDs",
+        Lists.<DataSegment>newArrayList(
+            new DataSegment(
+                "dummyDs",
+                new Interval(new DateTime(), new DateTime()),
+                new DateTime().toString(),
+                null,
+                null,
+                null,
+                null,
+                0
+            )
+        ), Lists.<AggregatorFactory>newArrayList()
+    );
+
     makeRemoteTaskRunner();
     makeTaskMonitor();
   }
@@ -114,6 +131,38 @@ public class RemoteTaskRunnerTest
         new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
         null
     );
+  }
+
+  @Test
+  public void testRunTooMuchZKData() throws Exception
+  {
+    boolean exceptionOccurred = false;
+    try {
+      remoteTaskRunner.run(
+          new TestTask(
+              new String(new char[5000]),
+              "dummyDs",
+              Lists.<DataSegment>newArrayList(
+                  new DataSegment(
+                      "dummyDs",
+                      new Interval(new DateTime(), new DateTime()),
+                      new DateTime().toString(),
+                      null,
+                      null,
+                      null,
+                      null,
+                      0
+                  )
+              ), Lists.<AggregatorFactory>newArrayList()
+          ),
+          new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
+          null
+      );
+    }
+    catch (IllegalStateException e) {
+      exceptionOccurred = true;
+    }
+    Assert.assertTrue(exceptionOccurred);
   }
 
   @Test
@@ -173,6 +222,12 @@ public class RemoteTaskRunnerTest
           public String getStatusPath()
           {
             return statusPath;
+          }
+
+          @Override
+          public long getMaxNumBytes()
+          {
+            return 1000;
           }
         },
         cf,
@@ -272,23 +327,6 @@ public class RemoteTaskRunnerTest
         scheduledExec,
         new RetryPolicyFactory(new TestRetryPolicyConfig()),
         new TestScalingStrategy()
-    );
-
-    task1 = new TestTask(
-        "task1",
-        "dummyDs",
-        Lists.<DataSegment>newArrayList(
-            new DataSegment(
-                "dummyDs",
-                new Interval(new DateTime(), new DateTime()),
-                new DateTime().toString(),
-                null,
-                null,
-                null,
-                null,
-                0
-            )
-        ), Lists.<AggregatorFactory>newArrayList()
     );
 
     // Create a single worker and wait for things for be ready
@@ -398,6 +436,12 @@ public class RemoteTaskRunnerTest
     public Duration getTaskAssignmentTimeoutDuration()
     {
       return new Duration(60000);
+    }
+
+    @Override
+    public long getMaxNumBytes()
+    {
+      return 1000;
     }
   }
 
