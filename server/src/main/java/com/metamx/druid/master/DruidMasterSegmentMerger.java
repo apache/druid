@@ -101,21 +101,23 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
       List<TimelineObjectHolder<String, DataSegment>> timelineObjects =
           timeline.lookup(new Interval(new DateTime(0), new DateTime("3000-01-01")));
 
-      // Accumulate timelineObjects greedily until we surpass our size threshold, then backtrack to the maximum complete set
+      // Accumulate timelineObjects greedily until we reach our limits, then backtrack to the maximum complete set
       SegmentsToMerge segmentsToMerge = new SegmentsToMerge();
 
       for(int i = 0 ; i < timelineObjects.size() ; i++) {
 
         segmentsToMerge.add(timelineObjects.get(i));
 
-        if(segmentsToMerge.getMergedSize() > params.getMergeThreshold()) {
-          i -= segmentsToMerge.backtrack(params.getMergeThreshold());
+        if (segmentsToMerge.getMergedSize() > params.getMergeBytesLimit()
+            || segmentsToMerge.size() >= params.getMergeSegmentsLimit())
+        {
+          i -= segmentsToMerge.backtrack(params.getMergeBytesLimit());
 
-          if(segmentsToMerge.size() > 1) {
+          if (segmentsToMerge.size() > 1) {
             count += mergeSegments(segmentsToMerge, entry.getKey());
           }
 
-          if(segmentsToMerge.size() == 0) {
+          if (segmentsToMerge.size() == 0) {
             // Backtracked all the way to zero. Increment by one so we continue to make progress.
             i++;
           }
@@ -125,7 +127,7 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
       }
 
       // Finish any timelineObjects to merge that may have not hit threshold
-      segmentsToMerge.backtrack(params.getMergeThreshold());
+      segmentsToMerge.backtrack(params.getMergeBytesLimit());
       if (segmentsToMerge.size() > 1) {
         count += mergeSegments(segmentsToMerge, entry.getKey());
       }
