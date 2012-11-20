@@ -44,7 +44,6 @@ import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.index.v1.MMappedIndex;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -419,6 +418,7 @@ public class IndexGeneratorJob implements Jobby
       int attemptNumber = context.getTaskAttemptID().getId();
       Path indexBasePath = config.makeSegmentOutputPath(bucket);
       Path indexZipFilePath = new Path(indexBasePath, String.format("index.zip.%s", attemptNumber));
+      final FileSystem infoFS = config.makeDescriptorInfoDir().getFileSystem(context.getConfiguration());
       final FileSystem outputFS = indexBasePath.getFileSystem(context.getConfiguration());
 
       outputFS.mkdirs(indexBasePath);
@@ -478,7 +478,7 @@ public class IndexGeneratorJob implements Jobby
       // retry 1 minute
       boolean success = false;
       for (int i = 0; i < 6; i++) {
-        if (renameIndexFiles(outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
+        if (renameIndexFiles(infoFS, outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
           log.info("Successfully renamed [%s] to [%s]", indexZipFilePath, finalIndexZipFilePath);
           success = true;
           break;
@@ -508,7 +508,7 @@ public class IndexGeneratorJob implements Jobby
           outputFS.delete(indexZipFilePath, true);
         } else {
           outputFS.delete(finalIndexZipFilePath, true);
-          if (!renameIndexFiles(outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
+          if (!renameIndexFiles(infoFS, outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
             throw new ISE(
                 "Files [%s] and [%s] are different, but still cannot rename after retry loop",
                 indexZipFilePath.toUri().getPath(),
@@ -520,6 +520,7 @@ public class IndexGeneratorJob implements Jobby
     }
 
     private boolean renameIndexFiles(
+        FileSystem intermediateFS,
         FileSystem outputFS,
         Path indexBasePath,
         Path indexZipFilePath,
@@ -565,7 +566,18 @@ public class IndexGeneratorJob implements Jobby
         return false;
       }
 
-      final Path descriptorPath = new Path(indexBasePath, "descriptor.json");
+      writeSegmentDescriptor(outputFS, segment, new Path(indexBasePath, "descriptor.json"));
+      final Path descriptorPath = config.makeDescriptorInfoPath(segment);
+      log.info("Writing descriptor to path[%s]", descriptorPath);
+      intermediateFS.mkdirs(descriptorPath.getParent());
+      writeSegmentDescriptor(intermediateFS, segment, descriptorPath);
+
+      return true;
+    }
+
+    private void writeSegmentDescriptor(FileSystem outputFS, DataSegment segment, Path descriptorPath)
+        throws IOException
+    {
       if (outputFS.exists(descriptorPath)) {
         outputFS.delete(descriptorPath, false);
       }
@@ -577,7 +589,6 @@ public class IndexGeneratorJob implements Jobby
       finally {
         descriptorOut.close();
       }
-      return true;
     }
 
     private long copyFile(

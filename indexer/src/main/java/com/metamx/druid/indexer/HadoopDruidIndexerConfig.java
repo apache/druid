@@ -34,6 +34,7 @@ import com.metamx.common.MapUtils;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.RegisteringNode;
+import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.indexer.data.DataSpec;
 import com.metamx.druid.indexer.data.ToLowercaseDataSpec;
@@ -59,6 +60,8 @@ import org.joda.time.format.ISODateTimeFormat;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -111,9 +114,7 @@ public class HadoopDruidIndexerConfig
       RegisteringNode.registerHandlers(registererers, Arrays.asList(jsonMapper));
     }
 
-    final HadoopDruidIndexerConfig retVal = jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
-    retVal.verify();
-    return retVal;
+    return jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
   }
 
   @SuppressWarnings("unchecked")
@@ -152,7 +153,9 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromConfiguration(Configuration conf)
   {
-    return fromString(conf.get(CONFIG_PROPERTY));
+    final HadoopDruidIndexerConfig retVal = fromString(conf.get(CONFIG_PROPERTY));
+    retVal.verify();
+    return retVal;
   }
 
   private static final Logger log = new Logger(HadoopDruidIndexerConfig.class);
@@ -556,6 +559,16 @@ public class HadoopDruidIndexerConfig
             ISODateTimeFormat.basicDateTime().print(bucketInterval.getEnd())
         )
     );
+  }
+
+  public Path makeDescriptorInfoDir()
+  {
+    return new Path(makeIntermediatePath(), "segmentDescriptorInfo");
+  }
+
+  public Path makeDescriptorInfoPath(DataSegment segment)
+  {
+    return new Path(makeDescriptorInfoDir(), String.format("%s.json", segment.getIdentifier().replace(":", "")));
   }
 
   public Path makeSegmentOutputPath(Bucket bucket)

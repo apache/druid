@@ -19,12 +19,16 @@
 
 package com.metamx.druid.indexer;
 
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
@@ -32,9 +36,7 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -50,7 +52,7 @@ public class DbUpdaterJob implements Jobby
   private final DBI dbi;
 
   // Keep track of published segment identifiers, in case a client is interested.
-  private volatile List<DataSegment> publishedSegments = null;
+  private volatile ImmutableList<DataSegment> publishedSegments = null;
 
   public DbUpdaterJob(
       HadoopDruidIndexerConfig config
@@ -66,7 +68,7 @@ public class DbUpdaterJob implements Jobby
   {
     final Configuration conf = new Configuration();
 
-    List<DataSegment> newPublishedSegments = new LinkedList<DataSegment>();
+    ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
 
     for (String propName : System.getProperties().stringPropertyNames()) {
       if (propName.startsWith("hadoop.")) {
@@ -74,16 +76,13 @@ public class DbUpdaterJob implements Jobby
       }
     }
 
-    final Iterator<Bucket> buckets = config.getAllBuckets().iterator();
-    Bucket bucket = buckets.next();
-    int numRetried = 0;
-    while (true) {
-      try {
-        final Path path = new Path(config.makeSegmentOutputPath(bucket), "descriptor.json");
-        final DataSegment segment = jsonMapper.readValue(
-            path.getFileSystem(conf).open(path),
-            DataSegment.class
-        );
+    final Path descriptorInfoDir = config.makeDescriptorInfoDir();
+
+    try {
+      FileSystem fs = descriptorInfoDir.getFileSystem(conf);
+
+      for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
+        final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
 
         dbi.withHandle(
             new HandleCallback<Void>()
@@ -91,12 +90,11 @@ public class DbUpdaterJob implements Jobby
               @Override
               public Void withHandle(Handle handle) throws Exception
               {
-                handle.createStatement(
-                    String.format(
-                        "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                handle.createStatement(String.format(
+                        "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
+                        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
                         spec.getSegmentTable()
-                    )
-                )
+                ))
                       .bind("id", segment.getIdentifier())
                       .bind("dataSource", segment.getDataSource())
                       .bind("created_date", new DateTime().toString())
@@ -113,37 +111,15 @@ public class DbUpdaterJob implements Jobby
             }
         );
 
-        newPublishedSegments.add(segment);
+        publishedSegmentsBuilder.add(segment);
         log.info("Published %s", segment.getIdentifier());
       }
-      catch (Exception e) {
-        if (numRetried < 5) {
-          log.error(e, "Retrying[%d] after exception when loading segment metadata into db", numRetried);
-
-          try {
-            Thread.sleep(15 * 1000);
-          }
-          catch (InterruptedException e1) {
-            Thread.currentThread().interrupt();
-            return false;
-          }
-
-          ++numRetried;
-          continue;
-        }
-        log.error(e, "Failing, retried too many times.");
-        return false;
-      }
-
-      if (buckets.hasNext()) {
-        bucket = buckets.next();
-        numRetried = 0;
-      } else {
-        break;
-      }
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
     }
 
-    publishedSegments = newPublishedSegments;
+    publishedSegments = publishedSegmentsBuilder.build();
 
     return true;
   }
@@ -158,7 +134,7 @@ public class DbUpdaterJob implements Jobby
       log.error("getPublishedSegments called before run!");
       throw new IllegalStateException("DbUpdaterJob has not run yet");
     } else {
-      return Collections.unmodifiableList(publishedSegments);
+      return publishedSegments;
     }
   }
 }

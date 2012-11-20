@@ -118,8 +118,7 @@ public class HadoopDruidIndexer
 
   private static void printHelp()
   {
-    System.out.println("Usage: <java invocation> <time_interval> <config_spec>");
-    System.out.println("<time_interval> is the ISO8601 interval of data to run over.");
+    System.out.println("Usage: <java invocation> <config_spec>");
     System.out.println("<config_spec> is either a JSON object or the path to a file that contains a JSON object.");
     System.out.println();
     System.out.println("JSON object description:");
