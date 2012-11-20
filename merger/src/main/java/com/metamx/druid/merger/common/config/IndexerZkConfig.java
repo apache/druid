@@ -20,6 +20,7 @@
 package com.metamx.druid.merger.common.config;
 
 import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
@@ -33,4 +34,8 @@ public abstract class IndexerZkConfig
 
   @Config("druid.zk.paths.indexer.statusPath")
   public abstract String getStatusPath();
+
+  @Config("druid.zk.maxNumBytes")
+  @Default("512000")
+  public abstract long getMaxNumBytes();
 }
