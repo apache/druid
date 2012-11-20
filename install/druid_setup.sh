@@ -20,6 +20,6 @@ DRUID_SERVER_JAR="$(ls -1 $(find $DRUID_DIR -name 'druid-server*selfcontained.ja
 echo "using ${DRUID_SERVER_JAR}" 
 echo 
 
-$RUN_JAVA -cp "${DRUID_SERVER_JAR}" -Dlog4j.configuration=file://${DRUID_DIR}/install/log4j.xml  -Djava.net.preferIPv4Stack=true -Duser.timezone=UTC -Dfile.encoding=UTF-8  com.metamx.druid.utils.DruidSetup $*
+$RUN_JAVA -cp "${DRUID_SERVER_JAR}" -Dlog4j.configuration=file://${DRUID_DIR}/install/log4j.xml -Duser.timezone=UTC -Dfile.encoding=UTF-8  com.metamx.druid.utils.DruidSetup $*
 
 [ -e ${DRUID_DIR}/install/druid_setup.log ]  &&  egrep "WARN|ERROR|FATAL" ${DRUID_DIR}/install/druid_setup.log
