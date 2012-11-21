@@ -73,7 +73,7 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
       @Override
       public Sequence<Row> run(Query<Row> input)
       {
-        GroupByQuery query = (GroupByQuery) input;
+        final GroupByQuery query = (GroupByQuery) input;
 
         List<Interval> condensed = query.getIntervals();
         final List<AggregatorFactory> aggs = Lists.transform(
@@ -119,7 +119,7 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
             }
         );
 
-        return Sequences.simple(index);
+        return Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs()));
       }
     };
   }

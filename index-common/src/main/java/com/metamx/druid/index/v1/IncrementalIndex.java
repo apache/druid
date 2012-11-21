@@ -35,6 +35,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.Aggregator;
 import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.index.v1.serde.ComplexMetricExtractor;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
@@ -53,7 +54,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -341,34 +341,52 @@ public class IncrementalIndex implements Iterable<Row>
   @Override
   public Iterator<Row> iterator()
   {
-    return Iterators.transform(
-        facts.entrySet().iterator(),
-        new Function<Map.Entry<TimeAndDims, Aggregator[]>, Row>()
-        {
-          @Override
-          public Row apply(final Map.Entry<TimeAndDims, Aggregator[]> input)
-          {
-            final TimeAndDims timeAndDims = input.getKey();
-            final Aggregator[] aggregators = input.getValue();
+    return iterableWithPostAggregations(null).iterator();
+  }
 
-            String[][] theDims = timeAndDims.getDims();
+  public Iterable<Row> iterableWithPostAggregations(final List<PostAggregator> postAggs)
+  {
+    return new Iterable<Row>()
+    {
+      @Override
+      public Iterator<Row> iterator()
+      {
+        return Iterators.transform(
+            facts.entrySet().iterator(),
+            new Function<Map.Entry<TimeAndDims, Aggregator[]>, Row>()
+            {
+              @Override
+              public Row apply(final Map.Entry<TimeAndDims, Aggregator[]> input)
+              {
+                final TimeAndDims timeAndDims = input.getKey();
+                final Aggregator[] aggregators = input.getValue();
 
-            Map<String, Object> theVals = Maps.newLinkedHashMap();
-            for (int i = 0; i < theDims.length; ++i) {
-              String[] dim = theDims[i];
-              if (dim != null && dim.length != 0) {
-                theVals.put(dimensions.get(i), dim.length == 1 ? dim[0] : Arrays.asList(dim));
+                String[][] theDims = timeAndDims.getDims();
+
+                Map<String, Object> theVals = Maps.newLinkedHashMap();
+                for (int i = 0; i < theDims.length; ++i) {
+                  String[] dim = theDims[i];
+                  if (dim != null && dim.length != 0) {
+                    theVals.put(dimensions.get(i), dim.length == 1 ? dim[0] : Arrays.asList(dim));
+                  }
+                }
+
+                for (int i = 0; i < aggregators.length; ++i) {
+                  theVals.put(metrics[i].getName(), aggregators[i].get());
+                }
+
+                if (postAggs != null) {
+                  for (PostAggregator postAgg : postAggs) {
+                    theVals.put(postAgg.getName(), postAgg.compute(theVals));
+                  }
+                }
+
+                return new MapBasedRow(timeAndDims.getTimestamp(), theVals);
               }
             }
-
-            for (int i = 0; i < aggregators.length; ++i) {
-              theVals.put(metrics[i].getName(), aggregators[i].get());
-            }
-
-            return new MapBasedRow(timeAndDims.getTimestamp(), theVals);
-          }
-        }
-    );
+        );
+      }
+    };
   }
 
   static class DimensionHolder

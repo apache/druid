@@ -52,7 +52,7 @@ import java.util.List;
 public class QueryRunnerTestHelper
 {
   public static final String dataSource = "testing";
-  public static final QueryGranularity gran = QueryGranularity.DAY;
+  public static final QueryGranularity dayGran = QueryGranularity.DAY;
   public static final QueryGranularity allGran = QueryGranularity.ALL;
   public static final String providerDimension = "proVider";
   public static final String qualityDimension = "quality";
