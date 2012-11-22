@@ -26,6 +26,15 @@ import java.util.List;
  */
 class DimFilterCacheHelper
 {
+  static final byte NOOP_CACHE_ID = -0x4;
+  static final byte SELECTOR_CACHE_ID = 0x0;
+  static final byte AND_CACHE_ID = 0x1;
+  static final byte OR_CACHE_ID = 0x2;
+  static final byte NOT_CACHE_ID = 0x3;
+  static final byte EXTRACTION_CACHE_ID = 0x4;
+  static final byte REGEX_CACHE_ID = 0x5;
+  static final byte SEARCH_QUERY_TYPE_ID = 0x6;
+
   static byte[] computeCacheKey(byte cacheIdKey, List<DimFilter> filters)
   {
     if (filters.size() == 1) {

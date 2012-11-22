@@ -29,8 +29,6 @@ import java.nio.ByteBuffer;
  */
 public class ExtractionDimFilter implements DimFilter
 {
-  private static final byte CACHE_TYPE_ID = 0x4;
-
   private final String dimension;
   private final String value;
   private final DimExtractionFn dimExtractionFn;
@@ -72,7 +70,7 @@ public class ExtractionDimFilter implements DimFilter
     byte[] valueBytes = value.getBytes();
 
     return ByteBuffer.allocate(1 + dimensionBytes.length + valueBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(DimFilterCacheHelper.EXTRACTION_CACHE_ID)
                      .put(dimensionBytes)
                      .put(valueBytes)
                      .array();

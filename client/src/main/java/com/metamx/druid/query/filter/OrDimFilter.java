@@ -29,7 +29,6 @@ import java.util.List;
  */
 public class OrDimFilter implements DimFilter
 {
-  private static final byte CACHE_TYPE_ID = 0x2;
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
   final private List<DimFilter> fields;
@@ -51,7 +50,7 @@ public class OrDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    return DimFilterCacheHelper.computeCacheKey(CACHE_TYPE_ID, fields);
+    return DimFilterCacheHelper.computeCacheKey(DimFilterCacheHelper.OR_CACHE_ID, fields);
   }
 
   @Override

@@ -419,7 +419,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     final EntryHolder holder = new EntryHolder();
     final ValueMatcher theMatcher = makeFilterMatcher(filter, holder);
     final SearchQuerySpec searchQuerySpec = query.getQuery();
-    final TreeSet<SearchHit> retVal = Sets.newTreeSet(searchQuerySpec.getSearchSortSpec().getComparator());
+    final TreeSet<SearchHit> retVal = Sets.newTreeSet(query.getSort().getComparator());
 
     ConcurrentNavigableMap<IncrementalIndex.TimeAndDims, Aggregator[]> facts = index.getSubMap(
         new IncrementalIndex.TimeAndDims(intervalStart, new String[][]{}),

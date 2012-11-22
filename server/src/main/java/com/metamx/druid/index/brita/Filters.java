@@ -27,6 +27,7 @@ import com.metamx.druid.query.filter.ExtractionDimFilter;
 import com.metamx.druid.query.filter.NotDimFilter;
 import com.metamx.druid.query.filter.OrDimFilter;
 import com.metamx.druid.query.filter.RegexDimFilter;
+import com.metamx.druid.query.filter.SearchQueryDimFilter;
 import com.metamx.druid.query.filter.SelectorDimFilter;
 
 import javax.annotation.Nullable;
@@ -79,6 +80,10 @@ public class Filters
       final RegexDimFilter regexDimFilter = (RegexDimFilter) dimFilter;
 
       filter = new RegexFilter(regexDimFilter.getDimension(), regexDimFilter.getPattern());
+    } else if (dimFilter instanceof SearchQueryDimFilter) {
+      final SearchQueryDimFilter searchQueryFilter = (SearchQueryDimFilter) dimFilter;
+
+      filter = new SearchQueryFilter(searchQueryFilter.getDimension(), searchQueryFilter.getQuery());
     }
 
     return filter;

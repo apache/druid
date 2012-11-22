@@ -101,7 +101,7 @@ public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchRe
       )
       {
         SearchQuery query = (SearchQuery) input;
-        return new SearchBinaryFn(query.getQuery().getSearchSortSpec(), query.getGranularity());
+        return new SearchBinaryFn(query.getSort(), query.getGranularity());
       }
     };
   }

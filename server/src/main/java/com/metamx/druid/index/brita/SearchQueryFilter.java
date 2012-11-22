@@ -17,53 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.query.filter;
+package com.metamx.druid.index.brita;
 
-import com.google.common.base.Charsets;
+import com.google.common.base.Predicate;
+import com.metamx.druid.query.search.SearchQuerySpec;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import java.nio.ByteBuffer;
+import javax.annotation.Nullable;
 
 /**
  */
-public class RegexDimFilter implements DimFilter
+public class SearchQueryFilter extends DimensionPredicateFilter
 {
-  private final String dimension;
-  private final String pattern;
-
   @JsonCreator
-  public RegexDimFilter(
+  public SearchQueryFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("pattern") String pattern
+      @JsonProperty("query") final SearchQuerySpec query
   )
   {
-    this.dimension = dimension;
-    this.pattern = pattern;
-  }
-
-  @JsonProperty
-  public String getDimension()
-  {
-    return dimension;
-  }
-
-  @JsonProperty
-  public String getPattern()
-  {
-    return pattern;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    final byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
-    final byte[] patternBytes = pattern.getBytes(Charsets.UTF_8);
-
-    return ByteBuffer.allocate(1 + dimensionBytes.length + patternBytes.length)
-        .put(DimFilterCacheHelper.REGEX_CACHE_ID)
-        .put(dimensionBytes)
-        .put(patternBytes)
-        .array();
+    super(
+        dimension,
+        new Predicate<String>()
+        {
+          @Override
+          public boolean apply(@Nullable String input)
+          {
+            return query.accept(input);
+          }
+        }
+    );
   }
 }

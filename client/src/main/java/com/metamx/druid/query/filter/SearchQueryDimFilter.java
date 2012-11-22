@@ -20,26 +20,25 @@
 package com.metamx.druid.query.filter;
 
 import com.google.common.base.Charsets;
-import org.codehaus.jackson.annotate.JsonCreator;
+import com.metamx.druid.query.search.SearchQuerySpec;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 import java.nio.ByteBuffer;
 
 /**
  */
-public class RegexDimFilter implements DimFilter
+public class SearchQueryDimFilter implements DimFilter
 {
   private final String dimension;
-  private final String pattern;
+  private final SearchQuerySpec query;
 
-  @JsonCreator
-  public RegexDimFilter(
+  public SearchQueryDimFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("pattern") String pattern
+      @JsonProperty("query")SearchQuerySpec query
   )
   {
     this.dimension = dimension;
-    this.pattern = pattern;
+    this.query = query;
   }
 
   @JsonProperty
@@ -49,21 +48,21 @@ public class RegexDimFilter implements DimFilter
   }
 
   @JsonProperty
-  public String getPattern()
+  public SearchQuerySpec getQuery()
   {
-    return pattern;
+    return query;
   }
 
   @Override
   public byte[] getCacheKey()
   {
     final byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
-    final byte[] patternBytes = pattern.getBytes(Charsets.UTF_8);
+    final byte[] queryBytes = query.getCacheKey();
 
-    return ByteBuffer.allocate(1 + dimensionBytes.length + patternBytes.length)
-        .put(DimFilterCacheHelper.REGEX_CACHE_ID)
+    return ByteBuffer.allocate(1 + dimensionBytes.length + queryBytes.length)
+        .put(DimFilterCacheHelper.SEARCH_QUERY_TYPE_ID)
         .put(dimensionBytes)
-        .put(patternBytes)
+        .put(queryBytes)
         .array();
   }
 }

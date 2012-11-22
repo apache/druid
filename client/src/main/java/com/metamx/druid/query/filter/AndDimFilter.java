@@ -29,7 +29,6 @@ import java.util.List;
  */
 public class AndDimFilter implements DimFilter
 {
-  private static final byte CACHE_TYPE_ID = 0x1;
   private static final Joiner AND_JOINER = Joiner.on(" && ");
 
   final private List<DimFilter> fields;
@@ -51,7 +50,7 @@ public class AndDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    return DimFilterCacheHelper.computeCacheKey(CACHE_TYPE_ID, fields);
+    return DimFilterCacheHelper.computeCacheKey(DimFilterCacheHelper.AND_CACHE_ID, fields);
   }
 
   @Override

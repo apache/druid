@@ -28,8 +28,6 @@ import java.nio.ByteBuffer;
  */
 public class NotDimFilter implements DimFilter
 {
-  private static final byte CACHE_TYPE_ID = 0x3;
-
   final private DimFilter field;
 
   @JsonCreator
@@ -51,7 +49,7 @@ public class NotDimFilter implements DimFilter
   {
     byte[] subKey = field.getCacheKey();
 
-    return ByteBuffer.allocate(1 + subKey.length).put(CACHE_TYPE_ID).put(subKey).array();
+    return ByteBuffer.allocate(1 + subKey.length).put(DimFilterCacheHelper.NOT_CACHE_ID).put(subKey).array();
   }
 
   @Override

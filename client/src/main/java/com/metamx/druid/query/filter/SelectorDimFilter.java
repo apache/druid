@@ -28,8 +28,6 @@ import java.nio.ByteBuffer;
  */
 public class SelectorDimFilter implements DimFilter
 {
-  private static final byte CACHE_TYPE_ID = 0x0;
-
   private final String dimension;
   private final String value;
 
@@ -50,7 +48,7 @@ public class SelectorDimFilter implements DimFilter
     byte[] valueBytes = value.getBytes();
 
     return ByteBuffer.allocate(1 + dimensionBytes.length + valueBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(DimFilterCacheHelper.SELECTOR_CACHE_ID)
                      .put(dimensionBytes)
                      .put(valueBytes)
                      .array();

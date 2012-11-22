@@ -41,6 +41,7 @@ import java.util.Map;
 public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 {
   private final DimFilter dimFilter;
+  private final SearchSortSpec sortSpec;
   private final QueryGranularity granularity;
   private final List<String> dimensions;
   private final SearchQuerySpec querySpec;
@@ -55,11 +56,13 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("searchDimensions") List<String> dimensions,
       @JsonProperty("query") SearchQuerySpec querySpec,
+      @JsonProperty("sort") SearchSortSpec sortSpec,
       @JsonProperty("context") Map<String, String> context
   )
   {
     super(dataSource, querySegmentSpec, context);
     this.dimFilter = dimFilter;
+    this.sortSpec = sortSpec;
     this.granularity = granularity == null ? QueryGranularity.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = (dimensions == null) ? null : Lists.transform(
@@ -102,6 +105,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         spec,
         dimensions,
         querySpec,
+        sortSpec,
         getContext()
     );
   }
@@ -117,6 +121,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         getQuerySegmentSpec(),
         dimensions,
         querySpec,
+        sortSpec,
         computeOverridenContext(contextOverrides)
     );
   }
@@ -151,6 +156,12 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     return querySpec;
   }
 
+  @JsonProperty("sort")
+  public SearchSortSpec getSort()
+  {
+    return sortSpec == null ? querySpec.getSearchSortSpec() : sortSpec;
+  }
+
   public SearchQuery withLimit(int newLimit)
   {
     return new SearchQuery(
@@ -161,6 +172,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         getQuerySegmentSpec(),
         dimensions,
         querySpec,
+        sortSpec,
         getContext()
     );
   }
