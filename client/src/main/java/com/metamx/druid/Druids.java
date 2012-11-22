@@ -523,6 +523,7 @@ public class Druids
           querySegmentSpec,
           dimensions,
           querySpec,
+          querySpec.getSearchSortSpec(),
           context
       );
     }
