@@ -62,6 +62,11 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
     this.index = index;
   }
 
+  public MMappedIndex getIndex()
+  {
+    return index;
+  }
+
   @Override
   public String getSegmentIdentifier()
   {

@@ -45,9 +45,7 @@ public class Sink implements Iterable<FireHydrant>
 {
   private static final Logger log = new Logger(Sink.class);
 
-  private volatile int swapCount = 0;
   private volatile FireHydrant currIndex;
-  private volatile boolean hasSwapped = false;
 
   private final Interval interval;
   private final Schema schema;
@@ -82,7 +80,6 @@ public class Sink implements Iterable<FireHydrant>
     }
     this.hydrants.addAll(hydrants);
 
-    swapCount = hydrants.size();
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
 
@@ -109,7 +106,6 @@ public class Sink implements Iterable<FireHydrant>
    */
   public FireHydrant swap()
   {
-    hasSwapped = true;
     return makeNewCurrIndex(interval.getStartMillis(), schema);
   }
 
@@ -149,16 +145,15 @@ public class Sink implements Iterable<FireHydrant>
     );
 
     FireHydrant old;
-    if (currIndex == null) {  // Only happens on initialization...
+    if (currIndex == null) {  // Only happens on initialization, cannot synchronize on null
       old = currIndex;
-      currIndex = new FireHydrant(newIndex, swapCount);
+      currIndex = new FireHydrant(newIndex, hydrants.size());
       hydrants.add(currIndex);
     } else {
       synchronized (currIndex) {
         old = currIndex;
-        currIndex = new FireHydrant(newIndex, swapCount);
+        currIndex = new FireHydrant(newIndex, hydrants.size());
         hydrants.add(currIndex);
-        ++swapCount;
       }
     }
 

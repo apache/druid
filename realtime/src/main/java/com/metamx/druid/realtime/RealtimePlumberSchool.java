@@ -33,9 +33,11 @@ import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.Query;
+import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerView;
+import com.metamx.druid.guava.ThreadRenamingRunnable;
 import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
@@ -46,7 +48,6 @@ import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
-import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -203,7 +204,7 @@ public class RealtimePlumberSchool implements PlumberSchool
               return ServerView.CallbackAction.CONTINUE;
             }
 
-            log.info("Checking segment[%s]", segment);
+            log.debug("Checking segment[%s] on server[%s]", segment, server);
             if (schema.getDataSource().equals(segment.getDataSource())) {
               final Interval interval = segment.getInterval();
               for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
@@ -239,10 +240,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     log.info(
         "Expect to run at [%s]",
         new DateTime().plus(
-            new Duration(
-                System.currentTimeMillis(),
-                segmentGranularity.increment(truncatedNow) + windowMillis
-            )
+            new Duration(System.currentTimeMillis(), segmentGranularity.increment(truncatedNow) + windowMillis)
         )
     );
 
@@ -251,10 +249,10 @@ public class RealtimePlumberSchool implements PlumberSchool
             scheduledExecutor,
             new Duration(System.currentTimeMillis(), segmentGranularity.increment(truncatedNow) + windowMillis),
             new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
-            new Runnable()
+            new ThreadRenamingRunnable(String.format("%s-overseer", schema.getDataSource()))
             {
               @Override
-              public void run()
+              public void doRun()
               {
                 log.info("Starting merge and push.");
 
@@ -272,11 +270,14 @@ public class RealtimePlumberSchool implements PlumberSchool
                 for (final Map.Entry<Long, Sink> entry : sinksToPush) {
                   final Sink sink = entry.getValue();
 
+                  final String threadName = String.format(
+                      "%s-%s-persist-n-merge", schema.getDataSource(), new DateTime(entry.getKey())
+                  );
                   persistExecutor.execute(
-                      new Runnable()
+                      new ThreadRenamingRunnable(threadName)
                       {
                         @Override
-                        public void run()
+                        public void doRun()
                         {
                           final Interval interval = sink.getInterval();
 
@@ -290,17 +291,26 @@ public class RealtimePlumberSchool implements PlumberSchool
 
                           final File mergedFile;
                           try {
-                            final File persistDir = computePersistDir(schema, interval);
-
-                            final File[] persistedIndexes = persistDir.listFiles();
                             List<MMappedIndex> indexes = Lists.newArrayList();
-                            for (File persistedIndex : persistedIndexes) {
-                              log.info("Adding index at [%s]", persistedIndex);
-                              indexes.add(IndexIO.mapDir(persistedIndex));
+                            for (FireHydrant fireHydrant : sink) {
+                              StorageAdapter adapter = fireHydrant.getAdapter();
+                              if (adapter instanceof MMappedIndexStorageAdapter) {
+                                log.info("Adding hydrant[%s]", fireHydrant);
+                                indexes.add(((MMappedIndexStorageAdapter) adapter).getIndex());
+                              }
+                              else {
+                                log.makeAlert("[%s] Failure to merge-n-push", schema.getDataSource())
+                                   .addData("type", "Unknown adapter type")
+                                   .addData("adapterClass", adapter.getClass().toString())
+                                   .emit();
+                                return;
+                              }
                             }
 
                             mergedFile = IndexMerger.mergeMMapped(
-                                indexes, schema.getAggregators(), new File(persistDir, "merged")
+                                indexes,
+                                schema.getAggregators(),
+                                new File(computePersistDir(schema, interval), "merged")
                             );
 
                             MMappedIndex index = IndexIO.mapDir(mergedFile);
@@ -421,10 +431,10 @@ public class RealtimePlumberSchool implements PlumberSchool
         }
 
         persistExecutor.execute(
-            new Runnable()
+            new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
             {
               @Override
-              public void run()
+              public void doRun()
               {
                 for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
                   metrics.incrementRowOutputCount(persistHydrant(pair.lhs, schema, pair.rhs));
