@@ -112,7 +112,9 @@ public class TaskConsumer implements Runnable
              .emit();
 
           // TODO - Retry would be nice, but only after we have a way to throttle and limit them
-          queue.done(task, TaskStatus.failure(task.getId()));
+          if(!shutdown) {
+            queue.done(task, TaskStatus.failure(task.getId()));
+          }
         }
       }
     }
