@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-echo "   This will run RealtimeStandaloneMain service in background"
+echo "This will run RealtimeStandaloneMain service in background"
+set +u
+shopt -s xpg_echo
+shopt -s expand_aliases
 
 PF=./twitter4j.properties
-
-# check twitter_realtime.spec exists
-[ ! -e twitter_realtime.spec ]  &&  echo "expecting file twitter_realtime.spec (as specified by property druid.realtime.specFile) to be in current directory"  &&  exit 3
 
 # if twitter4j.properties already exists, then user is okay with having twitter pw in file.
 #  Otherwise a twitter4j.properties file in curr. dir. is made temporarily for twitter login.
@@ -29,14 +29,16 @@ trap "${PF_CLEANUP} ; exit 1" 1 2 3 15
 
 [ -d /tmp/twitter_realtime ]  &&  echo "cleaning up from previous run.."  &&  /bin/rm -fr /tmp/twitter_realtime
 
-echo "Log output of service can be found in ./RealtimeNode.out"
+# check spec file exists
+[ ! -e twitter_realtime.spec ]  &&  echo "expecting file twitter_realtime.spec (as specified by property druid.realtime.specFile) to be in current directory"  &&  exit 3
 
 OPT_PROPS=""
 #OPT_PROPS="-Dtwitter4j.debug=true -Dtwitter4j.http.prettyDebug=true"
 
 #  start RealtimeNode process
 #
-java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Xmx600m -classpath target/druid-examples-twitter-*-selfcontained.jar $OPT_PROPS -Dtwitter4j.http.useSSL=true -Ddruid.realtime.specFile=twitter_realtime.spec druid.examples.RealtimeStandaloneMain  >RealtimeNode.out 2>&1  &
+echo "Log output of service can be found in ./RealtimeNode.out"
+java -Xmx600m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath target/druid-examples-twitter-*-selfcontained.jar $OPT_PROPS -Dtwitter4j.http.useSSL=true druid.examples.RealtimeStandaloneMain  >RealtimeNode.out 2>&1  &
 PID=$!
 
 trap "${PF_CLEANUP} ; kill ${PID} ; exit 1" 1 2 3 15
