@@ -163,6 +163,17 @@ public class IndexGeneratorTask extends AbstractTask
     plumber.persist(firehose.commit());
     plumber.finishJob();
 
+    // Output metrics
+    log.info(
+        "Task[%s] took in %,d rows (%,d processed, %,d unparseable, %,d thrown away) and output %,d rows",
+        getId(),
+        metrics.processed() + metrics.unparseable() + metrics.thrownAway(),
+        metrics.processed(),
+        metrics.unparseable(),
+        metrics.thrownAway(),
+        metrics.rowOutput()
+    );
+
     // Done
     return TaskStatus.success(getId(), ImmutableList.copyOf(pushedSegments));
   }
