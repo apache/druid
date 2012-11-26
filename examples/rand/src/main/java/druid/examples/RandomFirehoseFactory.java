@@ -1,6 +1,8 @@
 package druid.examples;
 
+import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.guava.Runnables;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.realtime.Firehose;
@@ -157,15 +159,14 @@ public class RandomFirehoseFactory implements FirehoseFactory
   @Override
   public Firehose connect() throws IOException
   {
+    final LinkedList<String> dimensions = new LinkedList<String>();
+    dimensions.add("inColumn");
+    dimensions.add("target");
+
     return new Firehose()
     {
-      private final Runnable commitRunnable = new Runnable() { public void run() {} };
       private final java.util.Random rand = (seed == 0L) ? new Random() : new Random(seed);
-      private final LinkedList<String> dimensions = new LinkedList<String>();
-      private final boolean placeholderForAdd = dimensions.add("inColumn");
-      private final boolean placeholderForAdd2 = dimensions.add("target");
 
-      private final Map<String, Object> theMap = new HashMap<String, Object>(2);
       private long rowCount = 0L;
       private boolean waitIfmaxGeneratedRows = true;
 
@@ -200,6 +201,8 @@ public class RandomFirehoseFactory implements FirehoseFactory
           }
         }
         rowCount++;
+
+        final Map<String, Object> theMap = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
         theMap.put("inColumn", anotherRand((int)nth));
         theMap.put("target", ("a" + nth));
         return new MapBasedInputRow(System.currentTimeMillis(), dimensions, theMap);
@@ -215,13 +218,20 @@ public class RandomFirehoseFactory implements FirehoseFactory
       public Runnable commit()
       {
         // Do nothing.
-        return commitRunnable; // reuse the same object each time
+        return new Runnable()
+        {
+          @Override
+          public void run()
+          {
+
+          }
+        };
       }
 
       @Override
       public void close() throws IOException
       {
-          ; // do nothing
+        // do nothing
       }
     };
   }

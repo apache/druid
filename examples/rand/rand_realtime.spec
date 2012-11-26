@@ -5,7 +5,7 @@
                "indexGranularity":"minute",
 	             "shardSpec" : { "type": "none" } },
   "config" : { "maxRowsInMemory" : 50000,
-               "intermediatePersistPeriod" : "PT2m" },
+               "intermediatePersistPeriod" : "PT10m" },
  
   "firehose" : { "type" : "rand",
                  "sleepUsec": 100000,
