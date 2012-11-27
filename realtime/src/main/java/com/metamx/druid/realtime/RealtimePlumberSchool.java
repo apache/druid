@@ -105,7 +105,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.windowPeriod = windowPeriod;
     this.basePersistDirectory = basePersistDirectory;
     this.segmentGranularity = segmentGranularity;
-    this.rejectionPolicyFactory = rejectionPolicyFactory;
+    this.rejectionPolicyFactory = rejectionPolicyFactory == null ? new ServerTimeRejectionPolicyFactory() : rejectionPolicyFactory;
 
     Preconditions.checkNotNull(windowPeriod, "RealtimePlumberSchool requires a windowPeriod.");
     Preconditions.checkNotNull(basePersistDirectory, "RealtimePlumberSchool requires a basePersistDirectory.");
