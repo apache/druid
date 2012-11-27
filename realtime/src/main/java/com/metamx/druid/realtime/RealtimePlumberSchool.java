@@ -242,6 +242,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     final long truncatedNow = segmentGranularity.truncate(new DateTime()).getMillis();
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     final RejectionPolicy rejectionPolicy = rejectionPolicyFactory.create(windowPeriod);
+    log.info("Creating plumber using rejectionPolicy[%s]", rejectionPolicy);
 
     log.info(
         "Expect to run at [%s]",
@@ -553,7 +554,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   public class ServerTimeRejectionPolicyFactory implements RejectionPolicyFactory
   {
     @Override
-    public RejectionPolicy create(Period windowPeriod)
+    public RejectionPolicy create(final Period windowPeriod)
     {
       final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
@@ -570,6 +571,12 @@ public class RealtimePlumberSchool implements PlumberSchool
         {
           return timestamp >= (System.currentTimeMillis() - windowMillis);
         }
+
+        @Override
+        public String toString()
+        {
+          return String.format("serverTime-%s", windowPeriod);
+        }
       };
     }
   }
@@ -577,7 +584,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   public class MessageTimeRejectionPolicyFactory implements RejectionPolicyFactory
   {
     @Override
-    public RejectionPolicy create(Period windowPeriod)
+    public RejectionPolicy create(final Period windowPeriod)
     {
       final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
@@ -597,6 +604,12 @@ public class RealtimePlumberSchool implements PlumberSchool
           maxTimestamp = Math.max(maxTimestamp, timestamp);
 
           return timestamp >= (maxTimestamp - windowMillis);
+        }
+
+        @Override
+        public String toString()
+        {
+          return String.format("messageTime-%s", windowPeriod);
         }
       };
     }
