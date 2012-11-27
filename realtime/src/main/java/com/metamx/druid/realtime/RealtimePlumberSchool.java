@@ -241,6 +241,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
     final long truncatedNow = segmentGranularity.truncate(new DateTime()).getMillis();
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
+    final RejectionPolicy rejectionPolicy = rejectionPolicyFactory.create(windowPeriod);
 
     log.info(
         "Expect to run at [%s]",
@@ -261,7 +262,7 @@ public class RealtimePlumberSchool implements PlumberSchool
               {
                 log.info("Starting merge and push.");
 
-                long minTimestamp = segmentGranularity.truncate(new DateTime()).getMillis() - windowMillis;
+                long minTimestamp = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime()).getMillis() - windowMillis;
 
                 List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
                 for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
@@ -339,8 +340,6 @@ public class RealtimePlumberSchool implements PlumberSchool
               }
             }
         );
-
-    final RejectionPolicy rejectionPolicy = rejectionPolicyFactory.create(windowPeriod);
 
     return new Plumber()
     {
@@ -537,6 +536,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
   public interface RejectionPolicy
   {
+    public DateTime getCurrMaxTime();
     public boolean accept(long timestamp);
   }
 
@@ -560,6 +560,12 @@ public class RealtimePlumberSchool implements PlumberSchool
       return new RejectionPolicy()
       {
         @Override
+        public DateTime getCurrMaxTime()
+        {
+          return new DateTime();
+        }
+
+        @Override
         public boolean accept(long timestamp)
         {
           return timestamp >= (System.currentTimeMillis() - windowMillis);
@@ -577,7 +583,13 @@ public class RealtimePlumberSchool implements PlumberSchool
 
       return new RejectionPolicy()
       {
-        long maxTimestamp = Long.MIN_VALUE;
+        private volatile long maxTimestamp = Long.MIN_VALUE;
+
+        @Override
+        public DateTime getCurrMaxTime()
+        {
+          return new DateTime(maxTimestamp);
+        }
 
         @Override
         public boolean accept(long timestamp)
