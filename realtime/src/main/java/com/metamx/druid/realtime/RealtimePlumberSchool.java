@@ -542,8 +542,8 @@ public class RealtimePlumberSchool implements PlumberSchool
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
   @JsonSubTypes(value = {
-      @JsonSubTypes.Type(name = "server_time", value = ServerTimeRejectionPolicyFactory.class),
-      @JsonSubTypes.Type(name = "message_time", value = MessageTimeRejectionPolicyFactory.class)
+      @JsonSubTypes.Type(name = "serverTime", value = ServerTimeRejectionPolicyFactory.class),
+      @JsonSubTypes.Type(name = "messageTime", value = MessageTimeRejectionPolicyFactory.class)
   })
   public interface RejectionPolicyFactory
   {
