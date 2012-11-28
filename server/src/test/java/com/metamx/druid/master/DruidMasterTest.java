@@ -129,7 +129,6 @@ public class DruidMasterTest
         },
         null,
         null,
-        null,
         databaseSegmentManager,
         serverInventoryManager,
         yp,
