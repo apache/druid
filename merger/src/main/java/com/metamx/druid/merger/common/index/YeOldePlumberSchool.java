@@ -81,10 +81,12 @@ public class YeOldePlumberSchool implements PlumberSchool
     // There can be only one.
     final Sink theSink = new Sink(interval, schema);
 
+    // Temporary directory to hold spilled segments.
     final File persistDir = new File(
         tmpSegmentDir, theSink.getSegment().withVersion(version).getIdentifier()
     );
 
+    // Set of spilled segments. Will be merged at the end.
     final Set<File> spilled = Sets.newHashSet();
 
     return new Plumber()
