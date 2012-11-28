@@ -37,7 +37,6 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.SegmentInventoryManager;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseSegmentManager;
@@ -85,13 +84,11 @@ public class DruidMaster
 
   private final ServiceProvider serviceProvider;
 
-  private final SegmentInventoryManager segmentInventoryManager;
   private final ObjectMapper jsonMapper;
 
   public DruidMaster(
       DruidMasterConfig config,
       DruidClusterInfo clusterInfo,
-      SegmentInventoryManager segmentInventoryManager,
       ObjectMapper jsonMapper,
       DatabaseSegmentManager databaseSegmentManager,
       ServerInventoryManager serverInventoryManager,
@@ -105,7 +102,6 @@ public class DruidMaster
     this.config = config;
     this.clusterInfo = clusterInfo;
 
-    this.segmentInventoryManager = segmentInventoryManager;
     this.jsonMapper = jsonMapper;
 
     this.databaseSegmentManager = databaseSegmentManager;
@@ -419,7 +415,6 @@ public class DruidMaster
       if (becameMaster) {
         log.info("I am the master, all must bow!");
         master = true;
-        segmentInventoryManager.start();
         databaseSegmentManager.start();
         serverInventoryManager.start();
 

@@ -19,23 +19,6 @@
 
 package com.metamx.druid.http;
 
-import java.net.URL;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-
-import org.I0Itec.zkclient.ZkClient;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.security.AWSCredentials;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.skife.config.ConfigurationObjectFactory;
-import org.skife.jdbi.v2.DBI;
-
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -47,8 +30,6 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.SegmentInventoryManager;
-import com.metamx.druid.client.SegmentInventoryManagerConfig;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.client.ServerInventoryManagerConfig;
 import com.metamx.druid.coordination.DruidClusterInfo;
@@ -127,9 +108,6 @@ public class MasterMain
     final PhoneBook masterYp = Initialization.createPhoneBook(jsonMapper, zkClient, "Master-ZKYP--%s", lifecycle);
     final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
 
-    final SegmentInventoryManager segmentInventoryManager =
-        new SegmentInventoryManager(configFactory.build(SegmentInventoryManagerConfig.class), masterYp);
-
     final ServerInventoryManager serverInventoryManager =
         new ServerInventoryManager(configFactory.build(ServerInventoryManagerConfig.class), masterYp);
 
@@ -186,7 +164,6 @@ public class MasterMain
     final DruidMaster master = new DruidMaster(
         druidMasterConfig,
         druidClusterInfo,
-        segmentInventoryManager,
         jsonMapper,
         databaseSegmentManager,
         serverInventoryManager,
