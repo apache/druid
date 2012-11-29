@@ -37,6 +37,34 @@ public class DbConnector
 
   public static void createSegmentTable(final DBI dbi, final DbConnectorConfig config)
   {
+    createTable(
+        dbi,
+        config.getSegmentTable(),
+        String.format(
+            "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date TINYTEXT NOT NULL, start TINYTEXT NOT NULL, end TINYTEXT NOT NULL, partitioned BOOLEAN NOT NULL, version TINYTEXT NOT NULL, used BOOLEAN NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), INDEX(used), PRIMARY KEY (id))",
+            config.getSegmentTable()
+        )
+    );
+  }
+
+  public static void createRuleTable(final DBI dbi, final DbConnectorConfig config)
+  {
+    createTable(
+        dbi,
+        config.getRuleTable(),
+        String.format(
+            "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), PRIMARY KEY (id))",
+            config.getRuleTable()
+        )
+    );
+  }
+
+  public static void createTable(
+      final DBI dbi,
+      final String tableName,
+      final String sql
+  )
+  {
     try {
       dbi.withHandle(
           new HandleCallback<Void>()
@@ -47,20 +75,15 @@ public class DbConnector
               List<Map<String, Object>> table = handle.select(
                   String.format(
                       "SHOW tables LIKE '%s'",
-                      config.getSegmentTable()
+                      tableName
                   )
               );
 
               if (table.isEmpty()) {
-                log.info("Creating table[%s]", config.getSegmentTable());
-                handle.createStatement(
-                    String.format(
-                        "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date TINYTEXT NOT NULL, start TINYTEXT NOT NULL, end TINYTEXT NOT NULL, partitioned BOOLEAN NOT NULL, version TINYTEXT NOT NULL, used BOOLEAN NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), INDEX(used), PRIMARY KEY (id))",
-                        config.getSegmentTable()
-                    )
-                ).execute();
+                log.info("Creating table[%s]", tableName);
+                handle.createStatement(sql).execute();
               } else {
-                log.info("Table[%s] existed: [%s]", config.getSegmentTable(), table);
+                log.info("Table[%s] existed: [%s]", tableName, table);
               }
 
               return null;
@@ -69,8 +92,39 @@ public class DbConnector
       );
     }
     catch (Exception e) {
-      log.warn(e.toString());
+      log.warn(e, "Exception creating table");
     }
+  }
+
+  public static void createDefaultRules(
+      final DBI dbi,
+      final String ruleTable,
+      final String id,
+      final String dataSource,
+      final String rules
+  )
+  {
+    dbi.withHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle) throws Exception
+          {
+            handle.createStatement(
+                String.format(
+                    "INSERT INTO %s (id, dataSource, payload) VALUES (:id, :dataSource, :payload)",
+                    ruleTable
+                )
+            )
+                  .bind("id", id)
+                  .bind("dataSource", dataSource)
+                  .bind("payload", rules)
+                  .execute();
+
+            return null;
+          }
+        }
+    );
   }
 
   private final DbConnectorConfig config;

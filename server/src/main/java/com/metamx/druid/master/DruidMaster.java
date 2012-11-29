@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
@@ -40,6 +42,9 @@ import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.master.rules.DruidMasterRuleMaker;
+import com.metamx.druid.master.rules.DruidMasterRuleMakerConfig;
+import com.metamx.druid.master.rules.Rule;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.phonebook.PhoneBook;
@@ -48,6 +53,8 @@ import com.netflix.curator.x.discovery.ServiceProvider;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Duration;
+import org.skife.config.ConfigurationObjectFactory;
+import org.skife.jdbi.v2.DBI;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -81,8 +88,9 @@ public class DruidMaster
   private final ScheduledExecutorService peonExec;
   private final PhoneBookPeon masterPeon;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
-
   private final ServiceProvider serviceProvider;
+  private final DBI dbi;
+  private final ConfigurationObjectFactory configFactory;
 
   private final ObjectMapper jsonMapper;
 
@@ -96,7 +104,9 @@ public class DruidMaster
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       Map<String, LoadQueuePeon> loadManagementPeons,
-      ServiceProvider serviceProvider
+      ServiceProvider serviceProvider,
+      DBI dbi,
+      ConfigurationObjectFactory configFactory
   )
   {
     this.config = config;
@@ -116,6 +126,9 @@ public class DruidMaster
     this.loadManagementPeons = loadManagementPeons;
 
     this.serviceProvider = serviceProvider;
+
+    this.dbi = dbi;
+    this.configFactory = configFactory;
   }
 
   public boolean isClusterMaster()
@@ -421,12 +434,11 @@ public class DruidMaster
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
 
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
-        if (config.isMergeSegments() && serviceProvider != null){
-            masterRunnables.add(Pair.of(new MasterSegmentMergerRunnable(), config.getMasterSegmentMergerPeriod()));
+        if (config.isMergeSegments() && serviceProvider != null) {
+          masterRunnables.add(Pair.of(new MasterSegmentMergerRunnable(), config.getMasterSegmentMergerPeriod()));
         }
 
-        for(final Pair<? extends MasterRunnable, Duration> masterRunnable : masterRunnables)
-        {
+        for (final Pair<? extends MasterRunnable, Duration> masterRunnable : masterRunnables) {
           ScheduledExecutors.scheduleWithFixedDelay(
               exec,
               config.getMasterStartDelay(),
@@ -565,8 +577,9 @@ public class DruidMaster
         for (DruidMasterHelper helper : helpers) {
           params = helper.run(params);
         }
-      } catch (Exception e) {
-          log.error(e, "Caught exception, ignoring so that schedule keeps going.");
+      }
+      catch (Exception e) {
+        log.error(e, "Caught exception, ignoring so that schedule keeps going.");
       }
     }
   }
@@ -577,8 +590,10 @@ public class DruidMaster
     {
       super(
           ImmutableList.of(
+              new DruidMasterRuleMaker(configFactory.build(DruidMasterRuleMakerConfig.class), jsonMapper, dbi),
               new DruidMasterSegmentInfoLoader(DruidMaster.this),
-              new DruidMasterHelper() {
+              new DruidMasterHelper()
+              {
                 @Override
                 public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
                 {
@@ -595,39 +610,80 @@ public class DruidMaster
                     }
                   }
 
-                  // Find all historical servers
-                  final Set<DruidServer> historicalServers = Sets.newHashSet();
+                  // Find all historical servers, group them by subType and sort by ascending usage
+                  final Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers = Maps.newHashMap();
+                  final Map<String, DruidServer> availableServerMap = Maps.newHashMap();
+
                   for (DruidServer server : servers) {
                     if (server.getType().equalsIgnoreCase("historical")) {
-                      historicalServers.add(server);
+                      availableServerMap.put(server.getName(), server);
+
+                      if (!loadManagementPeons.containsKey(server.getName())) {
+                        String basePath = yp.combineParts(Arrays.asList(config.getLoadQueuePath(), server.getName()));
+                        LoadQueuePeon loadQueuePeon = new LoadQueuePeon(yp, basePath, peonExec);
+                        log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
+
+                        loadManagementPeons.put(
+                            server.getName(),
+                            loadQueuePeon
+                        );
+                        yp.registerListener(basePath, loadQueuePeon);
+                      }
+
+                      MinMaxPriorityQueue<ServerHolder> tierServers = historicalServers.get(server.getSubType());
+                      if (tierServers == null) {
+                        tierServers = MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create();
+                        historicalServers.put(server.getSubType(), tierServers);
+                      }
+                      tierServers.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
                     }
                   }
 
-                  // Run historical server stuff
-                  final Map<String, DruidServer> availableServerMap = Maps.newHashMap();
-                  final Set<DataSegment> unservicedSegments =
-                      Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
-
-                  // Create map of available servers, find unserviced segments and create peons for new servers
-                  unservicedSegments.addAll(params.getAvailableSegments());
-                  for (DruidServer server : historicalServers) {
-                    availableServerMap.put(server.getName(), server);
-                    for (DruidDataSource dataSource : server.getDataSources()) {
-                      for (DataSegment segment : dataSource.getSegments()) {
-                        unservicedSegments.remove(segment);
+                  // Create a mapping between a segment and a rule, a segment is paired with the first rule it matches
+                  Map<String, Rule> segmentRules = Maps.newHashMap();
+                  for (DataSegment segment : params.getAvailableSegments()) {
+                    for (Rule rule : params.getRuleMap().getRules(segment.getDataSource())) {
+                      if (rule.appliesTo(segment.getInterval())) {
+                        segmentRules.put(segment.getIdentifier(), rule);
+                        break;
                       }
                     }
 
-                    if (!loadManagementPeons.containsKey(server.getName())) {
-                      String basePath = yp.combineParts(Arrays.asList(config.getLoadQueuePath(), server.getName()));
-                      LoadQueuePeon loadQueuePeon = new LoadQueuePeon(yp, basePath, peonExec);
-                      log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
+                    if (!segmentRules.containsKey(segment.getIdentifier())) {
+                      throw new ISE("Unable to find a rule for [%s]!!!", segment.getIdentifier());
+                    }
+                  }
 
-                      loadManagementPeons.put(
-                          server.getName(),
-                          loadQueuePeon
-                      );
-                      yp.registerListener(basePath, loadQueuePeon);
+                  // For segments in the cluster, build a lookup for how many replicants exist in each nodeType
+                  // Map<segmentId, Map<nodeType, # segments>>
+                  final Map<String, Map<String, Integer>> segmentsInCluster = Maps.newHashMap();
+
+                  for (MinMaxPriorityQueue<ServerHolder> serversByType : historicalServers.values()) {
+                    for (ServerHolder serverHolder : serversByType) {
+                      DruidServer server = serverHolder.getServer();
+
+                      for (DruidDataSource dataSource : server.getDataSources()) {
+                        for (DataSegment segment : dataSource.getSegments()) {
+                          Map<String, Integer> segmentInCluster = segmentsInCluster.get(segment.getIdentifier());
+                          if (segmentInCluster == null) {
+                            segmentInCluster = Maps.newHashMap();
+                            segmentInCluster.put(server.getSubType(), 0);
+                            segmentsInCluster.put(segment.getIdentifier(), segmentInCluster);
+                          }
+                          segmentInCluster.put(server.getSubType(), segmentInCluster.get(server.getSubType()) + 1);
+                        }
+                      }
+
+                      // Also account for queued segments
+                      for (DataSegment peonSegment : serverHolder.getPeon().getSegmentsToLoad()) {
+                        Map<String, Integer> segmentInCluster = segmentsInCluster.get(peonSegment.getIdentifier());
+                        if (segmentInCluster == null) {
+                          segmentInCluster = Maps.newHashMap();
+                          segmentInCluster.put(server.getSubType(), 0);
+                          segmentsInCluster.put(peonSegment.getIdentifier(), segmentInCluster);
+                        }
+                        segmentInCluster.put(server.getSubType(), segmentInCluster.get(server.getSubType()) + 1);
+                      }
                     }
                   }
 
@@ -642,23 +698,16 @@ public class DruidMaster
                     }
                   }
 
-                  // Remove queued segments
-                  for (LoadQueuePeon peon : loadManagementPeons.values()) {
-                    for (DataSegment segment : peon.getSegmentsToLoad()) {
-                      unservicedSegments.remove(segment);
-                    }
-                  }
-
                   return params.buildFromExisting()
                                .withAvailableServerMap(availableServerMap)
                                .withHistoricalServers(historicalServers)
-                               .withUnservicedSegments(unservicedSegments)
+                               .withSegmentRules(segmentRules)
+                               .withSegmentsInCluster(segmentsInCluster)
                                .build();
                 }
               },
               new DruidMasterAssigner(DruidMaster.this),
               new DruidMasterDropper(DruidMaster.this),
-              new DruidMasterReplicator(DruidMaster.this),
               new DruidMasterBalancer(DruidMaster.this, new BalancerAnalyzer()),
               new DruidMasterLogger()
           )

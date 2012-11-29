@@ -38,4 +38,8 @@ public abstract class DruidServerConfig
   @Config("druid.server.type")
   @Default("historical")
   public abstract String getType();
+
+  @Config("druid.server.subType")
+  @Default("normal")
+  public abstract String getSubType();
 }

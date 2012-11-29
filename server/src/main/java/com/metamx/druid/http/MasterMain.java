@@ -48,6 +48,7 @@ import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterConfig;
 import com.metamx.druid.master.LoadQueuePeon;
 import com.metamx.druid.utils.PropUtils;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
@@ -102,6 +103,7 @@ public class MasterMain
         PropUtils.getProperty(props, "druid.host"),
         Emitters.create(props, httpClient, jsonMapper, lifecycle)
     );
+    EmittingLogger.registerEmitter(emitter);
 
     final ZkClient zkClient = Initialization.makeZkClient(configFactory.build(ZkClientConfig.class), lifecycle);
 
@@ -114,6 +116,7 @@ public class MasterMain
     final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
     final DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
     DbConnector.createSegmentTable(dbi, dbConnectorConfig);
+    DbConnector.createRuleTable(dbi, dbConnectorConfig);
     final DatabaseSegmentManager databaseSegmentManager = new DatabaseSegmentManager(
         jsonMapper,
         scheduledExecutorFactory.create(1, "DatabaseSegmentManager-Exec--%d"),
@@ -171,7 +174,9 @@ public class MasterMain
         emitter,
         scheduledExecutorFactory,
         new ConcurrentHashMap<String, LoadQueuePeon>(),
-        serviceProvider
+        serviceProvider,
+        dbi,
+        configFactory
     );
     lifecycle.addManagedInstance(master);
 

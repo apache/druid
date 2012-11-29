@@ -50,8 +50,10 @@ public class DruidMasterLogger implements DruidMasterHelper
       LoadQueuePeon queuePeon = entry.getValue();
       DruidServer server = params.getAvailableServerMap().get(entry.getKey());
       log.info(
-          "Server[%s] has %,d left to load, %,d left to drop, %,d bytes queued, %,d bytes served.",
+          "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d bytes queued, %,d bytes served.",
           server.getName(),
+          server.getType(),
+          server.getSubType(),
           queuePeon.getSegmentsToLoad().size(),
           queuePeon.getSegmentsToDrop().size(),
           queuePeon.getLoadQueueSize(),

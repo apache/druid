@@ -20,15 +20,18 @@
 package com.metamx.druid.master;
 
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.guava.Comparators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.MinMaxPriorityQueue;
+import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidServer;
+import com.metamx.druid.master.rules.LoadRule;
+import com.metamx.druid.master.rules.Rule;
 import com.metamx.emitter.service.AlertEvent;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 
 /**
  */
@@ -48,86 +51,112 @@ public class DruidMasterAssigner implements DruidMasterHelper
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
     int unassignedCount = 0;
-    int unassignedSize = 0;
-    int assignedCount = 0;
+    long unassignedSize = 0;
+    Map<String, Integer> assignedCounts = Maps.newHashMap();
 
-    // Assign unserviced segments to servers in order of most available space
-    Collection<DruidServer> servers = params.getHistoricalServers();
-    Map<String, LoadQueuePeon> loadManagementPeons = params.getLoadManagementPeons();
+    Map<String, MinMaxPriorityQueue<ServerHolder>> servers = params.getHistoricalServers();
 
     if (servers.isEmpty()) {
       log.warn("Uh... I have no servers. Not assigning anything...");
       return params;
     }
 
-    if (loadManagementPeons.isEmpty()) {
-      log.warn("I have servers but no peons for them? What is happening?!");
-      return params;
-    }
+    // Assign unserviced segments to servers in order of most available space
+    for (DataSegment segment : params.getAvailableSegments()) {
+      Rule rule = params.getSegmentRules().get(segment.getIdentifier());
+      if (rule instanceof LoadRule) {
+        LoadRule loadRule = (LoadRule) rule;
 
-    PriorityQueue<ServerHolder> serverQueue = new PriorityQueue<ServerHolder>(
-        loadManagementPeons.size(),
-        Comparators.inverse(Comparators.<Comparable>comparable())
-    );
-    for (DruidServer server : servers) {
-      serverQueue.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
-    }
+        int expectedReplicants = loadRule.getReplicationFactor();
+        int actualReplicants = (params.getSegmentsInCluster().get(segment.getIdentifier()) == null ||
+                                params.getSegmentsInCluster().get(segment.getIdentifier()).get(loadRule.getNodeType())
+                                == null)
+                               ? 0
+                               : params.getSegmentsInCluster()
+                                       .get(segment.getIdentifier())
+                                       .get(loadRule.getNodeType());
 
-    for (DataSegment segment : params.getUnservicedSegments()) {
-      if (master.lookupSegmentLifetime(segment) > 0) {
-        continue;
-      }
-      ServerHolder holder = serverQueue.poll();
-      if (holder == null) {
-        log.warn("Wtf, holder was null?  Do I have no servers[%s]?", serverQueue);
-        continue;
-      }
-
-      if (holder.getAvailableSize() < segment.getSize()) {
-        log.warn(
-            "Not enough node capacity, closest is [%s] with %,d available, skipping segment[%s].",
-            holder.getServer(),
-            holder.getAvailableSize(),
-            segment
-        );
-        params.getEmitter().emit(
-            new AlertEvent.Builder().build(
-                "Not enough node capacity",
-                ImmutableMap.<String, Object>builder()
-                            .put("segmentSkipped", segment.toString())
-                            .put("closestNode", holder.getServer().toString())
-                            .put("availableSize", holder.getAvailableSize())
-                            .build()
-            )
-        );
-        serverQueue.add(holder);
-        ++unassignedCount;
-        unassignedSize += segment.getSize();
-        continue;
-      }
-
-      holder.getPeon().loadSegment(segment, new LoadPeonCallback()
-      {
-        @Override
-        protected void execute()
-        {
-          return;
+        MinMaxPriorityQueue<ServerHolder> serverQueue = params.getHistoricalServers().get(loadRule.getNodeType());
+        if (serverQueue == null) {
+          throw new ISE("No holders found for nodeType[%s]", loadRule.getNodeType());
         }
-      });
-      serverQueue.add(holder);
-      ++assignedCount;
+
+        List<ServerHolder> assignedServers = Lists.newArrayList();
+        while (actualReplicants < expectedReplicants) {
+          ServerHolder holder = serverQueue.pollFirst();
+          if (holder == null) {
+            log.warn("Not enough %s servers[%d] to assign segments!!!", loadRule.getNodeType(), serverQueue.size());
+            break;
+          }
+
+          // Segment already exists on this node
+          if (holder.getServer().getSegments().containsKey(segment.getIdentifier()) ||
+              holder.getPeon().getSegmentsToLoad().contains(segment)) {
+            continue;
+          }
+
+          if (holder.getAvailableSize() < segment.getSize()) {
+            log.warn(
+                "Not enough node capacity, closest is [%s] with %,d available, skipping segment[%s].",
+                holder.getServer(),
+                holder.getAvailableSize(),
+                segment
+            );
+            params.getEmitter().emit(
+                new AlertEvent.Builder().build(
+                    "Not enough node capacity",
+                    ImmutableMap.<String, Object>builder()
+                                .put("segmentSkipped", segment.toString())
+                                .put("closestNode", holder.getServer().toString())
+                                .put("availableSize", holder.getAvailableSize())
+                                .build()
+                )
+            );
+            serverQueue.add(holder);
+            unassignedCount++;
+            unassignedSize += segment.getSize();
+            break;
+          }
+
+          holder.getPeon().loadSegment(
+              segment,
+              new LoadPeonCallback()
+              {
+                @Override
+                protected void execute()
+                {
+                }
+              }
+          );
+          assignedServers.add(holder);
+
+          assignedCounts.put(
+              loadRule.getNodeType(),
+              assignedCounts.get(loadRule.getNodeType()) == null ? 1 :
+              assignedCounts.get(loadRule.getNodeType()) + 1
+          );
+
+          ++actualReplicants;
+        }
+
+        serverQueue.addAll(assignedServers);
+      }
     }
     master.decrementRemovedSegmentsLifetime();
 
+    List<String> assignmentMsgs = Lists.newArrayList();
+    for (Map.Entry<String, Integer> entry : assignedCounts.entrySet()) {
+      assignmentMsgs.add(
+          String.format(
+              "[%s] : Assigned %,d segments among %,d servers",
+              entry.getKey(), assignedCounts.get(entry.getKey()), servers.get(entry.getKey()).size()
+          )
+      );
+    }
+
     return params.buildFromExisting()
-                 .withMessage(
-                     String.format(
-                         "Assigned %,d segments among %,d servers",
-                         assignedCount,
-                         servers.size()
-                     )
-                 )
-                 .withAssignedCount(assignedCount)
+                 .withMessages(assignmentMsgs)
+                 .withAssignedCount(assignedCounts)
                  .withUnassignedCount(unassignedCount)
                  .withUnassignedSize(unassignedSize)
                  .build();

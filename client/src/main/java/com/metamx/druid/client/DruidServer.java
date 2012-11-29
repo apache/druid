@@ -44,6 +44,7 @@ public class DruidServer implements Comparable
   private final String host;
   private final long maxSize;
   private final String type;
+  private final String subType;
 
   private volatile long currSize;
 
@@ -55,7 +56,8 @@ public class DruidServer implements Comparable
         config.getServerName(),
         config.getHost(),
         config.getMaxSize(),
-        config.getType()
+        config.getType(),
+        config.getSubType()
     );
   }
 
@@ -64,13 +66,15 @@ public class DruidServer implements Comparable
       @JsonProperty("name") String name,
       @JsonProperty("host") String host,
       @JsonProperty("maxSize") long maxSize,
-      @JsonProperty("type") String type
+      @JsonProperty("type") String type,
+      @JsonProperty("subType") String subType
   )
   {
     this.name = name;
     this.host = host;
     this.maxSize = maxSize;
     this.type = type;
+    this.subType = subType == null ? "normal" : subType;
 
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
     this.segments = new HashMap<String, DataSegment>();
@@ -87,7 +91,8 @@ public class DruidServer implements Comparable
         "name", name,
         "host", host,
         "maxSize", String.valueOf(maxSize),
-        "type", type
+        "type", type,
+        "subType", subType
     );
   }
 
@@ -113,6 +118,12 @@ public class DruidServer implements Comparable
   public String getType()
   {
     return type;
+  }
+
+  @JsonProperty
+  public String getSubType()
+  {
+    return subType;
   }
 
   @JsonProperty
@@ -216,8 +227,6 @@ public class DruidServer implements Comparable
     return name != null ? name.hashCode() : 0;
   }
 
-
-
   @Override
   public String toString()
   {
@@ -226,6 +235,7 @@ public class DruidServer implements Comparable
            ", host='" + host + '\'' +
            ", maxSize=" + maxSize +
            ", type=" + type +
+           ", subType=" + subType +
            '}';
   }
 

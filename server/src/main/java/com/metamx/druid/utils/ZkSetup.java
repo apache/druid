@@ -33,8 +33,8 @@ public class ZkSetup
 {
   public static void main(final String[] args)
   {
-    if (args.length != 5) {
-      System.out.println("Usage: <java invocation> zkConnect baseZkPath dbConnectionUrl dbUsername:password tableName");
+    if (args.length != 6) {
+      System.out.println("Usage: <java invocation> zkConnect baseZkPath dbConnectionUrl dbUsername:password tableName ruleTableName");
       System.out.println("This utility is deprecated, see DruidSetup instead.");
       System.exit(1);
     }
@@ -52,8 +52,7 @@ public class ZkSetup
       final String thePath = String.format("%s/%s", path, subPath);
       if (zkClient.exists(thePath)) {
         System.out.printf("Path[%s] exists already%n", thePath);
-      }
-      else {
+      } else {
         System.out.printf("Creating ZK path[%s]%n", thePath);
         zkClient.createPersistent(thePath);
       }
@@ -96,6 +95,12 @@ public class ZkSetup
       public String getSegmentTable()
       {
         return args[4];
+      }
+
+      @Override
+      public String getRuleTable()
+      {
+        return args[5];
       }
     };
 

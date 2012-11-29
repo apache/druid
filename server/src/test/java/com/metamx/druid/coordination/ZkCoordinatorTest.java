@@ -135,6 +135,12 @@ public class ZkCoordinatorTest
               {
                 return "dummyType";
               }
+
+              @Override
+              public String getSubType()
+              {
+                return null;
+              }
             }
         ),
         yp,

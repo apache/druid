@@ -98,4 +98,34 @@ public class ServerHolder implements Comparable<ServerHolder>
   {
     return getAvailableSize().compareTo(serverHolder.getAvailableSize());
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    ServerHolder that = (ServerHolder) o;
+
+    if (peon != null ? !peon.equals(that.peon) : that.peon != null) {
+      return false;
+    }
+    if (server != null ? !server.equals(that.server) : that.server != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = server != null ? server.hashCode() : 0;
+    result = 31 * result + (peon != null ? peon.hashCode() : 0);
+    return result;
+  }
 }

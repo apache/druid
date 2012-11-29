@@ -41,4 +41,8 @@ public abstract class DbConnectorConfig
   @JsonProperty("segmentTable")
   @Config("druid.database.segmentTable")
   public abstract String getSegmentTable();
+
+  @JsonProperty("ruleTable")
+  @Config("druid.database.ruleTable")
+  public abstract String getRuleTable();
 }
