@@ -54,6 +54,7 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -88,9 +89,9 @@ public class RemoteTaskRunner implements TaskRunner
   private final ScalingStrategy strategy;
 
   // all workers that exist in ZK
-  private final ConcurrentHashMap<String, WorkerWrapper> zkWorkers = new ConcurrentHashMap<String, WorkerWrapper>();
+  private final Map<String, WorkerWrapper> zkWorkers = new ConcurrentHashMap<String, WorkerWrapper>();
   // all tasks that are assigned or need to be assigned
-  private final ConcurrentHashMap<String, TaskWrapper> tasks = new ConcurrentHashMap<String, TaskWrapper>();
+  private final Map<String, TaskWrapper> tasks = new ConcurrentHashMap<String, TaskWrapper>();
 
   private final ConcurrentSkipListSet<String> currentlyProvisioning = new ConcurrentSkipListSet<String>();
   private final ConcurrentSkipListSet<String> currentlyTerminating = new ConcurrentSkipListSet<String>();
@@ -259,7 +260,7 @@ public class RemoteTaskRunner implements TaskRunner
   @Override
   public void run(Task task, TaskContext context, TaskCallback callback)
   {
-    if (tasks.contains(task.getId())) {
+    if (tasks.containsKey(task.getId())) {
       throw new ISE("Assigned a task[%s] that already exists, WTF is happening?!", task.getId());
     }
     TaskWrapper taskWrapper = new TaskWrapper(

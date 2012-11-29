@@ -3,6 +3,7 @@ package com.metamx.druid.merger.coordinator;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -43,6 +44,8 @@ import java.io.File;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+
+import static junit.framework.Assert.fail;
 
 /**
  */
@@ -131,6 +134,18 @@ public class RemoteTaskRunnerTest
         new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
         null
     );
+  }
+
+  @Test
+  public void testAlreadyExecutedTask() throws Exception
+  {
+    remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+    try {
+        remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+        fail("ISE expected");
+    } catch (ISE expected) {
+
+    }
   }
 
   @Test
