@@ -131,17 +131,12 @@ public class ZkCoordinatorTest
               }
 
               @Override
-              public String getType()
-              {
-                return "dummyType";
-              }
-
-              @Override
               public String getSubType()
               {
                 return null;
               }
-            }
+            },
+            "dummyType"
         ),
         yp,
         serverManager,

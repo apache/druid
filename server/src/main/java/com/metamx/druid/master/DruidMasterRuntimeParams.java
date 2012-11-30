@@ -21,14 +21,11 @@ package com.metamx.druid.master;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
-import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.master.rules.Rule;
-import com.metamx.druid.master.rules.RuleMap;
+import com.metamx.druid.collect.CountingMap;
 import com.metamx.emitter.service.ServiceEmitter;
 
 import java.util.Collection;
@@ -42,19 +39,17 @@ import java.util.Set;
 public class DruidMasterRuntimeParams
 {
   private final long startTime;
-  private final RuleMap ruleMap;
-  private final Map<String, DruidServer> availableServerMap;
-  private final Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers;
-  private final Map<String, Rule> segmentRules;
-  private final Map<String, Map<String, Integer>> segmentsInCluster;
+  private final DruidCluster druidCluster;
+  private final SegmentRuleLookup segmentRuleLookup;
+  private final SegmentReplicantLookup segmentReplicantLookup;
   private final Set<DruidDataSource> dataSources;
   private final Set<DataSegment> availableSegments;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ServiceEmitter emitter;
   private final long millisToWaitBeforeDeleting;
   private final List<String> messages;
-  private final Map<String, Integer> assignedCount;
-  private final Map<String, Integer> droppedCount;
+  private final CountingMap<String> assignedCount;
+  private final CountingMap<String> droppedCount;
   private final int deletedCount;
   private final int unassignedCount;
   private final long unassignedSize;
@@ -65,19 +60,17 @@ public class DruidMasterRuntimeParams
 
   public DruidMasterRuntimeParams(
       long startTime,
-      RuleMap ruleMap,
-      Map<String, DruidServer> availableServerMap,
-      Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers,
-      Map<String, Rule> segmentRules,
-      Map<String, Map<String, Integer>> segmentsInCluster,
+      DruidCluster druidCluster,
+      SegmentRuleLookup segmentRuleLookup,
+      SegmentReplicantLookup segmentReplicantLookup,
       Set<DruidDataSource> dataSources,
       Set<DataSegment> availableSegments,
       Map<String, LoadQueuePeon> loadManagementPeons,
       ServiceEmitter emitter,
       long millisToWaitBeforeDeleting,
       List<String> messages,
-      Map<String, Integer> assignedCount,
-      Map<String, Integer> droppedCount,
+      CountingMap<String> assignedCount,
+      CountingMap<String> droppedCount,
       int deletedCount,
       int unassignedCount,
       long unassignedSize,
@@ -88,11 +81,9 @@ public class DruidMasterRuntimeParams
   )
   {
     this.startTime = startTime;
-    this.ruleMap = ruleMap;
-    this.availableServerMap = availableServerMap;
-    this.historicalServers = historicalServers;
-    this.segmentRules = segmentRules;
-    this.segmentsInCluster = segmentsInCluster;
+    this.druidCluster = druidCluster;
+    this.segmentRuleLookup = segmentRuleLookup;
+    this.segmentReplicantLookup = segmentReplicantLookup;
     this.dataSources = dataSources;
     this.availableSegments = availableSegments;
     this.loadManagementPeons = loadManagementPeons;
@@ -115,29 +106,19 @@ public class DruidMasterRuntimeParams
     return startTime;
   }
 
-  public RuleMap getRuleMap()
+  public DruidCluster getDruidCluster()
   {
-    return ruleMap;
+    return druidCluster;
   }
 
-  public Map<String, DruidServer> getAvailableServerMap()
+  public SegmentRuleLookup getSegmentRuleLookup()
   {
-    return availableServerMap;
+    return segmentRuleLookup;
   }
 
-  public Map<String, MinMaxPriorityQueue<ServerHolder>> getHistoricalServers()
+  public SegmentReplicantLookup getSegmentReplicantLookup()
   {
-    return historicalServers;
-  }
-
-  public Map<String, Rule> getSegmentRules()
-  {
-    return segmentRules;
-  }
-
-  public Map<String, Map<String, Integer>> getSegmentsInCluster()
-  {
-    return segmentsInCluster;
+    return segmentReplicantLookup;
   }
 
   public Set<DruidDataSource> getDataSources()
@@ -170,12 +151,12 @@ public class DruidMasterRuntimeParams
     return messages;
   }
 
-  public Map<String, Integer> getAssignedCount()
+  public CountingMap<String> getAssignedCount()
   {
     return assignedCount;
   }
 
-  public Map<String, Integer> getDroppedCount()
+  public CountingMap<String> getDroppedCount()
   {
     return droppedCount;
   }
@@ -224,11 +205,9 @@ public class DruidMasterRuntimeParams
   {
     return new Builder(
         startTime,
-        ruleMap,
-        availableServerMap,
-        historicalServers,
-        segmentRules,
-        segmentsInCluster,
+        druidCluster,
+        segmentRuleLookup,
+        segmentReplicantLookup,
         dataSources,
         availableSegments,
         loadManagementPeons,
@@ -250,19 +229,17 @@ public class DruidMasterRuntimeParams
   public static class Builder
   {
     private long startTime;
-    private RuleMap ruleMap;
-    private final Map<String, DruidServer> availableServerMap;
-    private final Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers;
-    private final Map<String, Rule> segmentRules;
-    private final Map<String, Map<String, Integer>> segmentsInCluster;
+    private DruidCluster druidCluster;
+    private SegmentRuleLookup segmentRuleLookup;
+    private SegmentReplicantLookup segmentReplicantLookup;
     private final Set<DruidDataSource> dataSources;
     private final Set<DataSegment> availableSegments;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private final List<String> messages;
     private long millisToWaitBeforeDeleting;
     private ServiceEmitter emitter;
-    private Map<String, Integer> assignedCount;
-    private Map<String, Integer> droppedCount;
+    private CountingMap<String> assignedCount;
+    private CountingMap<String> droppedCount;
     private int deletedCount;
     private int unassignedCount;
     private long unassignedSize;
@@ -274,19 +251,17 @@ public class DruidMasterRuntimeParams
     Builder()
     {
       this.startTime = 0;
-      this.ruleMap = null;
-      this.availableServerMap = Maps.newHashMap();
-      this.historicalServers = Maps.newHashMap();
-      this.segmentRules = Maps.newHashMap();
-      this.segmentsInCluster = Maps.newHashMap();
+      this.druidCluster = null;
+      this.segmentRuleLookup = null;
+      this.segmentReplicantLookup = null;
       this.dataSources = Sets.newHashSet();
       this.availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
       this.loadManagementPeons = Maps.newHashMap();
       this.messages = Lists.newArrayList();
       this.emitter = null;
       this.millisToWaitBeforeDeleting = 0;
-      this.assignedCount = Maps.newHashMap();
-      this.droppedCount = Maps.newHashMap();
+      this.assignedCount = new CountingMap<String>();
+      this.droppedCount = new CountingMap<String>();
       this.deletedCount = 0;
       this.unassignedCount = 0;
       this.unassignedSize = 0;
@@ -298,19 +273,17 @@ public class DruidMasterRuntimeParams
 
     Builder(
         long startTime,
-        RuleMap ruleMap,
-        Map<String, DruidServer> availableServerMap,
-        Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers,
-        Map<String, Rule> segmentRules,
-        Map<String, Map<String, Integer>> segmentsInCluster,
+        DruidCluster cluster,
+        SegmentRuleLookup segmentRuleLookup,
+        SegmentReplicantLookup segmentReplicantLookup,
         Set<DruidDataSource> dataSources,
         Set<DataSegment> availableSegments,
         Map<String, LoadQueuePeon> loadManagementPeons,
         List<String> messages,
         ServiceEmitter emitter,
         long millisToWaitBeforeDeleting,
-        Map<String, Integer> assignedCount,
-        Map<String, Integer> droppedCount,
+        CountingMap<String> assignedCount,
+        CountingMap<String> droppedCount,
         int deletedCount,
         int unassignedCount,
         long unassignedSize,
@@ -321,11 +294,9 @@ public class DruidMasterRuntimeParams
     )
     {
       this.startTime = startTime;
-      this.ruleMap = ruleMap;
-      this.availableServerMap = availableServerMap;
-      this.historicalServers = historicalServers;
-      this.segmentRules = segmentRules;
-      this.segmentsInCluster = segmentsInCluster;
+      this.druidCluster = cluster;
+      this.segmentRuleLookup = segmentRuleLookup;
+      this.segmentReplicantLookup = segmentReplicantLookup;
       this.dataSources = dataSources;
       this.availableSegments = availableSegments;
       this.loadManagementPeons = loadManagementPeons;
@@ -347,11 +318,9 @@ public class DruidMasterRuntimeParams
     {
       return new DruidMasterRuntimeParams(
           startTime,
-          ruleMap,
-          availableServerMap,
-          historicalServers,
-          segmentRules,
-          segmentsInCluster,
+          druidCluster,
+          segmentRuleLookup,
+          segmentReplicantLookup,
           dataSources,
           availableSegments,
           loadManagementPeons,
@@ -376,33 +345,21 @@ public class DruidMasterRuntimeParams
       return this;
     }
 
-    public Builder withRuleMap(RuleMap ruleMap)
+    public Builder withDruidCluster(DruidCluster cluster)
     {
-      this.ruleMap = ruleMap;
+      this.druidCluster = cluster;
       return this;
     }
 
-    public Builder withAvailableServerMap(Map<String, DruidServer> availableServersCollection)
+    public Builder withSegmentRuleLookup(SegmentRuleLookup segmentRuleLookup)
     {
-      availableServerMap.putAll(Collections.unmodifiableMap(availableServersCollection));
+      this.segmentRuleLookup = segmentRuleLookup;
       return this;
     }
 
-    public Builder withHistoricalServers(Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServersMap)
+    public Builder withSegmentReplicantLookup(SegmentReplicantLookup lookup)
     {
-      historicalServers.putAll(historicalServersMap);
-      return this;
-    }
-
-    public Builder withSegmentRules(Map<String, Rule> segmentRules)
-    {
-      this.segmentRules.putAll(segmentRules);
-      return this;
-    }
-
-    public Builder withSegmentsInCluster(Map<String, Map<String, Integer>> segmentsInCluster)
-    {
-      this.segmentsInCluster.putAll(segmentsInCluster);
+      this.segmentReplicantLookup = lookup;
       return this;
     }
 
@@ -448,13 +405,13 @@ public class DruidMasterRuntimeParams
       return this;
     }
 
-    public Builder withAssignedCount(Map<String, Integer> assignedCount)
+    public Builder withAssignedCount(CountingMap<String> assignedCount)
     {
       this.assignedCount.putAll(assignedCount);
       return this;
     }
 
-    public Builder withDroppedCount(Map<String, Integer> droppedCount)
+    public Builder withDroppedCount(CountingMap<String> droppedCount)
     {
       this.droppedCount.putAll(droppedCount);
       return this;

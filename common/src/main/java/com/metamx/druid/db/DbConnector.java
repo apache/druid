@@ -53,7 +53,7 @@ public class DbConnector
         dbi,
         config.getRuleTable(),
         String.format(
-            "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), PRIMARY KEY (id))",
+            "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, ruleVersion TINYTEXT NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), PRIMARY KEY (id))",
             config.getRuleTable()
         )
     );
@@ -94,37 +94,6 @@ public class DbConnector
     catch (Exception e) {
       log.warn(e, "Exception creating table");
     }
-  }
-
-  public static void createDefaultRules(
-      final DBI dbi,
-      final String ruleTable,
-      final String id,
-      final String dataSource,
-      final String rules
-  )
-  {
-    dbi.withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle) throws Exception
-          {
-            handle.createStatement(
-                String.format(
-                    "INSERT INTO %s (id, dataSource, payload) VALUES (:id, :dataSource, :payload)",
-                    ruleTable
-                )
-            )
-                  .bind("id", id)
-                  .bind("dataSource", dataSource)
-                  .bind("payload", rules)
-                  .execute();
-
-            return null;
-          }
-        }
-    );
   }
 
   private final DbConnectorConfig config;

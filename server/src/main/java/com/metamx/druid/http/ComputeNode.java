@@ -175,7 +175,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
   private void initializeDruidServer()
   {
     if (druidServer == null) {
-      setDruidServer(new DruidServer(getConfigFactory().build(DruidServerConfig.class)));
+      setDruidServer(new DruidServer(getConfigFactory().build(DruidServerConfig.class), "historical"));
     }
   }
 

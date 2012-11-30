@@ -40,8 +40,6 @@ import java.util.Map;
  */
 public class DruidMasterTest
 {
-  private static final Logger log = new Logger(DruidMasterTest.class);
-
   private DruidMaster master;
   private PhoneBook yp;
   private DatabaseSegmentManager databaseSegmentManager;
@@ -131,12 +129,11 @@ public class DruidMasterTest
         null,
         databaseSegmentManager,
         serverInventoryManager,
+        null,
         yp,
         new NoopServiceEmitter(),
         scheduledExecutorFactory,
         loadManagementPeons,
-        null,
-        null,
         null
     );
   }

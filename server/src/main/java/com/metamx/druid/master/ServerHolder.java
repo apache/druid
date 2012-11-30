@@ -20,6 +20,7 @@
 package com.metamx.druid.master;
 
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 
 /**
@@ -91,6 +92,11 @@ public class ServerHolder implements Comparable<ServerHolder>
     );
 
     return availableSize;
+  }
+
+  public boolean containsSegment(DataSegment segment)
+  {
+    return (server.getSegment(segment.getIdentifier()) != null && peon.getSegmentsToLoad().contains(segment));
   }
 
   @Override

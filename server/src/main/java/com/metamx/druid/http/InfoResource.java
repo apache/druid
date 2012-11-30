@@ -31,7 +31,9 @@ import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
+import com.metamx.druid.db.DatabaseRuleCoordinator;
 import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.master.rules.Rule;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -57,17 +59,20 @@ public class InfoResource
 {
   private final ServerInventoryManager serverInventoryManager;
   private final DatabaseSegmentManager databaseSegmentManager;
+  private final DatabaseRuleCoordinator databaseRuleCoordinator;
   private final DruidClusterInfo druidClusterInfo;
 
   @Inject
   public InfoResource(
       ServerInventoryManager serverInventoryManager,
       DatabaseSegmentManager databaseSegmentManager,
+      DatabaseRuleCoordinator databaseRuleCoordinator,
       DruidClusterInfo druidClusterInfo
   )
   {
     this.serverInventoryManager = serverInventoryManager;
     this.databaseSegmentManager = databaseSegmentManager;
+    this.databaseRuleCoordinator = databaseRuleCoordinator;
     this.druidClusterInfo = druidClusterInfo;
   }
 
@@ -259,6 +264,41 @@ public class InfoResource
     }
 
     return Response.status(Response.Status.NOT_FOUND).build();
+  }
+
+  @GET
+  @Path("/rules")
+  @Produces("application/json")
+  public Response getRules()
+  {
+    return Response.status(Response.Status.OK)
+                   .entity(databaseRuleCoordinator.getRules())
+                   .build();
+  }
+
+  @GET
+  @Path("/rules/{dataSourceName}")
+  @Produces("application/json")
+  public Response getDatasourceRules(
+      @PathParam("dataSourceName") final String dataSourceName
+  )
+  {
+    return Response.status(Response.Status.OK)
+                   .entity(databaseRuleCoordinator.getRules(dataSourceName))
+                   .build();
+  }
+
+  @POST
+  @Path("/rules/{dataSourceName}")
+  @Consumes("application/json")
+  public Response setDatasourceRules(
+      @PathParam("dataSourceName") final String dataSourceName,
+      final List<Rule> rules
+  )
+  {
+    return Response.status(Response.Status.OK)
+                   .entity(databaseRuleCoordinator.overrideRule(dataSourceName, rules))
+                   .build();
   }
 
   @GET

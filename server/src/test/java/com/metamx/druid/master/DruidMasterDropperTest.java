@@ -1,11 +1,31 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.master;
 
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
-import com.metamx.common.guava.Comparators;
+import com.google.common.collect.Table;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.master.rules.IntervalDropRule;
@@ -23,7 +43,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -74,35 +93,50 @@ public class DruidMasterDropperTest
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(master);
 
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverNorm",
+                            "hostNorm",
+                            1000,
+                            "historical",
+                            "normal"
+                        ),
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
     RuleMap ruleMap = new RuleMap(
         ImmutableMap.<String, List<Rule>>of(
             "test",
             Lists.<Rule>newArrayList(
-                new IntervalDropRule(new Interval("2012-01-01T12:00:00.000Z/2012-01-02T00:00:00.000Z"))
+                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "normal"),
+                new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
             )
         ),
         Lists.<Rule>newArrayList()
     );
 
-    Map<String, Map<String, Integer>> segmentsInCluster = Maps.newHashMap();
-    Map<String, Rule> segmentRules = Maps.newHashMap();
+    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
+    Table<String, String, Integer> segmentsInCluster = HashBasedTable.create();
     for (DataSegment segment : availableSegments) {
-      for (Rule rule : ruleMap.getRules(segment.getDataSource())) {
-        if (rule.appliesTo(segment.getInterval())) {
-          segmentRules.put(segment.getIdentifier(), rule);
-          break;
-        }
-
-        segmentsInCluster.put(segment.getIdentifier(), ImmutableMap.of("normal", 1));
-      }
+      segmentsInCluster.put(segment.getIdentifier(), "normal", 1);
     }
+    SegmentReplicantLookup segmentReplicantLookup = new SegmentReplicantLookup(segmentsInCluster);
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
-        .withHistoricalServers(Maps.<String, MinMaxPriorityQueue<ServerHolder>>newHashMap())
+        .withDruidCluster(druidCluster)
         .withMillisToWaitBeforeDeleting(0L)
         .withAvailableSegments(availableSegments)
-        .withSegmentRules(segmentRules)
-        .withSegmentsInCluster(segmentsInCluster)
+        .withSegmentRuleLookup(segmentRuleLookup)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
         .build();
 
     DruidMasterRuntimeParams afterParams = dropper.run(params);
@@ -136,17 +170,19 @@ public class DruidMasterDropperTest
         "normal"
     );
     server2.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
-    Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers = ImmutableMap.of(
-        "normal",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    server1,
-                    mockPeon
-                ),
-                new ServerHolder(
-                    server2,
-                    mockPeon
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server1,
+                        mockPeon
+                    ),
+                    new ServerHolder(
+                        server2,
+                        mockPeon
+                    )
                 )
             )
         )
@@ -164,31 +200,26 @@ public class DruidMasterDropperTest
         )
     );
 
-    Map<String, Map<String, Integer>> segmentsInCluster = Maps.newHashMap();
-    Map<String, Rule> segmentRules = Maps.newHashMap();
-    for (DataSegment segment : availableSegments) {
-      for (Rule rule : ruleMap.getRules(segment.getDataSource())) {
-        if (rule.appliesTo(segment.getInterval())) {
-          segmentRules.put(segment.getIdentifier(), rule);
-          break;
-        }
+    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
 
-        segmentsInCluster.put(segment.getIdentifier(), ImmutableMap.of("normal", 1));
-      }
+    Table<String, String, Integer> segmentsInCluster = HashBasedTable.create();
+    for (DataSegment segment : availableSegments) {
+      segmentsInCluster.put(segment.getIdentifier(), "normal", 1);
     }
-    segmentsInCluster.put(availableSegments.get(0).getIdentifier(), ImmutableMap.of("normal", 2));
+    segmentsInCluster.put(availableSegments.get(0).getIdentifier(), "normal", 2);
+    SegmentReplicantLookup segmentReplicantLookup = new SegmentReplicantLookup(segmentsInCluster);
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
-        .withHistoricalServers(historicalServers)
+        .withDruidCluster(druidCluster)
         .withMillisToWaitBeforeDeleting(0L)
         .withAvailableSegments(availableSegments)
-        .withSegmentRules(segmentRules)
-        .withSegmentsInCluster(segmentsInCluster)
+        .withSegmentRuleLookup(segmentRuleLookup)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
         .build();
 
     DruidMasterRuntimeParams afterParams = dropper.run(params);
 
-    Assert.assertTrue(afterParams.getDroppedCount().get("normal") == 1);
+    Assert.assertTrue(afterParams.getDroppedCount().get("normal").get() == 1);
     Assert.assertTrue(afterParams.getDeletedCount() == 12);
 
     EasyMock.verify(mockPeon);
@@ -218,22 +249,24 @@ public class DruidMasterDropperTest
         "normal"
     );
     server2.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
-    Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers = ImmutableMap.of(
-        "hot",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    server1,
-                    mockPeon
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server1,
+                        mockPeon
+                    )
                 )
-            )
-        ),
-        "normal",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    server2,
-                    mockPeon
+            ),
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server2,
+                        mockPeon
+                    )
                 )
             )
         )
@@ -251,31 +284,25 @@ public class DruidMasterDropperTest
         )
     );
 
-    Map<String, Map<String, Integer>> segmentsInCluster = Maps.newHashMap();
-    Map<String, Rule> segmentRules = Maps.newHashMap();
+    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
+    Table<String, String, Integer> segmentsInCluster = HashBasedTable.create();
     for (DataSegment segment : availableSegments) {
-      for (Rule rule : ruleMap.getRules(segment.getDataSource())) {
-        if (rule.appliesTo(segment.getInterval())) {
-          segmentRules.put(segment.getIdentifier(), rule);
-          break;
-        }
-
-        segmentsInCluster.put(segment.getIdentifier(), ImmutableMap.of("normal", 1));
-      }
+      segmentsInCluster.put(segment.getIdentifier(), "normal", 1);
     }
-    segmentsInCluster.put(availableSegments.get(0).getIdentifier(), ImmutableMap.of("hot", 1, "normal", 1));
+    segmentsInCluster.put(availableSegments.get(0).getIdentifier(), "hot", 1);
+    SegmentReplicantLookup segmentReplicantLookup = new SegmentReplicantLookup(segmentsInCluster);
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
-        .withHistoricalServers(historicalServers)
+        .withDruidCluster(druidCluster)
         .withMillisToWaitBeforeDeleting(0L)
         .withAvailableSegments(availableSegments)
-        .withSegmentRules(segmentRules)
-        .withSegmentsInCluster(segmentsInCluster)
+        .withSegmentRuleLookup(segmentRuleLookup)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
         .build();
 
     DruidMasterRuntimeParams afterParams = dropper.run(params);
 
-    Assert.assertTrue(afterParams.getDroppedCount().get("normal") == 1);
+    Assert.assertTrue(afterParams.getDroppedCount().get("normal").get() == 1);
     Assert.assertTrue(afterParams.getDeletedCount() == 12);
 
     EasyMock.verify(mockPeon);
@@ -299,22 +326,24 @@ public class DruidMasterDropperTest
         "normal"
     );
     server2.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
-    Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers = ImmutableMap.of(
-        "hot",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    server1,
-                    mockPeon
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server1,
+                        mockPeon
+                    )
                 )
-            )
-        ),
-        "normal",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    server2,
-                    mockPeon
+            ),
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server2,
+                        mockPeon
+                    )
                 )
             )
         )
@@ -332,30 +361,24 @@ public class DruidMasterDropperTest
         )
     );
 
-    Map<String, Map<String, Integer>> segmentsInCluster = Maps.newHashMap();
-    Map<String, Rule> segmentRules = Maps.newHashMap();
+    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
+    Table<String, String, Integer> segmentsInCluster = HashBasedTable.create();
     for (DataSegment segment : availableSegments) {
-      for (Rule rule : ruleMap.getRules(segment.getDataSource())) {
-        if (rule.appliesTo(segment.getInterval())) {
-          segmentRules.put(segment.getIdentifier(), rule);
-          break;
-        }
-
-        segmentsInCluster.put(segment.getIdentifier(), ImmutableMap.of("normal", 1));
-      }
+      segmentsInCluster.put(segment.getIdentifier(), "normal", 1);
     }
+    SegmentReplicantLookup segmentReplicantLookup = new SegmentReplicantLookup(segmentsInCluster);
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
-        .withHistoricalServers(historicalServers)
+        .withDruidCluster(druidCluster)
         .withMillisToWaitBeforeDeleting(0L)
         .withAvailableSegments(availableSegments)
-        .withSegmentRules(segmentRules)
-        .withSegmentsInCluster(segmentsInCluster)
+        .withSegmentRuleLookup(segmentRuleLookup)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
         .build();
 
     DruidMasterRuntimeParams afterParams = dropper.run(params);
 
-    Assert.assertTrue(afterParams.getDroppedCount().get("normal") == null);
+    Assert.assertTrue(afterParams.getDroppedCount().get("normal").get() == 0);
     Assert.assertTrue(afterParams.getDeletedCount() == 12);
   }
 }

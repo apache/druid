@@ -86,7 +86,7 @@ public class DruidMasterBalancerTest
     EasyMock.replay(druidServerHigh);
 
     EasyMock.expect(druidServerLow.getName()).andReturn("to").atLeastOnce();
-    EasyMock.expect(druidServerLow.getSubType()).andReturn("normal").atLeastOnce();
+    EasyMock.expect(druidServerLow.getTier()).andReturn("normal").atLeastOnce();
     EasyMock.expect(druidServerLow.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServerLow.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServerLow.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
@@ -137,14 +137,17 @@ public class DruidMasterBalancerTest
 
     DruidMasterRuntimeParams params =
         DruidMasterRuntimeParams.newBuilder()
-                                .withHistoricalServers(
-                                    ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
-                                        "normal",
-                                        MinMaxPriorityQueue.orderedBy(DruidMasterBalancer.percentUsedComparator).create(
-                                            Arrays.asList(
-                                                new ServerHolder(druidServerHigh, peon),
-                                                new ServerHolder(druidServerLow, peon)
-                                            )
+                                .withDruidCluster(
+                                    new DruidCluster(
+                                        ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
+                                            "normal",
+                                            MinMaxPriorityQueue.orderedBy(DruidMasterBalancer.percentUsedComparator)
+                                                               .create(
+                                                                   Arrays.asList(
+                                                                       new ServerHolder(druidServerHigh, peon),
+                                                                       new ServerHolder(druidServerLow, peon)
+                                                                   )
+                                                               )
                                         )
                                     )
                                 )

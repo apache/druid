@@ -17,24 +17,31 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client;
+package com.metamx.druid.master.stats;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.metamx.common.Pair;
+import com.metamx.druid.collect.CountingMap;
 
 /**
  */
-public abstract class DruidServerConfig
+public class DropStat
 {
-  @Config("druid.host")
-  public abstract String getServerName();
+  private final CountingMap<String> droppedCount;
+  private final int deletedCount;
 
-  @Config("druid.host")
-  public abstract String getHost();
+  public DropStat(CountingMap<String> droppedCount, int deletedCount)
+  {
+    this.droppedCount = droppedCount;
+    this.deletedCount = deletedCount;
+  }
 
-  @Config("druid.server.maxSize")
-  public abstract long getMaxSize();
+  public CountingMap<String> getDroppedCount()
+  {
+    return droppedCount;
+  }
 
-  @Config("druid.server.subType")
-  public abstract String getSubType();
+  public int getDeletedCount()
+  {
+    return deletedCount;
+  }
 }

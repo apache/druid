@@ -29,13 +29,14 @@ import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.master.rules.DropRule;
-import com.metamx.druid.master.rules.LoadRule;
+import com.metamx.druid.collect.CountingMap;
 import com.metamx.druid.master.rules.Rule;
+import com.metamx.druid.master.stats.DropStat;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -55,14 +56,14 @@ public class DruidMasterDropper implements DruidMasterHelper
   @Override
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
-    final Map<String, Integer> droppedCounts = Maps.newHashMap();
+    final CountingMap<String> droppedCounts = new CountingMap<String>();
     int deletedCount = 0;
 
     Set<DataSegment> availableSegments = params.getAvailableSegments();
-    Map<String, MinMaxPriorityQueue<ServerHolder>> servicedData = params.getHistoricalServers();
+    DruidCluster cluster = params.getDruidCluster();
 
     // Drop segments that are not needed
-    for (MinMaxPriorityQueue<ServerHolder> serverHolders : servicedData.values()) {
+    for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         DruidServer server = serverHolder.getServer();
 
@@ -81,11 +82,7 @@ public class DruidMasterDropper implements DruidMasterHelper
                   }
                 }
                 );
-                droppedCounts.put(
-                    server.getSubType(),
-                    droppedCounts.get(server.getSubType()) == null ? 1 :
-                    droppedCounts.get(server.getSubType()) + 1
-                );
+                droppedCounts.add(server.getTier(), 1);
               }
             }
           }
@@ -98,7 +95,7 @@ public class DruidMasterDropper implements DruidMasterHelper
     if (System.currentTimeMillis() - params.getStartTime() > params.getMillisToWaitBeforeDeleting()) {
       Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = Maps.newHashMap();
 
-      for (MinMaxPriorityQueue<ServerHolder> serverHolders : servicedData.values()) {
+      for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
         for (ServerHolder serverHolder : serverHolders) {
           DruidServer server = serverHolder.getServer();
 
@@ -122,86 +119,28 @@ public class DruidMasterDropper implements DruidMasterHelper
         for (TimelineObjectHolder<String, DataSegment> holder : timeline.findOvershadowed()) {
           for (DataSegment dataSegment : holder.getObject().payloads()) {
             log.info("Deleting[%s].", dataSegment);
-            removeSegment(dataSegment);
+            master.removeSegment(dataSegment);
             ++deletedCount;
           }
         }
       }
 
-      // Remove extra replicants only if we have enough total copies of a segment in the cluster
-      for (DataSegment segment : params.getAvailableSegments()) {
-        Rule rule = params.getSegmentRules().get(segment.getIdentifier());
-
-        if (rule instanceof DropRule) {
-          removeSegment(segment);
-          ++deletedCount;
-        } else if (rule instanceof LoadRule) {
-          LoadRule loadRule = (LoadRule) rule;
-          Map<String, Integer> replicants = params.getSegmentsInCluster().get(segment.getIdentifier());
-
-          if (replicants == null) {
-            continue;
-          }
-
-          int totalExpectedReplicantCount = loadRule.getReplicationFactor();
-          int totalActualReplicantCount = 0;
-          for (Map.Entry<String, Integer> replicantEntry : replicants.entrySet()) {
-            totalActualReplicantCount += replicantEntry.getValue();
-          }
-
-          // For all given node types
-          for (Map.Entry<String, Integer> replicantEntry : replicants.entrySet()) {
-            int actualReplicantCount = replicantEntry.getValue();
-            int expectedReplicantCount = replicantEntry.getKey().equalsIgnoreCase(loadRule.getNodeType())
-                                         ? totalExpectedReplicantCount
-                                         : 0;
-
-            MinMaxPriorityQueue<ServerHolder> serverQueue = params.getHistoricalServers().get(replicantEntry.getKey());
-            if (serverQueue == null) {
-              log.warn("No holders found for nodeType[%s]", replicantEntry.getKey());
-              continue;
-            }
-
-            List<ServerHolder> droppedServers = Lists.newArrayList();
-            while (actualReplicantCount > expectedReplicantCount &&
-                totalActualReplicantCount > totalExpectedReplicantCount) {
-              ServerHolder holder = serverQueue.pollLast();
-              if (holder == null) {
-                log.warn("Wtf, holder was null?  Do I have no servers[%s]?", serverQueue);
-                continue;
-              }
-
-              holder.getPeon().dropSegment(
-                  segment,
-                  new LoadPeonCallback()
-                  {
-                    @Override
-                    protected void execute()
-                    {
-                    }
-                  }
-              );
-              droppedServers.add(holder);
-              --actualReplicantCount;
-              --totalActualReplicantCount;
-              droppedCounts.put(
-                  holder.getServer().getSubType(),
-                  droppedCounts.get(holder.getServer().getSubType()) == null ? 1 :
-                  droppedCounts.get(holder.getServer().getSubType()) + 1
-              );
-            }
-            serverQueue.addAll(droppedServers);
-          }
+      for (DataSegment segment : availableSegments) {
+        Rule rule = params.getSegmentRuleLookup().lookup(segment.getIdentifier());
+        DropStat stat = rule.runDrop(master, params, segment);
+        deletedCount += stat.getDeletedCount();
+        if (stat.getDroppedCount() != null) {
+          droppedCounts.putAll(stat.getDroppedCount());
         }
       }
     }
 
     List<String> dropMsgs = Lists.newArrayList();
-    for (Map.Entry<String, Integer> entry : droppedCounts.entrySet()) {
+    for (Map.Entry<String, AtomicLong> entry : droppedCounts.entrySet()) {
       dropMsgs.add(
           String.format(
-              "[%s] : Dropped %,d segments among %,d servers",
-              entry.getKey(), droppedCounts.get(entry.getKey()), servicedData.get(entry.getKey()).size()
+              "[%s] : Dropped %s segments among %,d servers",
+              entry.getKey(), droppedCounts.get(entry.getKey()), cluster.get(entry.getKey()).size()
           )
       );
     }
@@ -212,11 +151,6 @@ public class DruidMasterDropper implements DruidMasterHelper
                  .withDroppedCount(droppedCounts)
                  .withDeletedCount(deletedCount)
                  .build();
-  }
 
-  private void removeSegment(DataSegment segment)
-  {
-    log.info("Removing Segment[%s]", segment);
-    master.removeSegment(segment);
   }
 }

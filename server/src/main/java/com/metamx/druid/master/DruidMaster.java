@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
@@ -41,10 +39,8 @@ import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
+import com.metamx.druid.db.DatabaseRuleCoordinator;
 import com.metamx.druid.db.DatabaseSegmentManager;
-import com.metamx.druid.master.rules.DruidMasterRuleMaker;
-import com.metamx.druid.master.rules.DruidMasterRuleMakerConfig;
-import com.metamx.druid.master.rules.Rule;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.phonebook.PhoneBook;
@@ -53,8 +49,6 @@ import com.netflix.curator.x.discovery.ServiceProvider;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Duration;
-import org.skife.config.ConfigurationObjectFactory;
-import org.skife.jdbi.v2.DBI;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -82,6 +76,7 @@ public class DruidMaster
   private final DruidClusterInfo clusterInfo;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final ServerInventoryManager serverInventoryManager;
+  private final DatabaseRuleCoordinator databaseRuleCoordinator;
   private final PhoneBook yp;
   private final ServiceEmitter emitter;
   private final ScheduledExecutorService exec;
@@ -89,8 +84,6 @@ public class DruidMaster
   private final PhoneBookPeon masterPeon;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ServiceProvider serviceProvider;
-  private final DBI dbi;
-  private final ConfigurationObjectFactory configFactory;
 
   private final ObjectMapper jsonMapper;
 
@@ -100,13 +93,12 @@ public class DruidMaster
       ObjectMapper jsonMapper,
       DatabaseSegmentManager databaseSegmentManager,
       ServerInventoryManager serverInventoryManager,
+      DatabaseRuleCoordinator databaseRuleCoordinator,
       PhoneBook zkPhoneBook,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       Map<String, LoadQueuePeon> loadManagementPeons,
-      ServiceProvider serviceProvider,
-      DBI dbi,
-      ConfigurationObjectFactory configFactory
+      ServiceProvider serviceProvider
   )
   {
     this.config = config;
@@ -116,6 +108,7 @@ public class DruidMaster
 
     this.databaseSegmentManager = databaseSegmentManager;
     this.serverInventoryManager = serverInventoryManager;
+    this.databaseRuleCoordinator = databaseRuleCoordinator;
     this.yp = zkPhoneBook;
     this.emitter = emitter;
 
@@ -126,9 +119,6 @@ public class DruidMaster
     this.loadManagementPeons = loadManagementPeons;
 
     this.serviceProvider = serviceProvider;
-
-    this.dbi = dbi;
-    this.configFactory = configFactory;
   }
 
   public boolean isClusterMaster()
@@ -190,6 +180,7 @@ public class DruidMaster
 
   public void removeSegment(DataSegment segment)
   {
+    log.info("Removing Segment[%s]", segment);
     databaseSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
   }
 
@@ -590,7 +581,6 @@ public class DruidMaster
     {
       super(
           ImmutableList.of(
-              new DruidMasterRuleMaker(configFactory.build(DruidMasterRuleMakerConfig.class), jsonMapper, dbi),
               new DruidMasterSegmentInfoLoader(DruidMaster.this),
               new DruidMasterHelper()
               {
@@ -611,12 +601,12 @@ public class DruidMaster
                   }
 
                   // Find all historical servers, group them by subType and sort by ascending usage
-                  final Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers = Maps.newHashMap();
-                  final Map<String, DruidServer> availableServerMap = Maps.newHashMap();
+                  final DruidCluster cluster = new DruidCluster();
+                  final Set<String> historicalServers = Sets.newHashSet();
 
                   for (DruidServer server : servers) {
                     if (server.getType().equalsIgnoreCase("historical")) {
-                      availableServerMap.put(server.getName(), server);
+                      historicalServers.add(server.getName());
 
                       if (!loadManagementPeons.containsKey(server.getName())) {
                         String basePath = yp.combineParts(Arrays.asList(config.getLoadQueuePath(), server.getName()));
@@ -630,79 +620,29 @@ public class DruidMaster
                         yp.registerListener(basePath, loadQueuePeon);
                       }
 
-                      MinMaxPriorityQueue<ServerHolder> tierServers = historicalServers.get(server.getSubType());
-                      if (tierServers == null) {
-                        tierServers = MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create();
-                        historicalServers.put(server.getSubType(), tierServers);
-                      }
-                      tierServers.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
+                      cluster.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
                     }
                   }
 
-                  // Create a mapping between a segment and a rule, a segment is paired with the first rule it matches
-                  Map<String, Rule> segmentRules = Maps.newHashMap();
-                  for (DataSegment segment : params.getAvailableSegments()) {
-                    for (Rule rule : params.getRuleMap().getRules(segment.getDataSource())) {
-                      if (rule.appliesTo(segment.getInterval())) {
-                        segmentRules.put(segment.getIdentifier(), rule);
-                        break;
-                      }
-                    }
-
-                    if (!segmentRules.containsKey(segment.getIdentifier())) {
-                      throw new ISE("Unable to find a rule for [%s]!!!", segment.getIdentifier());
-                    }
-                  }
-
-                  // For segments in the cluster, build a lookup for how many replicants exist in each nodeType
-                  // Map<segmentId, Map<nodeType, # segments>>
-                  final Map<String, Map<String, Integer>> segmentsInCluster = Maps.newHashMap();
-
-                  for (MinMaxPriorityQueue<ServerHolder> serversByType : historicalServers.values()) {
-                    for (ServerHolder serverHolder : serversByType) {
-                      DruidServer server = serverHolder.getServer();
-
-                      for (DruidDataSource dataSource : server.getDataSources()) {
-                        for (DataSegment segment : dataSource.getSegments()) {
-                          Map<String, Integer> segmentInCluster = segmentsInCluster.get(segment.getIdentifier());
-                          if (segmentInCluster == null) {
-                            segmentInCluster = Maps.newHashMap();
-                            segmentInCluster.put(server.getSubType(), 0);
-                            segmentsInCluster.put(segment.getIdentifier(), segmentInCluster);
-                          }
-                          segmentInCluster.put(server.getSubType(), segmentInCluster.get(server.getSubType()) + 1);
-                        }
-                      }
-
-                      // Also account for queued segments
-                      for (DataSegment peonSegment : serverHolder.getPeon().getSegmentsToLoad()) {
-                        Map<String, Integer> segmentInCluster = segmentsInCluster.get(peonSegment.getIdentifier());
-                        if (segmentInCluster == null) {
-                          segmentInCluster = Maps.newHashMap();
-                          segmentInCluster.put(server.getSubType(), 0);
-                          segmentsInCluster.put(peonSegment.getIdentifier(), segmentInCluster);
-                        }
-                        segmentInCluster.put(server.getSubType(), segmentInCluster.get(server.getSubType()) + 1);
-                      }
-                    }
-                  }
+                  SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(
+                      params.getAvailableSegments(),
+                      databaseRuleCoordinator.getRuleMap()
+                  );
+                  SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
 
                   // Stop peons for servers that aren't there anymore.
-                  for (String name : loadManagementPeons.keySet()) {
-                    if (!availableServerMap.containsKey(name)) {
-                      log.info("Removing listener for server[%s] which is no longer there.", name);
-                      LoadQueuePeon peon = loadManagementPeons.remove(name);
-                      peon.stop();
+                  for (String name : Sets.difference(historicalServers, loadManagementPeons.keySet())) {
+                    log.info("Removing listener for server[%s] which is no longer there.", name);
+                    LoadQueuePeon peon = loadManagementPeons.remove(name);
+                    peon.stop();
 
-                      yp.unregisterListener(yp.combineParts(Arrays.asList(config.getLoadQueuePath(), name)), peon);
-                    }
+                    yp.unregisterListener(yp.combineParts(Arrays.asList(config.getLoadQueuePath(), name)), peon);
                   }
 
                   return params.buildFromExisting()
-                               .withAvailableServerMap(availableServerMap)
-                               .withHistoricalServers(historicalServers)
-                               .withSegmentRules(segmentRules)
-                               .withSegmentsInCluster(segmentsInCluster)
+                               .withDruidCluster(cluster)
+                               .withSegmentRuleLookup(segmentRuleLookup)
+                               .withSegmentReplicantLookup(segmentReplicantLookup)
                                .build();
                 }
               },

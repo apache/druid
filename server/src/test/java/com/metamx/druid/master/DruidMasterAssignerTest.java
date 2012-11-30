@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.master;
 
 import com.google.common.collect.ImmutableMap;
@@ -6,25 +25,25 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.Comparators;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.master.rules.IntervalLoadRule;
 import com.metamx.druid.master.rules.Rule;
 import com.metamx.druid.master.rules.RuleMap;
 import com.metamx.druid.shard.NoneShardSpec;
-import junit.framework.Assert;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.emitter.service.ServiceEventBuilder;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -34,12 +53,15 @@ public class DruidMasterAssignerTest
   private LoadQueuePeon mockPeon;
   private List<DataSegment> availableSegments;
   private DruidMasterAssigner assigner;
+  private ServiceEmitter emitter;
 
   @Before
   public void setUp()
   {
     master = EasyMock.createMock(DruidMaster.class);
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);
+    emitter = EasyMock.createMock(ServiceEmitter.class);
+    EmittingLogger.registerEmitter(emitter);
 
     DateTime start = new DateTime("2012-01-01");
     availableSegments = Lists.newArrayList();
@@ -63,7 +85,7 @@ public class DruidMasterAssignerTest
 
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).anyTimes();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
     EasyMock.replay(mockPeon);
 
@@ -81,49 +103,51 @@ public class DruidMasterAssignerTest
   @Test
   public void testRunThreeTiersOneReplicant() throws Exception
   {
-    Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers = ImmutableMap.of(
-        "hot",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot",
-                        "hostHot",
-                        1000,
-                        "historical",
-                        "hot"
-                    ),
-                    mockPeon
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot",
+                            "hostHot",
+                            1000,
+                            "historical",
+                            "hot"
+                        ),
+                        mockPeon
+                    )
                 )
-            )
-        ),
-        "normal",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverNorm",
-                        "hostNorm",
-                        1000,
-                        "historical",
-                        "normal"
-                    ),
-                    mockPeon
+            ),
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverNorm",
+                            "hostNorm",
+                            1000,
+                            "historical",
+                            "normal"
+                        ),
+                        mockPeon
+                    )
                 )
-            )
-        ),
-        "cold",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverCold",
-                        "hostCold",
-                        1000,
-                        "historical",
-                        "cold"
-                    ),
-                    mockPeon
+            ),
+            "cold",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverCold",
+                            "hostCold",
+                            1000,
+                            "historical",
+                            "cold"
+                        ),
+                        mockPeon
+                    )
                 )
             )
         )
@@ -141,29 +165,21 @@ public class DruidMasterAssignerTest
         Lists.<Rule>newArrayList()
     );
 
-    Map<String, Rule> segmentRules = Maps.newHashMap();
-    for (DataSegment segment : availableSegments) {
-      for (Rule rule : ruleMap.getRules(segment.getDataSource())) {
-        if (rule.appliesTo(segment.getInterval())) {
-          segmentRules.put(segment.getIdentifier(), rule);
-          break;
-        }
-      }
-    }
+    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
 
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
-            .withHistoricalServers(historicalServers)
+            .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withSegmentRules(segmentRules)
-            .withSegmentsInCluster(Maps.<String, Map<String, Integer>>newHashMap())
+            .withSegmentRuleLookup(segmentRuleLookup)
+            .withSegmentReplicantLookup(new SegmentReplicantLookup())
             .build();
 
     DruidMasterRuntimeParams afterParams = assigner.run(params);
 
-    Assert.assertTrue(afterParams.getAssignedCount().get("hot") == 6);
-    Assert.assertTrue(afterParams.getAssignedCount().get("normal") == 6);
-    Assert.assertTrue(afterParams.getAssignedCount().get("cold") == 12);
+    Assert.assertTrue(afterParams.getAssignedCount().get("hot").get() == 6);
+    Assert.assertTrue(afterParams.getAssignedCount().get("normal").get() == 6);
+    Assert.assertTrue(afterParams.getAssignedCount().get("cold").get() == 12);
     Assert.assertTrue(afterParams.getUnassignedCount() == 0);
     Assert.assertTrue(afterParams.getUnassignedSize() == 0);
 
@@ -173,44 +189,46 @@ public class DruidMasterAssignerTest
   @Test
   public void testRunTwoTiersTwoReplicants() throws Exception
   {
-    Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers = ImmutableMap.of(
-        "hot",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot",
-                        "hostHot",
-                        1000,
-                        "historical",
-                        "hot"
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot",
+                            "hostHot",
+                            1000,
+                            "historical",
+                            "hot"
+                        ),
+                        mockPeon
                     ),
-                    mockPeon
-                ),
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot2",
-                        "hostHot2",
-                        1000,
-                        "historical",
-                        "hot"
-                    ),
-                    mockPeon
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot2",
+                            "hostHot2",
+                            1000,
+                            "historical",
+                            "hot"
+                        ),
+                        mockPeon
+                    )
                 )
-            )
-        ),
-        "cold",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverCold",
-                        "hostCold",
-                        1000,
-                        "historical",
-                        "cold"
-                    ),
-                    mockPeon
+            ),
+            "cold",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverCold",
+                            "hostCold",
+                            1000,
+                            "historical",
+                            "cold"
+                        ),
+                        mockPeon
+                    )
                 )
             )
         )
@@ -227,28 +245,20 @@ public class DruidMasterAssignerTest
         Lists.<Rule>newArrayList()
     );
 
-    Map<String, Rule> segmentRules = Maps.newHashMap();
-    for (DataSegment segment : availableSegments) {
-      for (Rule rule : ruleMap.getRules(segment.getDataSource())) {
-        if (rule.appliesTo(segment.getInterval())) {
-          segmentRules.put(segment.getIdentifier(), rule);
-          break;
-        }
-      }
-    }
+    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
 
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
-            .withHistoricalServers(historicalServers)
+            .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withSegmentRules(segmentRules)
-            .withSegmentsInCluster(Maps.<String, Map<String, Integer>>newHashMap())
+            .withSegmentRuleLookup(segmentRuleLookup)
+            .withSegmentReplicantLookup(new SegmentReplicantLookup())
             .build();
 
     DruidMasterRuntimeParams afterParams = assigner.run(params);
 
-    Assert.assertTrue(afterParams.getAssignedCount().get("hot") == 12);
-    Assert.assertTrue(afterParams.getAssignedCount().get("cold") == 18);
+    Assert.assertTrue(afterParams.getAssignedCount().get("hot").get() == 12);
+    Assert.assertTrue(afterParams.getAssignedCount().get("cold").get() == 18);
     Assert.assertTrue(afterParams.getUnassignedCount() == 0);
     Assert.assertTrue(afterParams.getUnassignedSize() == 0);
 
@@ -258,49 +268,51 @@ public class DruidMasterAssignerTest
   @Test
   public void testRunThreeTiersWithDefaultRules() throws Exception
   {
-    Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers = ImmutableMap.of(
-        "hot",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot",
-                        "hostHot",
-                        1000,
-                        "historical",
-                        "hot"
-                    ),
-                    mockPeon
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot",
+                            "hostHot",
+                            1000,
+                            "historical",
+                            "hot"
+                        ),
+                        mockPeon
+                    )
                 )
-            )
-        ),
-        "normal",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverNorm",
-                        "hostNorm",
-                        1000,
-                        "historical",
-                        "normal"
-                    ),
-                    mockPeon
+            ),
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverNorm",
+                            "hostNorm",
+                            1000,
+                            "historical",
+                            "normal"
+                        ),
+                        mockPeon
+                    )
                 )
-            )
-        ),
-        "cold",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverCold",
-                        "hostCold",
-                        1000,
-                        "historical",
-                        "cold"
-                    ),
-                    mockPeon
+            ),
+            "cold",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverCold",
+                            "hostCold",
+                            1000,
+                            "historical",
+                            "cold"
+                        ),
+                        mockPeon
+                    )
                 )
             )
         )
@@ -319,29 +331,21 @@ public class DruidMasterAssignerTest
         )
     );
 
-    Map<String, Rule> segmentRules = Maps.newHashMap();
-    for (DataSegment segment : availableSegments) {
-      for (Rule rule : ruleMap.getRules(segment.getDataSource())) {
-        if (rule.appliesTo(segment.getInterval())) {
-          segmentRules.put(segment.getIdentifier(), rule);
-          break;
-        }
-      }
-    }
+    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
 
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
-            .withHistoricalServers(historicalServers)
+            .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withSegmentRules(segmentRules)
-            .withSegmentsInCluster(Maps.<String, Map<String, Integer>>newHashMap())
+            .withSegmentRuleLookup(segmentRuleLookup)
+            .withSegmentReplicantLookup(new SegmentReplicantLookup())
             .build();
 
     DruidMasterRuntimeParams afterParams = assigner.run(params);
 
-    Assert.assertTrue(afterParams.getAssignedCount().get("hot") == 6);
-    Assert.assertTrue(afterParams.getAssignedCount().get("normal") == 6);
-    Assert.assertTrue(afterParams.getAssignedCount().get("cold") == 12);
+    Assert.assertTrue(afterParams.getAssignedCount().get("hot").get() == 6);
+    Assert.assertTrue(afterParams.getAssignedCount().get("normal").get() == 6);
+    Assert.assertTrue(afterParams.getAssignedCount().get("cold").get() == 12);
     Assert.assertTrue(afterParams.getUnassignedCount() == 0);
     Assert.assertTrue(afterParams.getUnassignedSize() == 0);
 
@@ -351,34 +355,36 @@ public class DruidMasterAssignerTest
   @Test
   public void testRunTwoTiersWithDefaultRulesExistingSegments() throws Exception
   {
-    Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers = ImmutableMap.of(
-        "hot",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverHot",
-                        "hostHot",
-                        1000,
-                        "historical",
-                        "hot"
-                    ),
-                    mockPeon
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot",
+                            "hostHot",
+                            1000,
+                            "historical",
+                            "hot"
+                        ),
+                        mockPeon
+                    )
                 )
-            )
-        ),
-        "normal",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverNorm",
-                        "hostNorm",
-                        1000,
-                        "historical",
-                        "normal"
-                    ),
-                    mockPeon
+            ),
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverNorm",
+                            "hostNorm",
+                            1000,
+                            "historical",
+                            "normal"
+                        ),
+                        mockPeon
+                    )
                 )
             )
         )
@@ -396,30 +402,20 @@ public class DruidMasterAssignerTest
         )
     );
 
-    Map<String, Map<String, Integer>> segmentsInCluster = Maps.newHashMap();
-    Map<String, Rule> segmentRules = Maps.newHashMap();
-    for (DataSegment segment : availableSegments) {
-      for (Rule rule : ruleMap.getRules(segment.getDataSource())) {
-        if (rule.appliesTo(segment.getInterval())) {
-          segmentRules.put(segment.getIdentifier(), rule);
-          break;
-        }
-      }
-
-      segmentsInCluster.put(segment.getIdentifier(), ImmutableMap.of("normal", 1));
-    }
+    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
-            .withHistoricalServers(historicalServers)
+            .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withSegmentRules(segmentRules)
-            .withSegmentsInCluster(segmentsInCluster)
+            .withSegmentRuleLookup(segmentRuleLookup)
+            .withSegmentReplicantLookup(segmentReplicantLookup)
             .build();
 
     DruidMasterRuntimeParams afterParams = assigner.run(params);
 
-    Assert.assertTrue(afterParams.getAssignedCount().get("hot") == 12);
+    Assert.assertTrue(afterParams.getAssignedCount().get("hot").get() == 12);
     Assert.assertTrue(afterParams.getUnassignedCount() == 0);
     Assert.assertTrue(afterParams.getUnassignedSize() == 0);
 
@@ -429,19 +425,25 @@ public class DruidMasterAssignerTest
   @Test
   public void testRunTwoTiersTierDoesNotExist() throws Exception
   {
-    Map<String, MinMaxPriorityQueue<ServerHolder>> historicalServers = ImmutableMap.of(
-        "normal",
-        MinMaxPriorityQueue.orderedBy(Comparators.inverse(Ordering.natural())).create(
-            Arrays.asList(
-                new ServerHolder(
-                    new DruidServer(
-                        "serverNorm",
-                        "hostNorm",
-                        1000,
-                        "historical",
-                        "normal"
-                    ),
-                    mockPeon
+    emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.replay(emitter);
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverNorm",
+                            "hostNorm",
+                            1000,
+                            "historical",
+                            "normal"
+                        ),
+                        mockPeon
+                    )
                 )
             )
         )
@@ -459,31 +461,24 @@ public class DruidMasterAssignerTest
         )
     );
 
-    Map<String, Rule> segmentRules = Maps.newHashMap();
-    for (DataSegment segment : availableSegments) {
-      for (Rule rule : ruleMap.getRules(segment.getDataSource())) {
-        if (rule.appliesTo(segment.getInterval())) {
-          segmentRules.put(segment.getIdentifier(), rule);
-          break;
-        }
-      }
-    }
+    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
 
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
-            .withHistoricalServers(historicalServers)
+            .withEmitter(emitter)
+            .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withSegmentRules(segmentRules)
-            .withSegmentsInCluster(Maps.<String, Map<String, Integer>>newHashMap())
+            .withSegmentRuleLookup(segmentRuleLookup)
+            .withSegmentReplicantLookup(new SegmentReplicantLookup())
             .build();
 
-    boolean exceptionOccurred = false;
-    try {
     DruidMasterRuntimeParams afterParams = assigner.run(params);
-    } catch (ISE e) {
-      exceptionOccurred = true;
-    }
 
-    Assert.assertTrue(exceptionOccurred);
+    Assert.assertTrue(afterParams.getAssignedCount().get("hot").get() == 0);
+    Assert.assertTrue(afterParams.getAssignedCount().get("normal").get() == 12);
+    Assert.assertTrue(afterParams.getUnassignedCount() == 0);
+    Assert.assertTrue(afterParams.getUnassignedSize() == 0);
+
+    EasyMock.verify(emitter);
   }
 }

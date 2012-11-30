@@ -41,15 +41,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DruidMasterBalancer implements DruidMasterHelper
 {
   public static final Comparator<ServerHolder> percentUsedComparator = Comparators.inverse(
-        new Comparator<ServerHolder>()
+      new Comparator<ServerHolder>()
+      {
+        @Override
+        public int compare(ServerHolder lhs, ServerHolder rhs)
         {
-          @Override
-          public int compare(ServerHolder lhs, ServerHolder rhs)
-          {
-            return lhs.getPercentUsed().compareTo(rhs.getPercentUsed());
-          }
+          return lhs.getPercentUsed().compareTo(rhs.getPercentUsed());
         }
-    );
+      }
+  );
   private static final EmittingLogger log = new EmittingLogger(DruidMasterBalancer.class);
 
   private final BalancerAnalyzer analyzer;
@@ -66,14 +66,14 @@ public class DruidMasterBalancer implements DruidMasterHelper
     this.analyzer = analyzer;
   }
 
-  private void reduceLifetimes(String nodeType)
+  private void reduceLifetimes(String tier)
   {
-    for (BalancerSegmentHolder holder : currentlyMovingSegments.get(nodeType).values()) {
+    for (BalancerSegmentHolder holder : currentlyMovingSegments.get(tier).values()) {
       holder.reduceLifetime();
       if (holder.getLifetime() <= 0) {
         log.makeAlert(
             "[%s]: Balancer move segments queue has a segment stuck",
-            nodeType,
+            tier,
             ImmutableMap.<String, Object>builder()
                         .put("segment", holder.getSegment().getIdentifier())
                         .build()
@@ -87,18 +87,19 @@ public class DruidMasterBalancer implements DruidMasterHelper
   {
     Map<String, Integer> movedCounts = Maps.newHashMap();
 
-    for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry : params.getHistoricalServers().entrySet()) {
-      String nodeType = entry.getKey();
+    for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry :
+        params.getDruidCluster().getCluster().entrySet()) {
+      String tier = entry.getKey();
 
-      if (currentlyMovingSegments.get(nodeType) == null) {
-        currentlyMovingSegments.put(nodeType, new ConcurrentHashMap<String, BalancerSegmentHolder>());
+      if (currentlyMovingSegments.get(tier) == null) {
+        currentlyMovingSegments.put(tier, new ConcurrentHashMap<String, BalancerSegmentHolder>());
       }
 
-      if (!currentlyMovingSegments.get(nodeType).isEmpty()) {
-        reduceLifetimes(nodeType);
+      if (!currentlyMovingSegments.get(tier).isEmpty()) {
+        reduceLifetimes(tier);
         log.info(
             "[%s]: Still waiting on %,d segments to be moved",
-            nodeType,
+            tier,
             currentlyMovingSegments.size()
         );
         continue;
@@ -110,7 +111,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
       if (serversByPercentUsed.size() <= 1) {
         log.info(
             "[%s]: No unique values found for highest and lowest percent used servers: nothing to balance",
-            nodeType
+            tier
         );
         return params;
       }
@@ -122,13 +123,13 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
       log.info(
           "[%s]: Percent difference in percent size used between highest/lowest servers: %s%%",
-          nodeType,
+          tier,
           analyzer.getPercentDiff()
       );
 
       log.info(
           "[%s]: Highest percent used [%s]: size used[%s], percent used[%s%%]",
-          nodeType,
+          tier,
           highestPercentUsedServer.getServer().getName(),
           highestPercentUsedServer.getSizeUsed(),
           highestPercentUsedServer.getPercentUsed()
@@ -136,7 +137,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
       log.info(
           "[%s]: Lowest percent used [%s]: size used[%s], percent used[%s%%]",
-          nodeType,
+          tier,
           lowestPercentUsedServer.getServer().getName(),
           lowestPercentUsedServer.getSizeUsed(),
           lowestPercentUsedServer.getPercentUsed()
@@ -200,17 +201,20 @@ public class DruidMasterBalancer implements DruidMasterHelper
                 @Override
                 protected void execute()
                 {
-                  currentlyMovingSegments.get(server.getSubType()).remove(segmentName, segment);
+                  Map<String, BalancerSegmentHolder> movingSegments = currentlyMovingSegments.get(server.getTier());
+                  if (movingSegments != null) {
+                    movingSegments.remove(segmentName);
+                  }
                 }
               }
           );
-          currentlyMovingSegments.get(server.getSubType()).put(segmentName, segment);
+          currentlyMovingSegments.get(server.getTier()).put(segmentName, segment);
         }
         catch (Exception e) {
           log.makeAlert(e, String.format("[%s] : Moving exception", segmentName)).emit();
         }
       } else {
-        currentlyMovingSegments.get(server.getSubType()).remove(segment);
+        currentlyMovingSegments.get(server.getTier()).remove(segment);
       }
     }
   }

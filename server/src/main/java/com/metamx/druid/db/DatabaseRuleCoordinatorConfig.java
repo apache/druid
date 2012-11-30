@@ -17,24 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client;
+package com.metamx.druid.db;
 
 import org.skife.config.Config;
-import org.skife.config.Default;
 
 /**
  */
-public abstract class DruidServerConfig
+public abstract class DatabaseRuleCoordinatorConfig
 {
-  @Config("druid.host")
-  public abstract String getServerName();
+  @Config("druid.database.ruleTable")
+  public abstract String getRuleTable();
 
-  @Config("druid.host")
-  public abstract String getHost();
+  @Config("druid.database.defaultDatasource")
+  public abstract String getDefaultDatasource();
 
-  @Config("druid.server.maxSize")
-  public abstract long getMaxSize();
-
-  @Config("druid.server.subType")
-  public abstract String getSubType();
+  @Config("druid.database.ruleVersion")
+  public abstract String getRuleVersion();
 }

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.master;
 
+import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
@@ -39,32 +40,33 @@ public class DruidMasterLogger implements DruidMasterHelper
   @Override
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
-    final Set<Map.Entry<String, LoadQueuePeon>> peonEntries = params.getLoadManagementPeons().entrySet();
-
     for (String msg : params.getMessages()) {
       log.info(msg);
     }
 
     log.info("Load Queues:");
-    for (Map.Entry<String, LoadQueuePeon> entry : peonEntries) {
-      LoadQueuePeon queuePeon = entry.getValue();
-      DruidServer server = params.getAvailableServerMap().get(entry.getKey());
-      log.info(
-          "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d bytes queued, %,d bytes served.",
-          server.getName(),
-          server.getType(),
-          server.getSubType(),
-          queuePeon.getSegmentsToLoad().size(),
-          queuePeon.getSegmentsToDrop().size(),
-          queuePeon.getLoadQueueSize(),
-          server.getCurrSize()
-      );
-      if (log.isDebugEnabled()) {
-        for (DataSegment segment : queuePeon.getSegmentsToLoad()) {
-          log.debug("Segment to load[%s]", segment);
-        }
-        for (DataSegment segment : queuePeon.getSegmentsToDrop()) {
-          log.debug("Segment to drop[%s]", segment);
+    DruidCluster cluster = params.getDruidCluster();
+    for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
+      for (ServerHolder serverHolder : serverHolders) {
+        DruidServer server = serverHolder.getServer();
+        LoadQueuePeon queuePeon = serverHolder.getPeon();
+        log.info(
+            "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d bytes queued, %,d bytes served.",
+            server.getName(),
+            server.getType(),
+            server.getTier(),
+            queuePeon.getSegmentsToLoad().size(),
+            queuePeon.getSegmentsToDrop().size(),
+            queuePeon.getLoadQueueSize(),
+            server.getCurrSize()
+        );
+        if (log.isDebugEnabled()) {
+          for (DataSegment segment : queuePeon.getSegmentsToLoad()) {
+            log.debug("Segment to load[%s]", segment);
+          }
+          for (DataSegment segment : queuePeon.getSegmentsToDrop()) {
+            log.debug("Segment to drop[%s]", segment);
+          }
         }
       }
     }
@@ -72,6 +74,7 @@ public class DruidMasterLogger implements DruidMasterHelper
     final ServiceEmitter emitter = params.getEmitter();
 
     // Emit master metrics
+    final Set<Map.Entry<String, LoadQueuePeon>> peonEntries = params.getLoadManagementPeons().entrySet();
     for (Map.Entry<String, LoadQueuePeon> entry : peonEntries) {
       String serverName = entry.getKey();
       LoadQueuePeon queuePeon = entry.getValue();

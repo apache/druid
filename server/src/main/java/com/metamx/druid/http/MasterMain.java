@@ -34,6 +34,8 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.client.ServerInventoryManagerConfig;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.coordination.DruidClusterInfoConfig;
+import com.metamx.druid.db.DatabaseRuleCoordinator;
+import com.metamx.druid.db.DatabaseRuleCoordinatorConfig;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.db.DatabaseSegmentManagerConfig;
 import com.metamx.druid.db.DbConnector;
@@ -123,6 +125,11 @@ public class MasterMain
         configFactory.build(DatabaseSegmentManagerConfig.class),
         dbi
     );
+    final DatabaseRuleCoordinator databaseRuleCoordinator = new DatabaseRuleCoordinator(
+        jsonMapper,
+        configFactory.build(DatabaseRuleCoordinatorConfig.class),
+        dbi
+    );
 
     final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
     final MonitorScheduler healthMonitor = new MonitorScheduler(
@@ -170,13 +177,12 @@ public class MasterMain
         jsonMapper,
         databaseSegmentManager,
         serverInventoryManager,
+        databaseRuleCoordinator,
         masterYp,
         emitter,
         scheduledExecutorFactory,
         new ConcurrentHashMap<String, LoadQueuePeon>(),
-        serviceProvider,
-        dbi,
-        configFactory
+        serviceProvider
     );
     lifecycle.addManagedInstance(master);
 
@@ -206,6 +212,7 @@ public class MasterMain
         new MasterServletModule(
             serverInventoryManager,
             databaseSegmentManager,
+            databaseRuleCoordinator,
             druidClusterInfo,
             master,
             jsonMapper
@@ -219,7 +226,7 @@ public class MasterMain
       @Override
       public boolean doLocal()
       {
-        return ((master != null) && master.isClusterMaster());
+        return master.isClusterMaster();
       }
 
       @Override
@@ -239,7 +246,7 @@ public class MasterMain
     final Context staticContext = new Context(server, "/static", Context.SESSIONS);
     staticContext.addServlet(new ServletHolder(new RedirectServlet(redirectInfo)), "/*");
 
-    staticContext.setResourceBase(ServerMain.class.getClassLoader().getResource("static").toExternalForm());
+    staticContext.setResourceBase(ComputeMain.class.getClassLoader().getResource("static").toExternalForm());
 
     final Context root = new Context(server, "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
