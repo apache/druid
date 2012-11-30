@@ -133,7 +133,7 @@ public class ZkCoordinatorTest
               @Override
               public String getSubType()
               {
-                return null;
+                return "normal";
               }
             },
             "dummyType"

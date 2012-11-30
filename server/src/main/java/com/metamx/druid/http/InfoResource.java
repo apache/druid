@@ -296,9 +296,10 @@ public class InfoResource
       final List<Rule> rules
   )
   {
-    return Response.status(Response.Status.OK)
-                   .entity(databaseRuleCoordinator.overrideRule(dataSourceName, rules))
-                   .build();
+    if (databaseRuleCoordinator.overrideRule(dataSourceName, rules)) {
+      return Response.status(Response.Status.OK).build();
+    }
+    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
   }
 
   @GET
