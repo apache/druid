@@ -75,7 +75,7 @@ public class DruidServer implements Comparable
     this.host = host;
     this.maxSize = maxSize;
     this.type = type;
-    this.tier = tier == null ? "normal" : tier;
+    this.tier = tier;
 
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
     this.segments = new HashMap<String, DataSegment>();
