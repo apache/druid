@@ -117,8 +117,8 @@ public class MasterMain
 
     final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
     final DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
-    DbConnector.createSegmentTable(dbi, dbConnectorConfig);
-    DbConnector.createRuleTable(dbi, dbConnectorConfig);
+    DbConnector.createSegmentTable(dbi, PropUtils.getProperty(props, "druid.database.segmentTable"));
+    DbConnector.createRuleTable(dbi, PropUtils.getProperty(props, "druid.database.ruleTable"));
     final DatabaseSegmentManager databaseSegmentManager = new DatabaseSegmentManager(
         jsonMapper,
         scheduledExecutorFactory.create(1, "DatabaseSegmentManager-Exec--%d"),

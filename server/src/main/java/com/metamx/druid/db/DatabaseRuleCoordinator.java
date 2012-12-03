@@ -61,14 +61,14 @@ public class DatabaseRuleCoordinator
 
   public RuleMap getRuleMap()
   {
-    Map<String, List<Rule>> assignmentRules = getRules();
+    Map<String, List<Rule>> assignmentRules = getAllRules();
     return new RuleMap(
         assignmentRules,
         assignmentRules.get(config.getDefaultDatasource())
     );
   }
 
-  public Map<String, List<Rule>> getRules()
+  public Map<String, List<Rule>> getAllRules()
   {
     synchronized (lock) {
       return dbi.withHandle(

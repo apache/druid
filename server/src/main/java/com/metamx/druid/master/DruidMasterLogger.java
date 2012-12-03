@@ -30,6 +30,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -40,12 +41,86 @@ public class DruidMasterLogger implements DruidMasterHelper
   @Override
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
-    for (String msg : params.getMessages()) {
-      log.info(msg);
+    DruidCluster cluster = params.getDruidCluster();
+    MasterStats stats = params.getMasterStats();
+    ServiceEmitter emitter = params.getEmitter();
+
+    Map<String, AtomicLong> assigned = stats.getPerTierStats().get("assignedCount");
+    if (assigned != null) {
+      for (Map.Entry<String, AtomicLong> entry : assigned.entrySet()) {
+        log.info(
+            "[%s] : Assigned %s segments among %,d servers",
+            entry.getKey(), entry.getValue().get(), cluster.get(entry.getKey()).size()
+        );
+      }
     }
 
+    Map<String, AtomicLong> unassigned = stats.getPerTierStats().get("unassignedCount");
+    if (unassigned != null) {
+      for (Map.Entry<String, AtomicLong> entry : unassigned.entrySet()) {
+        emitter.emit(
+            new ServiceMetricEvent.Builder().build(
+                String.format("master/%s/unassigned/count", entry.getKey()),
+                entry.getValue().get()
+            )
+        );
+      }
+    }
+
+    Map<String, AtomicLong> sizes = stats.getPerTierStats().get("unassignedSize");
+    if (sizes != null) {
+      for (Map.Entry<String, AtomicLong> entry : sizes.entrySet()) {
+        emitter.emit(
+            new ServiceMetricEvent.Builder().build(
+                String.format("master/%s/unassigned/size", entry.getKey()),
+                entry.getValue().get()
+            )
+        );
+      }
+    }
+
+    Map<String, AtomicLong> dropped = stats.getPerTierStats().get("droppedCount");
+    if (dropped != null) {
+      for (Map.Entry<String, AtomicLong> entry : dropped.entrySet()) {
+        log.info(
+            "[%s] : Dropped %s segments among %,d servers",
+            entry.getKey(), entry.getValue().get(), cluster.get(entry.getKey()).size()
+        );
+      }
+    }
+
+    emitter.emit(
+        new ServiceMetricEvent.Builder().build(
+            "master/deleted/count", stats.getGlobalStats().get("deletedCount")
+        )
+    );
+
+    Map<String, AtomicLong> unneeded = stats.getPerTierStats().get("unneededCount");
+    if (unneeded != null) {
+      for (Map.Entry<String, AtomicLong> entry : unneeded.entrySet()) {
+        log.info(
+            "[%s] : Removed %s unneeded segments among %,d servers",
+            entry.getKey(), entry.getValue().get(), cluster.get(entry.getKey()).size()
+        );
+      }
+    }
+
+    emitter.emit(
+        new ServiceMetricEvent.Builder().build(
+            "master/overShadowed/count", stats.getGlobalStats().get("overShadowedCount")
+        )
+    );
+
+    Map<String, AtomicLong> moved = stats.getPerTierStats().get("movedCount");
+    if (moved != null) {
+      for (Map.Entry<String, AtomicLong> entry : moved.entrySet()) {
+        log.info(
+            "[%s] : Moved %,d segment(s)",
+            entry.getKey(), entry.getValue().get()
+        );
+      }
+    }
     log.info("Load Queues:");
-    DruidCluster cluster = params.getDruidCluster();
     for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         DruidServer server = serverHolder.getServer();
@@ -71,8 +146,6 @@ public class DruidMasterLogger implements DruidMasterHelper
       }
     }
 
-    final ServiceEmitter emitter = params.getEmitter();
-
     // Emit master metrics
     final Set<Map.Entry<String, LoadQueuePeon>> peonEntries = params.getLoadManagementPeons().entrySet();
     for (Map.Entry<String, LoadQueuePeon> entry : peonEntries) {
@@ -97,8 +170,6 @@ public class DruidMasterLogger implements DruidMasterHelper
           )
       );
     }
-    emitter.emit(new ServiceMetricEvent.Builder().build("master/unassigned/count", params.getUnassignedCount()));
-    emitter.emit(new ServiceMetricEvent.Builder().build("master/unassigned/size", params.getUnassignedSize()));
 
     // Emit segment metrics
     CountingMap<String> segmentSizes = new CountingMap<String>();

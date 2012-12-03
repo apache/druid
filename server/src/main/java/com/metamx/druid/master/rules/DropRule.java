@@ -22,8 +22,7 @@ package com.metamx.druid.master.rules;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
-import com.metamx.druid.master.stats.AssignStat;
-import com.metamx.druid.master.stats.DropStat;
+import com.metamx.druid.master.MasterStats;
 
 /**
  * DropRules indicate when segments should be completely removed from the cluster.
@@ -31,15 +30,11 @@ import com.metamx.druid.master.stats.DropStat;
 public abstract class DropRule implements Rule
 {
   @Override
-  public AssignStat runAssign(DruidMasterRuntimeParams params, DataSegment segment)
+  public MasterStats run(DruidMaster master, DruidMasterRuntimeParams params, DataSegment segment)
   {
-    return new AssignStat(null, 0, 0);
-  }
-
-  @Override
-  public DropStat runDrop(DruidMaster master, DruidMasterRuntimeParams params, DataSegment segment)
-  {
+    MasterStats stats = new MasterStats();
     master.removeSegment(segment);
-    return new DropStat(null, 1);
+    stats.addToGlobalStat("deletedCount", 1);
+    return stats;
   }
 }

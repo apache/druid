@@ -68,17 +68,12 @@ public class SegmentReplicantLookup
 
   private final Table<String, String, Integer> table;
 
-  public SegmentReplicantLookup()
-  {
-    this.table = HashBasedTable.create();
-  }
-
-  public SegmentReplicantLookup(Table<String, String, Integer> table)
+  private SegmentReplicantLookup(Table<String, String, Integer> table)
   {
     this.table = table;
   }
 
-  public Map<String, Integer> gettiers(String segmentId)
+  public Map<String, Integer> getTiers(String segmentId)
   {
     Map<String, Integer> retVal = table.row(segmentId);
     return (retVal == null) ? Maps.<String, Integer>newHashMap() : retVal;

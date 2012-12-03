@@ -22,17 +22,14 @@ package com.metamx.druid.master.rules;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.common.Pair;
+import com.metamx.common.ISE;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.collect.CountingMap;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
 import com.metamx.druid.master.LoadPeonCallback;
+import com.metamx.druid.master.MasterStats;
 import com.metamx.druid.master.ServerHolder;
-import com.metamx.druid.master.stats.AssignStat;
-import com.metamx.druid.master.stats.DropStat;
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.AlertEvent;
 
 import java.util.List;
 import java.util.Map;
@@ -45,26 +42,39 @@ public abstract class LoadRule implements Rule
   private static final EmittingLogger log = new EmittingLogger(LoadRule.class);
 
   @Override
-  public AssignStat runAssign(DruidMasterRuntimeParams params, DataSegment segment)
+  public MasterStats run(DruidMaster master, DruidMasterRuntimeParams params, DataSegment segment)
   {
-    int assignedCount = 0;
-    int unassignedCount = 0;
-    long unassignedSize = 0;
+    MasterStats stats = new MasterStats();
 
-    int expectedReplicants = getReplicationFactor();
-    int actualReplicants = params.getSegmentReplicantLookup().lookup(segment.getIdentifier(), gettier());
+    int expectedReplicants = getReplicants();
+    int actualReplicants = params.getSegmentReplicantLookup().lookup(segment.getIdentifier(), getTier());
 
-    MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getServersByTier(gettier());
+    MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getServersByTier(getTier());
     if (serverQueue == null) {
-      log.makeAlert("No holders found for tier[%s]", gettier()).emit();
-      return new AssignStat(new Pair<String, Integer>(gettier(), 0), 0, 0);
+      log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", getTier()).emit();
+      throw new ISE("Tier[%s] has no servers! Check your cluster configuration!", getTier());
     }
+
+    stats.accumulate(assign(expectedReplicants, actualReplicants, serverQueue, segment));
+    stats.accumulate(drop(expectedReplicants, actualReplicants, segment, params));
+
+    return stats;
+  }
+
+  private MasterStats assign(
+      int expectedReplicants,
+      int actualReplicants,
+      MinMaxPriorityQueue<ServerHolder> serverQueue,
+      DataSegment segment
+  )
+  {
+    MasterStats stats = new MasterStats();
 
     List<ServerHolder> assignedServers = Lists.newArrayList();
     while (actualReplicants < expectedReplicants) {
       ServerHolder holder = serverQueue.pollFirst();
       if (holder == null) {
-        log.warn("Not enough %s servers[%d] to assign segments!!!", gettier(), serverQueue.size());
+        log.warn("Not enough %s servers[%d] to assign segments!!!", getTier(), serverQueue.size());
         break;
       }
       if (holder.containsSegment(segment)) {
@@ -78,19 +88,17 @@ public abstract class LoadRule implements Rule
             holder.getAvailableSize(),
             segment
         );
-        params.getEmitter().emit(
-            new AlertEvent.Builder().build(
-                "Not enough node capacity",
-                ImmutableMap.<String, Object>builder()
-                            .put("segmentSkipped", segment.toString())
-                            .put("closestNode", holder.getServer().toString())
-                            .put("availableSize", holder.getAvailableSize())
-                            .build()
-            )
-        );
+        log.makeAlert(
+            "Not enough node capacity",
+            ImmutableMap.<String, Object>builder()
+                        .put("segmentSkipped", segment.toString())
+                        .put("closestNode", holder.getServer().toString())
+                        .put("availableSize", holder.getAvailableSize())
+                        .build()
+        ).emit();
         serverQueue.add(holder);
-        unassignedCount++;
-        unassignedSize += segment.getSize();
+        stats.addToTieredStat("unassignedCount", getTier(), 1);
+        stats.addToTieredStat("unassignedSize", getTier(), segment.getSize());
         break;
       }
 
@@ -106,39 +114,43 @@ public abstract class LoadRule implements Rule
       );
       assignedServers.add(holder);
 
-      ++assignedCount;
+      stats.addToTieredStat("assignedCount", getTier(), 1);
       ++actualReplicants;
     }
     serverQueue.addAll(assignedServers);
 
-    return new AssignStat(new Pair<String, Integer>(gettier(), assignedCount), unassignedCount, unassignedSize);
+    return stats;
   }
 
-  @Override
-  public DropStat runDrop(DruidMaster master, DruidMasterRuntimeParams params, DataSegment segment)
+  private MasterStats drop(
+      int expectedReplicants,
+      int actualReplicants,
+      DataSegment segment,
+      DruidMasterRuntimeParams params
+  )
   {
-    CountingMap<String> droppedCounts = new CountingMap<String>();
-    int expectedNumReplicants = getReplicationFactor();
-    int actualNumReplicants = params.getSegmentReplicantLookup().lookup(
-        segment.getIdentifier(),
-        gettier()
-    );
+    MasterStats stats = new MasterStats();
 
-    if (actualNumReplicants < expectedNumReplicants) {
-      return new DropStat(droppedCounts, 0);
+    if (!params.hasDeletionWaitTimeElapsed()) {
+      return stats;
     }
 
-    Map<String, Integer> replicantsByType = params.getSegmentReplicantLookup().gettiers(segment.getIdentifier());
+    // Make sure we have enough actual replicants in the cluster before doing anything
+    if (actualReplicants < expectedReplicants) {
+      return stats;
+    }
+
+    Map<String, Integer> replicantsByType = params.getSegmentReplicantLookup().getTiers(segment.getIdentifier());
 
     for (Map.Entry<String, Integer> entry : replicantsByType.entrySet()) {
       String tier = entry.getKey();
       int actualNumReplicantsForType = entry.getValue();
-      int expectedNumReplicantsForType = getReplicationFactor(tier);
+      int expectedNumReplicantsForType = getReplicants(tier);
 
       MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().get(tier);
       if (serverQueue == null) {
         log.makeAlert("No holders found for tier[%s]", entry.getKey()).emit();
-        return new DropStat(droppedCounts, 0);
+        return stats;
       }
 
       List<ServerHolder> droppedServers = Lists.newArrayList();
@@ -161,17 +173,17 @@ public abstract class LoadRule implements Rule
         );
         droppedServers.add(holder);
         --actualNumReplicantsForType;
-        droppedCounts.add(tier, 1);
+        stats.addToTieredStat("droppedCount", tier, 1);
       }
       serverQueue.addAll(droppedServers);
     }
 
-    return new DropStat(droppedCounts, 0);
+    return stats;
   }
 
-  public abstract int getReplicationFactor();
+  public abstract int getReplicants();
 
-  public abstract int getReplicationFactor(String tier);
+  public abstract int getReplicants(String tier);
 
-  public abstract String gettier();
+  public abstract String getTier();
 }

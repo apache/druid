@@ -19,7 +19,6 @@
 
 package com.metamx.druid.master;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.guava.Comparators;
@@ -29,24 +28,19 @@ import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.collect.CountingMap;
-import com.metamx.druid.master.rules.Rule;
-import com.metamx.druid.master.stats.DropStat;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
-public class DruidMasterDropper implements DruidMasterHelper
+public class DruidMasterCleanup implements DruidMasterHelper
 {
-  private static final Logger log = new Logger(DruidMasterDropper.class);
+  private static final Logger log = new Logger(DruidMasterCleanup.class);
 
   private final DruidMaster master;
 
-  public DruidMasterDropper(
+  public DruidMasterCleanup(
       DruidMaster master
   )
   {
@@ -56,13 +50,11 @@ public class DruidMasterDropper implements DruidMasterHelper
   @Override
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
-    final CountingMap<String> droppedCounts = new CountingMap<String>();
-    int deletedCount = 0;
-
+    MasterStats stats = new MasterStats();
     Set<DataSegment> availableSegments = params.getAvailableSegments();
     DruidCluster cluster = params.getDruidCluster();
 
-    // Drop segments that are not needed
+    // Drop segments that no longer exist in the available segments configuration
     for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         DruidServer server = serverHolder.getServer();
@@ -82,7 +74,7 @@ public class DruidMasterDropper implements DruidMasterHelper
                   }
                 }
                 );
-                droppedCounts.add(server.getTier(), 1);
+                stats.addToTieredStat("unneededCount", server.getTier(), 1);
               }
             }
           }
@@ -92,7 +84,7 @@ public class DruidMasterDropper implements DruidMasterHelper
 
     // Delete segments that are old
     // Unservice old partitions if we've had enough time to make sure we aren't flapping with old data
-    if (System.currentTimeMillis() - params.getStartTime() > params.getMillisToWaitBeforeDeleting()) {
+    if (params.hasDeletionWaitTimeElapsed()) {
       Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = Maps.newHashMap();
 
       for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
@@ -118,39 +110,25 @@ public class DruidMasterDropper implements DruidMasterHelper
       for (VersionedIntervalTimeline<String, DataSegment> timeline : timelines.values()) {
         for (TimelineObjectHolder<String, DataSegment> holder : timeline.findOvershadowed()) {
           for (DataSegment dataSegment : holder.getObject().payloads()) {
-            log.info("Deleting[%s].", dataSegment);
             master.removeSegment(dataSegment);
-            ++deletedCount;
+            stats.addToGlobalStat("overShadowedCount", 1);
           }
         }
       }
-
-      for (DataSegment segment : availableSegments) {
-        Rule rule = params.getSegmentRuleLookup().lookup(segment.getIdentifier());
-        DropStat stat = rule.runDrop(master, params, segment);
-        deletedCount += stat.getDeletedCount();
-        if (stat.getDroppedCount() != null) {
-          droppedCounts.putAll(stat.getDroppedCount());
-        }
-      }
     }
 
-    List<String> dropMsgs = Lists.newArrayList();
-    for (Map.Entry<String, AtomicLong> entry : droppedCounts.entrySet()) {
-      dropMsgs.add(
-          String.format(
-              "[%s] : Dropped %s segments among %,d servers",
-              entry.getKey(), droppedCounts.get(entry.getKey()), cluster.get(entry.getKey()).size()
-          )
-      );
-    }
+    //List<String> removedMsgs = Lists.newArrayList();
+    //for (Map.Entry<String, AtomicLong> entry : unneededSegments.entrySet()) {
+    //  removedMsgs.add(
+    //      String.format(
+    //          "[%s] : Removed %s unneeded segments among %,d servers",
+    //          entry.getKey(), entry.getValue(), cluster.get(entry.getKey()).size()
+    //      )
+    //  );
+    //}
 
     return params.buildFromExisting()
-                 .withMessages(dropMsgs)
-                 .withMessage(String.format("Deleted %,d segments", deletedCount))
-                 .withDroppedCount(droppedCounts)
-                 .withDeletedCount(deletedCount)
+                 .withMasterStats(stats)
                  .build();
-
   }
 }

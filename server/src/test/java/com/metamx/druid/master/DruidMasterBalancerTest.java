@@ -155,6 +155,6 @@ public class DruidMasterBalancerTest
                                 .build();
 
     params = new DruidMasterBalancer(master, new BalancerAnalyzer()).run(params);
-    Assert.assertTrue(params.getMovedCount().get("normal") > 0);
+    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
   }
 }

@@ -32,18 +32,18 @@ public class IntervalLoadRule extends LoadRule
   private static final Logger log = new Logger(IntervalLoadRule.class);
 
   private final Interval interval;
-  private final Integer replicationFactor;
+  private final Integer replicants;
   private final String tier;
 
   @JsonCreator
   public IntervalLoadRule(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("replicationFactor") Integer replicationFactor,
+      @JsonProperty("replicants") Integer replicants,
       @JsonProperty("tier") String tier
   )
   {
     this.interval = interval;
-    this.replicationFactor = (replicationFactor == null) ? 2 : replicationFactor; //TODO:config
+    this.replicants = (replicants == null) ? 2 : replicants;
     this.tier = tier;
   }
 
@@ -56,20 +56,20 @@ public class IntervalLoadRule extends LoadRule
 
   @Override
   @JsonProperty
-  public int getReplicationFactor()
+  public int getReplicants()
   {
-    return replicationFactor;
+    return replicants;
   }
 
   @Override
-  public int getReplicationFactor(String tier)
+  public int getReplicants(String tier)
   {
-    return (this.tier.equalsIgnoreCase(tier)) ? replicationFactor : 0;
+    return (this.tier.equalsIgnoreCase(tier)) ? replicants : 0;
   }
 
   @Override
   @JsonProperty
-  public String gettier()
+  public String getTier()
   {
     return tier;
   }

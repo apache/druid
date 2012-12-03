@@ -85,7 +85,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
   @Override
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
-    Map<String, Integer> movedCounts = Maps.newHashMap();
+    MasterStats stats = new MasterStats();
 
     for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry :
         params.getDruidCluster().getCluster().entrySet()) {
@@ -149,22 +149,12 @@ public class DruidMasterBalancer implements DruidMasterHelper
           analyzer.findSegmentsToMove(highestPercentUsedServer.getServer()),
           params
       );
-    }
 
-    List<String> moveMsgs = Lists.newArrayList();
-    for (Map.Entry<String, ConcurrentHashMap<String, BalancerSegmentHolder>> entry : currentlyMovingSegments.entrySet()) {
-      movedCounts.put(entry.getKey(), entry.getValue().size());
-      moveMsgs.add(
-          String.format(
-              "[%s] : Moved %,d segment(s)",
-              entry.getKey(), entry.getValue().size()
-          )
-      );
+      stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
     }
 
     return params.buildFromExisting()
-                 .withMessages(moveMsgs)
-                 .withMovedCount(movedCounts)
+                 .withMasterStats(stats)
                  .build();
   }
 

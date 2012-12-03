@@ -27,6 +27,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
+import com.metamx.druid.master.rules.IntervalDropRule;
 import com.metamx.druid.master.rules.IntervalLoadRule;
 import com.metamx.druid.master.rules.Rule;
 import com.metamx.druid.master.rules.RuleMap;
@@ -47,12 +48,12 @@ import java.util.List;
 
 /**
  */
-public class DruidMasterAssignerTest
+public class DruidMasterRuleRunnerTest
 {
   private DruidMaster master;
   private LoadQueuePeon mockPeon;
   private List<DataSegment> availableSegments;
-  private DruidMasterAssigner assigner;
+  private DruidMasterRuleRunner ruleRunner;
   private ServiceEmitter emitter;
 
   @Before
@@ -81,25 +82,30 @@ public class DruidMasterAssignerTest
       start = start.plusHours(1);
     }
 
-    assigner = new DruidMasterAssigner(master);
+    ruleRunner = new DruidMasterRuleRunner(master);
 
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().anyTimes();
+    mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    EasyMock.expectLastCall().anyTimes();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).anyTimes();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
     EasyMock.replay(mockPeon);
-
-    master.decrementRemovedSegmentsLifetime();
-    EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.replay(master);
   }
 
   @After
   public void tearDown() throws Exception
   {
-    EasyMock.verify(mockPeon);
   }
 
+  /**
+   * Nodes:
+   * hot - 1 replicant
+   * normal - 1 replicant
+   * cold - 1 replicant
+   *
+   * @throws Exception
+   */
   @Test
   public void testRunThreeTiersOneReplicant() throws Exception
   {
@@ -165,27 +171,33 @@ public class DruidMasterAssignerTest
         Lists.<Rule>newArrayList()
     );
 
-    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
-
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withSegmentRuleLookup(segmentRuleLookup)
-            .withSegmentReplicantLookup(new SegmentReplicantLookup())
+            .withRuleMap(ruleMap)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
 
-    DruidMasterRuntimeParams afterParams = assigner.run(params);
+    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
+    MasterStats stats = afterParams.getMasterStats();
 
-    Assert.assertTrue(afterParams.getAssignedCount().get("hot").get() == 6);
-    Assert.assertTrue(afterParams.getAssignedCount().get("normal").get() == 6);
-    Assert.assertTrue(afterParams.getAssignedCount().get("cold").get() == 12);
-    Assert.assertTrue(afterParams.getUnassignedCount() == 0);
-    Assert.assertTrue(afterParams.getUnassignedSize() == 0);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 6);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("normal").get() == 6);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("cold").get() == 12);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
-    EasyMock.verify(master);
+    EasyMock.verify(mockPeon);
   }
 
+  /**
+   * Nodes:
+   * hot - 2 replicants
+   * cold - 1 replicant
+   *
+   * @throws Exception
+   */
   @Test
   public void testRunTwoTiersTwoReplicants() throws Exception
   {
@@ -245,26 +257,33 @@ public class DruidMasterAssignerTest
         Lists.<Rule>newArrayList()
     );
 
-    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
-
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withSegmentRuleLookup(segmentRuleLookup)
-            .withSegmentReplicantLookup(new SegmentReplicantLookup())
+            .withRuleMap(ruleMap)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
 
-    DruidMasterRuntimeParams afterParams = assigner.run(params);
+    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
+    MasterStats stats = afterParams.getMasterStats();
 
-    Assert.assertTrue(afterParams.getAssignedCount().get("hot").get() == 12);
-    Assert.assertTrue(afterParams.getAssignedCount().get("cold").get() == 18);
-    Assert.assertTrue(afterParams.getUnassignedCount() == 0);
-    Assert.assertTrue(afterParams.getUnassignedSize() == 0);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 12);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("cold").get() == 18);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
-    EasyMock.verify(master);
+    EasyMock.verify(mockPeon);
   }
 
+  /**
+   * Nodes:
+   * hot - 1 replicant
+   * normal - 1 replicant
+   * cold - 1 replicant
+   *
+   * @throws Exception
+   */
   @Test
   public void testRunThreeTiersWithDefaultRules() throws Exception
   {
@@ -331,30 +350,43 @@ public class DruidMasterAssignerTest
         )
     );
 
-    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
-
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withSegmentRuleLookup(segmentRuleLookup)
-            .withSegmentReplicantLookup(new SegmentReplicantLookup())
+            .withRuleMap(ruleMap)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
 
-    DruidMasterRuntimeParams afterParams = assigner.run(params);
+    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
+    MasterStats stats = afterParams.getMasterStats();
 
-    Assert.assertTrue(afterParams.getAssignedCount().get("hot").get() == 6);
-    Assert.assertTrue(afterParams.getAssignedCount().get("normal").get() == 6);
-    Assert.assertTrue(afterParams.getAssignedCount().get("cold").get() == 12);
-    Assert.assertTrue(afterParams.getUnassignedCount() == 0);
-    Assert.assertTrue(afterParams.getUnassignedSize() == 0);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 6);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("normal").get() == 6);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("cold").get() == 12);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
-    EasyMock.verify(master);
+    EasyMock.verify(mockPeon);
   }
 
+  /**
+   * Nodes:
+   * hot - 1 replicant
+   * normal - 1 replicant
+   *
+   * @throws Exception
+   */
   @Test
   public void testRunTwoTiersWithDefaultRulesExistingSegments() throws Exception
   {
+    DruidServer normServer = new DruidServer(
+        "serverNorm",
+        "hostNorm",
+        1000,
+        "historical",
+        "normal"
+    );
     DruidCluster druidCluster = new DruidCluster(
         ImmutableMap.of(
             "hot",
@@ -376,13 +408,7 @@ public class DruidMasterAssignerTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        new DruidServer(
-                            "serverNorm",
-                            "hostNorm",
-                            1000,
-                            "historical",
-                            "normal"
-                        ),
+                        normServer,
                         mockPeon
                     )
                 )
@@ -402,24 +428,29 @@ public class DruidMasterAssignerTest
         )
     );
 
-    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
+    for (DataSegment availableSegment : availableSegments) {
+      normServer.addDataSegment(availableSegment.getIdentifier(), availableSegment);
+    }
+
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withSegmentRuleLookup(segmentRuleLookup)
+            .withRuleMap(ruleMap)
             .withSegmentReplicantLookup(segmentReplicantLookup)
             .build();
 
-    DruidMasterRuntimeParams afterParams = assigner.run(params);
+    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
+    MasterStats stats = afterParams.getMasterStats();
 
-    Assert.assertTrue(afterParams.getAssignedCount().get("hot").get() == 12);
-    Assert.assertTrue(afterParams.getUnassignedCount() == 0);
-    Assert.assertTrue(afterParams.getUnassignedSize() == 0);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 12);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("normal").get() == 0);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
-    EasyMock.verify(master);
+    EasyMock.verify(mockPeon);
   }
 
   @Test
@@ -461,24 +492,307 @@ public class DruidMasterAssignerTest
         )
     );
 
-    SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(availableSegments, ruleMap);
-
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
             .withEmitter(emitter)
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withSegmentRuleLookup(segmentRuleLookup)
-            .withSegmentReplicantLookup(new SegmentReplicantLookup())
+            .withRuleMap(ruleMap)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
 
-    DruidMasterRuntimeParams afterParams = assigner.run(params);
+    boolean exceptionOccurred = false;
+    try {
+      ruleRunner.run(params);
+    }
+    catch (Exception e) {
+      exceptionOccurred = true;
+    }
 
-    Assert.assertTrue(afterParams.getAssignedCount().get("hot").get() == 0);
-    Assert.assertTrue(afterParams.getAssignedCount().get("normal").get() == 12);
-    Assert.assertTrue(afterParams.getUnassignedCount() == 0);
-    Assert.assertTrue(afterParams.getUnassignedSize() == 0);
+    Assert.assertTrue(exceptionOccurred);
 
     EasyMock.verify(emitter);
+    EasyMock.verify(mockPeon);
+  }
+
+  @Test
+  public void testDropRemove() throws Exception
+  {
+    master.removeSegment(EasyMock.<DataSegment>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.replay(master);
+
+    DruidServer server = new DruidServer(
+        "serverNorm",
+        "hostNorm",
+        1000,
+        "historical",
+        "normal"
+    );
+    for (DataSegment segment : availableSegments) {
+      server.addDataSegment(segment.getIdentifier(), segment);
+    }
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server,
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
+    RuleMap ruleMap = new RuleMap(
+        ImmutableMap.<String, List<Rule>>of(
+            "test",
+            Lists.<Rule>newArrayList(
+                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "normal"),
+                new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
+            )
+        ),
+        Lists.<Rule>newArrayList()
+    );
+
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+
+    DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
+        .withDruidCluster(druidCluster)
+        .withMillisToWaitBeforeDeleting(0L)
+        .withAvailableSegments(availableSegments)
+        .withRuleMap(ruleMap)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
+        .build();
+
+    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
+    MasterStats stats = afterParams.getMasterStats();
+
+    Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
+
+    EasyMock.verify(master);
+  }
+
+  @Test
+  public void testDropTooManyInSameTier() throws Exception
+  {
+    DruidServer server1 = new DruidServer(
+        "serverNorm",
+        "hostNorm",
+        1000,
+        "historical",
+        "normal"
+    );
+    server1.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
+
+    DruidServer server2 = new DruidServer(
+        "serverNorm2",
+        "hostNorm2",
+        1000,
+        "historical",
+        "normal"
+    );
+    for (DataSegment segment : availableSegments) {
+      server2.addDataSegment(segment.getIdentifier(), segment);
+    }
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server1,
+                        mockPeon
+                    ),
+                    new ServerHolder(
+                        server2,
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
+    RuleMap ruleMap = new RuleMap(
+        ImmutableMap.<String, List<Rule>>of(
+            "test",
+            Lists.<Rule>newArrayList(
+                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "normal")
+            )
+        ),
+        Lists.<Rule>newArrayList(
+            new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
+        )
+    );
+
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+
+    DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
+        .withDruidCluster(druidCluster)
+        .withMillisToWaitBeforeDeleting(0L)
+        .withAvailableSegments(availableSegments)
+        .withRuleMap(ruleMap)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
+        .build();
+
+    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
+    MasterStats stats = afterParams.getMasterStats();
+
+    Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 1);
+    Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
+
+    EasyMock.verify(mockPeon);
+  }
+
+  @Test
+  public void testDropTooManyInDifferentTiers() throws Exception
+  {
+    DruidServer server1 = new DruidServer(
+        "server1",
+        "host1",
+        1000,
+        "historical",
+        "hot"
+    );
+    server1.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
+    DruidServer server2 = new DruidServer(
+        "serverNorm2",
+        "hostNorm2",
+        1000,
+        "historical",
+        "normal"
+    );
+    for (DataSegment segment : availableSegments) {
+      server2.addDataSegment(segment.getIdentifier(), segment);
+    }
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server1,
+                        mockPeon
+                    )
+                )
+            ),
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server2,
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
+    RuleMap ruleMap = new RuleMap(
+        ImmutableMap.<String, List<Rule>>of(
+            "test",
+            Lists.<Rule>newArrayList(
+                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "hot")
+            )
+        ),
+        Lists.<Rule>newArrayList(
+            new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
+        )
+    );
+
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+
+    DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
+        .withDruidCluster(druidCluster)
+        .withMillisToWaitBeforeDeleting(0L)
+        .withAvailableSegments(availableSegments)
+        .withRuleMap(ruleMap)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
+        .build();
+
+    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
+    MasterStats stats = afterParams.getMasterStats();
+
+    Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 1);
+    Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
+
+    EasyMock.verify(mockPeon);
+  }
+
+  @Test
+  public void testDontDropInDifferentTiers() throws Exception
+  {
+    DruidServer server1 = new DruidServer(
+        "server1",
+        "host1",
+        1000,
+        "historical",
+        "hot"
+    );
+    DruidServer server2 = new DruidServer(
+        "serverNorm2",
+        "hostNorm2",
+        1000,
+        "historical",
+        "normal"
+    );
+    for (DataSegment segment : availableSegments) {
+      server2.addDataSegment(segment.getIdentifier(), segment);
+    }
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server1,
+                        mockPeon
+                    )
+                )
+            ),
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server2,
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
+    RuleMap ruleMap = new RuleMap(
+        ImmutableMap.<String, List<Rule>>of(
+            "test",
+            Lists.<Rule>newArrayList(
+                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "hot")
+            )
+        ),
+        Lists.<Rule>newArrayList(
+            new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
+        )
+    );
+
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+
+    DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
+        .withDruidCluster(druidCluster)
+        .withMillisToWaitBeforeDeleting(0L)
+        .withAvailableSegments(availableSegments)
+        .withRuleMap(ruleMap)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
+        .build();
+
+    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
+    MasterStats stats = afterParams.getMasterStats();
+
+    Assert.assertTrue(stats.getPerTierStats().get("droppedCount") == null);
+    Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
   }
 }

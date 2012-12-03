@@ -272,7 +272,7 @@ public class InfoResource
   public Response getRules()
   {
     return Response.status(Response.Status.OK)
-                   .entity(databaseRuleCoordinator.getRules())
+                   .entity(databaseRuleCoordinator.getAllRules())
                    .build();
   }
 

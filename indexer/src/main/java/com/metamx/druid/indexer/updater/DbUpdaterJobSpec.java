@@ -38,9 +38,6 @@ public class DbUpdaterJobSpec extends DbConnectorConfig implements UpdaterJobSpe
   @JsonProperty("segmentTable")
   public String segmentTable;
 
-  @JsonProperty("ruleTable")
-  public String ruleTable;
-
   @Override
   public String getDatabaseConnectURI()
   {
@@ -59,15 +56,8 @@ public class DbUpdaterJobSpec extends DbConnectorConfig implements UpdaterJobSpe
     return password;
   }
 
-  @Override
   public String getSegmentTable()
   {
     return segmentTable;
-  }
-
-  @Override
-  public String getRuleTable()
-  {
-    return ruleTable;
   }
 }

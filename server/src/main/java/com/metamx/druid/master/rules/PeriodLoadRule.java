@@ -34,18 +34,18 @@ public class PeriodLoadRule extends LoadRule
   private static final Logger log = new Logger(PeriodLoadRule.class);
 
   private final Period period;
-  private final Integer replicationFactor;
+  private final Integer replicants;
   private final String tier;
 
   @JsonCreator
   public PeriodLoadRule(
       @JsonProperty("period") String period,
-      @JsonProperty("replicationFactor") Integer replicationFactor,
+      @JsonProperty("replicants") Integer replicants,
       @JsonProperty("tier") String tier
   )
   {
-    this.period = (period == null || period.equalsIgnoreCase("all")) ? new Period("P1000Y") : new Period(period);
-    this.replicationFactor = (replicationFactor == null) ? 2 : replicationFactor; //TODO:config
+    this.period = (period == null || period.equalsIgnoreCase("all")) ? new Period("P5000Y") : new Period(period);
+    this.replicants = (replicants == null) ? 2 : replicants;
     this.tier = tier;
   }
 
@@ -63,19 +63,19 @@ public class PeriodLoadRule extends LoadRule
   }
 
   @JsonProperty
-  public int getReplicationFactor()
+  public int getReplicants()
   {
-    return replicationFactor;
+    return replicants;
   }
 
   @Override
-  public int getReplicationFactor(String tier)
+  public int getReplicants(String tier)
   {
-    return (this.tier.equalsIgnoreCase(tier)) ? replicationFactor : 0;
+    return (this.tier.equalsIgnoreCase(tier)) ? replicants : 0;
   }
 
   @JsonProperty
-  public String gettier()
+  public String getTier()
   {
     return tier;
   }

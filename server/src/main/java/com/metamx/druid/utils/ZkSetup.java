@@ -33,8 +33,8 @@ public class ZkSetup
 {
   public static void main(final String[] args)
   {
-    if (args.length != 6) {
-      System.out.println("Usage: <java invocation> zkConnect baseZkPath dbConnectionUrl dbUsername:password tableName ruleTableName");
+    if (args.length != 5) {
+      System.out.println("Usage: <java invocation> zkConnect baseZkPath dbConnectionUrl dbUsername:password tableName");
       System.out.println("This utility is deprecated, see DruidSetup instead.");
       System.exit(1);
     }
@@ -96,16 +96,10 @@ public class ZkSetup
       {
         return args[4];
       }
-
-      @Override
-      public String getRuleTable()
-      {
-        return args[5];
-      }
     };
 
     DbConnector dbConnector = new DbConnector(config);
 
-    DbConnector.createSegmentTable(dbConnector.getDBI(), config);
+    DbConnector.createSegmentTable(dbConnector.getDBI(), args[4]);
   }
 }

@@ -35,6 +35,6 @@ public abstract class DruidServerConfig
   @Config("druid.server.maxSize")
   public abstract long getMaxSize();
 
-  @Config("druid.server.subType")
-  public abstract String getSubType();
+  @Config("druid.server.tier")
+  public abstract String getTier();
 }

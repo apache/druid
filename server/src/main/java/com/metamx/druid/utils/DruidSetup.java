@@ -352,9 +352,6 @@ public class DruidSetup
 
     final DbConnectorConfig config = new DbConnectorConfig()
     {
-      {
-      }
-
       @Override
       public String getDatabaseConnectURI()
       {
@@ -378,18 +375,12 @@ public class DruidSetup
       {
         return tableName;
       }
-
-      @Override
-      public String getRuleTable()
-      {
-        return ruleTableName;
-      }
     };
 
     DbConnector dbConnector = new DbConnector(config);
 
-    DbConnector.createSegmentTable(dbConnector.getDBI(), config);
-
+    DbConnector.createSegmentTable(dbConnector.getDBI(), tableName);
+    DbConnector.createRuleTable(dbConnector.getDBI(), ruleTableName);
   }
 
   /**

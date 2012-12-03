@@ -35,26 +35,26 @@ public class DbConnector
 {
   private static final Logger log = new Logger(DbConnector.class);
 
-  public static void createSegmentTable(final DBI dbi, final DbConnectorConfig config)
+  public static void createSegmentTable(final DBI dbi, final String segmentTableName)
   {
     createTable(
         dbi,
-        config.getSegmentTable(),
+        segmentTableName,
         String.format(
             "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date TINYTEXT NOT NULL, start TINYTEXT NOT NULL, end TINYTEXT NOT NULL, partitioned BOOLEAN NOT NULL, version TINYTEXT NOT NULL, used BOOLEAN NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), INDEX(used), PRIMARY KEY (id))",
-            config.getSegmentTable()
+            segmentTableName
         )
     );
   }
 
-  public static void createRuleTable(final DBI dbi, final DbConnectorConfig config)
+  public static void createRuleTable(final DBI dbi, final String ruleTableName)
   {
     createTable(
         dbi,
-        config.getRuleTable(),
+        ruleTableName,
         String.format(
             "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, ruleVersion TINYTEXT NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), PRIMARY KEY (id))",
-            config.getRuleTable()
+            ruleTableName
         )
     );
   }

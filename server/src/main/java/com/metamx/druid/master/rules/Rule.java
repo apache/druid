@@ -22,8 +22,7 @@ package com.metamx.druid.master.rules;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
-import com.metamx.druid.master.stats.AssignStat;
-import com.metamx.druid.master.stats.DropStat;
+import com.metamx.druid.master.MasterStats;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 
@@ -43,7 +42,5 @@ public interface Rule
 
   public boolean appliesTo(DataSegment segment);
 
-  public AssignStat runAssign(DruidMasterRuntimeParams params, DataSegment segment);
-
-  public DropStat runDrop(DruidMaster master, DruidMasterRuntimeParams params, DataSegment segment);
+  public MasterStats run(DruidMaster master, DruidMasterRuntimeParams params, DataSegment segment);
 }

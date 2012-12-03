@@ -80,7 +80,7 @@ public class DruidCluster
     return cluster.isEmpty();
   }
 
-  public boolean isEmpty(String tier)
+  public boolean hasTier(String tier)
   {
     MinMaxPriorityQueue<ServerHolder> servers = cluster.get(tier);
     return (servers == null) || servers.isEmpty();

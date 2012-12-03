@@ -20,6 +20,7 @@
 package com.metamx.druid.master;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -50,6 +51,7 @@ import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -602,12 +604,8 @@ public class DruidMaster
 
                   // Find all historical servers, group them by subType and sort by ascending usage
                   final DruidCluster cluster = new DruidCluster();
-                  final Set<String> historicalServers = Sets.newHashSet();
-
                   for (DruidServer server : servers) {
                     if (server.getType().equalsIgnoreCase("historical")) {
-                      historicalServers.add(server.getName());
-
                       if (!loadManagementPeons.containsKey(server.getName())) {
                         String basePath = yp.combineParts(Arrays.asList(config.getLoadQueuePath(), server.getName()));
                         LoadQueuePeon loadQueuePeon = new LoadQueuePeon(yp, basePath, peonExec);
@@ -624,14 +622,24 @@ public class DruidMaster
                     }
                   }
 
-                  SegmentRuleLookup segmentRuleLookup = SegmentRuleLookup.make(
-                      params.getAvailableSegments(),
-                      databaseRuleCoordinator.getRuleMap()
-                  );
                   SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
 
                   // Stop peons for servers that aren't there anymore.
-                  for (String name : Sets.difference(historicalServers, loadManagementPeons.keySet())) {
+                  for (String name : Sets.difference(
+                      Sets.newHashSet(
+                          Collections2.transform(
+                              servers,
+                              new Function<DruidServer, String>()
+                              {
+                                @Override
+                                public String apply(@Nullable DruidServer input)
+                                {
+                                  return input.getName();
+                                }
+                              }
+                          )
+                      ), loadManagementPeons.keySet()
+                  )) {
                     log.info("Removing listener for server[%s] which is no longer there.", name);
                     LoadQueuePeon peon = loadManagementPeons.remove(name);
                     peon.stop();
@@ -639,15 +647,17 @@ public class DruidMaster
                     yp.unregisterListener(yp.combineParts(Arrays.asList(config.getLoadQueuePath(), name)), peon);
                   }
 
+                  decrementRemovedSegmentsLifetime();
+
                   return params.buildFromExisting()
                                .withDruidCluster(cluster)
-                               .withSegmentRuleLookup(segmentRuleLookup)
+                               .withRuleMap(databaseRuleCoordinator.getRuleMap())
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .build();
                 }
               },
-              new DruidMasterAssigner(DruidMaster.this),
-              new DruidMasterDropper(DruidMaster.this),
+              new DruidMasterRuleRunner(DruidMaster.this),
+              new DruidMasterCleanup(DruidMaster.this),
               new DruidMasterBalancer(DruidMaster.this, new BalancerAnalyzer()),
               new DruidMasterLogger()
           )
@@ -668,12 +678,13 @@ public class DruidMaster
                 @Override
                 public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
                 {
-                  log.info("Issued merge requests for %,d segments", params.getMergedSegmentCount());
+                  MasterStats stats = params.getMasterStats();
+                  log.info("Issued merge requests for %s segments", stats.getGlobalStats().get("mergedCount").get());
 
                   params.getEmitter().emit(
                       new ServiceMetricEvent.Builder().build(
                           "master/merge/count",
-                          params.getMergedSegmentCount()
+                          stats.getGlobalStats().get("mergedCount")
                       )
                   );
 

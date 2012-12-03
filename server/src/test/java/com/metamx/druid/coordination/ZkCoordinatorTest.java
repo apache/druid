@@ -131,7 +131,7 @@ public class ZkCoordinatorTest
               }
 
               @Override
-              public String getSubType()
+              public String getTier()
               {
                 return "normal";
               }

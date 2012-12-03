@@ -108,7 +108,7 @@ jQuery.fn = jQuery.prototype = {
 		}
 
 		// Handle $(DOMElement)
-		if ( selector.tier ) {
+		if ( selector.nodeType ) {
 			this.context = this[0] = selector;
 			this.length = 1;
 			return this;
@@ -518,7 +518,7 @@ jQuery.extend({
 		// Must be an Object.
 		// Because of IE, we also have to check the presence of the constructor property.
 		// Make sure that DOM nodes and window objects don't pass through, as well
-		if ( !obj || jQuery.type(obj) !== "object" || obj.tier || jQuery.isWindow( obj ) ) {
+		if ( !obj || jQuery.type(obj) !== "object" || obj.nodeType || jQuery.isWindow( obj ) ) {
 			return false;
 		}
 
@@ -1387,7 +1387,7 @@ jQuery.support = (function() {
 
 	support = {
 		// IE strips leading whitespace when .innerHTML is used
-		leadingWhitespace: ( div.firstChild.tier === 3 ),
+		leadingWhitespace: ( div.firstChild.nodeType === 3 ),
 
 		// Make sure that tbody elements aren't automatically inserted
 		// IE will insert them into empty tables
@@ -1693,7 +1693,7 @@ jQuery.extend({
 	},
 
 	hasData: function( elem ) {
-		elem = elem.tier ? jQuery.cache[ elem[jQuery.expando] ] : elem[ jQuery.expando ];
+		elem = elem.nodeType ? jQuery.cache[ elem[jQuery.expando] ] : elem[ jQuery.expando ];
 		return !!elem && !isEmptyDataObject( elem );
 	},
 
@@ -1708,7 +1708,7 @@ jQuery.extend({
 
 			// We have to handle DOM nodes and JS objects differently because IE6-7
 			// can't GC object references properly across the DOM-JS boundary
-			isNode = elem.tier,
+			isNode = elem.nodeType,
 
 			// Only DOM nodes need the global jQuery cache; JS object data is
 			// attached directly to the object so GC can occur automatically
@@ -1808,7 +1808,7 @@ jQuery.extend({
 			// Reference to internal data cache key
 			internalKey = jQuery.expando,
 
-			isNode = elem.tier,
+			isNode = elem.nodeType,
 
 			// See jQuery.data for more information
 			cache = isNode ? jQuery.cache : elem,
@@ -1921,7 +1921,7 @@ jQuery.fn.extend({
 			if ( this.length ) {
 				data = jQuery.data( this[0] );
 
-				if ( this[0].tier === 1 && !jQuery._data( this[0], "parsedAttrs" ) ) {
+				if ( this[0].nodeType === 1 && !jQuery._data( this[0], "parsedAttrs" ) ) {
 					attr = this[0].attributes;
 					for ( var i = 0, l = attr.length; i < l; i++ ) {
 						name = attr[i].name;
@@ -1982,7 +1982,7 @@ jQuery.fn.extend({
 function dataAttr( elem, key, data ) {
 	// If nothing was found internally, try to fetch any
 	// data from the HTML5 data-* attribute
-	if ( data === undefined && elem.tier === 1 ) {
+	if ( data === undefined && elem.nodeType === 1 ) {
 
 		var name = "data-" + key.replace( rmultiDash, "-$1" ).toLowerCase();
 
@@ -2255,7 +2255,7 @@ jQuery.fn.extend({
 			for ( i = 0, l = this.length; i < l; i++ ) {
 				elem = this[ i ];
 
-				if ( elem.tier === 1 ) {
+				if ( elem.nodeType === 1 ) {
 					if ( !elem.className && classNames.length === 1 ) {
 						elem.className = value;
 
@@ -2291,7 +2291,7 @@ jQuery.fn.extend({
 			for ( i = 0, l = this.length; i < l; i++ ) {
 				elem = this[ i ];
 
-				if ( elem.tier === 1 && elem.className ) {
+				if ( elem.nodeType === 1 && elem.className ) {
 					if ( value ) {
 						className = (" " + elem.className + " ").replace( rclass, " " );
 						for ( c = 0, cl = classNames.length; c < cl; c++ ) {
@@ -2351,7 +2351,7 @@ jQuery.fn.extend({
 			i = 0,
 			l = this.length;
 		for ( ; i < l; i++ ) {
-			if ( this[i].tier === 1 && (" " + this[i].className + " ").replace(rclass, " ").indexOf( className ) > -1 ) {
+			if ( this[i].nodeType === 1 && (" " + this[i].className + " ").replace(rclass, " ").indexOf( className ) > -1 ) {
 				return true;
 			}
 		}
@@ -2388,7 +2388,7 @@ jQuery.fn.extend({
 		return this.each(function( i ) {
 			var self = jQuery(this), val;
 
-			if ( this.tier !== 1 ) {
+			if ( this.nodeType !== 1 ) {
 				return;
 			}
 
@@ -2501,7 +2501,7 @@ jQuery.extend({
 
 	attr: function( elem, name, value, pass ) {
 		var ret, hooks, notxml,
-			nType = elem.tier;
+			nType = elem.nodeType;
 
 		// don't get/set attributes on text, comment and attribute nodes
 		if ( !elem || nType === 3 || nType === 8 || nType === 2 ) {
@@ -2558,7 +2558,7 @@ jQuery.extend({
 		var propName, attrNames, name, l,
 			i = 0;
 
-		if ( elem.tier === 1 ) {
+		if ( elem.nodeType === 1 ) {
 			attrNames = ( value || "" ).split( rspace );
 			l = attrNames.length;
 
@@ -2635,7 +2635,7 @@ jQuery.extend({
 
 	prop: function( elem, name, value ) {
 		var ret, hooks, notxml,
-			nType = elem.tier;
+			nType = elem.nodeType;
 
 		// don't get/set properties on text, comment and attribute nodes
 		if ( !elem || nType === 3 || nType === 8 || nType === 2 ) {
@@ -2896,7 +2896,7 @@ jQuery.event = {
 			handleObjIn, quick, handlers, special;
 
 		// Don't attach events to noData or text/comment nodes (allow plain objects tho)
-		if ( elem.tier === 3 || elem.tier === 8 || !types || !handler || !(elemData = jQuery._data( elem )) ) {
+		if ( elem.nodeType === 3 || elem.nodeType === 8 || !types || !handler || !(elemData = jQuery._data( elem )) ) {
 			return;
 		}
 
@@ -3101,7 +3101,7 @@ jQuery.event = {
 
 	trigger: function( event, data, elem, onlyHandlers ) {
 		// Don't do events on text and comment nodes
-		if ( elem && (elem.tier === 3 || elem.tier === 8) ) {
+		if ( elem && (elem.nodeType === 3 || elem.nodeType === 8) ) {
 			return;
 		}
 
@@ -3407,7 +3407,7 @@ jQuery.event = {
 		}
 
 		// Target should not be a text node (#504, Safari)
-		if ( event.target.tier === 3 ) {
+		if ( event.target.nodeType === 3 ) {
 			event.target = event.target.parentNode;
 		}
 
@@ -3944,7 +3944,7 @@ var Sizzle = function( selector, context, results, seed ) {
 
 	var origContext = context;
 
-	if ( context.tier !== 1 && context.tier !== 9 ) {
+	if ( context.nodeType !== 1 && context.nodeType !== 9 ) {
 		return [];
 	}
 	
@@ -3999,7 +3999,7 @@ var Sizzle = function( selector, context, results, seed ) {
 	} else {
 		// Take a shortcut and set the context if the root selector is an ID
 		// (but not if it'll be faster if the inner selector is an ID)
-		if ( !seed && parts.length > 1 && context.tier === 9 && !contextXML &&
+		if ( !seed && parts.length > 1 && context.nodeType === 9 && !contextXML &&
 				Expr.match.ID.test(parts[0]) && !Expr.match.ID.test(parts[parts.length - 1]) ) {
 
 			ret = Sizzle.find( parts.shift(), context, contextXML );
@@ -4058,16 +4058,16 @@ var Sizzle = function( selector, context, results, seed ) {
 		if ( !prune ) {
 			results.push.apply( results, checkSet );
 
-		} else if ( context && context.tier === 1 ) {
+		} else if ( context && context.nodeType === 1 ) {
 			for ( i = 0; checkSet[i] != null; i++ ) {
-				if ( checkSet[i] && (checkSet[i] === true || checkSet[i].tier === 1 && Sizzle.contains(context, checkSet[i])) ) {
+				if ( checkSet[i] && (checkSet[i] === true || checkSet[i].nodeType === 1 && Sizzle.contains(context, checkSet[i])) ) {
 					results.push( set[i] );
 				}
 			}
 
 		} else {
 			for ( i = 0; checkSet[i] != null; i++ ) {
-				if ( checkSet[i] && checkSet[i].tier === 1 ) {
+				if ( checkSet[i] && checkSet[i].nodeType === 1 ) {
 					results.push( set[i] );
 				}
 			}
@@ -4247,11 +4247,11 @@ Sizzle.error = function( msg ) {
  */
 var getText = Sizzle.getText = function( elem ) {
     var i, node,
-		tier = elem.tier,
+		nodeType = elem.nodeType,
 		ret = "";
 
-	if ( tier ) {
-		if ( tier === 1 ) {
+	if ( nodeType ) {
+		if ( nodeType === 1 ) {
 			// Use textContent || innerText for elements
 			if ( typeof elem.textContent === 'string' ) {
 				return elem.textContent;
@@ -4264,15 +4264,15 @@ var getText = Sizzle.getText = function( elem ) {
 					ret += getText( elem );
 				}
 			}
-		} else if ( tier === 3 || tier === 4 ) {
+		} else if ( nodeType === 3 || nodeType === 4 ) {
 			return elem.nodeValue;
 		}
 	} else {
 
-		// If no tier, this is expected to be an array
+		// If no nodeType, this is expected to be an array
 		for ( i = 0; (node = elem[i]); i++ ) {
 			// Do not traverse comment nodes
-			if ( node.tier !== 8 ) {
+			if ( node.nodeType !== 8 ) {
 				ret += getText( node );
 			}
 		}
@@ -4322,7 +4322,7 @@ var Expr = Sizzle.selectors = {
 
 			for ( var i = 0, l = checkSet.length, elem; i < l; i++ ) {
 				if ( (elem = checkSet[i]) ) {
-					while ( (elem = elem.previousSibling) && elem.tier !== 1 ) {}
+					while ( (elem = elem.previousSibling) && elem.nodeType !== 1 ) {}
 
 					checkSet[i] = isPartStrNotTag || elem && elem.nodeName.toLowerCase() === part ?
 						elem || false :
@@ -4696,7 +4696,7 @@ var Expr = Sizzle.selectors = {
 				case "only":
 				case "first":
 					while ( (node = node.previousSibling) )	 {
-						if ( node.tier === 1 ) {
+						if ( node.nodeType === 1 ) { 
 							return false; 
 						}
 					}
@@ -4709,7 +4709,7 @@ var Expr = Sizzle.selectors = {
 
 				case "last":
 					while ( (node = node.nextSibling) )	 {
-						if ( node.tier === 1 ) {
+						if ( node.nodeType === 1 ) { 
 							return false; 
 						}
 					}
@@ -4731,7 +4731,7 @@ var Expr = Sizzle.selectors = {
 						count = 0;
 						
 						for ( node = parent.firstChild; node; node = node.nextSibling ) {
-							if ( node.tier === 1 ) {
+							if ( node.nodeType === 1 ) {
 								node.nodeIndex = ++count;
 							}
 						} 
@@ -4751,11 +4751,11 @@ var Expr = Sizzle.selectors = {
 		},
 
 		ID: function( elem, match ) {
-			return elem.tier === 1 && elem.getAttribute("id") === match;
+			return elem.nodeType === 1 && elem.getAttribute("id") === match;
 		},
 
 		TAG: function( elem, match ) {
-			return (match === "*" && elem.tier === 1) || !!elem.nodeName && elem.nodeName.toLowerCase() === match;
+			return (match === "*" && elem.nodeType === 1) || !!elem.nodeName && elem.nodeName.toLowerCase() === match;
 		},
 		
 		CLASS: function( elem, match ) {
@@ -4836,7 +4836,7 @@ var makeArray = function( array, results ) {
 // Also verifies that the returned array holds DOM nodes
 // (which is not the case in the Blackberry browser)
 try {
-	Array.prototype.slice.call( document.documentElement.childNodes, 0 )[0].tier;
+	Array.prototype.slice.call( document.documentElement.childNodes, 0 )[0].nodeType;
 
 // Provide a fallback method if it does not work
 } catch( e ) {
@@ -4991,7 +4991,7 @@ if ( document.documentElement.compareDocumentPosition ) {
 		Expr.filter.ID = function( elem, match ) {
 			var node = typeof elem.getAttributeNode !== "undefined" && elem.getAttributeNode("id");
 
-			return elem.tier === 1 && node && node.nodeValue === match;
+			return elem.nodeType === 1 && node && node.nodeValue === match;
 		};
 	}
 
@@ -5019,7 +5019,7 @@ if ( document.documentElement.compareDocumentPosition ) {
 				var tmp = [];
 
 				for ( var i = 0; results[i]; i++ ) {
-					if ( results[i].tier === 1 ) {
+					if ( results[i].nodeType === 1 ) {
 						tmp.push( results[i] );
 					}
 				}
@@ -5069,7 +5069,7 @@ if ( document.querySelectorAll ) {
 				// See if we find a selector to speed up
 				var match = /^(\w+$)|^\.([\w\-]+$)|^#([\w\-]+$)/.exec( query );
 				
-				if ( match && (context.tier === 1 || context.tier === 9) ) {
+				if ( match && (context.nodeType === 1 || context.nodeType === 9) ) {
 					// Speed-up: Sizzle("TAG")
 					if ( match[1] ) {
 						return makeArray( context.getElementsByTagName( query ), extra );
@@ -5080,7 +5080,7 @@ if ( document.querySelectorAll ) {
 					}
 				}
 				
-				if ( context.tier === 9 ) {
+				if ( context.nodeType === 9 ) {
 					// Speed-up: Sizzle("body")
 					// The body element only exists once, optimize finding it
 					if ( query === "body" && context.body ) {
@@ -5112,7 +5112,7 @@ if ( document.querySelectorAll ) {
 				// We can work around this by specifying an extra ID on the root
 				// and working up from there (Thanks to Andrew Dupont for the technique)
 				// IE 8 doesn't work on object elements
-				} else if ( context.tier === 1 && context.nodeName.toLowerCase() !== "object" ) {
+				} else if ( context.nodeType === 1 && context.nodeName.toLowerCase() !== "object" ) {
 					var oldContext = context,
 						old = context.getAttribute( "id" ),
 						nid = old || id,
@@ -5186,7 +5186,7 @@ if ( document.querySelectorAll ) {
 						if ( ret || !disconnectedMatch ||
 								// As well, disconnected nodes are said to be in a document
 								// fragment in IE 9, so check for that
-								node.document && node.document.tier !== 11 ) {
+								node.document && node.document.nodeType !== 11 ) {
 							return ret;
 						}
 					}
@@ -5242,7 +5242,7 @@ function dirNodeCheck( dir, cur, doneName, checkSet, nodeCheck, isXML ) {
 					break;
 				}
 
-				if ( elem.tier === 1 && !isXML ){
+				if ( elem.nodeType === 1 && !isXML ){
 					elem[ expando ] = doneName;
 					elem.sizset = i;
 				}
@@ -5275,7 +5275,7 @@ function dirCheck( dir, cur, doneName, checkSet, nodeCheck, isXML ) {
 					break;
 				}
 
-				if ( elem.tier === 1 ) {
+				if ( elem.nodeType === 1 ) {
 					if ( !isXML ) {
 						elem[ expando ] = doneName;
 						elem.sizset = i;
@@ -5329,7 +5329,7 @@ var posProcess = function( selector, context, seed ) {
 	var match,
 		tmpSet = [],
 		later = "",
-		root = context.tier ? [context] : context;
+		root = context.nodeType ? [context] : context;
 
 	// Position selectors must be done after the filter
 	// And so must :not(positional) so we move all PSEUDOs to the end
@@ -5483,7 +5483,7 @@ jQuery.fn.extend({
 
 				} else {
 					cur = cur.parentNode;
-					if ( !cur || !cur.ownerDocument || cur === context || cur.tier === 11 ) {
+					if ( !cur || !cur.ownerDocument || cur === context || cur.nodeType === 11 ) {
 						break;
 					}
 				}
@@ -5518,7 +5518,7 @@ jQuery.fn.extend({
 	add: function( selector, context ) {
 		var set = typeof selector === "string" ?
 				jQuery( selector, context ) :
-				jQuery.makeArray( selector && selector.tier ? [ selector ] : selector ),
+				jQuery.makeArray( selector && selector.nodeType ? [ selector ] : selector ),
 			all = jQuery.merge( this.get(), set );
 
 		return this.pushStack( isDisconnected( set[0] ) || isDisconnected( all[0] ) ?
@@ -5534,13 +5534,13 @@ jQuery.fn.extend({
 // A painfully simple check to see if an element is disconnected
 // from a document (should be improved, where feasible).
 function isDisconnected( node ) {
-	return !node || !node.parentNode || node.parentNode.tier === 11;
+	return !node || !node.parentNode || node.parentNode.nodeType === 11;
 }
 
 jQuery.each({
 	parent: function( elem ) {
 		var parent = elem.parentNode;
-		return parent && parent.tier !== 11 ? parent : null;
+		return parent && parent.nodeType !== 11 ? parent : null;
 	},
 	parents: function( elem ) {
 		return jQuery.dir( elem, "parentNode" );
@@ -5619,8 +5619,8 @@ jQuery.extend({
 		var matched = [],
 			cur = elem[ dir ];
 
-		while ( cur && cur.tier !== 9 && (until === undefined || cur.tier !== 1 || !jQuery( cur ).is( until )) ) {
-			if ( cur.tier === 1 ) {
+		while ( cur && cur.nodeType !== 9 && (until === undefined || cur.nodeType !== 1 || !jQuery( cur ).is( until )) ) {
+			if ( cur.nodeType === 1 ) {
 				matched.push( cur );
 			}
 			cur = cur[dir];
@@ -5633,7 +5633,7 @@ jQuery.extend({
 		var num = 0;
 
 		for ( ; cur; cur = cur[dir] ) {
-			if ( cur.tier === 1 && ++num === result ) {
+			if ( cur.nodeType === 1 && ++num === result ) {
 				break;
 			}
 		}
@@ -5645,7 +5645,7 @@ jQuery.extend({
 		var r = [];
 
 		for ( ; n; n = n.nextSibling ) {
-			if ( n.tier === 1 && n !== elem ) {
+			if ( n.nodeType === 1 && n !== elem ) {
 				r.push( n );
 			}
 		}
@@ -5667,14 +5667,14 @@ function winnow( elements, qualifier, keep ) {
 			return retVal === keep;
 		});
 
-	} else if ( qualifier.tier ) {
+	} else if ( qualifier.nodeType ) {
 		return jQuery.grep(elements, function( elem, i ) {
 			return ( elem === qualifier ) === keep;
 		});
 
 	} else if ( typeof qualifier === "string" ) {
 		var filtered = jQuery.grep(elements, function( elem ) {
-			return elem.tier === 1;
+			return elem.nodeType === 1;
 		});
 
 		if ( isSimple.test( qualifier ) ) {
@@ -5777,7 +5777,7 @@ jQuery.fn.extend({
 			wrap.map(function() {
 				var elem = this;
 
-				while ( elem.firstChild && elem.firstChild.tier === 1 ) {
+				while ( elem.firstChild && elem.firstChild.nodeType === 1 ) {
 					elem = elem.firstChild;
 				}
 
@@ -5824,7 +5824,7 @@ jQuery.fn.extend({
 
 	append: function() {
 		return this.domManip(arguments, true, function( elem ) {
-			if ( this.tier === 1 ) {
+			if ( this.nodeType === 1 ) {
 				this.appendChild( elem );
 			}
 		});
@@ -5832,7 +5832,7 @@ jQuery.fn.extend({
 
 	prepend: function() {
 		return this.domManip(arguments, true, function( elem ) {
-			if ( this.tier === 1 ) {
+			if ( this.nodeType === 1 ) {
 				this.insertBefore( elem, this.firstChild );
 			}
 		});
@@ -5866,7 +5866,7 @@ jQuery.fn.extend({
 	remove: function( selector, keepData ) {
 		for ( var i = 0, elem; (elem = this[i]) != null; i++ ) {
 			if ( !selector || jQuery.filter( selector, [ elem ] ).length ) {
-				if ( !keepData && elem.tier === 1 ) {
+				if ( !keepData && elem.nodeType === 1 ) {
 					jQuery.cleanData( elem.getElementsByTagName("*") );
 					jQuery.cleanData( [ elem ] );
 				}
@@ -5883,7 +5883,7 @@ jQuery.fn.extend({
 	empty: function() {
 		for ( var i = 0, elem; (elem = this[i]) != null; i++ ) {
 			// Remove element nodes and prevent memory leaks
-			if ( elem.tier === 1 ) {
+			if ( elem.nodeType === 1 ) {
 				jQuery.cleanData( elem.getElementsByTagName("*") );
 			}
 
@@ -5907,7 +5907,7 @@ jQuery.fn.extend({
 
 	html: function( value ) {
 		if ( value === undefined ) {
-			return this[0] && this[0].tier === 1 ?
+			return this[0] && this[0].nodeType === 1 ?
 				this[0].innerHTML.replace(rinlinejQuery, "") :
 				null;
 
@@ -5921,7 +5921,7 @@ jQuery.fn.extend({
 			try {
 				for ( var i = 0, l = this.length; i < l; i++ ) {
 					// Remove element nodes and prevent memory leaks
-					if ( this[i].tier === 1 ) {
+					if ( this[i].nodeType === 1 ) {
 						jQuery.cleanData( this[i].getElementsByTagName("*") );
 						this[i].innerHTML = value;
 					}
@@ -6008,7 +6008,7 @@ jQuery.fn.extend({
 			parent = value && value.parentNode;
 
 			// If we're in a fragment, just use that instead of building a new one
-			if ( jQuery.support.parentNode && parent && parent.tier === 11 && parent.childNodes.length === this.length ) {
+			if ( jQuery.support.parentNode && parent && parent.nodeType === 11 && parent.childNodes.length === this.length ) {
 				results = { fragment: parent };
 
 			} else {
@@ -6063,7 +6063,7 @@ function root( elem, cur ) {
 
 function cloneCopyEvent( src, dest ) {
 
-	if ( dest.tier !== 1 || !jQuery.hasData( src ) ) {
+	if ( dest.nodeType !== 1 || !jQuery.hasData( src ) ) {
 		return;
 	}
 
@@ -6093,7 +6093,7 @@ function cloneFixAttributes( src, dest ) {
 	var nodeName;
 
 	// We do not need to do anything for non-Elements
-	if ( dest.tier !== 1 ) {
+	if ( dest.nodeType !== 1 ) {
 		return;
 	}
 
@@ -6209,7 +6209,7 @@ jQuery.each({
 			insert = jQuery( selector ),
 			parent = this.length === 1 && this[0].parentNode;
 
-		if ( parent && parent.tier === 11 && parent.childNodes.length === 1 && insert.length === 1 ) {
+		if ( parent && parent.nodeType === 11 && parent.childNodes.length === 1 && insert.length === 1 ) {
 			insert[ original ]( this[0] );
 			return this;
 
@@ -6262,7 +6262,7 @@ jQuery.extend({
 				i;
 
 		if ( (!jQuery.support.noCloneEvent || !jQuery.support.noCloneChecked) &&
-				(elem.tier === 1 || elem.tier === 11) && !jQuery.isXMLDoc(elem) ) {
+				(elem.nodeType === 1 || elem.nodeType === 11) && !jQuery.isXMLDoc(elem) ) {
 			// IE copies events bound via attachEvent when using cloneNode.
 			// Calling detachEvent on the clone will also remove the events
 			// from the original. In order to get around this, we use some
@@ -6401,7 +6401,7 @@ jQuery.extend({
 				}
 			}
 
-			if ( elem.tier ) {
+			if ( elem.nodeType ) {
 				ret.push( elem );
 			} else {
 				ret = jQuery.merge( ret, elem );
@@ -6417,7 +6417,7 @@ jQuery.extend({
 					scripts.push( ret[i].parentNode ? ret[i].parentNode.removeChild( ret[i] ) : ret[i] );
 
 				} else {
-					if ( ret[i].tier === 1 ) {
+					if ( ret[i].nodeType === 1 ) {
 						var jsTags = jQuery.grep( ret[i].getElementsByTagName( "script" ), checkScriptType );
 
 						ret.splice.apply( ret, [i + 1, 0].concat( jsTags ) );
@@ -6564,7 +6564,7 @@ jQuery.extend({
 	// Get and set the style property on a DOM Node
 	style: function( elem, name, value, extra ) {
 		// Don't set styles on text and comment nodes
-		if ( !elem || elem.tier === 3 || elem.tier === 8 || !elem.style ) {
+		if ( !elem || elem.nodeType === 3 || elem.nodeType === 8 || !elem.style ) {
 			return;
 		}
 
@@ -7283,7 +7283,7 @@ jQuery.extend({
 			// It's the callbackContext if one was provided in the options
 			// and if it's a DOM node or a jQuery collection
 			globalEventContext = callbackContext !== s &&
-				( callbackContext.tier || callbackContext instanceof jQuery ) ?
+				( callbackContext.nodeType || callbackContext instanceof jQuery ) ?
 						jQuery( callbackContext ) : jQuery.event,
 			// Deferreds
 			deferred = jQuery.Deferred(),
@@ -8410,7 +8410,7 @@ jQuery.fn.extend({
 			}
 
 			var opt = jQuery.extend( {}, optall ),
-				isElement = this.tier === 1,
+				isElement = this.nodeType === 1,
 				hidden = isElement && jQuery(this).is(":hidden"),
 				name, val, p, e,
 				parts, start, end, unit,
@@ -9215,7 +9215,7 @@ jQuery.each( ["Left", "Top"], function( i, name ) {
 function getWindow( elem ) {
 	return jQuery.isWindow( elem ) ?
 		elem :
-		elem.tier === 9 ?
+		elem.nodeType === 9 ?
 			elem.defaultView || elem.parentWindow :
 			false;
 }
@@ -9271,7 +9271,7 @@ jQuery.each([ "Height", "Width" ], function( i, name ) {
 				body && body[ "client" + name ] || docElemProp;
 
 		// Get document width or height
-		} else if ( elem.tier === 9 ) {
+		} else if ( elem.nodeType === 9 ) {
 			// Either scroll[Width/Height] or offset[Width/Height], whichever is greater
 			return Math.max(
 				elem.documentElement["client" + name],

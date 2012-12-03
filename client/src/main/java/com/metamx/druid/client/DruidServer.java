@@ -58,7 +58,7 @@ public class DruidServer implements Comparable
         config.getHost(),
         config.getMaxSize(),
         type,
-        config.getSubType()
+        config.getTier()
     );
   }
 
