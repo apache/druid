@@ -22,6 +22,7 @@ package com.metamx.druid.client.cache;
 import net.iharder.base64.Base64;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
+import net.spy.memcached.DefaultHashAlgorithm;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 
@@ -39,7 +40,12 @@ public class MemcachedCacheBroker implements CacheBroker
     try {
       return new MemcachedCacheBroker(
         new MemcachedClient(
-          new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY).build(),
+          new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
+                                        .setHashAlg(DefaultHashAlgorithm.FNV1A_64_HASH)
+                                        .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
+                                        .setDaemon(true)
+                                        .setShouldOptimize(true)
+                                        .build(),
           AddrUtil.getAddresses(config.getHosts())
         ),
         config.getTimeout(),
