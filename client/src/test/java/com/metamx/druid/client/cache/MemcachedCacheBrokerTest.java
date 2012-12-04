@@ -47,7 +47,7 @@ import java.util.concurrent.TimeoutException;
 
 /**
  */
-public class MemcachedBrokerTest
+public class MemcachedCacheBrokerTest
 {
   private static final byte[] HI = "hi".getBytes();
   private static final byte[] HO = "ho".getBytes();
