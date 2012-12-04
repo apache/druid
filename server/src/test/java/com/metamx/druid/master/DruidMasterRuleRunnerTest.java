@@ -27,6 +27,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
+import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.master.rules.IntervalDropRule;
 import com.metamx.druid.master.rules.IntervalLoadRule;
 import com.metamx.druid.master.rules.Rule;
@@ -55,6 +56,7 @@ public class DruidMasterRuleRunnerTest
   private List<DataSegment> availableSegments;
   private DruidMasterRuleRunner ruleRunner;
   private ServiceEmitter emitter;
+  private DatabaseRuleManager databaseRuleManager;
 
   @Before
   public void setUp()
@@ -63,6 +65,7 @@ public class DruidMasterRuleRunnerTest
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
+    databaseRuleManager = EasyMock.createMock(DatabaseRuleManager.class);
 
     DateTime start = new DateTime("2012-01-01");
     availableSegments = Lists.newArrayList();
@@ -96,6 +99,7 @@ public class DruidMasterRuleRunnerTest
   @After
   public void tearDown() throws Exception
   {
+    EasyMock.verify(databaseRuleManager);
   }
 
   /**
@@ -109,6 +113,15 @@ public class DruidMasterRuleRunnerTest
   @Test
   public void testRunThreeTiersOneReplicant() throws Exception
   {
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"), 1, "hot"),
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "normal"),
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), 1, "cold")
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
     DruidCluster druidCluster = new DruidCluster(
         ImmutableMap.of(
             "hot",
@@ -159,23 +172,11 @@ public class DruidMasterRuleRunnerTest
         )
     );
 
-    RuleMap ruleMap = new RuleMap(
-        ImmutableMap.<String, List<Rule>>of(
-            "test",
-            Lists.<Rule>newArrayList(
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"), 1, "hot"),
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "normal"),
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), 1, "cold")
-            )
-        ),
-        Lists.<Rule>newArrayList()
-    );
-
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withRuleMap(ruleMap)
+            .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
 
@@ -201,6 +202,14 @@ public class DruidMasterRuleRunnerTest
   @Test
   public void testRunTwoTiersTwoReplicants() throws Exception
   {
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"), 2, "hot"),
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), 1, "cold")
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
     DruidCluster druidCluster = new DruidCluster(
         ImmutableMap.of(
             "hot",
@@ -246,22 +255,11 @@ public class DruidMasterRuleRunnerTest
         )
     );
 
-    RuleMap ruleMap = new RuleMap(
-        ImmutableMap.<String, List<Rule>>of(
-            "test",
-            Lists.<Rule>newArrayList(
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"), 2, "hot"),
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), 1, "cold")
-            )
-        ),
-        Lists.<Rule>newArrayList()
-    );
-
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withRuleMap(ruleMap)
+            .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
 
@@ -280,106 +278,20 @@ public class DruidMasterRuleRunnerTest
    * Nodes:
    * hot - 1 replicant
    * normal - 1 replicant
-   * cold - 1 replicant
    *
    * @throws Exception
    */
   @Test
-  public void testRunThreeTiersWithDefaultRules() throws Exception
+  public void testRunTwoTiersWithExistingSegments() throws Exception
   {
-    DruidCluster druidCluster = new DruidCluster(
-        ImmutableMap.of(
-            "hot",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverHot",
-                            "hostHot",
-                            1000,
-                            "historical",
-                            "hot"
-                        ),
-                        mockPeon
-                    )
-                )
-            ),
-            "normal",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverNorm",
-                            "hostNorm",
-                            1000,
-                            "historical",
-                            "normal"
-                        ),
-                        mockPeon
-                    )
-                )
-            ),
-            "cold",
-            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
-                Arrays.asList(
-                    new ServerHolder(
-                        new DruidServer(
-                            "serverCold",
-                            "hostCold",
-                            1000,
-                            "historical",
-                            "cold"
-                        ),
-                        mockPeon
-                    )
-                )
-            )
-        )
-    );
-
-    RuleMap ruleMap = new RuleMap(
-        ImmutableMap.<String, List<Rule>>of(
-            "test",
-            Lists.<Rule>newArrayList(
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"), 1, "hot"),
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "normal")
-            )
-        ),
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), 1, "cold")
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "hot"),
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), 1, "normal")
         )
-    );
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
 
-    DruidMasterRuntimeParams params =
-        new DruidMasterRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withAvailableSegments(availableSegments)
-            .withRuleMap(ruleMap)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .build();
-
-    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
-    MasterStats stats = afterParams.getMasterStats();
-
-    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 6);
-    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("normal").get() == 6);
-    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("cold").get() == 12);
-    Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
-    Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
-
-    EasyMock.verify(mockPeon);
-  }
-
-  /**
-   * Nodes:
-   * hot - 1 replicant
-   * normal - 1 replicant
-   *
-   * @throws Exception
-   */
-  @Test
-  public void testRunTwoTiersWithDefaultRulesExistingSegments() throws Exception
-  {
     DruidServer normServer = new DruidServer(
         "serverNorm",
         "hostNorm",
@@ -387,6 +299,10 @@ public class DruidMasterRuleRunnerTest
         "historical",
         "normal"
     );
+    for (DataSegment availableSegment : availableSegments) {
+      normServer.addDataSegment(availableSegment.getIdentifier(), availableSegment);
+    }
+
     DruidCluster druidCluster = new DruidCluster(
         ImmutableMap.of(
             "hot",
@@ -416,29 +332,13 @@ public class DruidMasterRuleRunnerTest
         )
     );
 
-    RuleMap ruleMap = new RuleMap(
-        ImmutableMap.<String, List<Rule>>of(
-            "test",
-            Lists.<Rule>newArrayList(
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "hot")
-            )
-        ),
-        Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), 1, "normal")
-        )
-    );
-
-    for (DataSegment availableSegment : availableSegments) {
-      normServer.addDataSegment(availableSegment.getIdentifier(), availableSegment);
-    }
-
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withRuleMap(ruleMap)
+            .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(segmentReplicantLookup)
             .build();
 
@@ -460,6 +360,14 @@ public class DruidMasterRuleRunnerTest
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(emitter);
 
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "hot"),
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), 1, "normal")
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
     DruidCluster druidCluster = new DruidCluster(
         ImmutableMap.of(
             "normal",
@@ -480,24 +388,12 @@ public class DruidMasterRuleRunnerTest
         )
     );
 
-    RuleMap ruleMap = new RuleMap(
-        ImmutableMap.<String, List<Rule>>of(
-            "test",
-            Lists.<Rule>newArrayList(
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "hot")
-            )
-        ),
-        Lists.<Rule>newArrayList(
-            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"), 1, "normal")
-        )
-    );
-
     DruidMasterRuntimeParams params =
         new DruidMasterRuntimeParams.Builder()
             .withEmitter(emitter)
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
-            .withRuleMap(ruleMap)
+            .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
 
@@ -521,6 +417,14 @@ public class DruidMasterRuleRunnerTest
     master.removeSegment(EasyMock.<DataSegment>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(master);
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "normal"),
+            new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
 
     DruidServer server = new DruidServer(
         "serverNorm",
@@ -547,24 +451,13 @@ public class DruidMasterRuleRunnerTest
         )
     );
 
-    RuleMap ruleMap = new RuleMap(
-        ImmutableMap.<String, List<Rule>>of(
-            "test",
-            Lists.<Rule>newArrayList(
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "normal"),
-                new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
-            )
-        ),
-        Lists.<Rule>newArrayList()
-    );
-
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withMillisToWaitBeforeDeleting(0L)
         .withAvailableSegments(availableSegments)
-        .withRuleMap(ruleMap)
+        .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .build();
 
@@ -579,6 +472,14 @@ public class DruidMasterRuleRunnerTest
   @Test
   public void testDropTooManyInSameTier() throws Exception
   {
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "normal"),
+            new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
     DruidServer server1 = new DruidServer(
         "serverNorm",
         "hostNorm",
@@ -617,25 +518,13 @@ public class DruidMasterRuleRunnerTest
         )
     );
 
-    RuleMap ruleMap = new RuleMap(
-        ImmutableMap.<String, List<Rule>>of(
-            "test",
-            Lists.<Rule>newArrayList(
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "normal")
-            )
-        ),
-        Lists.<Rule>newArrayList(
-            new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
-        )
-    );
-
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withMillisToWaitBeforeDeleting(0L)
         .withAvailableSegments(availableSegments)
-        .withRuleMap(ruleMap)
+        .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .build();
 
@@ -651,6 +540,14 @@ public class DruidMasterRuleRunnerTest
   @Test
   public void testDropTooManyInDifferentTiers() throws Exception
   {
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "hot"),
+            new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
     DruidServer server1 = new DruidServer(
         "server1",
         "host1",
@@ -693,25 +590,13 @@ public class DruidMasterRuleRunnerTest
         )
     );
 
-    RuleMap ruleMap = new RuleMap(
-        ImmutableMap.<String, List<Rule>>of(
-            "test",
-            Lists.<Rule>newArrayList(
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "hot")
-            )
-        ),
-        Lists.<Rule>newArrayList(
-            new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
-        )
-    );
-
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withMillisToWaitBeforeDeleting(0L)
         .withAvailableSegments(availableSegments)
-        .withRuleMap(ruleMap)
+        .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .build();
 
@@ -727,6 +612,14 @@ public class DruidMasterRuleRunnerTest
   @Test
   public void testDontDropInDifferentTiers() throws Exception
   {
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "hot"),
+            new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
     DruidServer server1 = new DruidServer(
         "server1",
         "host1",
@@ -767,25 +660,13 @@ public class DruidMasterRuleRunnerTest
         )
     );
 
-    RuleMap ruleMap = new RuleMap(
-        ImmutableMap.<String, List<Rule>>of(
-            "test",
-            Lists.<Rule>newArrayList(
-                new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), 1, "hot")
-            )
-        ),
-        Lists.<Rule>newArrayList(
-            new IntervalDropRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
-        )
-    );
-
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withMillisToWaitBeforeDeleting(0L)
         .withAvailableSegments(availableSegments)
-        .withRuleMap(ruleMap)
+        .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .build();
 

@@ -22,6 +22,7 @@ package com.metamx.druid.master;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.master.rules.Rule;
 import com.metamx.druid.master.rules.RuleMap;
 
@@ -52,13 +53,9 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
     }
 
     // Run through all matched rules for available segments
-    RuleMap ruleMap = params.getRuleMap();
+    DatabaseRuleManager databaseRuleManager = params.getDatabaseRuleManager();
     for (DataSegment segment : params.getAvailableSegments()) {
-      List<Rule> rules = ruleMap.getRules(segment.getDataSource());
-
-      if (rules == null) {
-        throw new ISE("No rules found for segment[%s]", segment.getIdentifier());
-      }
+      List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
 
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {

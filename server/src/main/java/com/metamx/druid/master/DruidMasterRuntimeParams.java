@@ -24,7 +24,7 @@ import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
-import com.metamx.druid.db.DatabaseRuleCoordinator;
+import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.master.rules.RuleMap;
 import com.metamx.emitter.service.ServiceEmitter;
 
@@ -39,7 +39,7 @@ public class DruidMasterRuntimeParams
 {
   private final long startTime;
   private final DruidCluster druidCluster;
-  private final RuleMap ruleMap;
+  private final DatabaseRuleManager databaseRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
   private final Set<DruidDataSource> dataSources;
   private final Set<DataSegment> availableSegments;
@@ -53,7 +53,7 @@ public class DruidMasterRuntimeParams
   public DruidMasterRuntimeParams(
       long startTime,
       DruidCluster druidCluster,
-      RuleMap ruleMap,
+      DatabaseRuleManager databaseRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
       Set<DruidDataSource> dataSources,
       Set<DataSegment> availableSegments,
@@ -67,7 +67,7 @@ public class DruidMasterRuntimeParams
   {
     this.startTime = startTime;
     this.druidCluster = druidCluster;
-    this.ruleMap = ruleMap;
+    this.databaseRuleManager = databaseRuleManager;
     this.segmentReplicantLookup = segmentReplicantLookup;
     this.dataSources = dataSources;
     this.availableSegments = availableSegments;
@@ -89,9 +89,9 @@ public class DruidMasterRuntimeParams
     return druidCluster;
   }
 
-  public RuleMap getRuleMap()
+  public DatabaseRuleManager getDatabaseRuleManager()
   {
-    return ruleMap;
+    return databaseRuleManager;
   }
 
   public SegmentReplicantLookup getSegmentReplicantLookup()
@@ -154,7 +154,7 @@ public class DruidMasterRuntimeParams
     return new Builder(
         startTime,
         druidCluster,
-        ruleMap,
+        databaseRuleManager,
         segmentReplicantLookup,
         dataSources,
         availableSegments,
@@ -171,7 +171,7 @@ public class DruidMasterRuntimeParams
   {
     private long startTime;
     private DruidCluster druidCluster;
-    private RuleMap ruleMap;
+    private DatabaseRuleManager databaseRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
     private final Set<DruidDataSource> dataSources;
     private final Set<DataSegment> availableSegments;
@@ -186,7 +186,7 @@ public class DruidMasterRuntimeParams
     {
       this.startTime = 0;
       this.druidCluster = null;
-      this.ruleMap = null;
+      this.databaseRuleManager = null;
       this.segmentReplicantLookup = null;
       this.dataSources = Sets.newHashSet();
       this.availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
@@ -201,7 +201,7 @@ public class DruidMasterRuntimeParams
     Builder(
         long startTime,
         DruidCluster cluster,
-        RuleMap ruleMap,
+        DatabaseRuleManager databaseRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
         Set<DruidDataSource> dataSources,
         Set<DataSegment> availableSegments,
@@ -215,7 +215,7 @@ public class DruidMasterRuntimeParams
     {
       this.startTime = startTime;
       this.druidCluster = cluster;
-      this.ruleMap = ruleMap;
+      this.databaseRuleManager = databaseRuleManager;
       this.segmentReplicantLookup = segmentReplicantLookup;
       this.dataSources = dataSources;
       this.availableSegments = availableSegments;
@@ -232,7 +232,7 @@ public class DruidMasterRuntimeParams
       return new DruidMasterRuntimeParams(
           startTime,
           druidCluster,
-          ruleMap,
+          databaseRuleManager,
           segmentReplicantLookup,
           dataSources,
           availableSegments,
@@ -257,9 +257,9 @@ public class DruidMasterRuntimeParams
       return this;
     }
 
-    public Builder withRuleMap(RuleMap ruleMap)
+    public Builder withDatabaseRuleManager(DatabaseRuleManager databaseRuleManager)
     {
-      this.ruleMap = ruleMap;
+      this.databaseRuleManager = databaseRuleManager;
       return this;
     }
 

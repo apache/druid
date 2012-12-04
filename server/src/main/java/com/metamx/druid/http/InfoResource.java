@@ -31,7 +31,7 @@ import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
-import com.metamx.druid.db.DatabaseRuleCoordinator;
+import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.master.rules.Rule;
 
@@ -59,20 +59,20 @@ public class InfoResource
 {
   private final ServerInventoryManager serverInventoryManager;
   private final DatabaseSegmentManager databaseSegmentManager;
-  private final DatabaseRuleCoordinator databaseRuleCoordinator;
+  private final DatabaseRuleManager databaseRuleManager;
   private final DruidClusterInfo druidClusterInfo;
 
   @Inject
   public InfoResource(
       ServerInventoryManager serverInventoryManager,
       DatabaseSegmentManager databaseSegmentManager,
-      DatabaseRuleCoordinator databaseRuleCoordinator,
+      DatabaseRuleManager databaseRuleManager,
       DruidClusterInfo druidClusterInfo
   )
   {
     this.serverInventoryManager = serverInventoryManager;
     this.databaseSegmentManager = databaseSegmentManager;
-    this.databaseRuleCoordinator = databaseRuleCoordinator;
+    this.databaseRuleManager = databaseRuleManager;
     this.druidClusterInfo = druidClusterInfo;
   }
 
@@ -272,7 +272,7 @@ public class InfoResource
   public Response getRules()
   {
     return Response.status(Response.Status.OK)
-                   .entity(databaseRuleCoordinator.getAllRules())
+                   .entity(databaseRuleManager.getAllRules())
                    .build();
   }
 
@@ -284,7 +284,7 @@ public class InfoResource
   )
   {
     return Response.status(Response.Status.OK)
-                   .entity(databaseRuleCoordinator.getRules(dataSourceName))
+                   .entity(databaseRuleManager.getRules(dataSourceName))
                    .build();
   }
 
@@ -296,7 +296,7 @@ public class InfoResource
       final List<Rule> rules
   )
   {
-    if (databaseRuleCoordinator.overrideRule(dataSourceName, rules)) {
+    if (databaseRuleManager.overrideRule(dataSourceName, rules)) {
       return Response.status(Response.Status.OK).build();
     }
     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();

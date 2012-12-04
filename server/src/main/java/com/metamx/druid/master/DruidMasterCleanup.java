@@ -117,16 +117,6 @@ public class DruidMasterCleanup implements DruidMasterHelper
       }
     }
 
-    //List<String> removedMsgs = Lists.newArrayList();
-    //for (Map.Entry<String, AtomicLong> entry : unneededSegments.entrySet()) {
-    //  removedMsgs.add(
-    //      String.format(
-    //          "[%s] : Removed %s unneeded segments among %,d servers",
-    //          entry.getKey(), entry.getValue(), cluster.get(entry.getKey()).size()
-    //      )
-    //  );
-    //}
-
     return params.buildFromExisting()
                  .withMasterStats(stats)
                  .build();

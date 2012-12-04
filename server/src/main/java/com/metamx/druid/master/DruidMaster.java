@@ -40,7 +40,7 @@ import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
-import com.metamx.druid.db.DatabaseRuleCoordinator;
+import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -78,7 +78,7 @@ public class DruidMaster
   private final DruidClusterInfo clusterInfo;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final ServerInventoryManager serverInventoryManager;
-  private final DatabaseRuleCoordinator databaseRuleCoordinator;
+  private final DatabaseRuleManager databaseRuleManager;
   private final PhoneBook yp;
   private final ServiceEmitter emitter;
   private final ScheduledExecutorService exec;
@@ -95,7 +95,7 @@ public class DruidMaster
       ObjectMapper jsonMapper,
       DatabaseSegmentManager databaseSegmentManager,
       ServerInventoryManager serverInventoryManager,
-      DatabaseRuleCoordinator databaseRuleCoordinator,
+      DatabaseRuleManager databaseRuleManager,
       PhoneBook zkPhoneBook,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
@@ -110,7 +110,7 @@ public class DruidMaster
 
     this.databaseSegmentManager = databaseSegmentManager;
     this.serverInventoryManager = serverInventoryManager;
-    this.databaseRuleCoordinator = databaseRuleCoordinator;
+    this.databaseRuleManager = databaseRuleManager;
     this.yp = zkPhoneBook;
     this.emitter = emitter;
 
@@ -422,6 +422,7 @@ public class DruidMaster
         log.info("I am the master, all must bow!");
         master = true;
         databaseSegmentManager.start();
+        databaseRuleManager.start();
         serverInventoryManager.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
@@ -651,7 +652,7 @@ public class DruidMaster
 
                   return params.buildFromExisting()
                                .withDruidCluster(cluster)
-                               .withRuleMap(databaseRuleCoordinator.getRuleMap())
+                               .withDatabaseRuleManager(databaseRuleManager)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .build();
                 }

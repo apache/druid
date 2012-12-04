@@ -34,8 +34,8 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.client.ServerInventoryManagerConfig;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.coordination.DruidClusterInfoConfig;
-import com.metamx.druid.db.DatabaseRuleCoordinator;
-import com.metamx.druid.db.DatabaseRuleCoordinatorConfig;
+import com.metamx.druid.db.DatabaseRuleManager;
+import com.metamx.druid.db.DatabaseRuleManagerConfig;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.db.DatabaseSegmentManagerConfig;
 import com.metamx.druid.db.DbConnector;
@@ -125,9 +125,10 @@ public class MasterMain
         configFactory.build(DatabaseSegmentManagerConfig.class),
         dbi
     );
-    final DatabaseRuleCoordinator databaseRuleCoordinator = new DatabaseRuleCoordinator(
+    final DatabaseRuleManager databaseRuleManager = new DatabaseRuleManager(
         jsonMapper,
-        configFactory.build(DatabaseRuleCoordinatorConfig.class),
+        scheduledExecutorFactory.create(1, "DatabaseRuleManager-Exec--%d"),
+        configFactory.build(DatabaseRuleManagerConfig.class),
         dbi
     );
 
@@ -177,7 +178,7 @@ public class MasterMain
         jsonMapper,
         databaseSegmentManager,
         serverInventoryManager,
-        databaseRuleCoordinator,
+        databaseRuleManager,
         masterYp,
         emitter,
         scheduledExecutorFactory,
@@ -212,7 +213,7 @@ public class MasterMain
         new MasterServletModule(
             serverInventoryManager,
             databaseSegmentManager,
-            databaseRuleCoordinator,
+            databaseRuleManager,
             druidClusterInfo,
             master,
             jsonMapper

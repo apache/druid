@@ -19,11 +19,13 @@
 
 package com.metamx.druid.db;
 
+import org.joda.time.Duration;
 import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
-public abstract class DatabaseRuleCoordinatorConfig
+public abstract class DatabaseRuleManagerConfig
 {
   @Config("druid.database.ruleTable")
   public abstract String getRuleTable();
@@ -33,4 +35,8 @@ public abstract class DatabaseRuleCoordinatorConfig
 
   @Config("druid.database.ruleVersion")
   public abstract String getRuleVersion();
+
+  @Config("druid.database.rules.poll.duration")
+  @Default("PT1M")
+  public abstract Duration getRulesPollDuration();
 }
