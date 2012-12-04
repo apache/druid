@@ -5,7 +5,7 @@ import org.skife.config.Default;
 
 public abstract class MemcachedCacheBrokerConfig
 {
-  @Config("${prefix}.initialSize")
+  @Config("${prefix}.expiration")
   @Default("31536000")
   public abstract int getExpiration();
 
