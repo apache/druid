@@ -26,6 +26,6 @@ package com.metamx.druid.client.cache;
 public interface Cache
 {
   public byte[] get(byte[] key);
-  public byte[] put(byte[] key, byte[] value);
+  public void put(byte[] key, byte[] value);
   public void close();
 }
