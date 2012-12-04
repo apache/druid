@@ -131,6 +131,6 @@ public class MemcachedCacheBroker implements CacheBroker
   }
 
   private String computeKey(String identifier, byte[] key) {
-    return identifier + Base64.encodeBytes(key);
+    return identifier + Base64.encodeBytes(key, Base64.DONT_BREAK_LINES);
   }
 }
