@@ -33,6 +33,7 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.master.rules.Rule;
 
 import javax.annotation.Nullable;
@@ -264,6 +265,20 @@ public class InfoResource
     }
 
     return Response.status(Response.Status.NOT_FOUND).build();
+  }
+
+  @GET
+  @Path("/tiers")
+  @Produces("application/json")
+  public Response getTiers()
+  {
+    Set<String> tiers = Sets.newHashSet();
+    for (DruidServer server : serverInventoryManager.getInventory()) {
+      tiers.add(server.getTier());
+    }
+    return Response.status(Response.Status.OK)
+                   .entity(tiers)
+                   .build();
   }
 
   @GET
@@ -527,5 +542,101 @@ public class InfoResource
         )
     );
     return dataSources;
+  }
+
+  @GET
+  @Path("/db/datasources")
+  @Produces("application/json")
+  public Response getDatabaseDataSources(
+      @QueryParam("full") String full
+  )
+  {
+    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    if (full != null) {
+      return builder.entity(databaseSegmentManager.getInventory()).build();
+    }
+
+    return builder.entity(
+        Iterables.transform(
+            databaseSegmentManager.getInventory(),
+            new Function<DruidDataSource, String>()
+            {
+              @Override
+              public String apply(@Nullable DruidDataSource dataSource)
+              {
+                return dataSource.getName();
+              }
+            }
+        )
+    ).build();
+  }
+
+  @GET
+  @Path("/db/datasources/{dataSourceName}")
+  @Produces("application/json")
+  public Response getDatabaseSegmentDataSource(
+      @PathParam("dataSourceName") final String dataSourceName
+  )
+  {
+    DruidDataSource dataSource = databaseSegmentManager.getInventoryValue(dataSourceName);
+    if (dataSource == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    return Response.status(Response.Status.OK).entity(dataSource).build();
+  }
+
+  @GET
+  @Path("/db/datasources/{dataSourceName}/segments")
+  @Produces("application/json")
+  public Response getDatabaseSegmentDataSourceSegments(
+      @PathParam("dataSourceName") String dataSourceName,
+      @QueryParam("full") String full
+  )
+  {
+    DruidDataSource dataSource = databaseSegmentManager.getInventoryValue(dataSourceName);
+    if (dataSource == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    if (full != null) {
+      return builder.entity(dataSource.getSegments()).build();
+    }
+
+    return builder.entity(
+        Iterables.transform(
+            dataSource.getSegments(),
+            new Function<DataSegment, Object>()
+            {
+              @Override
+              public Object apply(@Nullable DataSegment segment)
+              {
+                return segment.getIdentifier();
+              }
+            }
+        )
+    ).build();
+  }
+
+  @GET
+  @Path("/db/datasources/{dataSourceName}/segments/{segmentId}")
+  @Produces("application/json")
+  public Response getDatabaseSegmentDataSourceSegment(
+      @PathParam("dataSourceName") String dataSourceName,
+      @PathParam("segmentId") String segmentId
+  )
+  {
+    DruidDataSource dataSource = databaseSegmentManager.getInventoryValue(dataSourceName);
+    if (dataSource == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    for (DataSegment segment : dataSource.getSegments()) {
+      if (segment.getIdentifier().equalsIgnoreCase(segmentId)) {
+        return Response.status(Response.Status.OK).entity(segment).build();
+      }
+    }
+    return Response.status(Response.Status.NOT_FOUND).build();
   }
 }

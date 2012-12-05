@@ -34,10 +34,10 @@ public class PeriodDropRule extends DropRule
 
   @JsonCreator
   public PeriodDropRule(
-      @JsonProperty("period") String period
+      @JsonProperty("period") Period period
   )
   {
-    this.period = (period == null || period.equalsIgnoreCase("all")) ? new Period("P1000Y") : new Period(period);
+    this.period = period;
   }
 
   @Override

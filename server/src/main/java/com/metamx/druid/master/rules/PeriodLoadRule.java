@@ -39,12 +39,12 @@ public class PeriodLoadRule extends LoadRule
 
   @JsonCreator
   public PeriodLoadRule(
-      @JsonProperty("period") String period,
+      @JsonProperty("period") Period period,
       @JsonProperty("replicants") Integer replicants,
       @JsonProperty("tier") String tier
   )
   {
-    this.period = (period == null || period.equalsIgnoreCase("all")) ? new Period("P5000Y") : new Period(period);
+    this.period = period;
     this.replicants = (replicants == null) ? 2 : replicants;
     this.tier = tier;
   }

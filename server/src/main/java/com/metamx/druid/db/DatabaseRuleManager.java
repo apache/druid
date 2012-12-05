@@ -30,6 +30,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.master.rules.Rule;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.FoldController;
@@ -206,15 +207,16 @@ public class DatabaseRuleManager
               @Override
               public Void withHandle(Handle handle) throws Exception
               {
+                final String version = new DateTime().toString();
                 handle.createStatement(
                     String.format(
-                        "INSERT INTO %s (id, dataSource, ruleVersion, payload) VALUES (:id, :dataSource, :ruleVersion, :payload)",
+                        "INSERT INTO %s (id, dataSource, version, payload) VALUES (:id, :dataSource, :version, :payload)",
                         config.getRuleTable()
                     )
                 )
-                      .bind("id", String.format("%s_%s", dataSource, config.getRuleVersion()))
+                      .bind("id", String.format("%s_%s", dataSource, version))
                       .bind("dataSource", dataSource)
-                      .bind("ruleVersion", config.getRuleVersion())
+                      .bind("version", version)
                       .bind("payload", jsonMapper.writeValueAsString(newRules))
                       .execute();
 

@@ -113,7 +113,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
             "[%s]: No unique values found for highest and lowest percent used servers: nothing to balance",
             tier
         );
-        return params;
+        continue;
       }
 
       ServerHolder highestPercentUsedServer = serversByPercentUsed.first();

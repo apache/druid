@@ -23,6 +23,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.shard.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,7 +41,7 @@ public class PeriodDropRuleTest
   {
     DateTime now = new DateTime();
     PeriodDropRule rule = new PeriodDropRule(
-        "all"
+        new Period("P5000Y")
     );
 
     Assert.assertTrue(
@@ -66,7 +67,7 @@ public class PeriodDropRuleTest
   {
     DateTime now = new DateTime();
     PeriodDropRule rule = new PeriodDropRule(
-        "P1M"
+        new Period("P1M")
     );
 
     Assert.assertTrue(
