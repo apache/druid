@@ -23,8 +23,10 @@ import net.iharder.base64.Base64;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.DefaultHashAlgorithm;
+import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
+import net.spy.memcached.transcoders.SerializingTranscoder;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -35,15 +37,21 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class MemcachedCacheBroker implements CacheBroker
 {
-  public static CacheBroker create(final MemcachedCacheBrokerConfig config)
+  public static MemcachedCacheBroker create(final MemcachedCacheBrokerConfig config)
   {
     try {
+      SerializingTranscoder transcoder = new SerializingTranscoder(config.getMaxObjectSize());
+      // disable compression
+      transcoder.setCompressionThreshold(Integer.MAX_VALUE);
+
       return new MemcachedCacheBroker(
         new MemcachedClient(
           new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
                                         .setHashAlg(DefaultHashAlgorithm.FNV1A_64_HASH)
                                         .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
                                         .setDaemon(true)
+                                        .setFailureMode(FailureMode.Retry)
+                                        .setTranscoder(transcoder)
                                         .setShouldOptimize(true)
                                         .build(),
           AddrUtil.getAddresses(config.getHosts())
@@ -132,5 +140,10 @@ public class MemcachedCacheBroker implements CacheBroker
 
   private String computeKey(String identifier, byte[] key) {
     return identifier + Base64.encodeBytes(key, Base64.DONT_BREAK_LINES);
+  }
+
+  protected MemcachedClientIF getClient()
+  {
+    return client;
   }
 }

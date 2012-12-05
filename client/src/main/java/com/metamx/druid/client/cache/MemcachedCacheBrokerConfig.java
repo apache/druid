@@ -15,4 +15,7 @@ public abstract class MemcachedCacheBrokerConfig
 
   @Config("${prefix}.hosts")
   public abstract String getHosts();
+
+  @Config("${prefix}.maxObjectSize")
+  public abstract int getMaxObjectSize();
 }
