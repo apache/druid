@@ -187,6 +187,11 @@
             <artifactId>easymock</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.caliper</groupId>
+            <artifactId>caliper</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
