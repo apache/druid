@@ -19,6 +19,7 @@
 
 package com.metamx.druid.client.cache;
 
+import com.google.common.base.Throwables;
 import net.iharder.base64.Base64;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -60,7 +61,7 @@ public class MemcachedCacheBroker implements CacheBroker
         config.getExpiration()
       );
     } catch(IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -117,10 +118,10 @@ public class MemcachedCacheBroker implements CacheBroker
           return null;
         }
         catch(InterruptedException e) {
-          return null;
+          throw Throwables.propagate(e);
         }
         catch(ExecutionException e) {
-          return null;
+          throw Throwables.propagate(e);
         }
       }
 
