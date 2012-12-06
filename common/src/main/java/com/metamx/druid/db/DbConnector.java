@@ -35,7 +35,35 @@ public class DbConnector
 {
   private static final Logger log = new Logger(DbConnector.class);
 
-  public static void createSegmentTable(final DBI dbi, final DbConnectorConfig config)
+  public static void createSegmentTable(final DBI dbi, final String segmentTableName)
+  {
+    createTable(
+        dbi,
+        segmentTableName,
+        String.format(
+            "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date TINYTEXT NOT NULL, start TINYTEXT NOT NULL, end TINYTEXT NOT NULL, partitioned BOOLEAN NOT NULL, version TINYTEXT NOT NULL, used BOOLEAN NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), INDEX(used), PRIMARY KEY (id))",
+            segmentTableName
+        )
+    );
+  }
+
+  public static void createRuleTable(final DBI dbi, final String ruleTableName)
+  {
+    createTable(
+        dbi,
+        ruleTableName,
+        String.format(
+            "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, version TINYTEXT NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), PRIMARY KEY (id))",
+            ruleTableName
+        )
+    );
+  }
+
+  public static void createTable(
+      final DBI dbi,
+      final String tableName,
+      final String sql
+  )
   {
     try {
       dbi.withHandle(
@@ -47,20 +75,15 @@ public class DbConnector
               List<Map<String, Object>> table = handle.select(
                   String.format(
                       "SHOW tables LIKE '%s'",
-                      config.getSegmentTable()
+                      tableName
                   )
               );
 
               if (table.isEmpty()) {
-                log.info("Creating table[%s]", config.getSegmentTable());
-                handle.createStatement(
-                    String.format(
-                        "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date TINYTEXT NOT NULL, start TINYTEXT NOT NULL, end TINYTEXT NOT NULL, partitioned BOOLEAN NOT NULL, version TINYTEXT NOT NULL, used BOOLEAN NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), INDEX(used), PRIMARY KEY (id))",
-                        config.getSegmentTable()
-                    )
-                ).execute();
+                log.info("Creating table[%s]", tableName);
+                handle.createStatement(sql).execute();
               } else {
-                log.info("Table[%s] existed: [%s]", config.getSegmentTable(), table);
+                log.info("Table[%s] existed: [%s]", tableName, table);
               }
 
               return null;
@@ -69,7 +92,7 @@ public class DbConnector
       );
     }
     catch (Exception e) {
-      log.warn(e.toString());
+      log.warn(e, "Exception creating table");
     }
   }
 

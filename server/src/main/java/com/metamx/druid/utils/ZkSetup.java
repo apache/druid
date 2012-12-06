@@ -52,8 +52,7 @@ public class ZkSetup
       final String thePath = String.format("%s/%s", path, subPath);
       if (zkClient.exists(thePath)) {
         System.out.printf("Path[%s] exists already%n", thePath);
-      }
-      else {
+      } else {
         System.out.printf("Creating ZK path[%s]%n", thePath);
         zkClient.createPersistent(thePath);
       }
@@ -101,6 +100,6 @@ public class ZkSetup
 
     DbConnector dbConnector = new DbConnector(config);
 
-    DbConnector.createSegmentTable(dbConnector.getDBI(), config);
+    DbConnector.createSegmentTable(dbConnector.getDBI(), args[4]);
   }
 }

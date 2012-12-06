@@ -77,7 +77,7 @@ public class MetadataUpdater
         "name", config.getServerName(),
         "host", config.getHost(),
         "maxSize", String.valueOf(config.getMaxSize()),
-        "type", config.getType()
+        "type", "realtime"
     );
   }
 

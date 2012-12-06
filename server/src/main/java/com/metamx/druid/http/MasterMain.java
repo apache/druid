@@ -34,6 +34,8 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.client.ServerInventoryManagerConfig;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.coordination.DruidClusterInfoConfig;
+import com.metamx.druid.db.DatabaseRuleManager;
+import com.metamx.druid.db.DatabaseRuleManagerConfig;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.db.DatabaseSegmentManagerConfig;
 import com.metamx.druid.db.DbConnector;
@@ -48,6 +50,7 @@ import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterConfig;
 import com.metamx.druid.master.LoadQueuePeon;
 import com.metamx.druid.utils.PropUtils;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
@@ -102,6 +105,7 @@ public class MasterMain
         PropUtils.getProperty(props, "druid.host"),
         Emitters.create(props, httpClient, jsonMapper, lifecycle)
     );
+    EmittingLogger.registerEmitter(emitter);
 
     final ZkClient zkClient = Initialization.makeZkClient(configFactory.build(ZkClientConfig.class), lifecycle);
 
@@ -113,11 +117,18 @@ public class MasterMain
 
     final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
     final DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
-    DbConnector.createSegmentTable(dbi, dbConnectorConfig);
+    DbConnector.createSegmentTable(dbi, PropUtils.getProperty(props, "druid.database.segmentTable"));
+    DbConnector.createRuleTable(dbi, PropUtils.getProperty(props, "druid.database.ruleTable"));
     final DatabaseSegmentManager databaseSegmentManager = new DatabaseSegmentManager(
         jsonMapper,
         scheduledExecutorFactory.create(1, "DatabaseSegmentManager-Exec--%d"),
         configFactory.build(DatabaseSegmentManagerConfig.class),
+        dbi
+    );
+    final DatabaseRuleManager databaseRuleManager = new DatabaseRuleManager(
+        jsonMapper,
+        scheduledExecutorFactory.create(1, "DatabaseRuleManager-Exec--%d"),
+        configFactory.build(DatabaseRuleManagerConfig.class),
         dbi
     );
 
@@ -167,6 +178,7 @@ public class MasterMain
         jsonMapper,
         databaseSegmentManager,
         serverInventoryManager,
+        databaseRuleManager,
         masterYp,
         emitter,
         scheduledExecutorFactory,
@@ -201,6 +213,7 @@ public class MasterMain
         new MasterServletModule(
             serverInventoryManager,
             databaseSegmentManager,
+            databaseRuleManager,
             druidClusterInfo,
             master,
             jsonMapper
@@ -214,7 +227,7 @@ public class MasterMain
       @Override
       public boolean doLocal()
       {
-        return ((master != null) && master.isClusterMaster());
+        return master.isClusterMaster();
       }
 
       @Override
@@ -234,7 +247,7 @@ public class MasterMain
     final Context staticContext = new Context(server, "/static", Context.SESSIONS);
     staticContext.addServlet(new ServletHolder(new RedirectServlet(redirectInfo)), "/*");
 
-    staticContext.setResourceBase(ServerMain.class.getClassLoader().getResource("static").toExternalForm());
+    staticContext.setResourceBase(ComputeMain.class.getClassLoader().getResource("static").toExternalForm());
 
     final Context root = new Context(server, "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");

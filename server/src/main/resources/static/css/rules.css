@@ -1,0 +1,43 @@
+#datasources {
+  width:200px;
+}
+
+#rules {
+  margin: 20px 0 20px 0;
+  display:none;
+  font-family: Verdana,Arial,sans-serif;
+  font-size: 1.1em;
+}
+
+#rules_list {
+  margin: 20px 0 20px 0;
+}
+
+.rule {
+  margin: 5px 0 5px 0;
+  padding: 10px;
+  border: solid 1px #ccc;
+  cursor: pointer;
+}
+
+.very_long_text {
+  width:500px;
+}
+
+.long_text {
+  width: 350px;
+}
+
+.short_text {
+  width: 80px;
+}
+
+.rule_label {
+  margin: 0 10px 0 10px;
+}
+
+.delete_rule {
+  border-style : none;
+  color:#555;
+  background-color:#eee;
+}

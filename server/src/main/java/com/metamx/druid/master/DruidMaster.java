@@ -20,6 +20,7 @@
 package com.metamx.druid.master;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -39,6 +40,7 @@ import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
+import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -49,6 +51,7 @@ import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -75,13 +78,13 @@ public class DruidMaster
   private final DruidClusterInfo clusterInfo;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final ServerInventoryManager serverInventoryManager;
+  private final DatabaseRuleManager databaseRuleManager;
   private final PhoneBook yp;
   private final ServiceEmitter emitter;
   private final ScheduledExecutorService exec;
   private final ScheduledExecutorService peonExec;
   private final PhoneBookPeon masterPeon;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
-
   private final ServiceProvider serviceProvider;
 
   private final ObjectMapper jsonMapper;
@@ -92,6 +95,7 @@ public class DruidMaster
       ObjectMapper jsonMapper,
       DatabaseSegmentManager databaseSegmentManager,
       ServerInventoryManager serverInventoryManager,
+      DatabaseRuleManager databaseRuleManager,
       PhoneBook zkPhoneBook,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
@@ -106,6 +110,7 @@ public class DruidMaster
 
     this.databaseSegmentManager = databaseSegmentManager;
     this.serverInventoryManager = serverInventoryManager;
+    this.databaseRuleManager = databaseRuleManager;
     this.yp = zkPhoneBook;
     this.emitter = emitter;
 
@@ -177,6 +182,7 @@ public class DruidMaster
 
   public void removeSegment(DataSegment segment)
   {
+    log.info("Removing Segment[%s]", segment);
     databaseSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
   }
 
@@ -416,17 +422,17 @@ public class DruidMaster
         log.info("I am the master, all must bow!");
         master = true;
         databaseSegmentManager.start();
+        databaseRuleManager.start();
         serverInventoryManager.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
 
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
-        if (config.isMergeSegments() && serviceProvider != null){
-            masterRunnables.add(Pair.of(new MasterSegmentMergerRunnable(), config.getMasterSegmentMergerPeriod()));
+        if (config.isMergeSegments() && serviceProvider != null) {
+          masterRunnables.add(Pair.of(new MasterSegmentMergerRunnable(), config.getMasterSegmentMergerPeriod()));
         }
 
-        for(final Pair<? extends MasterRunnable, Duration> masterRunnable : masterRunnables)
-        {
+        for (final Pair<? extends MasterRunnable, Duration> masterRunnable : masterRunnables) {
           ScheduledExecutors.scheduleWithFixedDelay(
               exec,
               config.getMasterStartDelay(),
@@ -565,8 +571,9 @@ public class DruidMaster
         for (DruidMasterHelper helper : helpers) {
           params = helper.run(params);
         }
-      } catch (Exception e) {
-          log.error(e, "Caught exception, ignoring so that schedule keeps going.");
+      }
+      catch (Exception e) {
+        log.error(e, "Caught exception, ignoring so that schedule keeps going.");
       }
     }
   }
@@ -578,7 +585,8 @@ public class DruidMaster
       super(
           ImmutableList.of(
               new DruidMasterSegmentInfoLoader(DruidMaster.this),
-              new DruidMasterHelper() {
+              new DruidMasterHelper()
+              {
                 @Override
                 public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
                 {
@@ -595,70 +603,62 @@ public class DruidMaster
                     }
                   }
 
-                  // Find all historical servers
-                  final Set<DruidServer> historicalServers = Sets.newHashSet();
+                  // Find all historical servers, group them by subType and sort by ascending usage
+                  final DruidCluster cluster = new DruidCluster();
                   for (DruidServer server : servers) {
                     if (server.getType().equalsIgnoreCase("historical")) {
-                      historicalServers.add(server);
-                    }
-                  }
+                      if (!loadManagementPeons.containsKey(server.getName())) {
+                        String basePath = yp.combineParts(Arrays.asList(config.getLoadQueuePath(), server.getName()));
+                        LoadQueuePeon loadQueuePeon = new LoadQueuePeon(yp, basePath, peonExec);
+                        log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
 
-                  // Run historical server stuff
-                  final Map<String, DruidServer> availableServerMap = Maps.newHashMap();
-                  final Set<DataSegment> unservicedSegments =
-                      Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
-
-                  // Create map of available servers, find unserviced segments and create peons for new servers
-                  unservicedSegments.addAll(params.getAvailableSegments());
-                  for (DruidServer server : historicalServers) {
-                    availableServerMap.put(server.getName(), server);
-                    for (DruidDataSource dataSource : server.getDataSources()) {
-                      for (DataSegment segment : dataSource.getSegments()) {
-                        unservicedSegments.remove(segment);
+                        loadManagementPeons.put(
+                            server.getName(),
+                            loadQueuePeon
+                        );
+                        yp.registerListener(basePath, loadQueuePeon);
                       }
-                    }
 
-                    if (!loadManagementPeons.containsKey(server.getName())) {
-                      String basePath = yp.combineParts(Arrays.asList(config.getLoadQueuePath(), server.getName()));
-                      LoadQueuePeon loadQueuePeon = new LoadQueuePeon(yp, basePath, peonExec);
-                      log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
-
-                      loadManagementPeons.put(
-                          server.getName(),
-                          loadQueuePeon
-                      );
-                      yp.registerListener(basePath, loadQueuePeon);
+                      cluster.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
                     }
                   }
+
+                  SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
 
                   // Stop peons for servers that aren't there anymore.
-                  for (String name : loadManagementPeons.keySet()) {
-                    if (!availableServerMap.containsKey(name)) {
-                      log.info("Removing listener for server[%s] which is no longer there.", name);
-                      LoadQueuePeon peon = loadManagementPeons.remove(name);
-                      peon.stop();
+                  for (String name : Sets.difference(
+                      Sets.newHashSet(
+                          Collections2.transform(
+                              servers,
+                              new Function<DruidServer, String>()
+                              {
+                                @Override
+                                public String apply(@Nullable DruidServer input)
+                                {
+                                  return input.getName();
+                                }
+                              }
+                          )
+                      ), loadManagementPeons.keySet()
+                  )) {
+                    log.info("Removing listener for server[%s] which is no longer there.", name);
+                    LoadQueuePeon peon = loadManagementPeons.remove(name);
+                    peon.stop();
 
-                      yp.unregisterListener(yp.combineParts(Arrays.asList(config.getLoadQueuePath(), name)), peon);
-                    }
+                    yp.unregisterListener(yp.combineParts(Arrays.asList(config.getLoadQueuePath(), name)), peon);
                   }
 
-                  // Remove queued segments
-                  for (LoadQueuePeon peon : loadManagementPeons.values()) {
-                    for (DataSegment segment : peon.getSegmentsToLoad()) {
-                      unservicedSegments.remove(segment);
-                    }
-                  }
+                  decrementRemovedSegmentsLifetime();
 
                   return params.buildFromExisting()
-                               .withAvailableServerMap(availableServerMap)
-                               .withHistoricalServers(historicalServers)
-                               .withUnservicedSegments(unservicedSegments)
+                               .withDruidCluster(cluster)
+                               .withDatabaseRuleManager(databaseRuleManager)
+                               .withSegmentReplicantLookup(segmentReplicantLookup)
                                .build();
                 }
               },
-              new DruidMasterAssigner(DruidMaster.this),
-              new DruidMasterDropper(DruidMaster.this),
-              new DruidMasterReplicator(DruidMaster.this),
+              new DruidMasterRuleRunner(DruidMaster.this),
+              new DruidMasterCleanup(DruidMaster.this),
               new DruidMasterBalancer(DruidMaster.this, new BalancerAnalyzer()),
               new DruidMasterLogger()
           )
@@ -679,12 +679,13 @@ public class DruidMaster
                 @Override
                 public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
                 {
-                  log.info("Issued merge requests for %,d segments", params.getMergedSegmentCount());
+                  MasterStats stats = params.getMasterStats();
+                  log.info("Issued merge requests for %s segments", stats.getGlobalStats().get("mergedCount").get());
 
                   params.getEmitter().emit(
                       new ServiceMetricEvent.Builder().build(
                           "master/merge/count",
-                          params.getMergedSegmentCount()
+                          stats.getGlobalStats().get("mergedCount")
                       )
                   );
 
