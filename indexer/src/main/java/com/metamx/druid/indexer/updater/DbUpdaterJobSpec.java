@@ -56,7 +56,6 @@ public class DbUpdaterJobSpec extends DbConnectorConfig implements UpdaterJobSpe
     return password;
   }
 
-  @Override
   public String getSegmentTable()
   {
     return segmentTable;

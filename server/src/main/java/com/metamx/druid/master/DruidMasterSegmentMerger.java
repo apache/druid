@@ -77,8 +77,8 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
   @Override
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
+    MasterStats stats = new MasterStats();
     Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = Maps.newHashMap();
-    int count = 0;
 
     // Find serviced segments by using a timeline
     for (DataSegment dataSegment : params.getAvailableSegments()) {
@@ -114,7 +114,7 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
           i -= segmentsToMerge.backtrack(params.getMergeBytesLimit());
 
           if (segmentsToMerge.getSegmentCount() > 1) {
-            count += mergeSegments(segmentsToMerge, entry.getKey());
+            stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
           }
 
           if (segmentsToMerge.getSegmentCount() == 0) {
@@ -129,12 +129,12 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
       // Finish any timelineObjects to merge that may have not hit threshold
       segmentsToMerge.backtrack(params.getMergeBytesLimit());
       if (segmentsToMerge.getSegmentCount() > 1) {
-        count += mergeSegments(segmentsToMerge, entry.getKey());
+        stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
       }
     }
 
     return params.buildFromExisting()
-                 .withMergedSegmentCount(count)
+                 .withMasterStats(stats)
                  .build();
   }
 

@@ -36,10 +36,6 @@ public abstract class MetadataUpdaterConfig
   @Default("0")
   public abstract long getMaxSize();
 
-  @Config("druid.server.type")
-  @Default("realtime")
-  public abstract String getType();
-
   @Config("druid.database.segmentTable")
   public abstract String getSegmentTable();
 

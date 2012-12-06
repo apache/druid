@@ -22,6 +22,7 @@ package com.metamx.druid.http;
 import com.google.inject.Provides;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
+import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.master.DruidMaster;
 import com.sun.jersey.guice.JerseyServletModule;
@@ -37,6 +38,7 @@ public class MasterServletModule extends JerseyServletModule
 {
   private final ServerInventoryManager serverInventoryManager;
   private final DatabaseSegmentManager segmentInventoryManager;
+  private final DatabaseRuleManager databaseRuleManager;
   private final DruidClusterInfo druidClusterInfo;
   private final DruidMaster master;
   private final ObjectMapper jsonMapper;
@@ -44,6 +46,7 @@ public class MasterServletModule extends JerseyServletModule
   public MasterServletModule(
       ServerInventoryManager serverInventoryManager,
       DatabaseSegmentManager segmentInventoryManager,
+      DatabaseRuleManager databaseRuleManager,
       DruidClusterInfo druidClusterInfo,
       DruidMaster master,
       ObjectMapper jsonMapper
@@ -51,6 +54,7 @@ public class MasterServletModule extends JerseyServletModule
   {
     this.serverInventoryManager = serverInventoryManager;
     this.segmentInventoryManager = segmentInventoryManager;
+    this.databaseRuleManager = databaseRuleManager;
     this.druidClusterInfo = druidClusterInfo;
     this.master = master;
     this.jsonMapper = jsonMapper;
@@ -63,6 +67,7 @@ public class MasterServletModule extends JerseyServletModule
     bind(MasterResource.class);
     bind(ServerInventoryManager.class).toInstance(serverInventoryManager);
     bind(DatabaseSegmentManager.class).toInstance(segmentInventoryManager);
+    bind(DatabaseRuleManager.class).toInstance(databaseRuleManager);
     bind(DruidMaster.class).toInstance(master);
     bind(DruidClusterInfo.class).toInstance(druidClusterInfo);
 

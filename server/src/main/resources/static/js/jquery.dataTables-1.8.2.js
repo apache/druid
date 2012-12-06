@@ -6596,7 +6596,7 @@
 			{
 				for ( var j=0, jLen=an1[i].childNodes.length ; j<jLen ; j++ )
 				{
-					if ( an1[i].childNodes[j].nodeType == 1 )
+					if ( an1[i].childNodes[j].tier == 1 )
 					{
 						if ( typeof an2 != 'undefined' )
 						{

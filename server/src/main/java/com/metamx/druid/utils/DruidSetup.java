@@ -325,6 +325,7 @@ public class DruidSetup
     Properties tmp_props = new Properties();
     loadProperties(pfile, tmp_props);
     final String tableName = tmp_props.getProperty("druid.database.segmentTable", "prod_segments");
+    final String ruleTableName = tmp_props.getProperty("druid.database.ruleTable", "prod_rules");
 
     final String dbConnectionUrl = tmp_props.getProperty("druid.database.connectURI");
     final String username = tmp_props.getProperty("druid.database.user");
@@ -335,6 +336,9 @@ public class DruidSetup
     //
     if (tableName.length() == 0 || !Character.isLetter(tableName.charAt(0))) {
       throw new RuntimeException("poorly formed property druid.database.segmentTable=" + tableName);
+    }
+    if (ruleTableName.length() == 0 || !Character.isLetter(ruleTableName.charAt(0))) {
+      throw new RuntimeException("poorly formed property druid.database.ruleTable=" + ruleTableName);
     }
     if (username == null || username.length() == 0) {
       throw new RuntimeException("poorly formed property druid.database.user=" + username);
@@ -348,9 +352,6 @@ public class DruidSetup
 
     final DbConnectorConfig config = new DbConnectorConfig()
     {
-      {
-      }
-
       @Override
       public String getDatabaseConnectURI()
       {
@@ -378,8 +379,8 @@ public class DruidSetup
 
     DbConnector dbConnector = new DbConnector(config);
 
-    DbConnector.createSegmentTable(dbConnector.getDBI(), config);
-
+    DbConnector.createSegmentTable(dbConnector.getDBI(), tableName);
+    DbConnector.createRuleTable(dbConnector.getDBI(), ruleTableName);
   }
 
   /**

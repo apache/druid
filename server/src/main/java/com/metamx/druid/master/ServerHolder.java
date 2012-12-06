@@ -20,6 +20,7 @@
 package com.metamx.druid.master;
 
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 
 /**
@@ -93,9 +94,44 @@ public class ServerHolder implements Comparable<ServerHolder>
     return availableSize;
   }
 
+  public boolean containsSegment(DataSegment segment)
+  {
+    return (server.getSegment(segment.getIdentifier()) != null && peon.getSegmentsToLoad().contains(segment));
+  }
+
   @Override
   public int compareTo(ServerHolder serverHolder)
   {
     return getAvailableSize().compareTo(serverHolder.getAvailableSize());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    ServerHolder that = (ServerHolder) o;
+
+    if (peon != null ? !peon.equals(that.peon) : that.peon != null) {
+      return false;
+    }
+    if (server != null ? !server.equals(that.server) : that.server != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = server != null ? server.hashCode() : 0;
+    result = 31 * result + (peon != null ? peon.hashCode() : 0);
+    return result;
   }
 }
