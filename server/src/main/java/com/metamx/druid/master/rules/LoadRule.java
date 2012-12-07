@@ -74,7 +74,13 @@ public abstract class LoadRule implements Rule
     while (actualReplicants < expectedReplicants) {
       ServerHolder holder = serverQueue.pollFirst();
       if (holder == null) {
-        log.warn("Not enough %s servers[%d] to assign segments!!!", getTier(), serverQueue.size());
+        log.warn(
+            "Not enough %s servers[%d] to assign segment[%s]! Expected Replicants[%d]",
+            getTier(),
+            assignedServers.size() + serverQueue.size() + 1,
+            segment.getIdentifier(),
+            expectedReplicants
+        );
         break;
       }
       if (holder.containsSegment(segment)) {
