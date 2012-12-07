@@ -21,9 +21,11 @@ package com.metamx.druid.utils;
 
 import com.google.common.io.Closeables;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.zk.PropertiesZkSerializer;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.ZkConnection;
@@ -381,6 +383,7 @@ public class DruidSetup
 
     DbConnector.createSegmentTable(dbConnector.getDBI(), tableName);
     DbConnector.createRuleTable(dbConnector.getDBI(), ruleTableName);
+    DatabaseRuleManager.createDefaultRule(dbConnector.getDBI(), ruleTableName, new DefaultObjectMapper());
   }
 
   /**

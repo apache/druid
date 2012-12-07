@@ -1,5 +1,5 @@
 var tiers = [];
-var defaultDatasource = "_mmx_default";
+var defaultDatasource = "_default";
 
 var ruleTypes = [
   "loadByInterval",

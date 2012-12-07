@@ -125,12 +125,14 @@ public class MasterMain
         configFactory.build(DatabaseSegmentManagerConfig.class),
         dbi
     );
+    final DatabaseRuleManagerConfig databaseRuleManagerConfig = configFactory.build(DatabaseRuleManagerConfig.class);
     final DatabaseRuleManager databaseRuleManager = new DatabaseRuleManager(
         jsonMapper,
         scheduledExecutorFactory.create(1, "DatabaseRuleManager-Exec--%d"),
-        configFactory.build(DatabaseRuleManagerConfig.class),
+        databaseRuleManagerConfig,
         dbi
     );
+    DatabaseRuleManager.createDefaultRule(dbi, databaseRuleManagerConfig.getRuleTable(), jsonMapper);
 
     final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
     final MonitorScheduler healthMonitor = new MonitorScheduler(

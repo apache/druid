@@ -27,11 +27,13 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.master.rules.PeriodLoadRule;
 import com.metamx.druid.master.rules.Rule;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
@@ -40,6 +42,7 @@ import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,6 +53,57 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DatabaseRuleManager
 {
+  public static void createDefaultRule(final DBI dbi, final String ruleTable, final ObjectMapper jsonMapper)
+  {
+    try {
+      dbi.withHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle) throws Exception
+            {
+              List<Map<String, Object>> existing = handle.select(
+                  String.format(
+                      "SELECT id from %s where datasource='_default';",
+                      ruleTable
+                  )
+              );
+
+              if (!existing.isEmpty()) {
+                return null;
+              }
+
+              final List<Rule> defaultRules = Arrays.<Rule>asList(
+                  new PeriodLoadRule(
+                      new Period("P5000Y"),
+                      2,
+                      "_default_tier"
+                  )
+              );
+              final String dataSource = "_default";
+              final String version = new DateTime().toString();
+              handle.createStatement(
+                  String.format(
+                      "INSERT INTO %s (id, dataSource, version, payload) VALUES (:id, :dataSource, :version, :payload)",
+                      ruleTable
+                  )
+              )
+                    .bind("id", String.format("%s_%s", dataSource, version))
+                    .bind("dataSource", dataSource)
+                    .bind("version", version)
+                    .bind("payload", jsonMapper.writeValueAsString(defaultRules))
+                    .execute();
+
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
   private static final Logger log = new Logger(DatabaseRuleManager.class);
 
   private final ObjectMapper jsonMapper;
