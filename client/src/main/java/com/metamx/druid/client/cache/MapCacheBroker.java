@@ -77,7 +77,8 @@ public class MapCacheBroker implements CacheBroker
         missCount.get(),
         byteCountingLRUMap.size(),
         byteCountingLRUMap.getNumBytes(),
-        byteCountingLRUMap.getEvictionCount()
+        byteCountingLRUMap.getEvictionCount(),
+        0
     );
   }
 
@@ -112,11 +113,12 @@ public class MapCacheBroker implements CacheBroker
         }
 
         @Override
-        public byte[] put(byte[] key, byte[] value)
+        public void put(byte[] key, byte[] value)
         {
           synchronized (clearLock) {
             if (open) {
-              return baseMap.put(computeKey(key), value);
+              baseMap.put(computeKey(key), value);
+              return;
             }
           }
           throw new ISE("Cache for identifier[%s] is closed.", identifier);
