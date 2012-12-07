@@ -53,7 +53,12 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DatabaseRuleManager
 {
-  public static void createDefaultRule(final DBI dbi, final String ruleTable, final ObjectMapper jsonMapper)
+  public static void createDefaultRule(
+      final DBI dbi,
+      final String ruleTable,
+      final String defaultDatasource,
+      final ObjectMapper jsonMapper
+  )
   {
     try {
       dbi.withHandle(
@@ -64,8 +69,9 @@ public class DatabaseRuleManager
             {
               List<Map<String, Object>> existing = handle.select(
                   String.format(
-                      "SELECT id from %s where datasource='_default';",
-                      ruleTable
+                      "SELECT id from %s where datasource=%s;",
+                      ruleTable,
+                      defaultDatasource
                   )
               );
 
@@ -80,7 +86,6 @@ public class DatabaseRuleManager
                       "_default_tier"
                   )
               );
-              final String dataSource = "_default";
               final String version = new DateTime().toString();
               handle.createStatement(
                   String.format(
@@ -88,8 +93,8 @@ public class DatabaseRuleManager
                       ruleTable
                   )
               )
-                    .bind("id", String.format("%s_%s", dataSource, version))
-                    .bind("dataSource", dataSource)
+                    .bind("id", String.format("%s_%s", defaultDatasource, version))
+                    .bind("dataSource", defaultDatasource)
                     .bind("version", version)
                     .bind("payload", jsonMapper.writeValueAsString(defaultRules))
                     .execute();

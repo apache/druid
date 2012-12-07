@@ -128,22 +128,26 @@ public class DruidSetup
     InputStream is = null;
     try {
       is = new FileInputStream(pfile);
-    } catch (FileNotFoundException e) {
+    }
+    catch (FileNotFoundException e) {
       System.err.println("File not found: " + pfile);
       System.err.println("No changes made.");
       System.exit(4);
-    } catch (IOException ioe) {
+    }
+    catch (IOException ioe) {
       reportErrorAndExit(pfile, ioe);
     }
     try {
       props.load(is);
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       reportErrorAndExit(pfile, e);
-    } finally {
+    }
+    finally {
       Closeables.closeQuietly(is);
     }
 
-    if (! Initialization.validateResolveProps(props)) { // bail, errors have been emitted
+    if (!Initialization.validateResolveProps(props)) { // bail, errors have been emitted
       System.exit(9);
     }
 
@@ -152,14 +156,16 @@ public class DruidSetup
     for (String pname : Initialization.SUB_PATH_PROPS) {
       System.out.println("  " + pname + "=" + props.getProperty(pname));
     }
-    System.out.println("  " + "druid.zk.paths.propertiesPath" + "=" +
-        props.getProperty("druid.zk.paths.propertiesPath"));
+    System.out.println(
+        "  " + "druid.zk.paths.propertiesPath" + "=" +
+        props.getProperty("druid.zk.paths.propertiesPath")
+    );
 
   }
 
   /**
    * @param zkClient  zookeeper client.
-   * @param zpathBase     znode base path.
+   * @param zpathBase znode base path.
    * @param zkConnect ZK coordinates in the form host1:port1[,host2:port2[, ...]]
    * @param out
    */
@@ -172,7 +178,8 @@ public class DruidSetup
         out.println("# Begin Properties Listing for zkConnect=" + zkConnect + " zpath=" + propPath);
         try {
           currProps.store(out, "Druid");
-        } catch (IOException ignored) {
+        }
+        catch (IOException ignored) {
         }
         out.println("# End Properties Listing for zkConnect=" + zkConnect + " zpath=" + propPath);
         out.println("# NOTE:  properties like druid.zk.paths.*Path are always stored in zookeeper in absolute form.");
@@ -205,10 +212,10 @@ public class DruidSetup
   }
 
   /**
-   * @param zkClient zookeeper client.
-   * @param zpathBase    znode base path.
-   * @param props    the properties to store.
-   * @param out      the PrintStream for human readable update summary (usually System.out).
+   * @param zkClient  zookeeper client.
+   * @param zpathBase znode base path.
+   * @param props     the properties to store.
+   * @param out       the PrintStream for human readable update summary (usually System.out).
    */
   private static void updatePropertiesZK(ZkClient zkClient, String zpathBase, Properties props, PrintStream out)
   {
@@ -231,7 +238,9 @@ public class DruidSetup
       String currMetaPropVal = "";
       StringBuilder changes = new StringBuilder(1024);
       for (String pname : props.stringPropertyNames()) {
-        if (pname.equals(PropertiesZkSerializer.META_PROP)) continue; // ignore meta prop datestamp, if any
+        if (pname.equals(PropertiesZkSerializer.META_PROP)) {
+          continue; // ignore meta prop datestamp, if any
+        }
         final String pvalue = props.getProperty(pname);
         final String pvalueCurr = currProps.getProperty(pname);
         if (pvalueCurr == null) {
@@ -242,7 +251,7 @@ public class DruidSetup
           } else {
             countDiffer++;
             changes.append("CHANGED: ").append(pname).append("=  PREV=").append(pvalueCurr)
-                .append("   NOW=").append(pvalue).append("\n");
+                   .append("   NOW=").append(pvalue).append("\n");
           }
         }
       }
@@ -257,7 +266,8 @@ public class DruidSetup
         }
       }
       if (countNew + countRemoved + countDiffer > 0) {
-        out.println("Current properties differ: "
+        out.println(
+            "Current properties differ: "
             + countNew + " new,  "
             + countDiffer + " different values, "
             + countRemoved + " removed, "
@@ -281,9 +291,9 @@ public class DruidSetup
   }
 
   /**
-   * @param zkClient zookeeper client.
-   * @param zpathBase    znode base path.
-   * @param out      the PrintStream for human readable update summary.
+   * @param zkClient  zookeeper client.
+   * @param zpathBase znode base path.
+   * @param out       the PrintStream for human readable update summary.
    */
   private static void createZNodes(ZkClient zkClient, String zpathBase, PrintStream out)
   {
@@ -332,6 +342,7 @@ public class DruidSetup
     final String dbConnectionUrl = tmp_props.getProperty("druid.database.connectURI");
     final String username = tmp_props.getProperty("druid.database.user");
     final String password = tmp_props.getProperty("druid.database.password");
+    final String defaultDatasource = tmp_props.getProperty("druid.database.defaultDatasource", "_default");
 
     //
     //   validation
@@ -383,7 +394,12 @@ public class DruidSetup
 
     DbConnector.createSegmentTable(dbConnector.getDBI(), tableName);
     DbConnector.createRuleTable(dbConnector.getDBI(), ruleTableName);
-    DatabaseRuleManager.createDefaultRule(dbConnector.getDBI(), ruleTableName, new DefaultObjectMapper());
+    DatabaseRuleManager.createDefaultRule(
+        dbConnector.getDBI(),
+        ruleTableName,
+        defaultDatasource,
+        new DefaultObjectMapper()
+    );
   }
 
   /**
@@ -391,7 +407,8 @@ public class DruidSetup
    */
   private static void printUsage()
   {
-    System.out.println("Usage: <java invocation> CMD [args]\n"
+    System.out.println(
+        "Usage: <java invocation> CMD [args]\n"
         + "  Where CMD is a particular command:\n"
         + "  CMD choices:\n"
         + "    dump zkConnect baseZkPath    # dump info from zk at given coordinates\n"

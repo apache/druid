@@ -31,6 +31,7 @@ public abstract class DatabaseRuleManagerConfig
   public abstract String getRuleTable();
 
   @Config("druid.database.defaultDatasource")
+  @Default("_default")
   public abstract String getDefaultDatasource();
 
   @Config("druid.database.rules.poll.duration")

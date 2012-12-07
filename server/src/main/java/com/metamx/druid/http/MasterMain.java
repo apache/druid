@@ -132,7 +132,12 @@ public class MasterMain
         databaseRuleManagerConfig,
         dbi
     );
-    DatabaseRuleManager.createDefaultRule(dbi, databaseRuleManagerConfig.getRuleTable(), jsonMapper);
+    DatabaseRuleManager.createDefaultRule(
+        dbi,
+        databaseRuleManagerConfig.getRuleTable(),
+        databaseRuleManagerConfig.getDefaultDatasource(),
+        jsonMapper
+    );
 
     final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
     final MonitorScheduler healthMonitor = new MonitorScheduler(
