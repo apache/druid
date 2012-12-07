@@ -69,7 +69,7 @@ public class DatabaseRuleManager
             {
               List<Map<String, Object>> existing = handle.select(
                   String.format(
-                      "SELECT id from %s where datasource=%s;",
+                      "SELECT id from %s where datasource='%s';",
                       ruleTable,
                       defaultDatasource
                   )
