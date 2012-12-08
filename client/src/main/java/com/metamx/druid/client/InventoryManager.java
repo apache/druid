@@ -143,7 +143,7 @@ public abstract class InventoryManager<T>
     return dataSources.get(key);
   }
 
-  public Collection<T> getInventory()
+  public Iterable<T> getInventory()
   {
     return dataSources.values();
   }
