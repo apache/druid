@@ -19,6 +19,7 @@
 
 package com.metamx.druid.aggregation.post;
 
+import com.metamx.common.ISE;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
@@ -51,7 +52,11 @@ public class FieldAccessPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    return combinedAggregators.get(fieldName);
+    Object retVal = combinedAggregators.get(fieldName);
+    if (retVal == null) {
+      throw new ISE("Mismatch! Agg[%s] was not specified!", fieldName);
+    }
+    return retVal;
   }
 
   @Override
