@@ -103,7 +103,7 @@ public class ServerInit
         final long memoryNeeded = (long) config.intermediateComputeSizeBytes() * (config.getNumThreads() + 1);
         if (maxDirectMemory < memoryNeeded) {
           throw new ISE(
-              "Not enough direct memory.  Please adjust -XX:MaxDirectMemory or druid.computation.buffer.size: "
+              "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize or druid.computation.buffer.size: "
               + "maxDirectMemory[%,d], memoryNeeded[%,d], druid.computation.buffer.size[%,d], numThreads[%,d]",
               maxDirectMemory, memoryNeeded, config.intermediateComputeSizeBytes(), config.getNumThreads()
           );
