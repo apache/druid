@@ -41,6 +41,8 @@ import com.metamx.druid.loading.StorageAdapterLoader;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.query.group.GroupByQueryRunnerFactory;
+import com.metamx.druid.query.metadata.SegmentMetadataQuery;
+import com.metamx.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.query.search.SearchQueryRunnerFactory;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
@@ -144,6 +146,7 @@ public class ServerInit
     );
     queryRunners.put(SearchQuery.class, new SearchQueryRunnerFactory());
     queryRunners.put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory());
+    queryRunners.put(SegmentMetadataQuery.class, new SegmentMetadataQueryRunnerFactory());
     return queryRunners;
   }
 
