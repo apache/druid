@@ -19,11 +19,13 @@
 
 package com.metamx.druid.aggregation.post;
 
+import com.metamx.common.ISE;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -40,6 +42,12 @@ public class FieldAccessPostAggregator implements PostAggregator
   {
     this.name = name;
     this.fieldName = fieldName;
+  }
+
+  @Override
+  public boolean verifyFields(Set<String> fieldNames)
+  {
+    return fieldNames.contains(fieldName);
   }
 
   @Override

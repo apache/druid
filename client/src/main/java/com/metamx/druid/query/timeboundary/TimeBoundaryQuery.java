@@ -42,7 +42,10 @@ import java.util.Map;
  */
 public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>>
 {
-  public static final Interval MY_Y2K_INTERVAL = new Interval(new DateTime(Long.MIN_VALUE), new DateTime(Long.MAX_VALUE));
+  public static final Interval MY_Y2K_INTERVAL = new Interval(
+      new DateTime(Long.MIN_VALUE),
+      new DateTime(Long.MAX_VALUE)
+  );
   public static final String MAX_TIME = "maxTime";
   public static final String MIN_TIME = "minTime";
   private static final byte CACHE_TYPE_ID = 0x0;
@@ -131,6 +134,10 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   public Iterable<Result<TimeBoundaryResultValue>> mergeResults(List<Result<TimeBoundaryResultValue>> results)
   {
+    if (results == null || results.isEmpty()) {
+      return Lists.newArrayList();
+    }
+
     DateTime min = new DateTime(Long.MAX_VALUE);
     DateTime max = new DateTime(Long.MIN_VALUE);
     for (Result<TimeBoundaryResultValue> result : results) {
