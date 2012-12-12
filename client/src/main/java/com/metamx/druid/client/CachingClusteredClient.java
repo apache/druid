@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -237,6 +238,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                     public Iterator<Object> make()
                     {
                       try {
+                        if (cachedResult.length == 0) {
+                          return Iterators.emptyIterator();
+                        }
+
                         return objectMapper.readValues(
                             objectMapper.getJsonFactory().createJsonParser(cachedResult), Object.class
                         );

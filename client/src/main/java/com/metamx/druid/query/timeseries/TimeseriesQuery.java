@@ -26,6 +26,7 @@ import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
+import com.metamx.druid.query.Queries;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.result.Result;
@@ -67,8 +68,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     this.aggregatorSpecs = aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
 
-    Preconditions.checkNotNull(aggregatorSpecs, "aggregations cannot be null");
-    Preconditions.checkArgument(aggregatorSpecs.size() > 0, "Must have at least one AggregatorFactory");
+    Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
 
   @Override

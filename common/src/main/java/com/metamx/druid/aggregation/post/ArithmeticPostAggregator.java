@@ -69,6 +69,17 @@ public class ArithmeticPostAggregator implements PostAggregator
   }
 
   @Override
+  public boolean verifyFields(Set<String> fieldNames)
+  {
+    for (PostAggregator field : fields) {
+      if (!field.verifyFields(fieldNames)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
   public Comparator getComparator()
   {
     return COMPARATOR;
