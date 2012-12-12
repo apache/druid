@@ -24,6 +24,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -40,6 +41,12 @@ public class ConstantPostAggregator implements PostAggregator
   {
     this.name = name;
     this.constantValue = constantValue;
+  }
+
+  @Override
+  public boolean verifyFields(Set<String> fields)
+  {
+    return true;
   }
 
   @Override

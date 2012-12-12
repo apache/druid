@@ -25,6 +25,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -44,6 +45,12 @@ public class FieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
+  public boolean verifyFields(Set<String> fieldNames)
+  {
+    return fieldNames.contains(fieldName);
+  }
+
+  @Override
   public Comparator getComparator()
   {
     throw new UnsupportedOperationException();
@@ -52,11 +59,7 @@ public class FieldAccessPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    Object retVal = combinedAggregators.get(fieldName);
-    if (retVal == null) {
-      throw new ISE("Mismatch! Agg[%s] was not specified!", fieldName);
-    }
-    return retVal;
+    return combinedAggregators.get(fieldName);
   }
 
   @Override
