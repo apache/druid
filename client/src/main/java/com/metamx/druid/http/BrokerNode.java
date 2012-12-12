@@ -35,9 +35,12 @@ import com.metamx.druid.client.CachingClusteredClient;
 import com.metamx.druid.client.ClientConfig;
 import com.metamx.druid.client.ClientInventoryManager;
 import com.metamx.druid.client.cache.CacheBroker;
+import com.metamx.druid.client.cache.CacheConfig;
 import com.metamx.druid.client.cache.CacheMonitor;
 import com.metamx.druid.client.cache.MapCacheBroker;
 import com.metamx.druid.client.cache.MapCacheBrokerConfig;
+import com.metamx.druid.client.cache.MemcachedCacheBroker;
+import com.metamx.druid.client.cache.MemcachedCacheBrokerConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -65,6 +68,10 @@ import java.util.Properties;
 public class BrokerNode extends QueryableNode<BrokerNode>
 {
   private static final Logger log = new Logger(BrokerNode.class);
+
+  public static final String CACHE_TYPE_LOCAL = "local";
+  public static final String CACHE_TYPE_MEMCACHED = "memcached";
+  public static final String CACHE_PROPERTY_PREFIX = "druid.bard.cache";
 
   private final List<Module> extraModules = Lists.newArrayList();
   private final List<String> pathsForGuiceFilter = Lists.newArrayList();
@@ -233,14 +240,31 @@ public class BrokerNode extends QueryableNode<BrokerNode>
   private void initializeCacheBroker()
   {
     if (cacheBroker == null) {
-      setCacheBroker(
-          MapCacheBroker.create(
-              getConfigFactory().buildWithReplacements(
-                  MapCacheBrokerConfig.class,
-                  ImmutableMap.of("prefix", "druid.bard.cache")
-              )
-          )
-      );
+      String cacheType = getConfigFactory()
+          .build(CacheConfig.class)
+          .getType();
+
+      if (cacheType.equals(CACHE_TYPE_LOCAL)) {
+        setCacheBroker(
+            MapCacheBroker.create(
+                getConfigFactory().buildWithReplacements(
+                    MapCacheBrokerConfig.class,
+                    ImmutableMap.of("prefix", CACHE_PROPERTY_PREFIX)
+                )
+            )
+        );
+      } else if (cacheType.equals(CACHE_TYPE_MEMCACHED)) {
+        setCacheBroker(
+            MemcachedCacheBroker.create(
+                getConfigFactory().buildWithReplacements(
+                    MemcachedCacheBrokerConfig.class,
+                    ImmutableMap.of("prefix", CACHE_PROPERTY_PREFIX)
+                )
+            )
+        );
+      } else {
+        throw new ISE("Unknown cache type [%s]", cacheType);
+      }
     }
   }
 
