@@ -42,7 +42,7 @@ public class QueriesTest
     try {
       Queries.verifyAggregations(aggFactories, postAggs);
     }
-    catch (Exception e) {
+    catch (IllegalArgumentException e) {
       exceptionOccured = true;
     }
 
@@ -74,7 +74,7 @@ public class QueriesTest
     try {
       Queries.verifyAggregations(aggFactories, postAggs);
     }
-    catch (Exception e) {
+    catch (IllegalArgumentException e) {
       exceptionOccured = true;
     }
 
@@ -128,7 +128,7 @@ public class QueriesTest
     try {
       Queries.verifyAggregations(aggFactories, postAggs);
     }
-    catch (Exception e) {
+    catch (IllegalArgumentException e) {
       exceptionOccured = true;
     }
 
@@ -182,7 +182,7 @@ public class QueriesTest
     try {
       Queries.verifyAggregations(aggFactories, postAggs);
     }
-    catch (Exception e) {
+    catch (IllegalArgumentException e) {
       exceptionOccured = true;
     }
 
