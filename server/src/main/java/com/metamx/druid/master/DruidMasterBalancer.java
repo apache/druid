@@ -105,8 +105,8 @@ public class DruidMasterBalancer implements DruidMasterHelper
         continue;
       }
 
-      TreeSet<ServerHolder> serversByPercentUsed = Sets.newTreeSet(percentUsedComparator);
-      serversByPercentUsed.addAll(entry.getValue());
+      MinMaxPriorityQueue<ServerHolder> serversByPercentUsed = MinMaxPriorityQueue.orderedBy(percentUsedComparator)
+                                                                                  .create(entry.getValue());
 
       if (serversByPercentUsed.size() <= 1) {
         log.info(
@@ -116,8 +116,8 @@ public class DruidMasterBalancer implements DruidMasterHelper
         continue;
       }
 
-      ServerHolder highestPercentUsedServer = serversByPercentUsed.first();
-      ServerHolder lowestPercentUsedServer = serversByPercentUsed.last();
+      ServerHolder highestPercentUsedServer = serversByPercentUsed.peekFirst();
+      ServerHolder lowestPercentUsedServer = serversByPercentUsed.peekLast();
 
       analyzer.init(highestPercentUsedServer, lowestPercentUsedServer);
 
