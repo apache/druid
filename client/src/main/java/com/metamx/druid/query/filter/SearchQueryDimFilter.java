@@ -34,7 +34,7 @@ public class SearchQueryDimFilter implements DimFilter
 
   public SearchQueryDimFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("query")SearchQuerySpec query
+      @JsonProperty("query") SearchQuerySpec query
   )
   {
     this.dimension = dimension;

@@ -31,7 +31,8 @@ import org.codehaus.jackson.annotate.JsonTypeInfo;
     @JsonSubTypes.Type(name="not", value=NotDimFilter.class),
     @JsonSubTypes.Type(name="selector", value=SelectorDimFilter.class),
     @JsonSubTypes.Type(name="extraction", value=ExtractionDimFilter.class),
-    @JsonSubTypes.Type(name="regex", value=RegexDimFilter.class)
+    @JsonSubTypes.Type(name="regex", value=RegexDimFilter.class),
+    @JsonSubTypes.Type(name="search", value=SearchQueryDimFilter.class)
 })
 public interface DimFilter
 {
