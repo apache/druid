@@ -46,7 +46,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
                                       .setTranscoder(transcoder)
                                       .setShouldOptimize(true)
                                       .build(),
-        AddrUtil.getAddresses("localhost:11211")
+        AddrUtil.getAddresses(System.getProperty("druid.bard.cache.hosts", "localhost:11211"))
     );
 
     broker = new MemcachedCacheBroker(
