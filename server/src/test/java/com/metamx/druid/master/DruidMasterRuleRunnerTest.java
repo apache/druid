@@ -357,7 +357,7 @@ public class DruidMasterRuleRunnerTest
   public void testRunTwoTiersTierDoesNotExist() throws Exception
   {
     emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().times(12);
     EasyMock.replay(emitter);
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
@@ -408,7 +408,7 @@ public class DruidMasterRuleRunnerTest
   public void testRunRuleDoesNotExist() throws Exception
   {
     emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().times(availableSegments.size());
     EasyMock.replay(emitter);
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
