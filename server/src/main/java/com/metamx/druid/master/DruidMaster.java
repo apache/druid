@@ -44,6 +44,7 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.phonebook.PhoneBook;
@@ -69,7 +70,7 @@ public class DruidMaster
 {
   public static final String MASTER_OWNER_NODE = "_MASTER";
 
-  private static final Logger log = new Logger(DruidMaster.class);
+  private static final EmittingLogger log = new EmittingLogger(DruidMaster.class);
 
   private final Object lock = new Object();
 
@@ -575,7 +576,7 @@ public class DruidMaster
         }
       }
       catch (Exception e) {
-        log.error(e, "Caught exception, ignoring so that schedule keeps going.");
+        log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
       }
     }
   }

@@ -357,7 +357,7 @@ public class DruidMasterRuleRunnerTest
   public void testRunTwoTiersTierDoesNotExist() throws Exception
   {
     emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().times(12);
     EasyMock.replay(emitter);
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
@@ -397,18 +397,59 @@ public class DruidMasterRuleRunnerTest
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
 
-    boolean exceptionOccurred = false;
-    try {
-      ruleRunner.run(params);
-    }
-    catch (Exception e) {
-      exceptionOccurred = true;
-    }
 
-    Assert.assertTrue(exceptionOccurred);
+    ruleRunner.run(params);
 
     EasyMock.verify(emitter);
     EasyMock.verify(mockPeon);
+  }
+
+  @Test
+  public void testRunRuleDoesNotExist() throws Exception
+  {
+    emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
+    EasyMock.expectLastCall().times(availableSegments.size());
+    EasyMock.replay(emitter);
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-02T00:00:00.000Z/2012-01-03T00:00:00.000Z"), 1, "normal")
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverNorm",
+                            "hostNorm",
+                            1000,
+                            "historical",
+                            "normal"
+                        ),
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
+    DruidMasterRuntimeParams params =
+        new DruidMasterRuntimeParams.Builder()
+            .withEmitter(emitter)
+            .withDruidCluster(druidCluster)
+            .withAvailableSegments(availableSegments)
+            .withDatabaseRuleManager(databaseRuleManager)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .build();
+
+    ruleRunner.run(params);
+
+    EasyMock.verify(emitter);
   }
 
   @Test

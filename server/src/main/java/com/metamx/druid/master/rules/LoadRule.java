@@ -52,7 +52,7 @@ public abstract class LoadRule implements Rule
     MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getServersByTier(getTier());
     if (serverQueue == null) {
       log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", getTier()).emit();
-      throw new ISE("Tier[%s] has no servers! Check your cluster configuration!", getTier());
+      return stats;
     }
 
     stats.accumulate(assign(expectedReplicants, actualReplicants, serverQueue, segment));
