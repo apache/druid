@@ -19,12 +19,9 @@
 
 package com.metamx.druid.master;
 
-import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.master.rules.Rule;
-import com.metamx.druid.master.rules.RuleMap;
 import com.metamx.emitter.EmittingLogger;
 
 import java.util.List;
