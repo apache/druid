@@ -68,7 +68,12 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
       }
 
       if (!foundMatchingRule) {
-        log.makeAlert("Unable to find a matching rule for segment[%s]", segment.getIdentifier()).emit();
+        log.makeAlert(
+            "Unable to find a matching rule for dataSource[%s]",
+            segment.getDataSource()
+        )
+           .addData("segment", segment.getIdentifier())
+           .emit();
       }
     }
 
