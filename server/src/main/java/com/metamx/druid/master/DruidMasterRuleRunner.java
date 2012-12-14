@@ -25,6 +25,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.master.rules.Rule;
 import com.metamx.druid.master.rules.RuleMap;
+import com.metamx.emitter.EmittingLogger;
 
 import java.util.List;
 
@@ -32,7 +33,7 @@ import java.util.List;
  */
 public class DruidMasterRuleRunner implements DruidMasterHelper
 {
-  private static final Logger log = new Logger(DruidMasterRuleRunner.class);
+  private static final EmittingLogger log = new EmittingLogger(DruidMasterRuleRunner.class);
 
   private final DruidMaster master;
 
@@ -67,7 +68,7 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
       }
 
       if (!foundMatchingRule) {
-        throw new ISE("Unable to find a matching rule for segment[%s]", segment.getIdentifier());
+        log.makeAlert("Unable to find a matching rule for segment[%s]", segment.getIdentifier()).emit();
       }
     }
 
