@@ -536,6 +536,7 @@ public class DruidMasterRuleRunnerTest
   {
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
     EasyMock.replay(mockPeon);
 
@@ -798,10 +799,12 @@ public class DruidMasterRuleRunnerTest
 
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
     EasyMock.replay(mockPeon);
 
     LoadQueuePeon anotherMockPeon = EasyMock.createMock(LoadQueuePeon.class);
+    EasyMock.expect(anotherMockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
     EasyMock.expect(anotherMockPeon.getLoadQueueSize()).andReturn(10L).atLeastOnce();
     EasyMock.replay(anotherMockPeon);
 
