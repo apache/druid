@@ -211,10 +211,10 @@ public class RemoteTaskRunner implements TaskRunner
               } else {
                 Duration durSinceLastTerminate = new Duration(new DateTime(), lastTerminateTime);
                 if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration())) {
-                  log.makeAlert(
-                      "It has been %d millis since last scheduled termination but nodes remain",
-                      durSinceLastTerminate.getMillis()
-                  ).emit();
+                  log.makeAlert("Worker node termination taking too long")
+                     .addData("millisSinceLastTerminate", durSinceLastTerminate.getMillis())
+                     .addData("terminatingCount", currentlyTerminating.size())
+                     .emit();
                 }
 
                 log.info(
@@ -330,7 +330,9 @@ public class RemoteTaskRunner implements TaskRunner
     log.info("Registering retry for failed task[%s]", task.getId());
 
     if (retryPolicy.hasExceededRetryThreshold()) {
-      log.makeAlert("Task [%s] has failed[%d] times, giving up!", task.getId(), retryPolicy.getNumRetries())
+      log.makeAlert("Task exceeded maximum retry count")
+         .addData("task", task.getId())
+         .addData("retryCount", retryPolicy.getNumRetries())
          .emit();
       return;
     }
@@ -542,10 +544,10 @@ public class RemoteTaskRunner implements TaskRunner
         } else {
           Duration durSinceLastProvision = new Duration(new DateTime(), lastProvisionTime);
           if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration())) {
-            log.makeAlert(
-                "It has been %d millis since last scheduled provision but nodes remain",
-                durSinceLastProvision.getMillis()
-            ).emit();
+            log.makeAlert("Worker node provisioning taking too long")
+               .addData("millisSinceLastProvision", durSinceLastProvision.getMillis())
+               .addData("provisioningCount", currentlyProvisioning.size())
+               .emit();
           }
 
           log.info(
