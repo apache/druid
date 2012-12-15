@@ -163,23 +163,25 @@ public abstract class LoadRule implements Rule
       while (actualNumReplicantsForType > expectedNumReplicantsForType) {
         ServerHolder holder = serverQueue.pollLast();
         if (holder == null) {
-          log.warn("Wtf, holder was null?  Do I have no servers[%s]?", serverQueue);
-          continue;
+          log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
+          break;
         }
 
-        holder.getPeon().dropSegment(
-            segment,
-            new LoadPeonCallback()
-            {
-              @Override
-              protected void execute()
+        if (holder.isServingSegment(segment)) {
+          holder.getPeon().dropSegment(
+              segment,
+              new LoadPeonCallback()
               {
+                @Override
+                protected void execute()
+                {
+                }
               }
-            }
-        );
+          );
+          --actualNumReplicantsForType;
+          stats.addToTieredStat("droppedCount", tier, 1);
+        }
         droppedServers.add(holder);
-        --actualNumReplicantsForType;
-        stats.addToTieredStat("droppedCount", tier, 1);
       }
       serverQueue.addAll(droppedServers);
     }
