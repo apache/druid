@@ -52,7 +52,7 @@ public class SegmentReplicantLookup
 
         // Also account for queued segments
         for (DataSegment segment : serverHolder.getPeon().getSegmentsToLoad()) {
-          Integer numReplicants = segmentsInCluster.get(segment.getIdentifier(), server.getTier());
+          Integer numReplicants = loadingSegments.get(segment.getIdentifier(), server.getTier());
           if (numReplicants == null) {
             numReplicants = 0;
           }
