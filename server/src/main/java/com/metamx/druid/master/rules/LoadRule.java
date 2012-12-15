@@ -83,7 +83,12 @@ public abstract class LoadRule implements Rule
         );
         break;
       }
-      if (holder.containsSegment(segment)) {
+      if (holder.isServingSegment(segment)) {
+        assignedServers.add(holder);
+        continue;
+      }
+      if (holder.isLoadingSegment(segment)) {
+        ++actualReplicants;
         assignedServers.add(holder);
         continue;
       }

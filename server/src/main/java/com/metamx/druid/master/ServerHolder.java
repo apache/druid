@@ -99,9 +99,9 @@ public class ServerHolder implements Comparable<ServerHolder>
     return (server.getSegment(segment.getIdentifier()) != null);
   }
 
-  public boolean containsSegment(DataSegment segment)
+  public boolean isLoadingSegment(DataSegment segment)
   {
-    return isServingSegment(segment) || peon.getSegmentsToLoad().contains(segment);
+    return peon.getSegmentsToLoad().contains(segment);
   }
 
   @Override
