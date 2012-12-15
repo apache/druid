@@ -84,7 +84,7 @@ public abstract class LoadRule implements Rule
         break;
       }
       if (holder.containsSegment(segment)) {
-        serverQueue.add(holder);
+        assignedServers.add(holder);
         continue;
       }
 
