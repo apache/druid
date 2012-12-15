@@ -42,18 +42,7 @@ public class SegmentReplicantLookup
       for (ServerHolder serverHolder : serversByType) {
         DruidServer server = serverHolder.getServer();
 
-        for (DruidDataSource dataSource : server.getDataSources()) {
-          for (DataSegment segment : dataSource.getSegments()) {
-            Integer numReplicants = segmentsInCluster.get(segment.getIdentifier(), server.getTier());
-            if (numReplicants == null) {
-              numReplicants = 0;
-            }
-            segmentsInCluster.put(segment.getIdentifier(), server.getTier(), ++numReplicants);
-          }
-        }
-
-        // Also account for queued segments
-        for (DataSegment segment : serverHolder.getPeon().getSegmentsToLoad()) {
+        for (DataSegment segment : server.getSegments().values()) {
           Integer numReplicants = segmentsInCluster.get(segment.getIdentifier(), server.getTier());
           if (numReplicants == null) {
             numReplicants = 0;
