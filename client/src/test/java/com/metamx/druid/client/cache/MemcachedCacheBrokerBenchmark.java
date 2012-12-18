@@ -24,6 +24,8 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
   private Cache cache;
   private static byte[] randBytes;
 
+  @Param({"localhost:11211"}) String hosts;
+
   // object size in kB
   @Param({"1", "5", "10", "40"}) int objectSize;
   @Param({"100", "1000"}) int objectCount;
@@ -37,6 +39,8 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
     // disable compression
     transcoder.setCompressionThreshold(Integer.MAX_VALUE);
 
+    System.out.println(String.format("Using memcached hosts [%s]", hosts));
+
     client = new MemcachedClient(
         new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
                                       .setHashAlg(DefaultHashAlgorithm.FNV1A_64_HASH)
@@ -46,7 +50,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
                                       .setTranscoder(transcoder)
                                       .setShouldOptimize(true)
                                       .build(),
-        AddrUtil.getAddresses(System.getProperty("druid.bard.cache.hosts", "localhost:11211"))
+        AddrUtil.getAddresses(hosts)
     );
 
     broker = new MemcachedCacheBroker(
