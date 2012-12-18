@@ -72,7 +72,7 @@ public class SegmentMetadataQueryEngine
         final Indexed<String> lookup = adapter.getDimValueLookup(input);
         for (String dimVal : lookup) {
           ImmutableConciseSet index = adapter.getInvertedIndex(input, dimVal);
-          size += index.size() * Charsets.UTF_8.encode(dimVal).capacity();
+          size += (dimVal == null) ? 0 : index.size() * Charsets.UTF_8.encode(dimVal).capacity();
         }
         return new SegmentMetadataResultValue.Dimension(
             size,
