@@ -44,7 +44,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 {
   public static final Interval MY_Y2K_INTERVAL = new Interval(
       new DateTime("0000-01-01"),
-      new DateTime("9000-01-01")
+      new DateTime("3000-01-01")
   );
   public static final String MAX_TIME = "maxTime";
   public static final String MIN_TIME = "minTime";

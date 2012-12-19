@@ -33,7 +33,6 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.master.rules.Rule;
 
 import javax.annotation.Nullable;
@@ -47,6 +46,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -556,7 +556,7 @@ public class InfoResource
       return builder.entity(databaseSegmentManager.getInventory()).build();
     }
 
-    return builder.entity(
+    List<String> dataSourceNames = Lists.newArrayList(
         Iterables.transform(
             databaseSegmentManager.getInventory(),
             new Function<DruidDataSource, String>()
@@ -568,7 +568,11 @@ public class InfoResource
               }
             }
         )
-    ).build();
+    );
+
+    Collections.sort(dataSourceNames);
+
+    return builder.entity(dataSourceNames).build();
   }
 
   @GET
