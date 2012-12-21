@@ -336,7 +336,7 @@ public class ServerManager implements QuerySegmentWalker
                 adapter.getInterval().getStart(),
                 factory.createRunner(adapter)
             )
-        ),
+        ).withWaitMeasuredFromNow(),
         segmentSpec
     );
   }
