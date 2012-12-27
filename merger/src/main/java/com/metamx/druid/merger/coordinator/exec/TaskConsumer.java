@@ -20,11 +20,9 @@
 package com.metamx.druid.merger.coordinator.exec;
 
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
@@ -35,11 +33,8 @@ import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.TaskRunner;
 import com.metamx.druid.merger.coordinator.VersionedTaskWrapper;
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
-import java.util.concurrent.ExecutorService;
 
 public class TaskConsumer implements Runnable
 {
@@ -242,17 +237,12 @@ public class TaskConsumer implements Runnable
         emitter.emit(builder.build("indexer/segment/bytes", bytes));
 
         if (status.isFailure()) {
-          emitter.emit(
-              new AlertEvent.Builder().build(
-                  String.format("Failed to index: %s", task.getDataSource()),
-                  ImmutableMap.<String, Object>builder()
-                              .put("task", task.getId())
-                              .put("type", task.getType().toString())
-                              .put("dataSource", task.getDataSource())
-                              .put("interval", task.getInterval())
-                              .build()
-              )
-          );
+          log.makeAlert("Failed to index")
+             .addData("task", task.getId())
+             .addData("type", task.getType().toString())
+             .addData("dataSource", task.getDataSource())
+             .addData("interval", task.getInterval())
+             .emit();
         }
 
         log.info(
