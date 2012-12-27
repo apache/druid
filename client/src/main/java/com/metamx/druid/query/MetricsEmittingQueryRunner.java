@@ -37,6 +37,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   private final ServiceEmitter emitter;
   private final Function<Query<T>, ServiceMetricEvent.Builder> builderFn;
   private final QueryRunner<T> queryRunner;
+  private final long creationTime;
 
   public MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
@@ -44,9 +45,25 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       QueryRunner<T> queryRunner
   )
   {
+    this(emitter, builderFn, queryRunner, -1);
+  }
+
+  public MetricsEmittingQueryRunner(
+      ServiceEmitter emitter,
+      Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
+      QueryRunner<T> queryRunner,
+      long creationTime
+  )
+  {
     this.emitter = emitter;
     this.builderFn = builderFn;
     this.queryRunner = queryRunner;
+    this.creationTime = creationTime;
+  }
+
+  public MetricsEmittingQueryRunner<T> withWaitMeasuredFromNow()
+  {
+    return new MetricsEmittingQueryRunner<T>(emitter, builderFn, queryRunner, System.currentTimeMillis());
   }
 
   @Override
@@ -77,6 +94,10 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           long timeTaken = System.currentTimeMillis() - startTime;
 
           emitter.emit(builder.build("query/time", timeTaken));
+
+          if(creationTime > 0) {
+            emitter.emit(builder.build("query/wait", startTime - creationTime));
+          }
         }
 
         return retVal;
@@ -148,6 +169,10 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 
             long timeTaken = System.currentTimeMillis() - startTime;
             emitter.emit(builder.build("query/time", timeTaken));
+
+            if(creationTime > 0) {
+              emitter.emit(builder.build("query/wait", startTime - creationTime));
+            }
 
             yielder.close();
           }
