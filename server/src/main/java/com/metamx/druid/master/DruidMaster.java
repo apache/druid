@@ -674,7 +674,7 @@ public class DruidMaster
               },
               new DruidMasterRuleRunner(DruidMaster.this),
               new DruidMasterCleanup(DruidMaster.this),
-              new DruidMasterBalancer(DruidMaster.this, new BalancerAnalyzer()),
+              new DruidMasterBalancer(DruidMaster.this, new BalancerCostAnalyzer()),
               new DruidMasterLogger()
           )
       );

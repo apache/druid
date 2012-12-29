@@ -27,11 +27,14 @@ import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import junit.framework.Assert;
 import org.easymock.EasyMock;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  */
@@ -46,6 +49,8 @@ public class DruidMasterBalancerTest
   private DataSegment segment4;
   private LoadQueuePeon peon;
   private DruidDataSource dataSource;
+  private Map<String, DataSegment> segments;
+  private static final int DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
 
   @Before
   public void setUp() throws Exception
@@ -78,17 +83,25 @@ public class DruidMasterBalancerTest
   @Test
   public void testRun()
   {
+    Map<String, DataSegment> segments = new HashMap<String, DataSegment>();
+    segments.put("segment1", segment1);
+    segments.put("segment2", segment2);
+    segments.put("segment3", segment3);
+    segments.put("segment4", segment4);
+
     // Mock some servers of different usages
     EasyMock.expect(druidServerHigh.getName()).andReturn("from").atLeastOnce();
     EasyMock.expect(druidServerHigh.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServerHigh.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServerHigh.getDataSources()).andReturn(Arrays.asList(dataSource)).atLeastOnce();
+    EasyMock.expect(druidServerHigh.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
+    EasyMock.expect(druidServerHigh.getSegments()).andReturn(segments).anyTimes();
     EasyMock.replay(druidServerHigh);
 
     EasyMock.expect(druidServerLow.getName()).andReturn("to").atLeastOnce();
     EasyMock.expect(druidServerLow.getTier()).andReturn("normal").atLeastOnce();
     EasyMock.expect(druidServerLow.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServerLow.getMaxSize()).andReturn(100L).atLeastOnce();
+    EasyMock.expect(druidServerLow.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
     EasyMock.expect(druidServerLow.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
     EasyMock.expect(druidServerLow.getSegment("segment1")).andReturn(null).anyTimes();
     EasyMock.expect(druidServerLow.getSegment("segment2")).andReturn(null).anyTimes();
@@ -104,21 +117,29 @@ public class DruidMasterBalancerTest
             segment3,
             segment4
         )
-    ).atLeastOnce();
+    ).anyTimes();
     EasyMock.replay(dataSource);
 
     // Mock some segments of different sizes
     EasyMock.expect(segment1.getSize()).andReturn(11L).anyTimes();
     EasyMock.expect(segment1.getIdentifier()).andReturn("segment1").anyTimes();
+    EasyMock.expect(segment1.getDataSource()).andReturn("datasource1").anyTimes();
+    EasyMock.expect(segment1.getInterval()).andReturn(new Interval(0, 1 * DAY_IN_MILLIS)).anyTimes();
     EasyMock.replay(segment1);
     EasyMock.expect(segment2.getSize()).andReturn(7L).anyTimes();
     EasyMock.expect(segment2.getIdentifier()).andReturn("segment2").anyTimes();
+    EasyMock.expect(segment2.getDataSource()).andReturn("datasource1").anyTimes();
+    EasyMock.expect(segment2.getInterval()).andReturn(new Interval(10 * DAY_IN_MILLIS, 11 * DAY_IN_MILLIS)).anyTimes();
     EasyMock.replay(segment2);
     EasyMock.expect(segment3.getSize()).andReturn(4L).anyTimes();
     EasyMock.expect(segment3.getIdentifier()).andReturn("segment3").anyTimes();
+    EasyMock.expect(segment3.getDataSource()).andReturn("datasource1").anyTimes();
+    EasyMock.expect(segment3.getInterval()).andReturn(new Interval(0, 1 * DAY_IN_MILLIS)).anyTimes();
     EasyMock.replay(segment3);
     EasyMock.expect(segment4.getSize()).andReturn(8L).anyTimes();
     EasyMock.expect(segment4.getIdentifier()).andReturn("segment4").anyTimes();
+    EasyMock.expect(segment4.getDataSource()).andReturn("datasource1").anyTimes();
+    EasyMock.expect(segment4.getInterval()).andReturn(new Interval(10 * DAY_IN_MILLIS, 11 * DAY_IN_MILLIS)).anyTimes();
     EasyMock.replay(segment4);
 
     // Mock stuff that the master needs
@@ -154,7 +175,7 @@ public class DruidMasterBalancerTest
                                 .withLoadManagementPeons(ImmutableMap.of("from", peon, "to", peon))
                                 .build();
 
-    params = new DruidMasterBalancer(master, new BalancerAnalyzer()).run(params);
+    params = new DruidMasterBalancer(master, new BalancerCostAnalyzer()).run(params);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
   }
 }
