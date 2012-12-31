@@ -83,7 +83,7 @@ public class PeriodLoadRule extends LoadRule
   @Override
   public boolean appliesTo(DataSegment segment)
   {
-    final Interval currInterval = new Interval(new DateTime().minus(period), period);
+    final Interval currInterval = new Interval(period, new DateTime());
     return currInterval.overlaps(segment.getInterval());
   }
 }
