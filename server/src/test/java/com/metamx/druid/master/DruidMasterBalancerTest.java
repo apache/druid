@@ -120,6 +120,13 @@ public class DruidMasterBalancerTest
     ).anyTimes();
     EasyMock.replay(dataSource);
 
+    /*
+      (2, 1, 2, 1
+       -, 2, 1, 2
+       -, -, 2, 1
+       -, -, -, 2)
+    */
+
     // Mock some segments of different sizes
     EasyMock.expect(segment1.getSize()).andReturn(11L).anyTimes();
     EasyMock.expect(segment1.getIdentifier()).andReturn("segment1").anyTimes();
