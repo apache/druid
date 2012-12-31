@@ -181,7 +181,7 @@ public class QueryGranularityTest
     );
   }
 
-  //@Test
+  @Test
   public void testPeriodDaylightSaving() throws Exception
   {
     final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
