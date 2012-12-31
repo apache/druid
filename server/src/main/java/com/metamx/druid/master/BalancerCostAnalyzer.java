@@ -45,11 +45,12 @@ public class BalancerCostAnalyzer
   private static final Logger log = new Logger(BalancerCostAnalyzer.class);
   private static final int MAX_SEGMENTS_TO_MOVE = 5;
   private static final int DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
-  private float initialTotalCost;
-  private float totalCostChange;
 
   private List<ServerHolder> serverHolderList;
   private Random rand;
+
+  private float initialTotalCost;
+  private float totalCostChange;
 
   public BalancerCostAnalyzer(){
     rand = new Random(0);
@@ -170,7 +171,6 @@ public class BalancerCostAnalyzer
         );
         totalCostChange += currCost - minPair.lhs;
       }
-
     }
 
     return segmentHoldersToMove;
