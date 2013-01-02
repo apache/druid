@@ -22,6 +22,7 @@ package com.metamx.druid.master.rules;
 import com.metamx.druid.client.DataSegment;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 /**
@@ -52,7 +53,7 @@ public class IntervalDropRule extends DropRule
   }
 
   @Override
-  public boolean appliesTo(DataSegment segment)
+  public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
     return interval.contains(segment.getInterval());
   }

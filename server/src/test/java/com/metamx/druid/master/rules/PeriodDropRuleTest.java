@@ -51,13 +51,15 @@ public class PeriodDropRuleTest
                     now.minusDays(2),
                     now.minusDays(1)
                 )
-            ).build()
+            ).build(),
+            now
         )
     );
     Assert.assertTrue(
         rule.appliesTo(
             builder.interval(new Interval(now.minusYears(100), now.minusDays(1)))
-                       .build()
+                       .build(),
+            now
         )
     );
   }
@@ -73,19 +75,22 @@ public class PeriodDropRuleTest
     Assert.assertTrue(
         rule.appliesTo(
             builder.interval(new Interval(now.minusWeeks(1), now.minusDays(1)))
-                       .build()
+                       .build(),
+            now
         )
     );
     Assert.assertFalse(
         rule.appliesTo(
             builder.interval(new Interval(now.minusYears(1), now.minusDays(1)))
-                       .build()
+                       .build(),
+            now
         )
     );
     Assert.assertFalse(
         rule.appliesTo(
             builder.interval(new Interval(now.minusMonths(2), now.minusDays(1)))
-                       .build()
+                       .build(),
+            now
         )
     );
   }
