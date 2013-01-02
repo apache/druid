@@ -79,6 +79,13 @@ public class PeriodDropRuleTest
             now
         )
     );
+    Assert.assertTrue(
+        rule.appliesTo(
+            builder.interval(new Interval(now.minusDays(1), now))
+                   .build(),
+            now
+        )
+    );
     Assert.assertFalse(
         rule.appliesTo(
             builder.interval(new Interval(now.minusYears(1), now.minusDays(1)))

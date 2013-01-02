@@ -56,7 +56,7 @@ public class PeriodDropRule extends DropRule
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
-    final Interval currInterval = new Interval(referenceTimestamp.minus(period), period);
+    final Interval currInterval = new Interval(period, referenceTimestamp);
     return currInterval.contains(segment.getInterval());
   }
 }
