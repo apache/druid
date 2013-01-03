@@ -64,7 +64,7 @@ public class Queries
 
         Preconditions.checkArgument(
             missing.isEmpty(),
-            String.format("Missing fields [%s] for postAggregator [%s]", Joiner.on(",").join(missing), postAgg.getName())
+            "Missing fields [%s] for postAggregator [%s]", missing, postAgg.getName()
         );
         combinedAggNames.add(postAgg.getName());
       }
