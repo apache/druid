@@ -22,7 +22,9 @@ package com.metamx.druid.master.rules;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.metamx.common.Pair;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.master.BalancerCostAnalyzer;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
 import com.metamx.druid.master.LoadPeonCallback;
@@ -75,7 +77,12 @@ public abstract class LoadRule implements Rule
 
     List<ServerHolder> assignedServers = Lists.newArrayList();
     while (totalReplicants < expectedReplicants) {
-      ServerHolder holder = serverQueue.pollFirst();
+      BalancerCostAnalyzer analyzer = new BalancerCostAnalyzer();
+      BalancerCostAnalyzer.BalancerCostAnalyzerHelper helper = analyzer.new BalancerCostAnalyzerHelper(serverHolderList, segment);
+      helper.computeAllCosts();
+      Pair<Double, ServerHolder> minPair = helper.getCostsServerHolderPairs().pollFirst();
+
+      ServerHolder holder = minPair.rhs;
       if (holder == null) {
         log.warn(
             "Not enough %s servers[%d] to assign segment[%s]! Expected Replicants[%d]",

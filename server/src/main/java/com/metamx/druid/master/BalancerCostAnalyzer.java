@@ -25,20 +25,19 @@ import com.google.common.collect.Sets;
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidDataSource;
-import com.metamx.druid.client.DruidServer;
 import org.joda.time.Interval;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+
 /**
- * The BalancerCostAnalyzer
+ * The BalancerCostAnalyzer will compute the total initial cost of the cluster, with costs defined in
+ * computeJointSegmentCosts.  It will then propose to move randomly chosen segments from their respective
+ * initial servers to other servers, chosen greedily to minimize the cost of the cluster.
  */
 public class BalancerCostAnalyzer
 {
@@ -52,25 +51,30 @@ public class BalancerCostAnalyzer
   private double initialTotalCost;
   private double totalCostChange;
 
-  public BalancerCostAnalyzer(){
+  public BalancerCostAnalyzer()
+  {
     rand = new Random(0);
     totalCostChange = 0;
   }
 
-  public void init(List<ServerHolder> serverHolderList){
+  public void init(List<ServerHolder> serverHolderList)
+  {
     this.initialTotalCost = calculateInitialTotalCost(serverHolderList);
     this.serverHolderList = serverHolderList;
   }
 
-  public double getInitialTotalCost() {
+  public double getInitialTotalCost()
+  {
     return initialTotalCost;
   }
 
-  public double getTotalCostChange() {
+  public double getTotalCostChange()
+  {
     return totalCostChange;
   }
 
-  private double calculateInitialTotalCost(List<ServerHolder> serverHolderList){
+  private double calculateInitialTotalCost(List<ServerHolder> serverHolderList)
+  {
     double cost = 0;
     for (ServerHolder server : serverHolderList) {
       DataSegment[] segments = server.getServer().getSegments().values().toArray(new DataSegment[]{});
@@ -83,7 +87,8 @@ public class BalancerCostAnalyzer
     return cost;
   }
 
-  public double computeJointSegmentCosts(DataSegment segment1, DataSegment segment2){
+  public double computeJointSegmentCosts(DataSegment segment1, DataSegment segment2)
+  {
     double cost = 0;
     Interval gap = segment1.getInterval().gap(segment2.getInterval());
 
@@ -92,32 +97,88 @@ public class BalancerCostAnalyzer
       cost += 1f;
     } else {
       long gapMillis = gap.toDurationMillis();
-      if (gapMillis < DAY_IN_MILLIS) cost += 1f;
+      if (gapMillis < DAY_IN_MILLIS) {
+        cost += 1f;
+      }
     }
 
-    if(segment1.getDataSource().equals(segment2.getDataSource())) cost += 1f;
+    if (segment1.getDataSource().equals(segment2.getDataSource())) {
+      cost += 1f;
+    }
 
     return cost;
   }
 
-  public Set<BalancerSegmentHolder2> findSegmentsToMove()
+  public class NullServerHolder extends ServerHolder
   {
-    Set<BalancerSegmentHolder2> segmentHoldersToMove = Sets.newHashSet();
-    Set<DataSegment> movingSegments = Sets.newHashSet();
+    public NullServerHolder()
+    {
+      super(null, null);
+    }
 
-    int counter = 0;
-    double currCost = 0;
+    @Override
+    public boolean equals(Object o)
+    {
+      return false;
+    }
+  }
 
-    while (segmentHoldersToMove.size() < MAX_SEGMENTS_TO_MOVE && counter < 3 * MAX_SEGMENTS_TO_MOVE) {
-      counter++;
-      ServerHolder fromServerHolder = serverHolderList.get(rand.nextInt(serverHolderList.size()));
-      List<DataSegment> segments = Lists.newArrayList(fromServerHolder.getServer().getSegments().values());
-      if (segments.size() == 0) continue;
-      DataSegment proposalSegment = segments.get(rand.nextInt(segments.size()));
-      if (movingSegments.contains(proposalSegment)) continue;
+  public class BalancerCostAnalyzerHelper
+  {
+    private MinMaxPriorityQueue<Pair<Double, ServerHolder>> costsServerHolderPairs;
+    private List<ServerHolder> serverHolderList;
+    private DataSegment proposalSegment;
+    private ServerHolder fromServerHolder;
+    private Set<BalancerSegmentHolder> segmentHoldersToMove;
+    private double currCost;
 
+    public MinMaxPriorityQueue<Pair<Double, ServerHolder>> getCostsServerHolderPairs()
+    {
+      return costsServerHolderPairs;
+    }
+
+    public List<ServerHolder> getServerHolderList()
+    {
+      return serverHolderList;
+    }
+
+    public DataSegment getProposalSegment()
+    {
+      return proposalSegment;
+    }
+
+    public ServerHolder getFromServerHolder()
+    {
+      return fromServerHolder;
+    }
+
+    public Set<BalancerSegmentHolder> getSegmentHoldersToMove()
+    {
+      return segmentHoldersToMove;
+    }
+
+    public double getCurrCost()
+    {
+      return currCost;
+    }
+
+    public BalancerCostAnalyzerHelper(
+        List<ServerHolder> serverHolderList,
+        DataSegment proposalSegment
+    )
+    {
+      this(serverHolderList, proposalSegment, new NullServerHolder(), Sets.<BalancerSegmentHolder>newHashSet());
+    }
+
+    public BalancerCostAnalyzerHelper(
+        List<ServerHolder> serverHolderList,
+        DataSegment proposalSegment,
+        ServerHolder fromServerHolder,
+        Set<BalancerSegmentHolder> segmentHoldersToMove
+    )
+    {
       // Just need a regular priority queue for the min. element.
-      MinMaxPriorityQueue<Pair<Double, ServerHolder>> pQueue = MinMaxPriorityQueue.orderedBy(
+      this.costsServerHolderPairs = MinMaxPriorityQueue.orderedBy(
           new Comparator<Pair<Double, ServerHolder>>()
           {
             @Override
@@ -130,7 +191,15 @@ public class BalancerCostAnalyzer
             }
           }
       ).create();
+      this.serverHolderList = serverHolderList;
+      this.proposalSegment = proposalSegment;
+      this.fromServerHolder = fromServerHolder;
+      this.segmentHoldersToMove = segmentHoldersToMove;
+      this.currCost = 0;
+    }
 
+    public void computeAllCosts()
+    {
       for (ServerHolder server : serverHolderList) {
         double cost = 0f;
         for (DataSegment segment : server.getServer().getSegments().values()) {
@@ -138,12 +207,14 @@ public class BalancerCostAnalyzer
         }
 
         // self cost
-        if (!server.getServer().equals(fromServerHolder.getServer())) cost += computeJointSegmentCosts(proposalSegment, proposalSegment);
+        if (!server.getServer().equals(fromServerHolder.getServer())) {
+          cost += computeJointSegmentCosts(proposalSegment, proposalSegment);
+        }
 
         // Take into account costs of segments that will be moved.
         Iterator it = segmentHoldersToMove.iterator();
         while (it.hasNext()) {
-          BalancerSegmentHolder2 segmentToMove = (BalancerSegmentHolder2) it.next();
+          BalancerSegmentHolder segmentToMove = (BalancerSegmentHolder) it.next();
           if (server.getServer().equals(segmentToMove.getToServer())) {
             cost += computeJointSegmentCosts(proposalSegment, segmentToMove.getSegment());
           }
@@ -152,24 +223,58 @@ public class BalancerCostAnalyzer
           }
         }
 
-        if (server.getServer().equals(fromServerHolder.getServer())){
+        if (server.getServer().equals(fromServerHolder.getServer())) {
           currCost = cost;
         }
 
-        pQueue.add(Pair.of(cost, server));
+        if (proposalSegment.getSize() < server.getAvailableSize()) {
+          costsServerHolderPairs.add(Pair.of(cost, server));
+        }
+
+      }
+    }
+
+  }
+
+  public Set<BalancerSegmentHolder> findSegmentsToMove()
+  {
+    Set<BalancerSegmentHolder> segmentHoldersToMove = Sets.newHashSet();
+    Set<DataSegment> movingSegments = Sets.newHashSet();
+
+    int counter = 0;
+
+    while (segmentHoldersToMove.size() < MAX_SEGMENTS_TO_MOVE && counter < 3 * MAX_SEGMENTS_TO_MOVE) {
+      counter++;
+      ServerHolder fromServerHolder = serverHolderList.get(rand.nextInt(serverHolderList.size()));
+      List<DataSegment> segments = Lists.newArrayList(fromServerHolder.getServer().getSegments().values());
+      if (segments.size() == 0) {
+        continue;
+      }
+      DataSegment proposalSegment = segments.get(rand.nextInt(segments.size()));
+      if (movingSegments.contains(proposalSegment)) {
+        continue;
       }
 
-      Pair<Double, ServerHolder> minPair = pQueue.peekFirst();
-      if (!minPair.rhs.equals(fromServerHolder)) {
+      BalancerCostAnalyzerHelper helper = new BalancerCostAnalyzerHelper(
+          serverHolderList,
+          proposalSegment,
+          fromServerHolder,
+          segmentHoldersToMove
+      );
+      helper.computeAllCosts();
+
+      Pair<Double, ServerHolder> minPair = helper.getCostsServerHolderPairs().pollFirst();
+
+      if (minPair.rhs != null && !minPair.rhs.equals(fromServerHolder)) {
         movingSegments.add(proposalSegment);
         segmentHoldersToMove.add(
-            new BalancerSegmentHolder2(
+            new BalancerSegmentHolder(
                 fromServerHolder.getServer(),
                 minPair.rhs.getServer(),
                 proposalSegment
             )
         );
-        totalCostChange += currCost - minPair.lhs;
+        totalCostChange += helper.getCurrCost() - minPair.lhs;
       }
     }
 

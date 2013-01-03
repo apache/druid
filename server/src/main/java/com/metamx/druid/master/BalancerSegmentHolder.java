@@ -26,23 +26,31 @@ import com.metamx.druid.client.DruidServer;
  */
 public class BalancerSegmentHolder
 {
-  private final DruidServer server;
+  private final DruidServer fromServer;
+  private final DruidServer toServer;
   private final DataSegment segment;
 
   private volatile int lifetime = 15;
 
   public BalancerSegmentHolder(
-      DruidServer server,
+      DruidServer fromServer,
+      DruidServer toServer,
       DataSegment segment
   )
   {
-    this.server = server;
+    this.fromServer = fromServer;
+    this.toServer = toServer;
     this.segment = segment;
   }
 
-  public DruidServer getServer()
+  public DruidServer getFromServer()
   {
-    return server;
+    return fromServer;
+  }
+
+  public DruidServer getToServer()
+  {
+    return toServer;
   }
 
   public DataSegment getSegment()

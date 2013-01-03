@@ -20,25 +20,19 @@
 package com.metamx.druid.master;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
-import com.metamx.common.Pair;
 import com.metamx.common.guava.Comparators;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.emitter.EmittingLogger;
-import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -60,7 +54,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
   private final BalancerCostAnalyzer analyzer;
   private final DruidMaster master;
 
-  private final Map<String, ConcurrentHashMap<String, BalancerSegmentHolder2>> currentlyMovingSegments = Maps.newHashMap();
+  private final Map<String, ConcurrentHashMap<String, BalancerSegmentHolder>> currentlyMovingSegments = Maps.newHashMap();
 
   public DruidMasterBalancer(
       DruidMaster master,
@@ -73,7 +67,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
   private void reduceLifetimes(String tier)
   {
-    for (BalancerSegmentHolder2 holder : currentlyMovingSegments.get(tier).values()) {
+    for (BalancerSegmentHolder holder : currentlyMovingSegments.get(tier).values()) {
       holder.reduceLifetime();
       if (holder.getLifetime() <= 0) {
         log.makeAlert(
@@ -97,7 +91,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
       String tier = entry.getKey();
 
       if (currentlyMovingSegments.get(tier) == null) {
-        currentlyMovingSegments.put(tier, new ConcurrentHashMap<String, BalancerSegmentHolder2>());
+        currentlyMovingSegments.put(tier, new ConcurrentHashMap<String, BalancerSegmentHolder>());
       }
 
       if (!currentlyMovingSegments.get(tier).isEmpty()) {
@@ -109,9 +103,6 @@ public class DruidMasterBalancer implements DruidMasterHelper
         );
         continue;
       }
-
-      //TreeSet<ServerHolder> serversByPercentUsed = Sets.newTreeSet(percentUsedComparator);
-      //serversByPercentUsed.addAll(entry.getValue());
 
       List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(entry.getValue());
 
@@ -136,44 +127,6 @@ public class DruidMasterBalancer implements DruidMasterHelper
         continue;
       }
 
-      /*
-      ServerHolder highestPercentUsedServer = serversByPercentUsed.first();
-      ServerHolder lowestPercentUsedServer = serversByPercentUsed.last();
-
-
-      analyzer.init(highestPercentUsedServer, lowestPercentUsedServer);
-
-      log.info(
-          "[%s]: Percent difference in percent size used between highest/lowest servers: %s%%",
-          tier,
-          analyzer.getPercentDiff()
-      );
-
-      log.info(
-          "[%s]: Highest percent used [%s]: size used[%s], percent used[%s%%]",
-          tier,
-          highestPercentUsedServer.getServer().getName(),
-          highestPercentUsedServer.getSizeUsed(),
-          highestPercentUsedServer.getPercentUsed()
-      );
-
-      log.info(
-          "[%s]: Lowest percent used [%s]: size used[%s], percent used[%s%%]",
-          tier,
-          lowestPercentUsedServer.getServer().getName(),
-          lowestPercentUsedServer.getSizeUsed(),
-          lowestPercentUsedServer.getPercentUsed()
-      );
-
-      // Use the analyzer to find segments to move and then move them
-      moveSegments(
-          lowestPercentUsedServer.getServer(),
-          analyzer.findSegmentsToMove(highestPercentUsedServer.getServer()),
-          params
-      );
-      */
-
-
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
     }
 
@@ -183,12 +136,12 @@ public class DruidMasterBalancer implements DruidMasterHelper
   }
 
   private void moveSegments(
-      final Set<BalancerSegmentHolder2> segments,
+      final Set<BalancerSegmentHolder> segments,
       final DruidMasterRuntimeParams params
   )
   {
 
-    for (final BalancerSegmentHolder2 segment : Sets.newHashSet(segments)) {
+    for (final BalancerSegmentHolder segment : Sets.newHashSet(segments)) {
       final DruidServer toServer = segment.getToServer();
       final String toServerName = segment.getToServer().getName();
       LoadQueuePeon toPeon = params.getLoadManagementPeons().get(toServerName);
@@ -216,7 +169,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
                 @Override
                 protected void execute()
                 {
-                  Map<String, BalancerSegmentHolder2> movingSegments = currentlyMovingSegments.get(toServer.getTier());
+                  Map<String, BalancerSegmentHolder> movingSegments = currentlyMovingSegments.get(toServer.getTier());
                   if (movingSegments != null) {
                     movingSegments.remove(segmentName);
                   }
