@@ -20,6 +20,7 @@
 package com.metamx.druid.aggregation.post;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -69,14 +70,13 @@ public class ArithmeticPostAggregator implements PostAggregator
   }
 
   @Override
-  public boolean verifyFields(Set<String> fieldNames)
+  public Set<String> getDependentFields()
   {
+    Set<String> dependentFields = Sets.newHashSet();
     for (PostAggregator field : fields) {
-      if (!field.verifyFields(fieldNames)) {
-        return false;
-      }
+      dependentFields.addAll(field.getDependentFields());
     }
-    return true;
+    return dependentFields;
   }
 
   @Override

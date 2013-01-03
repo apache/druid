@@ -20,6 +20,7 @@
 package com.metamx.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -58,9 +59,12 @@ public class Queries
       );
 
       for (PostAggregator postAgg : postAggs) {
+        Set<String> dependencies = postAgg.getDependentFields();
+        Set<String> missing = Sets.difference(dependencies, combinedAggNames);
+
         Preconditions.checkArgument(
-            postAgg.verifyFields(combinedAggNames),
-            String.format("Missing field[%s]", postAgg.getName())
+            missing.isEmpty(),
+            "Missing fields [%s] for postAggregator [%s]", missing, postAgg.getName()
         );
         combinedAggNames.add(postAgg.getName());
       }
