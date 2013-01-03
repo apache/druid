@@ -30,6 +30,7 @@ import com.metamx.druid.master.MasterStats;
 import com.metamx.druid.master.ServerHolder;
 import com.metamx.emitter.EmittingLogger;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -69,6 +70,8 @@ public abstract class LoadRule implements Rule
   )
   {
     MasterStats stats = new MasterStats();
+
+    List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(serverQueue);
 
     List<ServerHolder> assignedServers = Lists.newArrayList();
     while (totalReplicants < expectedReplicants) {

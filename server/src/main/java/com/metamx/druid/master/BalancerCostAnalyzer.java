@@ -49,12 +49,12 @@ public class BalancerCostAnalyzer
   private List<ServerHolder> serverHolderList;
   private Random rand;
 
-  private float initialTotalCost;
-  private float totalCostChange;
+  private double initialTotalCost;
+  private double totalCostChange;
 
   public BalancerCostAnalyzer(){
     rand = new Random(0);
-    totalCostChange = 0f;
+    totalCostChange = 0;
   }
 
   public void init(List<ServerHolder> serverHolderList){
@@ -62,16 +62,16 @@ public class BalancerCostAnalyzer
     this.serverHolderList = serverHolderList;
   }
 
-  public float getInitialTotalCost() {
+  public double getInitialTotalCost() {
     return initialTotalCost;
   }
 
-  public float getTotalCostChange() {
+  public double getTotalCostChange() {
     return totalCostChange;
   }
 
-  private float calculateInitialTotalCost(List<ServerHolder> serverHolderList){
-    float cost = 0;
+  private double calculateInitialTotalCost(List<ServerHolder> serverHolderList){
+    double cost = 0;
     for (ServerHolder server : serverHolderList) {
       DataSegment[] segments = server.getServer().getSegments().values().toArray(new DataSegment[]{});
       for (int i = 0; i < segments.length; ++i) {
@@ -83,8 +83,8 @@ public class BalancerCostAnalyzer
     return cost;
   }
 
-  public float computeJointSegmentCosts(DataSegment segment1, DataSegment segment2){
-    float cost = 0f;
+  public double computeJointSegmentCosts(DataSegment segment1, DataSegment segment2){
+    double cost = 0;
     Interval gap = segment1.getInterval().gap(segment2.getInterval());
 
     // gap is null if the two segment intervals overlap or if they're adjacent
@@ -106,7 +106,7 @@ public class BalancerCostAnalyzer
     Set<DataSegment> movingSegments = Sets.newHashSet();
 
     int counter = 0;
-    float currCost = 0f;
+    double currCost = 0;
 
     while (segmentHoldersToMove.size() < MAX_SEGMENTS_TO_MOVE && counter < 3 * MAX_SEGMENTS_TO_MOVE) {
       counter++;
@@ -117,22 +117,22 @@ public class BalancerCostAnalyzer
       if (movingSegments.contains(proposalSegment)) continue;
 
       // Just need a regular priority queue for the min. element.
-      MinMaxPriorityQueue<Pair<Float, ServerHolder>> pQueue = MinMaxPriorityQueue.orderedBy(
-          new Comparator<Pair<Float, ServerHolder>>()
+      MinMaxPriorityQueue<Pair<Double, ServerHolder>> pQueue = MinMaxPriorityQueue.orderedBy(
+          new Comparator<Pair<Double, ServerHolder>>()
           {
             @Override
             public int compare(
-                Pair<Float, ServerHolder> o,
-                Pair<Float, ServerHolder> o1
+                Pair<Double, ServerHolder> o,
+                Pair<Double, ServerHolder> o1
             )
             {
-              return Float.compare(o.lhs, o1.lhs);
+              return Double.compare(o.lhs, o1.lhs);
             }
           }
       ).create();
 
       for (ServerHolder server : serverHolderList) {
-        float cost = 0f;
+        double cost = 0f;
         for (DataSegment segment : server.getServer().getSegments().values()) {
           cost += computeJointSegmentCosts(proposalSegment, segment);
         }
@@ -159,7 +159,7 @@ public class BalancerCostAnalyzer
         pQueue.add(Pair.of(cost, server));
       }
 
-      Pair<Float, ServerHolder> minPair = pQueue.peekFirst();
+      Pair<Double, ServerHolder> minPair = pQueue.peekFirst();
       if (!minPair.rhs.equals(fromServerHolder)) {
         movingSegments.add(proposalSegment);
         segmentHoldersToMove.add(

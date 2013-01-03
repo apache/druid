@@ -110,8 +110,8 @@ public class DruidMasterBalancer implements DruidMasterHelper
         continue;
       }
 
-      TreeSet<ServerHolder> serversByPercentUsed = Sets.newTreeSet(percentUsedComparator);
-      serversByPercentUsed.addAll(entry.getValue());
+      //TreeSet<ServerHolder> serversByPercentUsed = Sets.newTreeSet(percentUsedComparator);
+      //serversByPercentUsed.addAll(entry.getValue());
 
       List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(entry.getValue());
 
@@ -128,18 +128,19 @@ public class DruidMasterBalancer implements DruidMasterHelper
           analyzer.getTotalCostChange()
       );
 
-      if (serversByPercentUsed.size() <= 1) {
+      if (serverHolderList.size() <= 1) {
         log.info(
-            "[%s]: No unique values found for highest and lowest percent used servers: nothing to balance",
+            "[%s]: One or fewer servers found.  Cannot balance.",
             tier
         );
         continue;
       }
 
+      /*
       ServerHolder highestPercentUsedServer = serversByPercentUsed.first();
       ServerHolder lowestPercentUsedServer = serversByPercentUsed.last();
 
-      /*
+
       analyzer.init(highestPercentUsedServer, lowestPercentUsedServer);
 
       log.info(
