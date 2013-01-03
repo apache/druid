@@ -28,7 +28,6 @@ import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
 
 import javax.annotation.Nullable;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
