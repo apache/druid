@@ -23,6 +23,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.master.rules.Rule;
 import com.metamx.emitter.EmittingLogger;
+import org.joda.time.DateTime;
 
 import java.util.List;
 
@@ -51,13 +52,14 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
     }
 
     // Run through all matched rules for available segments
+    DateTime now = new DateTime();
     DatabaseRuleManager databaseRuleManager = params.getDatabaseRuleManager();
     for (DataSegment segment : params.getAvailableSegments()) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
 
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
-        if (rule.appliesTo(segment)) {
+        if (rule.appliesTo(segment, now)) {
           stats.accumulate(rule.run(master, params, segment));
           foundMatchingRule = true;
           break;

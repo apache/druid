@@ -39,38 +39,41 @@ public class PeriodLoadRuleTest
   @Test
   public void testAppliesToAll()
   {
+    DateTime now = new DateTime("2013-01-01");
     PeriodLoadRule rule = new PeriodLoadRule(
         new Period("P5000Y"),
         0,
         ""
     );
 
-    Assert.assertTrue(rule.appliesTo(builder.interval(new Interval("2012-01-01/2012-12-31")).build()));
-    Assert.assertTrue(rule.appliesTo(builder.interval(new Interval("1000-01-01/2012-12-31")).build()));
-    Assert.assertTrue(rule.appliesTo(builder.interval(new Interval("0500-01-01/2100-12-31")).build()));
+    Assert.assertTrue(rule.appliesTo(builder.interval(new Interval("2012-01-01/2012-12-31")).build(), now));
+    Assert.assertTrue(rule.appliesTo(builder.interval(new Interval("1000-01-01/2012-12-31")).build(), now));
+    Assert.assertTrue(rule.appliesTo(builder.interval(new Interval("0500-01-01/2100-12-31")).build(), now));
   }
 
   @Test
   public void testAppliesToPeriod()
   {
-    DateTime now = new DateTime();
+    DateTime now = new DateTime("2012-12-31T01:00:00");
     PeriodLoadRule rule = new PeriodLoadRule(
         new Period("P1M"),
         0,
         ""
     );
 
-    Assert.assertTrue(rule.appliesTo(builder.interval(new Interval(now.minusWeeks(1), now)).build()));
+    Assert.assertTrue(rule.appliesTo(builder.interval(new Interval(now.minusWeeks(1), now)).build(), now));
     Assert.assertTrue(
         rule.appliesTo(
             builder.interval(new Interval(now.minusDays(1), now.plusDays(1)))
-                       .build()
+                   .build(),
+            now
         )
     );
     Assert.assertFalse(
         rule.appliesTo(
             builder.interval(new Interval(now.plusDays(1), now.plusDays(2)))
-                       .build()
+                       .build(),
+            now
         )
     );
   }
