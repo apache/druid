@@ -37,7 +37,7 @@ import java.util.Set;
 })
 public interface PostAggregator
 {
-  public boolean verifyFields(Set<String> fieldNames);
+  public Set<String> getDependentFields();
 
   public Comparator getComparator();
 
