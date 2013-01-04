@@ -111,6 +111,19 @@ public class DruidMasterBalancer implements DruidMasterHelper
           "Initial Total Cost: [%s]",
           analyzer.getInitialTotalCost()
       );
+
+      analyzer.init(serverHolderList);
+      log.info(
+          "Normalization: [%s]",
+          analyzer.getNormalization()
+      );
+
+      analyzer.init(serverHolderList);
+      log.info(
+          "Normalized Inital Cost: [%s]",
+          analyzer.getNormalizedInitialCost()
+      );
+
       moveSegments(analyzer.findSegmentsToMove(), params);
 
       stats.addToTieredStat("costChange", tier, (long) analyzer.getTotalCostChange());

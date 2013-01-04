@@ -52,6 +52,7 @@ import com.metamx.phonebook.PhoneBookPeon;
 import com.netflix.curator.x.discovery.ServiceProvider;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -674,7 +675,7 @@ public class DruidMaster
               },
               new DruidMasterRuleRunner(DruidMaster.this),
               new DruidMasterCleanup(DruidMaster.this),
-              new DruidMasterBalancer(DruidMaster.this, new BalancerCostAnalyzer()),
+              new DruidMasterBalancer(DruidMaster.this, new BalancerCostAnalyzer(DateTime.now())),
               new DruidMasterLogger()
           )
       );

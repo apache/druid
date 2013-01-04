@@ -27,6 +27,7 @@ import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import junit.framework.Assert;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Before;
@@ -182,7 +183,7 @@ public class DruidMasterBalancerTest
                                 .withLoadManagementPeons(ImmutableMap.of("from", peon, "to", peon))
                                 .build();
 
-    params = new DruidMasterBalancer(master, new BalancerCostAnalyzer()).run(params);
+    params = new DruidMasterBalancer(master, new BalancerCostAnalyzer(new DateTime("2013-01-01"))).run(params);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("costChange").get("normal").get() > 0);
   }
