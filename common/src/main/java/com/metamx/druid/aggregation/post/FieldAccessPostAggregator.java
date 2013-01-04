@@ -19,6 +19,7 @@
 
 package com.metamx.druid.aggregation.post;
 
+import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -45,9 +46,9 @@ public class FieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
-  public boolean verifyFields(Set<String> fieldNames)
+  public Set<String> getDependentFields()
   {
-    return fieldNames.contains(fieldName);
+    return Sets.newHashSet(fieldName);
   }
 
   @Override

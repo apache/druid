@@ -33,13 +33,13 @@ public class PeriodDropRuleTest
 {
   private final static DataSegment.Builder builder = DataSegment.builder()
                                                           .dataSource("test")
-                                                          .version(new DateTime().toString())
+                                                          .version(new DateTime("2012-12-31T01:00:00").toString())
                                                           .shardSpec(new NoneShardSpec());
 
   @Test
   public void testAppliesToAll()
   {
-    DateTime now = new DateTime();
+    DateTime now = new DateTime("2012-12-31T01:00:00");
     PeriodDropRule rule = new PeriodDropRule(
         new Period("P5000Y")
     );
@@ -51,13 +51,15 @@ public class PeriodDropRuleTest
                     now.minusDays(2),
                     now.minusDays(1)
                 )
-            ).build()
+            ).build(),
+            now
         )
     );
     Assert.assertTrue(
         rule.appliesTo(
             builder.interval(new Interval(now.minusYears(100), now.minusDays(1)))
-                       .build()
+                       .build(),
+            now
         )
     );
   }
@@ -65,7 +67,7 @@ public class PeriodDropRuleTest
   @Test
   public void testAppliesToPeriod()
   {
-    DateTime now = new DateTime();
+    DateTime now = new DateTime("2012-12-31T01:00:00");
     PeriodDropRule rule = new PeriodDropRule(
         new Period("P1M")
     );
@@ -73,19 +75,29 @@ public class PeriodDropRuleTest
     Assert.assertTrue(
         rule.appliesTo(
             builder.interval(new Interval(now.minusWeeks(1), now.minusDays(1)))
-                       .build()
+                       .build(),
+            now
+        )
+    );
+    Assert.assertTrue(
+        rule.appliesTo(
+            builder.interval(new Interval(now.minusDays(1), now))
+                   .build(),
+            now
         )
     );
     Assert.assertFalse(
         rule.appliesTo(
             builder.interval(new Interval(now.minusYears(1), now.minusDays(1)))
-                       .build()
+                       .build(),
+            now
         )
     );
     Assert.assertFalse(
         rule.appliesTo(
             builder.interval(new Interval(now.minusMonths(2), now.minusDays(1)))
-                       .build()
+                       .build(),
+            now
         )
     );
   }

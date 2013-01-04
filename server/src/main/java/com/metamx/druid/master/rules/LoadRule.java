@@ -22,7 +22,6 @@ package com.metamx.druid.master.rules;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.common.ISE;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
@@ -47,7 +46,8 @@ public abstract class LoadRule implements Rule
     MasterStats stats = new MasterStats();
 
     int expectedReplicants = getReplicants();
-    int actualReplicants = params.getSegmentReplicantLookup().lookup(segment.getIdentifier(), getTier());
+    int totalReplicants = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier(), getTier());
+    int clusterReplicants = params.getSegmentReplicantLookup().getClusterReplicants(segment.getIdentifier(), getTier());
 
     MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getServersByTier(getTier());
     if (serverQueue == null) {
@@ -55,15 +55,15 @@ public abstract class LoadRule implements Rule
       return stats;
     }
 
-    stats.accumulate(assign(expectedReplicants, actualReplicants, serverQueue, segment));
-    stats.accumulate(drop(expectedReplicants, actualReplicants, segment, params));
+    stats.accumulate(assign(expectedReplicants, totalReplicants, serverQueue, segment));
+    stats.accumulate(drop(expectedReplicants, clusterReplicants, segment, params));
 
     return stats;
   }
 
   private MasterStats assign(
       int expectedReplicants,
-      int actualReplicants,
+      int totalReplicants,
       MinMaxPriorityQueue<ServerHolder> serverQueue,
       DataSegment segment
   )
@@ -71,7 +71,7 @@ public abstract class LoadRule implements Rule
     MasterStats stats = new MasterStats();
 
     List<ServerHolder> assignedServers = Lists.newArrayList();
-    while (actualReplicants < expectedReplicants) {
+    while (totalReplicants < expectedReplicants) {
       ServerHolder holder = serverQueue.pollFirst();
       if (holder == null) {
         log.warn(
@@ -83,7 +83,8 @@ public abstract class LoadRule implements Rule
         );
         break;
       }
-      if (holder.containsSegment(segment)) {
+      if (holder.isServingSegment(segment) || holder.isLoadingSegment(segment)) {
+        assignedServers.add(holder);
         continue;
       }
 
@@ -121,7 +122,7 @@ public abstract class LoadRule implements Rule
       assignedServers.add(holder);
 
       stats.addToTieredStat("assignedCount", getTier(), 1);
-      ++actualReplicants;
+      ++totalReplicants;
     }
     serverQueue.addAll(assignedServers);
 
@@ -130,7 +131,7 @@ public abstract class LoadRule implements Rule
 
   private MasterStats drop(
       int expectedReplicants,
-      int actualReplicants,
+      int clusterReplicants,
       DataSegment segment,
       DruidMasterRuntimeParams params
   )
@@ -142,11 +143,11 @@ public abstract class LoadRule implements Rule
     }
 
     // Make sure we have enough actual replicants in the cluster before doing anything
-    if (actualReplicants < expectedReplicants) {
+    if (clusterReplicants < expectedReplicants) {
       return stats;
     }
 
-    Map<String, Integer> replicantsByType = params.getSegmentReplicantLookup().getTiers(segment.getIdentifier());
+    Map<String, Integer> replicantsByType = params.getSegmentReplicantLookup().getClusterTiers(segment.getIdentifier());
 
     for (Map.Entry<String, Integer> entry : replicantsByType.entrySet()) {
       String tier = entry.getKey();
@@ -163,23 +164,25 @@ public abstract class LoadRule implements Rule
       while (actualNumReplicantsForType > expectedNumReplicantsForType) {
         ServerHolder holder = serverQueue.pollLast();
         if (holder == null) {
-          log.warn("Wtf, holder was null?  Do I have no servers[%s]?", serverQueue);
-          continue;
+          log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
+          break;
         }
 
-        holder.getPeon().dropSegment(
-            segment,
-            new LoadPeonCallback()
-            {
-              @Override
-              protected void execute()
+        if (holder.isServingSegment(segment)) {
+          holder.getPeon().dropSegment(
+              segment,
+              new LoadPeonCallback()
               {
+                @Override
+                protected void execute()
+                {
+                }
               }
-            }
-        );
+          );
+          --actualNumReplicantsForType;
+          stats.addToTieredStat("droppedCount", tier, 1);
+        }
         droppedServers.add(holder);
-        --actualNumReplicantsForType;
-        stats.addToTieredStat("droppedCount", tier, 1);
       }
       serverQueue.addAll(droppedServers);
     }

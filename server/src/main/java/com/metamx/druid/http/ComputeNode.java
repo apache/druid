@@ -40,9 +40,11 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.QueryableLoaderConfig;
 import com.metamx.druid.loading.StorageAdapterLoader;
 import com.metamx.druid.metrics.ServerMonitor;
+import com.metamx.druid.query.MetricsEmittingExecutorService;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.Monitor;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.smile.SmileFactory;
@@ -118,13 +120,16 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     final List<Monitor> monitors = getMonitors();
     final QueryRunnerFactoryConglomerate conglomerate = getConglomerate();
 
-    final ExecutorService executorService = ExecutorServices.create(
-        getLifecycle(),
-        getConfigFactory().buildWithReplacements(
-            ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
-        )
+    final ExecutorService executorService = new MetricsEmittingExecutorService(
+        ExecutorServices.create(
+            getLifecycle(),
+            getConfigFactory().buildWithReplacements(
+                ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
+            )
+        ), emitter, new ServiceMetricEvent.Builder()
     );
-    ServerManager serverManager = new ServerManager(adapterLoader, conglomerate, emitter, executorService);
+
+    final ServerManager serverManager = new ServerManager(adapterLoader, conglomerate, emitter, executorService);
 
     final ZkCoordinator coordinator = new ZkCoordinator(
         getJsonMapper(),

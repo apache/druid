@@ -94,9 +94,14 @@ public class ServerHolder implements Comparable<ServerHolder>
     return availableSize;
   }
 
-  public boolean containsSegment(DataSegment segment)
+  public boolean isServingSegment(DataSegment segment)
   {
-    return (server.getSegment(segment.getIdentifier()) != null || peon.getSegmentsToLoad().contains(segment));
+    return (server.getSegment(segment.getIdentifier()) != null);
+  }
+
+  public boolean isLoadingSegment(DataSegment segment)
+  {
+    return peon.getSegmentsToLoad().contains(segment);
   }
 
   @Override
