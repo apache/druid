@@ -20,46 +20,39 @@
 package com.metamx.druid.loading;
 
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
-
-import java.io.File;
-import java.util.Map;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.QueryableIndex;
+import com.metamx.druid.index.QueryableIndexSegment;
+import com.metamx.druid.index.Segment;
 
 /**
  */
-public class RealtimeSegmentGetter implements SegmentGetter
+public class SingleSegmentLoader implements SegmentLoader
 {
-  private static final Logger log = new Logger(RealtimeSegmentGetter.class);
-
-  private final S3SegmentGetterConfig config;
+  private final SegmentPuller segmentPuller;
+  private final QueryableIndexFactory factory;
 
   @Inject
-  public RealtimeSegmentGetter(
-      S3SegmentGetterConfig config
+  public SingleSegmentLoader(
+      SegmentPuller segmentPuller,
+      QueryableIndexFactory factory
   )
   {
-    this.config = config;
+    this.segmentPuller = segmentPuller;
+    this.factory = factory;
   }
 
   @Override
-  public File getSegmentFiles(final Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  public Segment getSegment(DataSegment segment) throws StorageAdapterLoadingException
   {
-    try {
-      File cacheFile = (File) loadSpec.get("file");
+    final QueryableIndex index = factory.factorize(segmentPuller.getSegmentFiles(segment));
 
-      if (!cacheFile.exists()) {
-        throw new StorageAdapterLoadingException("Unable to find persisted file!");
-      }
-      return cacheFile;
-    }
-    catch (Exception e) {
-      throw new StorageAdapterLoadingException(e, e.getMessage());
-    }
+    return new QueryableIndexSegment(segment.getIdentifier(), index);
   }
 
   @Override
-  public boolean cleanSegmentFiles(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  public void cleanup(DataSegment segment) throws StorageAdapterLoadingException
   {
-    throw new UnsupportedOperationException();
+    segmentPuller.cleanSegmentFiles(segment);
   }
 }

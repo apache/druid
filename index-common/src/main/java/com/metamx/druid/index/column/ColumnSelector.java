@@ -17,16 +17,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid;
-
-import org.skife.config.Config;
-import org.skife.config.Default;
+package com.metamx.druid.index.column;
 
 /**
  */
-public abstract class GroupByQueryEngineConfig
+public interface ColumnSelector
 {
-  @Config("druid.query.groupBy.maxIntermediateRows")
-  @Default("50000")
-  public abstract int getMaxIntermediateRows();
+  public Column getTimeColumn();
+  public Column getColumn(String columnName);
 }

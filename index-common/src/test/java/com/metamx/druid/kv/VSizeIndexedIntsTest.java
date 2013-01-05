@@ -22,6 +22,10 @@ package com.metamx.druid.kv;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+
 /**
  */
 public class VSizeIndexedIntsTest
@@ -38,4 +42,25 @@ public class VSizeIndexedIntsTest
       Assert.assertEquals(array[i], ints.get(i));
     }
   }
+
+  @Test
+  public void testSerialization() throws Exception
+  {
+    final int[] array = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    VSizeIndexedInts ints = VSizeIndexedInts.fromArray(array);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ints.writeToChannel(Channels.newChannel(baos));
+
+    final byte[] bytes = baos.toByteArray();
+    Assert.assertEquals(ints.getSerializedSize(), bytes.length);
+    VSizeIndexedInts deserialized = VSizeIndexedInts.readFromByteBuffer(ByteBuffer.wrap(bytes));
+
+    Assert.assertEquals(1, deserialized.getNumBytes());
+    Assert.assertEquals(array.length, deserialized.size());
+    for (int i = 0; i < array.length; i++) {
+      Assert.assertEquals(array[i], deserialized.get(i));
+    }
+  }
+
 }

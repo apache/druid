@@ -19,13 +19,13 @@
 
 package com.metamx.druid.loading;
 
-import com.metamx.druid.StorageAdapter;
-
-import java.io.File;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.Segment;
 
 /**
  */
-public interface StorageAdapterFactory
+public interface SegmentLoader
 {
-  public StorageAdapter factorize(File parentDir) throws StorageAdapterLoadingException;
+  public Segment getSegment(DataSegment loadSpec) throws StorageAdapterLoadingException;
+  public void cleanup(DataSegment loadSpec) throws StorageAdapterLoadingException;
 }

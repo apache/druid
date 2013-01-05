@@ -384,6 +384,7 @@ public class IndexMerger
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn
   ) throws IOException
   {
+    // TODO: make v9 index, complain to Eric when you see this, cause he should be doing it.
     Map<String, String> metricTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
     for (IndexableAdapter adapter : indexes) {
       for (String metric : adapter.getAvailableMetrics()) {
@@ -704,7 +705,7 @@ public class IndexMerger
       if (!dimension.equals(serializerUtils.readString(dimValsMapped))) {
         throw new ISE("dimensions[%s] didn't equate!?  This is a major WTF moment.", dimension);
       }
-      Indexed<String> dimVals = GenericIndexed.readFromByteBuffer(dimValsMapped, GenericIndexed.stringStrategy);
+      Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.stringStrategy);
       log.info("Starting dimension[%s] with cardinality[%,d]", dimension, dimVals.size());
 
       FlattenedArrayWriter<ImmutableConciseSet> writer = new FlattenedArrayWriter<ImmutableConciseSet>(

@@ -248,7 +248,7 @@ public class MMappedIndexStorageAdapter extends BaseStorageAdapter
                     @Override
                     public DimensionSelector makeDimensionSelector(String dimension)
                     {
-                      final String dimensionName = dimension;
+                      final String dimensionName = dimension.toLowerCase();
                       final Indexed<? extends IndexedInts> rowVals = index.getDimColumn(dimensionName);
                       final Indexed<String> dimValueLookup = index.getDimValueLookup(dimensionName);
 

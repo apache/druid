@@ -24,13 +24,13 @@ import com.google.common.collect.Ordering;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.Query;
-import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.collect.CountingMap;
+import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.v1.SegmentIdAttachedStorageAdapter;
-import com.metamx.druid.loading.StorageAdapterLoader;
+import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.StorageAdapterLoadingException;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.partition.PartitionHolder;
@@ -66,29 +66,29 @@ public class ServerManager implements QuerySegmentWalker
 
   private final Object lock = new Object();
 
-  private final StorageAdapterLoader storageAdapterLoader;
+  private final SegmentLoader segmentLoader;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ServiceEmitter emitter;
   private final ExecutorService exec;
 
-  private final Map<String, VersionedIntervalTimeline<String, StorageAdapter>> dataSources;
+  private final Map<String, VersionedIntervalTimeline<String, Segment>> dataSources;
   private final CountingMap<String> dataSourceSizes = new CountingMap<String>();
   private final CountingMap<String> dataSourceCounts = new CountingMap<String>();
 
   public ServerManager(
-      StorageAdapterLoader storageAdapterLoader,
+      SegmentLoader segmentLoader,
       QueryRunnerFactoryConglomerate conglomerate,
       ServiceEmitter emitter,
       ExecutorService exec
   )
   {
-    this.storageAdapterLoader = storageAdapterLoader;
+    this.segmentLoader = segmentLoader;
     this.conglomerate = conglomerate;
     this.emitter = emitter;
 
     this.exec = exec;
 
-    this.dataSources = new HashMap<String, VersionedIntervalTimeline<String, StorageAdapter>>();
+    this.dataSources = new HashMap<String, VersionedIntervalTimeline<String, Segment>>();
   }
 
   public Map<String, Long> getDataSourceSizes()
@@ -107,13 +107,13 @@ public class ServerManager implements QuerySegmentWalker
 
   public void loadSegment(final DataSegment segment) throws StorageAdapterLoadingException
   {
-    StorageAdapter adapter = null;
+    final Segment adapter;
     try {
-      adapter = storageAdapterLoader.getAdapter(segment.getLoadSpec());
+      adapter = segmentLoader.getSegment(segment);
     }
     catch (StorageAdapterLoadingException e) {
       try {
-        storageAdapterLoader.cleanupAdapter(segment.getLoadSpec());
+        segmentLoader.cleanup(segment);
       }
       catch (StorageAdapterLoadingException e1) {
         // ignore
@@ -125,18 +125,16 @@ public class ServerManager implements QuerySegmentWalker
       throw new StorageAdapterLoadingException("Null adapter from loadSpec[%s]", segment.getLoadSpec());
     }
 
-    adapter = new SegmentIdAttachedStorageAdapter(segment.getIdentifier(), adapter);
-
     synchronized (lock) {
       String dataSource = segment.getDataSource();
-      VersionedIntervalTimeline<String, StorageAdapter> loadedIntervals = dataSources.get(dataSource);
+      VersionedIntervalTimeline<String, Segment> loadedIntervals = dataSources.get(dataSource);
 
       if (loadedIntervals == null) {
-        loadedIntervals = new VersionedIntervalTimeline<String, StorageAdapter>(Ordering.natural());
+        loadedIntervals = new VersionedIntervalTimeline<String, Segment>(Ordering.natural());
         dataSources.put(dataSource, loadedIntervals);
       }
 
-      PartitionHolder<StorageAdapter> entry = loadedIntervals.findEntry(
+      PartitionHolder<Segment> entry = loadedIntervals.findEntry(
           segment.getInterval(),
           segment.getVersion()
       );
@@ -161,17 +159,17 @@ public class ServerManager implements QuerySegmentWalker
   {
     String dataSource = segment.getDataSource();
     synchronized (lock) {
-      VersionedIntervalTimeline<String, StorageAdapter> loadedIntervals = dataSources.get(dataSource);
+      VersionedIntervalTimeline<String, Segment> loadedIntervals = dataSources.get(dataSource);
 
       if (loadedIntervals == null) {
         log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSource);
         return;
       }
 
-      PartitionChunk<StorageAdapter> removed = loadedIntervals.remove(
-          segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk((StorageAdapter) null)
+      PartitionChunk<Segment> removed = loadedIntervals.remove(
+          segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk((Segment) null)
       );
-      StorageAdapter oldQueryable = (removed == null) ? null : removed.getObject();
+      Segment oldQueryable = (removed == null) ? null : removed.getObject();
 
       if (oldQueryable != null) {
         synchronized (dataSourceSizes) {
@@ -189,7 +187,7 @@ public class ServerManager implements QuerySegmentWalker
         );
       }
     }
-    storageAdapterLoader.cleanupAdapter(segment.getLoadSpec());
+    segmentLoader.cleanup(segment);
   }
 
   @Override
@@ -202,7 +200,7 @@ public class ServerManager implements QuerySegmentWalker
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    final VersionedIntervalTimeline<String, StorageAdapter> timeline = dataSources.get(query.getDataSource());
+    final VersionedIntervalTimeline<String, Segment> timeline = dataSources.get(query.getDataSource());
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();
@@ -211,20 +209,20 @@ public class ServerManager implements QuerySegmentWalker
     FunctionalIterable<QueryRunner<T>> adapters = FunctionalIterable
         .create(intervals)
         .transformCat(
-            new Function<Interval, Iterable<TimelineObjectHolder<String, StorageAdapter>>>()
+            new Function<Interval, Iterable<TimelineObjectHolder<String, Segment>>>()
             {
               @Override
-              public Iterable<TimelineObjectHolder<String, StorageAdapter>> apply(Interval input)
+              public Iterable<TimelineObjectHolder<String, Segment>> apply(Interval input)
               {
                 return timeline.lookup(input);
               }
             }
         )
         .transformCat(
-            new Function<TimelineObjectHolder<String, StorageAdapter>, Iterable<QueryRunner<T>>>()
+            new Function<TimelineObjectHolder<String, Segment>, Iterable<QueryRunner<T>>>()
             {
               @Override
-              public Iterable<QueryRunner<T>> apply(@Nullable final TimelineObjectHolder<String, StorageAdapter> holder)
+              public Iterable<QueryRunner<T>> apply(@Nullable final TimelineObjectHolder<String, Segment> holder)
               {
                 if (holder == null) {
                   return null;
@@ -233,10 +231,10 @@ public class ServerManager implements QuerySegmentWalker
                 return FunctionalIterable
                     .create(holder.getObject())
                     .transform(
-                        new Function<PartitionChunk<StorageAdapter>, QueryRunner<T>>()
+                        new Function<PartitionChunk<Segment>, QueryRunner<T>>()
                         {
                           @Override
-                          public QueryRunner<T> apply(PartitionChunk<StorageAdapter> input)
+                          public QueryRunner<T> apply(PartitionChunk<Segment> input)
                           {
                             return buildAndDecorateQueryRunner(
                                 factory,
@@ -274,7 +272,7 @@ public class ServerManager implements QuerySegmentWalker
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
 
-    final VersionedIntervalTimeline<String, StorageAdapter> timeline = dataSources.get(query.getDataSource());
+    final VersionedIntervalTimeline<String, Segment> timeline = dataSources.get(query.getDataSource());
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();
@@ -289,7 +287,7 @@ public class ServerManager implements QuerySegmentWalker
               @SuppressWarnings("unchecked")
               public Iterable<QueryRunner<T>> apply(@Nullable SegmentDescriptor input)
               {
-                final PartitionHolder<StorageAdapter> entry = timeline.findEntry(
+                final PartitionHolder<Segment> entry = timeline.findEntry(
                     input.getInterval(), input.getVersion()
                 );
 
@@ -297,13 +295,13 @@ public class ServerManager implements QuerySegmentWalker
                   return null;
                 }
 
-                final PartitionChunk<StorageAdapter> chunk = entry.getChunk(input.getPartitionNumber());
+                final PartitionChunk<Segment> chunk = entry.getChunk(input.getPartitionNumber());
                 if (chunk == null) {
                   return null;
                 }
 
-                final StorageAdapter adapter = chunk.getObject();
-                return Arrays.<QueryRunner<T>>asList(
+                final Segment adapter = chunk.getObject();
+                return Arrays.asList(
                     buildAndDecorateQueryRunner(factory, toolChest, adapter, new SpecificSegmentSpec(input))
                 );
               }
@@ -316,7 +314,7 @@ public class ServerManager implements QuerySegmentWalker
   private <T> QueryRunner<T> buildAndDecorateQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
-      StorageAdapter adapter,
+      Segment adapter,
       QuerySegmentSpec segmentSpec
   )
   {
@@ -333,7 +331,7 @@ public class ServerManager implements QuerySegmentWalker
             },
             new BySegmentQueryRunner<T>(
                 adapter.getSegmentIdentifier(),
-                adapter.getInterval().getStart(),
+                adapter.getDataInterval().getStart(),
                 factory.createRunner(adapter)
             )
         ).withWaitMeasuredFromNow(),

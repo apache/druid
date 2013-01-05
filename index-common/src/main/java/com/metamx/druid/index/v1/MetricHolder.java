@@ -39,7 +39,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
 /**
@@ -140,7 +139,7 @@ public class MetricHolder
         break;
       case COMPLEX:
         if (strategy != null) {
-          holder.complexType = GenericIndexed.readFromByteBuffer(buf, strategy);
+          holder.complexType = GenericIndexed.read(buf, strategy);
         } else {
           final ComplexMetricSerde serdeForType = ComplexMetrics.getSerdeForType(holder.getTypeName());
 
@@ -148,7 +147,7 @@ public class MetricHolder
             throw new ISE("Unknown type[%s], cannot load.", holder.getTypeName());
           }
 
-          holder.complexType = GenericIndexed.readFromByteBuffer(buf, serdeForType.getObjectStrategy());
+          holder.complexType = GenericIndexed.read(buf, serdeForType.getObjectStrategy());
         }
         break;
     }
@@ -174,8 +173,8 @@ public class MetricHolder
     }
   }
 
-  private CompressedFloatsIndexedSupplier floatType = null;
-  private Indexed complexType = null;
+  CompressedFloatsIndexedSupplier floatType = null;
+  Indexed complexType = null;
 
   private MetricHolder(
       String name,

@@ -19,20 +19,17 @@
 
 package com.metamx.druid.loading;
 
-import com.metamx.druid.StorageAdapter;
-import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.index.v1.MMappedIndexStorageAdapter;
-
-import java.io.File;
-import java.io.IOException;
+import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
-public class MMappedStorageAdapterFactory extends ConvertingBaseQueryableFactory
+public abstract class S3SegmentPusherConfig
 {
-  @Override
-  protected StorageAdapter factorizeConverted(File parentDir) throws IOException
-  {
-    return new MMappedIndexStorageAdapter(IndexIO.mapDir(parentDir));
-  }
+  @Config("druid.pusher.s3.bucket")
+  public abstract String getBucket();
+
+  @Config("druid.pusher.s3.baseKey")
+  @Default("")
+  public abstract String getBaseKey();
 }

@@ -17,15 +17,38 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.loading;
+package com.metamx.druid.index.column;
 
-import java.io.File;
-import java.util.Map;
+import com.metamx.druid.kv.Indexed;
+
+import java.io.IOException;
 
 /**
- */
-public interface SegmentGetter
+*/
+public class IndexedComplexColumn implements ComplexColumn
 {
-  public File getSegmentFiles(Map<String, Object> loadSpec) throws StorageAdapterLoadingException;
-  public boolean cleanSegmentFiles(Map<String, Object> loadSpec) throws StorageAdapterLoadingException;
+  private final Indexed column;
+
+  public IndexedComplexColumn(
+      Indexed column
+  )
+  {
+    this.column = column;
+  }
+  @Override
+  public Class<?> getClazz()
+  {
+    return column.getClazz();
+  }
+
+  @Override
+  public Object getRowValue(int rowNum)
+  {
+    return column.get(rowNum);
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+  }
 }

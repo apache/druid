@@ -117,12 +117,8 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
     final long startMsec = System.currentTimeMillis();
 
     dimensions.add("htags");
-    dimensions.add("retweet_count");
-    dimensions.add("follower_count");
-    dimensions.add("friends_count");
     dimensions.add("lang");
     dimensions.add("utc_offset");
-    dimensions.add("statuses_count");
 
     //
     //   set up Twitter Spritzer
@@ -254,7 +250,6 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
         if (hts != null && hts.length > 0) {
           // ToDo: get all the hash tags instead of just the first one
           theMap.put("htags", hts[0].getText());
-          log.info("htags=" + hts[0].getText()); // about 16%
         } else {
           theMap.put("htags", null);
         }
@@ -270,14 +265,6 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
           theMap.put("statuses_count", u.getStatusesCount());
         } else {
           log.error("status.getUser() is null");
-        }
-        if (rowCount % 10 == 0) {
-          log.info("" + status.getCreatedAt() +
-              " follower_count=" + u.getFollowersCount() +
-              " friends_count=" + u.getFriendsCount() +
-              " statuses_count=" + u.getStatusesCount() +
-              " retweet_count=" + retweetCount
-          );
         }
 
         return new MapBasedInputRow(status.getCreatedAt().getTime(), dimensions, theMap);

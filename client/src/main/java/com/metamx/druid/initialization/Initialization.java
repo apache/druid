@@ -203,7 +203,7 @@ public class Initialization
           log.info("Loaded(properties stored in zk) Property[%s] as [%s]", prop, zkProps.getProperty(prop));
         }
       } // get props from zk
-    } else { // ToDo: should this be an error?
+    } else {
       log.warn("property druid.zk.service.host is not set, so no way to contact zookeeper for coordination.");
     }
     // validate properties now that all levels of precedence are loaded

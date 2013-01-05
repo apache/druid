@@ -36,7 +36,7 @@ import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.PlumberSchool;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.realtime.SegmentPusher;
+import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.realtime.Sink;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -168,7 +168,7 @@ public class YeOldePlumberSchool implements PlumberSchool
                 dirToPersist
             );
 
-            indexToPersist.swapAdapter(null);
+            indexToPersist.swapSegment(null);
 
             metrics.incrementRowOutputCount(rowsToPersist);
 

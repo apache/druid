@@ -153,6 +153,11 @@ public class VSizeIndexed implements Indexed<VSizeIndexedInts>
     throw new UnsupportedOperationException("Reverse lookup not allowed.");
   }
 
+  public int getSerializedSize()
+  {
+    return theBuffer.remaining() + 4 + 4 + 2;
+  }
+
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{version, (byte) numBytes}));
@@ -161,10 +166,7 @@ public class VSizeIndexed implements Indexed<VSizeIndexedInts>
     channel.write(theBuffer.asReadOnlyBuffer());
   }
 
-  public static VSizeIndexed readFromByteBuffer(
-      ByteBuffer buffer
-  )
-      throws IOException
+  public static VSizeIndexed readFromByteBuffer(ByteBuffer buffer)
   {
     byte versionFromBuffer = buffer.get();
 
@@ -175,10 +177,7 @@ public class VSizeIndexed implements Indexed<VSizeIndexedInts>
       bufferToUse.limit(bufferToUse.position() + size);
       buffer.position(bufferToUse.limit());
 
-      return new VSizeIndexed(
-          bufferToUse,
-          numBytes
-      );
+      return new VSizeIndexed(bufferToUse, numBytes);
     }
 
     throw new IAE("Unknown version[%s]", versionFromBuffer);

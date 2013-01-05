@@ -38,11 +38,16 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerView;
 import com.metamx.druid.guava.ThreadRenamingRunnable;
+import com.metamx.druid.index.QueryableIndex;
+import com.metamx.druid.index.QueryableIndexSegment;
+import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.index.v1.MMappedIndex;
+import com.metamx.druid.index.v1.MMappedIndexQueryableIndex;
 import com.metamx.druid.index.v1.MMappedIndexStorageAdapter;
+import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.query.MetricsEmittingQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
@@ -185,7 +190,7 @@ public class RealtimePlumberSchool implements PlumberSchool
           log.info("Loading previously persisted segment at [%s]", segmentDir);
           hydrants.add(
               new FireHydrant(
-                  new MMappedIndexStorageAdapter(IndexIO.mapDir(segmentDir)),
+                  new QueryableIndexSegment(null, IndexIO.loadIndex(segmentDir)),
                   Integer.parseInt(segmentDir.getName())
               )
           );
@@ -305,15 +310,16 @@ public class RealtimePlumberSchool implements PlumberSchool
                           try {
                             List<MMappedIndex> indexes = Lists.newArrayList();
                             for (FireHydrant fireHydrant : sink) {
-                              StorageAdapter adapter = fireHydrant.getAdapter();
-                              if (adapter instanceof MMappedIndexStorageAdapter) {
+                              Segment segment = fireHydrant.getSegment();
+                              final QueryableIndex queryableIndex = segment.asQueryableIndex();
+                              if (queryableIndex instanceof MMappedIndexQueryableIndex) {
                                 log.info("Adding hydrant[%s]", fireHydrant);
-                                indexes.add(((MMappedIndexStorageAdapter) adapter).getIndex());
+                                indexes.add(((MMappedIndexQueryableIndex) queryableIndex).getIndex());
                               }
                               else {
                                 log.makeAlert("[%s] Failure to merge-n-push", schema.getDataSource())
-                                   .addData("type", "Unknown adapter type")
-                                   .addData("adapterClass", adapter.getClass().toString())
+                                   .addData("type", "Unknown segment type")
+                                   .addData("adapterClass", segment.getClass().toString())
                                    .emit();
                                 return;
                               }
@@ -420,7 +426,7 @@ public class RealtimePlumberSchool implements PlumberSchool
                                       @Override
                                       public QueryRunner<T> apply(@Nullable FireHydrant input)
                                       {
-                                        return factory.createRunner(input.getAdapter());
+                                        return factory.createRunner(input.getSegment());
                                       }
                                     }
                                 )
@@ -441,6 +447,8 @@ public class RealtimePlumberSchool implements PlumberSchool
             indexesToPersist.add(Pair.of(sink.swap(), sink.getInterval()));
           }
         }
+
+        log.info("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
 
         persistExecutor.execute(
             new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
@@ -495,7 +503,9 @@ public class RealtimePlumberSchool implements PlumberSchool
           new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
       );
 
-      indexToPersist.swapAdapter(new MMappedIndexStorageAdapter(IndexIO.mapDir(persistedFile)));
+      indexToPersist.swapSegment(
+          new QueryableIndexSegment(null, new MMappedIndexQueryableIndex(IndexIO.mapDir(persistedFile)))
+      );
 
       return numRows;
     }

@@ -19,14 +19,12 @@
 
 package com.metamx.druid.loading;
 
-import com.metamx.druid.StorageAdapter;
+import com.metamx.druid.client.DataSegment;
 
-import java.util.Map;
+import java.io.File;
+import java.io.IOException;
 
-/**
- */
-public interface StorageAdapterLoader
+public interface SegmentPusher
 {
-  public StorageAdapter getAdapter(Map<String, Object> loadSpec) throws StorageAdapterLoadingException;
-  public void cleanupAdapter(Map<String, Object> loadSpec) throws StorageAdapterLoadingException;
+  public DataSegment push(File file, DataSegment segment) throws IOException;
 }

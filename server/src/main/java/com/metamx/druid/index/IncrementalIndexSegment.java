@@ -17,39 +17,47 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.loading;
+package com.metamx.druid.index;
 
-import com.google.inject.Inject;
 import com.metamx.druid.StorageAdapter;
-
-import java.util.Map;
+import com.metamx.druid.index.v1.IncrementalIndex;
+import com.metamx.druid.index.v1.IncrementalIndexStorageAdapter;
+import org.joda.time.Interval;
 
 /**
  */
-public class SingleStorageAdapterLoader implements StorageAdapterLoader
+public class IncrementalIndexSegment implements Segment
 {
-  private final SegmentGetter segmentGetter;
-  private final StorageAdapterFactory factory;
+  private final IncrementalIndex index;
 
-  @Inject
-  public SingleStorageAdapterLoader(
-      SegmentGetter segmentGetter,
-      StorageAdapterFactory factory
+  public IncrementalIndexSegment(
+      IncrementalIndex index
   )
   {
-    this.segmentGetter = segmentGetter;
-    this.factory = factory;
+    this.index = index;
   }
 
   @Override
-  public StorageAdapter getAdapter(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  public String getSegmentIdentifier()
   {
-    return factory.factorize(segmentGetter.getSegmentFiles(loadSpec));
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public void cleanupAdapter(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  public Interval getDataInterval()
   {
-    segmentGetter.cleanSegmentFiles(loadSpec);
+    return index.getInterval();
+  }
+
+  @Override
+  public QueryableIndex asQueryableIndex()
+  {
+    return null;
+  }
+
+  @Override
+  public StorageAdapter asStorageAdapter()
+  {
+    return new IncrementalIndexStorageAdapter(index);
   }
 }

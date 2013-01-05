@@ -28,7 +28,7 @@ import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.client.ZKPhoneBook;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.loading.NoopStorageAdapterLoader;
+import com.metamx.druid.loading.NoopSegmentLoader;
 import com.metamx.druid.metrics.NoopServiceEmitter;
 import com.metamx.druid.query.NoopQueryRunnerFactoryConglomerate;
 import com.metamx.druid.shard.NoneShardSpec;
@@ -72,7 +72,7 @@ public class ZkCoordinatorTest
     }
 
     serverManager = new ServerManager(
-        new NoopStorageAdapterLoader(),
+        new NoopSegmentLoader(),
         new NoopQueryRunnerFactoryConglomerate(),
         new NoopServiceEmitter(),
         MoreExecutors.sameThreadExecutor()

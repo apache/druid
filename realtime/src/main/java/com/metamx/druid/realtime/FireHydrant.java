@@ -19,16 +19,16 @@
 
 package com.metamx.druid.realtime;
 
-import com.metamx.druid.StorageAdapter;
+import com.metamx.druid.index.IncrementalIndexSegment;
+import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.v1.IncrementalIndex;
-import com.metamx.druid.index.v1.IncrementalIndexStorageAdapter;
 
 /**
 */
 public class FireHydrant
 {
   private volatile IncrementalIndex index;
-  private volatile StorageAdapter adapter;
+  private volatile Segment adapter;
   private final int count;
 
   public FireHydrant(
@@ -37,12 +37,12 @@ public class FireHydrant
   )
   {
     this.index = index;
-    this.adapter = new IncrementalIndexStorageAdapter(index);
+    this.adapter = new IncrementalIndexSegment(index);
     this.count = count;
   }
 
   public FireHydrant(
-      StorageAdapter adapter,
+      Segment adapter,
       int count
   )
   {
@@ -56,7 +56,7 @@ public class FireHydrant
     return index;
   }
 
-  public StorageAdapter getAdapter()
+  public Segment getSegment()
   {
     return adapter;
   }
@@ -71,7 +71,7 @@ public class FireHydrant
     return index == null;
   }
 
-  public void swapAdapter(StorageAdapter adapter)
+  public void swapSegment(Segment adapter)
   {
     this.adapter = adapter;
     this.index = null;
