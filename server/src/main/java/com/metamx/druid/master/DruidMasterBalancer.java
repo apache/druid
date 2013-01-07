@@ -106,19 +106,18 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
       List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(entry.getValue());
 
-      analyzer.init(serverHolderList);
+      analyzer.init(serverHolderList, params);
+
       log.info(
           "Initial Total Cost: [%s]",
           analyzer.getInitialTotalCost()
       );
 
-      analyzer.init(serverHolderList);
       log.info(
           "Normalization: [%s]",
           analyzer.getNormalization()
       );
 
-      analyzer.init(serverHolderList);
       log.info(
           "Normalized Inital Cost: [%s]",
           analyzer.getNormalizedInitialCost()
