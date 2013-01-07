@@ -19,6 +19,7 @@
 
 package com.metamx.druid.query.search;
 
+import com.google.common.collect.Iterators;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
@@ -34,7 +35,6 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
-import com.sun.xml.internal.xsom.impl.scd.Iterators;
 
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
@@ -91,7 +91,7 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
             @Override
             public Iterator<Result<SearchResultValue>> make()
             {
-              return Iterators.singleton(
+              return Iterators.singletonIterator(
                   new SearchResultBuilder(
                       adapter.getInterval().getStart(),
                       adapter.searchDimensions(
