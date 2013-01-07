@@ -107,28 +107,24 @@ public class DruidMasterBalancer implements DruidMasterHelper
       List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(entry.getValue());
 
       analyzer.init(serverHolderList, params);
-
-      log.info(
-          "Initial Total Cost: [%s]",
-          analyzer.getInitialTotalCost()
-      );
-
-      log.info(
-          "Normalization: [%s]",
-          analyzer.getNormalization()
-      );
-
-      log.info(
-          "Normalized Inital Cost: [%s]",
-          analyzer.getNormalizedInitialCost()
-      );
-
       moveSegments(analyzer.findSegmentsToMove(), params);
 
-      stats.addToTieredStat("costChange", tier, (long) analyzer.getTotalCostChange());
+      double initialTotalCost = analyzer.getInitialTotalCost();
+      double normalization = analyzer.getNormalization();
+      double normalizedInitialCost = analyzer.getNormalizedInitialCost();
+      double costChange = analyzer.getTotalCostChange();
+
+      stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
+      stats.addToTieredStat("normalization", tier, (long) normalization);
+      stats.addToTieredStat("costChange", tier, (long) costChange);
+
       log.info(
-          "Cost Change: [%s]",
-          analyzer.getTotalCostChange()
+          "Initial Total Cost: [%f], Initial Normalized Cost: [%f], Cost Change: [%f], Normalized Cost Change: [%f], New Normalized Cost: [%f]",
+          initialTotalCost,
+          normalizedInitialCost,
+          costChange,
+          costChange / normalization,
+          (initialTotalCost - costChange) / normalization
       );
 
       if (serverHolderList.size() <= 1) {
