@@ -22,6 +22,7 @@ package com.metamx.druid.index.v1;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.metamx.common.collect.MoreIterators;
@@ -47,7 +48,6 @@ import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.IndexedIterable;
 import com.metamx.druid.processing.ComplexMetricSelector;
 import com.metamx.druid.processing.FloatMetricSelector;
-import com.sun.xml.internal.xsom.impl.scd.Iterators;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -366,7 +366,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                               @Override
                               public Iterator<Integer> iterator()
                               {
-                                return Iterators.singleton(value);
+                                return Iterators.singletonIterator(value);
                               }
                             };
                           }
@@ -670,7 +670,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                               @Override
                               public Iterator<Integer> iterator()
                               {
-                                return Iterators.singleton(value);
+                                return Iterators.singletonIterator(value);
                               }
                             };
                           }
