@@ -56,6 +56,7 @@ public class BalancerCostAnalyzer
   private double initialTotalCost;
   private double normalization;
   private double totalCostChange;
+  private int totalSegments;
 
   public BalancerCostAnalyzer(DateTime referenceTimestamp)
   {
@@ -64,11 +65,12 @@ public class BalancerCostAnalyzer
     totalCostChange = 0;
   }
 
-  public void init(List<ServerHolder> serverHolderList)
+  public void init(List<ServerHolder> serverHolderList, DruidMasterRuntimeParams params)
   {
     this.initialTotalCost = calculateInitialTotalCost(serverHolderList);
     this.normalization = calculateNormalization(serverHolderList);
     this.serverHolderList = serverHolderList;
+    this.totalSegments = params.getAvailableSegments().size();
   }
 
   public double getInitialTotalCost()
@@ -317,6 +319,23 @@ public class BalancerCostAnalyzer
 
   }
 
+  /*
+   * Sample from each server with probability proportional to the number of segments on that server.
+   */
+  private ServerHolder sampleServer()
+  {
+    int num = rand.nextInt(totalSegments);
+    int cumulativeSegments = 0;
+    int numToStopAt = 0;
+
+    while (cumulativeSegments <= num) {
+      cumulativeSegments += serverHolderList.get(numToStopAt).getServer().getSegments().size();
+      numToStopAt++;
+    }
+
+    return serverHolderList.get(numToStopAt - 1);
+  }
+
   public Set<BalancerSegmentHolder> findSegmentsToMove()
   {
     Set<BalancerSegmentHolder> segmentHoldersToMove = Sets.newHashSet();
@@ -326,11 +345,19 @@ public class BalancerCostAnalyzer
 
     while (segmentHoldersToMove.size() < MAX_SEGMENTS_TO_MOVE && counter < 3 * MAX_SEGMENTS_TO_MOVE) {
       counter++;
-      ServerHolder fromServerHolder = serverHolderList.get(rand.nextInt(serverHolderList.size()));
+
+      int numServers = serverHolderList.size();
+      if (numServers == 0) break;
+
+      // We want to sample from each server w.p. numSegmentsOnServer / totalSegments
+      ServerHolder fromServerHolder = sampleServer();
+
+      // and actually pick that segment uniformly at random w.p. 1 / numSegmentsOnServer
+      // so that the probability of picking a segment is 1 / totalSegments.
       List<DataSegment> segments = Lists.newArrayList(fromServerHolder.getServer().getSegments().values());
-      if (segments.size() == 0) {
-        continue;
-      }
+
+      if (segments.size() == 0) continue;
+
       DataSegment proposalSegment = segments.get(rand.nextInt(segments.size()));
       if (movingSegments.contains(proposalSegment)) {
         continue;
