@@ -59,6 +59,18 @@ public class DbConnector
     );
   }
 
+  public static void createWorkerSetupTable(final DBI dbi, final String workerTableName)
+  {
+    createTable(
+        dbi,
+        workerTableName,
+        String.format(
+            "CREATE table %s (minVersion TINYTEXT NOT NULL, minNumWorkers SMALLINT NOT NULL, nodeData LONGTEXT NOT NULL, userData LONGTEXT NOT NULL)",
+            workerTableName
+        )
+    );
+  }
+
   public static void createTable(
       final DBI dbi,
       final String tableName,

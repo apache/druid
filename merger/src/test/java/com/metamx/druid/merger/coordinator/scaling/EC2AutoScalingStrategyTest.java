@@ -29,6 +29,10 @@ import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
+import com.metamx.druid.merger.coordinator.setup.EC2NodeData;
+import com.metamx.druid.merger.coordinator.setup.GalaxyUserData;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -52,6 +56,7 @@ public class EC2AutoScalingStrategyTest
   private Reservation reservation;
   private Instance instance;
   private EC2AutoScalingStrategy strategy;
+  private WorkerSetupManager workerSetupManager;
 
   @Before
   public void setUp() throws Exception
@@ -60,6 +65,7 @@ public class EC2AutoScalingStrategyTest
     runInstancesResult = EasyMock.createMock(RunInstancesResult.class);
     describeInstancesResult = EasyMock.createMock(DescribeInstancesResult.class);
     reservation = EasyMock.createMock(Reservation.class);
+    workerSetupManager = EasyMock.createMock(WorkerSetupManager.class);
 
     instance = new Instance()
         .withInstanceId(INSTANCE_ID)
@@ -69,44 +75,16 @@ public class EC2AutoScalingStrategyTest
 
     strategy = new EC2AutoScalingStrategy(
         new DefaultObjectMapper(),
-        amazonEC2Client, new EC2AutoScalingStrategyConfig()
-    {
-      @Override
-      public String getAmiId()
-      {
-        return AMI_ID;
-      }
-
-      @Override
-      public String getWorkerPort()
-      {
-        return "8080";
-      }
-
-      @Override
-      public String getInstanceType()
-      {
-        return "t1.micro";
-      }
-
-      @Override
-      public int getMinNumInstancesToProvision()
-      {
-        return 1;
-      }
-
-      @Override
-      public int getMaxNumInstancesToProvision()
-      {
-        return 1;
-      }
-
-      @Override
-      public String getUserDataFile()
-      {
-        return "";
-      }
-    }
+        amazonEC2Client,
+        new EC2AutoScalingStrategyConfig()
+        {
+          @Override
+          public String getWorkerPort()
+          {
+            return "8080";
+          }
+        },
+        workerSetupManager
     );
   }
 
@@ -117,11 +95,22 @@ public class EC2AutoScalingStrategyTest
     EasyMock.verify(runInstancesResult);
     EasyMock.verify(describeInstancesResult);
     EasyMock.verify(reservation);
+    EasyMock.verify(workerSetupManager);
   }
 
   @Test
   public void testScale()
   {
+    EasyMock.expect(workerSetupManager.getWorkerSetupData()).andReturn(
+        new WorkerSetupData(
+            "0",
+            0,
+            new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1),
+            new GalaxyUserData("env", "ver", "type")
+        )
+    );
+    EasyMock.replay(workerSetupManager);
+
     EasyMock.expect(amazonEC2Client.runInstances(EasyMock.anyObject(RunInstancesRequest.class))).andReturn(
         runInstancesResult
     );

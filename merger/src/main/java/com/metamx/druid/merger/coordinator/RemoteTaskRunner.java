@@ -39,6 +39,7 @@ import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
 import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
@@ -88,6 +89,7 @@ public class RemoteTaskRunner implements TaskRunner
   private final ScheduledExecutorService scheduledExec;
   private final RetryPolicyFactory retryPolicyFactory;
   private final ScalingStrategy strategy;
+  private final WorkerSetupManager workerSetupManager;
 
   // all workers that exist in ZK
   private final Map<String, WorkerWrapper> zkWorkers = new ConcurrentHashMap<String, WorkerWrapper>();
@@ -109,7 +111,8 @@ public class RemoteTaskRunner implements TaskRunner
       PathChildrenCache workerPathCache,
       ScheduledExecutorService scheduledExec,
       RetryPolicyFactory retryPolicyFactory,
-      ScalingStrategy strategy
+      ScalingStrategy strategy,
+      WorkerSetupManager workerSetupManager
   )
   {
     this.jsonMapper = jsonMapper;
@@ -119,6 +122,7 @@ public class RemoteTaskRunner implements TaskRunner
     this.scheduledExec = scheduledExec;
     this.retryPolicyFactory = retryPolicyFactory;
     this.strategy = strategy;
+    this.workerSetupManager = workerSetupManager;
   }
 
   @LifecycleStart
@@ -169,7 +173,7 @@ public class RemoteTaskRunner implements TaskRunner
             public void run()
             {
               if (currentlyTerminating.isEmpty()) {
-                if (zkWorkers.size() <= config.getMinNumWorkers()) {
+                if (zkWorkers.size() <= workerSetupManager.getWorkerSetupData().getMinNumWorkers()) {
                   return;
                 }
 
@@ -388,8 +392,7 @@ public class RemoteTaskRunner implements TaskRunner
               synchronized (statusLock) {
                 try {
                   if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED) ||
-                      event.getType().equals(PathChildrenCacheEvent.Type.CHILD_UPDATED))
-                  {
+                      event.getType().equals(PathChildrenCacheEvent.Type.CHILD_UPDATED)) {
                     final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
                     final TaskStatus taskStatus;
 
@@ -399,7 +402,7 @@ public class RemoteTaskRunner implements TaskRunner
                           event.getData().getData(), TaskStatus.class
                       );
 
-                      if(!taskStatus.getId().equals(taskId)) {
+                      if (!taskStatus.getId().equals(taskId)) {
                         // Sanity check
                         throw new ISE(
                             "Worker[%s] status id does not match payload id: %s != %s",
@@ -408,7 +411,8 @@ public class RemoteTaskRunner implements TaskRunner
                             taskStatus.getId()
                         );
                       }
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                       log.warn(e, "Worker[%s] wrote bogus status for task: %s", worker.getHost(), taskId);
                       retryTask(new CleanupPaths(worker.getHost(), taskId), tasks.get(taskId));
                       throw Throwables.propagate(e);
@@ -446,7 +450,8 @@ public class RemoteTaskRunner implements TaskRunner
                       }
                     }
                   }
-                } catch(Exception e) {
+                }
+                catch (Exception e) {
                   log.makeAlert(e, "Failed to handle new worker status")
                      .addData("worker", worker.getHost())
                      .addData("znode", event.getData().getPath())
@@ -526,7 +531,9 @@ public class RemoteTaskRunner implements TaskRunner
                 public boolean apply(WorkerWrapper input)
                 {
                   return (!input.isAtCapacity() &&
-                          input.getWorker().getVersion().compareTo(config.getMinWorkerVersion()) >= 0);
+                          input.getWorker()
+                               .getVersion()
+                               .compareTo(workerSetupManager.getWorkerSetupData().getMinVersion()) >= 0);
                 }
               }
           )

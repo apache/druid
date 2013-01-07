@@ -69,6 +69,8 @@ import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.scaling.EC2AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.NoopScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
+import com.metamx.druid.merger.coordinator.config.WorkerSetupManagerConfig;
 import com.metamx.druid.realtime.S3SegmentPusher;
 import com.metamx.druid.realtime.S3SegmentPusherConfig;
 import com.metamx.druid.realtime.SegmentPusher;
@@ -98,6 +100,7 @@ import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
+import org.skife.jdbi.v2.DBI;
 
 import java.net.URL;
 import java.util.Arrays;
@@ -133,6 +136,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private CuratorFramework curatorFramework = null;
   private ScheduledExecutorFactory scheduledExecutorFactory = null;
   private IndexerZkConfig indexerZkConfig;
+  private WorkerSetupManager workerSetupManager = null;
   private TaskRunnerFactory taskRunnerFactory = null;
   private TaskMaster taskMaster = null;
   private Server server = null;
@@ -160,14 +164,16 @@ public class IndexerCoordinatorNode extends RegisteringNode
     return this;
   }
 
-  public void setMergerDBCoordinator(MergerDBCoordinator mergerDBCoordinator)
+  public IndexerCoordinatorNode setMergerDBCoordinator(MergerDBCoordinator mergerDBCoordinator)
   {
     this.mergerDBCoordinator = mergerDBCoordinator;
+    return this;
   }
 
-  public void setTaskQueue(TaskQueue taskQueue)
+  public IndexerCoordinatorNode setTaskQueue(TaskQueue taskQueue)
   {
     this.taskQueue = taskQueue;
+    return this;
   }
 
   public IndexerCoordinatorNode setMergeDbCoordinator(MergerDBCoordinator mergeDbCoordinator)
@@ -182,9 +188,16 @@ public class IndexerCoordinatorNode extends RegisteringNode
     return this;
   }
 
-  public void setTaskRunnerFactory(TaskRunnerFactory taskRunnerFactory)
+  public IndexerCoordinatorNode setWorkerSetupManager(WorkerSetupManager workerSetupManager)
+  {
+    this.workerSetupManager = workerSetupManager;
+    return this;
+  }
+
+  public IndexerCoordinatorNode setTaskRunnerFactory(TaskRunnerFactory taskRunnerFactory)
   {
     this.taskRunnerFactory = taskRunnerFactory;
+    return this;
   }
 
   public void init() throws Exception
@@ -202,6 +215,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initializeJacksonSubtypes();
     initializeCurator();
     initializeIndexerZkConfig();
+    initializeWorkerSetupManager();
     initializeTaskRunnerFactory();
     initializeTaskMaster();
     initializeServer();
@@ -220,7 +234,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
             jsonMapper,
             config,
             emitter,
-            taskQueue
+            taskQueue,
+            workerSetupManager
         )
     );
 
@@ -447,6 +462,27 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
+  public void initializeWorkerSetupManager()
+  {
+    if (workerSetupManager == null) {
+      final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
+      final DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
+      final WorkerSetupManagerConfig workerSetupManagerConfig = configFactory.build(WorkerSetupManagerConfig.class);
+
+      DbConnector.createWorkerSetupTable(dbi, workerSetupManagerConfig.getWorkerSetupTable());
+      workerSetupManager = new WorkerSetupManager(
+          dbi, Executors.newScheduledThreadPool(
+          1,
+          new ThreadFactoryBuilder()
+              .setDaemon(true)
+              .setNameFormat("WorkerSetupManagerExec--%d")
+              .build()
+      ), jsonMapper, workerSetupManagerConfig
+      );
+    }
+    lifecycle.addManagedInstance(workerSetupManager);
+  }
+
   public void initializeTaskRunnerFactory()
   {
     if (taskRunnerFactory == null) {
@@ -476,7 +512,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
                           PropUtils.getProperty(props, "com.metamx.aws.secretKey")
                       )
                   ),
-                  configFactory.build(EC2AutoScalingStrategyConfig.class)
+                  configFactory.build(EC2AutoScalingStrategyConfig.class),
+                  workerSetupManager
               );
             } else if (config.getStrategyImpl().equalsIgnoreCase("noop")) {
               strategy = new NoopScalingStrategy();
@@ -491,7 +528,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
                 new PathChildrenCache(curatorFramework, indexerZkConfig.getAnnouncementPath(), true),
                 retryScheduledExec,
                 new RetryPolicyFactory(configFactory.build(RetryPolicyConfig.class)),
-                strategy
+                strategy,
+                workerSetupManager
             );
           }
         };

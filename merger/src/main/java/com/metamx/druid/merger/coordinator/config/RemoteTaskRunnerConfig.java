@@ -37,13 +37,6 @@ public abstract class RemoteTaskRunnerConfig extends IndexerZkConfig
   @Default("2012-01-01T00:55:00.000Z")
   public abstract DateTime getTerminateResourcesOriginDateTime();
 
-  @Config("druid.indexer.minWorkerVersion")
-  public abstract String getMinWorkerVersion();
-
-  @Config("druid.indexer.minNumWorkers")
-  @Default("1")
-  public abstract int getMinNumWorkers();
-
   @Config("druid.indexer.maxWorkerIdleTimeMillisBeforeDeletion")
   @Default("1")
   public abstract int getMaxWorkerIdleTimeMillisBeforeDeletion();
