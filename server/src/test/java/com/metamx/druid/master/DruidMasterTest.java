@@ -124,6 +124,12 @@ public class DruidMasterTest
           {
             return "";
           }
+
+          @Override
+          public int getMaxSegmentsToMove()
+          {
+            return 0;
+          }
         },
         null,
         null,

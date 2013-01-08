@@ -44,6 +44,7 @@ import java.util.Map;
  */
 public class DruidMasterBalancerTest
 {
+  private static final int MAX_SEGMENTS_TO_MOVE = 5;
   private DruidMaster master;
   private DruidServer druidServer1;
   private DruidServer druidServer2;
@@ -222,6 +223,7 @@ public class DruidMasterBalancerTest
                                 )
                                 .withLoadManagementPeons(ImmutableMap.of("from", peon, "to", peon))
                                 .withAvailableSegments(segments.values())
+                                .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                                 .build();
 
     params = new DruidMasterBalancer(master, new BalancerCostAnalyzer(new DateTime("2013-01-01"))).run(params);
@@ -370,6 +372,7 @@ public class DruidMasterBalancerTest
                                 )
                                 .withLoadManagementPeons(ImmutableMap.of("1", peon, "2", peon, "3", peon, "4", peon))
                                 .withAvailableSegments(segments.values())
+                                .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                                 .build();
 
     params = new DruidMasterBalancer(master, new BalancerCostAnalyzer(new DateTime("2013-01-01"))).run(params);

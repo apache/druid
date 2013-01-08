@@ -175,6 +175,7 @@ public class DruidMasterRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withMaxSegmentsToMove(5)
             .build();
 
     DruidMasterRuntimeParams afterParams = ruleRunner.run(params);

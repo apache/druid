@@ -65,7 +65,7 @@ public abstract class LoadRule implements Rule
             totalReplicants,
             serverQueue,
             segment,
-            master.getConfig().getMaxSegmentsToMove()
+            params.getMaxSegmentsToMove()
         )
     );
     stats.accumulate(drop(expectedReplicants, clusterReplicants, segment, params));
@@ -87,7 +87,7 @@ public abstract class LoadRule implements Rule
 
     List<ServerHolder> assignedServers = Lists.newArrayList();
     while (totalReplicants < expectedReplicants) {
-      BalancerCostAnalyzer analyzer = new BalancerCostAnalyzer(DateTime.now(), MAX_SEGMENTS_TO_MOVE);
+      BalancerCostAnalyzer analyzer = new BalancerCostAnalyzer(DateTime.now());
       BalancerCostAnalyzer.BalancerCostAnalyzerHelper helper = analyzer.new BalancerCostAnalyzerHelper(serverHolderList, segment);
       helper.computeAllCosts();
       Pair<Double, ServerHolder> minPair = helper.getCostsServerHolderPairs().pollFirst();

@@ -575,6 +575,7 @@ public class DruidMaster
                                     .withEmitter(emitter)
                                     .withMergeBytesLimit(config.getMergeBytesLimit())
                                     .withMergeSegmentsLimit(config.getMergeSegmentsLimit())
+                                    .withMaxSegmentsToMove(config.getMaxSegmentsToMove())
                                     .build();
 
         for (DruidMasterHelper helper : helpers) {
@@ -680,7 +681,7 @@ public class DruidMaster
               },
               new DruidMasterRuleRunner(DruidMaster.this),
               new DruidMasterCleanup(DruidMaster.this),
-              new DruidMasterBalancer(DruidMaster.this, new BalancerCostAnalyzer(DateTime.now(), config.getMaxSegmentsToMove())),
+              new DruidMasterBalancer(DruidMaster.this, new BalancerCostAnalyzer(DateTime.now())),
               new DruidMasterLogger()
           )
       );

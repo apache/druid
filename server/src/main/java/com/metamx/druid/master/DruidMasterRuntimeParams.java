@@ -49,6 +49,7 @@ public class DruidMasterRuntimeParams
   private final MasterStats stats;
   private final long mergeBytesLimit;
   private final int mergeSegmentsLimit;
+  private final int maxSegmentsToMove;
 
   public DruidMasterRuntimeParams(
       long startTime,
@@ -62,7 +63,8 @@ public class DruidMasterRuntimeParams
       long millisToWaitBeforeDeleting,
       MasterStats stats,
       long mergeBytesLimit,
-      int mergeSegmentsLimit
+      int mergeSegmentsLimit,
+      int maxSegmentsToMove
   )
   {
     this.startTime = startTime;
@@ -77,6 +79,12 @@ public class DruidMasterRuntimeParams
     this.stats = stats;
     this.mergeBytesLimit = mergeBytesLimit;
     this.mergeSegmentsLimit = mergeSegmentsLimit;
+    this.maxSegmentsToMove = maxSegmentsToMove;
+  }
+
+  public int getMaxSegmentsToMove()
+  {
+    return maxSegmentsToMove;
   }
 
   public long getStartTime()
@@ -163,7 +171,8 @@ public class DruidMasterRuntimeParams
         millisToWaitBeforeDeleting,
         stats,
         mergeBytesLimit,
-        mergeSegmentsLimit
+        mergeSegmentsLimit,
+        maxSegmentsToMove
     );
   }
 
@@ -181,6 +190,7 @@ public class DruidMasterRuntimeParams
     private MasterStats stats;
     private long mergeBytesLimit;
     private int mergeSegmentsLimit;
+    private int maxSegmentsToMove;
 
     Builder()
     {
@@ -196,6 +206,7 @@ public class DruidMasterRuntimeParams
       this.stats = new MasterStats();
       this.mergeBytesLimit = 0;
       this.mergeSegmentsLimit = 0;
+      this.maxSegmentsToMove = 0;
     }
 
     Builder(
@@ -210,7 +221,8 @@ public class DruidMasterRuntimeParams
         long millisToWaitBeforeDeleting,
         MasterStats stats,
         long mergeBytesLimit,
-        int mergeSegmentsLimit
+        int mergeSegmentsLimit,
+        int maxSegmentsToMove
     )
     {
       this.startTime = startTime;
@@ -225,6 +237,7 @@ public class DruidMasterRuntimeParams
       this.stats = stats;
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
+      this.maxSegmentsToMove = maxSegmentsToMove;
     }
 
     public DruidMasterRuntimeParams build()
@@ -241,7 +254,8 @@ public class DruidMasterRuntimeParams
           millisToWaitBeforeDeleting,
           stats,
           mergeBytesLimit,
-          mergeSegmentsLimit
+          mergeSegmentsLimit,
+          maxSegmentsToMove
       );
     }
 
@@ -314,6 +328,12 @@ public class DruidMasterRuntimeParams
     public Builder withMergeSegmentsLimit(int mergeSegmentsLimit)
     {
       this.mergeSegmentsLimit = mergeSegmentsLimit;
+      return this;
+    }
+
+    public Builder withMaxSegmentsToMove(int maxSegmentsToMove)
+    {
+      this.maxSegmentsToMove = maxSegmentsToMove;
       return this;
     }
   }

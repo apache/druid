@@ -44,7 +44,7 @@ import java.util.Set;
 public class BalancerCostAnalyzer
 {
   private static final Logger log = new Logger(BalancerCostAnalyzer.class);
-  private final int MAX_SEGMENTS_TO_MOVE;
+  private int MAX_SEGMENTS_TO_MOVE;
   private static final int DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
   private static final int SEVEN_DAYS_IN_MILLIS = 7 * DAY_IN_MILLIS;
   private static final int THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
@@ -58,20 +58,21 @@ public class BalancerCostAnalyzer
   private double totalCostChange;
   private int totalSegments;
 
-  public BalancerCostAnalyzer(DateTime referenceTimestamp, int MAX_SEGMENTS_TO_MOVE)
+  public BalancerCostAnalyzer(DateTime referenceTimestamp)
   {
     this.referenceTimestamp = referenceTimestamp;
-    this.MAX_SEGMENTS_TO_MOVE = MAX_SEGMENTS_TO_MOVE;
+
     rand = new Random(0);
     totalCostChange = 0;
   }
 
   public void init(List<ServerHolder> serverHolderList, DruidMasterRuntimeParams params)
   {
+    this.serverHolderList = serverHolderList;
     this.initialTotalCost = calculateInitialTotalCost(serverHolderList);
     this.normalization = calculateNormalization(serverHolderList);
-    this.serverHolderList = serverHolderList;
     this.totalSegments = params.getAvailableSegments().size();
+    this.MAX_SEGMENTS_TO_MOVE = params.getMaxSegmentsToMove();
   }
 
   public double getInitialTotalCost()
