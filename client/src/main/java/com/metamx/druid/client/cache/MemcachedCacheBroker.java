@@ -19,7 +19,11 @@
 
 package com.metamx.druid.client.cache;
 
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.metamx.common.Pair;
 import net.iharder.base64.Base64;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -27,9 +31,14 @@ import net.spy.memcached.DefaultHashAlgorithm;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
+import net.spy.memcached.internal.BulkFuture;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -94,52 +103,92 @@ public class MemcachedCacheBroker implements CacheBroker
   }
 
   @Override
-  public Cache provideCache(final String identifier)
+  public byte[] get(String identifier, byte[] key)
   {
-    return new Cache()
-    {
-      @Override
-      public byte[] get(byte[] key)
-      {
-        Future<Object> future = client.asyncGet(computeKey(identifier, key));
-        try {
-          byte[] bytes = (byte[]) future.get(timeout, TimeUnit.MILLISECONDS);
-          if(bytes != null) {
-            hitCount.incrementAndGet();
+    Future<Object> future = client.asyncGet(computeKey(identifier, key));
+    try {
+      byte[] bytes = (byte[]) future.get(timeout, TimeUnit.MILLISECONDS);
+      if(bytes != null) {
+        hitCount.incrementAndGet();
+      }
+      else {
+        missCount.incrementAndGet();
+      }
+      return bytes;
+    }
+    catch(TimeoutException e) {
+      timeoutCount.incrementAndGet();
+      future.cancel(false);
+      return null;
+    }
+    catch(InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
+    catch(ExecutionException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  @Override
+  public void put(String identifier, byte[] key, byte[] value)
+  {
+    client.set(computeKey(identifier, key), expiration, value);
+  }
+
+  @Override
+  public Map<Pair<String, ByteBuffer>, byte[]> getBulk(Iterable<Pair<String, ByteBuffer>> identifierKeyPairs)
+  {
+    Map<String, Pair<String, ByteBuffer>> keyLookup = Maps.uniqueIndex(
+        identifierKeyPairs,
+        new Function<Pair<String, ByteBuffer>, String>()
+        {
+          @Override
+          public String apply(
+              @Nullable Pair<String, ByteBuffer> input
+          )
+          {
+            return computeKey(input.lhs, input.rhs.array());
           }
-          else {
-            missCount.incrementAndGet();
-          }
-          return bytes;
         }
-        catch(TimeoutException e) {
-          timeoutCount.incrementAndGet();
-          future.cancel(false);
-          return null;
-        }
-        catch(InterruptedException e) {
-          throw Throwables.propagate(e);
-        }
-        catch(ExecutionException e) {
-          throw Throwables.propagate(e);
-        }
+    );
+
+    BulkFuture<Map<String, Object>> future = client.asyncGetBulk(keyLookup.keySet());
+
+    try {
+      Map<String, Object> some = future.getSome(timeout, TimeUnit.MILLISECONDS);
+
+      if(future.isTimeout()) {
+        future.cancel(false);
+        timeoutCount.incrementAndGet();
+      }
+      missCount.addAndGet(keyLookup.size() - some.size());
+      hitCount.addAndGet(some.size());
+
+      Map<Pair<String, ByteBuffer>, byte[]> results = Maps.newHashMap();
+      for(Map.Entry<String, Object> entry : some.entrySet()) {
+        results.put(
+            keyLookup.get(entry.getKey()),
+            (byte[])entry.getValue()
+        );
       }
 
-      @Override
-      public void put(byte[] key, byte[] value)
-      {
-        client.set(computeKey(identifier, key), expiration, value);
-      }
+      return results;
+    }
+    catch(InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
+    catch(ExecutionException e) {
+      throw Throwables.propagate(e);
+    }
+  }
 
-      @Override
-      public void close()
-      {
-        // no resources to cleanup
-      }
-    };
+  @Override
+  public void close(String identifier)
+  {
+    // no resources to cleanup
   }
 
   private String computeKey(String identifier, byte[] key) {
-    return identifier + Base64.encodeBytes(key, Base64.DONT_BREAK_LINES);
+    return identifier + ":" + Base64.encodeBytes(key, Base64.DONT_BREAK_LINES);
   }
 }

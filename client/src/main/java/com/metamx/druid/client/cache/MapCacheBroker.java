@@ -22,6 +22,7 @@ package com.metamx.druid.client.cache;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -34,6 +35,17 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class MapCacheBroker implements CacheBroker
 {
+  /**
+   * An interface to limit the operations that can be done on a Cache so that it is easier to reason about what
+   * is actually going to be done.
+   */
+  public interface Cache
+  {
+    public byte[] get(byte[] key);
+    public void put(byte[] key, byte[] value);
+    public void close();
+  }
+
   private final Map<ByteBuffer, byte[]> baseMap;
   private final ByteCountingLRUMap byteCountingLRUMap;
 
@@ -68,7 +80,6 @@ public class MapCacheBroker implements CacheBroker
     ids = new AtomicInteger();
   }
 
-
   @Override
   public CacheStats getStats()
   {
@@ -83,7 +94,35 @@ public class MapCacheBroker implements CacheBroker
   }
 
   @Override
-  public Cache provideCache(final String identifier)
+  public byte[] get(String identifier, byte[] key)
+  {
+    return provideCache(identifier).get(key);
+  }
+
+  @Override
+  public void put(String identifier, byte[] key, byte[] value)
+  {
+    provideCache(identifier).put(key, value);
+  }
+
+  @Override
+  public Map<Pair<String, ByteBuffer>, byte[]> getBulk(Iterable<Pair<String, ByteBuffer>> identifierKeyPairs)
+  {
+    Map<Pair<String, ByteBuffer>, byte[]> retVal = Maps.newHashMap();
+
+    for(Pair<String, ByteBuffer> e : identifierKeyPairs) {
+      retVal.put(e, provideCache(e.lhs).get(e.rhs.array()));
+    }
+    return retVal;
+  }
+
+  @Override
+  public void close(String identifier)
+  {
+    provideCache(identifier).close();
+  }
+
+  private Cache provideCache(final String identifier)
   {
     synchronized (cacheCache) {
       final Cache cachedCache = cacheCache.get(identifier);

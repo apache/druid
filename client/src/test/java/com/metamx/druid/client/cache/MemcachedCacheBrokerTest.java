@@ -51,51 +51,48 @@ public class MemcachedCacheBrokerTest
 {
   private static final byte[] HI = "hi".getBytes();
   private static final byte[] HO = "ho".getBytes();
-  private MemcachedCacheBroker broker;
+  private MemcachedCacheBroker cache;
 
   @Before
   public void setUp() throws Exception
   {
     MemcachedClientIF client = new MockMemcachedClient();
-    broker = new MemcachedCacheBroker(client, 500, 3600);
+    cache = new MemcachedCacheBroker(client, 500, 3600);
   }
 
   @Test
   public void testSanity() throws Exception
   {
-    Cache aCache = broker.provideCache("a");
-    Cache theCache = broker.provideCache("the");
+    Assert.assertNull(cache.get("a", HI));
+    put(cache, "a", HI, 1);
+    Assert.assertEquals(1, get(cache, "a", HI));
+    Assert.assertNull(cache.get("the", HI));
 
-    Assert.assertNull(aCache.get(HI));
-    put(aCache, HI, 1);
-    Assert.assertEquals(1, get(aCache, HI));
-    Assert.assertNull(theCache.get(HI));
+    put(cache, "the", HI, 2);
+    Assert.assertEquals(1, get(cache, "a", HI));
+    Assert.assertEquals(2, get(cache, "the", HI));
 
-    put(theCache, HI, 2);
-    Assert.assertEquals(1, get(aCache, HI));
-    Assert.assertEquals(2, get(theCache, HI));
+    put(cache, "the", HO, 10);
+    Assert.assertEquals(1, get(cache, "a", HI));
+    Assert.assertNull(cache.get("a", HO));
+    Assert.assertEquals(2, get(cache, "the", HI));
+    Assert.assertEquals(10, get(cache, "the", HO));
 
-    put(theCache, HO, 10);
-    Assert.assertEquals(1, get(aCache, HI));
-    Assert.assertNull(aCache.get(HO));
-    Assert.assertEquals(2, get(theCache, HI));
-    Assert.assertEquals(10, get(theCache, HO));
+    cache.close("the");
+    Assert.assertEquals(1, get(cache, "a", HI));
+    Assert.assertNull(cache.get("a", HO));
 
-    theCache.close();
-    Assert.assertEquals(1, get(aCache, HI));
-    Assert.assertNull(aCache.get(HO));
-
-    aCache.close();
+    cache.close("a");
   }
 
-  public void put(Cache cache, byte[] key, Integer value)
+  public void put(CacheBroker cache, String identifier, byte[] key, Integer value)
   {
-    cache.put(key, Ints.toByteArray(value));
+    cache.put(identifier, key, Ints.toByteArray(value));
   }
 
-  public int get(Cache cache, byte[] key)
+  public int get(CacheBroker cache, String identifier, byte[] key)
   {
-    return Ints.fromByteArray(cache.get(key));
+    return Ints.fromByteArray(cache.get(identifier, key));
   }
 }
 

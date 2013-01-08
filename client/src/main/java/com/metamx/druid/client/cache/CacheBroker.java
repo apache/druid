@@ -19,10 +19,20 @@
 
 package com.metamx.druid.client.cache;
 
+import com.metamx.common.Pair;
+
+import java.nio.ByteBuffer;
+import java.util.Map;
+
 /**
  */
 public interface CacheBroker
 {
+  public byte[] get(String identifier, byte[] key);
+  public void put(String identifier, byte[] key, byte[] value);
+  public Map<Pair<String, ByteBuffer>, byte[]> getBulk(Iterable<Pair<String, ByteBuffer>> identifierKeyPairs);
+
+  public void close(String identifier);
+
   public CacheStats getStats();
-  public Cache provideCache(String identifier);
 }
