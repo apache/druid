@@ -56,7 +56,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
     broker = new MemcachedCacheBroker(
         client,
         500, // 500 milliseconds
-        3600 * 24 * 365 // 1 year
+        3600 // 1 hour
     );
 
     cache = broker.provideCache("default");
@@ -84,15 +84,17 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
     }
   }
 
-  public byte[] timeGetObject(int reps) {
+  public long timeGetObject(int reps) {
     byte[] bytes = null;
+    long count = 0;
     for (int i = 0; i < reps; i++) {
       for(int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + i;
         bytes = cache.get(key.getBytes());
+        count += bytes.length;
       }
     }
-    return bytes;
+    return count;
   }
 
   public static void main(String[] args) throws Exception {
