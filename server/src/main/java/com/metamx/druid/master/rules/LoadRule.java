@@ -88,7 +88,7 @@ public abstract class LoadRule implements Rule
     List<ServerHolder> assignedServers = Lists.newArrayList();
     while (totalReplicants < expectedReplicants) {
       BalancerCostAnalyzer analyzer = new BalancerCostAnalyzer(DateTime.now());
-      BalancerCostAnalyzer.BalancerCostAnalyzerHelper helper = analyzer.new BalancerCostAnalyzerHelper(serverHolderList, segment);
+      BalancerCostAnalyzer.BalancerCostComputer helper = analyzer.new BalancerCostComputer(serverHolderList, segment);
 
       Pair<Double, ServerHolder> minPair = helper.getMinPair();
 
