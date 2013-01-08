@@ -106,7 +106,7 @@ public class TaskConsumer implements Runnable
              .addData("interval", task.getInterval())
              .emit();
 
-          // TODO - Retry would be nice, but only after we have a way to throttle and limit them
+          // Retry would be nice, but only after we have a way to throttle and limit them.  Just fail for now.
           if(!shutdown) {
             queue.done(task, TaskStatus.failure(task.getId()));
           }

@@ -28,6 +28,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Query;
 import com.metamx.druid.StorageAdapter;
+import com.metamx.druid.index.Segment;
 import com.metamx.druid.query.ConcatQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
@@ -56,7 +57,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Res
 
 
   @Override
-  public QueryRunner<Result<SegmentMetadataResultValue>> createRunner(final StorageAdapter adapter)
+  public QueryRunner<Result<SegmentMetadataResultValue>> createRunner(final Segment adapter)
   {
     return new QueryRunner<Result<SegmentMetadataResultValue>>()
     {
@@ -66,7 +67,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Res
         if (!(query instanceof SegmentMetadataQuery)) {
           throw new ISE("Got a [%s] which isn't a %s", query.getClass(), SegmentMetadataQuery.class);
         }
-        return new SegmentMetadataQueryEngine().process((SegmentMetadataQuery) query, adapter);
+        return new SegmentMetadataQueryEngine().process((SegmentMetadataQuery) query, adapter.asStorageAdapter());
       }
     };
   }

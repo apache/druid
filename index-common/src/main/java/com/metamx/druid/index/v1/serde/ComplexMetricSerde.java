@@ -19,7 +19,11 @@
 
 package com.metamx.druid.index.v1.serde;
 
+import com.metamx.druid.index.column.ColumnBuilder;
+import com.metamx.druid.index.serde.ColumnPartSerde;
 import com.metamx.druid.kv.ObjectStrategy;
+
+import java.nio.ByteBuffer;
 
 /**
  */
@@ -27,5 +31,29 @@ public interface ComplexMetricSerde
 {
   public String getTypeName();
   public ComplexMetricExtractor getExtractor();
+
+  /**
+   * Deserializes a ByteBuffer and adds it to the ColumnBuilder.  This method allows for the ComplexMetricSerde
+   * to implement it's own versioning scheme to allow for changes of binary format in a forward-compatible manner.
+   *
+   * The method is also in charge of returning a ColumnPartSerde that knows how to serialize out the object it
+   * added to the builder.
+   *
+   * @param buffer the buffer to deserialize
+   * @return a ColumnPartSerde that can serialize out the object that was read from the buffer to the builder
+   */
+  public ColumnPartSerde deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
+
+  /**
+   * This is deprecated because its usage is going to be removed from the code.
+   *
+   * It was introduced before deserializeColumn() existed.  This method creates the assumption that Druid knows
+   * how to interpret the actual column representation of the data, but I would much prefer that the ComplexMetricSerde
+   * objects be in charge of creating and interpreting the whole column, which is what deserializeColumn lets
+   * them do.
+   *
+   * @return an ObjectStrategy as used by GenericIndexed
+   */
+  @Deprecated
   public ObjectStrategy getObjectStrategy();
 }

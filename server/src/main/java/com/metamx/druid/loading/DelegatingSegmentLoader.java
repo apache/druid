@@ -21,43 +21,44 @@ package com.metamx.druid.loading;
 
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.StorageAdapter;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.Segment;
 
 import javax.inject.Inject;
 import java.util.Map;
 
 /**
  */
-public class DelegatingStorageAdapterLoader implements StorageAdapterLoader
+public class DelegatingSegmentLoader implements SegmentLoader
 {
-  private static final Logger log = new Logger(DelegatingStorageAdapterLoader.class);
+  private static final Logger log = new Logger(DelegatingSegmentLoader.class);
 
-  private volatile Map<String, StorageAdapterLoader> loaderTypes;
+  private volatile Map<String, SegmentLoader> loaderTypes;
 
   @Inject
   public void setLoaderTypes(
-      Map<String, StorageAdapterLoader> loaderTypes
+      Map<String, SegmentLoader> loaderTypes
   )
   {
     this.loaderTypes = loaderTypes;
   }
 
   @Override
-  public StorageAdapter getAdapter(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  public Segment getSegment(DataSegment segment) throws StorageAdapterLoadingException
   {
-    return getLoader(loadSpec).getAdapter(loadSpec);
+    return getLoader(segment.getLoadSpec()).getSegment(segment);
   }
 
   @Override
-  public void cleanupAdapter(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  public void cleanup(DataSegment segment) throws StorageAdapterLoadingException
   {
-    getLoader(loadSpec).cleanupAdapter(loadSpec);
+    getLoader(segment.getLoadSpec()).cleanup(segment);
   }
 
-  private StorageAdapterLoader getLoader(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  private SegmentLoader getLoader(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
   {
     String type = MapUtils.getString(loadSpec, "type");
-    StorageAdapterLoader loader = loaderTypes.get(type);
+    SegmentLoader loader = loaderTypes.get(type);
 
     if (loader == null) {
       throw new StorageAdapterLoadingException("Unknown loader type[%s].  Known types are %s", type, loaderTypes.keySet());

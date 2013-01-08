@@ -22,7 +22,9 @@ package com.metamx.druid.kv;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.List;
 
@@ -30,6 +32,8 @@ import java.util.List;
  */
 public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInts>
 {
+  private static final byte version = 0x0;
+
   public static VSizeIndexedInts fromArray(int[] array)
   {
     return fromArray(array, Ints.max(array));
@@ -143,9 +147,43 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return numBytes;
   }
 
+  public int getSerializedSize()
+  {
+    return 1 + 1 + 4 + buffer.remaining();
+  }
+
+
   @Override
   public Iterator<Integer> iterator()
   {
     return new IndexedIntsIterator(this);
   }
+
+  public void writeToChannel(WritableByteChannel channel) throws IOException
+  {
+    channel.write(ByteBuffer.wrap(new byte[]{version, (byte) numBytes}));
+    channel.write(ByteBuffer.wrap(Ints.toByteArray(buffer.remaining())));
+    channel.write(buffer.asReadOnlyBuffer());
+  }
+
+  public static VSizeIndexedInts readFromByteBuffer(ByteBuffer buffer)
+  {
+    byte versionFromBuffer = buffer.get();
+
+    if (version == versionFromBuffer) {
+      int numBytes = buffer.get();
+      int size = buffer.getInt();
+      ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();
+      bufferToUse.limit(bufferToUse.position() + size);
+      buffer.position(bufferToUse.limit());
+
+      return new VSizeIndexedInts(
+          bufferToUse,
+          numBytes
+      );
+    }
+
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
 }

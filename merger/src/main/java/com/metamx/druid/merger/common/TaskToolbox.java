@@ -20,13 +20,13 @@
 package com.metamx.druid.merger.common;
 
 import com.google.common.collect.ImmutableMap;
-import com.metamx.druid.loading.S3SegmentGetter;
+import com.metamx.druid.loading.S3SegmentPuller;
 import com.metamx.druid.loading.S3SegmentGetterConfig;
-import com.metamx.druid.loading.S3ZippedSegmentGetter;
-import com.metamx.druid.loading.SegmentGetter;
+import com.metamx.druid.loading.S3ZippedSegmentPuller;
+import com.metamx.druid.loading.SegmentPuller;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
-import com.metamx.druid.realtime.SegmentPusher;
+import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -85,7 +85,7 @@ public class TaskToolbox
     return objectMapper;
   }
 
-  public Map<String, SegmentGetter> getSegmentGetters(final Task task)
+  public Map<String, SegmentPuller> getSegmentGetters(final Task task)
   {
     final S3SegmentGetterConfig getterConfig = new S3SegmentGetterConfig()
     {
@@ -96,10 +96,10 @@ public class TaskToolbox
       }
     };
 
-    return ImmutableMap.<String, SegmentGetter>builder()
-                       .put("s3", new S3SegmentGetter(s3Client, getterConfig))
-                       .put("s3_union", new S3SegmentGetter(s3Client, getterConfig))
-                       .put("s3_zip", new S3ZippedSegmentGetter(s3Client, getterConfig))
+    return ImmutableMap.<String, SegmentPuller>builder()
+                       .put("s3", new S3SegmentPuller(s3Client, getterConfig))
+                       .put("s3_union", new S3SegmentPuller(s3Client, getterConfig))
+                       .put("s3_zip", new S3ZippedSegmentPuller(s3Client, getterConfig))
                        .build();
   }
 }

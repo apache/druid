@@ -139,13 +139,6 @@
             <artifactId>zkclient</artifactId>
         </dependency>
 
-        <!-- Override deps so that our jackson is compatible with druid-server -->
-        <dependency>
-            <groupId>com.codahale</groupId>
-            <artifactId>jerkson_${scala.version}</artifactId>
-            <version>0.5.0</version>
-        </dependency>
-
         <!-- Dependencies required for jets3t b/c emr pom doesn't include them -->
         <dependency>
             <groupId>commons-codec</groupId>

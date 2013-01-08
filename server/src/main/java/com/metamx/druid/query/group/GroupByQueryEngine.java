@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid;
+package com.metamx.druid.query.group;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -31,6 +31,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.common.guava.Sequence;
+import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.BufferAggregator;
 import com.metamx.druid.aggregation.post.PostAggregator;
@@ -42,7 +43,6 @@ import com.metamx.druid.index.v1.processing.DimensionSelector;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.dimension.DimensionSpec;
-import com.metamx.druid.query.group.GroupByQuery;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

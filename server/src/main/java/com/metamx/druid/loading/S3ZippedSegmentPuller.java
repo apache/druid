@@ -23,6 +23,7 @@ import com.google.common.io.Closeables;
 import com.metamx.common.MapUtils;
 import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.common.s3.S3Utils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -43,9 +44,9 @@ import java.util.zip.ZipInputStream;
 
 /**
  */
-public class S3ZippedSegmentGetter implements SegmentGetter
+public class S3ZippedSegmentPuller implements SegmentPuller
 {
-  private static final Logger log = new Logger(S3ZippedSegmentGetter.class);
+  private static final Logger log = new Logger(S3ZippedSegmentPuller.class);
 
   private static final String BUCKET = "bucket";
   private static final String KEY = "key";
@@ -53,7 +54,7 @@ public class S3ZippedSegmentGetter implements SegmentGetter
   private final RestS3Service s3Client;
   private final S3SegmentGetterConfig config;
 
-  public S3ZippedSegmentGetter(
+  public S3ZippedSegmentPuller(
       RestS3Service s3Client,
       S3SegmentGetterConfig config
   )
@@ -63,8 +64,9 @@ public class S3ZippedSegmentGetter implements SegmentGetter
   }
 
   @Override
-  public File getSegmentFiles(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  public File getSegmentFiles(DataSegment segment) throws StorageAdapterLoadingException
   {
+    Map<String, Object> loadSpec = segment.getLoadSpec();
     String s3Bucket = MapUtils.getString(loadSpec, "bucket");
     String s3Path = MapUtils.getString(loadSpec, "key");
 
@@ -161,8 +163,9 @@ public class S3ZippedSegmentGetter implements SegmentGetter
   }
 
   @Override
-  public boolean cleanSegmentFiles(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  public boolean cleanSegmentFiles(DataSegment segment) throws StorageAdapterLoadingException
   {
+    Map<String, Object> loadSpec = segment.getLoadSpec();
     File cacheFile = new File(
         config.getCacheDirectory(),
         computeCacheFilePath(

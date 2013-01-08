@@ -114,7 +114,8 @@ public class GenericIndexedTest
     channel.close();
 
     final ByteBuffer byteBuffer = ByteBuffer.wrap(baos.toByteArray());
-    GenericIndexed<String> deserialized = GenericIndexed.readFromByteBuffer(
+    Assert.assertEquals(indexed.getSerializedSize(), byteBuffer.remaining());
+    GenericIndexed<String> deserialized = GenericIndexed.read(
         byteBuffer, GenericIndexed.stringStrategy
     );
     Assert.assertEquals(0, byteBuffer.remaining());

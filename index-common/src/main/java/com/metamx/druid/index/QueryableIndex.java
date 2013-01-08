@@ -17,16 +17,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.index;
 
-import com.metamx.druid.client.DataSegment;
-
-import java.io.File;
-import java.io.IOException;
+import com.metamx.druid.index.column.ColumnSelector;
+import com.metamx.druid.kv.Indexed;
+import org.joda.time.Interval;
 
 /**
  */
-public interface SegmentPusher
+public interface QueryableIndex extends ColumnSelector
 {
-  public DataSegment push(File file, DataSegment segment) throws IOException;
+  public Interval getDataInterval();
+  public Indexed<String> getColumnNames();
+  public Indexed<String> getAvailableDimensions();
 }

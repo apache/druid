@@ -11,7 +11,7 @@ import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.realtime.MetadataUpdater;
 import com.metamx.druid.realtime.MetadataUpdaterConfig;
 import com.metamx.druid.realtime.RealtimeNode;
-import com.metamx.druid.realtime.SegmentPusher;
+import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.phonebook.PhoneBook;
 import org.codehaus.jackson.map.jsontype.NamedType;
 
@@ -21,8 +21,6 @@ import java.io.IOException;
 /**
  * Standalone Demo Realtime process.
  * Created: 20121009T2050
- *
- * @author pbaclace
  */
 public class RealtimeStandaloneMain
 {

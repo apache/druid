@@ -17,19 +17,16 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.query.group;
 
 import org.skife.config.Config;
 import org.skife.config.Default;
 
 /**
  */
-public abstract class S3SegmentPusherConfig
+public abstract class GroupByQueryEngineConfig
 {
-  @Config("druid.pusher.s3.bucket")
-  public abstract String getBucket();
-
-  @Config("druid.pusher.s3.baseKey")
-  @Default("")
-  public abstract String getBaseKey();
+  @Config("druid.query.groupBy.maxIntermediateRows")
+  @Default("50000")
+  public abstract int getMaxIntermediateRows();
 }

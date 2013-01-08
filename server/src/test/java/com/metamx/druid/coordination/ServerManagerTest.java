@@ -36,10 +36,12 @@ import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.QueryableIndex;
+import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.brita.Filter;
 import com.metamx.druid.index.v1.SegmentIdAttachedStorageAdapter;
 import com.metamx.druid.index.v1.processing.Cursor;
-import com.metamx.druid.loading.StorageAdapterLoader;
+import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.StorageAdapterLoadingException;
 import com.metamx.druid.metrics.NoopServiceEmitter;
 import com.metamx.druid.query.CacheStrategy;
@@ -85,19 +87,19 @@ public class ServerManagerTest
 
     factory = new MyQueryRunnerFactory();
     serverManager = new ServerManager(
-        new StorageAdapterLoader()
+        new SegmentLoader()
         {
           @Override
-          public StorageAdapter getAdapter(final Map<String, Object> loadSpec)
+          public Segment getSegment(final DataSegment segment)
           {
-            return new StorageAdapterForTesting(
-                MapUtils.getString(loadSpec, "version"),
-                (Interval) loadSpec.get("interval")
+            return new SegmentForTesting(
+                MapUtils.getString(segment.getLoadSpec(), "version"),
+                (Interval) segment.getLoadSpec().get("interval")
             );
           }
 
           @Override
-          public void cleanupAdapter(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+          public void cleanup(DataSegment segment) throws StorageAdapterLoadingException
           {
 
           }
@@ -285,11 +287,11 @@ public class ServerManagerTest
     QueryRunner<Result<SearchResultValue>> runner = serverManager.getQueryRunnerForIntervals(query, intervals);
     final Sequence<Result<SearchResultValue>> seq = runner.run(query);
     Sequences.toList(seq, Lists.<Result<SearchResultValue>>newArrayList());
-    Iterator<StorageAdapterForTesting> adaptersIter = factory.getAdapters().iterator();
+    Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
 
     while (expectedIter.hasNext() && adaptersIter.hasNext()) {
       Pair<String, Interval> expectedVals = expectedIter.next();
-      StorageAdapterForTesting value = adaptersIter.next();
+      SegmentForTesting value = adaptersIter.next();
 
       Assert.assertEquals(expectedVals.lhs, value.getVersion());
       Assert.assertEquals(expectedVals.rhs, value.getInterval());
@@ -301,12 +303,12 @@ public class ServerManagerTest
     factory.clearAdapters();
   }
 
-  private static class StorageAdapterForTesting implements StorageAdapter
+  private static class SegmentForTesting implements Segment
   {
     private final String version;
     private final Interval interval;
 
-    StorageAdapterForTesting(
+    SegmentForTesting(
         String version,
         Interval interval
     )
@@ -328,41 +330,23 @@ public class ServerManagerTest
     @Override
     public String getSegmentIdentifier()
     {
-      throw new UnsupportedOperationException();
+      return version;
     }
 
     @Override
-    public int getDimensionCardinality(String dimension)
+    public Interval getDataInterval()
+    {
+      return interval;
+    }
+
+    @Override
+    public QueryableIndex asQueryableIndex()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public DateTime getMinTime()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public DateTime getMaxTime()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Capabilities getCapabilities()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Iterable<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Iterable<SearchHit> searchDimensions(SearchQuery query, Filter filter)
+    public StorageAdapter asStorageAdapter()
     {
       throw new UnsupportedOperationException();
     }
@@ -370,12 +354,12 @@ public class ServerManagerTest
 
   public static class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
   {
-    private List<StorageAdapterForTesting> adapters = Lists.newArrayList();
+    private List<SegmentForTesting> adapters = Lists.newArrayList();
 
     @Override
-    public QueryRunner<Result<SearchResultValue>> createRunner(StorageAdapter adapter)
+    public QueryRunner<Result<SearchResultValue>> createRunner(Segment adapter)
     {
-      adapters.add((StorageAdapterForTesting) ((SegmentIdAttachedStorageAdapter) adapter).getDelegate());
+      adapters.add((SegmentForTesting) adapter);
       return new NoopQueryRunner<Result<SearchResultValue>>();
     }
 
@@ -393,7 +377,7 @@ public class ServerManagerTest
       return new NoopQueryToolChest<Result<SearchResultValue>, SearchQuery>();
     }
 
-    public List<StorageAdapterForTesting> getAdapters()
+    public List<SegmentForTesting> getAdapters()
     {
       return adapters;
     }

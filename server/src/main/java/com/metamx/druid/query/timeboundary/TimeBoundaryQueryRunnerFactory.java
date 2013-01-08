@@ -24,7 +24,7 @@ import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.druid.Query;
 import com.metamx.druid.StorageAdapter;
-import com.metamx.druid.collect.StupidPool;
+import com.metamx.druid.index.Segment;
 import com.metamx.druid.query.ChainedExecutionQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
@@ -33,7 +33,6 @@ import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
 
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 
@@ -45,41 +44,9 @@ public class TimeBoundaryQueryRunnerFactory
   private static final TimeBoundaryQueryQueryToolChest toolChest = new TimeBoundaryQueryQueryToolChest();
 
   @Override
-  public QueryRunner<Result<TimeBoundaryResultValue>> createRunner(final StorageAdapter adapter)
+  public QueryRunner<Result<TimeBoundaryResultValue>> createRunner(final Segment segment)
   {
-    return new QueryRunner<Result<TimeBoundaryResultValue>>()
-    {
-      @Override
-      public Sequence<Result<TimeBoundaryResultValue>> run(Query<Result<TimeBoundaryResultValue>> input)
-      {
-        if (!(input instanceof TimeBoundaryQuery)) {
-          throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
-        }
-
-        final TimeBoundaryQuery legacyQuery = (TimeBoundaryQuery) input;
-
-        return new BaseSequence<Result<TimeBoundaryResultValue>, Iterator<Result<TimeBoundaryResultValue>>>(
-            new BaseSequence.IteratorMaker<Result<TimeBoundaryResultValue>, Iterator<Result<TimeBoundaryResultValue>>>()
-            {
-              @Override
-              public Iterator<Result<TimeBoundaryResultValue>> make()
-              {
-                return legacyQuery.buildResult(
-                        adapter.getInterval().getStart(),
-                        adapter.getMinTime(),
-                        adapter.getMaxTime()
-                ).iterator();
-              }
-
-              @Override
-              public void cleanup(Iterator<Result<TimeBoundaryResultValue>> toClean)
-              {
-
-              }
-            }
-        );
-      }
-    };
+    return new TimeBoundaryQueryRunner(segment);
   }
 
   @Override
@@ -96,5 +63,46 @@ public class TimeBoundaryQueryRunnerFactory
   public QueryToolChest<Result<TimeBoundaryResultValue>, TimeBoundaryQuery> getToolchest()
   {
     return toolChest;
+  }
+
+  private static class TimeBoundaryQueryRunner implements QueryRunner<Result<TimeBoundaryResultValue>>
+  {
+    private final StorageAdapter adapter;
+
+    public TimeBoundaryQueryRunner(Segment segment)
+    {
+      this.adapter = segment.asStorageAdapter();
+    }
+
+    @Override
+    public Sequence<Result<TimeBoundaryResultValue>> run(Query<Result<TimeBoundaryResultValue>> input)
+    {
+      if (!(input instanceof TimeBoundaryQuery)) {
+        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
+      }
+
+      final TimeBoundaryQuery legacyQuery = (TimeBoundaryQuery) input;
+
+      return new BaseSequence<Result<TimeBoundaryResultValue>, Iterator<Result<TimeBoundaryResultValue>>>(
+          new BaseSequence.IteratorMaker<Result<TimeBoundaryResultValue>, Iterator<Result<TimeBoundaryResultValue>>>()
+          {
+            @Override
+            public Iterator<Result<TimeBoundaryResultValue>> make()
+            {
+              return legacyQuery.buildResult(
+                  adapter.getInterval().getStart(),
+                  adapter.getMinTime(),
+                  adapter.getMaxTime()
+              ).iterator();
+            }
+
+            @Override
+            public void cleanup(Iterator<Result<TimeBoundaryResultValue>> toClean)
+            {
+
+            }
+          }
+      );
+    }
   }
 }

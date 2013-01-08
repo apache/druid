@@ -28,7 +28,6 @@ import com.metamx.common.IAE;
 import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.collect.StupidResourceHolder;
 import com.metamx.druid.kv.GenericIndexed;
-import com.metamx.druid.kv.IndexedIterable;
 import com.metamx.druid.kv.IndexedLongs;
 
 import java.io.IOException;
@@ -162,6 +161,11 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     };
   }
 
+  public int getSerializedSize()
+  {
+    return baseLongBuffers.getSerializedSize() + 1 + 4 + 4;
+  }
+
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{version}));
@@ -188,7 +192,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     return baseLongBuffers;
   }
 
-  public static CompressedLongsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order) throws IOException
+  public static CompressedLongsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     byte versionFromBuffer = buffer.get();
 
@@ -196,7 +200,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
       return new CompressedLongsIndexedSupplier(
         buffer.getInt(),
         buffer.getInt(),
-        GenericIndexed.readFromByteBuffer(buffer, CompressedLongBufferObjectStrategy.getBufferForOrder(order))
+        GenericIndexed.read(buffer, CompressedLongBufferObjectStrategy.getBufferForOrder(order))
       );
     }
 

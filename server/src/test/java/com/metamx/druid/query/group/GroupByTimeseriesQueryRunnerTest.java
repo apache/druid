@@ -24,17 +24,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.GroupByQueryEngine;
-import com.metamx.druid.GroupByQueryEngineConfig;
 import com.metamx.druid.Query;
 import com.metamx.druid.collect.StupidPool;
-import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerTestHelper;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
-import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
@@ -42,7 +38,6 @@ import org.joda.time.DateTime;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -161,6 +156,13 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
   @Override
   public void testTimeseriesWithNonExistentFilterAndMultiDim()
+  {
+    // Skip this test because the timeseries test expects a day that doesn't have a filter match to be filled in,
+    // but group by just doesn't return a value if the filter doesn't match.
+  }
+
+  @Override
+  public void testTimeseriesWithFilterOnNonExistentDimension()
   {
     // Skip this test because the timeseries test expects a day that doesn't have a filter match to be filled in,
     // but group by just doesn't return a value if the filter doesn't match.

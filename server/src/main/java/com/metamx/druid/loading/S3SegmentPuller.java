@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.common.s3.S3Utils;
 import org.apache.commons.io.FileUtils;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -38,9 +39,9 @@ import java.util.zip.GZIPInputStream;
 
 /**
  */
-public class S3SegmentGetter implements SegmentGetter
+public class S3SegmentPuller implements SegmentPuller
 {
-  private static final Logger log = new Logger(S3SegmentGetter.class);
+  private static final Logger log = new Logger(S3SegmentPuller.class);
   private static final long DEFAULT_TIMEOUT = 5 * 60 * 1000;
 
   private static final String BUCKET = "bucket";
@@ -50,7 +51,7 @@ public class S3SegmentGetter implements SegmentGetter
   private final S3SegmentGetterConfig config;
 
   @Inject
-  public S3SegmentGetter(
+  public S3SegmentPuller(
       RestS3Service s3Client,
       S3SegmentGetterConfig config
   )
@@ -60,8 +61,9 @@ public class S3SegmentGetter implements SegmentGetter
   }
 
   @Override
-  public File getSegmentFiles(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  public File getSegmentFiles(DataSegment segment) throws StorageAdapterLoadingException
   {
+    Map<String, Object> loadSpec = segment.getLoadSpec();
     String s3Bucket = MapUtils.getString(loadSpec, "bucket");
     String s3Path = MapUtils.getString(loadSpec, "key");
 
@@ -156,8 +158,9 @@ public class S3SegmentGetter implements SegmentGetter
   }
 
   @Override
-  public boolean cleanSegmentFiles(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  public boolean cleanSegmentFiles(DataSegment segment) throws StorageAdapterLoadingException
   {
+    Map<String, Object> loadSpec = segment.getLoadSpec();
     File cacheFile = new File(
         config.getCacheDirectory(),
         computeCacheFilePath(MapUtils.getString(loadSpec, BUCKET), MapUtils.getString(loadSpec, KEY))

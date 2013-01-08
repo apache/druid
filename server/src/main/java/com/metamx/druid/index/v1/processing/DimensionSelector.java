@@ -57,18 +57,12 @@ public interface DimensionSelector
    * A,B
    * B
    *
-   * would be turned into (per lookupExpansion)
-   * 
-   * 0
-   * 1
-   * 0
-   * 2
+   * getRow() would return
    *
-   * at which point lookupExpansion would really return:
-   *
-   * lookupExpansion(1) => [0 1]
-   * lookupExpansion(2) => [0]
-   * lookupExpansion(3) => [1]
+   * getRow(0) => [0 1]
+   * getRow(1) => [0]
+   * getRow(2) => [0 1]
+   * getRow(3) => [1]
    *
    * and then lookupName would return:
    *
@@ -82,7 +76,7 @@ public interface DimensionSelector
 
   /**
    * The ID is the int id value of the field.
-   *    
+   *
    * @param name
    * @return
    */

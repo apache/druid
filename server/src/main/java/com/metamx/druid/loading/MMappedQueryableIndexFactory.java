@@ -20,7 +20,7 @@
 package com.metamx.druid.loading;
 
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.StorageAdapter;
+import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import org.apache.commons.io.FileUtils;
 
@@ -29,12 +29,12 @@ import java.io.IOException;
 
 /**
  */
-public abstract class ConvertingBaseQueryableFactory implements StorageAdapterFactory
+public class MMappedQueryableIndexFactory implements QueryableIndexFactory
 {
-  private static final Logger log = new Logger(ConvertingBaseQueryableFactory.class);
+  private static final Logger log = new Logger(MMappedQueryableIndexFactory.class);
 
   @Override
-  public StorageAdapter factorize(File parentDir) throws StorageAdapterLoadingException
+  public QueryableIndex factorize(File parentDir) throws StorageAdapterLoadingException
   {
     File indexFile = new File(parentDir, "index.drd");
     if (!indexFile.exists()) {
@@ -61,7 +61,7 @@ public abstract class ConvertingBaseQueryableFactory implements StorageAdapterFa
         FileUtils.deleteDirectory(canBeMappedDir);
       }
 
-      return factorizeConverted(parentDir);
+      return IndexIO.loadIndex(parentDir);
     }
     catch (IOException e) {
       log.warn(e, "Got exception, deleting index[%s]", indexFile);
@@ -74,6 +74,4 @@ public abstract class ConvertingBaseQueryableFactory implements StorageAdapterFa
       throw new StorageAdapterLoadingException(e, e.getMessage());
     }
   }
-
-  protected abstract StorageAdapter factorizeConverted(File parentDir) throws IOException;
 }
