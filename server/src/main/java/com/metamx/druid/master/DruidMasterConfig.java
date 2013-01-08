@@ -80,4 +80,8 @@ public abstract class DruidMasterConfig
   {
     return Integer.MAX_VALUE;
   }
+
+  @Config("druid.master.balancer.maxSegmentsToMove")
+  @Default("5")
+  public abstract int getMaxSegmentsToMove();
 }

@@ -44,7 +44,7 @@ import java.util.Set;
 public class BalancerCostAnalyzer
 {
   private static final Logger log = new Logger(BalancerCostAnalyzer.class);
-  private static final int MAX_SEGMENTS_TO_MOVE = 5;
+  private final int MAX_SEGMENTS_TO_MOVE;
   private static final int DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
   private static final int SEVEN_DAYS_IN_MILLIS = 7 * DAY_IN_MILLIS;
   private static final int THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
@@ -58,9 +58,10 @@ public class BalancerCostAnalyzer
   private double totalCostChange;
   private int totalSegments;
 
-  public BalancerCostAnalyzer(DateTime referenceTimestamp)
+  public BalancerCostAnalyzer(DateTime referenceTimestamp, int MAX_SEGMENTS_TO_MOVE)
   {
     this.referenceTimestamp = referenceTimestamp;
+    this.MAX_SEGMENTS_TO_MOVE = MAX_SEGMENTS_TO_MOVE;
     rand = new Random(0);
     totalCostChange = 0;
   }

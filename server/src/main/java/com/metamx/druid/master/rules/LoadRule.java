@@ -59,7 +59,15 @@ public abstract class LoadRule implements Rule
       return stats;
     }
 
-    stats.accumulate(assign(expectedReplicants, totalReplicants, serverQueue, segment));
+    stats.accumulate(
+        assign(
+            expectedReplicants,
+            totalReplicants,
+            serverQueue,
+            segment,
+            master.getConfig().getMaxSegmentsToMove()
+        )
+    );
     stats.accumulate(drop(expectedReplicants, clusterReplicants, segment, params));
 
     return stats;
@@ -69,7 +77,8 @@ public abstract class LoadRule implements Rule
       int expectedReplicants,
       int totalReplicants,
       MinMaxPriorityQueue<ServerHolder> serverQueue,
-      DataSegment segment
+      DataSegment segment,
+      int MAX_SEGMENTS_TO_MOVE
   )
   {
     MasterStats stats = new MasterStats();
@@ -78,7 +87,7 @@ public abstract class LoadRule implements Rule
 
     List<ServerHolder> assignedServers = Lists.newArrayList();
     while (totalReplicants < expectedReplicants) {
-      BalancerCostAnalyzer analyzer = new BalancerCostAnalyzer(DateTime.now());
+      BalancerCostAnalyzer analyzer = new BalancerCostAnalyzer(DateTime.now(), MAX_SEGMENTS_TO_MOVE);
       BalancerCostAnalyzer.BalancerCostAnalyzerHelper helper = analyzer.new BalancerCostAnalyzerHelper(serverHolderList, segment);
       helper.computeAllCosts();
       Pair<Double, ServerHolder> minPair = helper.getCostsServerHolderPairs().pollFirst();

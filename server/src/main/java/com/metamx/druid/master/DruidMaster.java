@@ -132,6 +132,11 @@ public class DruidMaster
     return master;
   }
 
+  public DruidMasterConfig getConfig()
+  {
+    return config;
+  }
+
   public Map<String, Double> getLoadStatus()
   {
     Map<String, Integer> availableSegmentMap = Maps.newHashMap();
@@ -675,7 +680,7 @@ public class DruidMaster
               },
               new DruidMasterRuleRunner(DruidMaster.this),
               new DruidMasterCleanup(DruidMaster.this),
-              new DruidMasterBalancer(DruidMaster.this, new BalancerCostAnalyzer(DateTime.now())),
+              new DruidMasterBalancer(DruidMaster.this, new BalancerCostAnalyzer(DateTime.now(), config.getMaxSegmentsToMove())),
               new DruidMasterLogger()
           )
       );
