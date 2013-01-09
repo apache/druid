@@ -343,6 +343,8 @@ public class RemoteTaskRunnerTest
             "0",
             0,
             null,
+            null,
+            Lists.<String>newArrayList(),
             null
         )
     );
@@ -403,6 +405,12 @@ public class RemoteTaskRunnerTest
     public AutoScalingData terminate(List<String> nodeIds)
     {
       return null;
+    }
+
+    @Override
+    public List<String> ipLookup(List<String> ips)
+    {
+      return ips;
     }
   }
 

@@ -27,18 +27,18 @@ import org.codehaus.jackson.annotate.JsonProperty;
 public class GalaxyUserData implements WorkerUserData
 {
   public final String env;
-  public final String ver;
+  public final String version;
   public final String type;
 
   @JsonCreator
   public GalaxyUserData(
       @JsonProperty("env") String env,
-      @JsonProperty("ver") String ver,
+      @JsonProperty("version") String version,
       @JsonProperty("type") String type
   )
   {
     this.env = env;
-    this.ver = ver;
+    this.version = version;
     this.type = type;
   }
 
@@ -49,9 +49,9 @@ public class GalaxyUserData implements WorkerUserData
   }
 
   @JsonProperty
-  public String getVer()
+  public String getVersion()
   {
-    return ver;
+    return version;
   }
 
   @JsonProperty

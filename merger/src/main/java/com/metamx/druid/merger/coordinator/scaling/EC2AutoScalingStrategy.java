@@ -36,6 +36,7 @@ import com.metamx.druid.merger.coordinator.setup.EC2NodeData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.EmittingLogger;
+import org.apache.commons.codec.binary.Base64;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.util.List;
@@ -82,7 +83,15 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
               workerConfig.getMaxInstances()
           )
               .withInstanceType(workerConfig.getInstanceType())
-              .withUserData(jsonMapper.writeValueAsString(setupData.getUserData()))
+              .withSecurityGroupIds(workerConfig.getSecurityGroupIds())
+              .withKeyName(workerConfig.getKeyName())
+              .withUserData(
+                  Base64.encodeBase64String(
+                      jsonMapper.writeValueAsBytes(
+                          setupData.getUserData()
+                      )
+                  )
+              )
       );
 
       List<String> instanceIds = Lists.transform(
@@ -107,7 +116,7 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
                 @Override
                 public String apply(Instance input)
                 {
-                  return String.format("%s:%s", input.getPrivateIpAddress(), config.getWorkerPort());
+                  return input.getInstanceId();
                 }
               }
           ),
@@ -127,7 +136,7 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
     DescribeInstancesResult result = amazonEC2Client.describeInstances(
         new DescribeInstancesRequest()
             .withFilters(
-                new Filter("private-ip-address", nodeIds)
+                new Filter("instance-id", nodeIds)
             )
     );
 
@@ -139,19 +148,7 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
     try {
       log.info("Terminating instance[%s]", instances);
       amazonEC2Client.terminateInstances(
-          new TerminateInstancesRequest(
-              Lists.transform(
-                  instances,
-                  new Function<Instance, String>()
-                  {
-                    @Override
-                    public String apply(Instance input)
-                    {
-                      return input.getInstanceId();
-                    }
-                  }
-              )
-          )
+          new TerminateInstancesRequest(nodeIds)
       );
 
       return new AutoScalingData<Instance>(
@@ -174,5 +171,33 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
     }
 
     return null;
+  }
+
+  @Override
+  public List<String> ipLookup(List<String> ips)
+  {
+    DescribeInstancesResult result = amazonEC2Client.describeInstances(
+        new DescribeInstancesRequest()
+            .withFilters(
+                new Filter("private-ip-address", ips)
+            )
+    );
+
+    List<Instance> instances = Lists.newArrayList();
+    for (Reservation reservation : result.getReservations()) {
+      instances.addAll(reservation.getInstances());
+    }
+
+    return Lists.transform(
+        instances,
+        new Function<Instance, String>()
+        {
+          @Override
+          public String apply(Instance input)
+          {
+            return input.getInstanceId();
+          }
+        }
+    );
   }
 }

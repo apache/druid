@@ -22,6 +22,8 @@ package com.metamx.druid.merger.coordinator.setup;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
+import java.util.List;
+
 /**
  */
 public class EC2NodeData implements WorkerNodeData
@@ -30,19 +32,25 @@ public class EC2NodeData implements WorkerNodeData
   private final String instanceType;
   private final int minInstances;
   private final int maxInstances;
+  private final List<String> securityGroupIds;
+  private final String keyName;
 
   @JsonCreator
   public EC2NodeData(
       @JsonProperty("amiId") String amiId,
       @JsonProperty("instanceType") String instanceType,
       @JsonProperty("minInstances") int minInstances,
-      @JsonProperty("maxInstances") int maxInstances
+      @JsonProperty("maxInstances") int maxInstances,
+      @JsonProperty("securityGroupIds") List<String> securityGroupIds,
+      @JsonProperty("keyName") String keyName
   )
   {
     this.amiId = amiId;
     this.instanceType = instanceType;
     this.minInstances = minInstances;
     this.maxInstances = maxInstances;
+    this.securityGroupIds = securityGroupIds;
+    this.keyName = keyName;
   }
 
   @JsonProperty
@@ -67,5 +75,17 @@ public class EC2NodeData implements WorkerNodeData
   public int getMaxInstances()
   {
     return maxInstances;
+  }
+
+  @JsonProperty
+  public List<String> getSecurityGroupIds()
+  {
+    return securityGroupIds;
+  }
+
+  @JsonProperty
+  public String getKeyName()
+  {
+    return keyName;
   }
 }

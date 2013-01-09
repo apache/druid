@@ -27,6 +27,7 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.google.common.collect.Lists;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.druid.merger.coordinator.setup.EC2NodeData;
@@ -105,8 +106,10 @@ public class EC2AutoScalingStrategyTest
         new WorkerSetupData(
             "0",
             0,
-            new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1),
-            new GalaxyUserData("env", "ver", "type")
+            new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.<String>newArrayList(), "foo"),
+            new GalaxyUserData("env", "version", "type"),
+            Arrays.asList("foo"),
+            "foo2"
         )
     );
     EasyMock.replay(workerSetupManager);
@@ -133,7 +136,7 @@ public class EC2AutoScalingStrategyTest
 
     Assert.assertEquals(created.getNodeIds().size(), 1);
     Assert.assertEquals(created.getNodes().size(), 1);
-    Assert.assertEquals(String.format("%s:8080", IP), created.getNodeIds().get(0));
+    Assert.assertEquals("theInstance", created.getNodeIds().get(0));
 
     AutoScalingData deleted = strategy.terminate(Arrays.asList("dummyHost"));
 

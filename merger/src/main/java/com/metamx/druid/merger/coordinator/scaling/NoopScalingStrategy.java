@@ -43,4 +43,11 @@ public class NoopScalingStrategy implements ScalingStrategy<String>
     log.info("If I were a real strategy I'd terminate %s now", nodeIds);
     return null;
   }
+
+  @Override
+  public List<String> ipLookup(List<String> ips)
+  {
+    log.info("I'm not a real strategy so I'm returning what I got %s", ips);
+    return ips;
+  }
 }

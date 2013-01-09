@@ -29,6 +29,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.coordinator.config.WorkerSetupManagerConfig;
 import org.apache.commons.collections.MapUtils;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 import org.joda.time.Duration;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.FoldController;
@@ -122,7 +123,7 @@ public class WorkerSetupManager
             {
               return handle.createQuery(
                   String.format(
-                      "SELECT minVersion, minNumWorkers, nodeData, userData FROM %s",
+                      "SELECT minVersion, minNumWorkers, nodeData, userData, securityGroupIds, keyName FROM %s",
                       config.getWorkerSetupTable()
                   )
               ).fold(
@@ -150,7 +151,14 @@ public class WorkerSetupManager
                                 jsonMapper.readValue(
                                     MapUtils.getString(stringObjectMap, "userData"),
                                     WorkerUserData.class
-                                )
+                                ),
+                                (List<String>) jsonMapper.readValue(
+                                    MapUtils.getString(stringObjectMap, "securityGroupIds"),
+                                    new TypeReference<List<String>>()
+                                    {
+                                    }
+                                ),
+                                MapUtils.getString(stringObjectMap, "keyName")
                             )
                         );
                         return workerNodeConfigurations;
@@ -207,7 +215,7 @@ public class WorkerSetupManager
                 handle.createStatement(String.format("DELETE FROM %s", config.getWorkerSetupTable())).execute();
                 handle.createStatement(
                     String.format(
-                        "INSERT INTO %s (minVersion, minNumWorkers, nodeData, userData) VALUES (:minVersion, :minNumWorkers, :nodeData, :userData)",
+                        "INSERT INTO %s (minVersion, minNumWorkers, nodeData, userData, securityGroupIds, keyName) VALUES (:minVersion, :minNumWorkers, :nodeData, :userData, :securityGroupIds, :keyName)",
                         config.getWorkerSetupTable()
                     )
                 )
@@ -215,6 +223,8 @@ public class WorkerSetupManager
                       .bind("minNumWorkers", value.getMinNumWorkers())
                       .bind("nodeData", jsonMapper.writeValueAsString(value.getNodeData()))
                       .bind("userData", jsonMapper.writeValueAsString(value.getUserData()))
+                      .bind("securityGroupIds", jsonMapper.writeValueAsString(value.getSecurityGroupIds()))
+                      .bind("keyName", jsonMapper.writeValueAsString(value.getKeyName()))
                       .execute();
 
                 return null;

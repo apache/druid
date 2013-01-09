@@ -22,6 +22,8 @@ package com.metamx.druid.merger.coordinator.setup;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
+import java.util.List;
+
 /**
  */
 public class WorkerSetupData
@@ -30,19 +32,25 @@ public class WorkerSetupData
   private final int minNumWorkers;
   private final WorkerNodeData nodeData;
   private final WorkerUserData userData;
+  private final List<String> securityGroupIds;
+  private final String keyName;
 
   @JsonCreator
   public WorkerSetupData(
       @JsonProperty("minVersion") String minVersion,
       @JsonProperty("minNumWorkers") int minNumWorkers,
       @JsonProperty("nodeData") WorkerNodeData nodeData,
-      @JsonProperty("userData") WorkerUserData userData
+      @JsonProperty("userData") WorkerUserData userData,
+      @JsonProperty("securityGroupIds") List<String> securityGroupIds,
+      @JsonProperty("keyName") String keyName
   )
   {
     this.minVersion = minVersion;
     this.minNumWorkers = minNumWorkers;
     this.nodeData = nodeData;
     this.userData = userData;
+    this.securityGroupIds = securityGroupIds;
+    this.keyName = keyName;
   }
 
   @JsonProperty
@@ -67,5 +75,17 @@ public class WorkerSetupData
   public WorkerUserData getUserData()
   {
     return userData;
+  }
+
+  @JsonProperty
+  public List<String> getSecurityGroupIds()
+  {
+    return securityGroupIds;
+  }
+
+  @JsonProperty
+  public String getKeyName()
+  {
+    return keyName;
   }
 }

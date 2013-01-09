@@ -54,6 +54,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -148,7 +149,7 @@ public class RemoteTaskRunner implements TaskRunner
                     Worker.class
                 );
                 log.info("Worker[%s] removed!", worker.getHost());
-                removeWorker(worker.getHost());
+                removeWorker(worker);
               }
             }
           }
@@ -222,7 +223,7 @@ public class RemoteTaskRunner implements TaskRunner
                 }
 
                 log.info(
-                    "[%s] still terminating. Wait for all nodes to terminate before trying again.",
+                    "%s still terminating. Wait for all nodes to terminate before trying again.",
                     currentlyTerminating
                 );
               }
@@ -372,7 +373,7 @@ public class RemoteTaskRunner implements TaskRunner
   private void addWorker(final Worker worker)
   {
     try {
-      currentlyProvisioning.remove(worker.getHost());
+      currentlyProvisioning.removeAll(strategy.ipLookup(Arrays.<String>asList(worker.getIp())));
 
       final String workerStatusPath = JOINER.join(config.getStatusPath(), worker.getHost());
       final PathChildrenCache statusCache = new PathChildrenCache(cf, workerStatusPath, true);
@@ -483,22 +484,22 @@ public class RemoteTaskRunner implements TaskRunner
    * When a ephemeral worker node disappears from ZK, we have to make sure there are no tasks still assigned
    * to the worker. If tasks remain, they are retried.
    *
-   * @param workerId - id of the removed worker
+   * @param worker - the removed worker
    */
-  private void removeWorker(final String workerId)
+  private void removeWorker(final Worker worker)
   {
-    currentlyTerminating.remove(workerId);
+    currentlyTerminating.remove(worker.getHost());
 
-    WorkerWrapper workerWrapper = zkWorkers.get(workerId);
+    WorkerWrapper workerWrapper = zkWorkers.get(worker.getHost());
     if (workerWrapper != null) {
       try {
         Set<String> tasksToRetry = Sets.newHashSet(workerWrapper.getRunningTasks());
-        tasksToRetry.addAll(cf.getChildren().forPath(JOINER.join(config.getTaskPath(), workerId)));
+        tasksToRetry.addAll(cf.getChildren().forPath(JOINER.join(config.getTaskPath(), worker.getHost())));
 
         for (String taskId : tasksToRetry) {
           TaskWrapper taskWrapper = tasks.get(taskId);
           if (taskWrapper != null) {
-            retryTask(new CleanupPaths(workerId, taskId), tasks.get(taskId));
+            retryTask(new CleanupPaths(worker.getHost(), taskId), tasks.get(taskId));
           }
         }
 
@@ -508,7 +509,7 @@ public class RemoteTaskRunner implements TaskRunner
         log.error(e, "Failed to cleanly remove worker[%s]");
       }
     }
-    zkWorkers.remove(workerId);
+    zkWorkers.remove(worker.getHost());
   }
 
   private WorkerWrapper findWorkerForTask()
@@ -558,7 +559,7 @@ public class RemoteTaskRunner implements TaskRunner
           }
 
           log.info(
-              "[%s] still provisioning. Wait for all provisioned nodes to complete before requesting new worker.",
+              "%s still provisioning. Wait for all provisioned nodes to complete before requesting new worker.",
               currentlyProvisioning
           );
         }
