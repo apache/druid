@@ -188,16 +188,14 @@ public class BalancerCostAnalyzer
   {
     final Set<BalancerSegmentHolder> segmentHoldersToMove = Sets.newHashSet();
     final Set<DataSegment> movingSegments = Sets.newHashSet();
-    int numServers = serverHolderList.size();
+    if (serverHolderList.isEmpty()) {
+      return segmentHoldersToMove;
+    }
 
     int counter = 0;
 
     while (segmentHoldersToMove.size() < MAX_SEGMENTS_TO_MOVE && counter < 3 * MAX_SEGMENTS_TO_MOVE) {
       counter++;
-
-      if (numServers == 0) {
-        break;
-      }
 
       // We want to sample from each server w.p. numSegmentsOnServer / totalSegments
       ServerHolder fromServerHolder = sampleServer();
