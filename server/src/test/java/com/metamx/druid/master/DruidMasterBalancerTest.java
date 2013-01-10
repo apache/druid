@@ -224,9 +224,10 @@ public class DruidMasterBalancerTest
                                 .withLoadManagementPeons(ImmutableMap.of("from", peon, "to", peon))
                                 .withAvailableSegments(segments.values())
                                 .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                                .withBalancerCostAnalyzer(new BalancerCostAnalyzer(new DateTime("2013-01-01")))
                                 .build();
 
-    params = new DruidMasterBalancer(master, new BalancerCostAnalyzer(new DateTime("2013-01-01"))).run(params);
+    params = new DruidMasterBalancer(master).run(params);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("costChange").get("normal").get() > 0);
   }
@@ -373,9 +374,10 @@ public class DruidMasterBalancerTest
                                 .withLoadManagementPeons(ImmutableMap.of("1", peon, "2", peon, "3", peon, "4", peon))
                                 .withAvailableSegments(segments.values())
                                 .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                                .withBalancerCostAnalyzer(new BalancerCostAnalyzer(new DateTime("2013-01-01")))
                                 .build();
 
-    params = new DruidMasterBalancer(master, new BalancerCostAnalyzer(new DateTime("2013-01-01"))).run(params);
+    params = new DruidMasterBalancer(master).run(params);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("costChange").get("normal").get() > 0);
   }

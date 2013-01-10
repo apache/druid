@@ -50,6 +50,7 @@ public class DruidMasterRuntimeParams
   private final long mergeBytesLimit;
   private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
+  private final BalancerCostAnalyzer balancerCostAnalyzer;
 
   public DruidMasterRuntimeParams(
       long startTime,
@@ -64,7 +65,8 @@ public class DruidMasterRuntimeParams
       MasterStats stats,
       long mergeBytesLimit,
       int mergeSegmentsLimit,
-      int maxSegmentsToMove
+      int maxSegmentsToMove,
+      BalancerCostAnalyzer balancerCostAnalyzer
   )
   {
     this.startTime = startTime;
@@ -80,11 +82,7 @@ public class DruidMasterRuntimeParams
     this.mergeBytesLimit = mergeBytesLimit;
     this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
-  }
-
-  public int getMaxSegmentsToMove()
-  {
-    return maxSegmentsToMove;
+    this.balancerCostAnalyzer = balancerCostAnalyzer;
   }
 
   public long getStartTime()
@@ -147,6 +145,16 @@ public class DruidMasterRuntimeParams
     return mergeSegmentsLimit;
   }
 
+  public int getMaxSegmentsToMove()
+  {
+    return maxSegmentsToMove;
+  }
+
+  public BalancerCostAnalyzer getBalancerCostAnalyzer()
+  {
+    return balancerCostAnalyzer;
+  }
+
   public boolean hasDeletionWaitTimeElapsed()
   {
     return (System.currentTimeMillis() - getStartTime() > getMillisToWaitBeforeDeleting());
@@ -172,7 +180,8 @@ public class DruidMasterRuntimeParams
         stats,
         mergeBytesLimit,
         mergeSegmentsLimit,
-        maxSegmentsToMove
+        maxSegmentsToMove,
+        balancerCostAnalyzer
     );
   }
 
@@ -191,6 +200,7 @@ public class DruidMasterRuntimeParams
     private long mergeBytesLimit;
     private int mergeSegmentsLimit;
     private int maxSegmentsToMove;
+    private BalancerCostAnalyzer balancerCostAnalyzer;
 
     Builder()
     {
@@ -207,6 +217,7 @@ public class DruidMasterRuntimeParams
       this.mergeBytesLimit = 0;
       this.mergeSegmentsLimit = 0;
       this.maxSegmentsToMove = 0;
+      this.balancerCostAnalyzer = null;
     }
 
     Builder(
@@ -222,7 +233,8 @@ public class DruidMasterRuntimeParams
         MasterStats stats,
         long mergeBytesLimit,
         int mergeSegmentsLimit,
-        int maxSegmentsToMove
+        int maxSegmentsToMove,
+        BalancerCostAnalyzer balancerCostAnalyzer
     )
     {
       this.startTime = startTime;
@@ -238,6 +250,7 @@ public class DruidMasterRuntimeParams
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
+      this.balancerCostAnalyzer = balancerCostAnalyzer;
     }
 
     public DruidMasterRuntimeParams build()
@@ -255,7 +268,8 @@ public class DruidMasterRuntimeParams
           stats,
           mergeBytesLimit,
           mergeSegmentsLimit,
-          maxSegmentsToMove
+          maxSegmentsToMove,
+          balancerCostAnalyzer
       );
     }
 
@@ -334,6 +348,12 @@ public class DruidMasterRuntimeParams
     public Builder withMaxSegmentsToMove(int maxSegmentsToMove)
     {
       this.maxSegmentsToMove = maxSegmentsToMove;
+      return this;
+    }
+
+    public Builder withBalancerCostAnalyzer(BalancerCostAnalyzer balancerCostAnalyzer)
+    {
+      this.balancerCostAnalyzer = balancerCostAnalyzer;
       return this;
     }
   }

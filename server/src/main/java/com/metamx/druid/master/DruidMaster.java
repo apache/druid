@@ -676,12 +676,13 @@ public class DruidMaster
                                .withDruidCluster(cluster)
                                .withDatabaseRuleManager(databaseRuleManager)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
+                               .withBalancerCostAnalyzer(new BalancerCostAnalyzer(DateTime.now()))
                                .build();
                 }
               },
               new DruidMasterRuleRunner(DruidMaster.this),
               new DruidMasterCleanup(DruidMaster.this),
-              new DruidMasterBalancer(DruidMaster.this, new BalancerCostAnalyzer(DateTime.now())),
+              new DruidMasterBalancer(DruidMaster.this),
               new DruidMasterLogger()
           )
       );

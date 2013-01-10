@@ -51,18 +51,15 @@ public class DruidMasterBalancer implements DruidMasterHelper
   );
   private static final EmittingLogger log = new EmittingLogger(DruidMasterBalancer.class);
 
-  private final BalancerCostAnalyzer analyzer;
   private final DruidMaster master;
 
   private final Map<String, ConcurrentHashMap<String, BalancerSegmentHolder>> currentlyMovingSegments = Maps.newHashMap();
 
   public DruidMasterBalancer(
-      DruidMaster master,
-      BalancerCostAnalyzer analyzer
+      DruidMaster master
   )
   {
     this.master = master;
-    this.analyzer = analyzer;
   }
 
   private void reduceLifetimes(String tier)
@@ -106,6 +103,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
       List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(entry.getValue());
 
+      BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer();
       analyzer.init(serverHolderList, params);
       moveSegments(analyzer.findSegmentsToMove(), params);
 
