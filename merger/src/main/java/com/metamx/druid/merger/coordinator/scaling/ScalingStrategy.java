@@ -27,7 +27,7 @@ public interface ScalingStrategy<T>
 {
   public AutoScalingData<T> provision();
 
-  public AutoScalingData<T> terminate(List<String> nodeIds);
+  public AutoScalingData<T> terminate(List<String> ids);
 
   /**
    * Provides a lookup of ip addresses to node ids

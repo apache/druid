@@ -30,27 +30,21 @@ public class WorkerSetupData
 {
   private final String minVersion;
   private final int minNumWorkers;
-  private final WorkerNodeData nodeData;
-  private final WorkerUserData userData;
-  private final List<String> securityGroupIds;
-  private final String keyName;
+  private final EC2NodeData nodeData;
+  private final GalaxyUserData userData;
 
   @JsonCreator
   public WorkerSetupData(
       @JsonProperty("minVersion") String minVersion,
       @JsonProperty("minNumWorkers") int minNumWorkers,
-      @JsonProperty("nodeData") WorkerNodeData nodeData,
-      @JsonProperty("userData") WorkerUserData userData,
-      @JsonProperty("securityGroupIds") List<String> securityGroupIds,
-      @JsonProperty("keyName") String keyName
+      @JsonProperty("nodeData") EC2NodeData nodeData,
+      @JsonProperty("userData") GalaxyUserData userData
   )
   {
     this.minVersion = minVersion;
     this.minNumWorkers = minNumWorkers;
     this.nodeData = nodeData;
     this.userData = userData;
-    this.securityGroupIds = securityGroupIds;
-    this.keyName = keyName;
   }
 
   @JsonProperty
@@ -66,26 +60,14 @@ public class WorkerSetupData
   }
 
   @JsonProperty
-  public WorkerNodeData getNodeData()
+  public EC2NodeData getNodeData()
   {
     return nodeData;
   }
 
   @JsonProperty
-  public WorkerUserData getUserData()
+  public GalaxyUserData getUserData()
   {
     return userData;
-  }
-
-  @JsonProperty
-  public List<String> getSecurityGroupIds()
-  {
-    return securityGroupIds;
-  }
-
-  @JsonProperty
-  public String getKeyName()
-  {
-    return keyName;
   }
 }

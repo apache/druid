@@ -123,7 +123,7 @@ public class WorkerSetupManager
             {
               return handle.createQuery(
                   String.format(
-                      "SELECT minVersion, minNumWorkers, nodeData, userData, securityGroupIds, keyName FROM %s",
+                      "SELECT config FROM %s",
                       config.getWorkerSetupTable()
                   )
               ).fold(
@@ -141,24 +141,9 @@ public class WorkerSetupManager
                       try {
                         // stringObjectMap lowercases and jackson may fail serde
                         workerNodeConfigurations.add(
-                            new WorkerSetupData(
-                                MapUtils.getString(stringObjectMap, "minVersion"),
-                                MapUtils.getInteger(stringObjectMap, "minNumWorkers"),
-                                jsonMapper.readValue(
-                                    MapUtils.getString(stringObjectMap, "nodeData"),
-                                    WorkerNodeData.class
-                                ),
-                                jsonMapper.readValue(
-                                    MapUtils.getString(stringObjectMap, "userData"),
-                                    WorkerUserData.class
-                                ),
-                                (List<String>) jsonMapper.readValue(
-                                    MapUtils.getString(stringObjectMap, "securityGroupIds"),
-                                    new TypeReference<List<String>>()
-                                    {
-                                    }
-                                ),
-                                MapUtils.getString(stringObjectMap, "keyName")
+                            jsonMapper.readValue(
+                                MapUtils.getString(stringObjectMap, "config"),
+                                WorkerSetupData.class
                             )
                         );
                         return workerNodeConfigurations;
@@ -215,16 +200,11 @@ public class WorkerSetupManager
                 handle.createStatement(String.format("DELETE FROM %s", config.getWorkerSetupTable())).execute();
                 handle.createStatement(
                     String.format(
-                        "INSERT INTO %s (minVersion, minNumWorkers, nodeData, userData, securityGroupIds, keyName) VALUES (:minVersion, :minNumWorkers, :nodeData, :userData, :securityGroupIds, :keyName)",
+                        "INSERT INTO %s (config) VALUES (:config)",
                         config.getWorkerSetupTable()
                     )
                 )
-                      .bind("minVersion", value.getMinVersion())
-                      .bind("minNumWorkers", value.getMinNumWorkers())
-                      .bind("nodeData", jsonMapper.writeValueAsString(value.getNodeData()))
-                      .bind("userData", jsonMapper.writeValueAsString(value.getUserData()))
-                      .bind("securityGroupIds", jsonMapper.writeValueAsString(value.getSecurityGroupIds()))
-                      .bind("keyName", jsonMapper.writeValueAsString(value.getKeyName()))
+                      .bind("config", jsonMapper.writeValueAsString(value))
                       .execute();
 
                 return null;

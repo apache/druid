@@ -26,7 +26,7 @@ import java.util.List;
 
 /**
  */
-public class EC2NodeData implements WorkerNodeData
+public class EC2NodeData
 {
   private final String amiId;
   private final String instanceType;

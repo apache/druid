@@ -24,7 +24,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  */
-public class GalaxyUserData implements WorkerUserData
+public class GalaxyUserData
 {
   public final String env;
   public final String version;

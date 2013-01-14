@@ -65,7 +65,7 @@ public class DbConnector
         dbi,
         workerTableName,
         String.format(
-            "CREATE table %s (minVersion TINYTEXT NOT NULL, minNumWorkers SMALLINT NOT NULL, nodeData LONGTEXT NOT NULL, userData LONGTEXT NOT NULL, securityGroupIds LONGTEXT NOT NULL, keyName TINYTEXT NOT NULL)",
+            "CREATE table %s (config LONGTEXT NOT NULL)",
             workerTableName
         )
     );

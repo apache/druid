@@ -53,7 +53,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -185,7 +184,7 @@ public class RemoteTaskRunner implements TaskRunner
                             new Predicate<WorkerWrapper>()
                             {
                               @Override
-                              public boolean apply(@Nullable WorkerWrapper input)
+                              public boolean apply(WorkerWrapper input)
                               {
                                 return input.getRunningTasks().isEmpty()
                                        && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
@@ -201,9 +200,9 @@ public class RemoteTaskRunner implements TaskRunner
                         new Function<WorkerWrapper, String>()
                         {
                           @Override
-                          public String apply(@Nullable WorkerWrapper input)
+                          public String apply(WorkerWrapper input)
                           {
-                            return input.getWorker().getHost();
+                            return input.getWorker().getIp();
                           }
                         }
                     )

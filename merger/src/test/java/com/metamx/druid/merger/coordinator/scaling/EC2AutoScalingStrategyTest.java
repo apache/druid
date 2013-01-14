@@ -107,9 +107,7 @@ public class EC2AutoScalingStrategyTest
             "0",
             0,
             new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.<String>newArrayList(), "foo"),
-            new GalaxyUserData("env", "version", "type"),
-            Arrays.asList("foo"),
-            "foo2"
+            new GalaxyUserData("env", "version", "type")
         )
     );
     EasyMock.replay(workerSetupManager);
@@ -138,7 +136,7 @@ public class EC2AutoScalingStrategyTest
     Assert.assertEquals(created.getNodes().size(), 1);
     Assert.assertEquals("theInstance", created.getNodeIds().get(0));
 
-    AutoScalingData deleted = strategy.terminate(Arrays.asList("dummyHost"));
+    AutoScalingData deleted = strategy.terminate(Arrays.asList("dummyIP"));
 
     Assert.assertEquals(deleted.getNodeIds().size(), 1);
     Assert.assertEquals(deleted.getNodes().size(), 1);

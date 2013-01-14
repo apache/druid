@@ -41,6 +41,7 @@ public abstract class WorkerConfig
 
   public int getCapacity()
   {
-    return Runtime.getRuntime().availableProcessors() - 1;
+    return 1;
+    //return Runtime.getRuntime().availableProcessors() - 1;
   }
 }

@@ -343,8 +343,6 @@ public class RemoteTaskRunnerTest
             "0",
             0,
             null,
-            null,
-            Lists.<String>newArrayList(),
             null
         )
     );
