@@ -48,7 +48,7 @@ public class BalancerCostAnalyzer
   private static final int THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
   private final Random rand;
   private final DateTime referenceTimestamp;
-  private int MAX_SEGMENTS_TO_MOVE;
+  private int maxSegmentsToMove;
   private List<ServerHolder> serverHolderList;
   private double initialTotalCost;
   private double normalization;
@@ -70,7 +70,7 @@ public class BalancerCostAnalyzer
     this.initialTotalCost = calculateInitialTotalCost(serverHolderList);
     this.normalization = calculateNormalization(serverHolderList);
     this.totalSegments = params.getAvailableSegments().size();
-    this.MAX_SEGMENTS_TO_MOVE = params.getMaxSegmentsToMove();
+    this.maxSegmentsToMove = params.getMaxSegmentsToMove();
   }
 
   public double getInitialTotalCost()
@@ -194,7 +194,7 @@ public class BalancerCostAnalyzer
 
     int counter = 0;
 
-    while (segmentHoldersToMove.size() < MAX_SEGMENTS_TO_MOVE && counter < 3 * MAX_SEGMENTS_TO_MOVE) {
+    while (segmentHoldersToMove.size() < maxSegmentsToMove && counter < 3 * maxSegmentsToMove) {
       counter++;
 
       // We want to sample from each server w.p. numSegmentsOnServer / totalSegments
