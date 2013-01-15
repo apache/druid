@@ -132,11 +132,6 @@ public class DruidMaster
     return master;
   }
 
-  public DruidMasterConfig getConfig()
-  {
-    return config;
-  }
-
   public Map<String, Double> getLoadStatus()
   {
     Map<String, Integer> availableSegmentMap = Maps.newHashMap();
