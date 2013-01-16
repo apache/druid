@@ -332,7 +332,7 @@ public class IndexIO
       throw new UnsupportedOperationException("Shouldn't ever happen in a cluster that is not owned by MMX.");
     }
 
-    public void convertV8toV9(File v8Dir, File v9Dir) throws IOException
+    public static void convertV8toV9(File v8Dir, File v9Dir) throws IOException
     {
       log.info("Converting v8[%s] to v9[%s]", v8Dir, v9Dir);
 
