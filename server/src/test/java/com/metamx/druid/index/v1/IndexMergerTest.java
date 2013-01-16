@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.input.MapBasedInputRow;
 import junit.framework.Assert;
 import org.apache.commons.io.FileUtils;
@@ -44,11 +45,11 @@ public class IndexMergerTest
 
     final File tempDir = Files.createTempDir();
     try {
-      MMappedIndex index = IndexIO.mapDir(IndexMerger.persist(toPersist, tempDir));
+      QueryableIndex index = IndexIO.loadIndex(IndexMerger.persist(toPersist, tempDir));
 
-      Assert.assertEquals(2, index.getTimestamps().size());
+      Assert.assertEquals(2, index.getTimeColumn().getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-      Assert.assertEquals(0, index.getAvailableMetrics().size());
+      Assert.assertEquals(2, index.getColumnNames().size());
     }
     finally {
       tempDir.delete();
@@ -84,25 +85,25 @@ public class IndexMergerTest
     final File tempDir2 = Files.createTempDir();
     final File mergedDir = Files.createTempDir();
     try {
-      MMappedIndex index1 = IndexIO.mapDir(IndexMerger.persist(toPersist1, tempDir1));
+      QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tempDir1));
 
-      Assert.assertEquals(2, index1.getTimestamps().size());
+      Assert.assertEquals(2, index1.getTimeColumn().getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
-      Assert.assertEquals(0, index1.getAvailableMetrics().size());
+      Assert.assertEquals(2, index1.getColumnNames().size());
 
-      MMappedIndex index2 = IndexIO.mapDir(IndexMerger.persist(toPersist2, tempDir2));
+      QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist2, tempDir2));
 
-      Assert.assertEquals(2, index2.getTimestamps().size());
+      Assert.assertEquals(2, index2.getTimeColumn().getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index2.getAvailableDimensions()));
-      Assert.assertEquals(0, index2.getAvailableMetrics().size());
+      Assert.assertEquals(2, index2.getColumnNames().size());
 
-      MMappedIndex merged = IndexIO.mapDir(
-          IndexMerger.mergeMMapped(Arrays.asList(index1, index2), new AggregatorFactory[]{}, mergedDir)
+      QueryableIndex merged = IndexIO.loadIndex(
+          IndexMerger.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, mergedDir)
       );
 
-      Assert.assertEquals(3, merged.getTimestamps().size());
+      Assert.assertEquals(3, merged.getTimeColumn().getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
-      Assert.assertEquals(0, merged.getAvailableMetrics().size());
+      Assert.assertEquals(2, merged.getColumnNames().size());
     }
     finally {
       FileUtils.deleteQuietly(tempDir1);

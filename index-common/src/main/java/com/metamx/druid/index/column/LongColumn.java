@@ -19,8 +19,7 @@
 
 package com.metamx.druid.index.column;
 
-import com.google.common.base.Supplier;
-import com.metamx.druid.kv.IndexedLongs;
+import com.metamx.druid.index.v1.CompressedLongsIndexedSupplier;
 
 /**
  */
@@ -29,9 +28,9 @@ public class LongColumn extends AbstractColumn
   private static final ColumnCapabilitiesImpl CAPABILITIES = new ColumnCapabilitiesImpl()
       .setType(ValueType.LONG);
 
-  private final Supplier<IndexedLongs> column;
+  private final CompressedLongsIndexedSupplier column;
 
-  public LongColumn(Supplier<IndexedLongs> column)
+  public LongColumn(CompressedLongsIndexedSupplier column)
   {
     this.column = column;
   }
@@ -40,6 +39,12 @@ public class LongColumn extends AbstractColumn
   public ColumnCapabilities getCapabilities()
   {
     return CAPABILITIES;
+  }
+
+  @Override
+  public int getLength()
+  {
+    return column.size();
   }
 
   @Override

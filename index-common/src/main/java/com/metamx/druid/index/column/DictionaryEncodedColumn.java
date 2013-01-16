@@ -26,6 +26,7 @@ import com.metamx.druid.kv.IndexedInts;
 public interface DictionaryEncodedColumn
 {
   public int size();
+  public boolean hasMultipleValues();
   public int getSingleValueRow(int rowNum);
   public IndexedInts getMultiValueRow(int rowNum);
   public String lookupName(int id);

@@ -19,8 +19,7 @@
 
 package com.metamx.druid.index.column;
 
-import com.google.common.base.Supplier;
-import com.metamx.druid.kv.IndexedFloats;
+import com.metamx.druid.index.v1.CompressedFloatsIndexedSupplier;
 
 /**
  */
@@ -29,9 +28,9 @@ public class FloatColumn extends AbstractColumn
   private static final ColumnCapabilitiesImpl CAPABILITIES = new ColumnCapabilitiesImpl()
       .setType(ValueType.FLOAT);
 
-  private final Supplier<IndexedFloats> column;
+  private final CompressedFloatsIndexedSupplier column;
 
-  public FloatColumn(Supplier<IndexedFloats> column)
+  public FloatColumn(CompressedFloatsIndexedSupplier column)
   {
     this.column = column;
   }
@@ -40,6 +39,12 @@ public class FloatColumn extends AbstractColumn
   public ColumnCapabilities getCapabilities()
   {
     return CAPABILITIES;
+  }
+
+  @Override
+  public int getLength()
+  {
+    return column.size();
   }
 
   @Override

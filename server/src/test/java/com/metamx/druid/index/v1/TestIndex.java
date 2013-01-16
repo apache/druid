@@ -119,8 +119,8 @@ public class TestIndex
         IndexMerger.persist(bottom, DATA_INTERVAL, bottomFile);
 
         mergedRealtime = IndexIO.loadIndex(
-            IndexMerger.mergeMMapped(
-                Arrays.asList(IndexIO.mapDir(topFile), IndexIO.mapDir(bottomFile)),
+            IndexMerger.mergeQueryableIndex(
+                Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)),
                 METRIC_AGGS,
                 mergedFile
             )

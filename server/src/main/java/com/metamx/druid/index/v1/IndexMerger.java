@@ -44,6 +44,7 @@ import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.ToLowerCaseAggregatorFactory;
 import com.metamx.druid.guava.FileOutputSupplier;
 import com.metamx.druid.guava.GuavaUtils;
+import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
@@ -75,6 +76,7 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -139,26 +141,26 @@ public class IndexMerger
     );
   }
 
-  public static File mergeMMapped(
-      List<MMappedIndex> indexes, final AggregatorFactory[] metricAggs, File outDir
+  public static File mergeQueryableIndex(
+      List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir
   ) throws IOException
   {
-    return mergeMMapped(indexes, metricAggs, outDir, new NoopProgressIndicator());
+    return mergeQueryableIndex(indexes, metricAggs, outDir, new NoopProgressIndicator());
   }
 
-  public static File mergeMMapped(
-      List<MMappedIndex> indexes, final AggregatorFactory[] metricAggs, File outDir, ProgressIndicator progress
+  public static File mergeQueryableIndex(
+      List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir, ProgressIndicator progress
   ) throws IOException
   {
     return merge(
         Lists.transform(
             indexes,
-            new Function<MMappedIndex, IndexableAdapter>()
+            new Function<QueryableIndex, IndexableAdapter>()
             {
               @Override
-              public IndexableAdapter apply(@Nullable final MMappedIndex input)
+              public IndexableAdapter apply(final QueryableIndex input)
               {
-                return new MMappedIndexAdapter(input);
+                return new QueryableIndexIndexableAdapter(input);
               }
             }
         ),
@@ -392,6 +394,7 @@ public class IndexMerger
     }
     final Interval dataInterval;
     File v8OutDir = new File(outDir, "v8-tmp");
+    v8OutDir.mkdirs();
 
     /*************  Main index.drd file **************/
     progress.progress();
@@ -573,15 +576,11 @@ public class IndexMerger
 
     Iterable<Rowboat> theRows = rowMergerFn.apply(boats);
 
-    CompressedLongsSupplierSerializer littleEndianTimeWriter = CompressedLongsSupplierSerializer.create(
-        ioPeon, "little_end_time", ByteOrder.LITTLE_ENDIAN
-    );
-    CompressedLongsSupplierSerializer bigEndianTimeWriter = CompressedLongsSupplierSerializer.create(
-        ioPeon, "big_end_time", ByteOrder.BIG_ENDIAN
+    CompressedLongsSupplierSerializer timeWriter = CompressedLongsSupplierSerializer.create(
+        ioPeon, "little_end_time", IndexIO.BYTE_ORDER
     );
 
-    littleEndianTimeWriter.open();
-    bigEndianTimeWriter.open();
+    timeWriter.open();
 
     ArrayList<VSizeIndexedWriter> forwardDimWriters = Lists.newArrayListWithCapacity(mergedDimensions.size());
     for (String dimension : mergedDimensions) {
@@ -621,8 +620,7 @@ public class IndexMerger
 
     for (Rowboat theRow : theRows) {
       progress.progress();
-      littleEndianTimeWriter.add(theRow.getTimestamp());
-      bigEndianTimeWriter.add(theRow.getTimestamp());
+      timeWriter.add(theRow.getTimestamp());
 
       final Object[] metrics = theRow.getMetrics();
       for (int i = 0; i < metrics.length; ++i) {
@@ -660,17 +658,11 @@ public class IndexMerger
       rowNumConversion.rewind();
     }
 
-    final File littleEndianFile = IndexIO.makeTimeFile(v8OutDir, ByteOrder.LITTLE_ENDIAN);
-    littleEndianFile.delete();
-    OutputSupplier<FileOutputStream> out = Files.newOutputStreamSupplier(littleEndianFile, true);
-    littleEndianTimeWriter.closeAndConsolidate(out);
-    IndexIO.checkFileSize(littleEndianFile);
-
-    final File bigEndianFile = IndexIO.makeTimeFile(v8OutDir, ByteOrder.BIG_ENDIAN);
-    bigEndianFile.delete();
-    out = Files.newOutputStreamSupplier(bigEndianFile, true);
-    bigEndianTimeWriter.closeAndConsolidate(out);
-    IndexIO.checkFileSize(bigEndianFile);
+    final File timeFile = IndexIO.makeTimeFile(v8OutDir, IndexIO.BYTE_ORDER);
+    timeFile.delete();
+    OutputSupplier<FileOutputStream> out = Files.newOutputStreamSupplier(timeFile, true);
+    timeWriter.closeAndConsolidate(out);
+    IndexIO.checkFileSize(timeFile);
 
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       forwardDimWriters.get(i).close();
@@ -746,11 +738,12 @@ public class IndexMerger
     final ArrayList<String> expectedFiles = Lists.newArrayList(
         Iterables.concat(
             Arrays.asList(
-                "index.drd", "inverted.drd", "time_BIG_ENDIAN.drd", "time_LITTLE_ENDIAN.drd"
+                "index.drd", "inverted.drd", String.format("time_%s.drd", IndexIO.BYTE_ORDER)
             ),
             Iterables.transform(mergedDimensions, GuavaUtils.formatFunction("dim_%s.drd")),
-            Iterables.transform(mergedMetrics, GuavaUtils.formatFunction("met_%s_LITTLE_ENDIAN.drd")),
-            Iterables.transform(mergedMetrics, GuavaUtils.formatFunction("met_%s_BIG_ENDIAN.drd"))
+            Iterables.transform(
+                mergedMetrics, GuavaUtils.formatFunction(String.format("met_%%s_%s.drd", IndexIO.BYTE_ORDER))
+            )
         )
     );
 
@@ -791,11 +784,13 @@ public class IndexMerger
 
   private static <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
   {
-    TreeSet<T> retVal = Sets.newTreeSet(Ordering.<T>natural().nullsFirst());
+    LinkedHashSet<T> retVal = Sets.newLinkedHashSet();
 
     for (Iterable<T> indexedList : indexedLists) {
       for (T val : indexedList) {
-        retVal.add(val);
+        if (val != null) {
+          retVal.add(val);
+        }
       }
     }
 

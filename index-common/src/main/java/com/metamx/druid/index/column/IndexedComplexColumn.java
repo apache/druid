@@ -28,17 +28,25 @@ import java.io.IOException;
 public class IndexedComplexColumn implements ComplexColumn
 {
   private final Indexed column;
+  private final String typeName;
 
   public IndexedComplexColumn(
-      Indexed column
+      String typeName, Indexed column
   )
   {
     this.column = column;
+    this.typeName = typeName;
   }
   @Override
   public Class<?> getClazz()
   {
     return column.getClazz();
+  }
+
+  @Override
+  public String getTypeName()
+  {
+    return typeName;
   }
 
   @Override

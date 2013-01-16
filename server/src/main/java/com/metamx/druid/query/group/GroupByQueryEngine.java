@@ -277,7 +277,10 @@ public class GroupByQueryEngine
       dimNames = new String[dimensionSpecs.size()];
       for (int i = 0; i < dimensionSpecs.size(); ++i) {
         final DimensionSpec dimSpec = dimensionSpecs.get(i);
-        dimensions.add(cursor.makeDimensionSelector(dimSpec.getDimension()));
+        final DimensionSelector selector = cursor.makeDimensionSelector(dimSpec.getDimension());
+        if (selector != null) {
+          dimensions.add(selector);
+        }
         dimNames[i] = dimSpec.getOutputName();
       }
 

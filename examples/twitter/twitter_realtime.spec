@@ -31,8 +31,8 @@
 
     "firehose": {
         "type": "twitzer",
-        "maxEventCount": 50000,
-        "maxRunMinutes": 10
+        "maxEventCount": 500000,
+        "maxRunMinutes": 120
     },
 
     "plumber": {
