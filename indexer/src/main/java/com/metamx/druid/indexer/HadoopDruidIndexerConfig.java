@@ -34,15 +34,19 @@ import com.metamx.common.MapUtils;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.RegisteringNode;
+import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.serde.Registererer;
 import com.metamx.druid.indexer.data.DataSpec;
+import com.metamx.druid.indexer.data.StringInputRowParser;
+import com.metamx.druid.indexer.data.TimestampSpec;
 import com.metamx.druid.indexer.data.ToLowercaseDataSpec;
 import com.metamx.druid.indexer.granularity.GranularitySpec;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.path.PathSpec;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.indexer.updater.UpdaterJobSpec;
+import com.metamx.druid.input.InputRow;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.shard.ShardSpec;
 import com.metamx.druid.utils.JodaUtils;
@@ -60,8 +64,6 @@ import org.joda.time.format.ISODateTimeFormat;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -237,6 +239,11 @@ public class HadoopDruidIndexerConfig
     this.timestampFormat = timestampFormat;
   }
 
+  public TimestampSpec getTimestampSpec()
+  {
+    return new TimestampSpec(timestampColumnName, timestampFormat);
+  }
+
   @JsonProperty
   public DataSpec getDataSpec()
   {
@@ -246,6 +253,32 @@ public class HadoopDruidIndexerConfig
   public void setDataSpec(DataSpec dataSpec)
   {
     this.dataSpec = new ToLowercaseDataSpec(dataSpec);
+  }
+
+  public StringInputRowParser getParser()
+  {
+    final List<String> dimensionExclusions;
+
+    if(getDataSpec().hasCustomDimensions()) {
+      dimensionExclusions = null;
+    } else {
+      dimensionExclusions = Lists.newArrayList();
+      dimensionExclusions.add(getTimestampColumnName());
+      dimensionExclusions.addAll(
+          Lists.transform(
+              getRollupSpec().getAggs(), new Function<AggregatorFactory, String>()
+          {
+            @Override
+            public String apply(AggregatorFactory aggregatorFactory)
+            {
+              return aggregatorFactory.getName();
+            }
+          }
+          )
+      );
+    }
+
+    return new StringInputRowParser(getTimestampSpec(), getDataSpec(), dimensionExclusions);
   }
 
   @Deprecated
@@ -335,7 +368,7 @@ public class HadoopDruidIndexerConfig
 
   public boolean partitionByDimension()
   {
-    return partitionDimension != null;
+    return targetPartitionSize != null;
   }
 
   @JsonProperty
@@ -447,21 +480,15 @@ public class HadoopDruidIndexerConfig
    ********************************************/
 
   /**
-   * Get the proper bucket for this "row"
+   * Get the proper bucket for some input row.
    *
-   * @param theMap a Map that represents a "row", keys are column names, values are, well, values
+   * @param inputRow an InputRow
    *
    * @return the Bucket that this row belongs to
    */
-  public Optional<Bucket> getBucket(Map<String, String> theMap)
+  public Optional<Bucket> getBucket(InputRow inputRow)
   {
-    final Optional<Interval> timeBucket = getGranularitySpec().bucketInterval(
-        new DateTime(
-            theMap.get(
-                getTimestampColumnName()
-            )
-        )
-    );
+    final Optional<Interval> timeBucket = getGranularitySpec().bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()));
     if (!timeBucket.isPresent()) {
       return Optional.absent();
     }
@@ -473,7 +500,7 @@ public class HadoopDruidIndexerConfig
 
     for (final HadoopyShardSpec hadoopyShardSpec : shards) {
       final ShardSpec actualSpec = hadoopyShardSpec.getActualSpec();
-      if (actualSpec.isInChunk(theMap)) {
+      if (actualSpec.isInChunk(inputRow)) {
         return Optional.of(
             new Bucket(
                 hadoopyShardSpec.getShardNum(),
@@ -484,7 +511,7 @@ public class HadoopDruidIndexerConfig
       }
     }
 
-    throw new ISE("row[%s] doesn't fit in any shard[%s]", theMap, shards);
+    throw new ISE("row[%s] doesn't fit in any shard[%s]", inputRow, shards);
   }
 
   public Set<Interval> getSegmentGranularIntervals()
@@ -566,6 +593,11 @@ public class HadoopDruidIndexerConfig
     return new Path(makeIntermediatePath(), "segmentDescriptorInfo");
   }
 
+  public Path makeGroupedDataDir()
+  {
+    return new Path(makeIntermediatePath(), "groupedData");
+  }
+
   public Path makeDescriptorInfoPath(DataSegment segment)
   {
     return new Path(makeDescriptorInfoDir(), String.format("%s.json", segment.getIdentifier().replace(":", "")));
@@ -626,10 +658,5 @@ public class HadoopDruidIndexerConfig
 
     final int nIntervals = getIntervals().size();
     Preconditions.checkArgument(nIntervals > 0, "intervals.size()[%s] <= 0", nIntervals);
-
-    if (partitionByDimension()) {
-      Preconditions.checkNotNull(partitionDimension);
-      Preconditions.checkNotNull(targetPartitionSize);
-    }
   }
 }
