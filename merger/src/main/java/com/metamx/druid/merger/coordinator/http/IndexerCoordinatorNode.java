@@ -469,7 +469,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
       final DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
       final WorkerSetupManagerConfig workerSetupManagerConfig = configFactory.build(WorkerSetupManagerConfig.class);
 
-      DbConnector.createWorkerSetupTable(dbi, workerSetupManagerConfig.getWorkerSetupTable());
+      DbConnector.createConfigTable(dbi, workerSetupManagerConfig.getConfigTable());
       workerSetupManager = new WorkerSetupManager(
           dbi, Executors.newScheduledThreadPool(
           1,

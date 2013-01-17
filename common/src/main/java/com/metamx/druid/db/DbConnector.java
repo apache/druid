@@ -59,14 +59,14 @@ public class DbConnector
     );
   }
 
-  public static void createWorkerSetupTable(final DBI dbi, final String workerTableName)
+  public static void createConfigTable(final DBI dbi, final String configTableName)
   {
     createTable(
         dbi,
-        workerTableName,
+        configTableName,
         String.format(
-            "CREATE table %s (config LONGTEXT NOT NULL)",
-            workerTableName
+            "CREATE table %s (name VARCHAR(255) NOT NULL, payload LONGTEXT NOT NULL, INDEX(name), PRIMARY KEY(name))",
+            configTableName
         )
     );
   }

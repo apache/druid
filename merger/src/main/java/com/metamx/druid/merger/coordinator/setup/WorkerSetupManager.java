@@ -29,7 +29,6 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.coordinator.config.WorkerSetupManagerConfig;
 import org.apache.commons.collections.MapUtils;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
 import org.joda.time.Duration;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.FoldController;
@@ -123,37 +122,39 @@ public class WorkerSetupManager
             {
               return handle.createQuery(
                   String.format(
-                      "SELECT config FROM %s",
-                      config.getWorkerSetupTable()
+                      "SELECT payload FROM %s WHERE name = :name",
+                      config.getConfigTable()
                   )
-              ).fold(
-                  Lists.<WorkerSetupData>newArrayList(),
-                  new Folder3<ArrayList<WorkerSetupData>, Map<String, Object>>()
-                  {
-                    @Override
-                    public ArrayList<WorkerSetupData> fold(
-                        ArrayList<WorkerSetupData> workerNodeConfigurations,
-                        Map<String, Object> stringObjectMap,
-                        FoldController foldController,
-                        StatementContext statementContext
-                    ) throws SQLException
-                    {
-                      try {
-                        // stringObjectMap lowercases and jackson may fail serde
-                        workerNodeConfigurations.add(
-                            jsonMapper.readValue(
-                                MapUtils.getString(stringObjectMap, "config"),
-                                WorkerSetupData.class
-                            )
-                        );
-                        return workerNodeConfigurations;
-                      }
-                      catch (Exception e) {
-                        throw Throwables.propagate(e);
-                      }
-                    }
-                  }
-              );
+              )
+                           .bind("name", config.getWorkerSetupConfigName())
+                           .fold(
+                               Lists.<WorkerSetupData>newArrayList(),
+                               new Folder3<ArrayList<WorkerSetupData>, Map<String, Object>>()
+                               {
+                                 @Override
+                                 public ArrayList<WorkerSetupData> fold(
+                                     ArrayList<WorkerSetupData> workerNodeConfigurations,
+                                     Map<String, Object> stringObjectMap,
+                                     FoldController foldController,
+                                     StatementContext statementContext
+                                 ) throws SQLException
+                                 {
+                                   try {
+                                     // stringObjectMap lowercases and jackson may fail serde
+                                     workerNodeConfigurations.add(
+                                         jsonMapper.readValue(
+                                             MapUtils.getString(stringObjectMap, "payload"),
+                                             WorkerSetupData.class
+                                         )
+                                     );
+                                     return workerNodeConfigurations;
+                                   }
+                                   catch (Exception e) {
+                                     throw Throwables.propagate(e);
+                                   }
+                                 }
+                               }
+                           );
             }
           }
       );
@@ -197,14 +198,14 @@ public class WorkerSetupManager
               @Override
               public Void withHandle(Handle handle) throws Exception
               {
-                handle.createStatement(String.format("DELETE FROM %s", config.getWorkerSetupTable())).execute();
                 handle.createStatement(
                     String.format(
-                        "INSERT INTO %s (config) VALUES (:config)",
-                        config.getWorkerSetupTable()
+                        "INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload",
+                        config.getConfigTable()
                     )
                 )
-                      .bind("config", jsonMapper.writeValueAsString(value))
+                      .bind("name", config.getWorkerSetupConfigName())
+                      .bind("payload", jsonMapper.writeValueAsString(value))
                       .execute();
 
                 return null;

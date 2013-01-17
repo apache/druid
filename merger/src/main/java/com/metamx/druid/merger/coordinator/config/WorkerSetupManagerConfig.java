@@ -27,8 +27,11 @@ import org.skife.config.Default;
  */
 public abstract class WorkerSetupManagerConfig
 {
-  @Config("druid.indexer.workerSetupTable")
-  public abstract String getWorkerSetupTable();
+  @Config("druid.indexer.configTable")
+  public abstract String getConfigTable();
+
+  @Config("druid.indexer.workerSetupConfigName")
+  public abstract String getWorkerSetupConfigName();
 
   @Config("druid.indexer.poll.duration")
   @Default("PT1M")
