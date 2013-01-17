@@ -60,7 +60,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
 
     cache = new MemcachedCacheBroker(
         client,
-        500, // 500 milliseconds
+        30000, // 30 seconds
         3600 // 1 hour
     );
 
