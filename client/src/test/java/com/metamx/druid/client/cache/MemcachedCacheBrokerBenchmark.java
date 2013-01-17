@@ -44,8 +44,6 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
     // disable compression
     transcoder.setCompressionThreshold(Integer.MAX_VALUE);
 
-    System.out.println(String.format("Using memcached hosts [%s]", hosts));
-
     client = new MemcachedClient(
         new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
                                       .setHashAlg(DefaultHashAlgorithm.FNV1A_64_HASH)
@@ -72,14 +70,13 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
   @Override
   protected void tearDown() throws Exception
   {
-    client.flush();
-    client.shutdown();
+    client.shutdown(1, TimeUnit.MINUTES);
   }
 
   public void timePutObjects(int reps) {
     for(int i = 0; i < reps; ++i) {
       for(int k = 0; k < objectCount; ++k) {
-        String key = BASE_KEY + i;
+        String key = BASE_KEY + k;
         cache.put(IDENTIFIER, key.getBytes(), randBytes);
       }
       // make sure the write queue is empty
@@ -109,7 +106,10 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
         keys.add(Pair.of(IDENTIFIER, ByteBuffer.wrap(key.getBytes())));
       }
       Map<Pair<String, ByteBuffer>, byte[]> results = cache.getBulk(keys);
-      for(byte[] bytes : results.values()) count += bytes.length;
+      for(Pair<String, ByteBuffer> key : keys) {
+        byte[] bytes = results.get(key);
+        count += bytes.length;
+      }
     }
     return count;
   }
