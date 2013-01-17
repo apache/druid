@@ -19,12 +19,14 @@
 
 package com.metamx.druid.index.v1;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
 import com.metamx.common.ISE;
 import com.metamx.druid.index.QueryableIndex;
+import com.metamx.druid.index.column.BitmapIndex;
 import com.metamx.druid.index.column.Column;
 import com.metamx.druid.index.column.ComplexColumn;
 import com.metamx.druid.index.column.DictionaryEncodedColumn;
@@ -32,6 +34,7 @@ import com.metamx.druid.index.column.GenericColumn;
 import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.kv.ArrayBasedIndexedInts;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
+import com.metamx.druid.kv.EmptyIndexedInts;
 import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.IndexedIterable;
@@ -91,7 +94,18 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public Indexed<String> getDimValueLookup(String dimension)
   {
-    final DictionaryEncodedColumn dict = input.getColumn(dimension).getDictionaryEncoding();
+    final Column column = input.getColumn(dimension);
+
+    if (column == null) {
+      return null;
+    }
+
+    final DictionaryEncodedColumn dict = column.getDictionaryEncoding();
+
+    if (dict == null) {
+      return null;
+    }
+
     return new Indexed<String>()
     {
       @Override
@@ -244,9 +258,18 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public IndexedInts getInverteds(String dimension, String value)
   {
-    return new ConciseCompressedIndexedInts(
-        input.getColumn(dimension).getBitmapIndex().getConciseSet(value)
-    );
+    final Column column = input.getColumn(dimension);
+
+    if (column == null) {
+      return new EmptyIndexedInts();
+    }
+
+    final BitmapIndex bitmaps = column.getBitmapIndex();
+    if (bitmaps == null) {
+      return new EmptyIndexedInts();
+    }
+
+    return new ConciseCompressedIndexedInts(bitmaps.getConciseSet(value));
   }
 
   @Override

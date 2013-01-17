@@ -79,6 +79,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 /**
@@ -784,13 +785,11 @@ public class IndexMerger
 
   private static <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
   {
-    LinkedHashSet<T> retVal = Sets.newLinkedHashSet();
+    Set<T> retVal = Sets.newTreeSet(Ordering.<T>natural().nullsFirst());
 
     for (Iterable<T> indexedList : indexedLists) {
       for (T val : indexedList) {
-        if (val != null) {
-          retVal.add(val);
-        }
+        retVal.add(val);
       }
     }
 
