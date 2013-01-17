@@ -190,7 +190,9 @@ public class MasterMain
         emitter,
         scheduledExecutorFactory,
         new ConcurrentHashMap<String, LoadQueuePeon>(),
-        serviceProvider
+        serviceProvider,
+        httpClient,
+        new ToStringResponseHandler(Charsets.UTF_8)
     );
     lifecycle.addManagedInstance(master);
 

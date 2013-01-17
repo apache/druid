@@ -37,6 +37,7 @@ import org.joda.time.Interval;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "append", value = AppendTask.class),
     @JsonSubTypes.Type(name = "delete", value = DeleteTask.class),
+    @JsonSubTypes.Type(name = "kill", value = KillTask.class),
     @JsonSubTypes.Type(name = "index", value = IndexTask.class),
     @JsonSubTypes.Type(name = "index_partitions", value = IndexDeterminePartitionsTask.class),
     @JsonSubTypes.Type(name = "index_generator", value = IndexGeneratorTask.class)
@@ -49,7 +50,8 @@ public interface Task
     MERGE,
     APPEND,
     DELETE,
-    TEST
+    TEST,
+    KILL
   }
 
   public String getId();

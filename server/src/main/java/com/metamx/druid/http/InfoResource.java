@@ -548,10 +548,14 @@ public class InfoResource
   @Path("/db/datasources")
   @Produces("application/json")
   public Response getDatabaseDataSources(
-      @QueryParam("full") String full
+      @QueryParam("full") String full,
+      @QueryParam("includeDisabled") String includeDisabled
   )
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    if (includeDisabled != null) {
+      return builder.entity(databaseSegmentManager.getAllDatasourceNames()).build();
+    }
     if (full != null) {
       return builder.entity(databaseSegmentManager.getInventory()).build();
     }
