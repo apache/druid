@@ -21,6 +21,7 @@ package com.metamx.druid.merger.common.index;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -138,7 +139,13 @@ public class YeOldePlumberSchool implements PlumberSchool
             IndexMerger.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload);
           }
 
-          final DataSegment segmentToUpload = theSink.getSegment().withVersion(version);
+          // Map merged segment so we can extract dimensions
+          final QueryableIndex mappedSegment = IndexIO.loadIndex(fileToUpload);
+
+          final DataSegment segmentToUpload = theSink.getSegment()
+                                                     .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
+                                                     .withVersion(version);
+
           segmentPusher.push(fileToUpload, segmentToUpload);
 
           log.info(
