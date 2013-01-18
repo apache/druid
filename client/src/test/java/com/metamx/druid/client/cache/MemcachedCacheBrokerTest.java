@@ -22,7 +22,6 @@ package com.metamx.druid.client.cache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.metamx.common.Pair;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.CachedData;
@@ -38,7 +37,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -56,22 +54,22 @@ public class MemcachedCacheBrokerTest
 {
   private static final byte[] HI = "hi".getBytes();
   private static final byte[] HO = "ho".getBytes();
-  private MemcachedCacheBroker cache;
+  private MemcachedCache cache;
 
   @Before
   public void setUp() throws Exception
   {
     MemcachedClientIF client = new MockMemcachedClient();
-    cache = new MemcachedCacheBroker(client, 500, 3600);
+    cache = new MemcachedCache(client, 500, 3600);
   }
 
   @Test
   public void testSanity() throws Exception
   {
-    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HI)));
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
     put(cache, "a", HI, 1);
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new CacheBroker.NamedKey("the", HI)));
+    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     put(cache, "the", HI, 2);
     Assert.assertEquals(1, get(cache, "a", HI));
@@ -79,13 +77,13 @@ public class MemcachedCacheBrokerTest
 
     put(cache, "the", HO, 10);
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HO)));
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
     Assert.assertEquals(2, get(cache, "the", HI));
     Assert.assertEquals(10, get(cache, "the", HO));
 
     cache.close("the");
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HO)));
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
 
     cache.close("a");
   }
@@ -93,15 +91,15 @@ public class MemcachedCacheBrokerTest
   @Test
   public void testGetBulk() throws Exception
   {
-    Assert.assertNull(cache.get(new CacheBroker.NamedKey("the", HI)));
+    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     put(cache, "the", HI, 2);
     put(cache, "the", HO, 10);
 
-    CacheBroker.NamedKey key1 = new CacheBroker.NamedKey("the", HI);
-    CacheBroker.NamedKey key2 = new CacheBroker.NamedKey("the", HO);
+    Cache.NamedKey key1 = new Cache.NamedKey("the", HI);
+    Cache.NamedKey key2 = new Cache.NamedKey("the", HO);
 
-    Map<CacheBroker.NamedKey, byte[]> result = cache.getBulk(
+    Map<Cache.NamedKey, byte[]> result = cache.getBulk(
         Lists.newArrayList(
             key1,
             key2
@@ -112,14 +110,14 @@ public class MemcachedCacheBrokerTest
     Assert.assertEquals(10, Ints.fromByteArray(result.get(key2)));
   }
 
-  public void put(CacheBroker cache, String namespace, byte[] key, Integer value)
+  public void put(Cache cache, String namespace, byte[] key, Integer value)
   {
-    cache.put(new CacheBroker.NamedKey(namespace, key), Ints.toByteArray(value));
+    cache.put(new Cache.NamedKey(namespace, key), Ints.toByteArray(value));
   }
 
-  public int get(CacheBroker cache, String namespace, byte[] key)
+  public int get(Cache cache, String namespace, byte[] key)
   {
-    return Ints.fromByteArray(cache.get(new CacheBroker.NamedKey(namespace, key)));
+    return Ints.fromByteArray(cache.get(new Cache.NamedKey(namespace, key)));
   }
 }
 

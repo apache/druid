@@ -26,7 +26,7 @@ import java.util.Map;
 
 /**
  */
-public interface CacheBroker
+public interface Cache
 {
   public byte[] get(NamedKey key);
   public void put(NamedKey key, byte[] value);

@@ -31,24 +31,24 @@ public class MapCacheBrokerTest
   private static final byte[] HI = "hi".getBytes();
   private static final byte[] HO = "ho".getBytes();
   private ByteCountingLRUMap baseMap;
-  private MapCacheBroker cache;
+  private MapCache cache;
 
   @Before
   public void setUp() throws Exception
   {
     baseMap = new ByteCountingLRUMap(1024 * 1024);
-    cache = new MapCacheBroker(baseMap);
+    cache = new MapCache(baseMap);
   }
 
   @Test
   public void testSanity() throws Exception
   {
-    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HI)));
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
     Assert.assertEquals(0, baseMap.size());
     put(cache, "a", HI, 1);
     Assert.assertEquals(1, baseMap.size());
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new CacheBroker.NamedKey("the", HI)));
+    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     put(cache, "the", HI, 2);
     Assert.assertEquals(2, baseMap.size());
@@ -58,26 +58,26 @@ public class MapCacheBrokerTest
     put(cache, "the", HO, 10);
     Assert.assertEquals(3, baseMap.size());
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HO)));
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
     Assert.assertEquals(2, get(cache, "the", HI));
     Assert.assertEquals(10, get(cache, "the", HO));
 
     cache.close("the");
     Assert.assertEquals(1, baseMap.size());
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HO)));
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
 
     cache.close("a");
     Assert.assertEquals(0, baseMap.size());
   }
 
-  public void put(CacheBroker cache, String namespace, byte[] key, Integer value)
+  public void put(Cache cache, String namespace, byte[] key, Integer value)
   {
-    cache.put(new CacheBroker.NamedKey(namespace, key), Ints.toByteArray(value));
+    cache.put(new Cache.NamedKey(namespace, key), Ints.toByteArray(value));
   }
 
-  public int get(CacheBroker cache, String namespace, byte[] key)
+  public int get(Cache cache, String namespace, byte[] key)
   {
-    return Ints.fromByteArray(cache.get(new CacheBroker.NamedKey(namespace, key)));
+    return Ints.fromByteArray(cache.get(new Cache.NamedKey(namespace, key)));
   }
 }

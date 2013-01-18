@@ -27,21 +27,21 @@ import com.metamx.metrics.AbstractMonitor;
  */
 public class CacheMonitor extends AbstractMonitor
 {
-  private final CacheBroker cacheBroker;
+  private final Cache cache;
 
   private volatile CacheStats prevCacheStats = null;
 
   public CacheMonitor(
-      CacheBroker cacheBroker
+      Cache cache
   )
   {
-    this.cacheBroker = cacheBroker;
+    this.cache = cache;
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    final CacheStats currCacheStats = cacheBroker.getStats();
+    final CacheStats currCacheStats = cache.getStats();
     final CacheStats deltaCacheStats = currCacheStats.delta(prevCacheStats);
 
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();

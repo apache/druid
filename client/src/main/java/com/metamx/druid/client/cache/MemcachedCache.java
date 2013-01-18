@@ -41,16 +41,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class MemcachedCacheBroker implements CacheBroker
+public class MemcachedCache implements Cache
 {
-  public static MemcachedCacheBroker create(final MemcachedCacheBrokerConfig config)
+  public static MemcachedCache create(final MemcachedCacheConfig config)
   {
     try {
       SerializingTranscoder transcoder = new SerializingTranscoder(config.getMaxObjectSize());
       // disable compression
       transcoder.setCompressionThreshold(Integer.MAX_VALUE);
 
-      return new MemcachedCacheBroker(
+      return new MemcachedCache(
         new MemcachedClient(
           new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
                                         .setHashAlg(DefaultHashAlgorithm.FNV1A_64_HASH)
@@ -79,7 +79,7 @@ public class MemcachedCacheBroker implements CacheBroker
   private final AtomicLong missCount = new AtomicLong(0);
   private final AtomicLong timeoutCount = new AtomicLong(0);
 
-  MemcachedCacheBroker(MemcachedClientIF client, int timeout, int expiration) {
+  MemcachedCache(MemcachedClientIF client, int timeout, int expiration) {
     this.timeout = timeout;
     this.expiration = expiration;
     this.client = client;

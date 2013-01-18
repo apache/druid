@@ -3,7 +3,7 @@ package com.metamx.druid.client.cache;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
-public abstract class MemcachedCacheBrokerConfig
+public abstract class MemcachedCacheConfig
 {
   @Config("${prefix}.expiration")
   @Default("31536000")

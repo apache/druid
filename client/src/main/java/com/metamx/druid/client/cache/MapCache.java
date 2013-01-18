@@ -22,7 +22,6 @@ package com.metamx.druid.client.cache;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.metamx.common.ISE;
-import com.metamx.common.Pair;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -33,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
-public class MapCacheBroker implements CacheBroker
+public class MapCache implements Cache
 {
   /**
    * An interface to limit the operations that can be done on a Cache so that it is easier to reason about what
@@ -57,9 +56,9 @@ public class MapCacheBroker implements CacheBroker
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
 
-  public static CacheBroker create(final MapCacheBrokerConfig config)
+  public static com.metamx.druid.client.cache.Cache create(final MapCacheConfig config)
   {
-    return new MapCacheBroker(
+    return new MapCache(
         new ByteCountingLRUMap(
             config.getInitialSize(),
             config.getLogEvictionCount(),
@@ -68,7 +67,7 @@ public class MapCacheBroker implements CacheBroker
     );
   }
 
-  MapCacheBroker(
+  MapCache(
       ByteCountingLRUMap byteCountingLRUMap
   )
   {

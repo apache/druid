@@ -24,7 +24,7 @@ import org.skife.config.Default;
 
 /**
  */
-public abstract class MapCacheBrokerConfig
+public abstract class MapCacheConfig
 {
   @Config("${prefix}.sizeInBytes")
   @Default("0")

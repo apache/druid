@@ -22,7 +22,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
   private static final String BASE_KEY = "test_2012-11-26T00:00:00.000Z_2012-11-27T00:00:00.000Z_2012-11-27T04:11:25.979Z_";
   public static final String NAMESPACE = "default";
 
-  private MemcachedCacheBroker cache;
+  private MemcachedCache cache;
   private MemcachedClientIF client;
 
   private static byte[] randBytes;
@@ -54,7 +54,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
         AddrUtil.getAddresses(hosts)
     );
 
-    cache = new MemcachedCacheBroker(
+    cache = new MemcachedCache(
         client,
         30000, // 30 seconds
         3600 // 1 hour
@@ -75,7 +75,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
     for(int i = 0; i < reps; ++i) {
       for(int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        cache.put(new CacheBroker.NamedKey(NAMESPACE, key.getBytes()), randBytes);
+        cache.put(new Cache.NamedKey(NAMESPACE, key.getBytes()), randBytes);
       }
       // make sure the write queue is empty
       client.waitForQueues(1, TimeUnit.HOURS);
@@ -88,7 +88,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
     for (int i = 0; i < reps; i++) {
       for(int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        bytes = cache.get(new CacheBroker.NamedKey(NAMESPACE, key.getBytes()));
+        bytes = cache.get(new Cache.NamedKey(NAMESPACE, key.getBytes()));
         count += bytes.length;
       }
     }
@@ -98,13 +98,13 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
   public long timeBulkGetObjects(int reps) {
     long count = 0;
     for (int i = 0; i < reps; i++) {
-      List<CacheBroker.NamedKey> keys = Lists.newArrayList();
+      List<Cache.NamedKey> keys = Lists.newArrayList();
       for(int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        keys.add(new CacheBroker.NamedKey(NAMESPACE, key.getBytes()));
+        keys.add(new Cache.NamedKey(NAMESPACE, key.getBytes()));
       }
-      Map<CacheBroker.NamedKey, byte[]> results = cache.getBulk(keys);
-      for(CacheBroker.NamedKey key : keys) {
+      Map<Cache.NamedKey, byte[]> results = cache.getBulk(keys);
+      for(Cache.NamedKey key : keys) {
         byte[] bytes = results.get(key);
         count += bytes.length;
       }

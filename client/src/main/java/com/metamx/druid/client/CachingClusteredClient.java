@@ -41,7 +41,7 @@ import com.metamx.druid.Query;
 import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.aggregation.AggregatorFactory;
-import com.metamx.druid.client.cache.CacheBroker;
+import com.metamx.druid.client.cache.Cache;
 import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.query.CacheStrategy;
@@ -57,7 +57,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -76,19 +75,19 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
   private final QueryToolChestWarehouse warehouse;
   private final ServerView serverView;
-  private final CacheBroker cacheBroker;
+  private final Cache cache;
   private final ObjectMapper objectMapper;
 
   public CachingClusteredClient(
       QueryToolChestWarehouse warehouse,
       ServerView serverView,
-      CacheBroker cacheBroker,
+      Cache cache,
       ObjectMapper objectMapper
   )
   {
     this.warehouse = warehouse;
     this.serverView = serverView;
-    this.cacheBroker = cacheBroker;
+    this.cache = cache;
     this.objectMapper = objectMapper;
 
     serverView.registerSegmentCallback(
@@ -100,7 +99,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           @Override
           public ServerView.CallbackAction segmentRemoved(DruidServer server, DataSegment segment)
           {
-            CachingClusteredClient.this.cacheBroker.close(segment.getIdentifier());
+            CachingClusteredClient.this.cache.close(segment.getIdentifier());
             return ServerView.CallbackAction.CONTINUE;
           }
         }
@@ -161,16 +160,16 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     // Pull cached segments from cache and remove from set of segments to query
     if(useCache && queryCacheKey != null) {
-      Map<Pair<ServerSelector, SegmentDescriptor>, CacheBroker.NamedKey> cacheKeys = Maps.newHashMap();
+      Map<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> cacheKeys = Maps.newHashMap();
       for(Pair<ServerSelector, SegmentDescriptor> e : segments) {
         cacheKeys.put(e, computeSegmentCacheKey(e.lhs.getSegment().getIdentifier(), e.rhs, queryCacheKey));
       }
 
-      Map<CacheBroker.NamedKey, byte[]> cachedValues = cacheBroker.getBulk(cacheKeys.values());
+      Map<Cache.NamedKey, byte[]> cachedValues = cache.getBulk(cacheKeys.values());
 
-      for(Map.Entry<Pair<ServerSelector, SegmentDescriptor>, CacheBroker.NamedKey> entry : cacheKeys.entrySet()) {
+      for(Map.Entry<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> entry : cacheKeys.entrySet()) {
         Pair<ServerSelector, SegmentDescriptor> segment = entry.getKey();
-        CacheBroker.NamedKey segmentCacheKey = entry.getValue();
+        Cache.NamedKey segmentCacheKey = entry.getValue();
 
         final ServerSelector selector = segment.lhs;
         final SegmentDescriptor descriptor = segment.rhs;
@@ -188,7 +187,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           final String segmentIdentifier = selector.getSegment().getIdentifier();
           cachePopulatorMap.put(
               String.format("%s_%s", segmentIdentifier, segmentQueryInterval),
-              new CachePopulator(cacheBroker, objectMapper, segmentCacheKey)
+              new CachePopulator(cache, objectMapper, segmentCacheKey)
           );
         }
       }
@@ -341,12 +340,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     );
   }
 
-  private CacheBroker.NamedKey computeSegmentCacheKey(String segmentIdentifier, SegmentDescriptor descriptor, byte[] queryCacheKey)
+  private Cache.NamedKey computeSegmentCacheKey(String segmentIdentifier, SegmentDescriptor descriptor, byte[] queryCacheKey)
   {
     final Interval segmentQueryInterval = descriptor.getInterval();
     final byte[] versionBytes = descriptor.getVersion().getBytes();
 
-    return new CacheBroker.NamedKey(
+    return new Cache.NamedKey(
         segmentIdentifier, ByteBuffer
         .allocate(16 + versionBytes.length + 4 + queryCacheKey.length)
         .putLong(segmentQueryInterval.getStartMillis())
@@ -359,11 +358,11 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
   private static class CachePopulator
   {
-    private final CacheBroker cache;
+    private final Cache cache;
     private final ObjectMapper mapper;
-    private final CacheBroker.NamedKey key;
+    private final Cache.NamedKey key;
 
-    public CachePopulator(CacheBroker cache, ObjectMapper mapper, CacheBroker.NamedKey key)
+    public CachePopulator(Cache cache, ObjectMapper mapper, Cache.NamedKey key)
     {
       this.cache = cache;
       this.mapper = mapper;
