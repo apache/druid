@@ -140,7 +140,7 @@ public class YeOldePlumberSchool implements PlumberSchool
           }
 
           // Map merged segment so we can extract dimensions
-          final MMappedIndex mappedSegment = IndexIO.mapDir(fileToUpload);
+          final QueryableIndex mappedSegment = IndexIO.loadIndex(fileToUpload);
 
           final DataSegment segmentToUpload = theSink.getSegment()
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
