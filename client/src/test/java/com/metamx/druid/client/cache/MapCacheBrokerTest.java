@@ -43,12 +43,12 @@ public class MapCacheBrokerTest
   @Test
   public void testSanity() throws Exception
   {
-    Assert.assertNull(cache.get("a", HI));
+    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HI)));
     Assert.assertEquals(0, baseMap.size());
     put(cache, "a", HI, 1);
     Assert.assertEquals(1, baseMap.size());
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get("the", HI));
+    Assert.assertNull(cache.get(new CacheBroker.NamedKey("the", HI)));
 
     put(cache, "the", HI, 2);
     Assert.assertEquals(2, baseMap.size());
@@ -58,26 +58,26 @@ public class MapCacheBrokerTest
     put(cache, "the", HO, 10);
     Assert.assertEquals(3, baseMap.size());
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get("a", HO));
+    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HO)));
     Assert.assertEquals(2, get(cache, "the", HI));
     Assert.assertEquals(10, get(cache, "the", HO));
 
     cache.close("the");
     Assert.assertEquals(1, baseMap.size());
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get("a", HO));
+    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HO)));
 
     cache.close("a");
     Assert.assertEquals(0, baseMap.size());
   }
 
-  public void put(CacheBroker cache, String identifier, byte[] key, Integer value)
+  public void put(CacheBroker cache, String namespace, byte[] key, Integer value)
   {
-    cache.put(identifier, key, Ints.toByteArray(value));
+    cache.put(new CacheBroker.NamedKey(namespace, key), Ints.toByteArray(value));
   }
 
-  public int get(CacheBroker cache, String identifier, byte[] key)
+  public int get(CacheBroker cache, String namespace, byte[] key)
   {
-    return Ints.fromByteArray(cache.get(identifier, key));
+    return Ints.fromByteArray(cache.get(new CacheBroker.NamedKey(namespace, key)));
   }
 }

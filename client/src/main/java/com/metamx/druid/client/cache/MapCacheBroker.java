@@ -94,32 +94,32 @@ public class MapCacheBroker implements CacheBroker
   }
 
   @Override
-  public byte[] get(String identifier, byte[] key)
+  public byte[] get(NamedKey key)
   {
-    return provideCache(identifier).get(key);
+    return provideCache(key.namespace).get(key.key);
   }
 
   @Override
-  public void put(String identifier, byte[] key, byte[] value)
+  public void put(NamedKey key, byte[] value)
   {
-    provideCache(identifier).put(key, value);
+    provideCache(key.namespace).put(key.key, value);
   }
 
   @Override
-  public Map<Pair<String, ByteBuffer>, byte[]> getBulk(Iterable<Pair<String, ByteBuffer>> identifierKeyPairs)
+  public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
   {
-    Map<Pair<String, ByteBuffer>, byte[]> retVal = Maps.newHashMap();
+    Map<NamedKey, byte[]> retVal = Maps.newHashMap();
 
-    for(Pair<String, ByteBuffer> e : identifierKeyPairs) {
-      retVal.put(e, provideCache(e.lhs).get(e.rhs.array()));
+    for(NamedKey key : keys) {
+      retVal.put(key, provideCache(key.namespace).get(key.key));
     }
     return retVal;
   }
 
   @Override
-  public void close(String identifier)
+  public void close(String namespace)
   {
-    provideCache(identifier).close();
+    provideCache(namespace).close();
   }
 
   private Cache provideCache(final String identifier)
@@ -148,7 +148,7 @@ public class MapCacheBroker implements CacheBroker
             }
             return retVal;
           }
-          throw new ISE("Cache for identifier[%s] is closed.", identifier);
+          throw new ISE("Cache for namespace[%s] is closed.", identifier);
         }
 
         @Override
@@ -160,7 +160,7 @@ public class MapCacheBroker implements CacheBroker
               return;
             }
           }
-          throw new ISE("Cache for identifier[%s] is closed.", identifier);
+          throw new ISE("Cache for namespace[%s] is closed.", identifier);
         }
 
         @Override

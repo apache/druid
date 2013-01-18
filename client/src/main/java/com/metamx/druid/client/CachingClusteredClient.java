@@ -21,6 +21,7 @@ package com.metamx.druid.client;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -133,7 +134,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       return Sequences.empty();
     }
 
-    Map<Pair<ServerSelector, SegmentDescriptor>, Pair<String, ByteBuffer>> segments = Maps.newLinkedHashMap();
+    Map<Pair<ServerSelector, SegmentDescriptor>, CacheBroker.NamedKey> segments = Maps.newLinkedHashMap();
 
     final byte[] queryCacheKey = (strategy != null) ? strategy.computeCacheKey(query) : null;
 
@@ -156,21 +157,13 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       }
     }
 
-    Map<Pair<String, ByteBuffer>, byte[]> cachedValues = cacheBroker.getBulk(
-        Iterables.filter(segments.values(), new Predicate<Pair<String, ByteBuffer>>()
-            {
-              @Override
-              public boolean apply(
-                  @Nullable Pair<String, ByteBuffer> input
-              )
-              {
-                return input != null;
-              }
-            })
+    Map<CacheBroker.NamedKey, byte[]> cachedValues = cacheBroker.getBulk(
+        Iterables.filter(segments.values(), Predicates.notNull())
     );
 
-    for(Pair<ServerSelector, SegmentDescriptor> segment : segments.keySet()) {
-      Pair<String, ByteBuffer> segmentCacheKey = segments.get(segment);
+    for(Map.Entry<Pair<ServerSelector, SegmentDescriptor>, CacheBroker.NamedKey> entry : segments.entrySet()) {
+      Pair<ServerSelector, SegmentDescriptor> segment = entry.getKey();
+      CacheBroker.NamedKey segmentCacheKey = entry.getValue();
 
       final ServerSelector selector = segment.lhs;
       final SegmentDescriptor descriptor = segment.rhs;
@@ -335,19 +328,19 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     );
   }
 
-  private Pair<String, ByteBuffer> computeSegmentCacheKey(String segmentIdentifier, SegmentDescriptor descriptor, byte[] queryCacheKey)
+  private CacheBroker.NamedKey computeSegmentCacheKey(String segmentIdentifier, SegmentDescriptor descriptor, byte[] queryCacheKey)
   {
     final Interval segmentQueryInterval = descriptor.getInterval();
     final byte[] versionBytes = descriptor.getVersion().getBytes();
 
-    return Pair.of(
+    return new CacheBroker.NamedKey(
         segmentIdentifier, ByteBuffer
         .allocate(16 + versionBytes.length + 4 + queryCacheKey.length)
         .putLong(segmentQueryInterval.getStartMillis())
         .putLong(segmentQueryInterval.getEndMillis())
         .put(versionBytes)
         .putInt(descriptor.getPartitionNumber())
-        .put(queryCacheKey)
+        .put(queryCacheKey).array()
     );
   }
 
@@ -355,9 +348,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   {
     private final CacheBroker cache;
     private final ObjectMapper mapper;
-    private final Pair<String, ByteBuffer> key;
+    private final CacheBroker.NamedKey key;
 
-    public CachePopulator(CacheBroker cache, ObjectMapper mapper, Pair<String, ByteBuffer> key)
+    public CachePopulator(CacheBroker cache, ObjectMapper mapper, CacheBroker.NamedKey key)
     {
       this.cache = cache;
       this.mapper = mapper;
@@ -382,7 +375,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           offset += array.length;
         }
 
-        cache.put(key.lhs, key.rhs.array(), valueBytes);
+        cache.put(key, valueBytes);
       }
       catch (IOException e) {
         throw Throwables.propagate(e);

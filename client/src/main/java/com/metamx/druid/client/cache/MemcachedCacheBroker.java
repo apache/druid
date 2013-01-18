@@ -21,9 +21,7 @@ package com.metamx.druid.client.cache;
 
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.metamx.common.Pair;
 import net.iharder.base64.Base64;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -36,8 +34,6 @@ import net.spy.memcached.transcoders.SerializingTranscoder;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -103,9 +99,9 @@ public class MemcachedCacheBroker implements CacheBroker
   }
 
   @Override
-  public byte[] get(String identifier, byte[] key)
+  public byte[] get(NamedKey key)
   {
-    Future<Object> future = client.asyncGet(computeKey(identifier, key));
+    Future<Object> future = client.asyncGet(computeKeyString(key));
     try {
       byte[] bytes = (byte[]) future.get(timeout, TimeUnit.MILLISECONDS);
       if(bytes != null) {
@@ -131,24 +127,24 @@ public class MemcachedCacheBroker implements CacheBroker
   }
 
   @Override
-  public void put(String identifier, byte[] key, byte[] value)
+  public void put(NamedKey key, byte[] value)
   {
-    client.set(computeKey(identifier, key), expiration, value);
+    client.set(computeKeyString(key), expiration, value);
   }
 
   @Override
-  public Map<Pair<String, ByteBuffer>, byte[]> getBulk(Iterable<Pair<String, ByteBuffer>> identifierKeyPairs)
+  public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
   {
-    Map<String, Pair<String, ByteBuffer>> keyLookup = Maps.uniqueIndex(
-        identifierKeyPairs,
-        new Function<Pair<String, ByteBuffer>, String>()
+    Map<String, NamedKey> keyLookup = Maps.uniqueIndex(
+        keys,
+        new Function<NamedKey, String>()
         {
           @Override
           public String apply(
-              @Nullable Pair<String, ByteBuffer> input
+              @Nullable NamedKey input
           )
           {
-            return computeKey(input.lhs, input.rhs.array());
+            return computeKeyString(input);
           }
         }
     );
@@ -165,7 +161,7 @@ public class MemcachedCacheBroker implements CacheBroker
       missCount.addAndGet(keyLookup.size() - some.size());
       hitCount.addAndGet(some.size());
 
-      Map<Pair<String, ByteBuffer>, byte[]> results = Maps.newHashMap();
+      Map<NamedKey, byte[]> results = Maps.newHashMap();
       for(Map.Entry<String, Object> entry : some.entrySet()) {
         results.put(
             keyLookup.get(entry.getKey()),
@@ -185,12 +181,12 @@ public class MemcachedCacheBroker implements CacheBroker
   }
 
   @Override
-  public void close(String identifier)
+  public void close(String namespace)
   {
     // no resources to cleanup
   }
 
-  private String computeKey(String identifier, byte[] key) {
-    return identifier + ":" + Base64.encodeBytes(key, Base64.DONT_BREAK_LINES);
+  private static String computeKeyString(NamedKey key) {
+    return key.namespace + ":" + Base64.encodeBytes(key.key, Base64.DONT_BREAK_LINES);
   }
 }

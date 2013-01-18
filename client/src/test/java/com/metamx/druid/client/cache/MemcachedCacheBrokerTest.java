@@ -68,10 +68,10 @@ public class MemcachedCacheBrokerTest
   @Test
   public void testSanity() throws Exception
   {
-    Assert.assertNull(cache.get("a", HI));
+    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HI)));
     put(cache, "a", HI, 1);
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get("the", HI));
+    Assert.assertNull(cache.get(new CacheBroker.NamedKey("the", HI)));
 
     put(cache, "the", HI, 2);
     Assert.assertEquals(1, get(cache, "a", HI));
@@ -79,13 +79,13 @@ public class MemcachedCacheBrokerTest
 
     put(cache, "the", HO, 10);
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get("a", HO));
+    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HO)));
     Assert.assertEquals(2, get(cache, "the", HI));
     Assert.assertEquals(10, get(cache, "the", HO));
 
     cache.close("the");
     Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get("a", HO));
+    Assert.assertNull(cache.get(new CacheBroker.NamedKey("a", HO)));
 
     cache.close("a");
   }
@@ -93,15 +93,15 @@ public class MemcachedCacheBrokerTest
   @Test
   public void testGetBulk() throws Exception
   {
-    Assert.assertNull(cache.get("the", HI));
+    Assert.assertNull(cache.get(new CacheBroker.NamedKey("the", HI)));
 
     put(cache, "the", HI, 2);
     put(cache, "the", HO, 10);
 
-    Pair<String, ByteBuffer> key1 = Pair.of("the", ByteBuffer.wrap(HI));
-    Pair<String, ByteBuffer> key2 = Pair.of("the", ByteBuffer.wrap(HO));
+    CacheBroker.NamedKey key1 = new CacheBroker.NamedKey("the", HI);
+    CacheBroker.NamedKey key2 = new CacheBroker.NamedKey("the", HO);
 
-    Map<Pair<String, ByteBuffer>, byte[]> result = cache.getBulk(
+    Map<CacheBroker.NamedKey, byte[]> result = cache.getBulk(
         Lists.newArrayList(
             key1,
             key2
@@ -112,14 +112,14 @@ public class MemcachedCacheBrokerTest
     Assert.assertEquals(10, Ints.fromByteArray(result.get(key2)));
   }
 
-  public void put(CacheBroker cache, String identifier, byte[] key, Integer value)
+  public void put(CacheBroker cache, String namespace, byte[] key, Integer value)
   {
-    cache.put(identifier, key, Ints.toByteArray(value));
+    cache.put(new CacheBroker.NamedKey(namespace, key), Ints.toByteArray(value));
   }
 
-  public int get(CacheBroker cache, String identifier, byte[] key)
+  public int get(CacheBroker cache, String namespace, byte[] key)
   {
-    return Ints.fromByteArray(cache.get(identifier, key));
+    return Ints.fromByteArray(cache.get(new CacheBroker.NamedKey(namespace, key)));
   }
 }
 

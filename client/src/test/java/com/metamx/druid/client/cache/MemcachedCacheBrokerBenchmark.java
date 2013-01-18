@@ -4,7 +4,6 @@ import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.collect.Lists;
-import com.metamx.common.Pair;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.DefaultHashAlgorithm;
@@ -13,7 +12,6 @@ import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -22,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
 {
   private static final String BASE_KEY = "test_2012-11-26T00:00:00.000Z_2012-11-27T00:00:00.000Z_2012-11-27T04:11:25.979Z_";
-  public static final String IDENTIFIER = "default";
+  public static final String NAMESPACE = "default";
 
   private MemcachedCacheBroker cache;
   private MemcachedClientIF client;
@@ -77,7 +75,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
     for(int i = 0; i < reps; ++i) {
       for(int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        cache.put(IDENTIFIER, key.getBytes(), randBytes);
+        cache.put(new CacheBroker.NamedKey(NAMESPACE, key.getBytes()), randBytes);
       }
       // make sure the write queue is empty
       client.waitForQueues(1, TimeUnit.HOURS);
@@ -90,7 +88,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
     for (int i = 0; i < reps; i++) {
       for(int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        bytes = cache.get(IDENTIFIER, key.getBytes());
+        bytes = cache.get(new CacheBroker.NamedKey(NAMESPACE, key.getBytes()));
         count += bytes.length;
       }
     }
@@ -100,13 +98,13 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
   public long timeBulkGetObjects(int reps) {
     long count = 0;
     for (int i = 0; i < reps; i++) {
-      List<Pair<String, ByteBuffer>> keys = Lists.newArrayList();
+      List<CacheBroker.NamedKey> keys = Lists.newArrayList();
       for(int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
-        keys.add(Pair.of(IDENTIFIER, ByteBuffer.wrap(key.getBytes())));
+        keys.add(new CacheBroker.NamedKey(NAMESPACE, key.getBytes()));
       }
-      Map<Pair<String, ByteBuffer>, byte[]> results = cache.getBulk(keys);
-      for(Pair<String, ByteBuffer> key : keys) {
+      Map<CacheBroker.NamedKey, byte[]> results = cache.getBulk(keys);
+      for(CacheBroker.NamedKey key : keys) {
         byte[] bytes = results.get(key);
         count += bytes.length;
       }
