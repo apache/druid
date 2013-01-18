@@ -122,6 +122,7 @@ public class MemcachedCacheBroker implements CacheBroker
       return null;
     }
     catch(InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw Throwables.propagate(e);
     }
     catch(ExecutionException e) {
@@ -175,6 +176,7 @@ public class MemcachedCacheBroker implements CacheBroker
       return results;
     }
     catch(InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw Throwables.propagate(e);
     }
     catch(ExecutionException e) {
