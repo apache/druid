@@ -28,16 +28,16 @@ import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.Query;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.index.v1.MMappedIndex;
+import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.PlumberSchool;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.realtime.Sink;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -130,13 +130,13 @@ public class YeOldePlumberSchool implements PlumberSchool
           } else if(spilled.size() == 1) {
             fileToUpload = Iterables.getOnlyElement(spilled);
           } else {
-            List<MMappedIndex> indexes = Lists.newArrayList();
+            List<QueryableIndex> indexes = Lists.newArrayList();
             for (final File oneSpill : spilled) {
-              indexes.add(IndexIO.mapDir(oneSpill));
+              indexes.add(IndexIO.loadIndex(oneSpill));
             }
 
             fileToUpload = new File(tmpSegmentDir, "merged");
-            IndexMerger.mergeMMapped(indexes, schema.getAggregators(), fileToUpload);
+            IndexMerger.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload);
           }
 
           // Map merged segment so we can extract dimensions

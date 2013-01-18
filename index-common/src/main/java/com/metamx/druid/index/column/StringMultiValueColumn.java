@@ -56,6 +56,12 @@ public class StringMultiValueColumn extends AbstractColumn
   }
 
   @Override
+  public int getLength()
+  {
+    return column.size();
+  }
+
+  @Override
   public DictionaryEncodedColumn getDictionaryEncoding()
   {
     return new DictionaryEncodedColumn()
@@ -64,6 +70,12 @@ public class StringMultiValueColumn extends AbstractColumn
       public int size()
       {
         return column.size();
+      }
+
+      @Override
+      public boolean hasMultipleValues()
+      {
+        return true;
       }
 
       @Override

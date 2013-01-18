@@ -21,6 +21,7 @@ package com.metamx.druid.index.v1;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -58,6 +59,7 @@ import com.metamx.druid.kv.IndexedIterable;
 import com.metamx.druid.kv.VSizeIndexed;
 import com.metamx.druid.kv.VSizeIndexedInts;
 import com.metamx.druid.utils.SerializerUtils;
+import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Interval;
@@ -70,6 +72,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.AbstractList;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -99,7 +102,7 @@ public class IndexIO
 
   private static final Logger log = new Logger(IndexIO.class);
   private static final SerializerUtils serializerUtils = new SerializerUtils();
-  private static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
+  public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 
   // This should really be provided by DI, should be changed once we switch around to using a DI framework
   private static final ObjectMapper mapper = new DefaultObjectMapper();
@@ -120,6 +123,7 @@ public class IndexIO
     return handler.canBeMapped(inDir);
   }
 
+  @Deprecated
   public static MMappedIndex mapDir(final File inDir) throws IOException
   {
     init();
@@ -332,7 +336,7 @@ public class IndexIO
       throw new UnsupportedOperationException("Shouldn't ever happen in a cluster that is not owned by MMX.");
     }
 
-    public void convertV8toV9(File v8Dir, File v9Dir) throws IOException
+    public static void convertV8toV9(File v8Dir, File v9Dir) throws IOException
     {
       log.info("Converting v8[%s] to v9[%s]", v8Dir, v9Dir);
 
@@ -383,22 +387,70 @@ public class IndexIO
           serializerUtils.writeString(nameBAOS, dimension);
           outParts.add(ByteBuffer.wrap(nameBAOS.toByteArray()));
 
-          final GenericIndexed<String> dictionary = GenericIndexed.read(
+          GenericIndexed<String> dictionary = GenericIndexed.read(
               dimBuffer, GenericIndexed.stringStrategy
           );
+
           VSizeIndexedInts singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
+          GenericIndexed<ImmutableConciseSet> bitmaps = bitmapIndexes.get(dimension);
+
           boolean onlyOneValue = true;
-          for (VSizeIndexedInts rowValue : multiValCol) {
+          ConciseSet nullsSet = null;
+          for (int i = 0; i < multiValCol.size(); ++i) {
+            VSizeIndexedInts rowValue = multiValCol.get(i);
             if (!onlyOneValue) {
               break;
             }
             if (rowValue.size() > 1) {
               onlyOneValue = false;
             }
+            if (rowValue.size() == 0) {
+              if (nullsSet == null) {
+                nullsSet = new ConciseSet();
+              }
+              nullsSet.add(i);
+            }
           }
 
           if (onlyOneValue) {
+            log.info("Dimension[%s] is single value, converting...", dimension);
+            final boolean bumpedDictionary;
+            if (nullsSet != null) {
+              log.info("Dimension[%s] has null rows.", dimension);
+              final ImmutableConciseSet theNullSet = ImmutableConciseSet.newImmutableFromMutable(nullsSet);
+
+              if (dictionary.get(0) != null) {
+                log.info("Dimension[%s] has no null value in the dictionary, expanding...", dimension);
+                bumpedDictionary = true;
+                final List<String> nullList = Lists.newArrayList();
+                nullList.add(null);
+
+                dictionary = GenericIndexed.fromIterable(
+                    Iterables.concat(nullList, dictionary),
+                    GenericIndexed.stringStrategy
+                );
+
+                bitmaps = GenericIndexed.fromIterable(
+                    Iterables.concat(Arrays.asList(theNullSet), bitmaps),
+                    ConciseCompressedIndexedInts.objectStrategy
+                );
+              }
+              else {
+                bumpedDictionary = false;
+                bitmaps = GenericIndexed.fromIterable(
+                    Iterables.concat(
+                        Arrays.asList(ImmutableConciseSet.union(theNullSet, bitmaps.get(0))),
+                        Iterables.skip(bitmaps, 1)
+                    ),
+                    ConciseCompressedIndexedInts.objectStrategy
+                );
+              }
+            }
+            else {
+              bumpedDictionary = false;
+            }
+
             final VSizeIndexed finalMultiValCol = multiValCol;
             singleValCol = VSizeIndexedInts.fromList(
                 new AbstractList<Integer>()
@@ -406,7 +458,8 @@ public class IndexIO
                   @Override
                   public Integer get(int index)
                   {
-                    return finalMultiValCol.get(index).get(0);
+                    final VSizeIndexedInts ints = finalMultiValCol.get(index);
+                    return ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0);
                   }
 
                   @Override
@@ -423,7 +476,7 @@ public class IndexIO
           }
 
           builder.addSerde(
-              new DictionaryEncodedColumnPartSerde(dictionary, singleValCol, multiValCol, bitmapIndexes.get(dimension))
+              new DictionaryEncodedColumnPartSerde(dictionary, singleValCol, multiValCol, bitmaps)
           );
 
           final ColumnDescriptor serdeficator = builder.build();
@@ -587,7 +640,7 @@ public class IndexIO
                   .setType(ValueType.COMPLEX)
                   .setComplexColumn(
                       new ComplexColumnPartSupplier(
-                          (GenericIndexed) metricHolder.complexType, metricHolder.getTypeName()
+                          metricHolder.getTypeName(), (GenericIndexed) metricHolder.complexType
                       )
                   )
                   .build()

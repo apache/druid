@@ -36,25 +36,28 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
 {
   @JsonCreator
   public static ComplexColumnPartSerde createDeserializer(
-      @JsonProperty("complexType") String complexType
+      @JsonProperty("typeName") String complexType
   )
   {
     return new ComplexColumnPartSerde(null, complexType);
   }
 
   private final GenericIndexed column;
+  private final String typeName;
+
   private final ComplexMetricSerde serde;
 
-  public ComplexColumnPartSerde(GenericIndexed column, String complexType)
+  public ComplexColumnPartSerde(GenericIndexed column, String typeName)
   {
     this.column = column;
-    serde = ComplexMetrics.getSerdeForType(complexType);
+    this.typeName = typeName;
+    serde = ComplexMetrics.getSerdeForType(typeName);
   }
 
   @JsonProperty
-  public GenericIndexed getColumn()
+  public String getTypeName()
   {
-    return column;
+    return typeName;
   }
 
   @Override

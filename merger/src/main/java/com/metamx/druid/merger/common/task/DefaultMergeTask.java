@@ -25,9 +25,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.index.v1.MMappedIndex;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
@@ -57,16 +57,16 @@ public class DefaultMergeTask extends MergeTask
   public File merge(final Map<DataSegment, File> segments, final File outDir)
       throws Exception
   {
-    return IndexMerger.mergeMMapped(
+    return IndexMerger.mergeQueryableIndex(
         Lists.transform(
             ImmutableList.copyOf(segments.values()),
-            new Function<File, MMappedIndex>()
+            new Function<File, QueryableIndex>()
             {
               @Override
-              public MMappedIndex apply(@Nullable File input)
+              public QueryableIndex apply(@Nullable File input)
               {
                 try {
-                  return IndexIO.mapDir(input);
+                  return IndexIO.loadIndex(input);
                 }
                 catch (Exception e) {
                   throw Throwables.propagate(e);
