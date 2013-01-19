@@ -22,6 +22,7 @@ package com.metamx.druid.merger.coordinator.http;
 import com.google.inject.Provides;
 import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -38,18 +39,21 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
   private final IndexerCoordinatorConfig indexerCoordinatorConfig;
   private final ServiceEmitter emitter;
   private final TaskQueue tasks;
+  private final WorkerSetupManager workerSetupManager;
 
   public IndexerCoordinatorServletModule(
       ObjectMapper jsonMapper,
       IndexerCoordinatorConfig indexerCoordinatorConfig,
       ServiceEmitter emitter,
-      TaskQueue tasks
+      TaskQueue tasks,
+      WorkerSetupManager workerSetupManager
   )
   {
     this.jsonMapper = jsonMapper;
     this.indexerCoordinatorConfig = indexerCoordinatorConfig;
     this.emitter = emitter;
     this.tasks = tasks;
+    this.workerSetupManager = workerSetupManager;
   }
 
   @Override
@@ -60,6 +64,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
     bind(IndexerCoordinatorConfig.class).toInstance(indexerCoordinatorConfig);
     bind(ServiceEmitter.class).toInstance(emitter);
     bind(TaskQueue.class).toInstance(tasks);
+    bind(WorkerSetupManager.class).toInstance(workerSetupManager);
 
     serve("/*").with(GuiceContainer.class);
   }

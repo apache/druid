@@ -28,6 +28,8 @@ import com.metamx.druid.merger.common.task.MergeTask;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.service.ServiceEmitter;
 
 import javax.ws.rs.Consumes;
@@ -48,18 +50,21 @@ public class IndexerCoordinatorResource
   private final IndexerCoordinatorConfig config;
   private final ServiceEmitter emitter;
   private final TaskQueue tasks;
+  private final WorkerSetupManager workerSetupManager;
 
   @Inject
   public IndexerCoordinatorResource(
       IndexerCoordinatorConfig config,
       ServiceEmitter emitter,
-      TaskQueue tasks
+      TaskQueue tasks,
+      WorkerSetupManager workerSetupManager
 
   ) throws Exception
   {
     this.config = config;
     this.emitter = emitter;
     this.tasks = tasks;
+    this.workerSetupManager = workerSetupManager;
   }
 
   @POST
@@ -114,5 +119,26 @@ public class IndexerCoordinatorResource
   private Response okResponse(final String taskid)
   {
     return Response.ok(ImmutableMap.of("task", taskid)).build();
+  }
+
+  @GET
+  @Path("/worker/setup")
+  @Produces("application/json")
+  public Response getWorkerSetupData()
+  {
+    return Response.ok(workerSetupManager.getWorkerSetupData()).build();
+  }
+
+  @POST
+  @Path("/worker/setup")
+  @Consumes("application/json")
+  public Response setWorkerSetupData(
+      final WorkerSetupData workerSetupData
+  )
+  {
+    if (!workerSetupManager.setWorkerSetupData(workerSetupData)) {
+      return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+    return Response.ok().build();
   }
 }

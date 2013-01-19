@@ -59,6 +59,18 @@ public class DbConnector
     );
   }
 
+  public static void createConfigTable(final DBI dbi, final String configTableName)
+  {
+    createTable(
+        dbi,
+        configTableName,
+        String.format(
+            "CREATE table %s (name VARCHAR(255) NOT NULL, payload LONGTEXT NOT NULL, PRIMARY KEY(name))",
+            configTableName
+        )
+    );
+  }
+
   public static void createTable(
       final DBI dbi,
       final String tableName,

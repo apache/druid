@@ -17,22 +17,46 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator.scaling;
+package com.metamx.druid.merger.coordinator.setup;
 
-import java.util.List;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  */
-public interface ScalingStrategy<T>
+public class GalaxyUserData
 {
-  public AutoScalingData<T> provision();
+  public final String env;
+  public final String version;
+  public final String type;
 
-  public AutoScalingData<T> terminate(List<String> ids);
+  @JsonCreator
+  public GalaxyUserData(
+      @JsonProperty("env") String env,
+      @JsonProperty("version") String version,
+      @JsonProperty("type") String type
+  )
+  {
+    this.env = env;
+    this.version = version;
+    this.type = type;
+  }
 
-  /**
-   * Provides a lookup of ip addresses to node ids
-   * @param ips
-   * @return
-   */
-  public List<String> ipLookup(List<String> ips);
+  @JsonProperty
+  public String getEnv()
+  {
+    return env;
+  }
+
+  @JsonProperty
+  public String getVersion()
+  {
+    return version;
+  }
+
+  @JsonProperty
+  public String getType()
+  {
+    return type;
+  }
 }
