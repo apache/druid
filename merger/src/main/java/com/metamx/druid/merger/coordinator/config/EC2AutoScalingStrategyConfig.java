@@ -26,24 +26,7 @@ import org.skife.config.Default;
  */
 public abstract class EC2AutoScalingStrategyConfig
 {
-  @Config("druid.indexer.amiId")
-  public abstract String getAmiId();
-
   @Config("druid.indexer.worker.port")
   @Default("8080")
   public abstract String getWorkerPort();
-
-  @Config("druid.indexer.instanceType")
-  public abstract String getInstanceType();
-
-  @Config("druid.indexer.minNumInstancesToProvision")
-  @Default("1")
-  public abstract int getMinNumInstancesToProvision();
-
-  @Config("druid.indexer.maxNumInstancesToProvision")
-  @Default("1")
-  public abstract int getMaxNumInstancesToProvision();
-
-  @Config("druid.indexer.userDataFile")
-  public abstract String getUserDataFile();
 }
