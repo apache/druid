@@ -17,22 +17,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator.scaling;
+package com.metamx.druid.merger.coordinator.config;
 
-import java.util.List;
+import org.joda.time.Duration;
+import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
-public interface ScalingStrategy<T>
+public abstract class WorkerSetupManagerConfig
 {
-  public AutoScalingData<T> provision();
+  @Config("druid.indexer.configTable")
+  public abstract String getConfigTable();
 
-  public AutoScalingData<T> terminate(List<String> ids);
+  @Config("druid.indexer.workerSetupConfigName")
+  public abstract String getWorkerSetupConfigName();
 
-  /**
-   * Provides a lookup of ip addresses to node ids
-   * @param ips
-   * @return
-   */
-  public List<String> ipLookup(List<String> ips);
+  @Config("druid.indexer.poll.duration")
+  @Default("PT1M")
+  public abstract Duration getPollDuration();
 }

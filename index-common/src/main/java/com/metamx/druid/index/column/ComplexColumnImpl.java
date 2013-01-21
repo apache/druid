@@ -29,10 +29,12 @@ public class ComplexColumnImpl extends AbstractColumn
       .setType(ValueType.COMPLEX);
 
   private final Indexed column;
+  private final String typeName;
 
-  public ComplexColumnImpl(Indexed column)
+  public ComplexColumnImpl(String typeName, Indexed column)
   {
     this.column = column;
+    this.typeName = typeName;
   }
 
   @Override
@@ -42,8 +44,14 @@ public class ComplexColumnImpl extends AbstractColumn
   }
 
   @Override
+  public int getLength()
+  {
+    return column.size();
+  }
+
+  @Override
   public ComplexColumn getComplexColumn()
   {
-    return new IndexedComplexColumn(column);
+    return new IndexedComplexColumn(typeName, column);
   }
 }

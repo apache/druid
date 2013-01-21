@@ -46,7 +46,13 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn
   @Override
   public int size()
   {
-    return column == null ? multiValueColumn.size() : column.size();
+    return hasMultipleValues() ? multiValueColumn.size() : column.size();
+  }
+
+  @Override
+  public boolean hasMultipleValues()
+  {
+    return column == null;
   }
 
   @Override

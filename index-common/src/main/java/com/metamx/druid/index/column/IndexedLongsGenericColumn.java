@@ -44,6 +44,18 @@ public class IndexedLongsGenericColumn implements GenericColumn
   }
 
   @Override
+  public ValueType getType()
+  {
+    return ValueType.LONG;
+  }
+
+  @Override
+  public boolean hasMultipleValues()
+  {
+    return false;
+  }
+
+  @Override
   public String getStringSingleValueRow(int rowNum)
   {
     throw new UnsupportedOperationException();

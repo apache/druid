@@ -308,30 +308,21 @@ public class RealtimePlumberSchool implements PlumberSchool
 
                           final File mergedFile;
                           try {
-                            List<MMappedIndex> indexes = Lists.newArrayList();
+                            List<QueryableIndex> indexes = Lists.newArrayList();
                             for (FireHydrant fireHydrant : sink) {
                               Segment segment = fireHydrant.getSegment();
                               final QueryableIndex queryableIndex = segment.asQueryableIndex();
-                              if (queryableIndex instanceof MMappedIndexQueryableIndex) {
-                                log.info("Adding hydrant[%s]", fireHydrant);
-                                indexes.add(((MMappedIndexQueryableIndex) queryableIndex).getIndex());
-                              }
-                              else {
-                                log.makeAlert("[%s] Failure to merge-n-push", schema.getDataSource())
-                                   .addData("type", "Unknown segment type")
-                                   .addData("adapterClass", segment.getClass().toString())
-                                   .emit();
-                                return;
-                              }
+                              log.info("Adding hydrant[%s]", fireHydrant);
+                              indexes.add(queryableIndex);
                             }
 
-                            mergedFile = IndexMerger.mergeMMapped(
+                            mergedFile = IndexMerger.mergeQueryableIndex(
                                 indexes,
                                 schema.getAggregators(),
                                 new File(computePersistDir(schema, interval), "merged")
                             );
 
-                            MMappedIndex index = IndexIO.mapDir(mergedFile);
+                            QueryableIndex index = IndexIO.loadIndex(mergedFile);
 
                             DataSegment segment = segmentPusher.push(
                                 mergedFile,
@@ -503,9 +494,7 @@ public class RealtimePlumberSchool implements PlumberSchool
           new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
       );
 
-      indexToPersist.swapSegment(
-          new QueryableIndexSegment(null, new MMappedIndexQueryableIndex(IndexIO.mapDir(persistedFile)))
-      );
+      indexToPersist.swapSegment(new QueryableIndexSegment(null, IndexIO.loadIndex(persistedFile)));
 
       return numRows;
     }

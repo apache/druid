@@ -59,6 +59,11 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     this.baseFloatBuffers = baseFloatBuffers;
   }
 
+  public int size()
+  {
+    return totalSize;
+  }
+
   @Override
   public IndexedFloats get()
   {

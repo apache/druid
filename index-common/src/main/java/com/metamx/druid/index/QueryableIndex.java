@@ -28,6 +28,7 @@ import org.joda.time.Interval;
 public interface QueryableIndex extends ColumnSelector
 {
   public Interval getDataInterval();
+  public int getNumRows();
   public Indexed<String> getColumnNames();
   public Indexed<String> getAvailableDimensions();
 }

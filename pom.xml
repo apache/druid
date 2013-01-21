@@ -68,7 +68,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>java-util</artifactId>
-                <version>0.18.0</version>
+                <version>0.19.1</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -84,7 +84,7 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.3</version>
+                <version>1.7</version>
             </dependency>
             <dependency>
                 <groupId>commons-httpclient</groupId>

@@ -24,7 +24,6 @@ import com.metamx.druid.kv.IOPeon;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteOrder;
 
 /**
  */
@@ -34,8 +33,7 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
   private final IOPeon ioPeon;
   private final File outDir;
 
-  private CompressedFloatsSupplierSerializer littleMetricsWriter;
-  private CompressedFloatsSupplierSerializer bigEndianMetricsWriter;
+  private CompressedFloatsSupplierSerializer writer;
 
   public FloatMetricColumnSerializer(
       String metricName,
@@ -51,43 +49,30 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
   @Override
   public void open() throws IOException
   {
-    littleMetricsWriter = CompressedFloatsSupplierSerializer.create(
-        ioPeon, String.format("%s_little", metricName), ByteOrder.LITTLE_ENDIAN
-    );
-    bigEndianMetricsWriter = CompressedFloatsSupplierSerializer.create(
-        ioPeon, String.format("%s_big", metricName), ByteOrder.BIG_ENDIAN
+    writer = CompressedFloatsSupplierSerializer.create(
+        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER
     );
 
-    littleMetricsWriter.open();
-    bigEndianMetricsWriter.open();
+    writer.open();
   }
 
   @Override
   public void serialize(Object obj) throws IOException
   {
     float val = (obj == null) ? 0 : ((Number) obj).floatValue();
-    littleMetricsWriter.add(val);
-    bigEndianMetricsWriter.add(val);
+    writer.add(val);
   }
 
   @Override
   public void close() throws IOException
   {
-    final File littleEndianFile = IndexIO.makeMetricFile(outDir, metricName, ByteOrder.LITTLE_ENDIAN);
-    littleEndianFile.delete();
+    final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
+    outFile.delete();
     MetricHolder.writeFloatMetric(
-        Files.newOutputStreamSupplier(littleEndianFile, true), metricName, littleMetricsWriter
+        Files.newOutputStreamSupplier(outFile, true), metricName, writer
     );
-    IndexIO.checkFileSize(littleEndianFile);
+    IndexIO.checkFileSize(outFile);
 
-    final File bigEndianFile = IndexIO.makeMetricFile(outDir, metricName, ByteOrder.BIG_ENDIAN);
-    bigEndianFile.delete();
-    MetricHolder.writeFloatMetric(
-        Files.newOutputStreamSupplier(bigEndianFile, true), metricName, bigEndianMetricsWriter
-    );
-    IndexIO.checkFileSize(bigEndianFile);
-
-    littleMetricsWriter = null;
-    bigEndianMetricsWriter = null;
+    writer = null;
   }
 }

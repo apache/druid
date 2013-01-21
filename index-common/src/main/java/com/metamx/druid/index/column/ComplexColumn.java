@@ -26,5 +26,6 @@ import java.io.Closeable;
 public interface ComplexColumn extends Closeable
 {
   public Class<?> getClazz();
+  public String getTypeName();
   public Object getRowValue(int rowNum);
 }

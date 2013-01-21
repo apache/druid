@@ -17,6 +17,8 @@ import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
 import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.TaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
@@ -62,13 +64,13 @@ public class RemoteTaskRunnerTest
   private PathChildrenCache pathChildrenCache;
   private RemoteTaskRunner remoteTaskRunner;
   private TaskMonitor taskMonitor;
+  private WorkerSetupManager workerSetupManager;
 
   private ScheduledExecutorService scheduledExec;
 
   private Task task1;
 
   private Worker worker1;
-
 
   @Before
   public void setUp() throws Exception
@@ -141,9 +143,10 @@ public class RemoteTaskRunnerTest
   {
     remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
     try {
-        remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
-        fail("ISE expected");
-    } catch (ISE expected) {
+      remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+      fail("ISE expected");
+    }
+    catch (ISE expected) {
 
     }
   }
@@ -333,6 +336,17 @@ public class RemoteTaskRunnerTest
   private void makeRemoteTaskRunner() throws Exception
   {
     scheduledExec = EasyMock.createMock(ScheduledExecutorService.class);
+    workerSetupManager = EasyMock.createMock(WorkerSetupManager.class);
+
+    EasyMock.expect(workerSetupManager.getWorkerSetupData()).andReturn(
+        new WorkerSetupData(
+            "0",
+            0,
+            null,
+            null
+        )
+    );
+    EasyMock.replay(workerSetupManager);
 
     remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
@@ -341,7 +355,8 @@ public class RemoteTaskRunnerTest
         pathChildrenCache,
         scheduledExec,
         new RetryPolicyFactory(new TestRetryPolicyConfig()),
-        new TestScalingStrategy()
+        new TestScalingStrategy(),
+        workerSetupManager
     );
 
     // Create a single worker and wait for things for be ready
@@ -389,6 +404,12 @@ public class RemoteTaskRunnerTest
     {
       return null;
     }
+
+    @Override
+    public List<String> ipLookup(List<String> ips)
+    {
+      return ips;
+    }
   }
 
   private static class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
@@ -403,18 +424,6 @@ public class RemoteTaskRunnerTest
     public DateTime getTerminateResourcesOriginDateTime()
     {
       return null;
-    }
-
-    @Override
-    public String getMinWorkerVersion()
-    {
-      return "0";
-    }
-
-    @Override
-    public int getMinNumWorkers()
-    {
-      return 0;
     }
 
     @Override

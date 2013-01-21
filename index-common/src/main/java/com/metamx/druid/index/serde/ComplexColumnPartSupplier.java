@@ -32,8 +32,7 @@ public class ComplexColumnPartSupplier implements Supplier<ComplexColumn>
   private final String typeName;
 
   public ComplexColumnPartSupplier(
-      final GenericIndexed complexType,
-      final String typeName
+      final String typeName, final GenericIndexed complexType
   ) {
     this.complexType = complexType;
     this.typeName = typeName;
@@ -42,6 +41,6 @@ public class ComplexColumnPartSupplier implements Supplier<ComplexColumn>
   @Override
   public ComplexColumn get()
   {
-    return new IndexedComplexColumn(complexType);
+    return new IndexedComplexColumn(typeName, complexType);
   }
 }

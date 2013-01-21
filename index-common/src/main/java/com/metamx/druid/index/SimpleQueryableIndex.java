@@ -57,6 +57,12 @@ public class SimpleQueryableIndex implements QueryableIndex
   }
 
   @Override
+  public int getNumRows()
+  {
+    return timeColumn.getLength();
+  }
+
+  @Override
   public Indexed<String> getColumnNames()
   {
     return columnNames;

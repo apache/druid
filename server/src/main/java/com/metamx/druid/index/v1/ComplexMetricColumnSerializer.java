@@ -19,7 +19,6 @@
 
 package com.metamx.druid.index.v1;
 
-import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.kv.FlattenedArrayWriter;
@@ -27,7 +26,6 @@ import com.metamx.druid.kv.IOPeon;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteOrder;
 
 /**
  */
@@ -75,18 +73,12 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
   {
     writer.close();
 
-    final File littleEndianFile = IndexIO.makeMetricFile(outDir, metricName, ByteOrder.LITTLE_ENDIAN);
-    littleEndianFile.delete();
+    final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
+    outFile.delete();
     MetricHolder.writeComplexMetric(
-        Files.newOutputStreamSupplier(littleEndianFile, true), metricName, serde.getTypeName(), writer
+        Files.newOutputStreamSupplier(outFile, true), metricName, serde.getTypeName(), writer
     );
-    IndexIO.checkFileSize(littleEndianFile);
-
-    final File bigEndianFile = IndexIO.makeMetricFile(outDir, metricName, ByteOrder.BIG_ENDIAN);
-    ByteStreams.copy(
-        Files.newInputStreamSupplier(littleEndianFile),
-        Files.newOutputStreamSupplier(bigEndianFile, false)
-    );
+    IndexIO.checkFileSize(outFile);
 
     writer = null;
   }
