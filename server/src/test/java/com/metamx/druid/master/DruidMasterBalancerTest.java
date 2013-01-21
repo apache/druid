@@ -224,7 +224,7 @@ public class DruidMasterBalancerTest
                                 .withLoadManagementPeons(ImmutableMap.of("from", peon, "to", peon))
                                 .withAvailableSegments(segments.values())
                                 .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
-                                .withBalancerCostAnalyzer(new BalancerCostAnalyzer(new DateTime("2013-01-01")))
+                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
     params = new DruidMasterBalancer(master).run(params);
@@ -373,7 +373,7 @@ public class DruidMasterBalancerTest
                                 .withLoadManagementPeons(ImmutableMap.of("1", peon, "2", peon, "3", peon, "4", peon))
                                 .withAvailableSegments(segments.values())
                                 .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
-                                .withBalancerCostAnalyzer(new BalancerCostAnalyzer(new DateTime("2013-01-01")))
+                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
     params = new DruidMasterBalancer(master).run(params);

@@ -27,6 +27,7 @@ import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.master.rules.RuleMap;
 import com.metamx.emitter.service.ServiceEmitter;
+import org.joda.time.DateTime;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -50,7 +51,7 @@ public class DruidMasterRuntimeParams
   private final long mergeBytesLimit;
   private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
-  private final BalancerCostAnalyzer balancerCostAnalyzer;
+  private final DateTime balancerReferenceTimestamp;
 
   public DruidMasterRuntimeParams(
       long startTime,
@@ -66,7 +67,7 @@ public class DruidMasterRuntimeParams
       long mergeBytesLimit,
       int mergeSegmentsLimit,
       int maxSegmentsToMove,
-      BalancerCostAnalyzer balancerCostAnalyzer
+      DateTime balancerReferenceTimestamp
   )
   {
     this.startTime = startTime;
@@ -82,7 +83,7 @@ public class DruidMasterRuntimeParams
     this.mergeBytesLimit = mergeBytesLimit;
     this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
-    this.balancerCostAnalyzer = balancerCostAnalyzer;
+    this.balancerReferenceTimestamp = balancerReferenceTimestamp;
   }
 
   public long getStartTime()
@@ -150,9 +151,14 @@ public class DruidMasterRuntimeParams
     return maxSegmentsToMove;
   }
 
-  public BalancerCostAnalyzer getBalancerCostAnalyzer()
+  public DateTime getBalancerReferenceTimestamp()
   {
-    return balancerCostAnalyzer;
+    return balancerReferenceTimestamp;
+  }
+
+  public BalancerCostAnalyzer getBalancerCostAnalyzer(DateTime referenceTimestamp)
+  {
+    return new BalancerCostAnalyzer(referenceTimestamp);
   }
 
   public boolean hasDeletionWaitTimeElapsed()
@@ -181,7 +187,7 @@ public class DruidMasterRuntimeParams
         mergeBytesLimit,
         mergeSegmentsLimit,
         maxSegmentsToMove,
-        balancerCostAnalyzer
+        balancerReferenceTimestamp
     );
   }
 
@@ -200,7 +206,7 @@ public class DruidMasterRuntimeParams
     private long mergeBytesLimit;
     private int mergeSegmentsLimit;
     private int maxSegmentsToMove;
-    private BalancerCostAnalyzer balancerCostAnalyzer;
+    private DateTime balancerReferenceTimestamp;
 
     Builder()
     {
@@ -217,7 +223,7 @@ public class DruidMasterRuntimeParams
       this.mergeBytesLimit = 0;
       this.mergeSegmentsLimit = 0;
       this.maxSegmentsToMove = 0;
-      this.balancerCostAnalyzer = null;
+      this.balancerReferenceTimestamp = null;
     }
 
     Builder(
@@ -234,7 +240,7 @@ public class DruidMasterRuntimeParams
         long mergeBytesLimit,
         int mergeSegmentsLimit,
         int maxSegmentsToMove,
-        BalancerCostAnalyzer balancerCostAnalyzer
+        DateTime balancerReferenceTimestamp
     )
     {
       this.startTime = startTime;
@@ -250,7 +256,7 @@ public class DruidMasterRuntimeParams
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
-      this.balancerCostAnalyzer = balancerCostAnalyzer;
+      this.balancerReferenceTimestamp = balancerReferenceTimestamp;
     }
 
     public DruidMasterRuntimeParams build()
@@ -269,7 +275,7 @@ public class DruidMasterRuntimeParams
           mergeBytesLimit,
           mergeSegmentsLimit,
           maxSegmentsToMove,
-          balancerCostAnalyzer
+          balancerReferenceTimestamp
       );
     }
 
@@ -351,9 +357,9 @@ public class DruidMasterRuntimeParams
       return this;
     }
 
-    public Builder withBalancerCostAnalyzer(BalancerCostAnalyzer balancerCostAnalyzer)
+    public Builder withBalancerReferenceTimestamp(DateTime balancerReferenceTimestamp)
     {
-      this.balancerCostAnalyzer = balancerCostAnalyzer;
+      this.balancerReferenceTimestamp = balancerReferenceTimestamp;
       return this;
     }
   }

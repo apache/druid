@@ -31,6 +31,7 @@ import com.metamx.druid.master.LoadPeonCallback;
 import com.metamx.druid.master.MasterStats;
 import com.metamx.druid.master.ServerHolder;
 import com.metamx.emitter.EmittingLogger;
+import org.joda.time.DateTime;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,7 +87,8 @@ public abstract class LoadRule implements Rule
 
     List<ServerHolder> assignedServers = Lists.newArrayList();
     while (totalReplicants < expectedReplicants) {
-      BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer();
+      final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
+      final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
       ServerHolder holder = analyzer.findNewSegmentHome(segment, serverHolderList);
 
       if (holder == null) {

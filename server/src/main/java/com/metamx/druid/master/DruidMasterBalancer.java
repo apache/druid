@@ -26,6 +26,7 @@ import com.metamx.common.guava.Comparators;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.emitter.EmittingLogger;
+import org.joda.time.DateTime;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -82,7 +83,8 @@ public class DruidMasterBalancer implements DruidMasterHelper
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
     final MasterStats stats = new MasterStats();
-    final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer();
+    final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
+    final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
     final int maxSegmentsToMove = params.getMaxSegmentsToMove();
 
     for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry :

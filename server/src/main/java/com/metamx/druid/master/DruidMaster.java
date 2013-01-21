@@ -671,7 +671,7 @@ public class DruidMaster
                                .withDruidCluster(cluster)
                                .withDatabaseRuleManager(databaseRuleManager)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
-                               .withBalancerCostAnalyzer(new BalancerCostAnalyzer(DateTime.now()))
+                               .withBalancerReferenceTimestamp(DateTime.now())
                                .build();
                 }
               },

@@ -176,7 +176,7 @@ public class DruidMasterRuleRunnerTest
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .withMaxSegmentsToMove(5)
-            .withBalancerCostAnalyzer(new BalancerCostAnalyzer(new DateTime("2013-01-01")))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
     DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
@@ -266,7 +266,7 @@ public class DruidMasterRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerCostAnalyzer(new BalancerCostAnalyzer(new DateTime("2013-01-01")))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
     DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
@@ -352,7 +352,7 @@ public class DruidMasterRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(segmentReplicantLookup)
-            .withBalancerCostAnalyzer(new BalancerCostAnalyzer(new DateTime("2013-01-01")))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
     DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
@@ -414,7 +414,7 @@ public class DruidMasterRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerCostAnalyzer(new BalancerCostAnalyzer(new DateTime("2013-01-01")))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
 
@@ -679,7 +679,7 @@ public class DruidMasterRuleRunnerTest
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
-        .withBalancerCostAnalyzer(new BalancerCostAnalyzer(new DateTime("2013-01-01")))
+        .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
     DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
@@ -756,7 +756,7 @@ public class DruidMasterRuleRunnerTest
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
-        .withBalancerCostAnalyzer(new BalancerCostAnalyzer(new DateTime("2013-01-01")))
+        .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
     DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
