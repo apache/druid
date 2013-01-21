@@ -43,6 +43,7 @@ import com.metamx.druid.indexer.data.TimestampSpec;
 import com.metamx.druid.indexer.data.ToLowercaseDataSpec;
 import com.metamx.druid.indexer.granularity.GranularitySpec;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
+import com.metamx.druid.indexer.partitions.PartitionsSpec;
 import com.metamx.druid.indexer.path.PathSpec;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.indexer.updater.UpdaterJobSpec;
@@ -54,6 +55,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
 import org.codehaus.jackson.JsonGenerator;
+import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
@@ -164,8 +166,6 @@ public class HadoopDruidIndexerConfig
 
   private static final String CONFIG_PROPERTY = "druid.indexer.config";
 
-  @Deprecated
-  private volatile List<Interval> intervals;
   private volatile String dataSource;
   private volatile String timestampColumnName;
   private volatile String timestampFormat;
@@ -177,8 +177,7 @@ public class HadoopDruidIndexerConfig
   private volatile String jobOutputDir;
   private volatile String segmentOutputDir;
   private volatile DateTime version = new DateTime();
-  private volatile String partitionDimension;
-  private volatile Long targetPartitionSize;
+  private volatile PartitionsSpec partitionsSpec;
   private volatile boolean leaveIntermediate = false;
   private volatile boolean cleanupOnFailure = true;
   private volatile Map<DateTime, List<HadoopyShardSpec>> shardSpecs = ImmutableMap.of();
@@ -188,22 +187,97 @@ public class HadoopDruidIndexerConfig
   private volatile boolean ignoreInvalidRows = false;
   private volatile List<String> registererers = Lists.newArrayList();
 
+  @JsonCreator
+  public HadoopDruidIndexerConfig(
+      final @JsonProperty("intervals") List<Interval> intervals,
+      final @JsonProperty("dataSource") String dataSource,
+      final @JsonProperty("timestampColumnName") String timestampColumnName,
+      final @JsonProperty("timestampFormat") String timestampFormat,
+      final @JsonProperty("dataSpec") DataSpec dataSpec,
+      final @JsonProperty("segmentGranularity") Granularity segmentGranularity,
+      final @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
+      final @JsonProperty("pathSpec") PathSpec pathSpec,
+      final @JsonProperty("jobOutputDir") String jobOutputDir,
+      final @JsonProperty("segmentOutputDir") String segmentOutputDir,
+      final @JsonProperty("version") DateTime version,
+      final @JsonProperty("partitionDimension") String partitionDimension,
+      final @JsonProperty("targetPartitionSize") Long targetPartitionSize,
+      final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
+      final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
+      final @JsonProperty("cleanupOnFailure") boolean cleanupOnFailure,
+      final @JsonProperty("shardSpecs") Map<DateTime, List<HadoopyShardSpec>> shardSpecs,
+      final @JsonProperty("overwriteFiles") boolean overwriteFiles,
+      final @JsonProperty("rollupSpec") DataRollupSpec rollupSpec,
+      final @JsonProperty("updaterJobSpec") UpdaterJobSpec updaterJobSpec,
+      final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
+      final @JsonProperty("registererers") List<String> registererers
+  )
+  {
+    this.dataSource = dataSource;
+    this.timestampColumnName = timestampColumnName;
+    this.timestampFormat = timestampFormat;
+    this.dataSpec = dataSpec;
+    this.granularitySpec = granularitySpec;
+    this.pathSpec = pathSpec;
+    this.jobOutputDir = jobOutputDir;
+    this.segmentOutputDir = segmentOutputDir;
+    this.version = version;
+    this.partitionsSpec = partitionsSpec;
+    this.leaveIntermediate = leaveIntermediate;
+    this.cleanupOnFailure = cleanupOnFailure;
+    this.shardSpecs = shardSpecs;
+    this.overwriteFiles = overwriteFiles;
+    this.rollupSpec = rollupSpec;
+    this.updaterJobSpec = updaterJobSpec;
+    this.ignoreInvalidRows = ignoreInvalidRows;
+    this.registererers = registererers;
+
+    if(partitionsSpec != null) {
+      Preconditions.checkArgument(
+          partitionDimension == null && targetPartitionSize == null,
+          "Cannot mix partitionsSpec with partitionDimension/targetPartitionSize"
+      );
+
+      this.partitionsSpec = partitionsSpec;
+    } else {
+      // Backwards compatibility
+      this.partitionsSpec = new PartitionsSpec(partitionDimension, targetPartitionSize, false);
+    }
+
+    if(granularitySpec != null) {
+      Preconditions.checkArgument(
+          segmentGranularity == null && intervals == null,
+          "Cannot mix granularitySpec with segmentGranularity/intervals"
+      );
+    } else {
+      // Backwards compatibility
+      this.segmentGranularity = segmentGranularity;
+      if(segmentGranularity != null && intervals != null) {
+        this.granularitySpec = new UniformGranularitySpec(segmentGranularity, intervals);
+      }
+    }
+  }
+
+  /**
+   * Default constructor does nothing. The caller is expected to use the various setX methods.
+   */
+  public HadoopDruidIndexerConfig()
+  {
+  }
+
   public List<Interval> getIntervals()
   {
     return JodaUtils.condenseIntervals(getGranularitySpec().bucketIntervals());
   }
 
   @Deprecated
-  @JsonProperty
   public void setIntervals(List<Interval> intervals)
   {
-    Preconditions.checkState(this.granularitySpec == null, "Use setGranularitySpec");
+    Preconditions.checkState(this.granularitySpec == null, "Cannot mix setIntervals with granularitySpec");
+    Preconditions.checkState(this.segmentGranularity != null, "Cannot use setIntervals without segmentGranularity");
 
     // For backwards compatibility
-    this.intervals = intervals;
-    if (this.segmentGranularity != null) {
-      this.granularitySpec = new UniformGranularitySpec(this.segmentGranularity, this.intervals);
-    }
+    this.granularitySpec = new UniformGranularitySpec(this.segmentGranularity, intervals);
   }
 
   @JsonProperty
@@ -281,19 +355,6 @@ public class HadoopDruidIndexerConfig
     return new StringInputRowParser(getTimestampSpec(), getDataSpec(), dimensionExclusions);
   }
 
-  @Deprecated
-  @JsonProperty
-  public void setSegmentGranularity(Granularity segmentGranularity)
-  {
-    Preconditions.checkState(this.granularitySpec == null, "Use setGranularitySpec");
-
-    // For backwards compatibility
-    this.segmentGranularity = segmentGranularity;
-    if (this.intervals != null) {
-      this.granularitySpec = new UniformGranularitySpec(this.segmentGranularity, this.intervals);
-    }
-  }
-
   @JsonProperty
   public GranularitySpec getGranularitySpec()
   {
@@ -302,13 +363,18 @@ public class HadoopDruidIndexerConfig
 
   public void setGranularitySpec(GranularitySpec granularitySpec)
   {
-    Preconditions.checkState(this.intervals == null, "Use setGranularitySpec instead of setIntervals");
-    Preconditions.checkState(
-        this.segmentGranularity == null,
-        "Use setGranularitySpec instead of setSegmentGranularity"
-    );
-
     this.granularitySpec = granularitySpec;
+  }
+
+  @JsonProperty
+  public PartitionsSpec getPartitionsSpec()
+  {
+    return partitionsSpec;
+  }
+
+  public void setPartitionsSpec(PartitionsSpec partitionsSpec)
+  {
+    this.partitionsSpec = partitionsSpec;
   }
 
   @JsonProperty
@@ -355,31 +421,19 @@ public class HadoopDruidIndexerConfig
     this.version = version;
   }
 
-  @JsonProperty
   public String getPartitionDimension()
   {
-    return partitionDimension;
-  }
-
-  public void setPartitionDimension(String partitionDimension)
-  {
-    this.partitionDimension = (partitionDimension == null) ? partitionDimension : partitionDimension;
+    return partitionsSpec.getPartitionDimension();
   }
 
   public boolean partitionByDimension()
   {
-    return targetPartitionSize != null;
+    return partitionsSpec.isDeterminingPartitions();
   }
 
-  @JsonProperty
   public Long getTargetPartitionSize()
   {
-    return targetPartitionSize;
-  }
-
-  public void setTargetPartitionSize(Long targetPartitionSize)
-  {
-    this.targetPartitionSize = targetPartitionSize;
+    return partitionsSpec.getTargetPartitionSize();
   }
 
   public boolean isUpdaterJobSpecSet()

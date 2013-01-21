@@ -134,7 +134,7 @@ public class IndexGeneratorJob implements Jobby
       job.setJarByClass(IndexGeneratorJob.class);
 
       job.submit();
-      log.info("Job submitted, status available at %s", job.getTrackingURL());
+      log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
 
       boolean success = job.waitForCompletion(true);
 

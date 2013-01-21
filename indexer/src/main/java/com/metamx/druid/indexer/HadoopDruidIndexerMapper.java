@@ -10,7 +10,7 @@ import org.joda.time.DateTime;
 
 import java.io.IOException;
 
-public class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<LongWritable, Text, KEYOUT, VALUEOUT>
+public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<LongWritable, Text, KEYOUT, VALUEOUT>
 {
   private HadoopDruidIndexerConfig config;
   private StringInputRowParser parser;
@@ -61,9 +61,6 @@ public class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<LongWrita
     }
   }
 
-  protected void innerMap(InputRow inputRow, Text text, Context context)
-      throws IOException, InterruptedException
-  {
-    // no-op, meant to be overridden
-  }
+  abstract protected void innerMap(InputRow inputRow, Text text, Context context)
+      throws IOException, InterruptedException;
 }
