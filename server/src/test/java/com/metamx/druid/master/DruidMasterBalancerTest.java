@@ -229,7 +229,6 @@ public class DruidMasterBalancerTest
 
     params = new DruidMasterBalancer(master).run(params);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
-    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("costChange").get("normal").get() > 0);
   }
 
   @Test
@@ -379,6 +378,5 @@ public class DruidMasterBalancerTest
 
     params = new DruidMasterBalancer(master).run(params);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
-    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("costChange").get("normal").get() > 0);
   }
 }

@@ -87,14 +87,11 @@ public abstract class LoadRule implements Rule
     List<ServerHolder> assignedServers = Lists.newArrayList();
     while (totalReplicants < expectedReplicants) {
       BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer();
-      BalancerCostAnalyzer.BalancerCostComputer helper = analyzer.new BalancerCostComputer(serverHolderList, segment);
+      ServerHolder holder = analyzer.findNewSegmentHome(segment, serverHolderList);
 
-      Pair<Double, ServerHolder> minPair = helper.getMinPair();
-
-      ServerHolder holder = minPair.rhs;
       if (holder == null) {
         log.warn(
-            "Not enough %s servers[%d] to assign segment[%s]! Expected Replicants[%d]",
+            "Not enough %s servers[%d] or node capacity to assign segment[%s]! Expected Replicants[%d]",
             getTier(),
             assignedServers.size() + serverQueue.size() + 1,
             segment.getIdentifier(),
@@ -105,27 +102,6 @@ public abstract class LoadRule implements Rule
       if (holder.isServingSegment(segment) || holder.isLoadingSegment(segment)) {
         assignedServers.add(holder);
         continue;
-      }
-
-      if (holder.getAvailableSize() < segment.getSize()) {
-        log.warn(
-            "Not enough node capacity, closest is [%s] with %,d available, skipping segment[%s].",
-            holder.getServer(),
-            holder.getAvailableSize(),
-            segment
-        );
-        log.makeAlert(
-            "Not enough node capacity",
-            ImmutableMap.<String, Object>builder()
-                        .put("segmentSkipped", segment.toString())
-                        .put("closestNode", holder.getServer().toString())
-                        .put("availableSize", holder.getAvailableSize())
-                        .build()
-        ).emit();
-        serverQueue.add(holder);
-        stats.addToTieredStat("unassignedCount", getTier(), 1);
-        stats.addToTieredStat("unassignedSize", getTier(), segment.getSize());
-        break;
       }
 
       holder.getPeon().loadSegment(
