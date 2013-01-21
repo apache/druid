@@ -191,7 +191,8 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
             TimeseriesResultValue results = input.getValue();
             final List<Object> retVal = Lists.newArrayListWithCapacity(1 + aggs.size());
 
-            retVal.add(input.getTimestamp().getMillis());
+            // make sure to preserve timezone information when caching results
+            retVal.add(input.getTimestamp());
             for (AggregatorFactory agg : aggs) {
               retVal.add(results.getMetric(agg.getName()));
             }
@@ -215,7 +216,7 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
             Iterator<Object> resultIter = results.iterator();
 
-            DateTime timestamp = new DateTime(resultIter.next());
+            DateTime timestamp = (DateTime)resultIter.next();
             while (aggsIter.hasNext() && resultIter.hasNext()) {
               final AggregatorFactory factory = aggsIter.next();
               retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
