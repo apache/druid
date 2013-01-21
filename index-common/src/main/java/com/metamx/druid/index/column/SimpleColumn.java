@@ -20,6 +20,7 @@
 package com.metamx.druid.index.column;
 
 import com.google.common.base.Supplier;
+import com.google.common.io.Closeables;
 
 /**
  */
@@ -53,6 +54,19 @@ class SimpleColumn implements Column
   public ColumnCapabilities getCapabilities()
   {
     return capabilities;
+  }
+
+  @Override
+  public int getLength()
+  {
+    GenericColumn column = null;
+    try {
+      column = genericColumn.get();
+      return column.size();
+    }
+    finally {
+      Closeables.closeQuietly(column);
+    }
   }
 
   @Override

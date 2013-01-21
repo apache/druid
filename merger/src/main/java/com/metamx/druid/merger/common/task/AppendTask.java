@@ -30,7 +30,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.index.v1.IndexableAdapter;
-import com.metamx.druid.index.v1.MMappedIndexAdapter;
+import com.metamx.druid.index.v1.QueryableIndexIndexableAdapter;
 import com.metamx.druid.index.v1.Rowboat;
 import com.metamx.druid.index.v1.RowboatFilteringIndexAdapter;
 import org.codehaus.jackson.annotate.JsonCreator;
@@ -90,8 +90,8 @@ public class AppendTask extends MergeTask
     for (final SegmentToMergeHolder holder : segmentsToMerge) {
       adapters.add(
           new RowboatFilteringIndexAdapter(
-              new MMappedIndexAdapter(
-                  IndexIO.mapDir(holder.getFile())
+              new QueryableIndexIndexableAdapter(
+                  IndexIO.loadIndex(holder.getFile())
               ),
               new Predicate<Rowboat>()
               {

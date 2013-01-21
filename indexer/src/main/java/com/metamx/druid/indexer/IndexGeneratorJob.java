@@ -31,10 +31,10 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.index.v1.MMappedIndex;
 import com.metamx.druid.indexer.data.StringInputRowParser;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.input.InputRow;
@@ -280,7 +280,7 @@ public class IndexGeneratorJob implements Jobby
 
       log.info("%,d lines completed.", lineCount);
 
-      List<MMappedIndex> indexes = Lists.newArrayListWithCapacity(indexCount);
+      List<QueryableIndex> indexes = Lists.newArrayListWithCapacity(indexCount);
       final File mergedBase;
 
       if (toMerge.size() == 0) {
@@ -310,9 +310,9 @@ public class IndexGeneratorJob implements Jobby
         toMerge.add(finalFile);
 
         for (File file : toMerge) {
-          indexes.add(IndexIO.mapDir(file));
+          indexes.add(IndexIO.loadIndex(file));
         }
-        mergedBase = IndexMerger.mergeMMapped(
+        mergedBase = IndexMerger.mergeQueryableIndex(
             indexes, aggs, new File(baseFlushFile, "merged"), new IndexMerger.ProgressIndicator()
         {
           @Override

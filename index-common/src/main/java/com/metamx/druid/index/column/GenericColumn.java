@@ -30,6 +30,8 @@ import java.io.Closeable;
 public interface GenericColumn extends Closeable
 {
   public int size();
+  public ValueType getType();
+  public boolean hasMultipleValues();
 
   public String getStringSingleValueRow(int rowNum);
   public Indexed<String> getStringMultiValueRow(int rowNum);

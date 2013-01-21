@@ -54,6 +54,12 @@ public class MMappedIndexQueryableIndex implements QueryableIndex
   }
 
   @Override
+  public int getNumRows()
+  {
+    return index.getTimestamps().size();
+  }
+
+  @Override
   public Indexed<String> getColumnNames()
   {
     return null;
@@ -91,7 +97,7 @@ public class MMappedIndexQueryableIndex implements QueryableIndex
       return new FloatColumn(metricHolder.floatType);
     }
     else {
-      return new ComplexColumnImpl(metricHolder.getComplexType());
+      return new ComplexColumnImpl(metricHolder.getTypeName(), metricHolder.getComplexType());
     }
   }
 }
