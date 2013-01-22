@@ -49,6 +49,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 import org.joda.time.Period;
+import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -216,7 +217,10 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
             Iterator<Object> resultIter = results.iterator();
 
-            DateTime timestamp = (DateTime)resultIter.next();
+            DateTime timestamp = ISODateTimeFormat.dateTimeParser()
+                                                  .withOffsetParsed()
+                                                  .parseDateTime(resultIter.next().toString());
+
             while (aggsIter.hasNext() && resultIter.hasNext()) {
               final AggregatorFactory factory = aggsIter.next();
               retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
