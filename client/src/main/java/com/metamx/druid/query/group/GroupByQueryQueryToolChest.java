@@ -32,6 +32,7 @@ import com.metamx.druid.Query;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.input.Rows;
 import com.metamx.druid.query.CacheStrategy;
@@ -119,7 +120,19 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
             }
         );
 
-        return Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs()));
+        // convert millis back to timestamp according to granularity to preserve time zone information
+        return Sequences.map(
+            Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
+            new Function<Row, Row>()
+            {
+              @Override
+              public Row apply(@Nullable Row input)
+              {
+                final MapBasedRow row = (MapBasedRow) input;
+                return new MapBasedRow(query.getGranularity().toDateTime(row.getTimestampFromEpoch()), row.getEvent());
+              }
+            }
+        );
       }
     };
   }
