@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.task.Task;
 
 /**

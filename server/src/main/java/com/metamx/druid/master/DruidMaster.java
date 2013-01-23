@@ -594,7 +594,6 @@ public class DruidMaster
             DruidMasterRuntimeParams.newBuilder()
                                     .withStartTime(startTime)
                                     .withDatasources(databaseSegmentManager.getInventory())
-                                    .withLoadManagementPeons(loadManagementPeons)
                                     .withMillisToWaitBeforeDeleting(config.getMillisToWaitBeforeDeleting())
                                     .withEmitter(emitter)
                                     .withMergeBytesLimit(config.getMergeBytesLimit())
@@ -696,6 +695,7 @@ public class DruidMaster
                   decrementRemovedSegmentsLifetime();
 
                   return params.buildFromExisting()
+                               .withLoadManagementPeons(loadManagementPeons)
                                .withDruidCluster(cluster)
                                .withDatabaseRuleManager(databaseRuleManager)
                                .withSegmentReplicantLookup(segmentReplicantLookup)

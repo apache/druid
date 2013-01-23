@@ -21,6 +21,7 @@ package com.metamx.druid.merger.worker;
 
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskHolder;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
@@ -110,7 +111,14 @@ public class TaskMonitor
                         try {
                           workerCuratorCoordinator.unannounceTask(task.getId());
                           workerCuratorCoordinator.announceStatus(TaskStatus.running(task.getId()));
-                          taskStatus = task.run(taskContext, toolbox);
+                          taskStatus = task.run(taskContext, toolbox, new TaskCallback()
+                          {
+                            @Override
+                            public void notify(TaskStatus status)
+                            {
+                              workerCuratorCoordinator.updateStatus(status);
+                            }
+                          });
                         }
                         catch (Exception e) {
                           log.makeAlert(e, "Failed to run task")

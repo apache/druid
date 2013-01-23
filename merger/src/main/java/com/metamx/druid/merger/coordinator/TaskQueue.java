@@ -52,18 +52,18 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Interface between task producers and task consumers.
- *
+ * <p/>
  * The queue accepts tasks from producers using {@link #add} and delivers tasks to consumers using either
  * {@link #take} or {@link #poll}. Ordering is mostly-FIFO, with deviations when the natural next task would conflict
  * with a currently-running task. In that case, tasks are skipped until a runnable one is found.
- *
+ * <p/>
  * To manage locking, the queue keeps track of currently-running tasks as {@link TaskGroup} objects. The idea is that
  * only one TaskGroup can be running on a particular dataSource + interval, and that TaskGroup has a single version
  * string that all tasks in the group must use to publish segments. Tasks in the same TaskGroup may run concurrently.
- *
+ * <p/>
  * For persistence, the queue saves new tasks from {@link #add} and task status updates from {@link #done} using a
  * {@link TaskStorage} object.
- *
+ * <p/>
  * To support leader election of our containing system, the queue can be stopped (in which case it will not accept
  * any new tasks, or hand out any more tasks, until started again).
  */
@@ -127,13 +127,13 @@ public class TaskQueue
         }
       };
 
-      for(final Pair<Task, String> taskAndVersion : byVersionOrdering.sortedCopy(runningTasks)) {
+      for (final Pair<Task, String> taskAndVersion : byVersionOrdering.sortedCopy(runningTasks)) {
         final Task task = taskAndVersion.lhs;
         final String preferredVersion = taskAndVersion.rhs;
 
         queue.add(task);
 
-        if(preferredVersion != null) {
+        if (preferredVersion != null) {
           final Optional<String> version = tryLock(task, Optional.of(preferredVersion));
 
           log.info(
@@ -173,7 +173,8 @@ public class TaskQueue
       running.clear();
       active = false;
 
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -182,6 +183,7 @@ public class TaskQueue
    * Adds some work to the queue and the underlying task storage facility with a generic "running" status.
    *
    * @param task task to add
+   *
    * @return true
    */
   public boolean add(Task task)
@@ -205,6 +207,7 @@ public class TaskQueue
 
   /**
    * Locks and returns next doable work from the queue. Blocks if there is no doable work.
+   *
    * @return runnable task
    */
   public VersionedTaskWrapper take() throws InterruptedException
@@ -214,19 +217,21 @@ public class TaskQueue
     try {
       VersionedTaskWrapper taskWrapper;
 
-      while((taskWrapper = poll()) == null) {
+      while ((taskWrapper = poll()) == null) {
         log.info("Waiting for work...");
         workMayBeAvailable.await();
       }
 
       return taskWrapper;
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
 
   /**
    * Locks and removes next doable work from the queue. Returns null if there is no doable work.
+   *
    * @return runnable task or null
    */
   public VersionedTaskWrapper poll()
@@ -235,9 +240,9 @@ public class TaskQueue
 
     try {
       log.info("Checking for doable work");
-      for(final Task task : queue) {
+      for (final Task task : queue) {
         final Optional<String> maybeVersion = tryLock(task);
-        if(maybeVersion.isPresent()) {
+        if (maybeVersion.isPresent()) {
           Preconditions.checkState(active, "wtf? Found task when inactive");
           taskStorage.setVersion(task.getId(), maybeVersion.get());
           queue.remove(task);
@@ -259,6 +264,7 @@ public class TaskQueue
    * running.
    *
    * @param task task to unlock
+   *
    * @throws IllegalStateException if task is not currently locked
    */
   private void unlock(final Task task)
@@ -284,7 +290,7 @@ public class TaskQueue
       );
 
       final TaskGroup taskGroup;
-      if(maybeTaskGroup.size() == 1) {
+      if (maybeTaskGroup.size() == 1) {
         taskGroup = maybeTaskGroup.get(0);
       } else {
         throw new IllegalStateException(String.format("Task must be running: %s", task.getId()));
@@ -294,12 +300,12 @@ public class TaskQueue
       log.info("Removing task[%s] from TaskGroup[%s]", task.getId(), taskGroup.getGroupId());
       taskGroup.getTaskSet().remove(task);
 
-      if(taskGroup.getTaskSet().size() == 0) {
+      if (taskGroup.getTaskSet().size() == 0) {
         log.info("TaskGroup complete: %s", taskGroup);
         running.get(dataSource).remove(taskGroup.getInterval());
       }
 
-      if(running.get(dataSource).size() == 0) {
+      if (running.get(dataSource).size() == 0) {
         running.remove(dataSource);
       }
 
@@ -314,8 +320,9 @@ public class TaskQueue
    * Unlock some task and update its status in the task storage facility. If "status" is a continuation status (i.e.
    * it has nextTasks) this will add the next tasks to the queue with a generic running status.
    *
-   * @param task task to unlock
+   * @param task   task to unlock
    * @param status task completion status; must not be runnable
+   *
    * @throws IllegalStateException if task is not currently running, or if status is runnable
    */
   public void done(final Task task, final TaskStatus status)
@@ -338,11 +345,12 @@ public class TaskQueue
 
       // Add next tasks, if any
       try {
-        for(final Task nextTask : status.getNextTasks()) {
+        for (final Task nextTask : status.getNextTasks()) {
           add(nextTask);
           tryLock(nextTask);
         }
-      } catch(Exception e) {
+      }
+      catch (Exception e) {
         log.error(e, "Failed to continue task: %s", task.getId());
         actualStatus = TaskStatus.failure(task.getId());
       }
@@ -369,7 +377,7 @@ public class TaskQueue
 
     try {
       final Optional<TaskStatus> statusOptional = taskStorage.getStatus(taskid);
-      if(statusOptional.isPresent()) {
+      if (statusOptional.isPresent()) {
         // See if we can collapse this down
         return Optional.of(collapseStatus(statusOptional.get()));
       } else {
@@ -383,17 +391,16 @@ public class TaskQueue
 
   private TaskStatus collapseStatus(TaskStatus status)
   {
-
     if (status.isContinued()) {
 
       int nSubtasks = 0;
       int nSuccesses = 0;
       List<DataSegment> segments = Lists.newArrayList();
 
-      for(final Task subtask : status.getNextTasks()) {
+      for (final Task subtask : status.getNextTasks()) {
 
         final TaskStatus subtaskStatus = collapseStatus(taskStorage.getStatus(subtask.getId()).get());
-        nSubtasks ++;
+        nSubtasks++;
 
         if (subtaskStatus.isFailure()) {
           return TaskStatus.failure(status.getId());
@@ -405,7 +412,7 @@ public class TaskQueue
       }
 
       if (nSubtasks == nSuccesses) {
-        return TaskStatus.success(status.getId(), segments);
+        return TaskStatus.success(status.getId(), segments).withAction(status.getAction());
       }
 
     }
@@ -419,6 +426,7 @@ public class TaskQueue
    * Attempt to lock a task, without removing it from the queue. Can safely be called multiple times on the same task.
    *
    * @param task task to attempt to lock
+   *
    * @return lock version if lock was acquired, absent otherwise
    */
   private Optional<String> tryLock(final Task task)
@@ -429,8 +437,9 @@ public class TaskQueue
   /**
    * Attempt to lock a task, without removing it from the queue. Can safely be called multiple times on the same task.
    *
-   * @param task task to attempt to lock
+   * @param task             task to attempt to lock
    * @param preferredVersion use this version if possible (no guarantees, though!)
+   *
    * @return lock version if lock was acquired, absent otherwise
    */
   private Optional<String> tryLock(final Task task, final Optional<String> preferredVersion)
@@ -474,7 +483,7 @@ public class TaskQueue
 
         final String version;
 
-        if(preferredVersion.isPresent()) {
+        if (preferredVersion.isPresent()) {
           // We have a preferred version. Since this is a private method, we'll trust our caller to not break our
           // ordering assumptions and just use it.
           version = preferredVersion.get();
@@ -503,7 +512,8 @@ public class TaskQueue
 
       return Optional.of(taskGroupToUse.getVersion());
 
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
 
@@ -518,7 +528,7 @@ public class TaskQueue
 
     try {
       final NavigableMap<Interval, TaskGroup> dsRunning = running.get(dataSource);
-      if(dsRunning == null) {
+      if (dsRunning == null) {
         // No locks at all
         return Collections.emptyList();
       } else {

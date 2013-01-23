@@ -40,6 +40,13 @@ public class TaskStatus
     CONTINUED
   }
 
+  public static enum Action
+  {
+    NONE,
+    ANNOUNCE_SEGMENTS,
+    DELETE_SEGMENTS
+  }
+
   public static TaskStatus running(String taskId)
   {
     return new TaskStatus(
@@ -47,29 +54,44 @@ public class TaskStatus
         Status.RUNNING,
         Collections.<DataSegment>emptyList(),
         Collections.<Task>emptyList(),
-        -1
+        -1,
+        Action.NONE
     );
   }
 
   public static TaskStatus failure(String taskId)
   {
-    return new TaskStatus(taskId, Status.FAILED, Collections.<DataSegment>emptyList(), Collections.<Task>emptyList(), -1);
+    return new TaskStatus(
+        taskId,
+        Status.FAILED,
+        Collections.<DataSegment>emptyList(),
+        Collections.<Task>emptyList(),
+        -1,
+        Action.NONE
+    );
   }
 
   public static TaskStatus success(String taskId, List<DataSegment> segments)
   {
-    return new TaskStatus(taskId, Status.SUCCESS, ImmutableList.copyOf(segments), Collections.<Task>emptyList(), -1);
+    return new TaskStatus(
+        taskId,
+        Status.SUCCESS,
+        ImmutableList.copyOf(segments),
+        Collections.<Task>emptyList(),
+        -1,
+        Action.NONE
+    );
   }
 
   public static TaskStatus continued(String taskId, List<Task> nextTasks)
   {
-    Preconditions.checkArgument(nextTasks.size() > 0, "nextTasks.size() > 0");
     return new TaskStatus(
         taskId,
         Status.CONTINUED,
         Collections.<DataSegment>emptyList(),
         ImmutableList.copyOf(nextTasks),
-        -1
+        -1,
+        Action.NONE
     );
   }
 
@@ -78,6 +100,7 @@ public class TaskStatus
   private final List<Task> nextTasks;
   private final Status status;
   private final long duration;
+  private final Action action;
 
   @JsonCreator
   private TaskStatus(
@@ -85,7 +108,8 @@ public class TaskStatus
       @JsonProperty("status") Status status,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("nextTasks") List<Task> nextTasks,
-      @JsonProperty("duration") long duration
+      @JsonProperty("duration") long duration,
+      @JsonProperty("action") Action action
   )
   {
     this.id = id;
@@ -93,6 +117,7 @@ public class TaskStatus
     this.nextTasks = nextTasks;
     this.status = status;
     this.duration = duration;
+    this.action = action;
   }
 
   @JsonProperty("id")
@@ -123,6 +148,12 @@ public class TaskStatus
   public long getDuration()
   {
     return duration;
+  }
+
+  @JsonProperty("action")
+  public Action getAction()
+  {
+    return action;
   }
 
   /**
@@ -171,7 +202,23 @@ public class TaskStatus
 
   public TaskStatus withDuration(long _duration)
   {
-    return new TaskStatus(id, status, segments, nextTasks, _duration);
+    return new TaskStatus(id, status, segments, nextTasks, _duration, action);
+  }
+
+  public TaskStatus withSegments(List<DataSegment> _segments)
+  {
+    return new TaskStatus(id, status, _segments, nextTasks, duration, action);
+  }
+
+  public TaskStatus withNextTasks(List<Task> _nextTasks)
+  {
+    Preconditions.checkArgument(_nextTasks.size() > 0, "nextTasks.size() > 0");
+    return new TaskStatus(id, status, segments, _nextTasks, duration, action);
+  }
+
+  public TaskStatus withAction(Action _action)
+  {
+    return new TaskStatus(id, status, segments, nextTasks, duration, _action);
   }
 
   @Override
@@ -183,6 +230,7 @@ public class TaskStatus
                   .add("nextTasks", nextTasks)
                   .add("status", status)
                   .add("duration", duration)
+                  .add("action", action)
                   .toString();
   }
 }

@@ -25,6 +25,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.indexer.granularity.GranularitySpec;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.coordinator.TaskContext;
@@ -126,11 +127,11 @@ public class IndexTask extends AbstractTask
   @Override
   public TaskStatus preflight(TaskContext context) throws Exception
   {
-    return TaskStatus.continued(getId(), toSubtasks());
+    return TaskStatus.continued(getId(), toSubtasks()).withAction(TaskStatus.Action.ANNOUNCE_SEGMENTS);
   }
 
   @Override
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
   {
     throw new IllegalStateException("IndexTasks should not be run!");
   }

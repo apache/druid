@@ -25,6 +25,8 @@ import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.input.InputRow;
+import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.index.YeOldePlumberSchool;
@@ -34,7 +36,6 @@ import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.realtime.Sink;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -89,7 +90,7 @@ public class IndexGeneratorTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskContext context, final TaskToolbox toolbox) throws Exception
+  public TaskStatus run(final TaskContext context, final TaskToolbox toolbox, TaskCallback callback) throws Exception
   {
     // Set up temporary directory for indexing
     final File tmpDir = new File(
@@ -131,10 +132,10 @@ public class IndexGeneratorTask extends AbstractTask
     ).findPlumber(schema, metrics);
 
     try {
-      while(firehose.hasMore()) {
+      while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
-        if(shouldIndex(inputRow)) {
+        if (shouldIndex(inputRow)) {
           final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
           if (sink == null) {
             throw new NullPointerException(
@@ -148,14 +149,15 @@ public class IndexGeneratorTask extends AbstractTask
           int numRows = sink.add(inputRow);
           metrics.incrementProcessed();
 
-          if(numRows >= toolbox.getConfig().getRowFlushBoundary()) {
+          if (numRows >= toolbox.getConfig().getRowFlushBoundary()) {
             plumber.persist(firehose.commit());
           }
         } else {
           metrics.incrementThrownAway();
         }
       }
-    } finally {
+    }
+    finally {
       firehose.close();
     }
 
@@ -174,23 +176,27 @@ public class IndexGeneratorTask extends AbstractTask
     );
 
     // Done
-    return TaskStatus.success(getId(), ImmutableList.copyOf(pushedSegments));
+    return TaskStatus.success(getId(), ImmutableList.copyOf(pushedSegments))
+                     .withAction(TaskStatus.Action.ANNOUNCE_SEGMENTS);
   }
 
   /**
    * Should we index this inputRow? Decision is based on our interval and shardSpec.
+   *
    * @param inputRow the row to check
+   *
    * @return true or false
    */
-  private boolean shouldIndex(InputRow inputRow) {
-    if(!getInterval().contains(inputRow.getTimestampFromEpoch())) {
+  private boolean shouldIndex(InputRow inputRow)
+  {
+    if (!getInterval().contains(inputRow.getTimestampFromEpoch())) {
       return false;
     }
 
     final Map<String, String> eventDimensions = Maps.newHashMapWithExpectedSize(inputRow.getDimensions().size());
-    for(final String dim : inputRow.getDimensions()) {
+    for (final String dim : inputRow.getDimensions()) {
       final List<String> dimValues = inputRow.getDimension(dim);
-      if(dimValues.size() == 1) {
+      if (dimValues.size() == 1) {
         eventDimensions.put(dim, Iterables.getOnlyElement(dimValues));
       }
     }

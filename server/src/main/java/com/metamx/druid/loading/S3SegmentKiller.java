@@ -101,42 +101,20 @@ public class S3SegmentKiller implements SegmentKiller
 
     log.info("Found %,d segments for %s for interval %s.", matchingSegments.size(), datasource, interval);
     for (final DataSegment segment : matchingSegments) {
-      // Remove database entry
-      log.info("Removing DB entry for %s", segment.getIdentifier());
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  String.format("DELETE from %s WHERE id = :segmentID", config.getSegmentTable())
-              ).bind("segmentID", segment.getIdentifier())
-                    .execute();
-
-              return null;
-            }
-          }
-      );
-
       // Remove from S3
-
       Map<String, Object> loadSpec = segment.getLoadSpec();
       String s3Bucket = MapUtils.getString(loadSpec, "bucket");
       String s3Path = MapUtils.getString(loadSpec, "key");
       String s3DescriptorPath = s3Path.substring(0, s3Path.lastIndexOf("/")) + "/descriptor.json";
 
-      if (!s3Client.isObjectInBucket(s3Bucket, s3Path)) {
-        throw new ISE("IndexFile[s3://%s/%s] does not exist.", s3Bucket, s3Path);
+      if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
+        log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);
+        s3Client.deleteObject(s3Bucket, s3Path);
       }
-      if (!s3Client.isObjectInBucket(s3Bucket, s3DescriptorPath)) {
-        throw new ISE("IndexFile[s3://%s/%s] does not exist.", s3Bucket, s3DescriptorPath);
+      if (s3Client.isObjectInBucket(s3Bucket, s3DescriptorPath)) {
+        log.info("Removing descriptor file[s3://%s/%s] from s3!", s3Bucket, s3DescriptorPath);
+        s3Client.deleteObject(s3Bucket, s3DescriptorPath);
       }
-
-      log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);
-      log.info("Removing descriptor file[s3://%s/%s] from s3!", s3Bucket, s3DescriptorPath);
-      s3Client.deleteObject(s3Bucket, s3Path);
-      s3Client.deleteObject(s3Bucket, s3DescriptorPath);
     }
 
     return matchingSegments;
