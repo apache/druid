@@ -263,7 +263,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
-                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .intervals("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           QueryRunnerTestHelper.rowsCount,
@@ -288,12 +288,6 @@ public class TimeseriesQueryRunnerTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L)
             )
-        ),
-        new Result<TimeseriesResultValue>(
-            new DateTime("2011-04-02", DateTimeZone.forID("America/Los_Angeles")),
-            new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 0L, "idx", 0L)
-            )
         )
     );
 
@@ -303,10 +297,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     TestHelper.assertExpectedResults(expectedResults, results);
-
-
   }
-
 
   @Test
   public void testTimeseriesWithVaryingGran()
