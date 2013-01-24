@@ -22,6 +22,7 @@ package com.metamx.druid.indexer;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
+import com.metamx.druid.indexer.partitions.PartitionsSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Interval;
@@ -67,7 +68,7 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testIntervalsAndSegmentGranularity() {
+  public void testGranularitySpecLegacy() {
     // Deprecated and replaced by granularitySpec, but still supported
     final HadoopDruidIndexerConfig cfg;
 
@@ -98,9 +99,8 @@ public class HadoopDruidIndexerConfigTest
     );
   }
 
-
   @Test
-  public void testCmdlineAndSegmentGranularity() {
+  public void testGranularitySpecPostConstructorIntervals() {
     // Deprecated and replaced by granularitySpec, but still supported
     final HadoopDruidIndexerConfig cfg;
 
@@ -133,7 +133,7 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testInvalidCombination() {
+  public void testInvalidGranularityCombination() {
     boolean thrown = false;
     try {
       final HadoopDruidIndexerConfig cfg = jsonMapper.readValue(
@@ -144,6 +144,162 @@ public class HadoopDruidIndexerConfigTest
           + "   \"type\":\"uniform\","
           + "   \"gran\":\"hour\","
           + "   \"intervals\":[\"2012-01-01/P1D\"]"
+          + " }"
+          + "}",
+          HadoopDruidIndexerConfig.class
+      );
+    } catch(Exception e) {
+      thrown = true;
+    }
+
+    Assert.assertTrue("Exception thrown", thrown);
+  }
+
+  @Test
+  public void testPartitionsSpecNoPartitioning() {
+    final HadoopDruidIndexerConfig cfg;
+
+    try {
+      cfg = jsonMapper.readValue(
+          "{}",
+          HadoopDruidIndexerConfig.class
+      );
+    } catch(Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
+
+    Assert.assertEquals(
+        "isDeterminingPartitions",
+        partitionsSpec.isDeterminingPartitions(),
+        false
+    );
+  }
+
+  @Test
+  public void testPartitionsSpecAutoDimension() {
+    final HadoopDruidIndexerConfig cfg;
+
+    try {
+      cfg = jsonMapper.readValue(
+          "{"
+          + "\"partitionsSpec\":{"
+          + "   \"targetPartitionSize\":100"
+          + " }"
+          + "}",
+          HadoopDruidIndexerConfig.class
+      );
+    } catch(Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
+
+    Assert.assertEquals(
+        "isDeterminingPartitions",
+        partitionsSpec.isDeterminingPartitions(),
+        true
+    );
+
+    Assert.assertEquals(
+        "getTargetPartitionSize",
+        partitionsSpec.getTargetPartitionSize(),
+        100
+    );
+
+    Assert.assertEquals(
+        "getPartitionDimension",
+        partitionsSpec.getPartitionDimension(),
+        null
+    );
+  }
+
+  @Test
+  public void testPartitionsSpecSpecificDimension() {
+    final HadoopDruidIndexerConfig cfg;
+
+    try {
+      cfg = jsonMapper.readValue(
+          "{"
+          + "\"partitionsSpec\":{"
+          + "   \"targetPartitionSize\":100,"
+          + "   \"partitionDimension\":\"foo\""
+          + " }"
+          + "}",
+          HadoopDruidIndexerConfig.class
+      );
+    } catch(Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
+
+    Assert.assertEquals(
+        "isDeterminingPartitions",
+        partitionsSpec.isDeterminingPartitions(),
+        true
+    );
+
+    Assert.assertEquals(
+        "getTargetPartitionSize",
+        partitionsSpec.getTargetPartitionSize(),
+        100
+    );
+
+    Assert.assertEquals(
+        "getPartitionDimension",
+        partitionsSpec.getPartitionDimension(),
+        "foo"
+    );
+  }
+
+  @Test
+  public void testPartitionsSpecLegacy() {
+    final HadoopDruidIndexerConfig cfg;
+
+    try {
+      cfg = jsonMapper.readValue(
+          "{"
+          + "\"targetPartitionSize\":100,"
+          + "\"partitionDimension\":\"foo\""
+          + "}",
+          HadoopDruidIndexerConfig.class
+      );
+    } catch(Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
+
+    Assert.assertEquals(
+        "isDeterminingPartitions",
+        partitionsSpec.isDeterminingPartitions(),
+        true
+    );
+
+    Assert.assertEquals(
+        "getTargetPartitionSize",
+        partitionsSpec.getTargetPartitionSize(),
+        100
+    );
+
+    Assert.assertEquals(
+        "getPartitionDimension",
+        partitionsSpec.getPartitionDimension(),
+        "foo"
+    );
+  }
+
+  @Test
+  public void testInvalidPartitionsCombination() {
+    boolean thrown = false;
+    try {
+      final HadoopDruidIndexerConfig cfg = jsonMapper.readValue(
+          "{"
+          + "\"targetPartitionSize\":100,"
+          + "\"partitionsSpec\":{"
+          + "   \"targetPartitionSize\":100"
           + " }"
           + "}",
           HadoopDruidIndexerConfig.class
