@@ -36,11 +36,6 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
   @Override
   public QueryableIndex factorize(File parentDir) throws StorageAdapterLoadingException
   {
-    File indexFile = new File(parentDir, "index.drd");
-    if (!indexFile.exists()) {
-      throw new StorageAdapterLoadingException("indexFile[%s] does not exist.", indexFile);
-    }
-
     try {
       if (! IndexIO.canBeMapped(parentDir)) {
         File canBeMappedDir = new File(parentDir, "forTheMapping");
@@ -55,7 +50,7 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
         }
         for (File file : canBeMappedDir.listFiles()) {
           if (! file.renameTo(new File(parentDir, file.getName()))) {
-            throw new StorageAdapterLoadingException("Couldn't rename[%s] to [%s]", canBeMappedDir, indexFile);
+            throw new StorageAdapterLoadingException("Couldn't rename[%s] to [%s]", canBeMappedDir, parentDir);
           }
         }
         FileUtils.deleteDirectory(canBeMappedDir);
@@ -64,7 +59,7 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
       return IndexIO.loadIndex(parentDir);
     }
     catch (IOException e) {
-      log.warn(e, "Got exception, deleting index[%s]", indexFile);
+      log.warn(e, "Got exception, deleting parentDir[%s]", parentDir);
       try {
         FileUtils.deleteDirectory(parentDir);
       }
