@@ -102,7 +102,7 @@ public class SortableBytes
     );
   }
 
-  public static void useSortableBytesAsKey(Job job)
+  public static void useSortableBytesAsMapOutputKey(Job job)
   {
     job.setMapOutputKeyClass(BytesWritable.class);
     job.setGroupingComparatorClass(SortableBytesGroupingComparator.class);
