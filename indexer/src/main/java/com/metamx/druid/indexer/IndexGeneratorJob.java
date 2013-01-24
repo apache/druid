@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -44,6 +45,7 @@ import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.input.MapBasedInputRow;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -65,8 +67,11 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import javax.annotation.Nullable;
 import java.io.BufferedOutputStream;
@@ -158,6 +163,38 @@ public class IndexGeneratorJob implements Jobby
       throw new RuntimeException(e);
     }
   }
+
+  public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config) {
+
+    final Configuration conf = new Configuration();
+    final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.jsonMapper;
+
+    ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
+
+    for (String propName : System.getProperties().stringPropertyNames()) {
+      if (propName.startsWith("hadoop.")) {
+        conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
+      }
+    }
+
+    final Path descriptorInfoDir = config.makeDescriptorInfoDir();
+
+    try {
+      FileSystem fs = descriptorInfoDir.getFileSystem(conf);
+
+      for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
+        final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
+        publishedSegmentsBuilder.add(segment);
+        log.info("Published %s", segment.getIdentifier());
+      }
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+    List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
+
+    return publishedSegments;
+}
 
   public static class IndexGeneratorMapper extends Mapper<LongWritable, Text, BytesWritable, Text>
   {
@@ -467,7 +504,7 @@ public class IndexGeneratorJob implements Jobby
       DataSegment segment = new DataSegment(
           config.getDataSource(),
           interval,
-          config.getVersion().toString(),
+          config.getVersion(),
           loadSpec,
           dimensionNames,
           metricNames,
