@@ -19,6 +19,8 @@
 
 package com.metamx.druid.client.cache;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
@@ -27,6 +29,7 @@ import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.NodeLocator;
 import net.spy.memcached.internal.BulkFuture;
+import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 import net.spy.memcached.transcoders.Transcoder;
 import org.junit.Assert;
@@ -51,51 +54,70 @@ public class MemcachedCacheBrokerTest
 {
   private static final byte[] HI = "hi".getBytes();
   private static final byte[] HO = "ho".getBytes();
-  private MemcachedCacheBroker broker;
+  private MemcachedCache cache;
 
   @Before
   public void setUp() throws Exception
   {
     MemcachedClientIF client = new MockMemcachedClient();
-    broker = new MemcachedCacheBroker(client, 500, 3600);
+    cache = new MemcachedCache(client, 500, 3600);
   }
 
   @Test
   public void testSanity() throws Exception
   {
-    Cache aCache = broker.provideCache("a");
-    Cache theCache = broker.provideCache("the");
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
+    put(cache, "a", HI, 1);
+    Assert.assertEquals(1, get(cache, "a", HI));
+    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
-    Assert.assertNull(aCache.get(HI));
-    put(aCache, HI, 1);
-    Assert.assertEquals(1, get(aCache, HI));
-    Assert.assertNull(theCache.get(HI));
+    put(cache, "the", HI, 2);
+    Assert.assertEquals(1, get(cache, "a", HI));
+    Assert.assertEquals(2, get(cache, "the", HI));
 
-    put(theCache, HI, 2);
-    Assert.assertEquals(1, get(aCache, HI));
-    Assert.assertEquals(2, get(theCache, HI));
+    put(cache, "the", HO, 10);
+    Assert.assertEquals(1, get(cache, "a", HI));
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
+    Assert.assertEquals(2, get(cache, "the", HI));
+    Assert.assertEquals(10, get(cache, "the", HO));
 
-    put(theCache, HO, 10);
-    Assert.assertEquals(1, get(aCache, HI));
-    Assert.assertNull(aCache.get(HO));
-    Assert.assertEquals(2, get(theCache, HI));
-    Assert.assertEquals(10, get(theCache, HO));
+    cache.close("the");
+    Assert.assertEquals(1, get(cache, "a", HI));
+    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
 
-    theCache.close();
-    Assert.assertEquals(1, get(aCache, HI));
-    Assert.assertNull(aCache.get(HO));
-
-    aCache.close();
+    cache.close("a");
   }
 
-  public void put(Cache cache, byte[] key, Integer value)
+  @Test
+  public void testGetBulk() throws Exception
   {
-    cache.put(key, Ints.toByteArray(value));
+    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
+
+    put(cache, "the", HI, 2);
+    put(cache, "the", HO, 10);
+
+    Cache.NamedKey key1 = new Cache.NamedKey("the", HI);
+    Cache.NamedKey key2 = new Cache.NamedKey("the", HO);
+
+    Map<Cache.NamedKey, byte[]> result = cache.getBulk(
+        Lists.newArrayList(
+            key1,
+            key2
+        )
+    );
+
+    Assert.assertEquals(2, Ints.fromByteArray(result.get(key1)));
+    Assert.assertEquals(10, Ints.fromByteArray(result.get(key2)));
   }
 
-  public int get(Cache cache, byte[] key)
+  public void put(Cache cache, String namespace, byte[] key, Integer value)
   {
-    return Ints.fromByteArray(cache.get(key));
+    cache.put(new Cache.NamedKey(namespace, key), Ints.toByteArray(value));
+  }
+
+  public int get(Cache cache, String namespace, byte[] key)
+  {
+    return Ints.fromByteArray(cache.get(new Cache.NamedKey(namespace, key)));
   }
 }
 
@@ -365,9 +387,67 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public <T> BulkFuture<Map<String, T>> asyncGetBulk(Iterator<String> keys, Transcoder<T> tc)
+  public <T> BulkFuture<Map<String, T>> asyncGetBulk(final Iterator<String> keys, final Transcoder<T> tc)
   {
-    throw new UnsupportedOperationException("not implemented");
+    return new BulkFuture<Map<String, T>>()
+        {
+          @Override
+          public boolean isTimeout()
+          {
+            return false;
+          }
+
+          @Override
+          public Map<String, T> getSome(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException
+          {
+            return get();
+          }
+
+          @Override
+          public OperationStatus getStatus()
+          {
+            return null;
+          }
+
+          @Override
+          public boolean cancel(boolean b)
+          {
+            return false;
+          }
+
+          @Override
+          public boolean isCancelled()
+          {
+            return false;
+          }
+
+          @Override
+          public boolean isDone()
+          {
+            return true;
+          }
+
+          @Override
+          public Map<String, T> get() throws InterruptedException, ExecutionException
+          {
+            Map<String, T> retVal = Maps.newHashMap();
+
+            while(keys.hasNext()) {
+              String key = keys.next();
+              CachedData data = theMap.get(key);
+              retVal.put(key, data != null ? tc.decode(data) : null);
+            }
+
+            return retVal;
+          }
+
+          @Override
+          public Map<String, T> get(long l, TimeUnit timeUnit)
+              throws InterruptedException, ExecutionException, TimeoutException
+          {
+            return get();
+          }
+        };
   }
 
   @Override
@@ -383,9 +463,9 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public BulkFuture<Map<String, Object>> asyncGetBulk(Collection<String> keys)
+  public BulkFuture<Map<String, Object>> asyncGetBulk(final Collection<String> keys)
   {
-    throw new UnsupportedOperationException("not implemented");
+    return asyncGetBulk(keys.iterator(), transcoder);
   }
 
   @Override

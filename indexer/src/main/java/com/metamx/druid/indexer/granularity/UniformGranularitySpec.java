@@ -20,6 +20,9 @@
 package com.metamx.druid.indexer.granularity;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Comparators;
@@ -35,47 +38,47 @@ import java.util.TreeSet;
 public class UniformGranularitySpec implements GranularitySpec
 {
   final private Granularity granularity;
-  final private List<Interval> intervals;
+  final private List<Interval> inputIntervals;
+  final private ArbitraryGranularitySpec wrappedSpec;
 
   @JsonCreator
   public UniformGranularitySpec(
       @JsonProperty("gran") Granularity granularity,
-      @JsonProperty("intervals") List<Interval> intervals
+      @JsonProperty("intervals") List<Interval> inputIntervals
   )
   {
+    List<Interval> granularIntervals = Lists.newArrayList();
+
+    for (Interval inputInterval : inputIntervals) {
+      Iterables.addAll(granularIntervals,  granularity.getIterable(inputInterval));
+    }
+
     this.granularity = granularity;
-    this.intervals = intervals;
+    this.inputIntervals = ImmutableList.copyOf(inputIntervals);
+    this.wrappedSpec = new ArbitraryGranularitySpec(granularIntervals);
   }
 
   @Override
   public SortedSet<Interval> bucketIntervals()
   {
-    final TreeSet<Interval> retVal = Sets.newTreeSet(Comparators.intervals());
-
-    for (Interval interval : intervals) {
-      for (Interval segmentInterval : granularity.getIterable(interval)) {
-        retVal.add(segmentInterval);
-      }
-    }
-
-    return retVal;
+    return wrappedSpec.bucketIntervals();
   }
 
   @Override
   public Optional<Interval> bucketInterval(DateTime dt)
   {
-    return Optional.of(granularity.bucket(dt));
+    return wrappedSpec.bucketInterval(dt);
   }
 
-  @JsonProperty
+  @JsonProperty("gran")
   public Granularity getGranularity()
   {
     return granularity;
   }
 
-  @JsonProperty
+  @JsonProperty("intervals")
   public Iterable<Interval> getIntervals()
   {
-    return intervals;
+    return inputIntervals;
   }
 }

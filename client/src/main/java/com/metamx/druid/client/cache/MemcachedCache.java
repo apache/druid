@@ -19,7 +19,9 @@
 
 package com.metamx.druid.client.cache;
 
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Maps;
 import net.iharder.base64.Base64;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -27,25 +29,28 @@ import net.spy.memcached.DefaultHashAlgorithm;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
+import net.spy.memcached.internal.BulkFuture;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class MemcachedCacheBroker implements CacheBroker
+public class MemcachedCache implements Cache
 {
-  public static MemcachedCacheBroker create(final MemcachedCacheBrokerConfig config)
+  public static MemcachedCache create(final MemcachedCacheConfig config)
   {
     try {
       SerializingTranscoder transcoder = new SerializingTranscoder(config.getMaxObjectSize());
       // disable compression
       transcoder.setCompressionThreshold(Integer.MAX_VALUE);
 
-      return new MemcachedCacheBroker(
+      return new MemcachedCache(
         new MemcachedClient(
           new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
                                         .setHashAlg(DefaultHashAlgorithm.FNV1A_64_HASH)
@@ -74,7 +79,7 @@ public class MemcachedCacheBroker implements CacheBroker
   private final AtomicLong missCount = new AtomicLong(0);
   private final AtomicLong timeoutCount = new AtomicLong(0);
 
-  MemcachedCacheBroker(MemcachedClientIF client, int timeout, int expiration) {
+  MemcachedCache(MemcachedClientIF client, int timeout, int expiration) {
     this.timeout = timeout;
     this.expiration = expiration;
     this.client = client;
@@ -94,52 +99,94 @@ public class MemcachedCacheBroker implements CacheBroker
   }
 
   @Override
-  public Cache provideCache(final String identifier)
+  public byte[] get(NamedKey key)
   {
-    return new Cache()
-    {
-      @Override
-      public byte[] get(byte[] key)
-      {
-        Future<Object> future = client.asyncGet(computeKey(identifier, key));
-        try {
-          byte[] bytes = (byte[]) future.get(timeout, TimeUnit.MILLISECONDS);
-          if(bytes != null) {
-            hitCount.incrementAndGet();
-          }
-          else {
-            missCount.incrementAndGet();
-          }
-          return bytes;
-        }
-        catch(TimeoutException e) {
-          timeoutCount.incrementAndGet();
-          future.cancel(false);
-          return null;
-        }
-        catch(InterruptedException e) {
-          throw Throwables.propagate(e);
-        }
-        catch(ExecutionException e) {
-          throw Throwables.propagate(e);
-        }
+    Future<Object> future = client.asyncGet(computeKeyString(key));
+    try {
+      byte[] bytes = (byte[]) future.get(timeout, TimeUnit.MILLISECONDS);
+      if(bytes != null) {
+        hitCount.incrementAndGet();
       }
-
-      @Override
-      public void put(byte[] key, byte[] value)
-      {
-        client.set(computeKey(identifier, key), expiration, value);
+      else {
+        missCount.incrementAndGet();
       }
-
-      @Override
-      public void close()
-      {
-        // no resources to cleanup
-      }
-    };
+      return bytes;
+    }
+    catch(TimeoutException e) {
+      timeoutCount.incrementAndGet();
+      future.cancel(false);
+      return null;
+    }
+    catch(InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw Throwables.propagate(e);
+    }
+    catch(ExecutionException e) {
+      throw Throwables.propagate(e);
+    }
   }
 
-  private String computeKey(String identifier, byte[] key) {
-    return identifier + Base64.encodeBytes(key, Base64.DONT_BREAK_LINES);
+  @Override
+  public void put(NamedKey key, byte[] value)
+  {
+    client.set(computeKeyString(key), expiration, value);
+  }
+
+  @Override
+  public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
+  {
+    Map<String, NamedKey> keyLookup = Maps.uniqueIndex(
+        keys,
+        new Function<NamedKey, String>()
+        {
+          @Override
+          public String apply(
+              @Nullable NamedKey input
+          )
+          {
+            return computeKeyString(input);
+          }
+        }
+    );
+
+    BulkFuture<Map<String, Object>> future = client.asyncGetBulk(keyLookup.keySet());
+
+    try {
+      Map<String, Object> some = future.getSome(timeout, TimeUnit.MILLISECONDS);
+
+      if(future.isTimeout()) {
+        future.cancel(false);
+        timeoutCount.incrementAndGet();
+      }
+      missCount.addAndGet(keyLookup.size() - some.size());
+      hitCount.addAndGet(some.size());
+
+      Map<NamedKey, byte[]> results = Maps.newHashMap();
+      for(Map.Entry<String, Object> entry : some.entrySet()) {
+        results.put(
+            keyLookup.get(entry.getKey()),
+            (byte[])entry.getValue()
+        );
+      }
+
+      return results;
+    }
+    catch(InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw Throwables.propagate(e);
+    }
+    catch(ExecutionException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  @Override
+  public void close(String namespace)
+  {
+    // no resources to cleanup
+  }
+
+  private static String computeKeyString(NamedKey key) {
+    return key.namespace + ":" + Base64.encodeBytes(key.key, Base64.DONT_BREAK_LINES);
   }
 }

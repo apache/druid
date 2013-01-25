@@ -19,10 +19,26 @@
 
 package com.metamx.druid.client.cache;
 
+import org.skife.config.Config;
+import org.skife.config.Default;
+
 /**
  */
-public interface CacheBroker
+public abstract class MapCacheConfig
 {
-  public CacheStats getStats();
-  public Cache provideCache(String identifier);
+  @Config("${prefix}.sizeInBytes")
+  @Default("0")
+  public abstract long getSizeInBytes();
+
+  @Config("${prefix}.initialSize")
+  public int getInitialSize()
+  {
+    return 500000;
+  }
+
+  @Config("${prefix}.logEvictionCount")
+  public int getLogEvictionCount()
+  {
+    return 0;
+  }
 }
