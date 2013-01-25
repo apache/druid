@@ -428,27 +428,27 @@ public class RemoteTaskRunner implements TaskRunner
 
                     statusLock.notify();
 
+                    final TaskWrapper taskWrapper = tasks.get(taskId);
+                    if (taskWrapper == null) {
+                      log.warn(
+                          "WTF?! Worker[%s] announcing a status for a task I didn't know about: %s",
+                          worker.getHost(),
+                          taskId
+                      );
+                    } else {
+                      final TaskCallback callback = taskWrapper.getCallback();
+
+                      // Cleanup
+                      if (callback != null) {
+                        callback.notify(taskStatus);
+                      }
+                    }
+
                     if (taskStatus.isComplete()) {
                       // Worker is done with this task
                       workerWrapper.setLastCompletedTaskTime(new DateTime());
-                      final TaskWrapper taskWrapper = tasks.get(taskId);
-
-                      if (taskWrapper == null) {
-                        log.warn(
-                            "WTF?! Worker[%s] completed a task I didn't know about: %s",
-                            worker.getHost(),
-                            taskId
-                        );
-                      } else {
-                        final TaskCallback callback = taskWrapper.getCallback();
-
-                        // Cleanup
-                        if (callback != null) {
-                          callback.notify(taskStatus);
-                        }
-                        tasks.remove(taskId);
-                        cf.delete().guaranteed().inBackground().forPath(event.getData().getPath());
-                      }
+                      tasks.remove(taskId);
+                      cf.delete().guaranteed().inBackground().forPath(event.getData().getPath());
                     }
                   }
                 }

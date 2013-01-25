@@ -191,4 +191,24 @@ public class MergerDBCoordinator
       }
     }
   }
+
+  public void deleteSegment(final DataSegment segment)
+  {
+    dbi.withHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle) throws Exception
+          {
+            handle.createStatement(
+                String.format("DELETE from %s WHERE id = :id", dbConnectorConfig.getSegmentTable())
+            ).bind("id", segment.getIdentifier())
+                  .execute();
+
+            return null;
+          }
+        }
+    );
+
+  }
 }

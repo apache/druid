@@ -20,7 +20,6 @@
 package com.metamx.druid.merger.common.task;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -43,16 +42,18 @@ import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class IndexDeterminePartitionsTask extends AbstractTask
 {
-  @JsonProperty private final FirehoseFactory firehoseFactory;
-  @JsonProperty private final Schema schema;
-  @JsonProperty private final long targetPartitionSize;
+  @JsonProperty
+  private final FirehoseFactory firehoseFactory;
+  @JsonProperty
+  private final Schema schema;
+  @JsonProperty
+  private final long targetPartitionSize;
 
   private static final Logger log = new Logger(IndexTask.class);
 
@@ -109,24 +110,24 @@ public class IndexDeterminePartitionsTask extends AbstractTask
     final Firehose firehose = firehoseFactory.connect();
 
     try {
-      while(firehose.hasMore()) {
+      while (firehose.hasMore()) {
 
         final InputRow inputRow = firehose.nextRow();
 
-        if(getInterval().contains(inputRow.getTimestampFromEpoch())) {
+        if (getInterval().contains(inputRow.getTimestampFromEpoch())) {
 
           // Extract dimensions from event
           for (final String dim : inputRow.getDimensions()) {
             final List<String> dimValues = inputRow.getDimension(dim);
 
-            if(!unusableDimensions.contains(dim)) {
+            if (!unusableDimensions.contains(dim)) {
 
-              if(dimValues.size() == 1) {
+              if (dimValues.size() == 1) {
 
                 // Track this value
                 TreeMultiset<String> dimensionValueMultiset = dimensionValueMultisets.get(dim);
 
-                if(dimensionValueMultiset == null) {
+                if (dimensionValueMultiset == null) {
                   dimensionValueMultiset = TreeMultiset.create();
                   dimensionValueMultisets.put(dim, dimensionValueMultiset);
                 }
@@ -147,7 +148,8 @@ public class IndexDeterminePartitionsTask extends AbstractTask
         }
 
       }
-    } finally {
+    }
+    finally {
       firehose.close();
     }
 
@@ -167,7 +169,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
       }
     };
 
-    if(dimensionValueMultisets.isEmpty()) {
+    if (dimensionValueMultisets.isEmpty()) {
       // No suitable partition dimension. We'll make one big segment and hope for the best.
       log.info("No suitable partition dimension found");
       shardSpecs.add(new NoneShardSpec());
@@ -189,9 +191,9 @@ public class IndexDeterminePartitionsTask extends AbstractTask
       // Iterate over unique partition dimension values in sorted order
       String currentPartitionStart = null;
       int currentPartitionSize = 0;
-      for(final String partitionDimValue : partitionDimValues.elementSet()) {
+      for (final String partitionDimValue : partitionDimValues.elementSet()) {
         currentPartitionSize += partitionDimValues.count(partitionDimValue);
-        if(currentPartitionSize >= targetPartitionSize) {
+        if (currentPartitionSize >= targetPartitionSize) {
           final ShardSpec shardSpec = new SingleDimensionShardSpec(
               partitionDim,
               currentPartitionStart,
@@ -229,24 +231,25 @@ public class IndexDeterminePartitionsTask extends AbstractTask
 
     return TaskStatus.success(getId()).withNextTasks(
         Lists.transform(
-            shardSpecs, new Function<ShardSpec, Task>()
-        {
-          @Override
-          public Task apply(ShardSpec shardSpec)
-          {
-            return new IndexGeneratorTask(
-                getGroupId(),
-                getInterval(),
-                firehoseFactory,
-                new Schema(
-                    schema.getDataSource(),
-                    schema.getAggregators(),
-                    schema.getIndexGranularity(),
-                    shardSpec
-                )
-            );
-          }
-        }
+            shardSpecs,
+            new Function<ShardSpec, Task>()
+            {
+              @Override
+              public Task apply(ShardSpec shardSpec)
+              {
+                return new IndexGeneratorTask(
+                    getGroupId(),
+                    getInterval(),
+                    firehoseFactory,
+                    new Schema(
+                        schema.getDataSource(),
+                        schema.getAggregators(),
+                        schema.getIndexGranularity(),
+                        shardSpec
+                    )
+                );
+              }
+            }
         )
     );
   }

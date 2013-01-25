@@ -111,16 +111,14 @@ public class TaskMonitor
                         try {
                           workerCuratorCoordinator.unannounceTask(task.getId());
                           workerCuratorCoordinator.announceStatus(TaskStatus.running(task.getId()));
-                          taskStatus = task.run(
-                              taskContext, toolbox, new TaskCallback()
+                          taskStatus = task.run(taskContext, toolbox, new TaskCallback()
                           {
                             @Override
                             public void notify(TaskStatus status)
                             {
-                              workerCuratorCoordinator.announceStatus(status);
+                              workerCuratorCoordinator.updateStatus(status);
                             }
-                          }
-                          );
+                          });
                         }
                         catch (Exception e) {
                           log.makeAlert(e, "Failed to run task")

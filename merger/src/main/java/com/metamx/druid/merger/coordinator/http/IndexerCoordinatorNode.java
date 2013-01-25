@@ -47,6 +47,8 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.S3SegmentKiller;
+import com.metamx.druid.loading.SegmentKiller;
 import com.metamx.druid.loading.S3SegmentPusher;
 import com.metamx.druid.loading.S3SegmentPusherConfig;
 import com.metamx.druid.loading.SegmentPusher;
@@ -129,6 +131,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
 
   private List<Monitor> monitors = null;
   private ServiceEmitter emitter = null;
+  private DbConnectorConfig dbConnectorConfig = null;
+  private DBI dbi = null;
   private IndexerCoordinatorConfig config = null;
   private TaskToolbox taskToolbox = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
@@ -207,6 +211,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
 
     initializeEmitter();
     initializeMonitors();
+    initializeDB();
     initializeIndexerCoordinatorConfig();
     initializeMergeDBCoordinator();
     initializeTaskToolbox();
@@ -387,6 +392,16 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
+  private void initializeDB()
+  {
+    if (dbConnectorConfig == null) {
+      dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
+    }
+    if (dbi == null) {
+      dbi = new DbConnector(dbConnectorConfig).getDBI();
+    }
+  }
+
   private void initializeIndexerCoordinatorConfig()
   {
     if (config == null) {
@@ -408,18 +423,23 @@ public class IndexerCoordinatorNode extends RegisteringNode
           configFactory.build(S3SegmentPusherConfig.class),
           jsonMapper
       );
-      taskToolbox = new TaskToolbox(config, emitter, s3Client, segmentPusher, jsonMapper);
+      final SegmentKiller segmentKiller = new S3SegmentKiller(
+          s3Client,
+          dbi,
+          dbConnectorConfig,
+          jsonMapper
+      );
+      taskToolbox = new TaskToolbox(config, emitter, s3Client, segmentPusher, segmentKiller, jsonMapper);
     }
   }
 
   public void initializeMergeDBCoordinator()
   {
     if (mergerDBCoordinator == null) {
-      final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
       mergerDBCoordinator = new MergerDBCoordinator(
           jsonMapper,
           dbConnectorConfig,
-          new DbConnector(dbConnectorConfig).getDBI()
+          dbi
       );
     }
   }

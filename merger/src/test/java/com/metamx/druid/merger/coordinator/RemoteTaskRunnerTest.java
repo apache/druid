@@ -191,10 +191,7 @@ public class RemoteTaskRunnerTest
     cf.create().creatingParentsIfNeeded().forPath(
         String.format("%s/worker1/task1", statusPath),
         jsonMapper.writeValueAsBytes(
-            TaskStatus.success(
-                "task1",
-                ImmutableSet.<DataSegment>of()
-            )
+            TaskStatus.success("task1")
         )
     );
 
@@ -327,7 +324,7 @@ public class RemoteTaskRunnerTest
               {
                 return null;
               }
-            }, null, null, null, jsonMapper
+            }, null, null, null, null, jsonMapper
         ),
         Executors.newSingleThreadExecutor()
     );
@@ -504,7 +501,7 @@ public class RemoteTaskRunnerTest
     @Override
     public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
     {
-      return TaskStatus.success("task1", ImmutableSet.<DataSegment>of());
+      return TaskStatus.success("task1");
     }
   }
 }
