@@ -28,6 +28,7 @@ import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.druid.Query;
+import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.ResultGranularTimestampComparator;
 import com.metamx.druid.TimeseriesBinaryFn;
 import com.metamx.druid.aggregation.AggregatorFactory;
@@ -192,8 +193,7 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
             TimeseriesResultValue results = input.getValue();
             final List<Object> retVal = Lists.newArrayListWithCapacity(1 + aggs.size());
 
-            // make sure to preserve timezone information when caching results
-            retVal.add(input.getTimestamp());
+            retVal.add(input.getTimestamp().getMillis());
             for (AggregatorFactory agg : aggs) {
               retVal.add(results.getMetric(agg.getName()));
             }
@@ -208,6 +208,8 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
       {
         return new Function<Object, Result<TimeseriesResultValue>>()
         {
+          private final QueryGranularity granularity = query.getGranularity();
+
           @Override
           public Result<TimeseriesResultValue> apply(@Nullable Object input)
           {
@@ -217,9 +219,7 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
             Iterator<Object> resultIter = results.iterator();
 
-            DateTime timestamp = ISODateTimeFormat.dateTimeParser()
-                                                  .withOffsetParsed()
-                                                  .parseDateTime(resultIter.next().toString());
+            DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
 
             while (aggsIter.hasNext() && resultIter.hasNext()) {
               final AggregatorFactory factory = aggsIter.next();

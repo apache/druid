@@ -29,6 +29,7 @@ import com.metamx.common.guava.ConcatSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Query;
+import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.initialization.Initialization;
@@ -125,11 +126,13 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
             Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
             new Function<Row, Row>()
             {
+              private final QueryGranularity granularity = query.getGranularity();
+
               @Override
-              public Row apply(@Nullable Row input)
+              public Row apply(Row input)
               {
                 final MapBasedRow row = (MapBasedRow) input;
-                return new MapBasedRow(query.getGranularity().toDateTime(row.getTimestampFromEpoch()), row.getEvent());
+                return new MapBasedRow(granularity.toDateTime(row.getTimestampFromEpoch()), row.getEvent());
               }
             }
         );
