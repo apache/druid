@@ -52,6 +52,8 @@ public class S3SegmentKiller implements SegmentKiller
   @Override
   public List<DataSegment> kill(final String datasource, final Interval interval) throws ServiceException
   {
+    // TODO -- Awkward for workers to use the DB!
+
     List<DataSegment> matchingSegments = dbi.withHandle(
         new HandleCallback<List<DataSegment>>()
         {
