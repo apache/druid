@@ -22,22 +22,31 @@ package com.metamx.druid.merger.common;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.task.Task;
 import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonProperty;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
+/**
+ * Represents the status of a task. The task may be ongoing ({@link #isComplete()} false) or it may be
+ * complete ({@link #isComplete()} true). Ongoing tasks may request segments to be created, but only
+ * complete tasks may request segments to be nuked or spawn other tasks. Failed tasks may not request
+ * anything.
+ *
+ * TaskStatus objects are immutable.
+ */
 public class TaskStatus
 {
   public static enum Status
   {
     RUNNING,
     SUCCESS,
-    FAILED,
-    CONTINUED
+    FAILED
   }
 
   public static TaskStatus running(String taskId)
@@ -45,37 +54,46 @@ public class TaskStatus
     return new TaskStatus(
         taskId,
         Status.RUNNING,
-        Collections.<DataSegment>emptyList(),
-        Collections.<Task>emptyList(),
+        ImmutableSet.<DataSegment>of(),
+        ImmutableSet.<DataSegment>of(),
+        ImmutableList.<Task>of(),
+        -1
+    );
+  }
+
+  public static TaskStatus success(String taskId)
+  {
+    return success(taskId, ImmutableSet.<DataSegment>of());
+  }
+
+  public static TaskStatus success(String taskId, Set<DataSegment> segments)
+  {
+    return new TaskStatus(
+        taskId,
+        Status.SUCCESS,
+        segments,
+        ImmutableSet.<DataSegment>of(),
+        ImmutableList.<Task>of(),
         -1
     );
   }
 
   public static TaskStatus failure(String taskId)
   {
-    return new TaskStatus(taskId, Status.FAILED, Collections.<DataSegment>emptyList(), Collections.<Task>emptyList(), -1);
-  }
-
-  public static TaskStatus success(String taskId, List<DataSegment> segments)
-  {
-    return new TaskStatus(taskId, Status.SUCCESS, ImmutableList.copyOf(segments), Collections.<Task>emptyList(), -1);
-  }
-
-  public static TaskStatus continued(String taskId, List<Task> nextTasks)
-  {
-    Preconditions.checkArgument(nextTasks.size() > 0, "nextTasks.size() > 0");
     return new TaskStatus(
         taskId,
-        Status.CONTINUED,
-        Collections.<DataSegment>emptyList(),
-        ImmutableList.copyOf(nextTasks),
+        Status.FAILED,
+        ImmutableSet.<DataSegment>of(),
+        ImmutableSet.<DataSegment>of(),
+        ImmutableList.<Task>of(),
         -1
     );
   }
 
   private final String id;
-  private final List<DataSegment> segments;
-  private final List<Task> nextTasks;
+  private final ImmutableSet<DataSegment> segments;
+  private final ImmutableSet<DataSegment> segmentsNuked;
+  private final ImmutableList<Task> nextTasks;
   private final Status status;
   private final long duration;
 
@@ -83,16 +101,42 @@ public class TaskStatus
   private TaskStatus(
       @JsonProperty("id") String id,
       @JsonProperty("status") Status status,
-      @JsonProperty("segments") List<DataSegment> segments,
+      @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("segmentsNuked") Set<DataSegment> segmentsNuked,
       @JsonProperty("nextTasks") List<Task> nextTasks,
       @JsonProperty("duration") long duration
   )
   {
     this.id = id;
-    this.segments = segments;
-    this.nextTasks = nextTasks;
+    this.segments = ImmutableSet.copyOf(segments);
+    this.segmentsNuked = ImmutableSet.copyOf(segmentsNuked);
+    this.nextTasks = ImmutableList.copyOf(nextTasks);
     this.status = status;
     this.duration = duration;
+
+    // Check class invariants.
+    Preconditions.checkNotNull(id, "id");
+    Preconditions.checkNotNull(status, "status");
+
+    if (this.segments.size() > 0) {
+      Preconditions.checkArgument(
+          status == Status.RUNNING || status == Status.SUCCESS,
+          "segments not allowed for %s tasks",
+          status
+      );
+    }
+
+    if (this.segmentsNuked.size() > 0) {
+      Preconditions.checkArgument(status == Status.SUCCESS, "segmentsNuked not allowed for %s tasks", status);
+    }
+
+    if (this.nextTasks.size() > 0) {
+      Preconditions.checkArgument(
+          status == Status.SUCCESS || status == Status.RUNNING,
+          "nextTasks not allowed for %s tasks",
+          status
+      );
+    }
   }
 
   @JsonProperty("id")
@@ -108,9 +152,15 @@ public class TaskStatus
   }
 
   @JsonProperty("segments")
-  public List<DataSegment> getSegments()
+  public Set<DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @JsonProperty("segmentsNuked")
+  public Set<DataSegment> getSegmentsNuked()
+  {
+    return segmentsNuked;
   }
 
   @JsonProperty("nextTasks")
@@ -127,51 +177,62 @@ public class TaskStatus
 
   /**
    * Signals that a task is not yet complete, and is still runnable on a worker. Exactly one of isRunnable,
-   * isContinued, isSuccess, or isFailure will be true at any one time.
+   * isSuccess, or isFailure will be true at any one time.
    */
+  @JsonIgnore
   public boolean isRunnable()
   {
     return status == Status.RUNNING;
   }
 
   /**
-   * Returned by tasks when they complete successfully without spawning subtasks. Exactly one of isRunnable,
-   * isContinued, isSuccess, or isFailure will be true at any one time.
-   */
-  public boolean isContinued()
-  {
-    return status == Status.CONTINUED;
-  }
-
-  /**
    * Inverse of {@link #isRunnable}.
    */
+  @JsonIgnore
   public boolean isComplete()
   {
     return !isRunnable();
   }
 
   /**
-   * Returned by tasks when they spawn subtasks. Exactly one of isRunnable, isContinued, isSuccess, or isFailure will
+   * Returned by tasks when they spawn subtasks. Exactly one of isRunnable, isSuccess, or isFailure will
    * be true at any one time.
    */
+  @JsonIgnore
   public boolean isSuccess()
   {
     return status == Status.SUCCESS;
   }
 
   /**
-   * Returned by tasks when they complete unsuccessfully. Exactly one of isRunnable, isContinued, isSuccess, or
+   * Returned by tasks when they complete unsuccessfully. Exactly one of isRunnable, isSuccess, or
    * isFailure will be true at any one time.
    */
+  @JsonIgnore
   public boolean isFailure()
   {
     return status == Status.FAILED;
   }
 
+  public TaskStatus withSegments(Set<DataSegment> _segments)
+  {
+    return new TaskStatus(id, status, _segments, segmentsNuked, nextTasks, duration);
+  }
+
+
+  public TaskStatus withSegmentsNuked(Set<DataSegment> _segmentsNuked)
+  {
+    return new TaskStatus(id, status, segments, _segmentsNuked, nextTasks, duration);
+  }
+
+  public TaskStatus withNextTasks(List<Task> _nextTasks)
+  {
+    return new TaskStatus(id, status, segments, segmentsNuked, _nextTasks, duration);
+  }
+
   public TaskStatus withDuration(long _duration)
   {
-    return new TaskStatus(id, status, segments, nextTasks, _duration);
+    return new TaskStatus(id, status, segments, segmentsNuked, nextTasks, _duration);
   }
 
   @Override

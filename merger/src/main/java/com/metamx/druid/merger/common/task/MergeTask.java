@@ -35,6 +35,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.loading.SegmentPuller;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.coordinator.TaskContext;
@@ -115,7 +116,7 @@ public abstract class MergeTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
   {
     final ServiceEmitter emitter = toolbox.getEmitter();
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
@@ -171,7 +172,7 @@ public abstract class MergeTask extends AbstractTask
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
 
-      return TaskStatus.success(getId(), Lists.newArrayList(uploadedSegment));
+      return TaskStatus.success(getId(), ImmutableSet.of(uploadedSegment));
     }
     catch (Exception e) {
       log.error(

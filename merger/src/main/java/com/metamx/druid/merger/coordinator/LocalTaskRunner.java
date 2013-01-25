@@ -22,6 +22,7 @@ package com.metamx.druid.merger.coordinator;
 import com.google.common.base.Throwables;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.task.Task;
@@ -70,7 +71,7 @@ public class LocalTaskRunner implements TaskRunner
             TaskStatus status;
 
             try {
-              status = task.run(context, toolbox);
+              status = task.run(context, toolbox, callback);
             }
             catch (InterruptedException e) {
               log.error(e, "Interrupted while running task[%s]", task);
@@ -97,9 +98,9 @@ public class LocalTaskRunner implements TaskRunner
 
             try {
               callback.notify(status.withDuration(System.currentTimeMillis() - startTime));
-            } catch(Throwable t) {
-              log.error(t, "Uncaught Throwable during callback for task[%s]", task);
-              throw Throwables.propagate(t);
+            } catch(Exception e) {
+              log.error(e, "Uncaught Exception during callback for task[%s]", task);
+              throw Throwables.propagate(e);
             }
           }
         }

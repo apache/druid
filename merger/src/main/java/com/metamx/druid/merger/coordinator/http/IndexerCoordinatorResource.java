@@ -27,6 +27,7 @@ import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.MergeTask;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskQueue;
+import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
@@ -50,6 +51,7 @@ public class IndexerCoordinatorResource
   private final IndexerCoordinatorConfig config;
   private final ServiceEmitter emitter;
   private final TaskQueue tasks;
+  private final TaskStorageQueryAdapter taskStorageQueryAdapter;
   private final WorkerSetupManager workerSetupManager;
 
   @Inject
@@ -57,6 +59,7 @@ public class IndexerCoordinatorResource
       IndexerCoordinatorConfig config,
       ServiceEmitter emitter,
       TaskQueue tasks,
+      TaskStorageQueryAdapter taskStorageQueryAdapter,
       WorkerSetupManager workerSetupManager
 
   ) throws Exception
@@ -64,6 +67,7 @@ public class IndexerCoordinatorResource
     this.config = config;
     this.emitter = emitter;
     this.tasks = tasks;
+    this.taskStorageQueryAdapter = taskStorageQueryAdapter;
     this.workerSetupManager = workerSetupManager;
   }
 
@@ -108,7 +112,7 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response doStatus(@PathParam("taskid") String taskid)
   {
-    final Optional<TaskStatus> status = tasks.getStatus(taskid);
+    final Optional<TaskStatus> status = taskStorageQueryAdapter.getGroupMergedStatus(taskid);
     if (!status.isPresent()) {
       return Response.status(Response.Status.NOT_FOUND).build();
     } else {

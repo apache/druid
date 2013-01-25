@@ -17,11 +17,16 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.merger.coordinator.commit;
 
 import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.task.Task;
 
-public interface TaskCallback
+public class TaskCommitStyle implements CommitStyle
 {
-  public void notify(TaskStatus status);
+  @Override
+  public boolean shouldCommit(Task task, TaskStatus taskStatus)
+  {
+    return taskStatus.isSuccess();
+  }
 }

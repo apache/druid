@@ -60,6 +60,17 @@ public class LocalTaskStorage implements TaskStorage
   }
 
   @Override
+  public Optional<Task> getTask(String taskid)
+  {
+    Preconditions.checkNotNull(taskid, "taskid");
+    if(tasks.containsKey(taskid)) {
+      return Optional.of(tasks.get(taskid).task);
+    } else {
+      return Optional.absent();
+    }
+  }
+
+  @Override
   public void setStatus(String taskid, TaskStatus status)
   {
     Preconditions.checkNotNull(taskid, "taskid");

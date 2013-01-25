@@ -96,7 +96,7 @@ public class WorkerNode extends RegisteringNode
 
   private List<Monitor> monitors = null;
   private ServiceEmitter emitter = null;
-  private IndexerCoordinatorConfig coordinatorConfig = null; // FIXME needed for task toolbox, but shouldn't be
+  private IndexerCoordinatorConfig coordinatorConfig = null; // TODO needed for task toolbox, but shouldn't be
   private WorkerConfig workerConfig = null;
   private TaskToolbox taskToolbox = null;
   private CuratorFramework curatorFramework = null;

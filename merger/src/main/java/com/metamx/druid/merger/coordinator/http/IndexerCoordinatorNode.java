@@ -64,6 +64,7 @@ import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.TaskRunner;
 import com.metamx.druid.merger.coordinator.TaskRunnerFactory;
 import com.metamx.druid.merger.coordinator.TaskStorage;
+import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
@@ -235,6 +236,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             config,
             emitter,
             taskQueue,
+            new TaskStorageQueryAdapter(taskStorage),
             workerSetupManager
         )
     );

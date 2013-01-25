@@ -17,24 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.merger.common;
 
-import com.metamx.druid.merger.common.TaskCallback;
-import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.merger.common.TaskStatus;
 
-/**
- * Interface for handing off tasks. Used by a {@link com.metamx.druid.merger.coordinator.exec.TaskConsumer} to run tasks that
- * have been locked.
- */
-public interface TaskRunner
+public interface TaskCallback
 {
-  /**
-   * Run a task with a particular context and call a callback. The callback may be called multiple times with RUNNING
-   * status, but should be called exactly once with a non-RUNNING status (e.g. SUCCESS, FAILED, CONTINUED...).
-   *
-   * @param task task to run
-   * @param context task context to run under
-   * @param callback callback to be called exactly once
-   */
-  public void run(Task task, TaskContext context, TaskCallback callback);
+  public void notify(TaskStatus status);
 }

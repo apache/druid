@@ -1,12 +1,14 @@
 package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
@@ -191,7 +193,7 @@ public class RemoteTaskRunnerTest
         jsonMapper.writeValueAsBytes(
             TaskStatus.success(
                 "task1",
-                Lists.<DataSegment>newArrayList()
+                ImmutableSet.<DataSegment>of()
             )
         )
     );
@@ -500,9 +502,9 @@ public class RemoteTaskRunnerTest
     }
 
     @Override
-    public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+    public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
     {
-      return TaskStatus.success("task1", Lists.<DataSegment>newArrayList());
+      return TaskStatus.success("task1", ImmutableSet.<DataSegment>of());
     }
   }
 }

@@ -162,6 +162,36 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
+  public Optional<Task> getTask(final String taskid)
+  {
+    return dbi.withHandle(
+        new HandleCallback<Optional<Task>>()
+        {
+          @Override
+          public Optional<Task> withHandle(Handle handle) throws Exception
+          {
+            final List<Map<String, Object>> dbTasks =
+                handle.createQuery(
+                    String.format(
+                        "SELECT payload FROM %s WHERE id = :id",
+                        dbConnectorConfig.getTaskTable()
+                    )
+                )
+                      .bind("id", taskid)
+                      .list();
+
+            if(dbTasks.size() == 0) {
+              return Optional.absent();
+            } else {
+              final Map<String, Object> dbStatus = Iterables.getOnlyElement(dbTasks);
+              return Optional.of(jsonMapper.readValue(dbStatus.get("payload").toString(), Task.class));
+            }
+          }
+        }
+    );
+  }
+
+  @Override
   public Optional<TaskStatus> getStatus(final String taskid)
   {
     return dbi.withHandle(

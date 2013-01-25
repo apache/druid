@@ -23,20 +23,19 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Booleans;
-import com.metamx.common.Pair;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
+import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -61,7 +60,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * only one TaskGroup can be running on a particular dataSource + interval, and that TaskGroup has a single version
  * string that all tasks in the group must use to publish segments. Tasks in the same TaskGroup may run concurrently.
  *
- * For persistence, the queue saves new tasks from {@link #add} and task status updates from {@link #done} using a
+ * For persistence, the queue saves new tasks from {@link #add} and task status updates from {@link #notify} using a
  * {@link TaskStorage} object.
  *
  * To support leader election of our containing system, the queue can be stopped (in which case it will not accept
@@ -71,6 +70,8 @@ public class TaskQueue
 {
   private final List<Task> queue = Lists.newLinkedList();
   private final Map<String, NavigableMap<Interval, TaskGroup>> running = Maps.newHashMap();
+  private final Multimap<String, String> seenNextTasks = HashMultimap.create();
+
   private final TaskStorage taskStorage;
 
   private final ReentrantLock giant = new ReentrantLock();
@@ -78,7 +79,7 @@ public class TaskQueue
 
   private volatile boolean active = false;
 
-  private static final Logger log = new Logger(TaskQueue.class);
+  private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
 
   public TaskQueue(TaskStorage taskStorage)
   {
@@ -100,36 +101,24 @@ public class TaskQueue
       Preconditions.checkState(queue.isEmpty(), "queue must be empty!");
       Preconditions.checkState(running.isEmpty(), "running list must be empty!");
 
-      // XXX - We might want a TaskStorage API that does this, but including the Pair type in the interface seems clumsy.
-      final List<Pair<Task, String>> runningTasks = Lists.transform(
-          taskStorage.getRunningTasks(),
-          new Function<Task, Pair<Task, String>>()
-          {
-            @Override
-            public Pair<Task, String> apply(Task task)
-            {
-              return Pair.of(task, taskStorage.getVersion(task.getId()).orNull());
-            }
-          }
-      );
+      final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage);
+      final List<VersionedTaskWrapper> runningTasks = taskStorageQueryAdapter.getRunningTaskVersions();
 
       // Sort by version, with nulls last
-      final Ordering<Pair<Task, String>> byVersionOrdering = new Ordering<Pair<Task, String>>()
+      final Ordering<VersionedTaskWrapper> byVersionOrdering = new Ordering<VersionedTaskWrapper>()
       {
         final private Ordering<String> baseOrdering = Ordering.natural().nullsLast();
 
         @Override
-        public int compare(
-            Pair<Task, String> left, Pair<Task, String> right
-        )
+        public int compare(VersionedTaskWrapper left, VersionedTaskWrapper right)
         {
-          return baseOrdering.compare(left.rhs, right.rhs);
+          return baseOrdering.compare(left.getVersion(), right.getVersion());
         }
       };
 
-      for(final Pair<Task, String> taskAndVersion : byVersionOrdering.sortedCopy(runningTasks)) {
-        final Task task = taskAndVersion.lhs;
-        final String preferredVersion = taskAndVersion.rhs;
+      for(final VersionedTaskWrapper taskAndVersion : byVersionOrdering.sortedCopy(runningTasks)) {
+        final Task task = taskAndVersion.getTask();
+        final String preferredVersion = taskAndVersion.getVersion();
 
         queue.add(task);
 
@@ -169,6 +158,8 @@ public class TaskQueue
 
     try {
 
+      log.info("Naptime!");
+
       queue.clear();
       running.clear();
       active = false;
@@ -184,21 +175,22 @@ public class TaskQueue
    * @param task task to add
    * @return true
    */
-  public boolean add(Task task)
+  public boolean add(final Task task)
   {
     giant.lock();
 
     try {
       Preconditions.checkState(active, "Queue is not active!");
 
+      // If this throws, we don't want to insert the task into our queue.
+      // (This is how we detect duplicates)
       taskStorage.insert(task, TaskStatus.running(task.getId()));
 
       queue.add(task);
       workMayBeAvailable.signalAll();
 
       return true;
-    }
-    finally {
+    } finally {
       giant.unlock();
     }
   }
@@ -254,6 +246,107 @@ public class TaskQueue
     }
   }
 
+  public void notify(final Task task, final TaskStatus status)
+  {
+    notify(task, status, null);
+  }
+
+  /**
+   * Notify this queue that some task has an updated status. If this update is valid, the status will be persisted in
+   * the task storage facility, and any nextTasks present in the status will be created. If the status is a completed
+   * status, the task will be unlocked and no further updates will be accepted. If this task has failed, the task group
+   * it is part of will be terminated.
+   *
+   * Finally, if this task is not supposed to be running, this method will simply do nothing.
+   *
+   * @param task task to update
+   * @param status new task status
+   * @param commitRunnable operation to perform if this task is ready to commit
+   * @throws NullPointerException if task or status is null
+   * @throws IllegalArgumentException if the task ID does not match the status ID
+   * @throws IllegalStateException if this queue is currently shut down
+   */
+  public void notify(final Task task, final TaskStatus status, final Runnable commitRunnable)
+  {
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(task, "task");
+      Preconditions.checkNotNull(status, "status");
+      Preconditions.checkState(active, "Queue is not active!");
+      Preconditions.checkArgument(
+          task.getId().equals(status.getId()),
+          "Mismatching task ids[%s/%s]",
+          task.getId(),
+          status.getId()
+      );
+
+      final TaskGroup taskGroup;
+
+      final Optional<TaskGroup> maybeTaskGroup = findTaskGroupForTask(task);
+      if(!maybeTaskGroup.isPresent()) {
+        log.info("Ignoring notification for dead task: %s", task.getId());
+        return;
+      } else {
+        taskGroup = maybeTaskGroup.get();
+      }
+
+      // Update status in DB
+      // TODO: We can either do this first, in which case we run the risk of having a task marked done in the DB but
+      // TODO: not committed here; or we can do it last, in which case we run the risk of having a task marked running
+      // TODO: in the DB but committed here. Currently, we err on the former side because we don't want a ticking time
+      // TODO: bomb in the DB (a task marked running that we have forgotten about, which will potentially be re-
+      // TODO: started much later when a coordinator bootstraps).
+      // TODO:
+      // TODO: Eventually we should have this status update enter a retry queue instead of throwing an exception
+      // TODO: if it fails.
+      taskStorage.setStatus(task.getId(), status);
+
+      // Should we commit?
+      if(taskGroup.getCommitStyle().shouldCommit(task, status)) {
+        log.info("Committing %s status for task: %s", status.getStatusCode(), task.getId());
+
+        // Add next tasks
+        try {
+          if(commitRunnable != null) {
+            log.info("Running commitRunnable for task: %s", task.getId());
+            commitRunnable.run();
+          }
+
+          // We want to allow tasks to submit RUNNING statuses with the same nextTasks over and over.
+          // So, we need to remember which ones we've already spawned and not do them again.
+          for(final Task nextTask : status.getNextTasks()) {
+            if(!seenNextTasks.containsEntry(task.getId(), nextTask.getId())) {
+              add(nextTask);
+              tryLock(nextTask);
+              seenNextTasks.put(task.getId(), nextTask.getId());
+            } else {
+              log.info("Already added followup task %s to original task: %s", nextTask.getId(), task.getId());
+            }
+          }
+        } catch(Exception e) {
+          log.makeAlert(e, "Failed to commit task")
+             .addData("task", task.getId())
+             .addData("statusCode", status.getStatusCode())
+             .emit();
+
+          // TODO -- If this fails, it should enter a retry queue instead of throwing an exception
+          taskStorage.setStatus(task.getId(), TaskStatus.failure(task.getId()).withDuration(status.getDuration()));
+        }
+      } else {
+        log.info("Not committing %s status for task: %s", status.getStatusCode(), task);
+      }
+
+      if(status.isComplete()) {
+        unlock(task);
+        seenNextTasks.removeAll(task.getId());
+        log.info("Task done: %s", task);
+      }
+    } finally {
+      giant.unlock();
+    }
+  }
+
   /**
    * Unlock some work. Does not update the task storage facility. Throws an exception if this work is not currently
    * running.
@@ -267,34 +360,21 @@ public class TaskQueue
 
     try {
       final String dataSource = task.getDataSource();
-      final Interval interval = task.getInterval();
-
-      final List<TaskGroup> maybeTaskGroup = Lists.newArrayList(
-          FunctionalIterable.create(findLocks(dataSource, interval))
-                            .filter(
-                                new Predicate<TaskGroup>()
-                                {
-                                  @Override
-                                  public boolean apply(TaskGroup taskGroup)
-                                  {
-                                    return taskGroup.getTaskSet().contains(task);
-                                  }
-                                }
-                            )
-      );
 
       final TaskGroup taskGroup;
-      if(maybeTaskGroup.size() == 1) {
-        taskGroup = maybeTaskGroup.get(0);
+      final Optional<TaskGroup> maybeTaskGroup = findTaskGroupForTask(task);
+
+      if(maybeTaskGroup.isPresent()) {
+        taskGroup = maybeTaskGroup.get();
       } else {
         throw new IllegalStateException(String.format("Task must be running: %s", task.getId()));
       }
 
       // Remove task from live list
       log.info("Removing task[%s] from TaskGroup[%s]", task.getId(), taskGroup.getGroupId());
-      taskGroup.getTaskSet().remove(task);
+      taskGroup.remove(task.getId());
 
-      if(taskGroup.getTaskSet().size() == 0) {
+      if(taskGroup.size() == 0) {
         log.info("TaskGroup complete: %s", taskGroup);
         running.get(dataSource).remove(taskGroup.getInterval());
       }
@@ -308,111 +388,6 @@ public class TaskQueue
     finally {
       giant.unlock();
     }
-  }
-
-  /**
-   * Unlock some task and update its status in the task storage facility. If "status" is a continuation status (i.e.
-   * it has nextTasks) this will add the next tasks to the queue with a generic running status.
-   *
-   * @param task task to unlock
-   * @param status task completion status; must not be runnable
-   * @throws IllegalStateException if task is not currently running, or if status is runnable
-   */
-  public void done(final Task task, final TaskStatus status)
-  {
-    giant.lock();
-
-    try {
-      Preconditions.checkState(active, "Queue is not active!");
-      Preconditions.checkState(!status.isRunnable(), "status must no longer be runnable");
-
-      Preconditions.checkState(
-          task.getId().equals(status.getId()),
-          "Mismatching task ids[%s/%s]",
-          task.getId(),
-          status.getId()
-      );
-
-      // Might change on continuation failure
-      TaskStatus actualStatus = status;
-
-      // Add next tasks, if any
-      try {
-        for(final Task nextTask : status.getNextTasks()) {
-          add(nextTask);
-          tryLock(nextTask);
-        }
-      } catch(Exception e) {
-        log.error(e, "Failed to continue task: %s", task.getId());
-        actualStatus = TaskStatus.failure(task.getId());
-      }
-
-      unlock(task);
-
-      // Update status in DB
-      taskStorage.setStatus(task.getId(), actualStatus);
-
-      log.info("Task done: %s", task);
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  /**
-   * Returns task status for a particular task ID. May collapse "continued" statuses down to "success" or "failure"
-   * if appropriate.
-   */
-  public Optional<TaskStatus> getStatus(final String taskid)
-  {
-    giant.lock();
-
-    try {
-      final Optional<TaskStatus> statusOptional = taskStorage.getStatus(taskid);
-      if(statusOptional.isPresent()) {
-        // See if we can collapse this down
-        return Optional.of(collapseStatus(statusOptional.get()));
-      } else {
-        return statusOptional;
-      }
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  private TaskStatus collapseStatus(TaskStatus status)
-  {
-
-    if (status.isContinued()) {
-
-      int nSubtasks = 0;
-      int nSuccesses = 0;
-      List<DataSegment> segments = Lists.newArrayList();
-
-      for(final Task subtask : status.getNextTasks()) {
-
-        final TaskStatus subtaskStatus = collapseStatus(taskStorage.getStatus(subtask.getId()).get());
-        nSubtasks ++;
-
-        if (subtaskStatus.isFailure()) {
-          return TaskStatus.failure(status.getId());
-        } else if (subtaskStatus.isSuccess()) {
-          nSuccesses++;
-          segments.addAll(subtaskStatus.getSegments());
-        }
-
-      }
-
-      if (nSubtasks == nSuccesses) {
-        return TaskStatus.success(status.getId(), segments);
-      }
-
-    }
-
-    // unable to collapse it down
-    return status;
-
   }
 
   /**
@@ -442,7 +417,7 @@ public class TaskQueue
       final String dataSource = task.getDataSource();
       final Interval interval = task.getInterval();
 
-      final List<TaskGroup> foundLocks = findLocks(dataSource, interval);
+      final List<TaskGroup> foundLocks = findTaskGroupsForInterval(dataSource, interval);
       final TaskGroup taskGroupToUse;
 
       if (foundLocks.size() > 1) {
@@ -495,7 +470,7 @@ public class TaskQueue
       }
 
       // Add to existing TaskGroup, if necessary
-      if (taskGroupToUse.getTaskSet().add(task)) {
+      if (taskGroupToUse.add(task)) {
         log.info("Added task[%s] to TaskGroup[%s]", task.getId(), taskGroupToUse.getGroupId());
       } else {
         log.info("Task[%s] already present in TaskGroup[%s]", task.getId(), taskGroupToUse.getGroupId());
@@ -510,9 +485,46 @@ public class TaskQueue
   }
 
   /**
+   * Return the currently-running task group for some task. If the task has no currently-running task group, this will
+   * return an absentee Optional.
+   *
+   * @param task task for which to locate group
+   */
+  private Optional<TaskGroup> findTaskGroupForTask(final Task task)
+  {
+    giant.lock();
+
+    try {
+      final List<TaskGroup> maybeTaskGroup = Lists.newArrayList(
+          FunctionalIterable.create(findTaskGroupsForInterval(task.getDataSource(), task.getInterval()))
+                            .filter(
+                                new Predicate<TaskGroup>()
+                                {
+                                  @Override
+                                  public boolean apply(TaskGroup taskGroup)
+                                  {
+                                    return taskGroup.contains(task.getId());
+                                  }
+                                }
+                            )
+      );
+
+      if(maybeTaskGroup.size() == 1) {
+        return Optional.of(maybeTaskGroup.get(0));
+      } else if(maybeTaskGroup.size() == 0) {
+        return Optional.absent();
+      } else {
+        throw new IllegalStateException(String.format("WTF?! Task %s is in multiple task groups!", task.getId()));
+      }
+    } finally {
+      giant.unlock();
+    }
+  }
+
+  /**
    * Return all locks that overlap some search interval.
    */
-  private List<TaskGroup> findLocks(final String dataSource, final Interval interval)
+  private List<TaskGroup> findTaskGroupsForInterval(final String dataSource, final Interval interval)
   {
     giant.lock();
 

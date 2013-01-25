@@ -29,6 +29,7 @@ import com.google.common.collect.TreeMultiset;
 import com.google.common.primitives.Ints;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.input.InputRow;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.coordinator.TaskContext;
@@ -88,15 +89,15 @@ public class IndexDeterminePartitionsTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
   {
     log.info("Running with targetPartitionSize[%d]", targetPartitionSize);
 
     // This is similar to what DeterminePartitionsJob does in the hadoop indexer, but we don't require
     // a preconfigured partition dimension (we'll just pick the one with highest cardinality).
 
-    // XXX - Space-efficiency (stores all unique dimension values, although at least not all combinations)
-    // XXX - Time-efficiency (runs all this on one single node instead of through map/reduce)
+    // NOTE: Space-efficiency (stores all unique dimension values, although at least not all combinations)
+    // NOTE: Time-efficiency (runs all this on one single node instead of through map/reduce)
 
     // Blacklist dimensions that have multiple values per row
     final Set<String> unusableDimensions = Sets.newHashSet();
@@ -226,8 +227,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
       }
     }
 
-    return TaskStatus.continued(
-        getId(),
+    return TaskStatus.success(getId()).withNextTasks(
         Lists.transform(
             shardSpecs, new Function<ShardSpec, Task>()
         {

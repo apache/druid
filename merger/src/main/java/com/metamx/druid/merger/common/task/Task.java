@@ -21,13 +21,10 @@ package com.metamx.druid.merger.common.task;
 
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.coordinator.TaskContext;
-import com.metamx.druid.merger.common.task.IndexDeterminePartitionsTask;
-import com.metamx.druid.merger.common.task.IndexGeneratorTask;
-import com.metamx.druid.merger.common.task.IndexTask;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 /**
@@ -81,8 +78,10 @@ public interface Task
    *
    * @param context Context for this task, gathered under indexer lock
    * @param toolbox Toolbox for this task
+   * @param callback Callback for "early returns". Statuses returned to this callback must not be
+   *                 complete (isRunnable must be true).
    * @return Some kind of finished status (isRunnable must be false).
    * @throws Exception
    */
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception;
+  public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception;
 }
