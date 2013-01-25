@@ -264,6 +264,16 @@ public class RemoteTaskRunner implements TaskRunner
     return zkWorkers.size();
   }
 
+  public boolean isTaskRunning(String taskId)
+  {
+    for (WorkerWrapper workerWrapper : zkWorkers.values()) {
+      if (workerWrapper.getRunningTasks().contains(taskId)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @Override
   public void run(Task task, TaskContext context, TaskCallback callback)
   {

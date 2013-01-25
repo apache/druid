@@ -196,8 +196,13 @@ public class RemoteTaskRunnerTest
     );
 
     // Really don't like this way of waiting for the task to appear
-    while (remoteTaskRunner.getNumWorkers() == 0) {
+    int count = 0;
+    while (!remoteTaskRunner.isTaskRunning("task1")) {
       Thread.sleep(500);
+      if (count > 10) {
+        throw new ISE("WTF?! Task still not announced in ZK?");
+      }
+      count++;
     }
 
     final MutableBoolean callbackCalled = new MutableBoolean(false);
@@ -364,8 +369,13 @@ public class RemoteTaskRunnerTest
         String.format("%s/worker1", announcementsPath),
         jsonMapper.writeValueAsBytes(worker1)
     );
+    int count = 0;
     while (remoteTaskRunner.getNumWorkers() == 0) {
       Thread.sleep(500);
+      if (count > 10) {
+        throw new ISE("WTF?! Still can't find worker!");
+      }
+      count++;
     }
   }
 
