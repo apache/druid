@@ -47,6 +47,7 @@ public interface Task
   enum Type
   {
     INDEX,
+    HADOOPINDEX,
     MERGE,
     APPEND,
     DELETE,

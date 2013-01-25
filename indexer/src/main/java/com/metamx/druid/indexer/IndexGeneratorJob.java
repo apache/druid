@@ -45,7 +45,6 @@ import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -70,8 +69,6 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import javax.annotation.Nullable;
 import java.io.BufferedOutputStream;
@@ -185,7 +182,7 @@ public class IndexGeneratorJob implements Jobby
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
         final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
         publishedSegmentsBuilder.add(segment);
-        log.info("Published %s", segment.getIdentifier());
+        log.info("Adding segment %s to the list of published segments", segment.getIdentifier());
       }
     }
     catch (IOException e) {
