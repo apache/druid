@@ -44,6 +44,7 @@ import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
@@ -286,21 +287,28 @@ public class RemoteTaskRunner implements TaskRunner
       try {
         log.info("Worker[%s] is already running task[%s].", worker.getHost(), taskWrapper.getTask().getId());
 
-        TaskStatus taskStatus = jsonMapper.readValue(
-            workerWrapper.getStatusCache()
-                         .getCurrentData(
-                             JOINER.join(config.getStatusPath(), worker.getHost(), taskWrapper.getTask().getId())
-                         )
-                         .getData(),
-            TaskStatus.class
-        );
+        final ChildData workerData = workerWrapper.getStatusCache()
+                                                  .getCurrentData(
+                                                      JOINER.join(
+                                                          config.getStatusPath(),
+                                                          worker.getHost(),
+                                                          taskWrapper.getTask().getId()
+                                                      )
+                                                  );
 
-        if (taskStatus.isComplete()) {
+        if (workerData != null && workerData.getData() != null) {
+          final TaskStatus taskStatus = jsonMapper.readValue(
+              workerData.getData(),
+              TaskStatus.class
+          );
+
           TaskCallback callback = taskWrapper.getCallback();
           if (callback != null) {
             callback.notify(taskStatus);
           }
           new CleanupPaths(worker.getHost(), taskWrapper.getTask().getId()).run();
+        } else {
+          log.warn("Worker data was null for worker: %s", worker.getHost());
         }
       }
       catch (Exception e) {
