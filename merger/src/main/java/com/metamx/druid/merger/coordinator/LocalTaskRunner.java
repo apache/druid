@@ -39,7 +39,7 @@ public class LocalTaskRunner implements TaskRunner
   private final TaskToolbox toolbox;
   private final ExecutorService exec;
 
-  private static final Logger log = new Logger(TaskQueue.class);
+  private static final Logger log = new Logger(LocalTaskRunner.class);
 
   public LocalTaskRunner(
       TaskToolbox toolbox,
@@ -66,11 +66,11 @@ public class LocalTaskRunner implements TaskRunner
           public void run()
           {
             final long startTime = System.currentTimeMillis();
-            final File taskDir = toolbox.getConfig().getTaskDir(task);
 
             TaskStatus status;
 
             try {
+              log.info("Running task: %s", task.getId());
               status = task.run(context, toolbox, callback);
             }
             catch (InterruptedException e) {
@@ -87,13 +87,15 @@ public class LocalTaskRunner implements TaskRunner
             }
 
             try {
+              final File taskDir = toolbox.getConfig().getTaskDir(task);
+
               if (taskDir.exists()) {
                 log.info("Removing task directory: %s", taskDir);
                 FileUtils.deleteDirectory(taskDir);
               }
             }
             catch (Exception e) {
-              log.error(e, "Failed to delete task directory[%s]", taskDir.toString());
+              log.error(e, "Failed to delete task directory: %s", task.getId());
             }
 
             try {

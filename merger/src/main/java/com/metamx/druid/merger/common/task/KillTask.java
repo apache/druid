@@ -56,6 +56,6 @@ public class KillTask extends AbstractTask
                .kill(getDataSource(), getInterval())
     );
 
-    return TaskStatus.success(getId(), segmentsToKill);
+    return TaskStatus.success(getId()).withSegmentsNuked(segmentsToKill);
   }
 }
