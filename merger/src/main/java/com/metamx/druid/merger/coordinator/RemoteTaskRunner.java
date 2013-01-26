@@ -316,7 +316,10 @@ public class RemoteTaskRunner implements TaskRunner
           if (callback != null) {
             callback.notify(taskStatus);
           }
-          new CleanupPaths(worker.getHost(), taskWrapper.getTask().getId()).run();
+
+          if (taskStatus.isComplete()) {
+            new CleanupPaths(worker.getHost(), taskWrapper.getTask().getId()).run();
+          }
         } else {
           log.warn("Worker data was null for worker: %s", worker.getHost());
         }
