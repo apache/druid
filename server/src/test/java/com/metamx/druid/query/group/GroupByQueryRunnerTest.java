@@ -1,10 +1,30 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.query.group;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.PeriodGranularity;
@@ -33,6 +53,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerTest
@@ -88,82 +109,61 @@ public class GroupByQueryRunnerTest
 
   @Test
   public void testGroupBy() {
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(
-                                         Lists.newArrayList(
-                                             (DimensionSpec)new DefaultDimensionSpec(
-                                                 "quality",
-                                                 "alias"
-                                             )
-                                         )
-                                     )
-                                     .setAggregatorSpecs(
-                                         Arrays.<AggregatorFactory>asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory(
-                                                 "idx",
-                                                 "index"
-                                             )
-                                         )
-                                     )
-                                     .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .build();
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
 
-      List<Row> expectedResults = Arrays.asList(
-          (Row) new MapBasedRow(new DateTime("2011-04-01"),ImmutableMap.<String, Object>of("alias", "automotive", "rows", 1L, "idx", 135L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01"),ImmutableMap.<String, Object>of("alias", "business",   "rows", 1L, "idx", 118L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01"),ImmutableMap.<String, Object>of("alias", "entertainment", "rows", 1L, "idx", 158L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01"),ImmutableMap.<String, Object>of("alias", "health", "rows", 1L, "idx", 120L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01"),ImmutableMap.<String, Object>of("alias", "mezzanine", "rows", 3L, "idx", 2870L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01"),ImmutableMap.<String, Object>of("alias", "news", "rows", 1L, "idx", 121L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01"),ImmutableMap.<String, Object>of("alias", "premium", "rows", 3L, "idx", 2900L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01"),ImmutableMap.<String, Object>of("alias", "technology", "rows", 1L, "idx", 78L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01"),ImmutableMap.<String, Object>of("alias", "travel", "rows", 1L, "idx", 119L)),
+      List<Row> expectedResults = Arrays.<Row>asList(
+          createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
+          createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+          createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
+          createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 120L),
+          createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+          createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+          createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 2900L),
+          createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+          createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L),
 
-          (Row) new MapBasedRow(new DateTime("2011-04-02"),ImmutableMap.<String, Object>of("alias", "automotive", "rows", 1L, "idx", 147L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-02"),ImmutableMap.<String, Object>of("alias", "business",   "rows", 1L, "idx", 112L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-02"),ImmutableMap.<String, Object>of("alias", "entertainment", "rows", 1L, "idx", 166L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-02"),ImmutableMap.<String, Object>of("alias", "health", "rows", 1L, "idx", 113L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-02"),ImmutableMap.<String, Object>of("alias", "mezzanine", "rows", 3L, "idx", 2447L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-02"),ImmutableMap.<String, Object>of("alias", "news", "rows", 1L, "idx", 114L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-02"),ImmutableMap.<String, Object>of("alias", "premium", "rows", 3L, "idx", 2505L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-02"),ImmutableMap.<String, Object>of("alias", "technology", "rows", 1L, "idx", 97L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-02"),ImmutableMap.<String, Object>of("alias", "travel", "rows", 1L, "idx", 126L))
+          createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+          createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 112L),
+          createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+          createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 113L),
+          createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+          createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
+          createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+          createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
+          createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
       );
 
-      Iterable<Row> results = Sequences.toList(
-          runner.run(query),
-          Lists.<Row>newArrayList()
-      );
+      Iterable<Row> results = Sequences.toList(runner.run(query), Lists.<Row>newArrayList());
 
       TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
   public void testMergeResults() {
-    GroupByQuery.Builder builder = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setInterval("2011-04-02/2011-04-04")
-                                     .setDimensions(
-                                         Lists.newArrayList(
-                                             (DimensionSpec)new DefaultDimensionSpec(
-                                                 "quality",
-                                                 "alias"
-                                             )
-                                         )
-                                     )
-                                     .setAggregatorSpecs(
-                                         Arrays.<AggregatorFactory>asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory(
-                                                 "idx",
-                                                 "index"
-                                             )
-                                         )
-                                     )
-                                     .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery fullQuery = builder.build();
 
@@ -174,57 +174,42 @@ public class GroupByQueryRunnerTest
           public Sequence run(Query<Row> query)
           {
             // simulate two daily segments
-            final Query query1 = query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03"))));
-            final Query query2 = query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04"))));
-            return Sequences.<Row>concat(runner.run(query1), runner.run(query2));
+            final Query query1 = query.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+            );
+            final Query query2 = query.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+            );
+            return Sequences.concat(runner.run(query1), runner.run(query2));
           }
         }
     );
 
-    List<Row> expectedResults = Arrays.asList(
-        (Row) new MapBasedRow(
-            new DateTime("2011-04-01"),
-            ImmutableMap.<String, Object>of("alias", "automotive", "rows", 1L, "idx", 269L)
-        ),
-        (Row) new MapBasedRow(
-            new DateTime("2011-04-01"),
-            ImmutableMap.<String, Object>of("alias", "business", "rows", 1L, "idx", 217L)
-        ),
-        (Row) new MapBasedRow(
-            new DateTime("2011-04-01"),
-            ImmutableMap.<String, Object>of("alias", "entertainment", "rows", 1L, "idx", 319L)
-        ),
-        (Row) new MapBasedRow(
-            new DateTime("2011-04-01"),
-            ImmutableMap.<String, Object>of("alias", "health", "rows", 1L, "idx", 216L)
-        ),
-        (Row) new MapBasedRow(
-            new DateTime("2011-04-01"),
-            ImmutableMap.<String, Object>of("alias", "mezzanine", "rows", 3L, "idx", 4420L)
-        ),
-        (Row) new MapBasedRow(
-            new DateTime("2011-04-01"),
-            ImmutableMap.<String, Object>of("alias", "news", "rows", 1L, "idx", 221L)
-        ),
-        (Row) new MapBasedRow(
-            new DateTime("2011-04-01"),
-            ImmutableMap.<String, Object>of("alias", "premium", "rows", 3L, "idx", 4416L)
-        ),
-        (Row) new MapBasedRow(
-            new DateTime("2011-04-01"),
-            ImmutableMap.<String, Object>of("alias", "technology", "rows", 1L, "idx", 177L)
-        ),
-        (Row) new MapBasedRow(
-            new DateTime("2011-04-01"),
-            ImmutableMap.<String, Object>of("alias", "travel", "rows", 1L, "idx", 243L)
-        )
+    List<Row> expectedResults = Arrays.<Row>asList(
+        createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
+        createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
+        createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
+        createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
+        createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
+        createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Iterable<Row> results = Sequences.toList(
-        mergedRunner.run(fullQuery),
-        Lists.<Row>newArrayList()
-    );
+    TestHelper.assertExpectedObjects(expectedResults, runner.run(fullQuery), "direct");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery), "merged");
+  }
 
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  private MapBasedRow createExpectedRow(final String timestamp, Object... vals)
+  {
+    Preconditions.checkArgument(vals.length % 2 == 0);
+
+    Map<String, Object> theVals = Maps.newHashMap();
+    for (int i = 0; i < vals.length; i+=2) {
+      theVals.put(vals[i].toString(), vals[i+1]);
+    }
+
+    return new MapBasedRow(new DateTime(timestamp), theVals);
   }
 }

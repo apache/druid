@@ -52,6 +52,12 @@ public class Rows
       {
         return row.getFloatMetric(metric);
       }
+
+      @Override
+      public String toString()
+      {
+        return row.toString();
+      }
     };
   }
 }

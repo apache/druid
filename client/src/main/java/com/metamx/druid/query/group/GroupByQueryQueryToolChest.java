@@ -29,6 +29,7 @@ import com.metamx.common.guava.ConcatSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Query;
+import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.initialization.Initialization;
@@ -99,10 +100,11 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
             }
         );
 
+        final QueryGranularity gran = query.getGranularity();
         final IncrementalIndex index = runner.run(query).accumulate(
             new IncrementalIndex(
-                condensed.get(0).getStartMillis(),
-                query.getGranularity(),
+                gran.truncate(condensed.get(0).getStartMillis()),
+                gran,
                 aggs.toArray(new AggregatorFactory[aggs.size()])
             ),
             new Accumulator<IncrementalIndex, Row>()

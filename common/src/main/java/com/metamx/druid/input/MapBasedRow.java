@@ -138,4 +138,33 @@ public class MapBasedRow implements Row
            '}';
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    MapBasedRow that = (MapBasedRow) o;
+
+    if (timestamp != that.timestamp) {
+      return false;
+    }
+    if (event != null ? !event.equals(that.event) : that.event != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = (int) (timestamp ^ (timestamp >>> 32));
+    result = 31 * result + (event != null ? event.hashCode() : 0);
+    return result;
+  }
 }
