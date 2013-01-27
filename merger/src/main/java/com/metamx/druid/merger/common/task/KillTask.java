@@ -51,11 +51,9 @@ public class KillTask extends AbstractTask
   public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
   {
     // Kill segments
-    Set<DataSegment> segmentsToKill = ImmutableSet.copyOf(
-        toolbox.getSegmentKiller()
-               .kill(getDataSource(), getInterval())
-    );
+    toolbox.getSegmentKiller()
+               .kill(context.getUnusedSegments());
 
-    return TaskStatus.success(getId()).withSegmentsNuked(segmentsToKill);
+    return TaskStatus.success(getId()).withSegmentsNuked(context.getUnusedSegments());
   }
 }

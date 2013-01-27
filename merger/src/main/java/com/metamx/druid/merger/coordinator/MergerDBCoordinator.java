@@ -20,6 +20,7 @@
 package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.common.logger.Logger;
@@ -31,12 +32,16 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.FoldController;
+import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.ResultIterator;
+import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -63,7 +68,7 @@ public class MergerDBCoordinator
     this.dbi = dbi;
   }
 
-  public List<DataSegment> getSegmentsForInterval(final String dataSource, final Interval interval) throws IOException
+  public List<DataSegment> getUsedSegmentsForInterval(final String dataSource, final Interval interval) throws IOException
   {
     synchronized (lock) {
 
@@ -209,6 +214,58 @@ public class MergerDBCoordinator
           }
         }
     );
+  }
 
+  public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
+  {
+    List<DataSegment> matchingSegments = dbi.withHandle(
+        new HandleCallback<List<DataSegment>>()
+        {
+          @Override
+          public List<DataSegment> withHandle(Handle handle) throws Exception
+          {
+            return handle.createQuery(
+                String.format(
+                    "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and end <= :end and used = 0",
+                    dbConnectorConfig.getSegmentTable()
+                )
+            )
+                         .bind("dataSource", dataSource)
+                         .bind("start", interval.getStart().toString())
+                         .bind("end", interval.getEnd().toString())
+                         .fold(
+                             Lists.<DataSegment>newArrayList(),
+                             new Folder3<List<DataSegment>, Map<String, Object>>()
+                             {
+                               @Override
+                               public List<DataSegment> fold(
+                                   List<DataSegment> accumulator,
+                                   Map<String, Object> stringObjectMap,
+                                   FoldController foldController,
+                                   StatementContext statementContext
+                               ) throws SQLException
+                               {
+                                 try {
+                                   DataSegment segment = jsonMapper.readValue(
+                                       (String) stringObjectMap.get("payload"),
+                                       DataSegment.class
+                                   );
+
+                                   accumulator.add(segment);
+
+                                   return accumulator;
+                                 }
+                                 catch (Exception e) {
+                                   throw Throwables.propagate(e);
+                                 }
+                               }
+                             }
+                         );
+          }
+        }
+    );
+
+    log.info("Found %,d segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
+    return matchingSegments;
   }
 }

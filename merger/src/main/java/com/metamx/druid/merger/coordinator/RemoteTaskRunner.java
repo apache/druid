@@ -463,13 +463,13 @@ public class RemoteTaskRunner implements TaskRunner
                       if (callback != null) {
                         callback.notify(taskStatus);
                       }
-                    }
 
-                    if (taskStatus.isComplete()) {
-                      // Worker is done with this task
-                      workerWrapper.setLastCompletedTaskTime(new DateTime());
-                      tasks.remove(taskId);
-                      cf.delete().guaranteed().inBackground().forPath(event.getData().getPath());
+                      if (taskStatus.isComplete()) {
+                        // Worker is done with this task
+                        workerWrapper.setLastCompletedTaskTime(new DateTime());
+                        tasks.remove(taskId);
+                        cf.delete().guaranteed().inBackground().forPath(event.getData().getPath());
+                      }
                     }
                   }
                 }

@@ -32,15 +32,18 @@ public class TaskContext
 {
   final String version;
   final Set<DataSegment> currentSegments;
+  final Set<DataSegment> unusedSegments;
 
   @JsonCreator
   public TaskContext(
       @JsonProperty("version") String version,
-      @JsonProperty("currentSegments") Set<DataSegment> currentSegments
+      @JsonProperty("currentSegments") Set<DataSegment> currentSegments,
+      @JsonProperty("unusedSegments") Set<DataSegment> unusedSegments
   )
   {
     this.version = version;
     this.currentSegments = currentSegments;
+    this.unusedSegments = unusedSegments;
   }
 
   @JsonProperty
@@ -53,5 +56,11 @@ public class TaskContext
   public Set<DataSegment> getCurrentSegments()
   {
     return currentSegments;
+  }
+
+  @JsonProperty
+  public Set<DataSegment> getUnusedSegments()
+  {
+    return unusedSegments;
   }
 }

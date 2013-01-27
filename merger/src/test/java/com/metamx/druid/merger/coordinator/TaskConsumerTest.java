@@ -41,30 +41,32 @@ public class TaskConsumerTest
     tc.start();
 
     try {
-      tq.add(new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
-      {
-        @Override
-        public Type getType()
-        {
-          return Type.TEST;
-        }
+      tq.add(
+          new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+          {
+            @Override
+            public Type getType()
+            {
+              return Type.TEST;
+            }
 
-        @Override
-        public TaskStatus run(
-            TaskContext context, TaskToolbox toolbox, TaskCallback callback
-        ) throws Exception
-        {
-          return TaskStatus.success(getId()).withSegments(
-              ImmutableSet.of(
-                  DataSegment.builder()
-                             .dataSource("ds")
-                             .interval(new Interval("2012-01-01/P1D"))
-                             .version(context.getVersion())
-                             .build()
-              )
-          );
-        }
-      });
+            @Override
+            public TaskStatus run(
+                TaskContext context, TaskToolbox toolbox, TaskCallback callback
+            ) throws Exception
+            {
+              return TaskStatus.success(getId()).withSegments(
+                  ImmutableSet.of(
+                      DataSegment.builder()
+                                 .dataSource("ds")
+                                 .interval(new Interval("2012-01-01/P1D"))
+                                 .version(context.getVersion())
+                                 .build()
+                  )
+              );
+            }
+          }
+      );
 
       while (ts.getStatus("id1").get().isRunnable()) {
         Thread.sleep(100);
@@ -97,7 +99,13 @@ public class TaskConsumerTest
     }
 
     @Override
-    public List<DataSegment> getSegmentsForInterval(String dataSource, Interval interval) throws IOException
+    public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval) throws IOException
+    {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
     {
       return ImmutableList.of();
     }

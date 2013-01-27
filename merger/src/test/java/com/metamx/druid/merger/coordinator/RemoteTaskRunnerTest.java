@@ -1,7 +1,6 @@
 package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
@@ -135,7 +134,7 @@ public class RemoteTaskRunnerTest
   {
     remoteTaskRunner.run(
         task1,
-        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
+        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
         null
     );
   }
@@ -143,9 +142,25 @@ public class RemoteTaskRunnerTest
   @Test
   public void testAlreadyExecutedTask() throws Exception
   {
-    remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+    remoteTaskRunner.run(
+        task1,
+        new TaskContext(
+            new DateTime().toString(),
+            Sets.<DataSegment>newHashSet(),
+            Sets.<DataSegment>newHashSet()
+        ),
+        null
+    );
     try {
-      remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+      remoteTaskRunner.run(
+          task1,
+          new TaskContext(
+              new DateTime().toString(),
+              Sets.<DataSegment>newHashSet(),
+              Sets.<DataSegment>newHashSet()
+          ),
+          null
+      );
       fail("ISE expected");
     }
     catch (ISE expected) {
@@ -175,7 +190,7 @@ public class RemoteTaskRunnerTest
                   )
               ), Lists.<AggregatorFactory>newArrayList()
           ),
-          new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
+          new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
           null
       );
     }

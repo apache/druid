@@ -408,7 +408,7 @@ public class TaskQueueTest
       }
     };
 
-    callback.notify(vt.getTask().run(new TaskContext(vt.getVersion(), null), null, callback));
+    callback.notify(vt.getTask().run(new TaskContext(vt.getVersion(), null, null), null, callback));
 
     // OK, finally ready to test stuff.
     Assert.assertTrue("pass1", structThingy.pass1);

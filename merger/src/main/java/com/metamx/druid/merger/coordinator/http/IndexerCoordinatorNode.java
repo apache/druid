@@ -424,10 +424,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
           jsonMapper
       );
       final SegmentKiller segmentKiller = new S3SegmentKiller(
-          s3Client,
-          dbi,
-          dbConnectorConfig,
-          jsonMapper
+          s3Client
       );
       taskToolbox = new TaskToolbox(config, emitter, s3Client, segmentPusher, segmentKiller, jsonMapper);
     }
@@ -487,8 +484,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public void initializeWorkerSetupManager()
   {
     if (workerSetupManager == null) {
-      final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
-      final DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
       final WorkerSetupManagerConfig workerSetupManagerConfig = configFactory.build(WorkerSetupManagerConfig.class);
 
       DbConnector.createConfigTable(dbi, workerSetupManagerConfig.getConfigTable());

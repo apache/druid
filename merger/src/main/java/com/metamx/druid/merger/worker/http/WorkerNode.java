@@ -29,15 +29,16 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.RegisteringNode;
-import com.metamx.druid.db.DbConnector;
-import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.S3SegmentKiller;
+import com.metamx.druid.loading.S3SegmentPusher;
+import com.metamx.druid.loading.S3SegmentPusherConfig;
 import com.metamx.druid.loading.SegmentKiller;
+import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
@@ -46,9 +47,6 @@ import com.metamx.druid.merger.worker.TaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import com.metamx.druid.loading.S3SegmentPusher;
-import com.metamx.druid.loading.S3SegmentPusherConfig;
-import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -73,7 +71,6 @@ import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
-import org.skife.jdbi.v2.DBI;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -298,13 +295,8 @@ public class WorkerNode extends RegisteringNode
           configFactory.build(S3SegmentPusherConfig.class),
           jsonMapper
       );
-      final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
-      DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
       final SegmentKiller segmentKiller = new S3SegmentKiller(
-          s3Client,
-          dbi,
-          dbConnectorConfig,
-          jsonMapper
+          s3Client
       );
       taskToolbox = new TaskToolbox(coordinatorConfig, emitter, s3Client, segmentPusher, segmentKiller, jsonMapper);
     }

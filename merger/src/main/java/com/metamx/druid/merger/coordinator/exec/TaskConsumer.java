@@ -109,7 +109,7 @@ public class TaskConsumer implements Runnable
              .emit();
 
           // Retry would be nice, but only after we have a way to throttle and limit them.  Just fail for now.
-          if(!shutdown) {
+          if (!shutdown) {
             queue.notify(task, TaskStatus.failure(task.getId()));
           }
         }
@@ -127,7 +127,13 @@ public class TaskConsumer implements Runnable
     final TaskContext context = new TaskContext(
         version,
         ImmutableSet.copyOf(
-            mergerDBCoordinator.getSegmentsForInterval(
+            mergerDBCoordinator.getUsedSegmentsForInterval(
+                task.getDataSource(),
+                task.getInterval()
+            )
+        ),
+        ImmutableSet.copyOf(
+            mergerDBCoordinator.getUnusedSegmentsForInterval(
                 task.getDataSource(),
                 task.getInterval()
             )
@@ -169,23 +175,24 @@ public class TaskConsumer implements Runnable
 
           // If we're not supposed to be running anymore, don't do anything. Somewhat racey if the flag gets set after
           // we check and before we commit the database transaction, but better than nothing.
-          if(shutdown) {
+          if (shutdown) {
             log.info("Abandoning task due to shutdown: %s", task.getId());
             return;
           }
 
-          queue.notify(task, statusFromRunner, new Runnable()
+          queue.notify(
+              task, statusFromRunner, new Runnable()
           {
             @Override
             public void run()
             {
               try {
-                if(statusFromRunner.getSegments().size() > 0) {
+                if (statusFromRunner.getSegments().size() > 0) {
                   // TODO -- Publish in transaction
                   publishSegments(task, context, statusFromRunner.getSegments());
                 }
 
-                if(statusFromRunner.getSegmentsNuked().size() > 0) {
+                if (statusFromRunner.getSegmentsNuked().size() > 0) {
                   deleteSegments(task, context, statusFromRunner.getSegmentsNuked());
                 }
               }
@@ -194,10 +201,11 @@ public class TaskConsumer implements Runnable
                 throw Throwables.propagate(e);
               }
             }
-          });
+          }
+          );
 
           // Emit event and log, if the task is done
-          if(statusFromRunner.isComplete()) {
+          if (statusFromRunner.isComplete()) {
             int segmentBytes = 0;
             for (DataSegment segment : statusFromRunner.getSegments()) {
               segmentBytes += segment.getSize();
@@ -226,7 +234,8 @@ public class TaskConsumer implements Runnable
                 statusFromRunner.getDuration()
             );
           }
-        } catch(Exception e) {
+        }
+        catch (Exception e) {
           log.makeAlert(e, "Failed to handle task callback")
              .addData("task", task.getId())
              .addData("statusCode", statusFromRunner.getStatusCode())
