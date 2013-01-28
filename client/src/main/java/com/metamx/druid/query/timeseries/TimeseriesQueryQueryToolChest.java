@@ -28,6 +28,7 @@ import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.druid.Query;
+import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.ResultGranularTimestampComparator;
 import com.metamx.druid.TimeseriesBinaryFn;
 import com.metamx.druid.aggregation.AggregatorFactory;
@@ -49,6 +50,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 import org.joda.time.Period;
+import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -206,6 +208,8 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
       {
         return new Function<Object, Result<TimeseriesResultValue>>()
         {
+          private final QueryGranularity granularity = query.getGranularity();
+
           @Override
           public Result<TimeseriesResultValue> apply(@Nullable Object input)
           {
@@ -215,7 +219,8 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
             Iterator<Object> resultIter = results.iterator();
 
-            DateTime timestamp = new DateTime(resultIter.next());
+            DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
+
             while (aggsIter.hasNext() && resultIter.hasNext()) {
               final AggregatorFactory factory = aggsIter.next();
               retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
