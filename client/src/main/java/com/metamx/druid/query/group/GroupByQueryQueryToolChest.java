@@ -101,10 +101,11 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
             }
         );
 
+        final QueryGranularity gran = query.getGranularity();
         final IncrementalIndex index = runner.run(query).accumulate(
             new IncrementalIndex(
-                condensed.get(0).getStartMillis(),
-                query.getGranularity(),
+                gran.truncate(condensed.get(0).getStartMillis()),
+                gran,
                 aggs.toArray(new AggregatorFactory[aggs.size()])
             ),
             new Accumulator<IncrementalIndex, Row>()
