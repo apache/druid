@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.merger.common;
 
 import com.metamx.druid.merger.common.TaskStatus;
 

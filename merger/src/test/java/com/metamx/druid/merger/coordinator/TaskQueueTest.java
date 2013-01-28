@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.task.AbstractTask;
@@ -76,18 +77,23 @@ public class TaskQueueTest
 
     Throwable thrown;
 
-    for(Task task : tasks) {
+    for (Task task : tasks) {
       tq.add(task);
     }
 
     // get task status for in-progress task
-    Assert.assertEquals("T2 status (before finishing)", TaskStatus.Status.RUNNING, tq.getStatus(tasks[2].getId()).get().getStatusCode());
+    Assert.assertEquals(
+        "T2 status (before finishing)",
+        TaskStatus.Status.RUNNING,
+        tq.getStatus(tasks[2].getId()).get().getStatusCode()
+    );
 
     // Can't add tasks with the same id
     thrown = null;
     try {
       tq.add(newTask("T5", "G5", "baz", new Interval("2013-02-01/PT1H")));
-    } catch(IllegalStateException e) {
+    }
+    catch (IllegalStateException e) {
       thrown = e;
     }
 
@@ -97,7 +103,7 @@ public class TaskQueueTest
     final List<Task> taken = Lists.newArrayList();
     while (true) {
       final VersionedTaskWrapper taskWrapper = tq.poll();
-      if(taskWrapper != null) {
+      if (taskWrapper != null) {
         taken.add(taskWrapper.getTask());
       } else {
         break;
@@ -114,16 +120,21 @@ public class TaskQueueTest
     );
 
     // mark one done
-    tq.done(tasks[2], tasks[2].run(null, null));
+    tq.done(tasks[2], tasks[2].run(null, null, null));
 
     // get its status back
-    Assert.assertEquals("T2 status (after finishing)", TaskStatus.Status.SUCCESS, tq.getStatus(tasks[2].getId()).get().getStatusCode());
+    Assert.assertEquals(
+        "T2 status (after finishing)",
+        TaskStatus.Status.SUCCESS,
+        tq.getStatus(tasks[2].getId()).get().getStatusCode()
+    );
 
     // Can't do a task twice
     thrown = null;
     try {
-      tq.done(tasks[2], tasks[2].run(null, null));
-    } catch(IllegalStateException e) {
+      tq.done(tasks[2], tasks[2].run(null, null, null));
+    }
+    catch (IllegalStateException e) {
       thrown = e;
     }
 
@@ -133,7 +144,7 @@ public class TaskQueueTest
     taken.clear();
     while (true) {
       final VersionedTaskWrapper taskWrapper = tq.poll();
-      if(taskWrapper != null) {
+      if (taskWrapper != null) {
         taken.add(taskWrapper.getTask());
       } else {
         break;
@@ -162,9 +173,9 @@ public class TaskQueueTest
     final Task t1 = newContinuedTask("T1", "G1", "bar", new Interval("2013/P1Y"), Lists.newArrayList(t0));
     tq.add(t1);
 
-    Assert.assertTrue("T0 isPresent (#1)",  !tq.getStatus("T0").isPresent());
-    Assert.assertTrue("T1 isPresent (#1)",   tq.getStatus("T1").isPresent());
-    Assert.assertTrue("T1 isRunnable (#1)",  tq.getStatus("T1").get().isRunnable());
+    Assert.assertTrue("T0 isPresent (#1)", !tq.getStatus("T0").isPresent());
+    Assert.assertTrue("T1 isPresent (#1)", tq.getStatus("T1").isPresent());
+    Assert.assertTrue("T1 isRunnable (#1)", tq.getStatus("T1").get().isRunnable());
     Assert.assertTrue("T1 isComplete (#1)", !tq.getStatus("T1").get().isComplete());
 
     // should be able to get t1 out
@@ -172,28 +183,28 @@ public class TaskQueueTest
     Assert.assertNull("poll #2", tq.poll());
 
     // report T1 done. Should cause T0 to be created
-    tq.done(t1, t1.run(null, null));
+    tq.done(t1, t1.run(null, null, null));
 
-    Assert.assertTrue("T0 isPresent (#2)",   tq.getStatus("T0").isPresent());
-    Assert.assertTrue("T0 isRunnable (#2)",  tq.getStatus("T0").get().isRunnable());
+    Assert.assertTrue("T0 isPresent (#2)", tq.getStatus("T0").isPresent());
+    Assert.assertTrue("T0 isRunnable (#2)", tq.getStatus("T0").get().isRunnable());
     Assert.assertTrue("T0 isComplete (#2)", !tq.getStatus("T0").get().isComplete());
-    Assert.assertTrue("T1 isPresent (#2)",   tq.getStatus("T1").isPresent());
+    Assert.assertTrue("T1 isPresent (#2)", tq.getStatus("T1").isPresent());
     Assert.assertTrue("T1 isRunnable (#2)", !tq.getStatus("T1").get().isRunnable());
-    Assert.assertTrue("T1 isComplete (#2)",  tq.getStatus("T1").get().isComplete());
+    Assert.assertTrue("T1 isComplete (#2)", tq.getStatus("T1").get().isComplete());
 
     // should be able to get t0 out
     Assert.assertEquals("poll #3", "T0", tq.poll().getTask().getId());
     Assert.assertNull("poll #4", tq.poll());
 
     // report T0 done. Should cause T0, T1 to be marked complete
-    tq.done(t0, t0.run(null, null));
+    tq.done(t0, t0.run(null, null, null));
 
-    Assert.assertTrue("T0 isPresent (#3)",   tq.getStatus("T0").isPresent());
+    Assert.assertTrue("T0 isPresent (#3)", tq.getStatus("T0").isPresent());
     Assert.assertTrue("T0 isRunnable (#3)", !tq.getStatus("T0").get().isRunnable());
-    Assert.assertTrue("T0 isComplete (#3)",  tq.getStatus("T0").get().isComplete());
-    Assert.assertTrue("T1 isPresent (#3)",   tq.getStatus("T1").isPresent());
+    Assert.assertTrue("T0 isComplete (#3)", tq.getStatus("T0").get().isComplete());
+    Assert.assertTrue("T1 isPresent (#3)", tq.getStatus("T1").isPresent());
     Assert.assertTrue("T1 isRunnable (#3)", !tq.getStatus("T1").get().isRunnable());
-    Assert.assertTrue("T1 isComplete (#3)",  tq.getStatus("T1").get().isComplete());
+    Assert.assertTrue("T1 isComplete (#3)", tq.getStatus("T1").get().isComplete());
 
     // should be no more events available for polling
     Assert.assertNull("poll #5", tq.poll());
@@ -227,7 +238,7 @@ public class TaskQueueTest
     Thread.sleep(5);
 
     // Finish t0
-    tq.done(t0, t0.run(null, null));
+    tq.done(t0, t0.run(null, null, null));
 
     // take max number of tasks
     final Set<String> taken = Sets.newHashSet();
@@ -238,7 +249,7 @@ public class TaskQueueTest
 
       final VersionedTaskWrapper taskWrapper = tq.poll();
 
-      if(taskWrapper != null) {
+      if (taskWrapper != null) {
         Assert.assertEquals(
             String.format("%s version", taskWrapper.getTask().getId()),
             wt0.getVersion(),
@@ -254,11 +265,11 @@ public class TaskQueueTest
     Assert.assertEquals("taken", Sets.newHashSet("T1", "T3"), taken);
 
     // Finish t1
-    tq.done(t1, t1.run(null, null));
+    tq.done(t1, t1.run(null, null, null));
     Assert.assertNull("null poll #2", tq.poll());
 
     // Finish t3
-    tq.done(t3, t3.run(null, null));
+    tq.done(t3, t3.run(null, null, null));
 
     // We should be able to get t2 now
     final VersionedTaskWrapper wt2 = tq.poll();
@@ -268,7 +279,7 @@ public class TaskQueueTest
     Assert.assertNull("null poll #3", tq.poll());
 
     // Finish t2
-    tq.done(t2, t2.run(null, null));
+    tq.done(t2, t2.run(null, null, null));
 
     // We should be able to get t4
     // And it should be in group G0, but that group should have a different version than last time
@@ -281,7 +292,7 @@ public class TaskQueueTest
     Assert.assertNotSame("wt4 version", wt2.getVersion(), wt4.getVersion());
 
     // Kind of done testing at this point, but let's finish t4 anyway
-    tq.done(t4, t4.run(null, null));
+    tq.done(t4, t4.run(null, null, null));
     Assert.assertNull("null poll #4", tq.poll());
   }
 
@@ -314,7 +325,7 @@ public class TaskQueueTest
     return new AbstractTask(id, groupId, dataSource, interval)
     {
       @Override
-      public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+      public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
       {
         return TaskStatus.success(
             id,
@@ -358,7 +369,7 @@ public class TaskQueueTest
       }
 
       @Override
-      public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+      public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
       {
         return TaskStatus.continued(id, nextTasks);
       }

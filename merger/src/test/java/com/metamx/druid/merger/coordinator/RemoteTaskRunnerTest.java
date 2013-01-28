@@ -7,6 +7,7 @@ import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
@@ -190,8 +191,7 @@ public class RemoteTaskRunnerTest
         String.format("%s/worker1/task1", statusPath),
         jsonMapper.writeValueAsBytes(
             TaskStatus.success(
-                "task1",
-                Lists.<DataSegment>newArrayList()
+                "task1"
             )
         )
     );
@@ -325,7 +325,7 @@ public class RemoteTaskRunnerTest
               {
                 return null;
               }
-            }, null, null, null, jsonMapper
+            }, null, null, null, null, jsonMapper
         ),
         Executors.newSingleThreadExecutor()
     );
@@ -500,9 +500,9 @@ public class RemoteTaskRunnerTest
     }
 
     @Override
-    public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+    public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
     {
-      return TaskStatus.success("task1", Lists.<DataSegment>newArrayList());
+      return TaskStatus.success("task1");
     }
   }
 }

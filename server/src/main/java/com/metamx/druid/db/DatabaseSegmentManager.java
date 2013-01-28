@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.metamx.common.MapUtils;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -45,6 +46,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import javax.annotation.Nullable;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -341,6 +343,44 @@ public class DatabaseSegmentManager
   public Collection<DruidDataSource> getInventory()
   {
     return dataSources.get().values();
+  }
+
+  public Collection<String> getAllDatasourceNames()
+  {
+    synchronized (lock) {
+      return dbi.withHandle(
+          new HandleCallback<List<String>>()
+          {
+            @Override
+            public List<String> withHandle(Handle handle) throws Exception
+            {
+              return handle.createQuery(
+                  String.format("SELECT DISTINCT(datasource) FROM %s", config.getSegmentTable())
+              )
+                           .fold(
+                               Lists.<String>newArrayList(),
+                               new Folder3<ArrayList<String>, Map<String, Object>>()
+                               {
+                                 @Override
+                                 public ArrayList<String> fold(
+                                     ArrayList<String> druidDataSources,
+                                     Map<String, Object> stringObjectMap,
+                                     FoldController foldController,
+                                     StatementContext statementContext
+                                 ) throws SQLException
+                                 {
+                                   druidDataSources.add(
+                                       MapUtils.getString(stringObjectMap, "datasource")
+                                   );
+                                   return druidDataSources;
+                                 }
+                               }
+                           );
+
+            }
+          }
+      );
+    }
   }
 
   public void poll()
