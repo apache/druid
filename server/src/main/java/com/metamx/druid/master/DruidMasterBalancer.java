@@ -120,10 +120,11 @@ public class DruidMasterBalancer implements DruidMasterHelper
       int iter = 0;
 
       while (iter < maxSegmentsToMove) {
-        BalancerSegmentHolder holder = analyzer.findNewSegmentHome(serverHolderList, numSegments);
-        if (!segmentsBeingMoved.contains(holder.getSegment())) {
-          moveSegment(holder, params);
-          segmentsBeingMoved.add(holder.getSegment());
+        BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList, numSegments);
+        DruidServer toServer = analyzer.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList).getServer();
+        if (!segmentsBeingMoved.contains(segmentToMove.getSegment())) {
+          moveSegment(segmentToMove, toServer, params);
+          segmentsBeingMoved.add(segmentToMove.getSegment());
         }
         iter++;
       }
@@ -160,14 +161,14 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
   private void moveSegment(
       final BalancerSegmentHolder segment,
+      final DruidServer toServer,
       final DruidMasterRuntimeParams params
   )
   {
-    final DruidServer toServer = segment.getToServer();
-    final String toServerName = segment.getToServer().getName();
+    final String toServerName = toServer.getName();
     final LoadQueuePeon toPeon = params.getLoadManagementPeons().get(toServerName);
 
-    final String fromServer = segment.getFromServer().getName();
+    final String fromServerName = segment.getFromServer().getName();
     final DataSegment segmentToMove = segment.getSegment();
     final String segmentName = segmentToMove.getIdentifier();
 
@@ -177,12 +178,12 @@ public class DruidMasterBalancer implements DruidMasterHelper
       log.info(
           "Moving [%s] from [%s] to [%s]",
           segmentName,
-          fromServer,
+          fromServerName,
           toServerName
       );
       try {
         master.moveSegment(
-            fromServer,
+            fromServerName,
             toServerName,
             segmentToMove.getIdentifier(),
             new LoadPeonCallback()

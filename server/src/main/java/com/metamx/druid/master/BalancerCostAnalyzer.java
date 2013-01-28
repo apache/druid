@@ -141,7 +141,7 @@ public class BalancerCostAnalyzer
   }
 
   // The balancing application requires us to pick a proposal segment.
-  public BalancerSegmentHolder findNewSegmentHome(List<ServerHolder> serverHolders, int numSegments)
+  public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders, int numSegments)
   {
     // We want to sample from each server w.p. numSegmentsOnServer / totalSegments
     ServerHolder fromServerHolder = sampleServer(serverHolders, numSegments);
@@ -151,9 +151,7 @@ public class BalancerCostAnalyzer
     List<DataSegment> segments = Lists.newArrayList(fromServerHolder.getServer().getSegments().values());
 
     DataSegment proposalSegment = segments.get(rand.nextInt(segments.size()));
-    ServerHolder toServer = findNewSegmentHome(proposalSegment, serverHolders);
-
-    return new BalancerSegmentHolder(fromServerHolder.getServer(), toServer.getServer(), proposalSegment);
+    return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
   }
 
   // The assignment application requires us to supply a proposal segment.
