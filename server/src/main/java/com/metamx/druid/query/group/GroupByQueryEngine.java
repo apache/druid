@@ -43,6 +43,7 @@ import com.metamx.druid.index.v1.processing.DimensionSelector;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.dimension.DimensionSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -347,7 +348,7 @@ public class GroupByQueryEngine
           .transform(
               new Function<Map.Entry<ByteBuffer, Integer>, Row>()
               {
-                private final long timestamp = cursor.getTime().getMillis();
+                private final DateTime timestamp = cursor.getTime();
                 private final int[] increments = positionMaintainer.getIncrements();
 
                 @Override

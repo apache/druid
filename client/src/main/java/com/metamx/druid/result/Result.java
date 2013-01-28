@@ -71,7 +71,7 @@ public class Result<T> implements Comparable<Result<T>>
 
     Result result = (Result) o;
 
-    if (timestamp != null ? !timestamp.equals(result.timestamp) : result.timestamp != null) {
+    if (timestamp != null ? !(timestamp.isEqual(result.timestamp) && timestamp.getZone().getOffset(timestamp) == result.timestamp.getZone().getOffset(result.timestamp)) : result.timestamp != null) {
       return false;
     }
     if (value != null ? !value.equals(result.value) : result.value != null) {

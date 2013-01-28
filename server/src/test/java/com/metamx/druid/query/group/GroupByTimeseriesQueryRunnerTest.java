@@ -112,7 +112,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                     MapBasedRow row = (MapBasedRow) input;
 
                     return new Result<TimeseriesResultValue>(
-                        new DateTime(input.getTimestampFromEpoch()), new TimeseriesResultValue(row.getEvent())
+                        row.getTimestamp(), new TimeseriesResultValue(row.getEvent())
                     );
                   }
                 }
