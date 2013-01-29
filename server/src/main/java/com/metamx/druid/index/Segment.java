@@ -26,7 +26,7 @@ import org.joda.time.Interval;
  */
 public interface Segment
 {
-  public String getSegmentIdentifier();
+  public String getIdentifier();
   public Interval getDataInterval();
   public QueryableIndex asQueryableIndex();
   public StorageAdapter asStorageAdapter();

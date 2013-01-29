@@ -38,7 +38,7 @@ public class IncrementalIndexSegment implements Segment
   }
 
   @Override
-  public String getSegmentIdentifier()
+  public String getIdentifier()
   {
     throw new UnsupportedOperationException();
   }

@@ -17,26 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.index.column;
+package com.metamx.druid.query.segment;
 
-import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedFloats;
-import com.metamx.druid.kv.IndexedLongs;
+import org.joda.time.Interval;
 
-import java.io.Closeable;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  */
-public interface GenericColumn extends Closeable
+public class QuerySegmentSpecs
 {
-  public int length();
-  public ValueType getType();
-  public boolean hasMultipleValues();
+  public static QuerySegmentSpec create(String isoInterval)
+  {
+    return new LegacySegmentSpec(isoInterval);
+  }
 
-  public String getStringSingleValueRow(int rowNum);
-  public Indexed<String> getStringMultiValueRow(int rowNum);
-  public float getFloatSingleValueRow(int rowNum);
-  public IndexedFloats getFloatMultiValueRow(int rowNum);
-  public long getLongSingleValueRow(int rowNum);
-  public IndexedLongs getLongMultiValueRow(int rowNum);
+  public static QuerySegmentSpec create(Interval interval)
+  {
+    return create(Arrays.asList(interval));
+  }
+
+  public static QuerySegmentSpec create(List<Interval> intervals)
+  {
+    return new MultipleIntervalSegmentSpec(intervals);
+  }
 }

@@ -17,26 +17,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.index.column;
-
-import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedFloats;
-import com.metamx.druid.kv.IndexedLongs;
-
-import java.io.Closeable;
+package com.metamx.druid.query.metadata;
 
 /**
  */
-public interface GenericColumn extends Closeable
+public class NoneColumnIncluderator implements ColumnIncluderator
 {
-  public int length();
-  public ValueType getType();
-  public boolean hasMultipleValues();
-
-  public String getStringSingleValueRow(int rowNum);
-  public Indexed<String> getStringMultiValueRow(int rowNum);
-  public float getFloatSingleValueRow(int rowNum);
-  public IndexedFloats getFloatMultiValueRow(int rowNum);
-  public long getLongSingleValueRow(int rowNum);
-  public IndexedLongs getLongMultiValueRow(int rowNum);
+  @Override
+  public boolean include(String columnName)
+  {
+    return false;
+  }
 }

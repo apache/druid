@@ -22,26 +22,40 @@ package com.metamx.druid.query.metadata;
 import com.metamx.druid.BaseQuery;
 import com.metamx.druid.Query;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
-import com.metamx.druid.result.Result;
-import com.metamx.druid.result.SegmentMetadataResultValue;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 import java.util.Map;
 
-public class SegmentMetadataQuery extends BaseQuery<Result<SegmentMetadataResultValue>>
+public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 {
+
+  private final ColumnIncluderator toInclude;
+  private final boolean merge;
 
   public SegmentMetadataQuery(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
+      @JsonProperty("toInclude") ColumnIncluderator toInclude,
+      @JsonProperty("merge") Boolean merge,
       @JsonProperty("context") Map<String, String> context
   )
   {
-    super(
-        dataSource,
-        querySegmentSpec,
-        context
-    );
+    super(dataSource, querySegmentSpec, context);
+
+    this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
+    this.merge = merge == null ? false : merge;
+  }
+
+  @JsonProperty
+  public ColumnIncluderator getToInclude()
+  {
+    return toInclude;
+  }
+
+  @JsonProperty
+  public boolean isMerge()
+  {
+    return merge;
   }
 
   @Override
@@ -57,22 +71,16 @@ public class SegmentMetadataQuery extends BaseQuery<Result<SegmentMetadataResult
   }
 
   @Override
-  public Query<Result<SegmentMetadataResultValue>> withOverriddenContext(Map<String, String> contextOverride)
+  public Query<SegmentAnalysis> withOverriddenContext(Map<String, String> contextOverride)
   {
     return new SegmentMetadataQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        computeOverridenContext(contextOverride)
+        getDataSource(), getQuerySegmentSpec(), toInclude, merge, computeOverridenContext(contextOverride)
     );
   }
 
   @Override
-  public Query<Result<SegmentMetadataResultValue>> withQuerySegmentSpec(QuerySegmentSpec spec)
+  public Query<SegmentAnalysis> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new SegmentMetadataQuery(
-        getDataSource(),
-        spec,
-        getContext()
-    );
+    return new SegmentMetadataQuery(getDataSource(), spec, toInclude, merge, getContext());
   }
 }

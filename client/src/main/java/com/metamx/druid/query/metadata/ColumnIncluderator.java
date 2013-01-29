@@ -17,26 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.index.column;
+package com.metamx.druid.query.metadata;
 
-import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedFloats;
-import com.metamx.druid.kv.IndexedLongs;
-
-import java.io.Closeable;
+import org.codehaus.jackson.annotate.JsonSubTypes;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
 
 /**
  */
-public interface GenericColumn extends Closeable
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "none", value= NoneColumnIncluderator.class),
+    @JsonSubTypes.Type(name = "all", value= AllColumnIncluderator.class),
+    @JsonSubTypes.Type(name = "list", value= ListColumnIncluderator.class)
+})
+public interface ColumnIncluderator
 {
-  public int length();
-  public ValueType getType();
-  public boolean hasMultipleValues();
-
-  public String getStringSingleValueRow(int rowNum);
-  public Indexed<String> getStringMultiValueRow(int rowNum);
-  public float getFloatSingleValueRow(int rowNum);
-  public IndexedFloats getFloatMultiValueRow(int rowNum);
-  public long getLongSingleValueRow(int rowNum);
-  public IndexedLongs getLongMultiValueRow(int rowNum);
+  public boolean include(String columnName);
 }

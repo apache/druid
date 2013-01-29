@@ -17,26 +17,40 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.index.column;
+package com.metamx.druid.query.metadata;
 
-import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedFloats;
-import com.metamx.druid.kv.IndexedLongs;
+import com.google.common.collect.Sets;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
 
-import java.io.Closeable;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 /**
  */
-public interface GenericColumn extends Closeable
+public class ListColumnIncluderator implements ColumnIncluderator
 {
-  public int length();
-  public ValueType getType();
-  public boolean hasMultipleValues();
+  private final Set<String> columns;
 
-  public String getStringSingleValueRow(int rowNum);
-  public Indexed<String> getStringMultiValueRow(int rowNum);
-  public float getFloatSingleValueRow(int rowNum);
-  public IndexedFloats getFloatMultiValueRow(int rowNum);
-  public long getLongSingleValueRow(int rowNum);
-  public IndexedLongs getLongMultiValueRow(int rowNum);
+  @JsonCreator
+  public ListColumnIncluderator(
+      @JsonProperty("columns") List<String> columns
+  )
+  {
+    this.columns = Sets.newTreeSet(String.CASE_INSENSITIVE_ORDER);
+    this.columns.addAll(columns);
+  }
+
+  @JsonProperty
+  public Set<String> getColumns()
+  {
+    return Collections.unmodifiableSet(columns);
+  }
+
+  @Override
+  public boolean include(String columnName)
+  {
+    return columns.contains(columnName);
+  }
 }

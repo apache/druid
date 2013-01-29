@@ -328,7 +328,7 @@ public class ServerManagerTest
     }
 
     @Override
-    public String getSegmentIdentifier()
+    public String getIdentifier()
     {
       return version;
     }

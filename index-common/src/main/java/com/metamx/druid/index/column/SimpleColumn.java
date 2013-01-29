@@ -62,7 +62,7 @@ class SimpleColumn implements Column
     GenericColumn column = null;
     try {
       column = genericColumn.get();
-      return column.size();
+      return column.length();
     }
     finally {
       Closeables.closeQuietly(column);

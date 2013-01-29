@@ -102,10 +102,7 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
   @Override
   public Sequence<Result<TimeseriesResultValue>> mergeSequences(Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences)
   {
-    return new OrderedMergeSequence<Result<TimeseriesResultValue>>(
-        getOrdering(),
-        seqOfSequences
-    );
+    return new OrderedMergeSequence<Result<TimeseriesResultValue>>(getOrdering(), seqOfSequences);
   }
 
   @Override

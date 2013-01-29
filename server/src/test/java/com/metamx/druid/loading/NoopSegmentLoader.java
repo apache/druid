@@ -35,7 +35,7 @@ public class NoopSegmentLoader implements SegmentLoader
     return new Segment()
     {
       @Override
-      public String getSegmentIdentifier()
+      public String getIdentifier()
       {
         return segment.getIdentifier();
       }
