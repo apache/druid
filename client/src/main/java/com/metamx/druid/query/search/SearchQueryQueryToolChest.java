@@ -82,6 +82,10 @@ public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchRe
     maxSearchLimit = PropUtils.getPropertyAsInt(props, "com.metamx.query.search.maxSearchLimit", 1000);
   }
 
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
+  {
+  };
+
   @Override
   public QueryRunner<Result<SearchResultValue>> mergeResults(QueryRunner<Result<SearchResultValue>> runner)
   {
@@ -143,9 +147,9 @@ public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchRe
   }
 
   @Override
-  public CacheStrategy<Result<SearchResultValue>, SearchQuery> getCacheStrategy(SearchQuery query)
+  public CacheStrategy<Result<SearchResultValue>, Object, SearchQuery> getCacheStrategy(SearchQuery query)
   {
-    return new CacheStrategy<Result<SearchResultValue>, SearchQuery>()
+    return new CacheStrategy<Result<SearchResultValue>, Object, SearchQuery>()
     {
       @Override
       public byte[] computeCacheKey(SearchQuery query)
@@ -181,6 +185,12 @@ public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchRe
         }
 
         return queryCacheKey.array();
+      }
+
+      @Override
+      public TypeReference<Object> getCacheObjectClazz()
+      {
+        return OBJECT_TYPE_REFERENCE;
       }
 
       @Override

@@ -68,6 +68,9 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
   private static final TypeReference<Result<TimeseriesResultValue>> TYPE_REFERENCE = new TypeReference<Result<TimeseriesResultValue>>()
   {
   };
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
+  {
+  };
 
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> mergeResults(QueryRunner<Result<TimeseriesResultValue>> queryRunner)
@@ -155,9 +158,9 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
   }
 
   @Override
-  public CacheStrategy<Result<TimeseriesResultValue>, TimeseriesQuery> getCacheStrategy(final TimeseriesQuery query)
+  public CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery> getCacheStrategy(final TimeseriesQuery query)
   {
-    return new CacheStrategy<Result<TimeseriesResultValue>, TimeseriesQuery>()
+    return new CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery>()
     {
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
       private final List<PostAggregator> postAggs = query.getPostAggregatorSpecs();
@@ -177,6 +180,12 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
             .put(filterBytes)
             .put(aggregatorBytes)
             .array();
+      }
+
+      @Override
+      public TypeReference<Object> getCacheObjectClazz()
+      {
+        return OBJECT_TYPE_REFERENCE;
       }
 
       @Override
@@ -259,6 +268,4 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
   {
     return Ordering.natural();
   }
-
-
 }

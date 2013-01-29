@@ -27,7 +27,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.Comparators;
+import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.druid.Query;
@@ -44,8 +44,7 @@ import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
 import javax.annotation.Nullable;
-import java.util.Comparator;
-import java.util.Iterator;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,6 +53,7 @@ import java.util.Set;
 public class SegmentMetadataQueryQueryToolChest implements QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
   private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<SegmentAnalysis>(){};
+  private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
 
   @Override
   public QueryRunner<SegmentAnalysis> mergeResults(final QueryRunner<SegmentAnalysis> runner)
@@ -165,9 +165,58 @@ public class SegmentMetadataQueryQueryToolChest implements QueryToolChest<Segmen
   }
 
   @Override
-  public CacheStrategy<SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(SegmentMetadataQuery query)
+  public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(SegmentMetadataQuery query)
   {
-    return null;
+    return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
+    {
+      @Override
+      public byte[] computeCacheKey(SegmentMetadataQuery query)
+      {
+        byte[] includerBytes = query.getToInclude().getCacheKey();
+        return ByteBuffer.allocate(1 + includerBytes.length)
+                         .put(SEGMENT_METADATA_CACHE_PREFIX)
+                         .put(includerBytes)
+                         .array();
+      }
+
+      @Override
+      public TypeReference<SegmentAnalysis> getCacheObjectClazz()
+      {
+        return getResultTypeReference();
+      }
+
+      @Override
+      public Function<SegmentAnalysis, SegmentAnalysis> prepareForCache()
+      {
+        return new Function<SegmentAnalysis, SegmentAnalysis>()
+        {
+          @Override
+          public SegmentAnalysis apply(@Nullable SegmentAnalysis input)
+          {
+            return input;
+          }
+        };
+      }
+
+      @Override
+      public Function<SegmentAnalysis, SegmentAnalysis> pullFromCache()
+      {
+        return new Function<SegmentAnalysis, SegmentAnalysis>()
+        {
+          @Override
+          public SegmentAnalysis apply(@Nullable SegmentAnalysis input)
+          {
+            return input;
+          }
+        };
+      }
+
+      @Override
+      public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
+      {
+        return new MergeSequence<SegmentAnalysis>(getOrdering(), seqOfSequences);
+      }
+    };
   }
 
   @Override

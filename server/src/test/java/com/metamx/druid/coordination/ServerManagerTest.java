@@ -421,7 +421,7 @@ public class ServerManagerTest
     }
 
     @Override
-    public CacheStrategy<T, QueryType> getCacheStrategy(QueryType query)
+    public <Typer> CacheStrategy<T, Typer, QueryType> getCacheStrategy(QueryType query)
     {
       return null;
     }

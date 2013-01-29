@@ -178,7 +178,7 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
   }
 
   @Override
-  public CacheStrategy<Row, GroupByQuery> getCacheStrategy(GroupByQuery query)
+  public CacheStrategy<Row, Object, GroupByQuery> getCacheStrategy(GroupByQuery query)
   {
     return null;
   }

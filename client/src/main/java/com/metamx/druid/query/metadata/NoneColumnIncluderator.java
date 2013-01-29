@@ -28,4 +28,10 @@ public class NoneColumnIncluderator implements ColumnIncluderator
   {
     return false;
   }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return NONE_CACHE_PREFIX;
+  }
 }

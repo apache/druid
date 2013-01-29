@@ -19,10 +19,16 @@
 
 package com.metamx.druid.query.metadata;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -52,5 +58,25 @@ public class ListColumnIncluderator implements ColumnIncluderator
   public boolean include(String columnName)
   {
     return columns.contains(columnName);
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    int size = 1;
+    List<byte[]> columns = Lists.newArrayListWithExpectedSize(this.columns.size());
+
+    for (String column : this.columns) {
+      final byte[] bytes = column.getBytes(Charsets.UTF_8);
+      columns.add(bytes);
+      size += bytes.length;
+    }
+
+    final ByteBuffer bytes = ByteBuffer.allocate(size).put(LIST_CACHE_PREFIX);
+    for (byte[] column : columns) {
+      bytes.put(column);
+    }
+
+    return bytes.array();
   }
 }

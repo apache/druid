@@ -28,4 +28,10 @@ public class AllColumnIncluderator implements ColumnIncluderator
   {
     return true;
   }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return ALL_CACHE_PREFIX;
+  }
 }
