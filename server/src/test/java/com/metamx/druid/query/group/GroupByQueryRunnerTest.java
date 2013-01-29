@@ -22,6 +22,7 @@ package com.metamx.druid.query.group;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -41,6 +42,7 @@ import com.metamx.druid.query.dimension.DefaultDimensionSpec;
 import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Test;
@@ -149,6 +151,70 @@ public class GroupByQueryRunnerTest
 
       TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
+
+  @Test
+  public void testGroupByWithTimeZone() {
+    DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
+                                     .setInterval("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
+                                     .setDimensions(
+                                         Lists.newArrayList(
+                                             (DimensionSpec) new DefaultDimensionSpec(
+                                                 "quality",
+                                                 "alias"
+                                             )
+                                         )
+                                     )
+                                     .setAggregatorSpecs(
+                                         Arrays.<AggregatorFactory>asList(
+                                             QueryRunnerTestHelper.rowsCount,
+                                             new LongSumAggregatorFactory(
+                                                 "idx",
+                                                 "index"
+                                             )
+                                         )
+                                     )
+                                     .setGranularity(
+                                         new PeriodGranularity(
+                                             new Period("P1D"),
+                                             null,
+                                             tz
+                                         )
+                                     )
+                                     .build();
+
+      List<Row> expectedResults = Arrays.asList(
+          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "automotive", "rows", 1L, "idx", 135L)),
+          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "business",   "rows", 1L, "idx", 118L)),
+          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "entertainment", "rows", 1L, "idx", 158L)),
+          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "health", "rows", 1L, "idx", 120L)),
+          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "mezzanine", "rows", 3L, "idx", 2870L)),
+          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "news", "rows", 1L, "idx", 121L)),
+          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "premium", "rows", 3L, "idx", 2900L)),
+          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "technology", "rows", 1L, "idx", 78L)),
+          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "travel", "rows", 1L, "idx", 119L)),
+
+          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "automotive", "rows", 1L, "idx", 147L)),
+          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "business",   "rows", 1L, "idx", 112L)),
+          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "entertainment", "rows", 1L, "idx", 166L)),
+          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "health", "rows", 1L, "idx", 113L)),
+          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "mezzanine", "rows", 3L, "idx", 2447L)),
+          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "news", "rows", 1L, "idx", 114L)),
+          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "premium", "rows", 3L, "idx", 2505L)),
+          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "technology", "rows", 1L, "idx", 97L)),
+          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "travel", "rows", 1L, "idx", 126L))
+      );
+
+      Iterable<Row> results = Sequences.toList(
+          runner.run(query),
+          Lists.<Row>newArrayList()
+      );
+
+      TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
 
   @Test
   public void testMergeResults() {
