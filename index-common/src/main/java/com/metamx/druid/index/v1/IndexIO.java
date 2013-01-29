@@ -649,8 +649,12 @@ public class IndexIO
       }
 
       Set<String> colSet = Sets.newTreeSet();
-      colSet.addAll(Lists.newArrayList(index.getAvailableDimensions()));
-      colSet.addAll(Lists.newArrayList(index.getAvailableMetrics()));
+      for (String dimension : index.getAvailableDimensions()) {
+        colSet.add(dimension.toLowerCase());
+      }
+      for (String metric : index.getAvailableMetrics()) {
+        colSet.add(metric.toLowerCase());
+      }
 
       String[] cols = colSet.toArray(new String[colSet.size()]);
 
