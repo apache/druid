@@ -17,47 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.input;
+package com.metamx.druid.query.segment;
 
+import org.joda.time.Interval;
+
+import java.util.Arrays;
 import java.util.List;
 
 /**
  */
-public class Rows
+public class QuerySegmentSpecs
 {
-  public static InputRow toInputRow(final Row row, final List<String> dimensions)
+  public static QuerySegmentSpec create(String isoInterval)
   {
-    return new InputRow()
-    {
-      @Override
-      public List<String> getDimensions()
-      {
-        return dimensions;
-      }
+    return new LegacySegmentSpec(isoInterval);
+  }
 
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return row.getTimestampFromEpoch();
-      }
+  public static QuerySegmentSpec create(Interval interval)
+  {
+    return create(Arrays.asList(interval));
+  }
 
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return row.getDimension(dimension);
-      }
-
-      @Override
-      public float getFloatMetric(String metric)
-      {
-        return row.getFloatMetric(metric);
-      }
-
-      @Override
-      public String toString()
-      {
-        return row.toString();
-      }
-    };
+  public static QuerySegmentSpec create(List<Interval> intervals)
+  {
+    return new MultipleIntervalSegmentSpec(intervals);
   }
 }

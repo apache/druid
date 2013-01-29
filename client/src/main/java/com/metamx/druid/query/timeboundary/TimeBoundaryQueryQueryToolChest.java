@@ -53,6 +53,9 @@ public class TimeBoundaryQueryQueryToolChest
   private static final TypeReference<Result<TimeBoundaryResultValue>> TYPE_REFERENCE = new TypeReference<Result<TimeBoundaryResultValue>>()
   {
   };
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
+  {
+  };
 
   @Override
   public QueryRunner<Result<TimeBoundaryResultValue>> mergeResults(
@@ -106,9 +109,9 @@ public class TimeBoundaryQueryQueryToolChest
   }
 
   @Override
-  public CacheStrategy<Result<TimeBoundaryResultValue>, TimeBoundaryQuery> getCacheStrategy(TimeBoundaryQuery query)
+  public CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery> getCacheStrategy(TimeBoundaryQuery query)
   {
-    return new CacheStrategy<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>()
+    return new CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery>()
     {
       @Override
       public byte[] computeCacheKey(TimeBoundaryQuery query)
@@ -117,6 +120,12 @@ public class TimeBoundaryQueryQueryToolChest
                          .put(TIMEBOUNDARY_QUERY)
                          .put(query.getCacheKey())
                          .array();
+      }
+
+      @Override
+      public TypeReference<Object> getCacheObjectClazz()
+      {
+        return OBJECT_TYPE_REFERENCE;
       }
 
       @Override

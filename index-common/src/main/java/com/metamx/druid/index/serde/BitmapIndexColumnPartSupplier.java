@@ -22,6 +22,7 @@ package com.metamx.druid.index.serde;
 import com.google.common.base.Supplier;
 import com.metamx.druid.index.column.BitmapIndex;
 import com.metamx.druid.kv.GenericIndexed;
+import com.metamx.druid.kv.Indexed;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**
@@ -46,6 +47,18 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
   {
     return new BitmapIndex()
     {
+      @Override
+      public int getCardinality()
+      {
+        return dictionary.size();
+      }
+
+      @Override
+      public String getValue(int index)
+      {
+        return dictionary.get(index);
+      }
+
       @Override
       public ImmutableConciseSet getConciseSet(String value)
       {

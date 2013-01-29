@@ -17,47 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.input;
-
-import java.util.List;
+package com.metamx.druid.query.metadata;
 
 /**
  */
-public class Rows
+public class NoneColumnIncluderator implements ColumnIncluderator
 {
-  public static InputRow toInputRow(final Row row, final List<String> dimensions)
+  @Override
+  public boolean include(String columnName)
   {
-    return new InputRow()
-    {
-      @Override
-      public List<String> getDimensions()
-      {
-        return dimensions;
-      }
+    return false;
+  }
 
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return row.getTimestampFromEpoch();
-      }
-
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return row.getDimension(dimension);
-      }
-
-      @Override
-      public float getFloatMetric(String metric)
-      {
-        return row.getFloatMetric(metric);
-      }
-
-      @Override
-      public String toString()
-      {
-        return row.toString();
-      }
-    };
+  @Override
+  public byte[] getCacheKey()
+  {
+    return NONE_CACHE_PREFIX;
   }
 }

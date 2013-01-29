@@ -17,47 +17,25 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.input;
+package com.metamx.druid.query.metadata;
 
-import java.util.List;
+import org.codehaus.jackson.annotate.JsonSubTypes;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
 
 /**
  */
-public class Rows
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "none", value= NoneColumnIncluderator.class),
+    @JsonSubTypes.Type(name = "all", value= AllColumnIncluderator.class),
+    @JsonSubTypes.Type(name = "list", value= ListColumnIncluderator.class)
+})
+public interface ColumnIncluderator
 {
-  public static InputRow toInputRow(final Row row, final List<String> dimensions)
-  {
-    return new InputRow()
-    {
-      @Override
-      public List<String> getDimensions()
-      {
-        return dimensions;
-      }
+  public static final byte[] NONE_CACHE_PREFIX = new byte[]{0x0};
+  public static final byte[] ALL_CACHE_PREFIX = new byte[]{0x1};
+  public static final byte[] LIST_CACHE_PREFIX = new byte[]{0x2};
 
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return row.getTimestampFromEpoch();
-      }
-
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return row.getDimension(dimension);
-      }
-
-      @Override
-      public float getFloatMetric(String metric)
-      {
-        return row.getFloatMetric(metric);
-      }
-
-      @Override
-      public String toString()
-      {
-        return row.toString();
-      }
-    };
-  }
+  public boolean include(String columnName);
+  public byte[] getCacheKey();
 }

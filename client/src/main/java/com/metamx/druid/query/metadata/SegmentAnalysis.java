@@ -17,61 +17,34 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.result;
+package com.metamx.druid.query.metadata;
 
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
+import org.joda.time.Interval;
 
+import java.util.List;
 import java.util.Map;
 
-public class SegmentMetadataResultValue
+public class SegmentAnalysis
 {
-  public static class Dimension {
-    @JsonProperty public long size;
-    @JsonProperty public int cardinality;
-
-    @JsonCreator
-    public Dimension(
-        @JsonProperty("size") long size,
-        @JsonProperty("cardinality") int cardinality
-    )
-    {
-      this.size = size;
-      this.cardinality = cardinality;
-    }
-  }
-  public static class Metric {
-    @JsonProperty public String type;
-    @JsonProperty public long size;
-
-    @JsonCreator
-    public Metric(
-            @JsonProperty("type") String type,
-            @JsonProperty("size") long size
-    )
-    {
-      this.type = type;
-      this.size = size;
-    }
-  }
-
   private final String id;
-  private final Map<String, Dimension> dimensions;
-  private final Map<String, Metric> metrics;
+  private final List<Interval> interval;
+  private final Map<String, ColumnAnalysis> columns;
   private final long size;
 
   @JsonCreator
-  public SegmentMetadataResultValue(
+  public SegmentAnalysis(
       @JsonProperty("id") String id,
-      @JsonProperty("dimensions") Map<String, Dimension> dimensions,
-      @JsonProperty("metrics") Map<String, Metric> metrics,
+      @JsonProperty("intervals") List<Interval> interval,
+      @JsonProperty("columns") Map<String, ColumnAnalysis> columns,
       @JsonProperty("size") long size
 
   )
   {
     this.id = id;
-    this.dimensions = dimensions;
-    this.metrics = metrics;
+    this.interval = interval;
+    this.columns = columns;
     this.size = size;
   }
 
@@ -82,20 +55,40 @@ public class SegmentMetadataResultValue
   }
 
   @JsonProperty
-  public Map<String, Dimension> getDimensions()
+  public List<Interval> getIntervals()
   {
-    return dimensions;
+    return interval;
   }
 
   @JsonProperty
-  public Map<String, Metric> getMetrics()
+  public Map<String, ColumnAnalysis> getColumns()
   {
-    return metrics;
+    return columns;
   }
 
   @JsonProperty
   public long getSize()
   {
     return size;
+  }
+
+  public String toDetailedString()
+  {
+    return "SegmentAnalysis{" +
+           "id='" + id + '\'' +
+           ", interval=" + interval +
+           ", columns=" + columns +
+           ", size=" + size +
+           '}';
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SegmentAnalysis{" +
+           "id='" + id + '\'' +
+           ", interval=" + interval +
+           ", size=" + size +
+           '}';
   }
 }

@@ -38,7 +38,7 @@ public class IndexedLongsGenericColumn implements GenericColumn
   }
 
   @Override
-  public int size()
+  public int length()
   {
     return column.size();
   }

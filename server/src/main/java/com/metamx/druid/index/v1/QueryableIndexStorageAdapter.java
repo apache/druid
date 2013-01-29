@@ -113,7 +113,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
     GenericColumn column = null;
     try {
       column = index.getTimeColumn().getGenericColumn();
-      return new DateTime(column.getLongSingleValueRow(column.size() - 1));
+      return new DateTime(column.getLongSingleValueRow(column.length() - 1));
     }
     finally {
       Closeables.closeQuietly(column);
@@ -572,7 +572,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                 public Cursor apply(final Long input)
                 {
                   final long timeStart = Math.max(interval.getStartMillis(), input);
-                  while (currRow < timestamps.size() && timestamps.getLongSingleValueRow(currRow) < timeStart) {
+                  while (currRow < timestamps.length() && timestamps.getLongSingleValueRow(currRow) < timeStart) {
                     ++currRow;
                   }
 
@@ -597,7 +597,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                     @Override
                     public boolean isDone()
                     {
-                      return currRow >= timestamps.size() || timestamps.getLongSingleValueRow(currRow) >= nextBucket;
+                      return currRow >= timestamps.length() || timestamps.getLongSingleValueRow(currRow) >= nextBucket;
                     }
 
                     @Override
@@ -848,7 +848,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
       GenericColumn column = null;
       try {
         column = index.getTimeColumn().getGenericColumn();
-        return column.size();
+        return column.length();
       }
       finally {
         Closeables.closeQuietly(column);

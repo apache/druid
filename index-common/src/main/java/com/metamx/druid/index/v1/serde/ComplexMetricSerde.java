@@ -19,6 +19,7 @@
 
 package com.metamx.druid.index.v1.serde;
 
+import com.google.common.base.Function;
 import com.metamx.druid.index.column.ColumnBuilder;
 import com.metamx.druid.index.serde.ColumnPartSerde;
 import com.metamx.druid.kv.ObjectStrategy;
@@ -27,10 +28,10 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public interface ComplexMetricSerde
+public abstract class ComplexMetricSerde
 {
-  public String getTypeName();
-  public ComplexMetricExtractor getExtractor();
+  public abstract String getTypeName();
+  public abstract ComplexMetricExtractor getExtractor();
 
   /**
    * Deserializes a ByteBuffer and adds it to the ColumnBuilder.  This method allows for the ComplexMetricSerde
@@ -42,7 +43,7 @@ public interface ComplexMetricSerde
    * @param buffer the buffer to deserialize
    * @return a ColumnPartSerde that can serialize out the object that was read from the buffer to the builder
    */
-  public ColumnPartSerde deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
+  public abstract ColumnPartSerde deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
 
   /**
    * This is deprecated because its usage is going to be removed from the code.
@@ -55,5 +56,20 @@ public interface ComplexMetricSerde
    * @return an ObjectStrategy as used by GenericIndexed
    */
   @Deprecated
-  public ObjectStrategy getObjectStrategy();
+  public abstract ObjectStrategy getObjectStrategy();
+
+
+  /**
+   * Returns a function that can convert the Object provided by the ComplexColumn created through deserializeColumn
+   * into a number of expected input bytes to produce that object.
+   *
+   * This is used to approximate the size of the input data via the SegmentMetadataQuery and does not need to be
+   * overridden if you do not care about the query.
+   *
+   * @return A function that can compute the size of the complex object or null if you cannot/do not want to compute it
+   */
+  public Function<Object, Long> inputSizeFn()
+  {
+    return null;
+  }
 }

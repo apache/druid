@@ -54,6 +54,7 @@ import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -110,7 +111,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> query)
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    final CacheStrategy<T, Query<T>> strategy = toolChest.getCacheStrategy(query);
+    final CacheStrategy<T, Object, Query<T>> strategy = toolChest.getCacheStrategy(query);
 
     final Map<DruidServer, List<SegmentDescriptor>> serverSegments = Maps.newTreeMap();
 
@@ -241,6 +242,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             }
 
             final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache();
+            final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
             for (Pair<DateTime, byte[]> cachedResultPair : cachedResults) {
               final byte[] cachedResult = cachedResultPair.rhs;
               Sequence<Object> cachedSequence = new BaseSequence<Object, Iterator<Object>>(
@@ -255,7 +257,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                         }
 
                         return objectMapper.readValues(
-                            objectMapper.getJsonFactory().createJsonParser(cachedResult), Object.class
+                            objectMapper.getJsonFactory().createJsonParser(cachedResult),
+                            cacheObjectClazz
                         );
                       }
                       catch (IOException e) {
