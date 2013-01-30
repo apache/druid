@@ -49,9 +49,11 @@ public class BalancerCostAnalyzer
     rand = new Random(0);
   }
 
-  /*
+  /**
    * Calculates the cost normalization.  This is such that the normalized cost is lower bounded
    * by 1 (e.g. when each segment gets its own compute node).
+   * @param serverHolderList
+   * @return
    */
   public double calculateNormalization(List<ServerHolder> serverHolderList)
   {
@@ -64,7 +66,11 @@ public class BalancerCostAnalyzer
     return cost;
   }
 
-  // Calculates the initial cost of the Druid segment configuration.
+  /**
+   * Calculates the initial cost of the Druid segment configuration.
+   * @param serverHolderList
+   * @return
+   */
   public double calculateInitialTotalCost(List<ServerHolder> serverHolderList)
   {
     double cost = 0;
@@ -79,13 +85,16 @@ public class BalancerCostAnalyzer
     return cost;
   }
 
-  /*
+  /**
    * This defines the unnormalized cost function between two segments.  There is a base cost given by
    * the minimum size of the two segments and additional penalties.
    * recencyPenalty: it is more likely that recent segments will be queried together
    * dataSourcePenalty: if two segments belong to the same data source, they are more likely to be involved
    * in the same queries
    * gapPenalty: it is more likely that segments close together in time will be queried together
+   * @param segment1
+   * @param segment2
+   * @return
    */
   public double computeJointSegmentCosts(DataSegment segment1, DataSegment segment2)
   {
@@ -123,8 +132,11 @@ public class BalancerCostAnalyzer
     return cost;
   }
 
-  /*
+  /**
    * Sample from each server with probability proportional to the number of segments on that server.
+   * @param serverHolderList
+   * @param numSegments
+   * @return
    */
   private ServerHolder sampleServer(List<ServerHolder> serverHolderList, int numSegments)
   {
@@ -140,7 +152,12 @@ public class BalancerCostAnalyzer
     return serverHolderList.get(numToStopAt - 1);
   }
 
-  // The balancing application requires us to pick a proposal segment.
+  /**
+   * The balancing application requires us to pick a proposal segment.
+   * @param serverHolders
+   * @param numSegments
+   * @return
+   */
   public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders, int numSegments)
   {
     // We want to sample from each server w.p. numSegmentsOnServer / totalSegments
@@ -154,7 +171,12 @@ public class BalancerCostAnalyzer
     return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
   }
 
-  // The assignment application requires us to supply a proposal segment.
+  /**
+   * The assignment application requires us to supply a proposal segment.
+   * @param proposalSegment
+   * @param serverHolders
+   * @return
+   */
   public ServerHolder findNewSegmentHome(DataSegment proposalSegment, Iterable<ServerHolder> serverHolders)
   {
     final long proposalSegmentSize = proposalSegment.getSize();
