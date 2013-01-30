@@ -50,11 +50,11 @@ public class DruidMasterBalancer implements DruidMasterHelper
         }
       }
   );
-  private static final EmittingLogger log = new EmittingLogger(DruidMasterBalancer.class);
+  protected static final EmittingLogger log = new EmittingLogger(DruidMasterBalancer.class);
 
-  private final DruidMaster master;
+  protected final DruidMaster master;
 
-  private final Map<String, ConcurrentHashMap<String, BalancerSegmentHolder>> currentlyMovingSegments = Maps.newHashMap();
+  protected final Map<String, ConcurrentHashMap<String, BalancerSegmentHolder>> currentlyMovingSegments = Maps.newHashMap();
 
   public DruidMasterBalancer(
       DruidMaster master
@@ -63,7 +63,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
     this.master = master;
   }
 
-  private void reduceLifetimes(String tier)
+  protected void reduceLifetimes(String tier)
   {
     for (BalancerSegmentHolder holder : currentlyMovingSegments.get(tier).values()) {
       holder.reduceLifetime();
@@ -159,7 +159,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
                  .build();
   }
 
-  private void moveSegment(
+  protected void moveSegment(
       final BalancerSegmentHolder segment,
       final DruidServer toServer,
       final DruidMasterRuntimeParams params

@@ -28,6 +28,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.shard.NoneShardSpec;
+import com.metamx.phonebook.PhoneBook;
 import junit.framework.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -39,6 +40,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -55,7 +57,6 @@ public class DruidMasterBalancerTest
   private DataSegment segment3;
   private DataSegment segment4;
   Map<String, DataSegment> segments;
-  private LoadQueuePeon peon;
   private DruidDataSource dataSource;
 
   @Before
@@ -70,7 +71,6 @@ public class DruidMasterBalancerTest
     segment2 = EasyMock.createMock(DataSegment.class);
     segment3 = EasyMock.createMock(DataSegment.class);
     segment4 = EasyMock.createMock(DataSegment.class);
-    peon = EasyMock.createMock(LoadQueuePeon.class);
     dataSource = EasyMock.createMock(DruidDataSource.class);
 
     DateTime start1 = new DateTime("2012-01-01");
@@ -118,10 +118,10 @@ public class DruidMasterBalancerTest
     );
 
     segments = new HashMap<String, DataSegment>();
-    segments.put("segment1", segment1);
-    segments.put("segment2", segment2);
-    segments.put("segment3", segment3);
-    segments.put("segment4", segment4);
+    segments.put("datasource1_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z", segment1);
+    segments.put("datasource1_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z", segment2);
+    segments.put("datasource2_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z", segment3);
+    segments.put("datasource2_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z", segment4);
   }
 
   @After
@@ -132,7 +132,6 @@ public class DruidMasterBalancerTest
     EasyMock.verify(druidServer2);
     EasyMock.verify(druidServer3);
     EasyMock.verify(druidServer4);
-    EasyMock.verify(peon);
     EasyMock.verify(dataSource);
   }
 
@@ -146,6 +145,26 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer1.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
     EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
+    EasyMock.expect(
+        druidServer1.getSegment(
+            "datasource1_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
+        )
+    ).andReturn(null).anyTimes();
+    EasyMock.expect(
+        druidServer1.getSegment(
+            "datasource1_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
+        )
+    ).andReturn(null).anyTimes();
+    EasyMock.expect(
+        druidServer1.getSegment(
+            "datasource2_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
+        )
+    ).andReturn(null).anyTimes();
+    EasyMock.expect(
+        druidServer1.getSegment(
+            "datasource2_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
+        )
+    ).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
     EasyMock.expect(druidServer2.getName()).andReturn("to").atLeastOnce();
@@ -154,29 +173,8 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
     EasyMock.expect(druidServer2.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
-    EasyMock.expect(
-        druidServer2.getSegment(
-            "datasource1_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer2.getSegment(
-            "datasource1_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer2.getSegment(
-            "datasource2_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer2.getSegment(
-            "datasource2_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(druidServer2.getSegment("segment3")).andReturn(null).anyTimes();
-    EasyMock.expect(druidServer2.getSegment("segment4")).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
+
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
 
@@ -198,12 +196,11 @@ public class DruidMasterBalancerTest
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(master);
 
-    EasyMock.expect(peon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.expect(peon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.replay(peon);
+    LoadQueuePeonTester fromPeon = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "from", EasyMock.createMock(ScheduledExecutorService.class));
+    LoadQueuePeonTester toPeon = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "to", EasyMock.createMock(ScheduledExecutorService.class));
 
     DruidMasterRuntimeParams params =
         DruidMasterRuntimeParams.newBuilder()
@@ -211,27 +208,27 @@ public class DruidMasterBalancerTest
                                     new DruidCluster(
                                         ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
                                             "normal",
-                                            MinMaxPriorityQueue.orderedBy(DruidMasterBalancer.percentUsedComparator)
+                                            MinMaxPriorityQueue.orderedBy(DruidMasterBalancerTester.percentUsedComparator)
                                                                .create(
                                                                    Arrays.asList(
-                                                                       new ServerHolder(druidServer1, peon),
-                                                                       new ServerHolder(druidServer2, peon)
+                                                                       new ServerHolder(druidServer1, fromPeon),
+                                                                       new ServerHolder(druidServer2, toPeon)
                                                                    )
                                                                )
                                         )
                                     )
                                 )
-                                .withLoadManagementPeons(ImmutableMap.of("from", peon, "to", peon))
+                                .withLoadManagementPeons(ImmutableMap.<String, LoadQueuePeon>of("from", fromPeon, "to", toPeon))
                                 .withAvailableSegments(segments.values())
                                 .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
-    params = new DruidMasterBalancer(master).run(params);
+    params = new DruidMasterBalancerTester(master).run(params);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
   }
 
-  @Test
+ @Test
   public void testRun2()
   {
     // Mock some servers of different usages
@@ -345,12 +342,13 @@ public class DruidMasterBalancerTest
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(master);
 
-    EasyMock.expect(peon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.expect(peon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
-    EasyMock.replay(peon);
+    LoadQueuePeonTester peon1 = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "1", EasyMock.createMock(ScheduledExecutorService.class));
+    LoadQueuePeonTester peon2 = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "2", EasyMock.createMock(ScheduledExecutorService.class));
+    LoadQueuePeonTester peon3 = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "3", EasyMock.createMock(ScheduledExecutorService.class));
+    LoadQueuePeonTester peon4 = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "4", EasyMock.createMock(ScheduledExecutorService.class));
 
     DruidMasterRuntimeParams params =
         DruidMasterRuntimeParams.newBuilder()
@@ -358,25 +356,25 @@ public class DruidMasterBalancerTest
                                     new DruidCluster(
                                         ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
                                             "normal",
-                                            MinMaxPriorityQueue.orderedBy(DruidMasterBalancer.percentUsedComparator)
+                                            MinMaxPriorityQueue.orderedBy(DruidMasterBalancerTester.percentUsedComparator)
                                                                .create(
                                                                    Arrays.asList(
-                                                                       new ServerHolder(druidServer1, peon),
-                                                                       new ServerHolder(druidServer2, peon),
-                                                                       new ServerHolder(druidServer3, peon),
-                                                                       new ServerHolder(druidServer4, peon)
+                                                                       new ServerHolder(druidServer1, peon1),
+                                                                       new ServerHolder(druidServer2, peon2),
+                                                                       new ServerHolder(druidServer3, peon3),
+                                                                       new ServerHolder(druidServer4, peon4)
                                                                    )
                                                                )
                                         )
                                     )
                                 )
-                                .withLoadManagementPeons(ImmutableMap.of("1", peon, "2", peon, "3", peon, "4", peon))
+                                .withLoadManagementPeons(ImmutableMap.<String, LoadQueuePeon>of("1", peon1, "2", peon2, "3", peon3, "4", peon4))
                                 .withAvailableSegments(segments.values())
                                 .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
-    params = new DruidMasterBalancer(master).run(params);
+    params = new DruidMasterBalancerTester(master).run(params);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
   }
 }
