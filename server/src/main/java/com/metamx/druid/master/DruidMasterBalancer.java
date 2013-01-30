@@ -116,15 +116,13 @@ public class DruidMasterBalancer implements DruidMasterHelper
         continue;
       }
 
-      final Set<DataSegment> segmentsBeingMoved = new HashSet<DataSegment>();
       int iter = 0;
 
       while (iter < maxSegmentsToMove) {
         BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList, numSegments);
         DruidServer toServer = analyzer.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList).getServer();
-        if (!segmentsBeingMoved.contains(segmentToMove.getSegment())) {
+        if (!currentlyMovingSegments.get(tier).containsKey(segmentToMove.getSegment())) {
           moveSegment(segmentToMove, toServer, params);
-          segmentsBeingMoved.add(segmentToMove.getSegment());
         }
         iter++;
       }
@@ -135,13 +133,13 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
       stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
       stats.addToTieredStat("normalization", tier, (long) normalization);
-      stats.addToTieredStat("movedCount", tier, segmentsBeingMoved.size());
+      stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
 
       log.info(
           "Initial Total Cost: [%f], Initial Normalized Cost: [%f], Segments Moved: [%d]",
           initialTotalCost,
           normalizedInitialCost,
-          segmentsBeingMoved.size()
+          currentlyMovingSegments.get(tier).size()
       );
 
       if (serverHolderList.size() <= 1) {
