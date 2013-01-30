@@ -23,9 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Sets;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.phonebook.PhoneBook;
@@ -57,7 +55,6 @@ public class DruidMasterBalancerTest
   private DataSegment segment3;
   private DataSegment segment4;
   Map<String, DataSegment> segments;
-  private DruidDataSource dataSource;
 
   @Before
   public void setUp() throws Exception
@@ -71,7 +68,6 @@ public class DruidMasterBalancerTest
     segment2 = EasyMock.createMock(DataSegment.class);
     segment3 = EasyMock.createMock(DataSegment.class);
     segment4 = EasyMock.createMock(DataSegment.class);
-    dataSource = EasyMock.createMock(DruidDataSource.class);
 
     DateTime start1 = new DateTime("2012-01-01");
     DateTime start2 = new DateTime("2012-02-01");
@@ -132,7 +128,6 @@ public class DruidMasterBalancerTest
     EasyMock.verify(druidServer2);
     EasyMock.verify(druidServer3);
     EasyMock.verify(druidServer4);
-    EasyMock.verify(dataSource);
   }
 
   @Test
@@ -143,28 +138,7 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer1.getName()).andReturn("from").atLeastOnce();
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer1.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
     EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
-    EasyMock.expect(
-        druidServer1.getSegment(
-            "datasource1_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer1.getSegment(
-            "datasource1_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer1.getSegment(
-            "datasource2_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer1.getSegment(
-            "datasource2_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
     EasyMock.expect(druidServer2.getName()).andReturn("to").atLeastOnce();
@@ -172,22 +146,10 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
-    EasyMock.expect(druidServer2.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
     EasyMock.replay(druidServer2);
 
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
-
-    // Mock a datasource
-    EasyMock.expect(dataSource.getSegments()).andReturn(
-        Sets.<DataSegment>newHashSet(
-            segment1,
-            segment2,
-            segment3,
-            segment4
-        )
-    ).anyTimes();
-    EasyMock.replay(dataSource);
 
     // Mock stuff that the master needs
     master.moveSegment(
@@ -235,7 +197,6 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer1.getName()).andReturn("1").atLeastOnce();
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer1.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
     EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
     EasyMock.replay(druidServer1);
 
@@ -244,27 +205,6 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
-    EasyMock.expect(druidServer2.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
-    EasyMock.expect(
-        druidServer2.getSegment(
-            "datasource1_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer2.getSegment(
-            "datasource1_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer2.getSegment(
-            "datasource2_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer2.getSegment(
-            "datasource2_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
     EasyMock.expect(druidServer3.getName()).andReturn("3").atLeastOnce();
@@ -272,27 +212,6 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer3.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer3.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer3.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
-    EasyMock.expect(druidServer3.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
-    EasyMock.expect(
-        druidServer3.getSegment(
-            "datasource1_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer3.getSegment(
-            "datasource1_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer3.getSegment(
-            "datasource2_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer3.getSegment(
-            "datasource2_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
     EasyMock.replay(druidServer3);
 
     EasyMock.expect(druidServer4.getName()).andReturn("4").atLeastOnce();
@@ -300,40 +219,7 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer4.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer4.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer4.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
-    EasyMock.expect(druidServer4.getDataSources()).andReturn(Arrays.asList(dataSource)).anyTimes();
-    EasyMock.expect(
-        druidServer4.getSegment(
-            "datasource1_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer4.getSegment(
-            "datasource1_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer4.getSegment(
-            "datasource2_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
-    EasyMock.expect(
-        druidServer4.getSegment(
-            "datasource2_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z"
-        )
-    ).andReturn(null).anyTimes();
     EasyMock.replay(druidServer4);
-
-
-    // Mock a datasource
-    EasyMock.expect(dataSource.getSegments()).andReturn(
-        Sets.<DataSegment>newHashSet(
-            segment1,
-            segment2,
-            segment3,
-            segment4
-        )
-    ).anyTimes();
-    EasyMock.replay(dataSource);
 
     // Mock stuff that the master needs
     master.moveSegment(
@@ -375,6 +261,6 @@ public class DruidMasterBalancerTest
                                 .build();
 
     params = new DruidMasterBalancerTester(master).run(params);
-    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
+    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() == 4);
   }
 }
