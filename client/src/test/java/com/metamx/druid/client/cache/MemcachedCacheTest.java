@@ -50,7 +50,7 @@ import java.util.concurrent.TimeoutException;
 
 /**
  */
-public class MemcachedCacheBrokerTest
+public class MemcachedCacheTest
 {
   private static final byte[] HI = "hi".getBytes();
   private static final byte[] HO = "ho".getBytes();
