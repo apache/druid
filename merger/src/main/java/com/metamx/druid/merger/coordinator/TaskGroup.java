@@ -74,10 +74,18 @@ public class TaskGroup
     return new ImmediateCommitStyle();
   }
 
+  /**
+   * Returns number of tasks in this group.
+   */
   public int size() {
     return taskMap.size();
   }
 
+  /**
+   * Adds a task to this group.
+   * @param task task to add
+   * @return true iff this group did not already contain the task
+   */
   public boolean add(final Task task) {
     Preconditions.checkArgument(
         task.getGroupId().equals(groupId),
@@ -86,7 +94,6 @@ public class TaskGroup
         groupId
     );
 
-    // Act sort of like a Set
     if(taskMap.containsKey(task.getId())) {
       return false;
     } else {
@@ -95,10 +102,18 @@ public class TaskGroup
     }
   }
 
+  /**
+   * Returns true if this group contains a particular task.
+   */
   public boolean contains(final String taskId) {
     return taskMap.containsKey(taskId);
   }
 
+  /**
+   * Removes a task from this group.
+   * @param taskId task ID to remove
+   * @return the removed task, or null if the task was not in this group
+   */
   public Task remove(final String taskId)
   {
     return taskMap.remove(taskId);
