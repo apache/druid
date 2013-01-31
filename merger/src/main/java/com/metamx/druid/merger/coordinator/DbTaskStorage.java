@@ -33,6 +33,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.exceptions.StatementException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.util.List;
@@ -67,29 +68,38 @@ public class DbTaskStorage implements TaskStorage
 
     log.info("Inserting task %s with status: %s", task.getId(), status);
 
-    dbi.withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle) throws Exception
+    try {
+      dbi.withHandle(
+          new HandleCallback<Void>()
           {
-            handle.createStatement(
-                String.format(
-                    "INSERT INTO %s (id, created_date, payload, status_code, status_payload) VALUES (:id, :created_date, :payload, :status_code, :status_payload)",
-                    dbConnectorConfig.getTaskTable()
-                )
-            )
-                  .bind("id", task.getId())
-                  .bind("created_date", new DateTime().toString())
-                  .bind("payload", jsonMapper.writeValueAsString(task))
-                  .bind("status_code", status.getStatusCode().toString())
-                  .bind("status_payload", jsonMapper.writeValueAsString(status))
-                  .execute();
+            @Override
+            public Void withHandle(Handle handle) throws Exception
+            {
+              handle.createStatement(
+                  String.format(
+                      "INSERT INTO %s (id, created_date, payload, status_code, status_payload) VALUES (:id, :created_date, :payload, :status_code, :status_payload)",
+                      dbConnectorConfig.getTaskTable()
+                  )
+              )
+                    .bind("id", task.getId())
+                    .bind("created_date", new DateTime().toString())
+                    .bind("payload", jsonMapper.writeValueAsString(task))
+                    .bind("status_code", status.getStatusCode().toString())
+                    .bind("status_payload", jsonMapper.writeValueAsString(status))
+                    .execute();
 
-            return null;
+              return null;
+            }
           }
-        }
-    );
+      );
+    } catch (StatementException e) {
+      // Might be a duplicate task ID.
+      if(getTask(task.getId()).isPresent()) {
+        throw new TaskExistsException(task.getId(), e);
+      } else {
+        throw e;
+      }
+    }
   }
 
   @Override

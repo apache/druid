@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -184,9 +185,14 @@ public class TaskQueue
     try {
       Preconditions.checkState(active, "Queue is not active!");
 
-      // If this throws, we don't want to insert the task into our queue.
-      // (This is how we detect duplicates)
-      taskStorage.insert(task, TaskStatus.running(task.getId()));
+      // If this throws with any sort of exception, including TaskExistsException, we don't want to
+      // insert the task into our queue.
+      try {
+        taskStorage.insert(task, TaskStatus.running(task.getId()));
+      } catch(TaskExistsException e) {
+        log.warn("Attempt to add task twice: %s", task.getId());
+        throw Throwables.propagate(e);
+      }
 
       queue.add(task);
       workMayBeAvailable.signalAll();

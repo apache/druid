@@ -21,15 +21,12 @@ package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +51,11 @@ public class LocalTaskStorage implements TaskStorage
         task.getId(),
         status.getId()
     );
-    Preconditions.checkState(!tasks.containsKey(task.getId()), "Task ID must not already be present: %s", task.getId());
+
+    if(tasks.containsKey(task.getId())) {
+      throw new TaskExistsException(task.getId());
+    }
+
     log.info("Inserting task %s with status: %s", task.getId(), status);
     tasks.put(task.getId(), new TaskStuff(task, status));
   }
@@ -64,7 +65,7 @@ public class LocalTaskStorage implements TaskStorage
   {
     Preconditions.checkNotNull(taskid, "taskid");
     if(tasks.containsKey(taskid)) {
-      return Optional.of(tasks.get(taskid).task);
+      return Optional.of(tasks.get(taskid).getTask());
     } else {
       return Optional.absent();
     }
@@ -85,7 +86,7 @@ public class LocalTaskStorage implements TaskStorage
   {
     Preconditions.checkNotNull(taskid, "taskid");
     if(tasks.containsKey(taskid)) {
-      return Optional.of(tasks.get(taskid).status);
+      return Optional.of(tasks.get(taskid).getStatus());
     } else {
       return Optional.absent();
     }
@@ -106,7 +107,7 @@ public class LocalTaskStorage implements TaskStorage
   {
     Preconditions.checkNotNull(taskid, "taskid");
     if(tasks.containsKey(taskid)) {
-      return tasks.get(taskid).version;
+      return tasks.get(taskid).getVersion();
     } else {
       return Optional.absent();
     }
@@ -117,8 +118,8 @@ public class LocalTaskStorage implements TaskStorage
   {
     final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
     for(final TaskStuff taskStuff : tasks.values()) {
-      if(taskStuff.status.isRunnable()) {
-        listBuilder.add(taskStuff.task);
+      if(taskStuff.getStatus().isRunnable()) {
+        listBuilder.add(taskStuff.getTask());
       }
     }
 
@@ -145,6 +146,21 @@ public class LocalTaskStorage implements TaskStorage
       this.task = task;
       this.status = status;
       this.version = version;
+    }
+
+    public Task getTask()
+    {
+      return task;
+    }
+
+    public TaskStatus getStatus()
+    {
+      return status;
+    }
+
+    public Optional<String> getVersion()
+    {
+      return version;
     }
 
     private TaskStuff withStatus(TaskStatus _status)

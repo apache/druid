@@ -87,7 +87,7 @@ public class TaskQueueTest
     thrown = null;
     try {
       tq.add(newTask("T5", "G5", "baz", new Interval("2013-02-01/PT1H")));
-    } catch(IllegalStateException e) {
+    } catch(TaskExistsException e) {
       thrown = e;
     }
 
