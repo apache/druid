@@ -11,6 +11,7 @@ import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
+import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.DefaultMergeTask;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
@@ -277,38 +278,8 @@ public class RemoteTaskRunnerTest
         cf,
         workerCuratorCoordinator,
         new TaskToolbox(
-            new IndexerCoordinatorConfig()
+            new TaskConfig()
             {
-              @Override
-              public String getServerName()
-              {
-                return "worker1";
-              }
-
-              @Override
-              public String getLeaderLatchPath()
-              {
-                return null;
-              }
-
-              @Override
-              public int getNumLocalThreads()
-              {
-                return 1;
-              }
-
-              @Override
-              public String getRunnerImpl()
-              {
-                return null;
-              }
-
-              @Override
-              public String getStorageImpl()
-              {
-                return null;
-              }
-
               @Override
               public File getBaseTaskDir()
               {
@@ -321,28 +292,9 @@ public class RemoteTaskRunnerTest
               }
 
               @Override
-              public boolean isWhitelistEnabled()
-              {
-                return false;
-              }
-
-              @Override
-              public String getWhitelistDatasourcesString()
-              {
-                return null;
-              }
-
-              @Override
               public long getRowFlushBoundary()
               {
                 return 0;
-              }
-
-
-              @Override
-              public String getStrategyImpl()
-              {
-                return null;
               }
             }, null, null, null, null, jsonMapper
         ),

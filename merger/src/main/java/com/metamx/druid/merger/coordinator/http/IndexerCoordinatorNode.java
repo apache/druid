@@ -54,6 +54,7 @@ import com.metamx.druid.loading.S3SegmentPusherConfig;
 import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
+import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.DbTaskStorage;
 import com.metamx.druid.merger.coordinator.LocalTaskRunner;
@@ -134,6 +135,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private DbConnectorConfig dbConnectorConfig = null;
   private DBI dbi = null;
   private IndexerCoordinatorConfig config = null;
+  private TaskConfig taskConfig = null;
   private TaskToolbox taskToolbox = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
   private TaskStorage taskStorage = null;
@@ -213,6 +215,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initializeMonitors();
     initializeDB();
     initializeIndexerCoordinatorConfig();
+    initializeTaskConfig();
     initializeMergeDBCoordinator();
     initializeTaskToolbox();
     initializeTaskStorage();
@@ -409,6 +412,13 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
+  private void initializeTaskConfig()
+  {
+    if (taskConfig == null) {
+      taskConfig = configFactory.build(TaskConfig.class);
+    }
+  }
+
   public void initializeTaskToolbox() throws S3ServiceException
   {
     if (taskToolbox == null) {
@@ -426,7 +436,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
       final SegmentKiller segmentKiller = new S3SegmentKiller(
           s3Client
       );
-      taskToolbox = new TaskToolbox(config, emitter, s3Client, segmentPusher, segmentKiller, jsonMapper);
+      taskToolbox = new TaskToolbox(taskConfig, emitter, s3Client, segmentPusher, segmentKiller, jsonMapper);
     }
   }
 
