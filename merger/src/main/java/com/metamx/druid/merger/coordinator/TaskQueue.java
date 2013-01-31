@@ -26,6 +26,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -42,6 +43,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -514,7 +516,7 @@ public class TaskQueue
     giant.lock();
 
     try {
-      final List<TaskGroup> maybeTaskGroup = Lists.newArrayList(
+      final Iterator<TaskGroup> maybeTaskGroup =
           FunctionalIterable.create(findTaskGroupsForInterval(task.getDataSource(), task.getInterval()))
                             .filter(
                                 new Predicate<TaskGroup>()
@@ -526,14 +528,13 @@ public class TaskQueue
                                   }
                                 }
                             )
-      );
+                            .iterator();
 
-      if (maybeTaskGroup.size() == 1) {
-        return Optional.of(maybeTaskGroup.get(0));
-      } else if (maybeTaskGroup.size() == 0) {
+
+      if (!maybeTaskGroup.hasNext()) {
         return Optional.absent();
       } else {
-        throw new IllegalStateException(String.format("WTF?! Task %s is in multiple task groups!", task.getId()));
+        return Optional.of(Iterators.getOnlyElement(maybeTaskGroup));
       }
     }
     finally {
