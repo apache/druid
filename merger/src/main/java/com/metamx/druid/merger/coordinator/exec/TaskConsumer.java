@@ -187,14 +187,38 @@ public class TaskConsumer implements Runnable
             public void run()
             {
               try {
-                if (statusFromRunner.getSegments().size() > 0) {
-                  // TODO -- Publish in transaction
-                  publishSegments(task, context, statusFromRunner.getSegments());
+                // Validate status
+                for (final DataSegment segment : statusFromRunner.getSegments()) {
+                  verifyDataSourceAndInterval(task, context, segment);
+
+                  // Verify version (must be equal to our context version)
+                  if (!context.getVersion().equals(segment.getVersion())) {
+                    throw new IllegalStateException(
+                        String.format(
+                            "Segment for task[%s] has invalid version: %s",
+                            task.getId(),
+                            segment.getIdentifier()
+                        )
+                    );
+                  }
                 }
 
-                if (statusFromRunner.getSegmentsNuked().size() > 0) {
-                  deleteSegments(task, context, statusFromRunner.getSegmentsNuked());
+                for (final DataSegment segment : statusFromRunner.getSegmentsNuked()) {
+                  verifyDataSourceAndInterval(task, context, segment);
+
+                  // Verify version (must be less than our context version)
+                  if (segment.getVersion().compareTo(context.getVersion()) >= 0) {
+                    throw new IllegalStateException(
+                        String.format(
+                            "Segment-to-nuke for task[%s] has invalid version: %s",
+                            task.getId(),
+                            segment.getIdentifier()
+                        )
+                    );
+                  }
                 }
+
+                mergerDBCoordinator.commitTaskStatus(statusFromRunner);
               }
               catch (Exception e) {
                 log.error(e, "Exception while publishing segments for task: %s", task);
@@ -211,11 +235,18 @@ public class TaskConsumer implements Runnable
               segmentBytes += segment.getSize();
             }
 
+            int segmentNukedBytes = 0;
+            for (DataSegment segment : statusFromRunner.getSegmentsNuked()) {
+              segmentNukedBytes += segment.getSize();
+            }
+
             builder.setUser3(statusFromRunner.getStatusCode().toString());
 
             emitter.emit(builder.build("indexer/time/run/millis", statusFromRunner.getDuration()));
             emitter.emit(builder.build("indexer/segment/count", statusFromRunner.getSegments().size()));
             emitter.emit(builder.build("indexer/segment/bytes", segmentBytes));
+            emitter.emit(builder.build("indexer/segmentNuked/count", statusFromRunner.getSegmentsNuked().size()));
+            emitter.emit(builder.build("indexer/segmentNuked/bytes", segmentNukedBytes));
 
             if (statusFromRunner.isFailure()) {
               log.makeAlert("Failed to index")

@@ -10,11 +10,15 @@ import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.task.AbstractTask;
 import com.metamx.druid.merger.coordinator.exec.TaskConsumer;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
 import junit.framework.Assert;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -24,68 +28,122 @@ import java.util.concurrent.Executors;
 
 public class TaskConsumerTest
 {
-  @Test
-  public void testSimple()
+  private TaskStorage ts = null;
+  private TaskQueue tq = null;
+  private TaskRunner tr = null;
+  private MockMergerDBCoordinator mdc = null;
+  private TaskConsumer tc = null;
+
+  @Before
+  public void setUp()
   {
-    final TaskStorage ts = new LocalTaskStorage();
-    final TaskQueue tq = new TaskQueue(ts);
-    final TaskRunner tr = new LocalTaskRunner(
+    EmittingLogger.registerEmitter(EasyMock.createMock(ServiceEmitter.class));
+
+    ts = new LocalTaskStorage();
+    tq = new TaskQueue(ts);
+    tr = new LocalTaskRunner(
         new TaskToolbox(null, null, null, null, null, null),
         Executors.newSingleThreadExecutor()
     );
 
-    final MockMergerDBCoordinator mdc = newMockMDC();
-    final TaskConsumer tc = new TaskConsumer(tq, tr, mdc, newMockEmitter());
+    mdc = newMockMDC();
+    tc = new TaskConsumer(tq, tr, mdc, newMockEmitter());
 
     tq.start();
     tc.start();
+  }
 
-    try {
-      tq.add(
-          new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+  @After
+  public void tearDown()
+  {
+    tc.stop();
+    tq.stop();
+  }
+
+  @Test
+  public void testSimple() throws Exception
+  {
+    tq.add(
+        new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+        {
+          @Override
+          public Type getType()
           {
-            @Override
-            public Type getType()
-            {
-              return Type.TEST;
-            }
-
-            @Override
-            public TaskStatus run(
-                TaskContext context, TaskToolbox toolbox, TaskCallback callback
-            ) throws Exception
-            {
-              return TaskStatus.success(getId()).withSegments(
-                  ImmutableSet.of(
-                      DataSegment.builder()
-                                 .dataSource("ds")
-                                 .interval(new Interval("2012-01-01/P1D"))
-                                 .version(context.getVersion())
-                                 .build()
-                  )
-              );
-            }
+            return Type.TEST;
           }
-      );
 
-      while (ts.getStatus("id1").get().isRunnable()) {
-        Thread.sleep(100);
-      }
+          @Override
+          public TaskStatus run(
+              TaskContext context, TaskToolbox toolbox, TaskCallback callback
+          ) throws Exception
+          {
+            return TaskStatus.success(getId()).withSegments(
+                ImmutableSet.of(
+                    DataSegment.builder()
+                               .dataSource("ds")
+                               .interval(new Interval("2012-01-01/P1D"))
+                               .version(context.getVersion())
+                               .build()
+                )
+            );
+          }
+        }
+    );
 
-      final TaskStatus status = ts.getStatus("id1").get();
-      Assert.assertTrue("nextTasks", status.getNextTasks().isEmpty());
-      Assert.assertEquals("segments.size", 1, status.getSegments().size());
-      Assert.assertEquals("segmentsNuked.size", 0, status.getSegmentsNuked().size());
-      Assert.assertEquals("segments published", status.getSegments(), mdc.getPublished());
-      Assert.assertEquals("segments nuked", status.getSegmentsNuked(), mdc.getNuked());
+    while (ts.getStatus("id1").get().isRunnable()) {
+      Thread.sleep(100);
     }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
+
+    final TaskStatus status = ts.getStatus("id1").get();
+    Assert.assertEquals("statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
+    Assert.assertEquals("nextTasks.size", 0, status.getNextTasks().size());
+    Assert.assertEquals("segments.size", 1, status.getSegments().size());
+    Assert.assertEquals("segmentsNuked.size", 0, status.getSegmentsNuked().size());
+    Assert.assertEquals("segments published", status.getSegments(), mdc.getPublished());
+    Assert.assertEquals("segments nuked", status.getSegmentsNuked(), mdc.getNuked());
+  }
+
+  @Test
+  public void testBadVersion() throws Exception
+  {
+    tq.add(
+        new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+        {
+          @Override
+          public Type getType()
+          {
+            return Type.TEST;
+          }
+
+          @Override
+          public TaskStatus run(
+              TaskContext context, TaskToolbox toolbox, TaskCallback callback
+          ) throws Exception
+          {
+            return TaskStatus.success(getId()).withSegments(
+                ImmutableSet.of(
+                    DataSegment.builder()
+                               .dataSource("ds")
+                               .interval(new Interval("2012-01-01/P1D"))
+                               .version(context.getVersion() + "1!!!1!!")
+                               .build()
+                )
+            );
+          }
+        }
+    );
+
+    while (ts.getStatus("id1").get().isRunnable()) {
+      Thread.sleep(100);
     }
-    finally {
-      tc.stop();
-      tq.stop();
-    }
+
+    final TaskStatus status = ts.getStatus("id1").get();
+    Assert.assertEquals("statusCode", TaskStatus.Status.FAILED, status.getStatusCode());
+    Assert.assertEquals("nextTasks.size", 0, status.getNextTasks().size());
+    Assert.assertEquals("segments.size", 0, status.getSegments().size());
+    Assert.assertEquals("segmentsNuked.size", 0, status.getSegmentsNuked().size());
+    Assert.assertEquals("segments published", status.getSegments(), mdc.getPublished());
+    Assert.assertEquals("segments nuked", status.getSegmentsNuked(), mdc.getNuked());
   }
 
   private static class MockMergerDBCoordinator extends MergerDBCoordinator
@@ -111,7 +169,21 @@ public class TaskConsumerTest
     }
 
     @Override
-    public void announceHistoricalSegment(DataSegment segment) throws Exception
+    public void commitTaskStatus(TaskStatus taskStatus)
+    {
+      for(final DataSegment segment : taskStatus.getSegments())
+      {
+        announceHistoricalSegment(segment);
+      }
+
+      for(final DataSegment segment : taskStatus.getSegmentsNuked())
+      {
+        deleteSegment(segment);
+      }
+    }
+
+    @Override
+    public void announceHistoricalSegment(DataSegment segment)
     {
       published.add(segment);
     }
