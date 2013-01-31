@@ -34,9 +34,7 @@ import java.util.Set;
 
 /**
  * Represents the status of a task. The task may be ongoing ({@link #isComplete()} false) or it may be
- * complete ({@link #isComplete()} true). Ongoing tasks may request segments to be created, but only
- * complete tasks may request segments to be nuked or spawn other tasks. Failed tasks may not request
- * anything.
+ * complete ({@link #isComplete()} true).
  *
  * TaskStatus objects are immutable.
  */
