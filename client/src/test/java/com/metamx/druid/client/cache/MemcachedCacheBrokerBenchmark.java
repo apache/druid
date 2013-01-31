@@ -56,6 +56,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
 
     cache = new MemcachedCache(
         client,
+        "druid-memcached-benchmark",
         30000, // 30 seconds
         3600 // 1 hour
     );

@@ -18,4 +18,7 @@ public abstract class MemcachedCacheConfig
 
   @Config("${prefix}.maxObjectSize")
   public abstract int getMaxObjectSize();
+
+  @Config("${prefix}.memcachedPrefix")
+  public abstract String getMemcachedPrefix();
 }

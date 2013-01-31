@@ -20,9 +20,9 @@
 package com.metamx.druid.client.cache;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import net.iharder.base64.Base64;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.DefaultHashAlgorithm;
@@ -31,6 +31,7 @@ import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.internal.BulkFuture;
 import net.spy.memcached.transcoders.SerializingTranscoder;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -62,6 +63,7 @@ public class MemcachedCache implements Cache
                                         .build(),
           AddrUtil.getAddresses(config.getHosts())
         ),
+        config.getMemcachedPrefix(),
         config.getTimeout(),
         config.getExpiration()
       );
@@ -72,6 +74,7 @@ public class MemcachedCache implements Cache
 
   private final int timeout;
   private final int expiration;
+  private final String memcachedPrefix;
 
   private final MemcachedClientIF client;
 
@@ -79,10 +82,15 @@ public class MemcachedCache implements Cache
   private final AtomicLong missCount = new AtomicLong(0);
   private final AtomicLong timeoutCount = new AtomicLong(0);
 
-  MemcachedCache(MemcachedClientIF client, int timeout, int expiration) {
+  MemcachedCache(MemcachedClientIF client, String memcachedPrefix, int timeout, int expiration) {
+    Preconditions.checkArgument(memcachedPrefix.length() <= MAX_PREFIX_LENGTH,
+                                "memcachedPrefix length [%d] exceeds maximum length [%d]",
+                                memcachedPrefix.length(),
+                                MAX_PREFIX_LENGTH);
     this.timeout = timeout;
     this.expiration = expiration;
     this.client = client;
+    this.memcachedPrefix = memcachedPrefix;
   }
 
   @Override
@@ -101,7 +109,7 @@ public class MemcachedCache implements Cache
   @Override
   public byte[] get(NamedKey key)
   {
-    Future<Object> future = client.asyncGet(computeKeyString(key));
+    Future<Object> future = client.asyncGet(computeKeyString(memcachedPrefix, key));
     try {
       byte[] bytes = (byte[]) future.get(timeout, TimeUnit.MILLISECONDS);
       if(bytes != null) {
@@ -129,7 +137,7 @@ public class MemcachedCache implements Cache
   @Override
   public void put(NamedKey key, byte[] value)
   {
-    client.set(computeKeyString(key), expiration, value);
+    client.set(computeKeyString(memcachedPrefix, key), expiration, value);
   }
 
   @Override
@@ -144,7 +152,7 @@ public class MemcachedCache implements Cache
               @Nullable NamedKey input
           )
           {
-            return computeKeyString(input);
+            return computeKeyString(memcachedPrefix, input);
           }
         }
     );
@@ -186,7 +194,15 @@ public class MemcachedCache implements Cache
     // no resources to cleanup
   }
 
-  private static String computeKeyString(NamedKey key) {
-    return key.namespace + ":" + Base64.encodeBytes(key.key, Base64.DONT_BREAK_LINES);
+  public static final int MAX_PREFIX_LENGTH =
+        MemcachedClientIF.MAX_KEY_LENGTH
+        - 40 // length of namespace hash
+        - 40 // length of key hash
+        - 2  // length of separators
+        ;
+
+  private static String computeKeyString(String memcachedPrefix, NamedKey key) {
+    // hash keys to keep things under 250 characters for memcached
+    return memcachedPrefix + ":" + DigestUtils.sha1Hex(key.namespace) + ":" + DigestUtils.sha1Hex(key.key);
   }
 }

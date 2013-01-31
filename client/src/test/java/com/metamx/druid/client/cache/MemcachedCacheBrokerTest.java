@@ -60,7 +60,7 @@ public class MemcachedCacheBrokerTest
   public void setUp() throws Exception
   {
     MemcachedClientIF client = new MockMemcachedClient();
-    cache = new MemcachedCache(client, 500, 3600);
+    cache = new MemcachedCache(client, "druid-memcached-test", 500, 3600);
   }
 
   @Test
