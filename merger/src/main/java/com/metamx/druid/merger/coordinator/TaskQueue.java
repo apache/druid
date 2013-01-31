@@ -159,7 +159,7 @@ public class TaskQueue
 
     try {
 
-      log.info("Naptime!");
+      log.info("Naptime! Shutting down until we are started again.");
 
       queue.clear();
       running.clear();
