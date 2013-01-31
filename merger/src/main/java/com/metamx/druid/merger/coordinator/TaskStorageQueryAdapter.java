@@ -50,10 +50,11 @@ public class TaskStorageQueryAdapter
   }
 
   /**
-   * Returns all recursive task statuses for a particular task from the same task group. Includes that task,
-   * plus any tasks it spawned, and so on. Excludes spawned tasks that ended up in a different task group.
+   * Returns all recursive task statuses for a particular task, staying within the same task group. Includes that
+   * task, plus any tasks it spawned, and so on. Does not include spawned tasks that ended up in a different task
+   * group. Does not include this task's parents or siblings.
    */
-  public Map<String, Optional<TaskStatus>> getGroupRecursiveStatuses(final String taskid)
+  public Map<String, Optional<TaskStatus>> getSameGroupChildStatuses(final String taskid)
   {
     final Optional<Task> taskOptional = storage.getTask(taskid);
     final Optional<TaskStatus> statusOptional = storage.getStatus(taskid);
@@ -64,7 +65,7 @@ public class TaskStorageQueryAdapter
     if(taskOptional.isPresent() && statusOptional.isPresent()) {
       for(final Task nextTask : statusOptional.get().getNextTasks()) {
         if(nextTask.getGroupId().equals(taskOptional.get().getGroupId())) {
-          resultBuilder.putAll(getGroupRecursiveStatuses(nextTask.getId()));
+          resultBuilder.putAll(getSameGroupChildStatuses(nextTask.getId()));
         }
       }
     }
@@ -73,12 +74,11 @@ public class TaskStorageQueryAdapter
   }
 
   /**
-   * Like {@link #getGroupRecursiveStatuses}, but flattens all recursive statuses for the same task group into a
-   * single, merged status.
+   * Like {@link #getSameGroupChildStatuses}, but flattens the recursive statuses into a single, merged status.
    */
-  public Optional<TaskStatus> getGroupMergedStatus(final String taskid)
+  public Optional<TaskStatus> getSameGroupMergedStatus(final String taskid)
   {
-    final Map<String, Optional<TaskStatus>> statuses = getGroupRecursiveStatuses(taskid);
+    final Map<String, Optional<TaskStatus>> statuses = getSameGroupChildStatuses(taskid);
 
     int nSuccesses = 0;
     int nFailures = 0;

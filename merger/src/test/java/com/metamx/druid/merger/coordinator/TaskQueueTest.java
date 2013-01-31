@@ -416,7 +416,7 @@ public class TaskQueueTest
     Assert.assertTrue("id1 isSuccess", ts.getStatus("id1").get().isSuccess());
     Assert.assertTrue(
         "id1 isSuccess (merged)",
-        new TaskStorageQueryAdapter(ts).getGroupMergedStatus("id1").get().isSuccess()
+        new TaskStorageQueryAdapter(ts).getSameGroupMergedStatus("id1").get().isSuccess()
     );
     Assert.assertTrue("id2 isRunnable", ts.getStatus("id2").get().isRunnable());
   }

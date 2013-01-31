@@ -112,7 +112,7 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response doStatus(@PathParam("taskid") String taskid)
   {
-    final Optional<TaskStatus> status = taskStorageQueryAdapter.getGroupMergedStatus(taskid);
+    final Optional<TaskStatus> status = taskStorageQueryAdapter.getSameGroupMergedStatus(taskid);
     if (!status.isPresent()) {
       return Response.status(Response.Status.NOT_FOUND).build();
     } else {
