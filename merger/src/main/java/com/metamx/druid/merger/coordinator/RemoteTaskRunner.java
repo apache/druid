@@ -175,27 +175,31 @@ public class RemoteTaskRunner implements TaskRunner
             public void run()
             {
               if (currentlyTerminating.isEmpty()) {
-                if (zkWorkers.size() <= workerSetupManager.getWorkerSetupData().getMinNumWorkers()) {
+                final int minNumWorkers = workerSetupManager.getWorkerSetupData().getMinNumWorkers();
+                if (zkWorkers.size() <= minNumWorkers) {
                   return;
                 }
 
-                int workerCount = 0;
-                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList();
-                for (WorkerWrapper workerWrapper : zkWorkers.values()) {
-                  workerCount++;
-
-                  if (workerCount > workerSetupManager.getWorkerSetupData().getMinNumWorkers() &&
-                      workerWrapper.getRunningTasks().isEmpty() &&
-                      System.currentTimeMillis() - workerWrapper.getLastCompletedTaskTime().getMillis()
-                      > config.getMaxWorkerIdleTimeMillisBeforeDeletion()
-                      ) {
-                    thoseLazyWorkers.add(workerWrapper);
-                  }
-                }
+                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList(
+                    FunctionalIterable
+                        .create(zkWorkers.values())
+                        .filter(
+                            new Predicate<WorkerWrapper>()
+                            {
+                              @Override
+                              public boolean apply(WorkerWrapper input)
+                              {
+                                return input.getRunningTasks().isEmpty()
+                                       && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
+                                          > config.getMaxWorkerIdleTimeMillisBeforeDeletion();
+                              }
+                            }
+                        )
+                );
 
                 AutoScalingData terminated = strategy.terminate(
                     Lists.transform(
-                        thoseLazyWorkers,
+                        thoseLazyWorkers.subList(minNumWorkers, thoseLazyWorkers.size() - 1),
                         new Function<WorkerWrapper, String>()
                         {
                           @Override
