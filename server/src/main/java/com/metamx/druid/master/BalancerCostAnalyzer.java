@@ -52,13 +52,16 @@ public class BalancerCostAnalyzer
   /**
    * Calculates the cost normalization.  This is such that the normalized cost is lower bounded
    * by 1 (e.g. when each segment gets its own compute node).
-   * @param serverHolderList
-   * @return
+   * @param     serverHolders
+   *            A list of ServerHolders for a particular tier.
+   * @return    The normalization value (the sum of the diagonal entries in the
+   *            pairwise cost matrix).  This is the cost of a cluster if each
+   *            segment were to get its own compute node.
    */
-  public double calculateNormalization(List<ServerHolder> serverHolderList)
+  public double calculateNormalization(List<ServerHolder> serverHolders)
   {
     double cost = 0;
-    for (ServerHolder server : serverHolderList) {
+    for (ServerHolder server : serverHolders) {
       for (DataSegment segment : server.getServer().getSegments().values()) {
         cost += computeJointSegmentCosts(segment, segment);
       }
@@ -68,13 +71,14 @@ public class BalancerCostAnalyzer
 
   /**
    * Calculates the initial cost of the Druid segment configuration.
-   * @param serverHolderList
-   * @return
+   * @param     serverHolders
+   *            A list of ServerHolders for a particular tier.
+   * @return    The initial cost of the Druid tier.
    */
-  public double calculateInitialTotalCost(List<ServerHolder> serverHolderList)
+  public double calculateInitialTotalCost(List<ServerHolder> serverHolders)
   {
     double cost = 0;
-    for (ServerHolder server : serverHolderList) {
+    for (ServerHolder server : serverHolders) {
       DataSegment[] segments = server.getServer().getSegments().values().toArray(new DataSegment[]{});
       for (int i = 0; i < segments.length; ++i) {
         for (int j = i; j < segments.length; ++j) {
@@ -92,9 +96,11 @@ public class BalancerCostAnalyzer
    * dataSourcePenalty: if two segments belong to the same data source, they are more likely to be involved
    * in the same queries
    * gapPenalty: it is more likely that segments close together in time will be queried together
-   * @param segment1
-   * @param segment2
-   * @return
+   * @param     segment1
+   *            The first DataSegment.
+   * @param     segment2
+   *            The second DataSegment.
+   * @return    The joint cost of placing the two DataSegments together on one node.
    */
   public double computeJointSegmentCosts(DataSegment segment1, DataSegment segment2)
   {
@@ -134,37 +140,42 @@ public class BalancerCostAnalyzer
 
   /**
    * Sample from each server with probability proportional to the number of segments on that server.
-   * @param serverHolderList
-   * @param numSegments
-   * @return
+   * @param     serverHolders
+   *            A list of ServerHolders for a particular tier.
+   * @param     numSegments
+
+   * @return    A ServerHolder sampled with probability proportional to the
+   *            number of segments on that server
    */
-  private ServerHolder sampleServer(List<ServerHolder> serverHolderList, int numSegments)
+  private ServerHolder sampleServer(List<ServerHolder> serverHolders, int numSegments)
   {
     final int num = rand.nextInt(numSegments);
     int cumulativeSegments = 0;
     int numToStopAt = 0;
 
     while (cumulativeSegments <= num) {
-      cumulativeSegments += serverHolderList.get(numToStopAt).getServer().getSegments().size();
+      cumulativeSegments += serverHolders.get(numToStopAt).getServer().getSegments().size();
       numToStopAt++;
     }
 
-    return serverHolderList.get(numToStopAt - 1);
+    return serverHolders.get(numToStopAt - 1);
   }
 
   /**
    * The balancing application requires us to pick a proposal segment.
-   * @param serverHolders
-   * @param numSegments
-   * @return
+   * @param     serverHolders
+   *            A list of ServerHolders for a particular tier.
+   * @param     numSegments
+   *            The total number of segments on a particular tier.
+   * @return    A BalancerSegmentHolder sampled uniformly at random.
    */
   public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders, int numSegments)
   {
-    // We want to sample from each server w.p. numSegmentsOnServer / totalSegments
+    /** We want to sample from each server w.p. numSegmentsOnServer / totalSegments */
     ServerHolder fromServerHolder = sampleServer(serverHolders, numSegments);
 
-    // and actually pick that segment uniformly at random w.p. 1 / numSegmentsOnServer
-    // so that the probability of picking a segment is 1 / totalSegments.
+    /** and actually pick that segment uniformly at random w.p. 1 / numSegmentsOnServer
+    so that the probability of picking a segment is 1 / totalSegments. */
     List<DataSegment> segments = Lists.newArrayList(fromServerHolder.getServer().getSegments().values());
 
     DataSegment proposalSegment = segments.get(rand.nextInt(segments.size()));
@@ -173,9 +184,11 @@ public class BalancerCostAnalyzer
 
   /**
    * The assignment application requires us to supply a proposal segment.
-   * @param proposalSegment
-   * @param serverHolders
-   * @return
+   * @param     proposalSegment
+   *            A DataSegment that we are proposing to move.
+   * @param     serverHolders
+   *            An iterable of ServerHolders for a particular tier.
+   * @return    A ServerHolder with the new home for a segment.
    */
   public ServerHolder findNewSegmentHome(DataSegment proposalSegment, Iterable<ServerHolder> serverHolders)
   {
@@ -184,20 +197,20 @@ public class BalancerCostAnalyzer
     ServerHolder toServer = null;
 
     for (ServerHolder server : serverHolders) {
-      // Only calculate costs if the server has enough space.
+      /** Only calculate costs if the server has enough space. */
       if (proposalSegmentSize > server.getAvailableSize()) {
         break;
       }
 
-      // The contribution to the total cost of a given server by proposing to move the segment to that server is...
+      /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
       double cost = 0f;
-      // the sum of the costs of other (exclusive of the proposalSegment) segments on the server
+      /**  the sum of the costs of other (exclusive of the proposalSegment) segments on the server */
       for (DataSegment segment : server.getServer().getSegments().values()) {
         if (!proposalSegment.equals(segment)) {
           cost += computeJointSegmentCosts(proposalSegment, segment);
         }
       }
-      // plus the costs of segments that will be loaded
+      /**  plus the costs of segments that will be loaded */
       for (DataSegment segment : server.getPeon().getSegmentsToLoad()) {
         cost += computeJointSegmentCosts(proposalSegment, segment);
       }
