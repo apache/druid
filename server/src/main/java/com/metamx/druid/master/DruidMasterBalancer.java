@@ -91,11 +91,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
       if (!currentlyMovingSegments.get(tier).isEmpty()) {
         reduceLifetimes(tier);
-        log.info(
-            "[%s]: Still waiting on %,d segments to be moved",
-            tier,
-            currentlyMovingSegments.size()
-        );
+        log.info("[%s]: Still waiting on %,d segments to be moved", tier, currentlyMovingSegments.size());
         continue;
       }
 
@@ -104,8 +100,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
       if (serversByPercentUsed.size() <= 1) {
         log.info(
-            "[%s]: No unique values found for highest and lowest percent used servers: nothing to balance",
-            tier
+            "[%s]: No unique values found for highest and lowest percent used servers: nothing to balance", tier
         );
         continue;
       }
@@ -169,12 +164,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
       if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
           (server.getSegment(segmentName) == null) &&
           new ServerHolder(server, toPeon).getAvailableSize() > segmentToMove.getSize()) {
-        log.info(
-            "Moving [%s] from [%s] to [%s]",
-            segmentName,
-            fromServer,
-            toServer
-        );
+        log.info("Moving [%s] from [%s] to [%s]", segmentName, fromServer, toServer);
         try {
           master.moveSegment(
               fromServer,
