@@ -177,22 +177,19 @@ public class RemoteTaskRunner implements TaskRunner
                   return;
                 }
 
-                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList(
-                    FunctionalIterable
-                        .create(zkWorkers.values())
-                        .filter(
-                            new Predicate<WorkerWrapper>()
-                            {
-                              @Override
-                              public boolean apply(WorkerWrapper input)
-                              {
-                                return input.getRunningTasks().isEmpty()
-                                       && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
-                                          > config.getMaxWorkerIdleTimeMillisBeforeDeletion();
-                              }
-                            }
-                        )
-                );
+                int workerCount = 0;
+                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList();
+                for (WorkerWrapper workerWrapper : zkWorkers.values()) {
+                  workerCount++;
+
+                  if (workerCount > workerSetupManager.getWorkerSetupData().getMinNumWorkers() &&
+                      workerWrapper.getRunningTasks().isEmpty() &&
+                      System.currentTimeMillis() - workerWrapper.getLastCompletedTaskTime().getMillis()
+                      > config.getMaxWorkerIdleTimeMillisBeforeDeletion()
+                      ) {
+                    thoseLazyWorkers.add(workerWrapper);
+                  }
+                }
 
                 AutoScalingData terminated = strategy.terminate(
                     Lists.transform(

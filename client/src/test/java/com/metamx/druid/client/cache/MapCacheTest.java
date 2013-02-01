@@ -26,7 +26,7 @@ import org.junit.Test;
 
 /**
  */
-public class MapCacheBrokerTest
+public class MapCacheTest
 {
   private static final byte[] HI = "hi".getBytes();
   private static final byte[] HO = "ho".getBytes();
