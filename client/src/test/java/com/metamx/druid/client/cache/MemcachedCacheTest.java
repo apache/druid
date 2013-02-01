@@ -50,7 +50,7 @@ import java.util.concurrent.TimeoutException;
 
 /**
  */
-public class MemcachedCacheBrokerTest
+public class MemcachedCacheTest
 {
   private static final byte[] HI = "hi".getBytes();
   private static final byte[] HO = "ho".getBytes();
@@ -60,7 +60,7 @@ public class MemcachedCacheBrokerTest
   public void setUp() throws Exception
   {
     MemcachedClientIF client = new MockMemcachedClient();
-    cache = new MemcachedCache(client, 500, 3600);
+    cache = new MemcachedCache(client, "druid-memcached-test", 500, 3600);
   }
 
   @Test
