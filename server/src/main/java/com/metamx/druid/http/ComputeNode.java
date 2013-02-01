@@ -126,7 +126,9 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
             getConfigFactory().buildWithReplacements(
                 ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
             )
-        ), emitter, new ServiceMetricEvent.Builder()
+        ),
+        emitter,
+        new ServiceMetricEvent.Builder()
     );
 
     final ServerManager serverManager = new ServerManager(segmentLoader, conglomerate, emitter, executorService);

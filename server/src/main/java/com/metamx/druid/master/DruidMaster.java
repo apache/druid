@@ -594,21 +594,20 @@ public class DruidMaster
                 public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
                 {
                   // Display info about all historical servers
-                  Iterable<DruidServer> servers =
-                      FunctionalIterable.create(serverInventoryManager.getInventory())
-                                        .filter(
-                                            new Predicate<DruidServer>()
-                                            {
-                                              @Override
-                                              public boolean apply(
-                                                  @Nullable DruidServer input
-                                              )
-                                              {
-                                                return input.getType()
-                                                            .equalsIgnoreCase("historical");
-                                              }
-                                            }
-                                        );
+                  Iterable<DruidServer> servers =FunctionalIterable
+                      .create(serverInventoryManager.getInventory())
+                      .filter(
+                          new Predicate<DruidServer>()
+                          {
+                            @Override
+                            public boolean apply(
+                                @Nullable DruidServer input
+                            )
+                            {
+                              return input.getType().equalsIgnoreCase("historical");
+                            }
+                          }
+                      );
                   if (log.isDebugEnabled()) {
                     log.debug("Servers");
                     for (DruidServer druidServer : servers) {

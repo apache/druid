@@ -19,8 +19,6 @@
 
 package com.metamx.druid.master;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
@@ -30,7 +28,6 @@ import com.metamx.druid.client.DruidServer;
 import com.metamx.emitter.EmittingLogger;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -71,13 +68,10 @@ public class DruidMasterBalancer implements DruidMasterHelper
     for (BalancerSegmentHolder holder : currentlyMovingSegments.get(tier).values()) {
       holder.reduceLifetime();
       if (holder.getLifetime() <= 0) {
-        log.makeAlert(
-            "[%s]: Balancer move segments queue has a segment stuck",
-            tier,
-            ImmutableMap.<String, Object>builder()
-                        .put("segment", holder.getSegment().getIdentifier())
-                        .build()
-        ).emit();
+        log.makeAlert("[%s]: Balancer move segments queue has a segment stuck", tier)
+            .addData("segment", holder.getSegment().getIdentifier())
+            .addData("server", holder.getServer())
+            .emit();
       }
     }
   }
