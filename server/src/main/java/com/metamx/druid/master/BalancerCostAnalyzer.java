@@ -123,7 +123,7 @@ public class BalancerCostAnalyzer
       recencyPenalty = 2 - maxDiff / SEVEN_DAYS_IN_MILLIS;
     }
 
-    // gap is null if the two segment intervals overlap or if they're adjacent
+    /** gap is null if the two segment intervals overlap or if they're adjacent */
     if (gap == null) {
       gapPenalty = 2;
     } else {
