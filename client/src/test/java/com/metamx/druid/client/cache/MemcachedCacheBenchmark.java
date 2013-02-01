@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
+public class MemcachedCacheBenchmark extends SimpleBenchmark
 {
   private static final String BASE_KEY = "test_2012-11-26T00:00:00.000Z_2012-11-27T00:00:00.000Z_2012-11-27T04:11:25.979Z_";
   public static final String NAMESPACE = "default";
@@ -56,6 +56,7 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
 
     cache = new MemcachedCache(
         client,
+        "druid-memcached-benchmark",
         30000, // 30 seconds
         3600 // 1 hour
     );
@@ -113,6 +114,6 @@ public class MemcachedCacheBrokerBenchmark extends SimpleBenchmark
   }
 
   public static void main(String[] args) throws Exception {
-    Runner.main(MemcachedCacheBrokerBenchmark.class, args);
+    Runner.main(MemcachedCacheBenchmark.class, args);
   }
 }
