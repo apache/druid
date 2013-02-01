@@ -20,14 +20,9 @@ $(document).ready(function() {
         Yes : function() {
           var selected = $('#datasources option:selected').text();
           var interval = $('#interval').val();
-          var toSend = {
-            "dataSource" : selected,
-            "interval" : interval
-          }
           $.ajax({
-            type: 'POST',
-            url:'/master/kill',
-            data: JSON.stringify(toSend),
+            type: 'DELETE',
+            url:'/info/datasources/' + selected +'?kill=true&interval=' + interval,
             contentType:"application/json; charset=utf-8",
             dataType:"json",
             error: function(xhr, status, error) {

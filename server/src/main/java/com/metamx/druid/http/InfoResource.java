@@ -33,7 +33,10 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.rules.Rule;
+import com.metamx.druid.merge.ClientKillQuery;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -58,6 +61,7 @@ import java.util.TreeSet;
 @Path("/info")
 public class InfoResource
 {
+  private final DruidMaster master;
   private final ServerInventoryManager serverInventoryManager;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final DatabaseRuleManager databaseRuleManager;
@@ -65,12 +69,14 @@ public class InfoResource
 
   @Inject
   public InfoResource(
+      DruidMaster master,
       ServerInventoryManager serverInventoryManager,
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
       DruidClusterInfo druidClusterInfo
   )
   {
+    this.master = master;
     this.serverInventoryManager = serverInventoryManager;
     this.databaseSegmentManager = databaseSegmentManager;
     this.databaseRuleManager = databaseRuleManager;
@@ -362,11 +368,17 @@ public class InfoResource
   @DELETE
   @Path("/datasources/{dataSourceName}")
   public Response deleteDataSource(
-      @PathParam("dataSourceName") final String dataSourceName
+      @PathParam("dataSourceName") final String dataSourceName,
+      @QueryParam("kill") final String kill,
+      @QueryParam("interval") final String interval
   )
   {
-    if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+    if (kill != null && Boolean.valueOf(kill)) {
+      master.killSegments(new ClientKillQuery(dataSourceName, new Interval(interval)));
+    } else {
+      if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      }
     }
 
     return Response.status(Response.Status.OK).build();

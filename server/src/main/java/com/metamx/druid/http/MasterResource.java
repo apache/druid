@@ -111,15 +111,6 @@ public class MasterResource
     return resp;
   }
 
-  @POST
-  @Path("/kill")
-  @Consumes("application/json")
-  public Response killSegments(ClientKillQuery killQuery)
-  {
-    master.killSegments(killQuery);
-    return Response.ok().build();
-  }
-
   @GET
   @Path("/loadstatus")
   @Produces("application/json")
