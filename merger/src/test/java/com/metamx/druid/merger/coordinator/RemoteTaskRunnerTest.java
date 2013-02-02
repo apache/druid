@@ -44,6 +44,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -68,7 +69,7 @@ public class RemoteTaskRunnerTest
 
   private ScheduledExecutorService scheduledExec;
 
-  private Task task1;
+  private TestTask task1;
 
   private Worker worker1;
 
@@ -111,6 +112,7 @@ public class RemoteTaskRunnerTest
                 null,
                 null,
                 null,
+                null,
                 0
             )
         ), Lists.<AggregatorFactory>newArrayList()
@@ -141,13 +143,28 @@ public class RemoteTaskRunnerTest
   @Test
   public void testAlreadyExecutedTask() throws Exception
   {
-    remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+    final CountDownLatch latch = new CountDownLatch(1);
+    remoteTaskRunner.run(
+        new TestTask(task1){
+          @Override
+          public TaskStatus run(
+              TaskContext context, TaskToolbox toolbox
+          ) throws Exception
+          {
+            latch.await();
+            return super.run(context, toolbox);
+          }
+        },
+        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
+        null
+    );
     try {
       remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+      latch.countDown();
       fail("ISE expected");
     }
     catch (ISE expected) {
-
+      latch.countDown();
     }
   }
 
@@ -165,6 +182,7 @@ public class RemoteTaskRunnerTest
                       "dummyDs",
                       new Interval(new DateTime(), new DateTime()),
                       new DateTime().toString(),
+                      null,
                       null,
                       null,
                       null,
@@ -366,7 +384,7 @@ public class RemoteTaskRunnerTest
         jsonMapper.writeValueAsBytes(worker1)
     );
     while (remoteTaskRunner.getNumWorkers() == 0) {
-      Thread.sleep(500);
+      Thread.sleep(50);
     }
   }
 
@@ -473,6 +491,9 @@ public class RemoteTaskRunnerTest
   private static class TestTask extends DefaultMergeTask
   {
     private final String id;
+    private final String dataSource;
+    private final List<DataSegment> segments;
+    private final List<AggregatorFactory> aggregators;
 
     public TestTask(
         @JsonProperty("id") String id,
@@ -484,6 +505,14 @@ public class RemoteTaskRunnerTest
       super(dataSource, segments, aggregators);
 
       this.id = id;
+      this.dataSource = dataSource;
+      this.segments = segments;
+      this.aggregators = aggregators;
+    }
+
+    public TestTask(TestTask task)
+    {
+      this(task.id, task.dataSource, task.segments, task.aggregators);
     }
 
     @Override

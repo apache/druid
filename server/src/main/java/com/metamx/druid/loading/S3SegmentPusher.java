@@ -25,6 +25,7 @@ import com.google.common.io.Closeables;
 import com.metamx.common.ISE;
 import com.metamx.common.StreamUtils;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -63,9 +64,9 @@ public class S3SegmentPusher implements SegmentPusher
   }
 
   @Override
-  public DataSegment push(File file, DataSegment segment) throws IOException
+  public DataSegment push(final File indexFilesDir, DataSegment segment) throws IOException
   {
-    log.info("Uploading [%s] to S3", file);
+    log.info("Uploading [%s] to S3", indexFilesDir);
     String outputKey = JOINER.join(
         config.getBaseKey().isEmpty() ? null : config.getBaseKey(),
         segment.getDataSource(),
@@ -77,8 +78,6 @@ public class S3SegmentPusher implements SegmentPusher
         segment.getVersion(),
         segment.getShardSpec().getPartitionNum()
     );
-
-    File indexFilesDir = file;
 
     long indexSize = 0;
     final File zipOutFile = File.createTempFile("druid", "index.zip");
@@ -110,14 +109,15 @@ public class S3SegmentPusher implements SegmentPusher
       log.info("Pushing %s.", toPush);
       s3Client.putObject(outputBucket, toPush);
 
-      DataSegment outputSegment = segment.withSize(indexSize)
-                                         .withLoadSpec(
-                                             ImmutableMap.<String, Object>of(
-                                                 "type", "s3_zip",
-                                                 "bucket", outputBucket,
-                                                 "key", toPush.getKey()
-                                             )
-                                         );
+      segment = segment.withSize(indexSize)
+                       .withLoadSpec(
+                           ImmutableMap.<String, Object>of(
+                               "type", "s3_zip",
+                               "bucket", outputBucket,
+                               "key", toPush.getKey()
+                           )
+                       )
+                       .withBinaryVersion(IndexIO.getVersionFromDir(indexFilesDir));
 
       File descriptorFile = File.createTempFile("druid", "descriptor.json");
       StreamUtils.copyToFileAndClose(new ByteArrayInputStream(jsonMapper.writeValueAsBytes(segment)), descriptorFile);
@@ -137,7 +137,7 @@ public class S3SegmentPusher implements SegmentPusher
       log.info("Deleting descriptor file[%s]", descriptorFile);
       descriptorFile.delete();
 
-      return outputSegment;
+      return segment;
     }
     catch (NoSuchAlgorithmException e) {
       throw new IOException(e);

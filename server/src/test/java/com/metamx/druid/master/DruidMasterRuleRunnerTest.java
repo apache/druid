@@ -28,6 +28,7 @@ import com.google.common.collect.Sets;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.db.DatabaseRuleManager;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.master.rules.IntervalDropRule;
 import com.metamx.druid.master.rules.IntervalLoadRule;
 import com.metamx.druid.master.rules.Rule;
@@ -78,6 +79,7 @@ public class DruidMasterRuleRunnerTest
               Lists.<String>newArrayList(),
               Lists.<String>newArrayList(),
               new NoneShardSpec(),
+              IndexIO.CURRENT_VERSION_ID,
               1
           )
       );

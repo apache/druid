@@ -83,9 +83,7 @@ public class YeOldePlumberSchool implements PlumberSchool
     final Sink theSink = new Sink(interval, schema);
 
     // Temporary directory to hold spilled segments.
-    final File persistDir = new File(
-        tmpSegmentDir, theSink.getSegment().withVersion(version).getIdentifier()
-    );
+    final File persistDir = new File(tmpSegmentDir, theSink.getSegment().withVersion(version).getIdentifier());
 
     // Set of spilled segments. Will be merged at the end.
     final Set<File> spilled = Sets.newHashSet();
@@ -144,7 +142,8 @@ public class YeOldePlumberSchool implements PlumberSchool
 
           final DataSegment segmentToUpload = theSink.getSegment()
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
-                                                     .withVersion(version);
+                                                     .withVersion(version)
+                                                     .withBinaryVersion(IndexIO.getVersionFromDir(fileToUpload));
 
           segmentPusher.push(fileToUpload, segmentToUpload);
 
