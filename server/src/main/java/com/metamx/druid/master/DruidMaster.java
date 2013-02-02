@@ -21,7 +21,7 @@ package com.metamx.druid.master;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -36,7 +36,6 @@ import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
@@ -44,9 +43,12 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.merge.ClientKillQuery;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
 import com.netflix.curator.x.discovery.ServiceProvider;
@@ -55,8 +57,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.net.URL;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -89,6 +91,8 @@ public class DruidMaster
   private final PhoneBookPeon masterPeon;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ServiceProvider serviceProvider;
+  private final HttpClient httpClient;
+  private final HttpResponseHandler<StringBuilder, String> responseHandler;
 
   private final ObjectMapper jsonMapper;
 
@@ -103,7 +107,9 @@ public class DruidMaster
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       Map<String, LoadQueuePeon> loadManagementPeons,
-      ServiceProvider serviceProvider
+      ServiceProvider serviceProvider,
+      HttpClient httpClient,
+      HttpResponseHandler<StringBuilder, String> responseHandler
   )
   {
     this.config = config;
@@ -124,6 +130,9 @@ public class DruidMaster
     this.loadManagementPeons = loadManagementPeons;
 
     this.serviceProvider = serviceProvider;
+
+    this.httpClient = httpClient;
+    this.responseHandler = responseHandler;
   }
 
   public boolean isClusterMaster()
@@ -197,6 +206,27 @@ public class DruidMaster
   public void enableDatasource(String ds)
   {
     databaseSegmentManager.enableDatasource(ds);
+  }
+
+  public void killSegments(ClientKillQuery killQuery)
+  {
+    try {
+      httpClient.post(
+          new URL(
+              String.format(
+                  "http://%s:%s/mmx/merger/v1/index",
+                  serviceProvider.getInstance().getAddress(),
+                  serviceProvider.getInstance().getPort()
+              )
+          )
+      )
+                .setContent("application/json", jsonMapper.writeValueAsBytes(killQuery))
+                .go(responseHandler)
+                .get();
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   public void moveSegment(String from, String to, String segmentName, final LoadPeonCallback callback)
@@ -564,7 +594,6 @@ public class DruidMaster
             DruidMasterRuntimeParams.newBuilder()
                                     .withStartTime(startTime)
                                     .withDatasources(databaseSegmentManager.getInventory())
-                                    .withLoadManagementPeons(loadManagementPeons)
                                     .withMillisToWaitBeforeDeleting(config.getMillisToWaitBeforeDeleting())
                                     .withEmitter(emitter)
                                     .withMergeBytesLimit(config.getMergeBytesLimit())
@@ -665,6 +694,7 @@ public class DruidMaster
                   decrementRemovedSegmentsLifetime();
 
                   return params.buildFromExisting()
+                               .withLoadManagementPeons(loadManagementPeons)
                                .withDruidCluster(cluster)
                                .withDatabaseRuleManager(databaseRuleManager)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -687,7 +717,14 @@ public class DruidMaster
       super(
           ImmutableList.of(
               new DruidMasterSegmentInfoLoader(DruidMaster.this),
-              new DruidMasterSegmentMerger(jsonMapper, serviceProvider),
+              new DruidMasterSegmentMerger(
+                  new HttpMergerClient(
+                      httpClient,
+                      responseHandler,
+                      jsonMapper,
+                      serviceProvider
+                  )
+              ),
               new DruidMasterHelper()
               {
                 @Override

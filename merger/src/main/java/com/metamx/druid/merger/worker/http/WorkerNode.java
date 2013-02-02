@@ -34,17 +34,20 @@ import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.S3SegmentKiller;
+import com.metamx.druid.loading.S3SegmentPusher;
+import com.metamx.druid.loading.S3SegmentPusherConfig;
+import com.metamx.druid.loading.SegmentKiller;
+import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
+import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.worker.TaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import com.metamx.druid.loading.S3SegmentPusher;
-import com.metamx.druid.loading.S3SegmentPusherConfig;
-import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -96,7 +99,7 @@ public class WorkerNode extends RegisteringNode
 
   private List<Monitor> monitors = null;
   private ServiceEmitter emitter = null;
-  private IndexerCoordinatorConfig coordinatorConfig = null; // FIXME needed for task toolbox, but shouldn't be
+  private TaskConfig taskConfig = null;
   private WorkerConfig workerConfig = null;
   private TaskToolbox taskToolbox = null;
   private CuratorFramework curatorFramework = null;
@@ -270,8 +273,8 @@ public class WorkerNode extends RegisteringNode
 
   private void initializeMergerConfig()
   {
-    if (coordinatorConfig == null) {
-      coordinatorConfig = configFactory.build(IndexerCoordinatorConfig.class);
+    if (taskConfig == null) {
+      taskConfig = configFactory.build(TaskConfig.class);
     }
 
     if (workerConfig == null) {
@@ -293,7 +296,10 @@ public class WorkerNode extends RegisteringNode
           configFactory.build(S3SegmentPusherConfig.class),
           jsonMapper
       );
-      taskToolbox = new TaskToolbox(coordinatorConfig, emitter, s3Client, segmentPusher, jsonMapper);
+      final SegmentKiller segmentKiller = new S3SegmentKiller(
+          s3Client
+      );
+      taskToolbox = new TaskToolbox(taskConfig, emitter, s3Client, segmentPusher, segmentKiller, jsonMapper);
     }
   }
 

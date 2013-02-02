@@ -189,7 +189,11 @@ public class DatabaseRuleManager
                 public Map<String, List<Rule>> withHandle(Handle handle) throws Exception
                 {
                   return handle.createQuery(
-                      String.format("SELECT dataSource, payload FROM %s", config.getRuleTable())
+                      // Return latest version rule by dataSource
+                      String.format(
+                          "SELECT %1$s.dataSource, %1$s.payload FROM %1$s INNER JOIN(SELECT dataSource, max(version) as version, payload FROM %1$s GROUP BY dataSource) ds ON %1$s.datasource = ds.datasource and %1$s.version = ds.version",
+                          config.getRuleTable()
+                      )
                   ).fold(
                       Maps.<String, List<Rule>>newHashMap(),
                       new Folder3<Map<String, List<Rule>>, Map<String, Object>>()

@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableMap;
 import com.metamx.druid.loading.S3SegmentPuller;
 import com.metamx.druid.loading.S3SegmentGetterConfig;
 import com.metamx.druid.loading.S3ZippedSegmentPuller;
+import com.metamx.druid.loading.SegmentKiller;
 import com.metamx.druid.loading.SegmentPuller;
+import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.loading.SegmentPusher;
@@ -39,17 +41,19 @@ import java.util.Map;
  */
 public class TaskToolbox
 {
-  private final IndexerCoordinatorConfig config;
+  private final TaskConfig config;
   private final ServiceEmitter emitter;
   private final RestS3Service s3Client;
   private final SegmentPusher segmentPusher;
+  private final SegmentKiller segmentKiller;
   private final ObjectMapper objectMapper;
 
   public TaskToolbox(
-      IndexerCoordinatorConfig config,
+      TaskConfig config,
       ServiceEmitter emitter,
       RestS3Service s3Client,
       SegmentPusher segmentPusher,
+      SegmentKiller segmentKiller,
       ObjectMapper objectMapper
   )
   {
@@ -57,10 +61,11 @@ public class TaskToolbox
     this.emitter = emitter;
     this.s3Client = s3Client;
     this.segmentPusher = segmentPusher;
+    this.segmentKiller = segmentKiller;
     this.objectMapper = objectMapper;
   }
 
-  public IndexerCoordinatorConfig getConfig()
+  public TaskConfig getConfig()
   {
     return config;
   }
@@ -78,6 +83,11 @@ public class TaskToolbox
   public SegmentPusher getSegmentPusher()
   {
     return segmentPusher;
+  }
+
+  public SegmentKiller getSegmentKiller()
+  {
+    return segmentKiller;
   }
 
   public ObjectMapper getObjectMapper()

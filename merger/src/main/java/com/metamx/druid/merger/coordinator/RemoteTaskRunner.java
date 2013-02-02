@@ -33,6 +33,7 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.PeriodGranularity;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskHolder;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
@@ -43,6 +44,7 @@ import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
@@ -173,27 +175,31 @@ public class RemoteTaskRunner implements TaskRunner
             public void run()
             {
               if (currentlyTerminating.isEmpty()) {
-                if (zkWorkers.size() <= workerSetupManager.getWorkerSetupData().getMinNumWorkers()) {
+                final int minNumWorkers = workerSetupManager.getWorkerSetupData().getMinNumWorkers();
+                if (zkWorkers.size() <= minNumWorkers) {
                   return;
                 }
 
-                int workerCount = 0;
-                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList();
-                for (WorkerWrapper workerWrapper : zkWorkers.values()) {
-                  workerCount++;
-
-                  if (workerCount > workerSetupManager.getWorkerSetupData().getMinNumWorkers() &&
-                      workerWrapper.getRunningTasks().isEmpty() &&
-                      System.currentTimeMillis() - workerWrapper.getLastCompletedTaskTime().getMillis()
-                      > config.getMaxWorkerIdleTimeMillisBeforeDeletion()
-                      ) {
-                    thoseLazyWorkers.add(workerWrapper);
-                  }
-                }
+                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList(
+                    FunctionalIterable
+                        .create(zkWorkers.values())
+                        .filter(
+                            new Predicate<WorkerWrapper>()
+                            {
+                              @Override
+                              public boolean apply(WorkerWrapper input)
+                              {
+                                return input.getRunningTasks().isEmpty()
+                                       && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
+                                          > config.getMaxWorkerIdleTimeMillisBeforeDeletion();
+                              }
+                            }
+                        )
+                );
 
                 AutoScalingData terminated = strategy.terminate(
                     Lists.transform(
-                        thoseLazyWorkers,
+                        thoseLazyWorkers.subList(minNumWorkers, thoseLazyWorkers.size() - 1),
                         new Function<WorkerWrapper, String>()
                         {
                           @Override
@@ -259,6 +265,16 @@ public class RemoteTaskRunner implements TaskRunner
     return zkWorkers.size();
   }
 
+  public boolean isTaskRunning(String taskId)
+  {
+    for (WorkerWrapper workerWrapper : zkWorkers.values()) {
+      if (workerWrapper.getRunningTasks().contains(taskId)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @Override
   public void run(Task task, TaskContext context, TaskCallback callback)
   {
@@ -282,21 +298,31 @@ public class RemoteTaskRunner implements TaskRunner
       try {
         log.info("Worker[%s] is already running task[%s].", worker.getHost(), taskWrapper.getTask().getId());
 
-        TaskStatus taskStatus = jsonMapper.readValue(
-            workerWrapper.getStatusCache()
-                         .getCurrentData(
-                             JOINER.join(config.getStatusPath(), worker.getHost(), taskWrapper.getTask().getId())
-                         )
-                         .getData(),
-            TaskStatus.class
-        );
+        final ChildData workerData = workerWrapper.getStatusCache()
+                                                  .getCurrentData(
+                                                      JOINER.join(
+                                                          config.getStatusPath(),
+                                                          worker.getHost(),
+                                                          taskWrapper.getTask().getId()
+                                                      )
+                                                  );
 
-        if (taskStatus.isComplete()) {
+        if (workerData != null && workerData.getData() != null) {
+          final TaskStatus taskStatus = jsonMapper.readValue(
+              workerData.getData(),
+              TaskStatus.class
+          );
+
           TaskCallback callback = taskWrapper.getCallback();
           if (callback != null) {
             callback.notify(taskStatus);
           }
-          new CleanupPaths(worker.getHost(), taskWrapper.getTask().getId()).run();
+
+          if (taskStatus.isComplete()) {
+            new CleanupPaths(worker.getHost(), taskWrapper.getTask().getId()).run();
+          }
+        } else {
+          log.warn("Worker data was null for worker: %s", worker.getHost());
         }
       }
       catch (Exception e) {
@@ -424,24 +450,24 @@ public class RemoteTaskRunner implements TaskRunner
 
                     statusLock.notify();
 
-                    if (taskStatus.isComplete()) {
-                      // Worker is done with this task
-                      workerWrapper.setLastCompletedTaskTime(new DateTime());
-                      final TaskWrapper taskWrapper = tasks.get(taskId);
+                    final TaskWrapper taskWrapper = tasks.get(taskId);
+                    if (taskWrapper == null) {
+                      log.warn(
+                          "WTF?! Worker[%s] announcing a status for a task I didn't know about: %s",
+                          worker.getHost(),
+                          taskId
+                      );
+                    } else {
+                      final TaskCallback callback = taskWrapper.getCallback();
 
-                      if (taskWrapper == null) {
-                        log.warn(
-                            "WTF?! Worker[%s] completed a task I didn't know about: %s",
-                            worker.getHost(),
-                            taskId
-                        );
-                      } else {
-                        final TaskCallback callback = taskWrapper.getCallback();
+                      // Cleanup
+                      if (callback != null) {
+                        callback.notify(taskStatus);
+                      }
 
-                        // Cleanup
-                        if (callback != null) {
-                          callback.notify(taskStatus);
-                        }
+                      if (taskStatus.isComplete()) {
+                        // Worker is done with this task
+                        workerWrapper.setLastCompletedTaskTime(new DateTime());
                         tasks.remove(taskId);
                         cf.delete().guaranteed().inBackground().forPath(event.getData().getPath());
                       }

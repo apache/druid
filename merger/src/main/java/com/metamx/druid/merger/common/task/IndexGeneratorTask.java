@@ -20,11 +20,13 @@
 package com.metamx.druid.merger.common.task;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.input.InputRow;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.index.YeOldePlumberSchool;
@@ -89,7 +91,7 @@ public class IndexGeneratorTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskContext context, final TaskToolbox toolbox) throws Exception
+  public TaskStatus run(final TaskContext context, final TaskToolbox toolbox, TaskCallback callback) throws Exception
   {
     // Set up temporary directory for indexing
     final File tmpDir = new File(
@@ -174,7 +176,7 @@ public class IndexGeneratorTask extends AbstractTask
     );
 
     // Done
-    return TaskStatus.success(getId(), ImmutableList.copyOf(pushedSegments));
+    return TaskStatus.success(getId(), ImmutableSet.copyOf(pushedSegments));
   }
 
   /**

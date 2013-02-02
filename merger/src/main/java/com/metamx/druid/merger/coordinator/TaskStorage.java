@@ -29,7 +29,7 @@ public interface TaskStorage
 {
   /**
    * Adds a task to the storage facility with a particular status. If the task ID already exists, this method
-   * will throw an exception.
+   * will throw a {@link TaskExistsException}.
    */
   public void insert(Task task, TaskStatus status);
 
@@ -43,6 +43,14 @@ public interface TaskStorage
    * an exception.
    */
   public void setVersion(String taskid, String version);
+
+  /**
+   * Returns task as stored in the storage facility. If the task ID does not exist, this will return an
+   * absentee Optional.
+   *
+   * TODO -- This method probably wants to be combined with {@link #getStatus}.
+   */
+  public Optional<Task> getTask(String taskid);
 
   /**
    * Returns task status as stored in the storage facility. If the task ID does not exist, this will return

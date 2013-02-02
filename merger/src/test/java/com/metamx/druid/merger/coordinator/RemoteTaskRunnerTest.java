@@ -7,9 +7,11 @@ import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
+import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.DefaultMergeTask;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
@@ -133,7 +135,7 @@ public class RemoteTaskRunnerTest
   {
     remoteTaskRunner.run(
         task1,
-        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
+        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
         null
     );
   }
@@ -141,9 +143,25 @@ public class RemoteTaskRunnerTest
   @Test
   public void testAlreadyExecutedTask() throws Exception
   {
-    remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+    remoteTaskRunner.run(
+        task1,
+        new TaskContext(
+            new DateTime().toString(),
+            Sets.<DataSegment>newHashSet(),
+            Sets.<DataSegment>newHashSet()
+        ),
+        null
+    );
     try {
-      remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+      remoteTaskRunner.run(
+          task1,
+          new TaskContext(
+              new DateTime().toString(),
+              Sets.<DataSegment>newHashSet(),
+              Sets.<DataSegment>newHashSet()
+          ),
+          null
+      );
       fail("ISE expected");
     }
     catch (ISE expected) {
@@ -173,7 +191,7 @@ public class RemoteTaskRunnerTest
                   )
               ), Lists.<AggregatorFactory>newArrayList()
           ),
-          new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
+          new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
           null
       );
     }
@@ -189,16 +207,18 @@ public class RemoteTaskRunnerTest
     cf.create().creatingParentsIfNeeded().forPath(
         String.format("%s/worker1/task1", statusPath),
         jsonMapper.writeValueAsBytes(
-            TaskStatus.success(
-                "task1",
-                Lists.<DataSegment>newArrayList()
-            )
+            TaskStatus.success("task1")
         )
     );
 
     // Really don't like this way of waiting for the task to appear
-    while (remoteTaskRunner.getNumWorkers() == 0) {
+    int count = 0;
+    while (!remoteTaskRunner.isTaskRunning("task1")) {
       Thread.sleep(500);
+      if (count > 10) {
+        throw new ISE("WTF?! Task still not announced in ZK?");
+      }
+      count++;
     }
 
     final MutableBoolean callbackCalled = new MutableBoolean(false);
@@ -258,38 +278,8 @@ public class RemoteTaskRunnerTest
         cf,
         workerCuratorCoordinator,
         new TaskToolbox(
-            new IndexerCoordinatorConfig()
+            new TaskConfig()
             {
-              @Override
-              public String getServerName()
-              {
-                return "worker1";
-              }
-
-              @Override
-              public String getLeaderLatchPath()
-              {
-                return null;
-              }
-
-              @Override
-              public int getNumLocalThreads()
-              {
-                return 1;
-              }
-
-              @Override
-              public String getRunnerImpl()
-              {
-                return null;
-              }
-
-              @Override
-              public String getStorageImpl()
-              {
-                return null;
-              }
-
               @Override
               public File getBaseTaskDir()
               {
@@ -302,30 +292,11 @@ public class RemoteTaskRunnerTest
               }
 
               @Override
-              public boolean isWhitelistEnabled()
-              {
-                return false;
-              }
-
-              @Override
-              public String getWhitelistDatasourcesString()
-              {
-                return null;
-              }
-
-              @Override
               public long getRowFlushBoundary()
               {
                 return 0;
               }
-
-
-              @Override
-              public String getStrategyImpl()
-              {
-                return null;
-              }
-            }, null, null, null, jsonMapper
+            }, null, null, null, null, jsonMapper
         ),
         Executors.newSingleThreadExecutor()
     );
@@ -365,8 +336,13 @@ public class RemoteTaskRunnerTest
         String.format("%s/worker1", announcementsPath),
         jsonMapper.writeValueAsBytes(worker1)
     );
+    int count = 0;
     while (remoteTaskRunner.getNumWorkers() == 0) {
       Thread.sleep(500);
+      if (count > 10) {
+        throw new ISE("WTF?! Still can't find worker!");
+      }
+      count++;
     }
   }
 
@@ -500,9 +476,9 @@ public class RemoteTaskRunnerTest
     }
 
     @Override
-    public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+    public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
     {
-      return TaskStatus.success("task1", Lists.<DataSegment>newArrayList());
+      return TaskStatus.success("task1");
     }
   }
 }

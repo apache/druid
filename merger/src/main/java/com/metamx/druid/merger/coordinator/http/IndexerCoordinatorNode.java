@@ -47,11 +47,14 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.S3SegmentKiller;
+import com.metamx.druid.loading.SegmentKiller;
 import com.metamx.druid.loading.S3SegmentPusher;
 import com.metamx.druid.loading.S3SegmentPusherConfig;
 import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
+import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.DbTaskStorage;
 import com.metamx.druid.merger.coordinator.LocalTaskRunner;
@@ -64,6 +67,7 @@ import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.TaskRunner;
 import com.metamx.druid.merger.coordinator.TaskRunnerFactory;
 import com.metamx.druid.merger.coordinator.TaskStorage;
+import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
@@ -128,7 +132,10 @@ public class IndexerCoordinatorNode extends RegisteringNode
 
   private List<Monitor> monitors = null;
   private ServiceEmitter emitter = null;
+  private DbConnectorConfig dbConnectorConfig = null;
+  private DBI dbi = null;
   private IndexerCoordinatorConfig config = null;
+  private TaskConfig taskConfig = null;
   private TaskToolbox taskToolbox = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
   private TaskStorage taskStorage = null;
@@ -206,7 +213,9 @@ public class IndexerCoordinatorNode extends RegisteringNode
 
     initializeEmitter();
     initializeMonitors();
+    initializeDB();
     initializeIndexerCoordinatorConfig();
+    initializeTaskConfig();
     initializeMergeDBCoordinator();
     initializeTaskToolbox();
     initializeTaskStorage();
@@ -235,6 +244,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             config,
             emitter,
             taskQueue,
+            new TaskStorageQueryAdapter(taskStorage),
             workerSetupManager
         )
     );
@@ -385,10 +395,27 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
+  private void initializeDB()
+  {
+    if (dbConnectorConfig == null) {
+      dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
+    }
+    if (dbi == null) {
+      dbi = new DbConnector(dbConnectorConfig).getDBI();
+    }
+  }
+
   private void initializeIndexerCoordinatorConfig()
   {
     if (config == null) {
       config = configFactory.build(IndexerCoordinatorConfig.class);
+    }
+  }
+
+  private void initializeTaskConfig()
+  {
+    if (taskConfig == null) {
+      taskConfig = configFactory.build(TaskConfig.class);
     }
   }
 
@@ -406,18 +433,20 @@ public class IndexerCoordinatorNode extends RegisteringNode
           configFactory.build(S3SegmentPusherConfig.class),
           jsonMapper
       );
-      taskToolbox = new TaskToolbox(config, emitter, s3Client, segmentPusher, jsonMapper);
+      final SegmentKiller segmentKiller = new S3SegmentKiller(
+          s3Client
+      );
+      taskToolbox = new TaskToolbox(taskConfig, emitter, s3Client, segmentPusher, segmentKiller, jsonMapper);
     }
   }
 
   public void initializeMergeDBCoordinator()
   {
     if (mergerDBCoordinator == null) {
-      final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
       mergerDBCoordinator = new MergerDBCoordinator(
           jsonMapper,
           dbConnectorConfig,
-          new DbConnector(dbConnectorConfig).getDBI()
+          dbi
       );
     }
   }
@@ -465,8 +494,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public void initializeWorkerSetupManager()
   {
     if (workerSetupManager == null) {
-      final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
-      final DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
       final WorkerSetupManagerConfig workerSetupManagerConfig = configFactory.build(WorkerSetupManagerConfig.class);
 
       DbConnector.createConfigTable(dbi, workerSetupManagerConfig.getConfigTable());

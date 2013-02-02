@@ -21,13 +21,10 @@ package com.metamx.druid.merger.common.task;
 
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.coordinator.TaskContext;
-import com.metamx.druid.merger.common.task.IndexDeterminePartitionsTask;
-import com.metamx.druid.merger.common.task.IndexGeneratorTask;
-import com.metamx.druid.merger.common.task.IndexTask;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 /**
@@ -37,6 +34,7 @@ import org.joda.time.Interval;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "append", value = AppendTask.class),
     @JsonSubTypes.Type(name = "delete", value = DeleteTask.class),
+    @JsonSubTypes.Type(name = "kill", value = KillTask.class),
     @JsonSubTypes.Type(name = "index", value = IndexTask.class),
     @JsonSubTypes.Type(name = "index_partitions", value = IndexDeterminePartitionsTask.class),
     @JsonSubTypes.Type(name = "index_generator", value = IndexGeneratorTask.class)
@@ -49,7 +47,8 @@ public interface Task
     MERGE,
     APPEND,
     DELETE,
-    TEST
+    TEST,
+    KILL
   }
 
   public String getId();
@@ -81,8 +80,10 @@ public interface Task
    *
    * @param context Context for this task, gathered under indexer lock
    * @param toolbox Toolbox for this task
+   * @param callback Callback for "early returns". Statuses returned to this callback must not be
+   *                 complete (isRunnable must be true).
    * @return Some kind of finished status (isRunnable must be false).
    * @throws Exception
    */
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception;
+  public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception;
 }

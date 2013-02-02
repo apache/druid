@@ -17,45 +17,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.merger.coordinator.commit;
 
-import com.metamx.druid.merger.common.TaskCallback;
+import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.merger.coordinator.TaskGroup;
 
-/**
- */
-public class TaskWrapper
+public class ImmediateCommitStyle implements CommitStyle
 {
-  private final Task task;
-  private final TaskContext taskContext;
-  private final TaskCallback callback;
-  private final RetryPolicy retryPolicy;
-
-  public TaskWrapper(Task task, TaskContext taskContext, TaskCallback callback, RetryPolicy retryPolicy)
+  @Override
+  public boolean shouldCommit(Task task, TaskStatus taskStatus)
   {
-    this.task = task;
-    this.taskContext = taskContext;
-    this.callback = callback;
-    this.retryPolicy = retryPolicy;
-  }
-
-  public Task getTask()
-  {
-    return task;
-  }
-
-  public TaskContext getTaskContext()
-  {
-    return taskContext;
-  }
-
-  public TaskCallback getCallback()
-  {
-    return callback;
-  }
-
-  public RetryPolicy getRetryPolicy()
-  {
-    return retryPolicy;
+    return true;
   }
 }
