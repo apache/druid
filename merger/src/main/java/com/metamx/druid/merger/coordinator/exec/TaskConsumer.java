@@ -230,23 +230,17 @@ public class TaskConsumer implements Runnable
 
           // Emit event and log, if the task is done
           if (statusFromRunner.isComplete()) {
-            int segmentBytes = 0;
-            for (DataSegment segment : statusFromRunner.getSegments()) {
-              segmentBytes += segment.getSize();
-            }
-
-            int segmentNukedBytes = 0;
-            for (DataSegment segment : statusFromRunner.getSegmentsNuked()) {
-              segmentNukedBytes += segment.getSize();
-            }
-
             builder.setUser3(statusFromRunner.getStatusCode().toString());
 
+            for (DataSegment segment : statusFromRunner.getSegments()) {
+              emitter.emit(builder.build("indexer/segment/bytes", segment.getSize()));
+            }
+
+            for (DataSegment segmentNuked : statusFromRunner.getSegmentsNuked()) {
+              emitter.emit(builder.build("indexer/segmentNuked/bytes", segmentNuked.getSize()));
+            }
+
             emitter.emit(builder.build("indexer/time/run/millis", statusFromRunner.getDuration()));
-            emitter.emit(builder.build("indexer/segment/count", statusFromRunner.getSegments().size()));
-            emitter.emit(builder.build("indexer/segment/bytes", segmentBytes));
-            emitter.emit(builder.build("indexer/segmentNuked/count", statusFromRunner.getSegmentsNuked().size()));
-            emitter.emit(builder.build("indexer/segmentNuked/bytes", segmentNukedBytes));
 
             if (statusFromRunner.isFailure()) {
               log.makeAlert("Failed to index")
