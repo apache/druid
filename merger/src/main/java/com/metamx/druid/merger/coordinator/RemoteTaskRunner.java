@@ -563,7 +563,7 @@ public class RemoteTaskRunner implements TaskRunner
       );
 
       if (workerQueue.isEmpty()) {
-        log.info("Worker nodes do not have capacity to run any more tasks!");
+        log.info("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
 
         if (currentlyProvisioning.isEmpty()) {
           AutoScalingData provisioned = strategy.provision();

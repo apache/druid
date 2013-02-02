@@ -130,6 +130,10 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
   @Override
   public AutoScalingData<Instance> terminate(List<String> ids)
   {
+    if (ids.isEmpty()) {
+      return new AutoScalingData<Instance>(Lists.<String>newArrayList(), Lists.<Instance>newArrayList());
+    }
+
     DescribeInstancesResult result = amazonEC2Client.describeInstances(
         new DescribeInstancesRequest()
             .withFilters(
