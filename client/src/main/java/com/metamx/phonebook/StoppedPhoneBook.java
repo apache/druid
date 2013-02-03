@@ -112,7 +112,8 @@ class StoppedPhoneBook implements PhoneBook
     }
 
     if (! serviceAnnouncements.containsKey(nodeName)) {
-      throw new IAE("Cannot unannounce node[%s] on service[%s]", nodeName, serviceName);
+      log.warn("Cannot unannounce[%s]: it doesn't exist for service[%s]", nodeName, serviceName);
+      return;
     }
 
     serviceAnnouncements.remove(nodeName);
