@@ -19,37 +19,23 @@
 
 package com.metamx.druid.merger.coordinator.scaling;
 
-import java.util.List;
+import org.joda.time.Duration;
+import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
-public class AutoScalingData<T>
+public abstract class SimpleResourceManagmentConfig
 {
-  private final List<String> nodeIds;
-  private final List<T> nodes;
+  @Config("druid.indexer.maxWorkerIdleTimeMillisBeforeDeletion")
+  @Default("600000")
+  public abstract int getMaxWorkerIdleTimeMillisBeforeDeletion();
 
-  public AutoScalingData(List<String> nodeIds, List<T> nodes)
-  {
-    this.nodeIds = nodeIds;
-    this.nodes = nodes;
-  }
+  @Config("druid.indexer.maxScalingDuration")
+  @Default("PT1H")
+  public abstract Duration getMaxScalingDuration();
 
-  public List<String> getNodeIds()
-  {
-    return nodeIds;
-  }
-
-  public List<T> getNodes()
-  {
-    return nodes;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "AutoScalingData{" +
-           "nodeIds=" + nodeIds +
-           ", nodes=" + nodes +
-           '}';
-  }
+  @Config("druid.indexer.numEventsToTrack")
+  @Default("20")
+  public abstract int getNumEventsToTrack();
 }

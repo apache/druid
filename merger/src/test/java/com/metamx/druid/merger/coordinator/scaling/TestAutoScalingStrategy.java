@@ -23,33 +23,23 @@ import java.util.List;
 
 /**
  */
-public class AutoScalingData<T>
+public class TestAutoScalingStrategy<T> implements AutoScalingStrategy<T>
 {
-  private final List<String> nodeIds;
-  private final List<T> nodes;
-
-  public AutoScalingData(List<String> nodeIds, List<T> nodes)
+  @Override
+  public AutoScalingData<T> provision()
   {
-    this.nodeIds = nodeIds;
-    this.nodes = nodes;
-  }
-
-  public List<String> getNodeIds()
-  {
-    return nodeIds;
-  }
-
-  public List<T> getNodes()
-  {
-    return nodes;
+    return null;
   }
 
   @Override
-  public String toString()
+  public AutoScalingData<T> terminate(List<String> ids)
   {
-    return "AutoScalingData{" +
-           "nodeIds=" + nodeIds +
-           ", nodes=" + nodes +
-           '}';
+    return null;
+  }
+
+  @Override
+  public List<String> ipToIdLookup(List<String> ips)
+  {
+    return null;
   }
 }

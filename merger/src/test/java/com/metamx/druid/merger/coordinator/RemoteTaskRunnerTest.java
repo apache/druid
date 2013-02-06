@@ -7,6 +7,7 @@ import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.merger.TestTask;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
@@ -14,11 +15,10 @@ import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.DefaultMergeTask;
 import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
-import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
+import com.metamx.druid.merger.coordinator.scaling.AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.TaskMonitor;
@@ -326,7 +326,6 @@ public class RemoteTaskRunnerTest
         pathChildrenCache,
         scheduledExec,
         new RetryPolicyFactory(new TestRetryPolicyConfig()),
-        new TestScalingStrategy(),
         workerSetupManager
     );
 
@@ -337,7 +336,7 @@ public class RemoteTaskRunnerTest
         jsonMapper.writeValueAsBytes(worker1)
     );
     int count = 0;
-    while (remoteTaskRunner.getNumWorkers() == 0) {
+    while (remoteTaskRunner.getNumAvailableWorkers() == 0) {
       Thread.sleep(500);
       if (count > 10) {
         throw new ISE("WTF?! Still can't find worker!");
@@ -364,27 +363,6 @@ public class RemoteTaskRunnerTest
     public long getMaxRetryCount()
     {
       return 0;
-    }
-  }
-
-  private static class TestScalingStrategy<T> implements ScalingStrategy<T>
-  {
-    @Override
-    public AutoScalingData provision()
-    {
-      return null;
-    }
-
-    @Override
-    public AutoScalingData terminate(List<String> nodeIds)
-    {
-      return null;
-    }
-
-    @Override
-    public List<String> ipLookup(List<String> ips)
-    {
-      return ips;
     }
   }
 
@@ -442,43 +420,6 @@ public class RemoteTaskRunnerTest
     public long getMaxNumBytes()
     {
       return 1000;
-    }
-  }
-
-  @JsonTypeName("test")
-  private static class TestTask extends DefaultMergeTask
-  {
-    private final String id;
-
-    public TestTask(
-        @JsonProperty("id") String id,
-        @JsonProperty("dataSource") String dataSource,
-        @JsonProperty("segments") List<DataSegment> segments,
-        @JsonProperty("aggregations") List<AggregatorFactory> aggregators
-    )
-    {
-      super(dataSource, segments, aggregators);
-
-      this.id = id;
-    }
-
-    @Override
-    @JsonProperty
-    public String getId()
-    {
-      return id;
-    }
-
-    @Override
-    public Type getType()
-    {
-      return Type.TEST;
-    }
-
-    @Override
-    public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
-    {
-      return TaskStatus.success("task1");
     }
   }
 }

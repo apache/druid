@@ -43,7 +43,7 @@ import java.util.List;
 
 /**
  */
-public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
+public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
 {
   private static final EmittingLogger log = new EmittingLogger(EC2AutoScalingStrategy.class);
 
@@ -187,7 +187,7 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
   }
 
   @Override
-  public List<String> ipLookup(List<String> ips)
+  public List<String> ipToIdLookup(List<String> ips)
   {
     DescribeInstancesResult result = amazonEC2Client.describeInstances(
         new DescribeInstancesRequest()

@@ -19,27 +19,21 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.metamx.common.ISE;
-import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.PeriodGranularity;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskHolder;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
-import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
-import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
@@ -52,29 +46,25 @@ import com.netflix.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
-import org.joda.time.Period;
 
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The RemoteTaskRunner encapsulates all interactions with Zookeeper and keeps track of which workers
- * are running which tasks. The RemoteTaskRunner is event driven and updates state according to ephemeral node
- * changes in ZK.
+ * The RemoteTaskRunner's primary responsibility is to assign tasks to worker nodes and manage retries in failure
+ * scenarios. The RemoteTaskRunner keeps track of which workers are running which tasks and manages coordinator and
+ * worker interactions over Zookeeper. The RemoteTaskRunner is event driven and updates state according to ephemeral
+ * node changes in ZK.
  * <p/>
- * The RemoteTaskRunner will assign tasks to a node until the node hits capacity. RemoteTaskRunners have scaling
- * strategies to help them decide when to create or delete new resources. When tasks are assigned to the remote
- * task runner and no workers have capacity to handle the task, provisioning will be done according to the strategy.
- * The remote task runner periodically runs a check to see if any worker nodes have not had any work for a
- * specified period of time. If so, the worker node will be terminated.
+ * The RemoteTaskRunner will assign tasks to a node until the node hits capacity. At that point, task assignment will
+ * fail. The RemoteTaskRunner depends on another manager to create additional worker resources.
+ * For example, {@link com.metamx.druid.merger.coordinator.scaling.ResourceManagmentScheduler} can take care of these duties.
+ *
  * <p/>
  * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will automatically retry any tasks
  * that were associated with the node.
@@ -90,7 +80,6 @@ public class RemoteTaskRunner implements TaskRunner
   private final PathChildrenCache workerPathCache;
   private final ScheduledExecutorService scheduledExec;
   private final RetryPolicyFactory retryPolicyFactory;
-  private final ScalingStrategy strategy;
   private final WorkerSetupManager workerSetupManager;
 
   // all workers that exist in ZK
@@ -98,12 +87,8 @@ public class RemoteTaskRunner implements TaskRunner
   // all tasks that are assigned or need to be assigned
   private final Map<String, TaskWrapper> tasks = new ConcurrentHashMap<String, TaskWrapper>();
 
-  private final ConcurrentSkipListSet<String> currentlyProvisioning = new ConcurrentSkipListSet<String>();
-  private final ConcurrentSkipListSet<String> currentlyTerminating = new ConcurrentSkipListSet<String>();
   private final Object statusLock = new Object();
 
-  private volatile DateTime lastProvisionTime = new DateTime();
-  private volatile DateTime lastTerminateTime = new DateTime();
   private volatile boolean started = false;
 
   public RemoteTaskRunner(
@@ -113,7 +98,6 @@ public class RemoteTaskRunner implements TaskRunner
       PathChildrenCache workerPathCache,
       ScheduledExecutorService scheduledExec,
       RetryPolicyFactory retryPolicyFactory,
-      ScalingStrategy strategy,
       WorkerSetupManager workerSetupManager
   )
   {
@@ -123,7 +107,6 @@ public class RemoteTaskRunner implements TaskRunner
     this.workerPathCache = workerPathCache;
     this.scheduledExec = scheduledExec;
     this.retryPolicyFactory = retryPolicyFactory;
-    this.strategy = strategy;
     this.workerSetupManager = workerSetupManager;
   }
 
@@ -131,6 +114,10 @@ public class RemoteTaskRunner implements TaskRunner
   public void start()
   {
     try {
+      if (started) {
+        return;
+      }
+
       workerPathCache.getListenable().addListener(
           new PathChildrenCacheListener()
           {
@@ -157,81 +144,6 @@ public class RemoteTaskRunner implements TaskRunner
       );
       workerPathCache.start();
 
-      // Schedule termination of worker nodes periodically
-      Period period = new Period(config.getTerminateResourcesDuration());
-      PeriodGranularity granularity = new PeriodGranularity(period, config.getTerminateResourcesOriginDateTime(), null);
-      final long startTime = granularity.next(granularity.truncate(new DateTime().getMillis()));
-
-      ScheduledExecutors.scheduleAtFixedRate(
-          scheduledExec,
-          new Duration(
-              System.currentTimeMillis(),
-              startTime
-          ),
-          config.getTerminateResourcesDuration(),
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              if (currentlyTerminating.isEmpty()) {
-                final int minNumWorkers = workerSetupManager.getWorkerSetupData().getMinNumWorkers();
-                if (zkWorkers.size() <= minNumWorkers) {
-                  return;
-                }
-
-                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList(
-                    FunctionalIterable
-                        .create(zkWorkers.values())
-                        .filter(
-                            new Predicate<WorkerWrapper>()
-                            {
-                              @Override
-                              public boolean apply(WorkerWrapper input)
-                              {
-                                return input.getRunningTasks().isEmpty()
-                                       && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
-                                          > config.getMaxWorkerIdleTimeMillisBeforeDeletion();
-                              }
-                            }
-                        )
-                );
-
-                AutoScalingData terminated = strategy.terminate(
-                    Lists.transform(
-                        thoseLazyWorkers.subList(minNumWorkers, thoseLazyWorkers.size() - 1),
-                        new Function<WorkerWrapper, String>()
-                        {
-                          @Override
-                          public String apply(WorkerWrapper input)
-                          {
-                            return input.getWorker().getIp();
-                          }
-                        }
-                    )
-                );
-
-                if (terminated != null) {
-                  currentlyTerminating.addAll(terminated.getNodeIds());
-                  lastTerminateTime = new DateTime();
-                }
-              } else {
-                Duration durSinceLastTerminate = new Duration(new DateTime(), lastTerminateTime);
-                if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration())) {
-                  log.makeAlert("Worker node termination taking too long")
-                     .addData("millisSinceLastTerminate", durSinceLastTerminate.getMillis())
-                     .addData("terminatingCount", currentlyTerminating.size())
-                     .emit();
-                }
-
-                log.info(
-                    "%s still terminating. Wait for all nodes to terminate before trying again.",
-                    currentlyTerminating
-                );
-              }
-            }
-          }
-      );
       started = true;
     }
     catch (Exception e) {
@@ -243,6 +155,10 @@ public class RemoteTaskRunner implements TaskRunner
   public void stop()
   {
     try {
+      if (!started) {
+        return;
+      }
+
       for (WorkerWrapper workerWrapper : zkWorkers.values()) {
         workerWrapper.close();
       }
@@ -255,14 +171,14 @@ public class RemoteTaskRunner implements TaskRunner
     }
   }
 
-  public boolean hasStarted()
-  {
-    return started;
-  }
-
-  public int getNumWorkers()
+  public int getNumAvailableWorkers()
   {
     return zkWorkers.size();
+  }
+
+  public Collection<WorkerWrapper> getAvailableWorkers()
+  {
+    return zkWorkers.values();
   }
 
   public boolean isTaskRunning(String taskId)
@@ -275,6 +191,13 @@ public class RemoteTaskRunner implements TaskRunner
     return false;
   }
 
+  /**
+   * A task will be run only if there is no current knowledge in the RemoteTaskRunner of the task.
+   *
+   * @param task task to run
+   * @param context task context to run under
+   * @param callback callback to be called exactly once
+   */
   @Override
   public void run(Task task, TaskContext context, TaskCallback callback)
   {
@@ -288,11 +211,18 @@ public class RemoteTaskRunner implements TaskRunner
     assignTask(taskWrapper);
   }
 
+  /**
+   * Ensures no workers are already running a task before assigning the task to a worker.
+   * It is possible that a worker is running a task the RTR has no knowledge of. This is common when the RTR
+   * needs to bootstrap after a restart.
+   *
+   * @param taskWrapper - a wrapper containing task metadata
+   */
   private void assignTask(TaskWrapper taskWrapper)
   {
     WorkerWrapper workerWrapper = findWorkerRunningTask(taskWrapper);
 
-    // If the task already exists, we don't need to announce it
+    // If a worker is already running this task, we don't need to announce it
     if (workerWrapper != null) {
       final Worker worker = workerWrapper.getWorker();
       try {
@@ -395,8 +325,6 @@ public class RemoteTaskRunner implements TaskRunner
   private void addWorker(final Worker worker)
   {
     try {
-      currentlyProvisioning.removeAll(strategy.ipLookup(Arrays.<String>asList(worker.getIp())));
-
       final String workerStatusPath = JOINER.join(config.getStatusPath(), worker.getHost());
       final PathChildrenCache statusCache = new PathChildrenCache(cf, workerStatusPath, true);
       final WorkerWrapper workerWrapper = new WorkerWrapper(
@@ -460,12 +388,12 @@ public class RemoteTaskRunner implements TaskRunner
                     } else {
                       final TaskCallback callback = taskWrapper.getCallback();
 
-                      // Cleanup
-                      if (callback != null) {
-                        callback.notify(taskStatus);
-                      }
-
                       if (taskStatus.isComplete()) {
+                        // Cleanup
+                        if (callback != null) {
+                          callback.notify(taskStatus);
+                        }
+
                         // Worker is done with this task
                         workerWrapper.setLastCompletedTaskTime(new DateTime());
                         tasks.remove(taskId);
@@ -510,8 +438,6 @@ public class RemoteTaskRunner implements TaskRunner
    */
   private void removeWorker(final Worker worker)
   {
-    currentlyTerminating.remove(worker.getHost());
-
     WorkerWrapper workerWrapper = zkWorkers.get(worker.getHost());
     if (workerWrapper != null) {
       try {
@@ -564,27 +490,6 @@ public class RemoteTaskRunner implements TaskRunner
 
       if (workerQueue.isEmpty()) {
         log.info("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
-
-        if (currentlyProvisioning.isEmpty()) {
-          AutoScalingData provisioned = strategy.provision();
-          if (provisioned != null) {
-            currentlyProvisioning.addAll(provisioned.getNodeIds());
-            lastProvisionTime = new DateTime();
-          }
-        } else {
-          Duration durSinceLastProvision = new Duration(new DateTime(), lastProvisionTime);
-          if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration())) {
-            log.makeAlert("Worker node provisioning taking too long")
-               .addData("millisSinceLastProvision", durSinceLastProvision.getMillis())
-               .addData("provisioningCount", currentlyProvisioning.size())
-               .emit();
-          }
-
-          log.info(
-              "%s still provisioning. Wait for all provisioned nodes to complete before requesting new worker.",
-              currentlyProvisioning
-          );
-        }
         return null;
       }
 

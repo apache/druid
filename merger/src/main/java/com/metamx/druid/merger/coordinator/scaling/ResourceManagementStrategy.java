@@ -19,20 +19,20 @@
 
 package com.metamx.druid.merger.coordinator.scaling;
 
-import java.util.List;
+import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.merger.coordinator.WorkerWrapper;
+
+import java.util.Collection;
 
 /**
+ * The ResourceManagementStrategy decides if worker nodes should be provisioned or determined
+ * based on the available tasks in the system and the state of the workers in the system.
  */
-public interface ScalingStrategy<T>
+public interface ResourceManagementStrategy
 {
-  public AutoScalingData<T> provision();
+  public void doProvision(Collection<Task> availableTasks, Collection<WorkerWrapper> workerWrappers);
 
-  public AutoScalingData<T> terminate(List<String> ids);
+  public void doTerminate(Collection<Task> availableTasks, Collection<WorkerWrapper> workerWrappers);
 
-  /**
-   * Provides a lookup of ip addresses to node ids
-   * @param ips
-   * @return
-   */
-  public List<String> ipLookup(List<String> ips);
+  public ScalingStats getStats();
 }

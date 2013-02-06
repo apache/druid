@@ -19,37 +19,24 @@
 
 package com.metamx.druid.merger.coordinator.scaling;
 
-import java.util.List;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
+import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
-public class AutoScalingData<T>
+public abstract class ResourceManagementSchedulerConfig
 {
-  private final List<String> nodeIds;
-  private final List<T> nodes;
+  @Config("druid.indexer.provisionResources.duration")
+  @Default("PT1H")
+  public abstract Duration getProvisionResourcesDuration();
 
-  public AutoScalingData(List<String> nodeIds, List<T> nodes)
-  {
-    this.nodeIds = nodeIds;
-    this.nodes = nodes;
-  }
+  @Config("druid.indexer.terminateResources.duration")
+  @Default("PT1H")
+  public abstract Duration getTerminateResourcesDuration();
 
-  public List<String> getNodeIds()
-  {
-    return nodeIds;
-  }
-
-  public List<T> getNodes()
-  {
-    return nodes;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "AutoScalingData{" +
-           "nodeIds=" + nodeIds +
-           ", nodes=" + nodes +
-           '}';
-  }
+  @Config("druid.indexer.terminateResources.originDateTime")
+  @Default("2012-01-01T00:55:00.000Z")
+  public abstract DateTime getTerminateResourcesOriginDateTime();
 }

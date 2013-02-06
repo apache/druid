@@ -75,8 +75,12 @@ import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.config.WorkerSetupManagerConfig;
 import com.metamx.druid.merger.coordinator.scaling.EC2AutoScalingStrategy;
-import com.metamx.druid.merger.coordinator.scaling.NoopScalingStrategy;
-import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
+import com.metamx.druid.merger.coordinator.scaling.NoopAutoScalingStrategy;
+import com.metamx.druid.merger.coordinator.scaling.ResourceManagementSchedulerConfig;
+import com.metamx.druid.merger.coordinator.scaling.ResourceManagmentScheduler;
+import com.metamx.druid.merger.coordinator.scaling.AutoScalingStrategy;
+import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagementStrategy;
+import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagmentConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
@@ -529,35 +533,19 @@ public class IndexerCoordinatorNode extends RegisteringNode
                     .build()
             );
 
-            ScalingStrategy strategy;
-            if (config.getStrategyImpl().equalsIgnoreCase("ec2")) {
-              strategy = new EC2AutoScalingStrategy(
-                  jsonMapper,
-                  new AmazonEC2Client(
-                      new BasicAWSCredentials(
-                          PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-                          PropUtils.getProperty(props, "com.metamx.aws.secretKey")
-                      )
-                  ),
-                  configFactory.build(EC2AutoScalingStrategyConfig.class),
-                  workerSetupManager
-              );
-            } else if (config.getStrategyImpl().equalsIgnoreCase("noop")) {
-              strategy = new NoopScalingStrategy();
-            } else {
-              throw new ISE("Invalid strategy implementation: %s", config.getStrategyImpl());
-            }
-
-            return new RemoteTaskRunner(
+            RemoteTaskRunner remoteTaskRunner = new RemoteTaskRunner(
                 jsonMapper,
                 configFactory.build(RemoteTaskRunnerConfig.class),
                 curatorFramework,
                 new PathChildrenCache(curatorFramework, indexerZkConfig.getAnnouncementPath(), true),
                 retryScheduledExec,
                 new RetryPolicyFactory(configFactory.build(RetryPolicyConfig.class)),
-                strategy,
                 workerSetupManager
             );
+
+            initializeWorkerScaling(remoteTaskRunner);
+
+            return remoteTaskRunner;
           }
         };
 
@@ -575,6 +563,49 @@ public class IndexerCoordinatorNode extends RegisteringNode
         throw new ISE("Invalid runner implementation: %s", config.getRunnerImpl());
       }
     }
+  }
+
+  private void initializeWorkerScaling(RemoteTaskRunner taskRunner)
+  {
+    final ScheduledExecutorService scalingScheduledExec = Executors.newScheduledThreadPool(
+        1,
+        new ThreadFactoryBuilder()
+            .setDaemon(true)
+            .setNameFormat("ScalingExec--%d")
+            .build()
+    );
+
+    AutoScalingStrategy strategy;
+    if (config.getStrategyImpl().equalsIgnoreCase("ec2")) {
+      strategy = new EC2AutoScalingStrategy(
+          jsonMapper,
+          new AmazonEC2Client(
+              new BasicAWSCredentials(
+                  PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+                  PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+              )
+          ),
+          configFactory.build(EC2AutoScalingStrategyConfig.class),
+          workerSetupManager
+      );
+    } else if (config.getStrategyImpl().equalsIgnoreCase("noop")) {
+      strategy = new NoopAutoScalingStrategy();
+    } else {
+      throw new ISE("Invalid strategy implementation: %s", config.getStrategyImpl());
+    }
+
+    ResourceManagmentScheduler resourceManagmentScheduler = new ResourceManagmentScheduler(
+        taskQueue,
+        taskRunner,
+        new SimpleResourceManagementStrategy(
+            strategy,
+            configFactory.build(SimpleResourceManagmentConfig.class),
+            workerSetupManager
+        ),
+        configFactory.build(ResourceManagementSchedulerConfig.class),
+        scalingScheduledExec
+    );
+    lifecycle.addManagedInstance(resourceManagmentScheduler);
   }
 
   public static class Builder

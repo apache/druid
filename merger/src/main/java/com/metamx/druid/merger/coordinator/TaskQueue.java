@@ -42,6 +42,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -374,6 +375,12 @@ public class TaskQueue
     finally {
       giant.unlock();
     }
+  }
+
+  public Collection<Task> getAvailableTasks()
+  {
+    // TODO: actually implement this
+    return Lists.newArrayList();
   }
 
   /**
