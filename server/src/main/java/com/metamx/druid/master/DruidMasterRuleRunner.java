@@ -33,6 +33,8 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
 {
   private static final EmittingLogger log = new EmittingLogger(DruidMasterRuleRunner.class);
 
+  private final DruidMasterReplicationManager replicationManager = new DruidMasterReplicationManager(10, 15);
+
   private final DruidMaster master;
 
   public DruidMasterRuleRunner(DruidMaster master)
@@ -50,6 +52,15 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
       log.warn("Uh... I have no servers. Not assigning anything...");
       return params;
     }
+
+    for (String tier : params.getDruidCluster().getTierNames()) {
+      replicationManager.updateCreationState(tier);
+      replicationManager.updateTerminationState(tier);
+    }
+
+    DruidMasterRuntimeParams paramsWithReplicationManager = params.buildFromExisting()
+                                                                  .withReplicationManager(replicationManager)
+                                                                  .build();
 
     // Run through all matched rules for available segments
     DateTime now = new DateTime();
@@ -76,8 +87,8 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
       }
     }
 
-    return params.buildFromExisting()
-                 .withMasterStats(stats)
-                 .build();
+    return paramsWithReplicationManager.buildFromExisting()
+                                       .withMasterStats(stats)
+                                       .build();
   }
 }

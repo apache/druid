@@ -62,6 +62,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -622,6 +623,7 @@ public class DruidMaster
 
                   // Find all historical servers, group them by subType and sort by ascending usage
                   final DruidCluster cluster = new DruidCluster();
+                  final Map<String, ConcurrentSkipListSet<String>> currentlyReplicatingSegments;
                   for (DruidServer server : servers) {
                     if (!loadManagementPeons.containsKey(server.getName())) {
                       String basePath = yp.combineParts(Arrays.asList(config.getLoadQueuePath(), server.getName()));
