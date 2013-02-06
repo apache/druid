@@ -24,7 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.master.DruidMaster;
-import com.metamx.druid.master.DruidMasterReplicationManager;
+import com.metamx.druid.master.ReplicationThrottler;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
 import com.metamx.druid.master.LoadPeonCallback;
 import com.metamx.druid.master.MasterStats;
@@ -63,7 +63,7 @@ public abstract class LoadRule implements Rule
   }
 
   private MasterStats assign(
-      final DruidMasterReplicationManager replicationManager,
+      final ReplicationThrottler replicationManager,
       int expectedReplicants,
       int totalReplicants,
       MinMaxPriorityQueue<ServerHolder> serverQueue,
@@ -74,6 +74,13 @@ public abstract class LoadRule implements Rule
 
     List<ServerHolder> assignedServers = Lists.newArrayList();
     while (totalReplicants < expectedReplicants) {
+      if (totalReplicants > 0) { // don't throttle if there's only 1 copy of this segment in the cluster
+        if (!replicationManager.canAddReplicant(getTier()) ||
+            !replicationManager.registerReplicantCreation(getTier(), segment.getIdentifier())) {
+          break;
+        }
+      }
+
       ServerHolder holder = serverQueue.pollFirst();
       if (holder == null) {
         log.warn(
@@ -111,13 +118,6 @@ public abstract class LoadRule implements Rule
         break;
       }
 
-      if (totalReplicants > 0) { // don't throttle if there's only 1 copy of this segment in the cluster
-        if (!replicationManager.canAddReplicant(getTier()) ||
-            !replicationManager.registerReplicantCreation(getTier(), segment.getIdentifier())) {
-          break;
-        }
-      }
-
       holder.getPeon().loadSegment(
           segment,
           new LoadPeonCallback()
@@ -147,7 +147,7 @@ public abstract class LoadRule implements Rule
   )
   {
     MasterStats stats = new MasterStats();
-    final DruidMasterReplicationManager replicationManager = params.getReplicationManager();
+    final ReplicationThrottler replicationManager = params.getReplicationManager();
 
     if (!params.hasDeletionWaitTimeElapsed()) {
       return stats;
@@ -173,17 +173,17 @@ public abstract class LoadRule implements Rule
 
       List<ServerHolder> droppedServers = Lists.newArrayList();
       while (actualNumReplicantsForType > expectedNumReplicantsForType) {
-        ServerHolder holder = serverQueue.pollLast();
-        if (holder == null) {
-          log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
-          break;
-        }
-
-        if (actualNumReplicantsForType > 1) { // don't throttle unless we are removing extra replicants
+        if (expectedNumReplicantsForType > 0) { // don't throttle unless we are removing extra replicants
           if (!replicationManager.canDestroyReplicant(getTier()) ||
               !replicationManager.registerReplicantTermination(getTier(), segment.getIdentifier())) {
             break;
           }
+        }
+
+        ServerHolder holder = serverQueue.pollLast();
+        if (holder == null) {
+          log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
+          break;
         }
 
         if (holder.isServingSegment(segment)) {

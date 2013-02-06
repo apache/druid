@@ -27,11 +27,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
- * The DruidMasterReplicationManager is used to throttle the number of replicants that are created and destroyed.
+ * The ReplicationThrottler is used to throttle the number of replicants that are created and destroyed.
  */
-public class DruidMasterReplicationManager
+public class ReplicationThrottler
 {
-  private static final EmittingLogger log = new EmittingLogger(DruidMasterReplicationManager.class);
+  private static final EmittingLogger log = new EmittingLogger(ReplicationThrottler.class);
   private final int maxReplicants;
   private final int maxLifetime;
 
@@ -40,7 +40,7 @@ public class DruidMasterReplicationManager
   private final ReplicatorSegmentHolder currentlyReplicating = new ReplicatorSegmentHolder();
   private final ReplicatorSegmentHolder currentlyTerminating = new ReplicatorSegmentHolder();
 
-  public DruidMasterReplicationManager(int maxReplicants, int maxLifetime)
+  public ReplicationThrottler(int maxReplicants, int maxLifetime)
   {
     this.maxReplicants = maxReplicants;
     this.maxLifetime = maxLifetime;
@@ -60,16 +60,23 @@ public class DruidMasterReplicationManager
   {
     int size = holder.getNumProcessing(tier);
     if (size != 0) {
-      log.info("[%s]: Replicant %s queue still has %d segments", tier, type, size);
-      holder.reduceLifetime();
-
-      if (holder.getLifetime() < 0) {
-        log.makeAlert("[%s]: Replicant %s queue stuck after %d+ runs!", tier, type, maxReplicants).emit();
-      }
+      log.info(
+          "[%s]: Replicant %s queue still has %d segments. Lifetime[%d]",
+          tier,
+          type,
+          size,
+          holder.getLifetime(tier)
+      );
+      holder.reduceLifetime(tier);
       lookup.put(tier, false);
-    }
 
-    lookup.put(tier, true);
+      if (holder.getLifetime(tier) < 0) {
+        log.makeAlert("[%s]: Replicant %s queue stuck after %d+ runs!", tier, type, maxLifetime).emit();
+      }
+    } else {
+      log.info("[%s]: Replicant %s queue is empty.", tier, type);
+      lookup.put(tier, true);
+    }
   }
 
   public boolean canAddReplicant(String tier)
@@ -105,15 +112,16 @@ public class DruidMasterReplicationManager
   private class ReplicatorSegmentHolder
   {
     private final Map<String, ConcurrentSkipListSet<String>> currentlyProcessingSegments = Maps.newHashMap();
-    private volatile int lifetime = maxLifetime;
+    private final Map<String, Integer> lifetimes = Maps.newHashMap();
 
     public boolean addSegment(String tier, String segmentId)
     {
-      if (currentlyProcessingSegments.size() < maxReplicants) {
-        Set<String> segments = currentlyProcessingSegments.get(tier);
-        if (segments == null) {
-          segments = new ConcurrentSkipListSet<String>();
-        }
+      ConcurrentSkipListSet<String> segments = currentlyProcessingSegments.get(tier);
+      if (segments == null) {
+        segments = new ConcurrentSkipListSet<String>();
+        currentlyProcessingSegments.put(tier, segments);
+      }
+      if (segments.size() < maxReplicants) {
         segments.add(segmentId);
         return true;
       }
@@ -132,17 +140,27 @@ public class DruidMasterReplicationManager
     public int getNumProcessing(String tier)
     {
       Set<String> segments = currentlyProcessingSegments.get(tier);
-      return (segments == null) ? 0 : currentlyProcessingSegments.size();
+      return (segments == null) ? 0 : segments.size();
     }
 
-    public int getLifetime()
+    public int getLifetime(String tier)
     {
+      Integer lifetime = lifetimes.get(tier);
+      if (lifetime == null) {
+        lifetime = maxLifetime;
+        lifetimes.put(tier, lifetime);
+      }
       return lifetime;
     }
 
-    public void reduceLifetime()
+    public void reduceLifetime(String tier)
     {
-      lifetime--;
+      Integer lifetime = lifetimes.get(tier);
+      if (lifetime == null) {
+        lifetime = maxLifetime;
+        lifetimes.put(tier, lifetime);
+      }
+      lifetimes.put(tier, --lifetime);
     }
   }
 }

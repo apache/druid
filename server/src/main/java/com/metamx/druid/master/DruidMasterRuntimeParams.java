@@ -31,7 +31,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  */
@@ -44,7 +43,7 @@ public class DruidMasterRuntimeParams
   private final Set<DruidDataSource> dataSources;
   private final Set<DataSegment> availableSegments;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
-  private final DruidMasterReplicationManager replicationManager;
+  private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
   private final long millisToWaitBeforeDeleting;
   private final MasterStats stats;
@@ -59,7 +58,7 @@ public class DruidMasterRuntimeParams
       Set<DruidDataSource> dataSources,
       Set<DataSegment> availableSegments,
       Map<String, LoadQueuePeon> loadManagementPeons,
-      DruidMasterReplicationManager replicationManager,
+      ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
       long millisToWaitBeforeDeleting,
       MasterStats stats,
@@ -117,7 +116,7 @@ public class DruidMasterRuntimeParams
     return loadManagementPeons;
   }
 
-  public DruidMasterReplicationManager getReplicationManager()
+  public ReplicationThrottler getReplicationManager()
   {
     return replicationManager;
   }
@@ -185,7 +184,7 @@ public class DruidMasterRuntimeParams
     private final Set<DruidDataSource> dataSources;
     private final Set<DataSegment> availableSegments;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
-    private DruidMasterReplicationManager replicationManager;
+    private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
     private long millisToWaitBeforeDeleting;
     private MasterStats stats;
@@ -217,7 +216,7 @@ public class DruidMasterRuntimeParams
         Set<DruidDataSource> dataSources,
         Set<DataSegment> availableSegments,
         Map<String, LoadQueuePeon> loadManagementPeons,
-        DruidMasterReplicationManager replicationManager,
+        ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
         long millisToWaitBeforeDeleting,
         MasterStats stats,
@@ -301,7 +300,7 @@ public class DruidMasterRuntimeParams
       return this;
     }
 
-    public Builder withReplicationManager(DruidMasterReplicationManager replicationManager)
+    public Builder withReplicationManager(ReplicationThrottler replicationManager)
     {
       this.replicationManager = replicationManager;
       return this;
