@@ -21,7 +21,6 @@ package com.metamx.druid.master;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -36,7 +35,6 @@ import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
@@ -56,7 +54,6 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -564,7 +561,6 @@ public class DruidMaster
             DruidMasterRuntimeParams.newBuilder()
                                     .withStartTime(startTime)
                                     .withDatasources(databaseSegmentManager.getInventory())
-                                    .withLoadManagementPeons(loadManagementPeons)
                                     .withMillisToWaitBeforeDeleting(config.getMillisToWaitBeforeDeleting())
                                     .withEmitter(emitter)
                                     .withMergeBytesLimit(config.getMergeBytesLimit())
@@ -667,11 +663,16 @@ public class DruidMaster
                   return params.buildFromExisting()
                                .withDruidCluster(cluster)
                                .withDatabaseRuleManager(databaseRuleManager)
+                               .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .build();
                 }
               },
-              new DruidMasterRuleRunner(DruidMaster.this),
+              new DruidMasterRuleRunner(
+                  DruidMaster.this,
+                  config.getReplicantLifetime(),
+                  config.getReplicantThrottleLimit()
+              ),
               new DruidMasterCleanup(DruidMaster.this),
               new DruidMasterBalancer(DruidMaster.this, new BalancerAnalyzer()),
               new DruidMasterLogger()
