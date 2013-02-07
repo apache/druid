@@ -109,7 +109,7 @@ public class IndexIO
 
 
   private static volatile IndexIOHandler handler = null;
-  public static final byte CURRENT_VERSION_ID = 0x8;
+  public static final int CURRENT_VERSION_ID = V9_VERSION;
 
   public static Index readIndex(File inDir) throws IOException
   {
@@ -170,7 +170,7 @@ public class IndexIO
     }
   }
 
-  private static int getVersionFromDir(File inDir) throws IOException
+  public static int getVersionFromDir(File inDir) throws IOException
   {
     File versionFile = new File(inDir, "version.bin");
     if (versionFile.exists()) {

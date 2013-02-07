@@ -48,6 +48,8 @@ import java.util.Map;
 public class DataSegment implements Comparable<DataSegment>
 {
   public static String delimiter = "_";
+  private final Integer binaryVersion;
+
   public static String makeDataSegmentIdentifier(
       String dataSource,
       DateTime start,
@@ -89,6 +91,7 @@ public class DataSegment implements Comparable<DataSegment>
       @JsonProperty("dimensions") @JsonDeserialize(using = CommaListJoinDeserializer.class) List<String> dimensions,
       @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) List<String> metrics,
       @JsonProperty("shardSpec") ShardSpec shardSpec,
+      @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size
   )
   {
@@ -112,6 +115,7 @@ public class DataSegment implements Comparable<DataSegment>
                    ? ImmutableList.<String>of()
                    : ImmutableList.copyOf(Iterables.filter(metrics, nonEmpty));
     this.shardSpec = (shardSpec == null) ? new NoneShardSpec() : shardSpec;
+    this.binaryVersion = binaryVersion;
     this.size = size;
 
     this.identifier = makeDataSegmentIdentifier(
@@ -173,6 +177,12 @@ public class DataSegment implements Comparable<DataSegment>
   }
 
   @JsonProperty
+  public Integer getBinaryVersion()
+  {
+    return binaryVersion;
+  }
+
+  @JsonProperty
   public long getSize()
   {
     return size;
@@ -207,6 +217,11 @@ public class DataSegment implements Comparable<DataSegment>
   public DataSegment withVersion(String version)
   {
     return builder(this).version(version).build();
+  }
+
+  public DataSegment withBinaryVersion(int binaryVersion)
+  {
+    return builder(this).binaryVersion(binaryVersion).build();
   }
 
   @Override
@@ -287,6 +302,7 @@ public class DataSegment implements Comparable<DataSegment>
     private List<String> dimensions;
     private List<String> metrics;
     private ShardSpec shardSpec;
+    private Integer binaryVersion;
     private long size;
 
     public Builder()
@@ -307,6 +323,7 @@ public class DataSegment implements Comparable<DataSegment>
       this.dimensions = segment.getDimensions();
       this.metrics = segment.getMetrics();
       this.shardSpec = segment.getShardSpec();
+      this.binaryVersion = segment.getBinaryVersion();
       this.size = segment.getSize();
     }
 
@@ -352,6 +369,12 @@ public class DataSegment implements Comparable<DataSegment>
       return this;
     }
 
+    public Builder binaryVersion(Integer binaryVersion)
+    {
+      this.binaryVersion = binaryVersion;
+      return this;
+    }
+
     public Builder size(long size)
     {
       this.size = size;
@@ -374,6 +397,7 @@ public class DataSegment implements Comparable<DataSegment>
           dimensions,
           metrics,
           shardSpec,
+          binaryVersion,
           size
       );
     }

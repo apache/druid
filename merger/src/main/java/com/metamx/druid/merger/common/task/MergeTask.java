@@ -128,17 +128,19 @@ public abstract class MergeTask extends AbstractTask
       final long startTime = System.currentTimeMillis();
 
       log.info(
-          "Starting merge of id[%s], segments: %s", getId(), Lists.transform(
-          segments,
-          new Function<DataSegment, String>()
-          {
-            @Override
-            public String apply(@Nullable DataSegment input)
-            {
-              return input.getIdentifier();
-            }
-          }
-      )
+          "Starting merge of id[%s], segments: %s",
+          getId(),
+          Lists.transform(
+              segments,
+              new Function<DataSegment, String>()
+              {
+                @Override
+                public String apply(@Nullable DataSegment input)
+                {
+                  return input.getIdentifier();
+                }
+              }
+          )
       );
 
 

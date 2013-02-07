@@ -146,7 +146,7 @@ public class DeterminePartitionsJob implements Jobby
         log.info("Job %s submitted, status available at: %s", groupByJob.getJobName(), groupByJob.getTrackingURL());
 
         if(!groupByJob.waitForCompletion(true)) {
-          log.error("Job failed: %s", groupByJob.getJobID().toString());
+          log.error("Job failed: %s", groupByJob.getJobID());
           return false;
         }
       } else {

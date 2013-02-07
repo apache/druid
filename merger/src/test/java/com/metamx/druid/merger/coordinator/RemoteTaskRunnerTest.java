@@ -13,12 +13,9 @@ import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
-import com.metamx.druid.merger.common.task.DefaultMergeTask;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
-import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
-import com.metamx.druid.merger.coordinator.scaling.AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.TaskMonitor;
@@ -31,8 +28,6 @@ import com.netflix.curator.retry.ExponentialBackoffRetry;
 import com.netflix.curator.test.TestingCluster;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.zookeeper.CreateMode;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonTypeName;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.jsontype.NamedType;
 import org.easymock.EasyMock;
@@ -45,7 +40,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -113,6 +108,7 @@ public class RemoteTaskRunnerTest
                 null,
                 null,
                 null,
+                0,
                 0
             )
         ), Lists.<AggregatorFactory>newArrayList()
@@ -143,13 +139,25 @@ public class RemoteTaskRunnerTest
   @Test
   public void testAlreadyExecutedTask() throws Exception
   {
+    final CountDownLatch latch = new CountDownLatch(1);
     remoteTaskRunner.run(
-        task1,
-        new TaskContext(
-            new DateTime().toString(),
-            Sets.<DataSegment>newHashSet(),
-            Sets.<DataSegment>newHashSet()
-        ),
+        new TestTask(
+            task1.getId(),
+            task1.getDataSource(),
+            Lists.<DataSegment>newArrayList(),
+            Lists.<AggregatorFactory>newArrayList()
+        )
+        {
+          @Override
+          public TaskStatus run(
+              TaskContext context, TaskToolbox toolbox, TaskCallback callback
+          ) throws Exception
+          {
+            latch.await();
+            return super.run(context, toolbox, callback);
+          }
+        },
+        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
         null
     );
     try {
@@ -162,10 +170,11 @@ public class RemoteTaskRunnerTest
           ),
           null
       );
+      latch.countDown();
       fail("ISE expected");
     }
     catch (ISE expected) {
-
+      latch.countDown();
     }
   }
 
@@ -187,6 +196,7 @@ public class RemoteTaskRunnerTest
                       null,
                       null,
                       null,
+                      0,
                       0
                   )
               ), Lists.<AggregatorFactory>newArrayList()

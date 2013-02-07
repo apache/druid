@@ -21,7 +21,6 @@ package com.metamx.druid.master;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -43,12 +42,9 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
-import com.metamx.druid.merge.ClientKillQuery;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
 import com.netflix.curator.x.discovery.ServiceProvider;
@@ -57,7 +53,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -91,8 +86,6 @@ public class DruidMaster
   private final PhoneBookPeon masterPeon;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ServiceProvider serviceProvider;
-  private final HttpClient httpClient;
-  private final HttpResponseHandler<StringBuilder, String> responseHandler;
 
   private final ObjectMapper jsonMapper;
 
@@ -107,9 +100,7 @@ public class DruidMaster
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       Map<String, LoadQueuePeon> loadManagementPeons,
-      ServiceProvider serviceProvider,
-      HttpClient httpClient,
-      HttpResponseHandler<StringBuilder, String> responseHandler
+      ServiceProvider serviceProvider
   )
   {
     this.config = config;
@@ -130,9 +121,6 @@ public class DruidMaster
     this.loadManagementPeons = loadManagementPeons;
 
     this.serviceProvider = serviceProvider;
-
-    this.httpClient = httpClient;
-    this.responseHandler = responseHandler;
   }
 
   public boolean isClusterMaster()
@@ -206,27 +194,6 @@ public class DruidMaster
   public void enableDatasource(String ds)
   {
     databaseSegmentManager.enableDatasource(ds);
-  }
-
-  public void killSegments(ClientKillQuery killQuery)
-  {
-    try {
-      httpClient.post(
-          new URL(
-              String.format(
-                  "http://%s:%s/mmx/merger/v1/index",
-                  serviceProvider.getInstance().getAddress(),
-                  serviceProvider.getInstance().getPort()
-              )
-          )
-      )
-                .setContent("application/json", jsonMapper.writeValueAsBytes(killQuery))
-                .go(responseHandler)
-                .get();
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   public void moveSegment(String from, String to, String segmentName, final LoadPeonCallback callback)
@@ -623,21 +590,20 @@ public class DruidMaster
                 public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
                 {
                   // Display info about all historical servers
-                  Iterable<DruidServer> servers =
-                      FunctionalIterable.create(serverInventoryManager.getInventory())
-                                        .filter(
-                                            new Predicate<DruidServer>()
-                                            {
-                                              @Override
-                                              public boolean apply(
-                                                  @Nullable DruidServer input
-                                              )
-                                              {
-                                                return input.getType()
-                                                            .equalsIgnoreCase("historical");
-                                              }
-                                            }
-                                        );
+                  Iterable<DruidServer> servers =FunctionalIterable
+                      .create(serverInventoryManager.getInventory())
+                      .filter(
+                          new Predicate<DruidServer>()
+                          {
+                            @Override
+                            public boolean apply(
+                                @Nullable DruidServer input
+                            )
+                            {
+                              return input.getType().equalsIgnoreCase("historical");
+                            }
+                          }
+                      );
                   if (log.isDebugEnabled()) {
                     log.debug("Servers");
                     for (DruidServer druidServer : servers) {
@@ -695,14 +661,18 @@ public class DruidMaster
                   decrementRemovedSegmentsLifetime();
 
                   return params.buildFromExisting()
-                               .withLoadManagementPeons(loadManagementPeons)
                                .withDruidCluster(cluster)
                                .withDatabaseRuleManager(databaseRuleManager)
+                               .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .build();
                 }
               },
-              new DruidMasterRuleRunner(DruidMaster.this),
+              new DruidMasterRuleRunner(
+                  DruidMaster.this,
+                  config.getReplicantLifetime(),
+                  config.getReplicantThrottleLimit()
+              ),
               new DruidMasterCleanup(DruidMaster.this),
               new DruidMasterBalancer(DruidMaster.this, new BalancerAnalyzer()),
               new DruidMasterLogger()
@@ -718,14 +688,7 @@ public class DruidMaster
       super(
           ImmutableList.of(
               new DruidMasterSegmentInfoLoader(DruidMaster.this),
-              new DruidMasterSegmentMerger(
-                  new HttpMergerClient(
-                      httpClient,
-                      responseHandler,
-                      jsonMapper,
-                      serviceProvider
-                  )
-              ),
+              new DruidMasterSegmentMerger(jsonMapper, serviceProvider),
               new DruidMasterHelper()
               {
                 @Override

@@ -63,7 +63,7 @@ public interface Task
 
   /**
    * Execute preflight checks for a task. This typically runs on the coordinator, and will be run while
-   * holding a lock on our dataSouce and interval. If this method throws an exception, the task should be
+   * holding a lock on our dataSource and interval. If this method throws an exception, the task should be
    * considered a failure.
    *
    * @param context Context for this task, gathered under indexer lock

@@ -27,6 +27,7 @@ import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
 import com.metamx.druid.master.LoadPeonCallback;
 import com.metamx.druid.master.MasterStats;
+import com.metamx.druid.master.ReplicationThrottler;
 import com.metamx.druid.master.ServerHolder;
 import com.metamx.emitter.EmittingLogger;
 
@@ -55,17 +56,18 @@ public abstract class LoadRule implements Rule
       return stats;
     }
 
-    stats.accumulate(assign(expectedReplicants, totalReplicants, serverQueue, segment));
+    stats.accumulate(assign(params.getReplicationManager(), expectedReplicants, totalReplicants, serverQueue, segment));
     stats.accumulate(drop(expectedReplicants, clusterReplicants, segment, params));
 
     return stats;
   }
 
   private MasterStats assign(
+      final ReplicationThrottler replicationManager,
       int expectedReplicants,
       int totalReplicants,
       MinMaxPriorityQueue<ServerHolder> serverQueue,
-      DataSegment segment
+      final DataSegment segment
   )
   {
     MasterStats stats = new MasterStats();
@@ -109,6 +111,14 @@ public abstract class LoadRule implements Rule
         break;
       }
 
+      if (totalReplicants > 0) { // don't throttle if there's only 1 copy of this segment in the cluster
+        if (!replicationManager.canAddReplicant(getTier()) ||
+            !replicationManager.registerReplicantCreation(getTier(), segment.getIdentifier())) {
+          serverQueue.add(holder);
+          break;
+        }
+      }
+
       holder.getPeon().loadSegment(
           segment,
           new LoadPeonCallback()
@@ -116,6 +126,7 @@ public abstract class LoadRule implements Rule
             @Override
             protected void execute()
             {
+              replicationManager.unregisterReplicantCreation(getTier(), segment.getIdentifier());
             }
           }
       );
@@ -132,11 +143,12 @@ public abstract class LoadRule implements Rule
   private MasterStats drop(
       int expectedReplicants,
       int clusterReplicants,
-      DataSegment segment,
-      DruidMasterRuntimeParams params
+      final DataSegment segment,
+      final DruidMasterRuntimeParams params
   )
   {
     MasterStats stats = new MasterStats();
+    final ReplicationThrottler replicationManager = params.getReplicationManager();
 
     if (!params.hasDeletionWaitTimeElapsed()) {
       return stats;
@@ -168,6 +180,14 @@ public abstract class LoadRule implements Rule
           break;
         }
 
+        if (expectedNumReplicantsForType > 0) { // don't throttle unless we are removing extra replicants
+          if (!replicationManager.canDestroyReplicant(getTier()) ||
+              !replicationManager.registerReplicantTermination(getTier(), segment.getIdentifier())) {
+            serverQueue.add(holder);
+            break;
+          }
+        }
+
         if (holder.isServingSegment(segment)) {
           holder.getPeon().dropSegment(
               segment,
@@ -176,6 +196,7 @@ public abstract class LoadRule implements Rule
                 @Override
                 protected void execute()
                 {
+                  replicationManager.unregisterReplicantTermination(getTier(), segment.getIdentifier());
                 }
               }
           );
