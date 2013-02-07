@@ -926,7 +926,8 @@ public class DruidMasterRuleRunnerTest
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
         new NoneShardSpec(),
-        1
+        1,
+        0
     );
 
     afterParams = ruleRunner.run(
@@ -971,7 +972,8 @@ public class DruidMasterRuleRunnerTest
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
         new NoneShardSpec(),
-        1
+        1,
+        0
     );
     List<DataSegment> longerAvailableSegments = Lists.newArrayList(availableSegments);
     longerAvailableSegments.add(overFlowSegment);
