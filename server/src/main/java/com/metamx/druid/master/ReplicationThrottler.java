@@ -76,6 +76,7 @@ public class ReplicationThrottler
     } else {
       log.info("[%s]: Replicant %s queue is empty.", tier, type);
       lookup.put(tier, true);
+      holder.resetLifetime(tier);
     }
   }
 
@@ -161,6 +162,11 @@ public class ReplicationThrottler
         lifetimes.put(tier, lifetime);
       }
       lifetimes.put(tier, --lifetime);
+    }
+
+    public void resetLifetime(String tier)
+    {
+      lifetimes.put(tier, maxLifetime);
     }
   }
 }

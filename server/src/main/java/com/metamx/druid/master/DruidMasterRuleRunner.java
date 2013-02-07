@@ -33,14 +33,14 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
 {
   private static final EmittingLogger log = new EmittingLogger(DruidMasterRuleRunner.class);
 
-  private final ReplicationThrottler replicationManager;
+  private final ReplicationThrottler replicatorThrottler;
 
   private final DruidMaster master;
 
   public DruidMasterRuleRunner(DruidMaster master, int replicantLifeTime, int replicantThrottleLimit)
   {
     this.master = master;
-    this.replicationManager = new ReplicationThrottler(replicantThrottleLimit, replicantLifeTime);
+    this.replicatorThrottler = new ReplicationThrottler(replicantThrottleLimit, replicantLifeTime);
   }
 
   @Override
@@ -55,12 +55,12 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
     }
 
     for (String tier : cluster.getTierNames()) {
-      replicationManager.updateReplicationState(tier);
-      replicationManager.updateTerminationState(tier);
+      replicatorThrottler.updateReplicationState(tier);
+      replicatorThrottler.updateTerminationState(tier);
     }
 
     DruidMasterRuntimeParams paramsWithReplicationManager = params.buildFromExisting()
-                                                                  .withReplicationManager(replicationManager)
+                                                                  .withReplicationManager(replicatorThrottler)
                                                                   .build();
 
     // Run through all matched rules for available segments
