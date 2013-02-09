@@ -53,7 +53,7 @@ import java.util.Properties;
 
 /**
  */
-public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQuery>
+public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery>
 {
 
   private static final TypeReference<Row> TYPE_REFERENCE = new TypeReference<Row>(){};

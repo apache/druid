@@ -21,8 +21,11 @@ package com.metamx.druid.query.timeboundary;
 
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -33,20 +36,26 @@ import com.metamx.druid.query.CacheStrategy;
 import com.metamx.druid.query.MetricManipulationFn;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChest;
+import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
+import com.metamx.druid.utils.JodaUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.codehaus.jackson.type.TypeReference;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  */
 public class TimeBoundaryQueryQueryToolChest
-    implements QueryToolChest<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>
+    extends QueryToolChest<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>
 {
   private static final byte TIMEBOUNDARY_QUERY = 0x3;
 
@@ -56,6 +65,44 @@ public class TimeBoundaryQueryQueryToolChest
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
   {
   };
+
+
+  @Override
+  public Iterable<SegmentDescriptor> filterSegments(TimeBoundaryQuery query, Iterable<SegmentDescriptor> input) {
+    long minMillis = Long.MAX_VALUE;
+    long maxMillis = Long.MIN_VALUE;
+    SegmentDescriptor min = null;
+    SegmentDescriptor max = null;
+
+    // keep track of all segments in a given shard
+    Map<String, Set<SegmentDescriptor>> segmentGroups = Maps.newHashMap();
+
+    Iterable<Interval> condensedIntervals = JodaUtils.condenseIntervals(query.getIntervals());
+    for(SegmentDescriptor e : input) {
+      if(Iterables.isEmpty(condensedIntervals) || JodaUtils.overlaps(e.getInterval(), condensedIntervals)) {
+        final long start = e.getInterval().getStartMillis();
+        final long end = e.getInterval().getEndMillis();
+        final String version = e.getVersion();
+
+        if(segmentGroups.containsKey(version)) {
+          segmentGroups.get(version).add(e);
+        } else {
+          segmentGroups.put(version, Sets.newHashSet(e));
+        }
+
+        if(min == null || start < minMillis) {
+          min = e;
+          minMillis = start;
+        }
+        if(max == null || end > maxMillis) {
+          max = e;
+          maxMillis = end;
+        }
+      }
+    }
+
+    return Sets.union(segmentGroups.get(min.getVersion()), segmentGroups.get(max.getVersion()));
+  }
 
   @Override
   public QueryRunner<Result<TimeBoundaryResultValue>> mergeResults(

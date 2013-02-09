@@ -50,7 +50,7 @@ import java.util.Map;
 import java.util.Set;
 
 
-public class SegmentMetadataQueryQueryToolChest implements QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
+public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
   private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<SegmentAnalysis>(){};
   private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};

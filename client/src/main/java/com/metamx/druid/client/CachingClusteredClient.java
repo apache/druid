@@ -20,6 +20,7 @@
 package com.metamx.druid.client;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -58,6 +59,7 @@ import org.codehaus.jackson.type.TypeReference;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -151,6 +153,35 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         }
       }
     }
+
+    // Let tool chest filter out unneeded segments
+    final Set<SegmentDescriptor> filteredSegmentDescriptors = Sets.newLinkedHashSet(toolChest.filterSegments(
+        query,
+        Iterables.transform(
+            segments, new Function<Pair<ServerSelector, SegmentDescriptor>, SegmentDescriptor>()
+        {
+          @Override
+          public SegmentDescriptor apply(
+              @Nullable Pair<ServerSelector, SegmentDescriptor> input
+          )
+          {
+            return input.rhs;
+          }
+        }
+        )
+    ));
+
+    // remove unneeded segments from list of segments to query
+    segments = Sets.newLinkedHashSet(Iterables.filter(segments, new Predicate<Pair<ServerSelector, SegmentDescriptor>>()
+    {
+      @Override
+      public boolean apply(
+          @Nullable Pair<ServerSelector, SegmentDescriptor> input
+      )
+      {
+        return filteredSegmentDescriptors.contains(input.rhs);
+      }
+    }));
 
     final byte[] queryCacheKey;
     if(strategy != null) {

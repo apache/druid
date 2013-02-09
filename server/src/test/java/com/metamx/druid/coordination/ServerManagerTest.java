@@ -391,7 +391,7 @@ public class ServerManagerTest
     }
   }
 
-  public static class NoopQueryToolChest<T, QueryType extends Query<T>> implements QueryToolChest<T, QueryType>
+  public static class NoopQueryToolChest<T, QueryType extends Query<T>> extends QueryToolChest<T, QueryType>
   {
     @Override
     public QueryRunner<T> mergeResults(QueryRunner<T> runner)

@@ -64,7 +64,7 @@ import java.util.Set;
 
 /**
  */
-public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchResultValue>, SearchQuery>
+public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResultValue>, SearchQuery>
 {
   private static final byte SEARCH_QUERY = 0x2;
 

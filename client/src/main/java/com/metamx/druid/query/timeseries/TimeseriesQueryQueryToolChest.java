@@ -60,7 +60,7 @@ import java.util.Map;
 
 /**
  */
-public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
+public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
   private static final byte TIMESERIES_QUERY = 0x0;
 
