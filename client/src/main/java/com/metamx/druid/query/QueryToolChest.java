@@ -22,12 +22,9 @@ package com.metamx.druid.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
+import com.metamx.druid.LogicalSegment;
 import com.metamx.druid.Query;
-import com.metamx.druid.TimelineObjectHolder;
-import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
-
 import java.util.List;
 
 /**
@@ -50,7 +47,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public abstract Function<ResultType, ResultType> makeMetricManipulatorFn(QueryType query, MetricManipulationFn fn);
   public abstract TypeReference<ResultType> getResultTypeReference();
 
-    public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query) {
+  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query) {
     return null;
   }
 
@@ -62,10 +59,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     return runner;
   }
 
-  public List<TimelineObjectHolder<String, ServerSelector>> filterSegments(
-      QueryType query,
-      List<TimelineObjectHolder<String, ServerSelector>> segments
-  ) {
+  public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments) {
     return segments;
   }
 }

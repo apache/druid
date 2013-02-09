@@ -22,16 +22,14 @@ package com.metamx.druid.query.timeboundary;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.druid.LogicalSegment;
 import com.metamx.druid.Query;
-import com.metamx.druid.TimelineObjectHolder;
-import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.collect.OrderedMergeSequence;
 import com.metamx.druid.query.BySegmentSkippingQueryRunner;
 import com.metamx.druid.query.CacheStrategy;
@@ -47,8 +45,6 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  */
@@ -64,32 +60,17 @@ public class TimeBoundaryQueryQueryToolChest
   {
   };
 
-
   @Override
-  public List<TimelineObjectHolder<String, ServerSelector>> filterSegments(
-      TimeBoundaryQuery query,
-      List<TimelineObjectHolder<String, ServerSelector>> input
-  ) {
-    long minMillis = Long.MAX_VALUE;
-    long maxMillis = Long.MIN_VALUE;
-    TimelineObjectHolder<String, ServerSelector> min = null;
-    TimelineObjectHolder<String, ServerSelector> max = null;
-
-    for(TimelineObjectHolder<String, ServerSelector> e : input) {
-      final long start = e.getInterval().getStartMillis();
-      final long end = e.getInterval().getEndMillis();
-
-      if(min == null || start < minMillis) {
-        min = e;
-        minMillis = start;
-      }
-      if(max == null || end > maxMillis) {
-        max = e;
-        maxMillis = end;
-      }
+  public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> input)
+  {
+    if(input.size() <= 1) {
+      return input;
     }
 
-    return min == max ? Lists.newArrayList(min) : Lists.newArrayList(min , max);
+    return Lists.newArrayList(
+        Iterables.getFirst(input, null),
+        Iterables.getLast(input)
+    );
   }
 
   @Override
