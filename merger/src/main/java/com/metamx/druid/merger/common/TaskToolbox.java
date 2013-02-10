@@ -20,13 +20,15 @@
 package com.metamx.druid.merger.common;
 
 import com.google.common.collect.ImmutableMap;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.loading.MMappedQueryableIndexFactory;
 import com.metamx.druid.loading.S3SegmentPuller;
-import com.metamx.druid.loading.S3SegmentGetterConfig;
-import com.metamx.druid.loading.S3ZippedSegmentPuller;
 import com.metamx.druid.loading.SegmentPuller;
+import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.loading.SingleSegmentLoader;
+import com.metamx.druid.loading.StorageAdapterLoadingException;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
-import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -87,19 +89,28 @@ public class TaskToolbox
 
   public Map<String, SegmentPuller> getSegmentGetters(final Task task)
   {
-    final S3SegmentGetterConfig getterConfig = new S3SegmentGetterConfig()
-    {
-      @Override
-      public File getCacheDirectory()
-      {
-        return new File(config.getTaskDir(task), "fetched_segments");
-      }
-    };
+    LoaderPullerAdapter puller = new LoaderPullerAdapter(new File(config.getTaskDir(task), "fetched_segments"));
 
     return ImmutableMap.<String, SegmentPuller>builder()
-                       .put("s3", new S3SegmentPuller(s3Client, getterConfig))
-                       .put("s3_union", new S3SegmentPuller(s3Client, getterConfig))
-                       .put("s3_zip", new S3ZippedSegmentPuller(s3Client, getterConfig))
+                       .put("s3", puller)
+                       .put("s3_union", puller)
+                       .put("s3_zip", puller)
                        .build();
+  }
+
+  class LoaderPullerAdapter implements SegmentPuller{
+    private SingleSegmentLoader loader;
+    public LoaderPullerAdapter(File cacheDir){
+      loader = new SingleSegmentLoader(new S3SegmentPuller(s3Client), new MMappedQueryableIndexFactory(), cacheDir);
+    }
+    @Override
+    public File getSegmentFiles(DataSegment loadSpec) throws StorageAdapterLoadingException {
+      return loader.getSegmentFiles(loadSpec);
+    }
+
+    @Override
+    public long getLastModified(DataSegment segment) throws StorageAdapterLoadingException {
+      return -1;
+    }
   }
 }

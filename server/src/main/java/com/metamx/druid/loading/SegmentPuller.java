@@ -29,5 +29,5 @@ import java.util.Map;
 public interface SegmentPuller
 {
   public File getSegmentFiles(DataSegment loadSpec) throws StorageAdapterLoadingException;
-  public boolean cleanSegmentFiles(DataSegment loadSpec) throws StorageAdapterLoadingException;
+  long getLastModified(DataSegment segment) throws StorageAdapterLoadingException;
 }
