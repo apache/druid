@@ -35,7 +35,6 @@ import com.metamx.druid.query.group.GroupByQueryEngineConfig;
 import com.metamx.druid.Query;
 import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.loading.QueryableLoaderConfig;
-import com.metamx.druid.loading.S3ZippedSegmentPuller;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
@@ -69,8 +68,8 @@ public class ServerInit
   {
     DelegatingSegmentLoader delegateLoader = new DelegatingSegmentLoader();
 
-    final S3SegmentPuller segmentGetter = new S3SegmentPuller(s3Client, config);
-    final S3ZippedSegmentPuller zippedGetter = new S3ZippedSegmentPuller(s3Client, config);
+    final S3SegmentPuller segmentGetter = new S3SegmentPuller(s3Client);
+
     final QueryableIndexFactory factory;
     if ("mmap".equals(config.getQueryableFactoryType())) {
       factory = new MMappedQueryableIndexFactory();
@@ -78,11 +77,12 @@ public class ServerInit
       throw new ISE("Unknown queryableFactoryType[%s]", config.getQueryableFactoryType());
     }
 
+    SingleSegmentLoader segmentLoader = new SingleSegmentLoader(segmentGetter, factory, config.getCacheDirectory());
     delegateLoader.setLoaderTypes(
         ImmutableMap.<String, SegmentLoader>builder()
-                    .put("s3", new SingleSegmentLoader(segmentGetter, factory))
-                    .put("s3_zip", new SingleSegmentLoader(zippedGetter, factory))
-                    .build()
+        .put("s3", segmentLoader)
+        .put("s3_zip", segmentLoader)
+        .build()
     );
 
     return delegateLoader;

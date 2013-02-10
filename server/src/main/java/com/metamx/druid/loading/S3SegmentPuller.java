@@ -25,17 +25,15 @@ import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.common.s3.S3Utils;
-import org.apache.commons.io.FileUtils;
+import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 import org.joda.time.DateTime;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.Map;
-import java.util.zip.GZIPInputStream;
 
 /**
  */
@@ -48,133 +46,85 @@ public class S3SegmentPuller implements SegmentPuller
   private static final String KEY = "key";
 
   private final RestS3Service s3Client;
-  private final S3SegmentGetterConfig config;
 
   @Inject
   public S3SegmentPuller(
-      RestS3Service s3Client,
-      S3SegmentGetterConfig config
+      RestS3Service s3Client
   )
   {
     this.s3Client = s3Client;
-    this.config = config;
   }
 
   @Override
   public File getSegmentFiles(DataSegment segment) throws StorageAdapterLoadingException
   {
-    Map<String, Object> loadSpec = segment.getLoadSpec();
-    String s3Bucket = MapUtils.getString(loadSpec, "bucket");
-    String s3Path = MapUtils.getString(loadSpec, "key");
+    S3Coords s3Coords = new S3Coords(segment);
 
-    log.info("Loading index at path[s3://%s/%s]", s3Bucket, s3Path);
+    log.info("Loading index at path[%s]", s3Coords);
 
-    S3Object s3Obj = null;
+    if(!isObjectInBucket(s3Coords)){
+      throw new StorageAdapterLoadingException("IndexFile[%s] does not exist.", s3Coords);
+    }
+
+    long currTime = System.currentTimeMillis();
     File tmpFile = null;
+    S3Object s3Obj = null;
+
     try {
-      if (!s3Client.isObjectInBucket(s3Bucket, s3Path)) {
-        throw new StorageAdapterLoadingException("IndexFile[s3://%s/%s] does not exist.", s3Bucket, s3Path);
-      }
+      s3Obj = s3Client.getObject(new S3Bucket(s3Coords.bucket), s3Coords.path);
+      tmpFile = File.createTempFile(s3Coords.bucket, new DateTime().toString() + s3Coords.path.replace('/', '_'));
+      log.info("Downloading file[%s] to local tmpFile[%s] for segment[%s]", s3Coords, tmpFile, segment);
 
-      File cacheFile = new File(config.getCacheDirectory(), computeCacheFilePath(s3Bucket, s3Path));
-
-      if (cacheFile.exists()) {
-        S3Object objDetails = s3Client.getObjectDetails(new S3Bucket(s3Bucket), s3Path);
-        DateTime cacheFileLastModified = new DateTime(cacheFile.lastModified());
-        DateTime s3ObjLastModified = new DateTime(objDetails.getLastModifiedDate().getTime());
-        if (cacheFileLastModified.isAfter(s3ObjLastModified)) {
-          log.info(
-              "Found cacheFile[%s] with modified[%s], which is after s3Obj[%s].  Using.",
-              cacheFile,
-              cacheFileLastModified,
-              s3ObjLastModified
-          );
-          return cacheFile.getParentFile();
-        }
-        FileUtils.deleteDirectory(cacheFile.getParentFile());
-      }
-
-      long currTime = System.currentTimeMillis();
-
-      tmpFile = File.createTempFile(s3Bucket, new DateTime().toString());
-      log.info(
-          "Downloading file[s3://%s/%s] to local tmpFile[%s] for cacheFile[%s]",
-          s3Bucket, s3Path, tmpFile, cacheFile
-      );
-
-      s3Obj = s3Client.getObject(new S3Bucket(s3Bucket), s3Path);
       StreamUtils.copyToFileAndClose(s3Obj.getDataInputStream(), tmpFile, DEFAULT_TIMEOUT);
       final long downloadEndTime = System.currentTimeMillis();
-      log.info("Download of file[%s] completed in %,d millis", cacheFile, downloadEndTime - currTime);
+      log.info("Download of file[%s] completed in %,d millis", tmpFile, downloadEndTime - currTime);
 
-      if (!cacheFile.getParentFile().mkdirs()) {
-        log.info("Unable to make parent file[%s]", cacheFile.getParentFile());
-      }
-      cacheFile.delete();
-
-      if (s3Path.endsWith("gz")) {
-        log.info("Decompressing file[%s] to [%s]", tmpFile, cacheFile);
-        StreamUtils.copyToFileAndClose(
-            new GZIPInputStream(new FileInputStream(tmpFile)),
-            cacheFile
-        );
-        if (!tmpFile.delete()) {
-          log.error("Could not delete tmpFile[%s].", tmpFile);
-        }
-      } else {
-        log.info("Rename tmpFile[%s] to cacheFile[%s]", tmpFile, cacheFile);
-        if (!tmpFile.renameTo(cacheFile)) {
-          log.warn("Error renaming tmpFile[%s] to cacheFile[%s].  Copying instead.", tmpFile, cacheFile);
-
-          StreamUtils.copyToFileAndClose(new FileInputStream(tmpFile), cacheFile);
-          if (!tmpFile.delete()) {
-            log.error("Could not delete tmpFile[%s].", tmpFile);
-          }
-        }
-      }
-
-      long endTime = System.currentTimeMillis();
-      log.info("Local processing of file[%s] done in %,d millis", cacheFile, endTime - downloadEndTime);
-
-      return cacheFile.getParentFile();
+      return tmpFile;
     }
     catch (Exception e) {
+      if(tmpFile!=null && tmpFile.exists()){
+        tmpFile.delete();
+      }
       throw new StorageAdapterLoadingException(e, e.getMessage());
     }
     finally {
       S3Utils.closeStreamsQuietly(s3Obj);
-      if (tmpFile != null && tmpFile.exists()) {
-        log.warn("Deleting tmpFile[%s] in finally block.  Why?", tmpFile);
-        tmpFile.delete();
-      }
     }
   }
 
-  private String computeCacheFilePath(String s3Bucket, String s3Path)
-  {
-    return String.format(
-        "%s/%s", s3Bucket, s3Path.endsWith("gz") ? s3Path.substring(0, s3Path.length() - ".gz".length()) : s3Path
-    );
+  private boolean isObjectInBucket(S3Coords coords) throws StorageAdapterLoadingException {
+    try {
+      return s3Client.isObjectInBucket(coords.bucket, coords.path);
+    } catch (ServiceException e) {
+      throw new StorageAdapterLoadingException(e, "Problem communicating with S3 checking bucket/path[%s]", coords);
+    }
   }
 
   @Override
-  public boolean cleanSegmentFiles(DataSegment segment) throws StorageAdapterLoadingException
-  {
-    Map<String, Object> loadSpec = segment.getLoadSpec();
-    File cacheFile = new File(
-        config.getCacheDirectory(),
-        computeCacheFilePath(MapUtils.getString(loadSpec, BUCKET), MapUtils.getString(loadSpec, KEY))
-    );
-
+  public long getLastModified(DataSegment segment) throws StorageAdapterLoadingException {
+    S3Coords coords = new S3Coords(segment);
     try {
-      final File parentFile = cacheFile.getParentFile();
-      log.info("Recursively deleting file[%s]", parentFile);
-      FileUtils.deleteDirectory(parentFile);
-    }
-    catch (IOException e) {
+      S3Object objDetails = s3Client.getObjectDetails(new S3Bucket(coords.bucket), coords.path);
+      return objDetails.getLastModifiedDate().getTime();
+    } catch (S3ServiceException e) {
       throw new StorageAdapterLoadingException(e, e.getMessage());
     }
+  }
 
-    return true;
+  private class S3Coords {
+    String bucket;
+    String path;
+
+    public S3Coords(DataSegment segment) {
+      Map<String, Object> loadSpec = segment.getLoadSpec();
+      bucket = MapUtils.getString(loadSpec, BUCKET);
+      path = MapUtils.getString(loadSpec, KEY);
+      if(path.startsWith("/")){
+        path = path.substring(1);
+      }
+    }
+    public String toString(){
+      return String.format("s3://%s/%s", bucket, path);
+    }
   }
 }
