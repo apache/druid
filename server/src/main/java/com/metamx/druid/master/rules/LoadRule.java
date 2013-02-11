@@ -21,6 +21,7 @@ package com.metamx.druid.master.rules;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.metamx.common.Pair;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.master.BalancerCostAnalyzer;
 import com.metamx.druid.master.DruidMaster;
@@ -58,14 +59,18 @@ public abstract class LoadRule implements Rule
       return stats;
     }
 
+    final List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(serverQueue);
+    final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
+    final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
+    MinMaxPriorityQueue<Pair<Double, ServerHolder>> serverCostQueue = analyzer.findNewSegmentHome(segment, serverHolderList);
+
     stats.accumulate(
         assign(
             params.getReplicationManager(),
             expectedReplicants,
             totalReplicants,
-            serverQueue,
-            segment,
-            params
+            serverCostQueue,
+            segment
         )
     );
 
@@ -78,40 +83,32 @@ public abstract class LoadRule implements Rule
       final ReplicationThrottler replicationManager,
       int expectedReplicants,
       int totalReplicants,
-      MinMaxPriorityQueue<ServerHolder> serverQueue,
-      final DataSegment segment,
-      final DruidMasterRuntimeParams params
+      MinMaxPriorityQueue<Pair<Double, ServerHolder>> serverQueue,
+      final DataSegment segment
   )
   {
     MasterStats stats = new MasterStats();
 
-    List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(serverQueue);
-
-    List<ServerHolder> assignedServers = Lists.newArrayList();
     while (totalReplicants < expectedReplicants) {
-      final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-      final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
-      ServerHolder holder = analyzer.findNewSegmentHome(segment, serverHolderList);
+      ServerHolder holder = serverQueue.pollFirst().rhs;
 
       if (holder == null) {
         log.warn(
-            "Not enough %s servers[%d] or node capacity to assign segment[%s]! Expected Replicants[%d]",
+            "Not enough %s servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
             getTier(),
-            assignedServers.size() + serverQueue.size() + 1,
             segment.getIdentifier(),
             expectedReplicants
         );
         break;
       }
+
       if (holder.isServingSegment(segment) || holder.isLoadingSegment(segment)) {
-        assignedServers.add(holder);
         continue;
       }
 
       if (totalReplicants > 0) { // don't throttle if there's only 1 copy of this segment in the cluster
         if (!replicationManager.canAddReplicant(getTier()) ||
             !replicationManager.registerReplicantCreation(getTier(), segment.getIdentifier())) {
-          serverQueue.add(holder);
           break;
         }
       }
@@ -127,12 +124,10 @@ public abstract class LoadRule implements Rule
             }
           }
       );
-      assignedServers.add(holder);
 
       stats.addToTieredStat("assignedCount", getTier(), 1);
       ++totalReplicants;
     }
-    serverQueue.addAll(assignedServers);
 
     return stats;
   }
