@@ -7,13 +7,6 @@ import org.codehaus.jackson.annotate.JsonProperty;
 
 import java.util.Map;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jbae
- * Date: 2/4/13
- * Time: 10:22 AM
- * To change this template use File | Settings | File Templates.
- */
 public class LinearShardSpec implements ShardSpec {
   private int partitionNum;
 

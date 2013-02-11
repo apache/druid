@@ -1,12 +1,5 @@
 package com.metamx.druid.partition;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jbae
- * Date: 2/4/13
- * Time: 10:24 AM
- * To change this template use File | Settings | File Templates.
- */
 public class LinearPartitionChunk <T> implements PartitionChunk<T>
 {
   private final int chunkNumber;
