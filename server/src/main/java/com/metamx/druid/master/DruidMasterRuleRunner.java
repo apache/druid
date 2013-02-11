@@ -23,6 +23,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.master.rules.Rule;
 import com.metamx.emitter.EmittingLogger;
+import org.joda.time.DateTime;
 
 import java.util.List;
 
@@ -32,11 +33,14 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
 {
   private static final EmittingLogger log = new EmittingLogger(DruidMasterRuleRunner.class);
 
+  private final ReplicationThrottler replicatorThrottler;
+
   private final DruidMaster master;
 
-  public DruidMasterRuleRunner(DruidMaster master)
+  public DruidMasterRuleRunner(DruidMaster master, int replicantLifeTime, int replicantThrottleLimit)
   {
     this.master = master;
+    this.replicatorThrottler = new ReplicationThrottler(replicantThrottleLimit, replicantLifeTime);
   }
 
   @Override
@@ -50,15 +54,25 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
       return params;
     }
 
+    for (String tier : cluster.getTierNames()) {
+      replicatorThrottler.updateReplicationState(tier);
+      replicatorThrottler.updateTerminationState(tier);
+    }
+
+    DruidMasterRuntimeParams paramsWithReplicationManager = params.buildFromExisting()
+                                                                  .withReplicationManager(replicatorThrottler)
+                                                                  .build();
+
     // Run through all matched rules for available segments
-    DatabaseRuleManager databaseRuleManager = params.getDatabaseRuleManager();
-    for (DataSegment segment : params.getAvailableSegments()) {
+    DateTime now = new DateTime();
+    DatabaseRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
+    for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
 
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
-        if (rule.appliesTo(segment)) {
-          stats.accumulate(rule.run(master, params, segment));
+        if (rule.appliesTo(segment, now)) {
+          stats.accumulate(rule.run(master, paramsWithReplicationManager, segment));
           foundMatchingRule = true;
           break;
         }
@@ -74,8 +88,8 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
       }
     }
 
-    return params.buildFromExisting()
-                 .withMasterStats(stats)
-                 .build();
+    return paramsWithReplicationManager.buildFromExisting()
+                                       .withMasterStats(stats)
+                                       .build();
   }
 }

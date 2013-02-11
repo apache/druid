@@ -22,7 +22,6 @@ package com.metamx.druid.query;
 import com.google.common.collect.Lists;
 import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.CountAggregatorFactory;
 import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
@@ -30,12 +29,11 @@ import com.metamx.druid.aggregation.LongSumAggregatorFactory;
 import com.metamx.druid.aggregation.post.ArithmeticPostAggregator;
 import com.metamx.druid.aggregation.post.ConstantPostAggregator;
 import com.metamx.druid.aggregation.post.FieldAccessPostAggregator;
+import com.metamx.druid.index.IncrementalIndexSegment;
+import com.metamx.druid.index.QueryableIndex;
+import com.metamx.druid.index.QueryableIndexSegment;
+import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.v1.IncrementalIndex;
-import com.metamx.druid.index.v1.IncrementalIndexStorageAdapter;
-import com.metamx.druid.index.v1.Index;
-import com.metamx.druid.index.v1.IndexStorageAdapter;
-import com.metamx.druid.index.v1.MMappedIndex;
-import com.metamx.druid.index.v1.MMappedIndexStorageAdapter;
 import com.metamx.druid.index.v1.TestIndex;
 import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
@@ -108,34 +106,27 @@ public class QueryRunnerTestHelper
   )
       throws IOException
   {
-    final Index testIndex = TestIndex.getTestIndex();
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    final MMappedIndex persistedRTIndex = TestIndex.getMMappedTestIndex();
-    final MMappedIndex mergedRT = TestIndex.mergedRealtimeIndex();
+    final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
+    final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
     return Arrays.asList(
         new Object[][]{
             {
-                makeQueryRunner(factory, new IndexStorageAdapter(testIndex))
+                makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex))
             },
             {
-                makeQueryRunner(factory, new MMappedIndexStorageAdapter(MMappedIndex.fromIndex(testIndex)))
+                makeQueryRunner(factory, new QueryableIndexSegment(null, mMappedTestIndex))
             },
             {
-                makeQueryRunner(factory, new IncrementalIndexStorageAdapter(rtIndex))
-            },
-            {
-                makeQueryRunner(factory, new MMappedIndexStorageAdapter(persistedRTIndex))
-            },
-            {
-                makeQueryRunner(factory, new MMappedIndexStorageAdapter(mergedRT))
+                makeQueryRunner(factory, new QueryableIndexSegment(null, mergedRealtimeIndex))
             }
         }
     );
   }
 
-  private static <T> QueryRunner<T> makeQueryRunner(
+  public static <T> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
-      StorageAdapter adapter
+      Segment adapter
   )
   {
     return new FinalizeResultsQueryRunner<T>(

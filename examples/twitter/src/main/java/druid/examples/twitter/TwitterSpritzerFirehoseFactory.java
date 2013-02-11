@@ -1,25 +1,34 @@
 package druid.examples.twitter;
 
+import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonTypeName;
 import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.ObjectMapper;
-import twitter4j.*;
+import org.codehaus.jackson.annotate.JsonTypeName;
+import twitter4j.ConnectionLifeCycleListener;
+import twitter4j.HashtagEntity;
+import twitter4j.Status;
+import twitter4j.StatusDeletionNotice;
+import twitter4j.StatusListener;
+import twitter4j.TwitterStream;
+import twitter4j.TwitterStreamFactory;
+import twitter4j.User;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static java.lang.Thread.*;
+import static java.lang.Thread.sleep;
 
 
 /**
@@ -117,12 +126,8 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
     final long startMsec = System.currentTimeMillis();
 
     dimensions.add("htags");
-    dimensions.add("retweet_count");
-    dimensions.add("follower_count");
-    dimensions.add("friends_count");
     dimensions.add("lang");
     dimensions.add("utc_offset");
-    dimensions.add("statuses_count");
 
     //
     //   set up Twitter Spritzer
@@ -245,39 +250,26 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
         } catch (InterruptedException e) {
           throw new RuntimeException("InterruptedException", e);
         }
-        //log.info("twitterStatus: "+ status.getCreatedAt() + " @" + status.getUser().getScreenName() + " - " + status.getText());//DEBUG
-
-        // theMap.put("twid", status.getUser().getScreenName());
-        // theMap.put("msg", status.getText());  // ToDo:  verify encoding
 
         HashtagEntity[] hts = status.getHashtagEntities();
         if (hts != null && hts.length > 0) {
-          // ToDo: get all the hash tags instead of just the first one
-          theMap.put("htags", hts[0].getText());
-          log.info("htags=" + hts[0].getText()); // about 16%
-        } else {
-          theMap.put("htags", null);
+          List<String> hashTags = Lists.newArrayListWithExpectedSize(hts.length);
+          for (HashtagEntity ht : hts) {
+            hashTags.add(ht.getText());
+          }
+
+          theMap.put("htags", Arrays.asList(hashTags.get(0)));
         }
 
         long retweetCount = status.getRetweetCount();
         theMap.put("retweet_count", retweetCount);
-        User u = status.getUser();
-        if (u != null) {
-          theMap.put("follower_count", u.getFollowersCount());
-          theMap.put("friends_count", u.getFriendsCount());
-          theMap.put("lang", u.getLang());
-          theMap.put("utc_offset", u.getUtcOffset());  // resolution in seconds, -1 if not available?
-          theMap.put("statuses_count", u.getStatusesCount());
-        } else {
-          log.error("status.getUser() is null");
-        }
-        if (rowCount % 10 == 0) {
-          log.info("" + status.getCreatedAt() +
-              " follower_count=" + u.getFollowersCount() +
-              " friends_count=" + u.getFriendsCount() +
-              " statuses_count=" + u.getStatusesCount() +
-              " retweet_count=" + retweetCount
-          );
+        User user = status.getUser();
+        if (user != null) {
+          theMap.put("follower_count", user.getFollowersCount());
+          theMap.put("friends_count", user.getFriendsCount());
+          theMap.put("lang", user.getLang());
+          theMap.put("utc_offset", user.getUtcOffset());  // resolution in seconds, -1 if not available?
+          theMap.put("statuses_count", user.getStatusesCount());
         }
 
         return new MapBasedInputRow(status.getCreatedAt().getTime(), dimensions, theMap);

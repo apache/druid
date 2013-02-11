@@ -26,9 +26,9 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.GroupByQueryEngine;
 import com.metamx.druid.Query;
 import com.metamx.druid.StorageAdapter;
+import com.metamx.druid.index.Segment;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.ConcatQueryRunner;
 import com.metamx.druid.query.QueryRunner;
@@ -62,22 +62,9 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   }
 
   @Override
-  public QueryRunner<Row> createRunner(final StorageAdapter adapter)
+  public QueryRunner<Row> createRunner(final Segment segment)
   {
-    return new QueryRunner<Row>()
-    {
-      @Override
-      public Sequence<Row> run(Query<Row> input)
-      {
-        if (! (input instanceof GroupByQuery)) {
-          throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
-        }
-
-        GroupByQuery query = (GroupByQuery) input;
-
-        return engine.process(query, adapter);
-      }
-    };
+    return new GroupByQueryRunner(segment, engine);
   }
 
   @Override
@@ -131,5 +118,27 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   public QueryToolChest getToolchest()
   {
     return toolChest;
+  }
+
+  private static class GroupByQueryRunner implements QueryRunner<Row>
+  {
+    private final StorageAdapter adapter;
+    private final GroupByQueryEngine engine;
+
+    public GroupByQueryRunner(Segment segment, final GroupByQueryEngine engine)
+    {
+      this.adapter = segment.asStorageAdapter();
+      this.engine = engine;
+    }
+
+    @Override
+    public Sequence<Row> run(Query<Row> input)
+    {
+      if (! (input instanceof GroupByQuery)) {
+        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
+      }
+
+      return engine.process((GroupByQuery) input, adapter);
+    }
   }
 }

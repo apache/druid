@@ -28,7 +28,7 @@
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.1.25-SNAPSHOT</version>
+        <version>0.2.7-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -207,13 +207,6 @@
         <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-client</artifactId>
-            <version>${project.parent.version}</version>
-            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>

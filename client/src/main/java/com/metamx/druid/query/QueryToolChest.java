@@ -44,7 +44,7 @@ public interface QueryToolChest<ResultType, QueryType extends Query<ResultType>>
   public ServiceMetricEvent.Builder makeMetricBuilder(QueryType query);
   public Function<ResultType, ResultType> makeMetricManipulatorFn(QueryType query, MetricManipulationFn fn);
   public TypeReference<ResultType> getResultTypeReference();
-  public CacheStrategy<ResultType, QueryType> getCacheStrategy(QueryType query);
+  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query);
   public QueryRunner<ResultType> preMergeQueryDecoration(QueryRunner<ResultType> runner);
   public QueryRunner<ResultType> postMergeQueryDecoration(QueryRunner<ResultType> runner);
 }

@@ -524,7 +524,7 @@ public class IncrementalIndex implements Iterable<Row>
 
     public String get(String value)
     {
-      return poorMansInterning.get(value);
+      return value == null ? null : poorMansInterning.get(value);
     }
 
     public int getId(String value)

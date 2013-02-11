@@ -25,7 +25,6 @@ import com.metamx.common.guava.Comparators;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.db.DatabaseRuleManager;
-import com.metamx.druid.master.rules.RuleMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.joda.time.DateTime;
 
@@ -45,6 +44,7 @@ public class DruidMasterRuntimeParams
   private final Set<DruidDataSource> dataSources;
   private final Set<DataSegment> availableSegments;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
+  private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
   private final long millisToWaitBeforeDeleting;
   private final MasterStats stats;
@@ -61,6 +61,7 @@ public class DruidMasterRuntimeParams
       Set<DruidDataSource> dataSources,
       Set<DataSegment> availableSegments,
       Map<String, LoadQueuePeon> loadManagementPeons,
+      ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
       long millisToWaitBeforeDeleting,
       MasterStats stats,
@@ -77,6 +78,7 @@ public class DruidMasterRuntimeParams
     this.dataSources = dataSources;
     this.availableSegments = availableSegments;
     this.loadManagementPeons = loadManagementPeons;
+    this.replicationManager = replicationManager;
     this.emitter = emitter;
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
     this.stats = stats;
@@ -119,6 +121,11 @@ public class DruidMasterRuntimeParams
   public Map<String, LoadQueuePeon> getLoadManagementPeons()
   {
     return loadManagementPeons;
+  }
+
+  public ReplicationThrottler getReplicationManager()
+  {
+    return replicationManager;
   }
 
   public ServiceEmitter getEmitter()
@@ -181,6 +188,7 @@ public class DruidMasterRuntimeParams
         dataSources,
         availableSegments,
         loadManagementPeons,
+        replicationManager,
         emitter,
         millisToWaitBeforeDeleting,
         stats,
@@ -200,6 +208,7 @@ public class DruidMasterRuntimeParams
     private final Set<DruidDataSource> dataSources;
     private final Set<DataSegment> availableSegments;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
+    private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
     private long millisToWaitBeforeDeleting;
     private MasterStats stats;
@@ -217,6 +226,7 @@ public class DruidMasterRuntimeParams
       this.dataSources = Sets.newHashSet();
       this.availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
       this.loadManagementPeons = Maps.newHashMap();
+      this.replicationManager = null;
       this.emitter = null;
       this.millisToWaitBeforeDeleting = 0;
       this.stats = new MasterStats();
@@ -234,6 +244,7 @@ public class DruidMasterRuntimeParams
         Set<DruidDataSource> dataSources,
         Set<DataSegment> availableSegments,
         Map<String, LoadQueuePeon> loadManagementPeons,
+        ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
         long millisToWaitBeforeDeleting,
         MasterStats stats,
@@ -250,6 +261,7 @@ public class DruidMasterRuntimeParams
       this.dataSources = dataSources;
       this.availableSegments = availableSegments;
       this.loadManagementPeons = loadManagementPeons;
+      this.replicationManager = replicationManager;
       this.emitter = emitter;
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
       this.stats = stats;
@@ -269,6 +281,7 @@ public class DruidMasterRuntimeParams
           dataSources,
           availableSegments,
           loadManagementPeons,
+          replicationManager,
           emitter,
           millisToWaitBeforeDeleting,
           stats,
@@ -318,6 +331,12 @@ public class DruidMasterRuntimeParams
     public Builder withLoadManagementPeons(Map<String, LoadQueuePeon> loadManagementPeonsCollection)
     {
       loadManagementPeons.putAll(Collections.unmodifiableMap(loadManagementPeonsCollection));
+      return this;
+    }
+
+    public Builder withReplicationManager(ReplicationThrottler replicationManager)
+    {
+      this.replicationManager = replicationManager;
       return this;
     }
 

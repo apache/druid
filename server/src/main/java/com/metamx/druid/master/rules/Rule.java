@@ -25,6 +25,7 @@ import com.metamx.druid.master.DruidMasterRuntimeParams;
 import com.metamx.druid.master.MasterStats;
 import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.joda.time.DateTime;
 
 /**
  */
@@ -40,7 +41,7 @@ public interface Rule
 {
   public String getType();
 
-  public boolean appliesTo(DataSegment segment);
+  public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp);
 
   public MasterStats run(DruidMaster master, DruidMasterRuntimeParams params, DataSegment segment);
 }

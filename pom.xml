@@ -23,7 +23,7 @@
     <groupId>com.metamx</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.1.25-SNAPSHOT</version>
+    <version>0.2.7-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -68,7 +68,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>java-util</artifactId>
-                <version>0.16.0</version>
+                <version>0.19.1</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -84,7 +84,7 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.3</version>
+                <version>1.7</version>
             </dependency>
             <dependency>
                 <groupId>commons-httpclient</groupId>
@@ -363,14 +363,6 @@
             <id>pub-libs</id>
             <name>pub-libs-local</name>
             <url>https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local</url>
-        </repository>
-        <repository>
-            <id>repo.codahale.com</id>
-            <url>http://repo.codahale.com</url>
-        </repository>
-        <repository>
-            <id>nativelibs4java</id>
-            <url>http://nativelibs4java.sourceforge.net/maven</url>
         </repository>
         <repository>
             <id>thirdparty-uploads</id>

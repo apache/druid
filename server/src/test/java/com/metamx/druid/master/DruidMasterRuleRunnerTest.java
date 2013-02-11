@@ -28,6 +28,7 @@ import com.google.common.collect.Sets;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.db.DatabaseRuleManager;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.master.rules.IntervalDropRule;
 import com.metamx.druid.master.rules.IntervalLoadRule;
 import com.metamx.druid.master.rules.Rule;
@@ -78,13 +79,14 @@ public class DruidMasterRuleRunnerTest
               Lists.<String>newArrayList(),
               Lists.<String>newArrayList(),
               new NoneShardSpec(),
+              IndexIO.CURRENT_VERSION_ID,
               1
           )
       );
       start = start.plusHours(1);
     }
 
-    ruleRunner = new DruidMasterRuleRunner(master);
+    ruleRunner = new DruidMasterRuleRunner(master, 1, 24);
   }
 
   @After
@@ -854,5 +856,188 @@ public class DruidMasterRuleRunnerTest
 
     EasyMock.verify(mockPeon);
     EasyMock.verify(anotherMockPeon);
+  }
+
+  /**
+   * Nodes:
+   * hot - 2 replicants
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testReplicantThrottle() throws Exception
+  {
+    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
+    EasyMock.replay(mockPeon);
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"), 2, "hot")
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot",
+                            "hostHot",
+                            1000,
+                            "historical",
+                            "hot"
+                        ),
+                        mockPeon
+                    ),
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot2",
+                            "hostHot2",
+                            1000,
+                            "historical",
+                            "hot"
+                        ),
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
+    DruidMasterRuntimeParams params =
+        new DruidMasterRuntimeParams.Builder()
+            .withDruidCluster(druidCluster)
+            .withAvailableSegments(availableSegments)
+            .withDatabaseRuleManager(databaseRuleManager)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .build();
+
+    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
+    MasterStats stats = afterParams.getMasterStats();
+
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 48);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
+
+    DataSegment overFlowSegment = new DataSegment(
+        "test",
+        new Interval("2012-02-01/2012-02-02"),
+        new DateTime().toString(),
+        Maps.<String, Object>newHashMap(),
+        Lists.<String>newArrayList(),
+        Lists.<String>newArrayList(),
+        new NoneShardSpec(),
+        1,
+        0
+    );
+
+    afterParams = ruleRunner.run(
+        new DruidMasterRuntimeParams.Builder()
+            .withDruidCluster(druidCluster)
+            .withEmitter(emitter)
+            .withAvailableSegments(Arrays.asList(overFlowSegment))
+            .withDatabaseRuleManager(databaseRuleManager)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .build()
+    );
+    stats = afterParams.getMasterStats();
+
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 1);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
+
+    EasyMock.verify(mockPeon);
+  }
+
+  @Test
+  public void testDropReplicantThrottle() throws Exception
+  {
+    mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
+    EasyMock.replay(mockPeon);
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2013-01-02T00:00:00.000Z"), 1, "normal")
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DataSegment overFlowSegment = new DataSegment(
+        "test",
+        new Interval("2012-02-01/2012-02-02"),
+        new DateTime().toString(),
+        Maps.<String, Object>newHashMap(),
+        Lists.<String>newArrayList(),
+        Lists.<String>newArrayList(),
+        new NoneShardSpec(),
+        1,
+        0
+    );
+    List<DataSegment> longerAvailableSegments = Lists.newArrayList(availableSegments);
+    longerAvailableSegments.add(overFlowSegment);
+
+    DruidServer server1 = new DruidServer(
+        "serverNorm1",
+        "hostNorm1",
+        1000,
+        "historical",
+        "normal"
+    );
+    for (DataSegment availableSegment : longerAvailableSegments) {
+      server1.addDataSegment(availableSegment.getIdentifier(), availableSegment);
+    }
+    DruidServer server2 = new DruidServer(
+        "serverNorm2",
+        "hostNorm2",
+        1000,
+        "historical",
+        "normal"
+    );
+    for (DataSegment availableSegment : longerAvailableSegments) {
+      server2.addDataSegment(availableSegment.getIdentifier(), availableSegment);
+    }
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "normal",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        server1,
+                        mockPeon
+                    ),
+                    new ServerHolder(
+                        server2,
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+
+    DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
+        .withDruidCluster(druidCluster)
+        .withMillisToWaitBeforeDeleting(0L)
+        .withAvailableSegments(longerAvailableSegments)
+        .withDatabaseRuleManager(databaseRuleManager)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
+        .build();
+
+    DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
+    MasterStats stats = afterParams.getMasterStats();
+
+    Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 24);
+    EasyMock.verify(mockPeon);
   }
 }

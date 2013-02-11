@@ -35,10 +35,13 @@ import org.codehaus.jackson.map.JsonSerializer;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 import org.codehaus.jackson.map.SerializerProvider;
+import org.codehaus.jackson.map.Serializers;
 import org.codehaus.jackson.map.module.SimpleModule;
+import org.codehaus.jackson.map.ser.std.ToStringSerializer;
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
+import java.nio.ByteOrder;
 import java.util.TimeZone;
 
 /**
@@ -128,6 +131,23 @@ public class DefaultObjectMapper extends ObjectMapper
                 }
             );
             jgen.writeEndArray();
+          }
+        }
+    );
+    serializerModule.addSerializer(ByteOrder.class, ToStringSerializer.instance);
+    serializerModule.addDeserializer(
+        ByteOrder.class,
+        new JsonDeserializer<ByteOrder>()
+        {
+          @Override
+          public ByteOrder deserialize(
+              JsonParser jp, DeserializationContext ctxt
+          ) throws IOException, JsonProcessingException
+          {
+            if (ByteOrder.BIG_ENDIAN.toString().equals(jp.getText())) {
+              return ByteOrder.BIG_ENDIAN;
+            }
+            return ByteOrder.LITTLE_ENDIAN;
           }
         }
     );

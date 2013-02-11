@@ -30,6 +30,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IncrementalIndex;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.input.InputRow;
 import org.joda.time.Interval;
 
@@ -134,6 +135,7 @@ public class Sink implements Iterable<FireHydrant>
           }
         }),
         schema.getShardSpec(),
+        null,
         0
     );
   }

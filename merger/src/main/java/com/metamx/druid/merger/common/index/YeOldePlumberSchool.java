@@ -21,22 +21,23 @@ package com.metamx.druid.merger.common.index;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.Query;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.index.v1.MMappedIndex;
+import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.PlumberSchool;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.realtime.SegmentPusher;
 import com.metamx.druid.realtime.Sink;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -82,9 +83,7 @@ public class YeOldePlumberSchool implements PlumberSchool
     final Sink theSink = new Sink(interval, schema);
 
     // Temporary directory to hold spilled segments.
-    final File persistDir = new File(
-        tmpSegmentDir, theSink.getSegment().withVersion(version).getIdentifier()
-    );
+    final File persistDir = new File(tmpSegmentDir, theSink.getSegment().withVersion(version).getIdentifier());
 
     // Set of spilled segments. Will be merged at the end.
     final Set<File> spilled = Sets.newHashSet();
@@ -129,16 +128,23 @@ public class YeOldePlumberSchool implements PlumberSchool
           } else if(spilled.size() == 1) {
             fileToUpload = Iterables.getOnlyElement(spilled);
           } else {
-            List<MMappedIndex> indexes = Lists.newArrayList();
+            List<QueryableIndex> indexes = Lists.newArrayList();
             for (final File oneSpill : spilled) {
-              indexes.add(IndexIO.mapDir(oneSpill));
+              indexes.add(IndexIO.loadIndex(oneSpill));
             }
 
             fileToUpload = new File(tmpSegmentDir, "merged");
-            IndexMerger.mergeMMapped(indexes, schema.getAggregators(), fileToUpload);
+            IndexMerger.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload);
           }
 
-          final DataSegment segmentToUpload = theSink.getSegment().withVersion(version);
+          // Map merged segment so we can extract dimensions
+          final QueryableIndex mappedSegment = IndexIO.loadIndex(fileToUpload);
+
+          final DataSegment segmentToUpload = theSink.getSegment()
+                                                     .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
+                                                     .withVersion(version)
+                                                     .withBinaryVersion(IndexIO.getVersionFromDir(fileToUpload));
+
           segmentPusher.push(fileToUpload, segmentToUpload);
 
           log.info(
@@ -168,7 +174,7 @@ public class YeOldePlumberSchool implements PlumberSchool
                 dirToPersist
             );
 
-            indexToPersist.swapAdapter(null);
+            indexToPersist.swapSegment(null);
 
             metrics.incrementRowOutputCount(rowsToPersist);
 

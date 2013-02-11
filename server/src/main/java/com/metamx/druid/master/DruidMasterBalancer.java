@@ -19,7 +19,6 @@
 
 package com.metamx.druid.master;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.guava.Comparators;
@@ -30,10 +29,8 @@ import org.joda.time.DateTime;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -68,13 +65,10 @@ public class DruidMasterBalancer implements DruidMasterHelper
     for (BalancerSegmentHolder holder : currentlyMovingSegments.get(tier).values()) {
       holder.reduceLifetime();
       if (holder.getLifetime() <= 0) {
-        log.makeAlert(
-            "[%s]: Balancer move segments queue has a segment stuck",
-            tier,
-            ImmutableMap.<String, Object>builder()
-                        .put("segment", holder.getSegment().getIdentifier())
-                        .build()
-        ).emit();
+        log.makeAlert("[%s]: Balancer move segments queue has a segment stuck", tier)
+            .addData("segment", holder.getSegment().getIdentifier())
+            .addData("server", holder.getFromServer())
+            .emit();
       }
     }
   }
@@ -97,11 +91,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
       if (!currentlyMovingSegments.get(tier).isEmpty()) {
         reduceLifetimes(tier);
-        log.info(
-            "[%s]: Still waiting on %,d segments to be moved",
-            tier,
-            currentlyMovingSegments.size()
-        );
+        log.info("[%s]: Still waiting on %,d segments to be moved", tier, currentlyMovingSegments.size());
         continue;
       }
 
@@ -173,12 +163,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
         (toServer.getSegment(segmentName) == null) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
-      log.info(
-          "Moving [%s] from [%s] to [%s]",
-          segmentName,
-          fromServerName,
-          toServerName
-      );
+      log.info("Moving [%s] from [%s] to [%s]", segmentName, fromServerName, toServerName);
       try {
         master.moveSegment(
             fromServerName,

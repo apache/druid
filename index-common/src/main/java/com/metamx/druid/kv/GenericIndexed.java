@@ -150,8 +150,11 @@ public class GenericIndexed<T> implements Indexed<T>
   @Override
   public T get(int index)
   {
+    if (index < 0) {
+      throw new IAE("Index[%s] < 0", index);
+    }
     if (index >= size) {
-      throw new IllegalArgumentException(String.format("Index[%s] >= size[%s]", index, size));
+      throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
     }
 
     ByteBuffer myBuffer = theBuffer.asReadOnlyBuffer();
@@ -204,6 +207,11 @@ public class GenericIndexed<T> implements Indexed<T>
     return -(minIndex + 1);
   }
 
+  public int getSerializedSize()
+  {
+    return theBuffer.remaining() + 2 + 4 + 4;
+  }
+
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{version, allowReverseLookup ? (byte) 0x1 : (byte) 0x0}));
@@ -212,8 +220,7 @@ public class GenericIndexed<T> implements Indexed<T>
     channel.write(theBuffer.asReadOnlyBuffer());
   }
 
-  public static <T> GenericIndexed<T> readFromByteBuffer(ByteBuffer buffer, ObjectStrategy<T> strategy)
-      throws IOException
+  public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy)
   {
     byte versionFromBuffer = buffer.get();
 

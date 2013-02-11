@@ -39,6 +39,7 @@ import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
 import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
@@ -52,7 +53,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
-import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -88,6 +89,7 @@ public class RemoteTaskRunner implements TaskRunner
   private final ScheduledExecutorService scheduledExec;
   private final RetryPolicyFactory retryPolicyFactory;
   private final ScalingStrategy strategy;
+  private final WorkerSetupManager workerSetupManager;
 
   // all workers that exist in ZK
   private final Map<String, WorkerWrapper> zkWorkers = new ConcurrentHashMap<String, WorkerWrapper>();
@@ -109,7 +111,8 @@ public class RemoteTaskRunner implements TaskRunner
       PathChildrenCache workerPathCache,
       ScheduledExecutorService scheduledExec,
       RetryPolicyFactory retryPolicyFactory,
-      ScalingStrategy strategy
+      ScalingStrategy strategy,
+      WorkerSetupManager workerSetupManager
   )
   {
     this.jsonMapper = jsonMapper;
@@ -119,6 +122,7 @@ public class RemoteTaskRunner implements TaskRunner
     this.scheduledExec = scheduledExec;
     this.retryPolicyFactory = retryPolicyFactory;
     this.strategy = strategy;
+    this.workerSetupManager = workerSetupManager;
   }
 
   @LifecycleStart
@@ -144,7 +148,7 @@ public class RemoteTaskRunner implements TaskRunner
                     Worker.class
                 );
                 log.info("Worker[%s] removed!", worker.getHost());
-                removeWorker(worker.getHost());
+                removeWorker(worker);
               }
             }
           }
@@ -169,26 +173,23 @@ public class RemoteTaskRunner implements TaskRunner
             public void run()
             {
               if (currentlyTerminating.isEmpty()) {
-                if (zkWorkers.size() <= config.getMinNumWorkers()) {
+                if (zkWorkers.size() <= workerSetupManager.getWorkerSetupData().getMinNumWorkers()) {
                   return;
                 }
 
-                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList(
-                    FunctionalIterable
-                        .create(zkWorkers.values())
-                        .filter(
-                            new Predicate<WorkerWrapper>()
-                            {
-                              @Override
-                              public boolean apply(@Nullable WorkerWrapper input)
-                              {
-                                return input.getRunningTasks().isEmpty()
-                                       && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
-                                          > config.getMaxWorkerIdleTimeMillisBeforeDeletion();
-                              }
-                            }
-                        )
-                );
+                int workerCount = 0;
+                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList();
+                for (WorkerWrapper workerWrapper : zkWorkers.values()) {
+                  workerCount++;
+
+                  if (workerCount > workerSetupManager.getWorkerSetupData().getMinNumWorkers() &&
+                      workerWrapper.getRunningTasks().isEmpty() &&
+                      System.currentTimeMillis() - workerWrapper.getLastCompletedTaskTime().getMillis()
+                      > config.getMaxWorkerIdleTimeMillisBeforeDeletion()
+                      ) {
+                    thoseLazyWorkers.add(workerWrapper);
+                  }
+                }
 
                 AutoScalingData terminated = strategy.terminate(
                     Lists.transform(
@@ -196,9 +197,9 @@ public class RemoteTaskRunner implements TaskRunner
                         new Function<WorkerWrapper, String>()
                         {
                           @Override
-                          public String apply(@Nullable WorkerWrapper input)
+                          public String apply(WorkerWrapper input)
                           {
-                            return input.getWorker().getHost();
+                            return input.getWorker().getIp();
                           }
                         }
                     )
@@ -218,7 +219,7 @@ public class RemoteTaskRunner implements TaskRunner
                 }
 
                 log.info(
-                    "[%s] still terminating. Wait for all nodes to terminate before trying again.",
+                    "%s still terminating. Wait for all nodes to terminate before trying again.",
                     currentlyTerminating
                 );
               }
@@ -368,7 +369,7 @@ public class RemoteTaskRunner implements TaskRunner
   private void addWorker(final Worker worker)
   {
     try {
-      currentlyProvisioning.remove(worker.getHost());
+      currentlyProvisioning.removeAll(strategy.ipLookup(Arrays.<String>asList(worker.getIp())));
 
       final String workerStatusPath = JOINER.join(config.getStatusPath(), worker.getHost());
       final PathChildrenCache statusCache = new PathChildrenCache(cf, workerStatusPath, true);
@@ -388,8 +389,7 @@ public class RemoteTaskRunner implements TaskRunner
               synchronized (statusLock) {
                 try {
                   if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED) ||
-                      event.getType().equals(PathChildrenCacheEvent.Type.CHILD_UPDATED))
-                  {
+                      event.getType().equals(PathChildrenCacheEvent.Type.CHILD_UPDATED)) {
                     final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
                     final TaskStatus taskStatus;
 
@@ -399,7 +399,7 @@ public class RemoteTaskRunner implements TaskRunner
                           event.getData().getData(), TaskStatus.class
                       );
 
-                      if(!taskStatus.getId().equals(taskId)) {
+                      if (!taskStatus.getId().equals(taskId)) {
                         // Sanity check
                         throw new ISE(
                             "Worker[%s] status id does not match payload id: %s != %s",
@@ -408,7 +408,8 @@ public class RemoteTaskRunner implements TaskRunner
                             taskStatus.getId()
                         );
                       }
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                       log.warn(e, "Worker[%s] wrote bogus status for task: %s", worker.getHost(), taskId);
                       retryTask(new CleanupPaths(worker.getHost(), taskId), tasks.get(taskId));
                       throw Throwables.propagate(e);
@@ -446,7 +447,8 @@ public class RemoteTaskRunner implements TaskRunner
                       }
                     }
                   }
-                } catch(Exception e) {
+                }
+                catch (Exception e) {
                   log.makeAlert(e, "Failed to handle new worker status")
                      .addData("worker", worker.getHost())
                      .addData("znode", event.getData().getPath())
@@ -478,22 +480,22 @@ public class RemoteTaskRunner implements TaskRunner
    * When a ephemeral worker node disappears from ZK, we have to make sure there are no tasks still assigned
    * to the worker. If tasks remain, they are retried.
    *
-   * @param workerId - id of the removed worker
+   * @param worker - the removed worker
    */
-  private void removeWorker(final String workerId)
+  private void removeWorker(final Worker worker)
   {
-    currentlyTerminating.remove(workerId);
+    currentlyTerminating.remove(worker.getHost());
 
-    WorkerWrapper workerWrapper = zkWorkers.get(workerId);
+    WorkerWrapper workerWrapper = zkWorkers.get(worker.getHost());
     if (workerWrapper != null) {
       try {
         Set<String> tasksToRetry = Sets.newHashSet(workerWrapper.getRunningTasks());
-        tasksToRetry.addAll(cf.getChildren().forPath(JOINER.join(config.getTaskPath(), workerId)));
+        tasksToRetry.addAll(cf.getChildren().forPath(JOINER.join(config.getTaskPath(), worker.getHost())));
 
         for (String taskId : tasksToRetry) {
           TaskWrapper taskWrapper = tasks.get(taskId);
           if (taskWrapper != null) {
-            retryTask(new CleanupPaths(workerId, taskId), tasks.get(taskId));
+            retryTask(new CleanupPaths(worker.getHost(), taskId), tasks.get(taskId));
           }
         }
 
@@ -503,7 +505,7 @@ public class RemoteTaskRunner implements TaskRunner
         log.error(e, "Failed to cleanly remove worker[%s]");
       }
     }
-    zkWorkers.remove(workerId);
+    zkWorkers.remove(worker.getHost());
   }
 
   private WorkerWrapper findWorkerForTask()
@@ -526,7 +528,9 @@ public class RemoteTaskRunner implements TaskRunner
                 public boolean apply(WorkerWrapper input)
                 {
                   return (!input.isAtCapacity() &&
-                          input.getWorker().getVersion().compareTo(config.getMinWorkerVersion()) >= 0);
+                          input.getWorker()
+                               .getVersion()
+                               .compareTo(workerSetupManager.getWorkerSetupData().getMinVersion()) >= 0);
                 }
               }
           )
@@ -551,7 +555,7 @@ public class RemoteTaskRunner implements TaskRunner
           }
 
           log.info(
-              "[%s] still provisioning. Wait for all provisioned nodes to complete before requesting new worker.",
+              "%s still provisioning. Wait for all provisioned nodes to complete before requesting new worker.",
               currentlyProvisioning
           );
         }

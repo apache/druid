@@ -22,16 +22,19 @@ package com.metamx.druid.query;
 import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
 import com.metamx.druid.Query;
+import org.codehaus.jackson.type.TypeReference;
 
 /**
 */
-public interface CacheStrategy<T, QueryType extends Query<T>>
+public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
   public byte[] computeCacheKey(QueryType query);
 
-  public Function<T, Object> prepareForCache();
+  public TypeReference<CacheType> getCacheObjectClazz();
 
-  public Function<Object, T> pullFromCache();
+  public Function<T, CacheType> prepareForCache();
+
+  public Function<CacheType, T> pullFromCache();
 
   public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences);
 }

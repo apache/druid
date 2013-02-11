@@ -20,35 +20,96 @@
 package com.metamx.druid.index.v1;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+import com.google.common.io.Files;
+import com.google.common.primitives.Ints;
+import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.io.smoosh.FileSmoosher;
 import com.metamx.common.io.smoosh.Smoosh;
 import com.metamx.common.io.smoosh.SmooshedFileMapper;
+import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.index.QueryableIndex;
+import com.metamx.druid.index.SimpleQueryableIndex;
+import com.metamx.druid.index.column.Column;
+import com.metamx.druid.index.column.ColumnBuilder;
+import com.metamx.druid.index.column.ColumnDescriptor;
+import com.metamx.druid.index.column.ValueType;
+import com.metamx.druid.index.serde.BitmapIndexColumnPartSupplier;
+import com.metamx.druid.index.serde.ComplexColumnPartSerde;
+import com.metamx.druid.index.serde.ComplexColumnPartSupplier;
+import com.metamx.druid.index.serde.DictionaryEncodedColumnPartSerde;
+import com.metamx.druid.index.serde.DictionaryEncodedColumnSupplier;
+import com.metamx.druid.index.serde.FloatGenericColumnPartSerde;
+import com.metamx.druid.index.serde.FloatGenericColumnSupplier;
+import com.metamx.druid.index.serde.LongGenericColumnPartSerde;
+import com.metamx.druid.index.serde.LongGenericColumnSupplier;
+import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.kv.ArrayIndexed;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.IndexedIterable;
 import com.metamx.druid.kv.VSizeIndexed;
+import com.metamx.druid.kv.VSizeIndexedInts;
 import com.metamx.druid.utils.SerializerUtils;
+import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Interval;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.AbstractList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * This should be changed to use DI instead of a static reference...
  */
 public class IndexIO
 {
+  public static final byte V8_VERSION = 0x8;
+  public static final byte V9_VERSION = 0x9;
+
+  private static final Map<Integer, IndexLoader> indexLoaders =
+      ImmutableMap.<Integer, IndexLoader>builder()
+                  .put(0, new LegacyIndexLoader())
+                  .put(1, new LegacyIndexLoader())
+                  .put(2, new LegacyIndexLoader())
+                  .put(3, new LegacyIndexLoader())
+                  .put(4, new LegacyIndexLoader())
+                  .put(5, new LegacyIndexLoader())
+                  .put(6, new LegacyIndexLoader())
+                  .put(7, new LegacyIndexLoader())
+                  .put(8, new LegacyIndexLoader())
+                  .put(9, new V9IndexLoader())
+                  .build();
+
+  private static final Logger log = new Logger(IndexIO.class);
+  private static final SerializerUtils serializerUtils = new SerializerUtils();
+  public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
+
+  // This should really be provided by DI, should be changed once we switch around to using a DI framework
+  private static final ObjectMapper mapper = new DefaultObjectMapper();
+
+
   private static volatile IndexIOHandler handler = null;
-  public static final byte CURRENT_VERSION_ID = 0x8;
+  public static final int CURRENT_VERSION_ID = V9_VERSION;
 
   public static Index readIndex(File inDir) throws IOException
   {
@@ -62,10 +123,25 @@ public class IndexIO
     return handler.canBeMapped(inDir);
   }
 
+  @Deprecated
   public static MMappedIndex mapDir(final File inDir) throws IOException
   {
     init();
     return handler.mapDir(inDir);
+  }
+
+  public static QueryableIndex loadIndex(File inDir) throws IOException
+  {
+    init();
+    final int version = getVersionFromDir(inDir);
+
+    final IndexLoader loader = indexLoaders.get(version);
+
+    if (loader != null) {
+      return loader.load(inDir);
+    } else {
+      throw new ISE("Unknown index version[%s]", version);
+    }
   }
 
   public static void storeLatest(Index index, File file) throws IOException
@@ -82,8 +158,7 @@ public class IndexIO
   {
     if (IndexIO.handler == null) {
       IndexIO.handler = handler;
-    }
-    else {
+    } else {
       throw new ISE("Already have a handler[%s], cannot register another[%s]", IndexIO.handler, handler);
     }
   }
@@ -93,6 +168,26 @@ public class IndexIO
     if (handler == null) {
       handler = new DefaultIndexIOHandler();
     }
+  }
+
+  public static int getVersionFromDir(File inDir) throws IOException
+  {
+    File versionFile = new File(inDir, "version.bin");
+    if (versionFile.exists()) {
+      return Ints.fromByteArray(Files.toByteArray(versionFile));
+    }
+
+    final File indexFile = new File(inDir, "index.drd");
+    InputStream in = null;
+    int version;
+    try {
+      in = new FileInputStream(indexFile);
+      version = in.read();
+    }
+    finally {
+      Closeables.closeQuietly(in);
+    }
+    return version;
   }
 
   public static void checkFileSize(File indexFile) throws IOException
@@ -128,7 +223,6 @@ public class IndexIO
      * This only exists for some legacy compatibility reasons, Metamarkets is working on getting rid of it in
      * future versions.  Normal persisting of indexes is done via IndexMerger.
      *
-     *
      * @param file
      */
     public void storeLatest(Index index, File file) throws IOException;
@@ -137,9 +231,6 @@ public class IndexIO
   static class DefaultIndexIOHandler implements IndexIOHandler
   {
     private static final Logger log = new Logger(DefaultIndexIOHandler.class);
-    private static final SerializerUtils serializerUtils = new SerializerUtils();
-    private static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
-
     @Override
     public Index readIndex(File inDir)
     {
@@ -152,8 +243,6 @@ public class IndexIO
       return true;
     }
 
-    public static final byte VERSION_ID = 0x8;
-
     @Override
     public MMappedIndex mapDir(File inDir) throws IOException
     {
@@ -164,7 +253,7 @@ public class IndexIO
       try {
         indexIn = new FileInputStream(new File(inDir, "index.drd"));
         byte theVersion = (byte) indexIn.read();
-        if (theVersion != VERSION_ID) {
+        if (theVersion != V8_VERSION) {
           throw new IllegalArgumentException(String.format("Unknown version[%s]", theVersion));
         }
       }
@@ -176,10 +265,10 @@ public class IndexIO
       ByteBuffer indexBuffer = smooshedFiles.mapFile("index.drd");
 
       indexBuffer.get(); // Skip the version byte
-      final GenericIndexed<String> availableDimensions = GenericIndexed.readFromByteBuffer(
+      final GenericIndexed<String> availableDimensions = GenericIndexed.read(
           indexBuffer, GenericIndexed.stringStrategy
       );
-      final GenericIndexed<String> availableMetrics = GenericIndexed.readFromByteBuffer(
+      final GenericIndexed<String> availableMetrics = GenericIndexed.read(
           indexBuffer, GenericIndexed.stringStrategy
       );
       final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
@@ -213,7 +302,7 @@ public class IndexIO
             fileDimensionName
         );
 
-        dimValueLookups.put(dimension, GenericIndexed.readFromByteBuffer(dimBuffer, GenericIndexed.stringStrategy));
+        dimValueLookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.stringStrategy));
         dimColumns.put(dimension, VSizeIndexed.readFromByteBuffer(dimBuffer));
       }
 
@@ -221,7 +310,7 @@ public class IndexIO
       for (int i = 0; i < availableDimensions.size(); ++i) {
         invertedIndexed.put(
             serializerUtils.readString(invertedBuffer),
-            GenericIndexed.readFromByteBuffer(invertedBuffer, ConciseCompressedIndexedInts.objectStrategy)
+            GenericIndexed.read(invertedBuffer, ConciseCompressedIndexedInts.objectStrategy)
         );
       }
 
@@ -245,6 +334,386 @@ public class IndexIO
     public void storeLatest(Index index, File file)
     {
       throw new UnsupportedOperationException("Shouldn't ever happen in a cluster that is not owned by MMX.");
+    }
+
+    public static void convertV8toV9(File v8Dir, File v9Dir) throws IOException
+    {
+      log.info("Converting v8[%s] to v9[%s]", v8Dir, v9Dir);
+
+      InputStream indexIn = null;
+      try {
+        indexIn = new FileInputStream(new File(v8Dir, "index.drd"));
+        byte theVersion = (byte) indexIn.read();
+        if (theVersion != V8_VERSION) {
+          throw new IAE("Unknown version[%s]", theVersion);
+        }
+      }
+      finally {
+        Closeables.close(indexIn, false);
+      }
+
+      SmooshedFileMapper v8SmooshedFiles = Smoosh.map(v8Dir);
+
+      v9Dir.mkdirs();
+      final FileSmoosher v9Smoosher = new FileSmoosher(v9Dir);
+
+      ByteStreams.write(Ints.toByteArray(9), Files.newOutputStreamSupplier(new File(v9Dir, "version.bin")));
+      Map<String, GenericIndexed<ImmutableConciseSet>> bitmapIndexes = Maps.newHashMap();
+
+      final ByteBuffer invertedBuffer = v8SmooshedFiles.mapFile("inverted.drd");
+      while (invertedBuffer.hasRemaining()) {
+        bitmapIndexes.put(
+            serializerUtils.readString(invertedBuffer),
+            GenericIndexed.read(invertedBuffer, ConciseCompressedIndexedInts.objectStrategy)
+        );
+      }
+
+      LinkedHashSet<String> skippedFiles = Sets.newLinkedHashSet();
+      for (String filename : v8SmooshedFiles.getInternalFilenames()) {
+        log.info("Processing file[%s]", filename);
+        if (filename.startsWith("dim_")) {
+          final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
+          builder.setValueType(ValueType.STRING);
+
+          final List<ByteBuffer> outParts = Lists.newArrayList();
+
+          ByteBuffer dimBuffer = v8SmooshedFiles.mapFile(filename);
+          String dimension = serializerUtils.readString(dimBuffer);
+          if (!filename.equals(String.format("dim_%s.drd", dimension))) {
+            throw new ISE("loaded dimension[%s] from file[%s]", dimension, filename);
+          }
+
+          ByteArrayOutputStream nameBAOS = new ByteArrayOutputStream();
+          serializerUtils.writeString(nameBAOS, dimension);
+          outParts.add(ByteBuffer.wrap(nameBAOS.toByteArray()));
+
+          GenericIndexed<String> dictionary = GenericIndexed.read(
+              dimBuffer, GenericIndexed.stringStrategy
+          );
+
+          VSizeIndexedInts singleValCol = null;
+          VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
+          GenericIndexed<ImmutableConciseSet> bitmaps = bitmapIndexes.get(dimension);
+
+          boolean onlyOneValue = true;
+          ConciseSet nullsSet = null;
+          for (int i = 0; i < multiValCol.size(); ++i) {
+            VSizeIndexedInts rowValue = multiValCol.get(i);
+            if (!onlyOneValue) {
+              break;
+            }
+            if (rowValue.size() > 1) {
+              onlyOneValue = false;
+            }
+            if (rowValue.size() == 0) {
+              if (nullsSet == null) {
+                nullsSet = new ConciseSet();
+              }
+              nullsSet.add(i);
+            }
+          }
+
+          if (onlyOneValue) {
+            log.info("Dimension[%s] is single value, converting...", dimension);
+            final boolean bumpedDictionary;
+            if (nullsSet != null) {
+              log.info("Dimension[%s] has null rows.", dimension);
+              final ImmutableConciseSet theNullSet = ImmutableConciseSet.newImmutableFromMutable(nullsSet);
+
+              if (dictionary.get(0) != null) {
+                log.info("Dimension[%s] has no null value in the dictionary, expanding...", dimension);
+                bumpedDictionary = true;
+                final List<String> nullList = Lists.newArrayList();
+                nullList.add(null);
+
+                dictionary = GenericIndexed.fromIterable(
+                    Iterables.concat(nullList, dictionary),
+                    GenericIndexed.stringStrategy
+                );
+
+                bitmaps = GenericIndexed.fromIterable(
+                    Iterables.concat(Arrays.asList(theNullSet), bitmaps),
+                    ConciseCompressedIndexedInts.objectStrategy
+                );
+              }
+              else {
+                bumpedDictionary = false;
+                bitmaps = GenericIndexed.fromIterable(
+                    Iterables.concat(
+                        Arrays.asList(ImmutableConciseSet.union(theNullSet, bitmaps.get(0))),
+                        Iterables.skip(bitmaps, 1)
+                    ),
+                    ConciseCompressedIndexedInts.objectStrategy
+                );
+              }
+            }
+            else {
+              bumpedDictionary = false;
+            }
+
+            final VSizeIndexed finalMultiValCol = multiValCol;
+            singleValCol = VSizeIndexedInts.fromList(
+                new AbstractList<Integer>()
+                {
+                  @Override
+                  public Integer get(int index)
+                  {
+                    final VSizeIndexedInts ints = finalMultiValCol.get(index);
+                    return ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0);
+                  }
+
+                  @Override
+                  public int size()
+                  {
+                    return finalMultiValCol.size();
+                  }
+                },
+                dictionary.size()
+            );
+            multiValCol = null;
+          } else {
+            builder.setHasMultipleValues(true);
+          }
+
+          builder.addSerde(
+              new DictionaryEncodedColumnPartSerde(dictionary, singleValCol, multiValCol, bitmaps)
+          );
+
+          final ColumnDescriptor serdeficator = builder.build();
+
+          ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
+          byte[] specBytes = baos.toByteArray();
+
+          final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+              dimension, serdeficator.numBytes() + specBytes.length
+          );
+          channel.write(ByteBuffer.wrap(specBytes));
+          serdeficator.write(channel);
+          channel.close();
+        } else if (filename.startsWith("met_")) {
+          if (!filename.endsWith(String.format("%s.drd", BYTE_ORDER))) {
+            skippedFiles.add(filename);
+            continue;
+          }
+
+          MetricHolder holder = MetricHolder.fromByteBuffer(v8SmooshedFiles.mapFile(filename));
+          final String metric = holder.getName();
+
+          final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
+
+          switch (holder.getType()) {
+            case FLOAT:
+              builder.setValueType(ValueType.FLOAT);
+              builder.addSerde(new FloatGenericColumnPartSerde(holder.floatType, BYTE_ORDER));
+              break;
+            case COMPLEX:
+              if (!(holder.complexType instanceof GenericIndexed)) {
+                throw new ISE("Serialized complex types must be GenericIndexed objects.");
+              }
+              final GenericIndexed column = (GenericIndexed) holder.complexType;
+              final String complexType = holder.getTypeName();
+
+              builder.setValueType(ValueType.COMPLEX);
+              builder.addSerde(new ComplexColumnPartSerde(column, complexType));
+              break;
+            default:
+              throw new ISE("Unknown type[%s]", holder.getType());
+          }
+
+          final ColumnDescriptor serdeficator = builder.build();
+
+          ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
+          byte[] specBytes = baos.toByteArray();
+
+          final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+              metric, serdeficator.numBytes() + specBytes.length
+          );
+          channel.write(ByteBuffer.wrap(specBytes));
+          serdeficator.write(channel);
+          channel.close();
+        } else if (String.format("time_%s.drd", BYTE_ORDER).equals(filename)) {
+          CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
+              v8SmooshedFiles.mapFile(filename), BYTE_ORDER
+          );
+
+          final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
+          builder.setValueType(ValueType.LONG);
+          builder.addSerde(new LongGenericColumnPartSerde(timestamps, BYTE_ORDER));
+
+          final ColumnDescriptor serdeficator = builder.build();
+
+          ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
+          byte[] specBytes = baos.toByteArray();
+
+          final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+              "__time", serdeficator.numBytes() + specBytes.length
+          );
+          channel.write(ByteBuffer.wrap(specBytes));
+          serdeficator.write(channel);
+          channel.close();
+        } else if ("index.drd".equals(filename)) {
+          final ByteBuffer indexBuffer = v8SmooshedFiles.mapFile(filename);
+
+          indexBuffer.get(); // Skip the version byte
+          final GenericIndexed<String> dims = GenericIndexed.read(
+              indexBuffer, GenericIndexed.stringStrategy
+          );
+          final GenericIndexed<String> availableMetrics = GenericIndexed.read(
+              indexBuffer, GenericIndexed.stringStrategy
+          );
+          final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
+
+          Set<String> columns = Sets.newTreeSet();
+          columns.addAll(Lists.newArrayList(dims));
+          columns.addAll(Lists.newArrayList(availableMetrics));
+
+          GenericIndexed<String> cols = GenericIndexed.fromIterable(columns, GenericIndexed.stringStrategy);
+
+          final int numBytes = cols.getSerializedSize() + dims.getSerializedSize() + 16;
+          final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
+          cols.writeToChannel(writer);
+          dims.writeToChannel(writer);
+          serializerUtils.writeLong(writer, dataInterval.getStartMillis());
+          serializerUtils.writeLong(writer, dataInterval.getEndMillis());
+          writer.close();
+        } else {
+          skippedFiles.add(filename);
+        }
+      }
+      log.info("Skipped files[%s]", skippedFiles);
+
+      v9Smoosher.close();
+    }
+  }
+
+  static interface IndexLoader
+  {
+    public QueryableIndex load(File inDir) throws IOException;
+  }
+
+  static class LegacyIndexLoader implements IndexLoader
+  {
+    @Override
+    public QueryableIndex load(File inDir) throws IOException
+    {
+      MMappedIndex index = IndexIO.mapDir(inDir);
+
+      Map<String, Column> columns = Maps.newHashMap();
+
+      for (String dimension : index.getAvailableDimensions()) {
+        columns.put(
+            dimension.toLowerCase(),
+            new ColumnBuilder()
+                .setType(ValueType.STRING)
+                .setHasMultipleValues(true)
+                .setDictionaryEncodedColumn(
+                    new DictionaryEncodedColumnSupplier(
+                        index.getDimValueLookup(dimension), null, (index.getDimColumn(dimension))
+                    )
+                )
+                .setBitmapIndex(
+                    new BitmapIndexColumnPartSupplier(
+                        index.getInvertedIndexes().get(dimension), index.getDimValueLookup(dimension)
+                    )
+                )
+                .build()
+        );
+      }
+
+      for (String metric : index.getAvailableMetrics()) {
+        final MetricHolder metricHolder = index.getMetricHolder(metric);
+        if (metricHolder.getType() == MetricHolder.MetricType.FLOAT) {
+          columns.put(
+              metric.toLowerCase(),
+              new ColumnBuilder()
+                  .setType(ValueType.FLOAT)
+                  .setGenericColumn(new FloatGenericColumnSupplier(metricHolder.floatType, BYTE_ORDER))
+                  .build()
+          );
+        } else if (metricHolder.getType() == MetricHolder.MetricType.COMPLEX) {
+          columns.put(
+              metric.toLowerCase(),
+              new ColumnBuilder()
+                  .setType(ValueType.COMPLEX)
+                  .setComplexColumn(
+                      new ComplexColumnPartSupplier(
+                          metricHolder.getTypeName(), (GenericIndexed) metricHolder.complexType
+                      )
+                  )
+                  .build()
+          );
+        }
+      }
+
+      Set<String> colSet = Sets.newTreeSet();
+      for (String dimension : index.getAvailableDimensions()) {
+        colSet.add(dimension.toLowerCase());
+      }
+      for (String metric : index.getAvailableMetrics()) {
+        colSet.add(metric.toLowerCase());
+      }
+
+      String[] cols = colSet.toArray(new String[colSet.size()]);
+
+      return new SimpleQueryableIndex(
+          index.getDataInterval(),
+          new ArrayIndexed<String>(cols, String.class),
+          index.getAvailableDimensions(),
+          new ColumnBuilder()
+              .setType(ValueType.LONG)
+              .setGenericColumn(new LongGenericColumnSupplier(index.timestamps))
+              .build(),
+          columns
+      );
+    }
+  }
+
+  static class V9IndexLoader implements IndexLoader
+  {
+    @Override
+    public QueryableIndex load(File inDir) throws IOException
+    {
+      log.debug("Mapping v9 index[%s]", inDir);
+      long startTime = System.currentTimeMillis();
+
+      final int theVersion = Ints.fromByteArray(Files.toByteArray(new File(inDir, "version.bin")));
+      if (theVersion != V9_VERSION) {
+        throw new IllegalArgumentException(String.format("Expected version[9], got[%s]", theVersion));
+      }
+
+      SmooshedFileMapper smooshedFiles = Smoosh.map(inDir);
+
+      ByteBuffer indexBuffer = smooshedFiles.mapFile("index.drd");
+      final GenericIndexed<String> cols = GenericIndexed.read(indexBuffer, GenericIndexed.stringStrategy);
+      final GenericIndexed<String> dims = GenericIndexed.read(indexBuffer, GenericIndexed.stringStrategy);
+      final Interval dataInterval = new Interval(indexBuffer.getLong(), indexBuffer.getLong());
+
+      Map<String, Column> columns = Maps.newHashMap();
+
+      ObjectMapper mapper = new DefaultObjectMapper();
+
+      for (String columnName : cols) {
+        columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName)));
+      }
+
+      final QueryableIndex index = new SimpleQueryableIndex(
+          dataInterval, cols, dims, deserializeColumn(mapper, smooshedFiles.mapFile("__time")), columns
+      );
+
+      log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
+
+      return index;
+    }
+
+    private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer) throws IOException
+    {
+      ColumnDescriptor serde = mapper.readValue(
+          serializerUtils.readString(byteBuffer), ColumnDescriptor.class
+      );
+      return serde.read(byteBuffer);
     }
   }
 

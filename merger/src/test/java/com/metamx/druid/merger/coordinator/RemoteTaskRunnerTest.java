@@ -17,6 +17,8 @@ import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
 import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.TaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
@@ -42,6 +44,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -62,13 +65,13 @@ public class RemoteTaskRunnerTest
   private PathChildrenCache pathChildrenCache;
   private RemoteTaskRunner remoteTaskRunner;
   private TaskMonitor taskMonitor;
+  private WorkerSetupManager workerSetupManager;
 
   private ScheduledExecutorService scheduledExec;
 
-  private Task task1;
+  private TestTask task1;
 
   private Worker worker1;
-
 
   @Before
   public void setUp() throws Exception
@@ -109,6 +112,7 @@ public class RemoteTaskRunnerTest
                 null,
                 null,
                 null,
+                null,
                 0
             )
         ), Lists.<AggregatorFactory>newArrayList()
@@ -139,12 +143,28 @@ public class RemoteTaskRunnerTest
   @Test
   public void testAlreadyExecutedTask() throws Exception
   {
-    remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+    final CountDownLatch latch = new CountDownLatch(1);
+    remoteTaskRunner.run(
+        new TestTask(task1){
+          @Override
+          public TaskStatus run(
+              TaskContext context, TaskToolbox toolbox
+          ) throws Exception
+          {
+            latch.await();
+            return super.run(context, toolbox);
+          }
+        },
+        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
+        null
+    );
     try {
-        remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
-        fail("ISE expected");
-    } catch (ISE expected) {
-
+      remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
+      latch.countDown();
+      fail("ISE expected");
+    }
+    catch (ISE expected) {
+      latch.countDown();
     }
   }
 
@@ -162,6 +182,7 @@ public class RemoteTaskRunnerTest
                       "dummyDs",
                       new Interval(new DateTime(), new DateTime()),
                       new DateTime().toString(),
+                      null,
                       null,
                       null,
                       null,
@@ -333,6 +354,17 @@ public class RemoteTaskRunnerTest
   private void makeRemoteTaskRunner() throws Exception
   {
     scheduledExec = EasyMock.createMock(ScheduledExecutorService.class);
+    workerSetupManager = EasyMock.createMock(WorkerSetupManager.class);
+
+    EasyMock.expect(workerSetupManager.getWorkerSetupData()).andReturn(
+        new WorkerSetupData(
+            "0",
+            0,
+            null,
+            null
+        )
+    );
+    EasyMock.replay(workerSetupManager);
 
     remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
@@ -341,7 +373,8 @@ public class RemoteTaskRunnerTest
         pathChildrenCache,
         scheduledExec,
         new RetryPolicyFactory(new TestRetryPolicyConfig()),
-        new TestScalingStrategy()
+        new TestScalingStrategy(),
+        workerSetupManager
     );
 
     // Create a single worker and wait for things for be ready
@@ -351,7 +384,7 @@ public class RemoteTaskRunnerTest
         jsonMapper.writeValueAsBytes(worker1)
     );
     while (remoteTaskRunner.getNumWorkers() == 0) {
-      Thread.sleep(500);
+      Thread.sleep(50);
     }
   }
 
@@ -389,6 +422,12 @@ public class RemoteTaskRunnerTest
     {
       return null;
     }
+
+    @Override
+    public List<String> ipLookup(List<String> ips)
+    {
+      return ips;
+    }
   }
 
   private static class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
@@ -403,18 +442,6 @@ public class RemoteTaskRunnerTest
     public DateTime getTerminateResourcesOriginDateTime()
     {
       return null;
-    }
-
-    @Override
-    public String getMinWorkerVersion()
-    {
-      return "0";
-    }
-
-    @Override
-    public int getMinNumWorkers()
-    {
-      return 0;
     }
 
     @Override
@@ -464,6 +491,9 @@ public class RemoteTaskRunnerTest
   private static class TestTask extends DefaultMergeTask
   {
     private final String id;
+    private final String dataSource;
+    private final List<DataSegment> segments;
+    private final List<AggregatorFactory> aggregators;
 
     public TestTask(
         @JsonProperty("id") String id,
@@ -475,6 +505,14 @@ public class RemoteTaskRunnerTest
       super(dataSource, segments, aggregators);
 
       this.id = id;
+      this.dataSource = dataSource;
+      this.segments = segments;
+      this.aggregators = aggregators;
+    }
+
+    public TestTask(TestTask task)
+    {
+      this(task.id, task.dataSource, task.segments, task.aggregators);
     }
 
     @Override

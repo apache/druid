@@ -20,6 +20,7 @@
 package com.metamx.druid;
 
 import com.metamx.common.guava.Sequence;
+import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.query.metadata.SegmentMetadataQuery;
 import com.metamx.druid.query.search.SearchQuery;
@@ -56,6 +57,8 @@ public interface Query<T>
   public String getType();
 
   public Sequence<T> run(QuerySegmentWalker walker);
+
+  public Sequence<T> run(QueryRunner<T> runner);
 
   public List<Interval> getIntervals();
 

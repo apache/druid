@@ -61,10 +61,11 @@ public class VSizeIndexedTest
     assertSame(someInts, indexed);
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    WritableByteChannel byteChannel = Channels.newChannel(baos);
-    indexed.writeToChannel(byteChannel);
+    indexed.writeToChannel(Channels.newChannel(baos));
 
-    VSizeIndexed deserializedIndexed = VSizeIndexed.readFromByteBuffer(ByteBuffer.wrap(baos.toByteArray()));
+    final byte[] bytes = baos.toByteArray();
+    Assert.assertEquals(indexed.getSerializedSize(), bytes.length);
+    VSizeIndexed deserializedIndexed = VSizeIndexed.readFromByteBuffer(ByteBuffer.wrap(bytes));
 
     assertSame(someInts, deserializedIndexed);
   }

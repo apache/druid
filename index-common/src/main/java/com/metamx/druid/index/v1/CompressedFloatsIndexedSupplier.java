@@ -29,7 +29,6 @@ import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.collect.StupidResourceHolder;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.IndexedFloats;
-import com.metamx.druid.kv.IndexedIterable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -58,6 +57,11 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseFloatBuffers = baseFloatBuffers;
+  }
+
+  public int size()
+  {
+    return totalSize;
   }
 
   @Override
@@ -146,6 +150,11 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     };
   }
 
+  public int getSerializedSize()
+  {
+    return baseFloatBuffers.getSerializedSize() + 1 + 4 + 4;
+  }
+
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{version}));
@@ -178,7 +187,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     return MAX_FLOATS_IN_BUFFER - (MAX_FLOATS_IN_BUFFER % numFloatsInChunk);
   }
 
-  public static CompressedFloatsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order) throws IOException
+  public static CompressedFloatsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     byte versionFromBuffer = buffer.get();
 
@@ -186,7 +195,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
       return new CompressedFloatsIndexedSupplier(
         buffer.getInt(),
         buffer.getInt(),
-        GenericIndexed.readFromByteBuffer(buffer, CompressedFloatBufferObjectStrategy.getBufferForOrder(order))
+        GenericIndexed.read(buffer, CompressedFloatBufferObjectStrategy.getBufferForOrder(order))
       );
     }
 

@@ -19,13 +19,14 @@
 
 package com.metamx.druid.query.search;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.Iterators;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.druid.Query;
 import com.metamx.druid.SearchResultBuilder;
 import com.metamx.druid.StorageAdapter;
+import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.brita.Filters;
 import com.metamx.druid.query.ChainedExecutionQueryRunner;
 import com.metamx.druid.query.QueryRunner;
@@ -45,46 +46,9 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
   private static final SearchQueryQueryToolChest toolChest = new SearchQueryQueryToolChest();
 
   @Override
-  public QueryRunner<Result<SearchResultValue>> createRunner(final StorageAdapter adapter)
+  public QueryRunner<Result<SearchResultValue>> createRunner(final Segment segment)
   {
-    return new QueryRunner<Result<SearchResultValue>>()
-    {
-      @Override
-      public Sequence<Result<SearchResultValue>> run(final Query<Result<SearchResultValue>> input)
-      {
-        if (!(input instanceof SearchQuery)) {
-          throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
-        }
-
-        final SearchQuery query = (SearchQuery) input;
-
-        return new BaseSequence<Result<SearchResultValue>, Iterator<Result<SearchResultValue>>>(
-            new BaseSequence.IteratorMaker<Result<SearchResultValue>, Iterator<Result<SearchResultValue>>>()
-            {
-              @Override
-              public Iterator<Result<SearchResultValue>> make()
-              {
-                return Lists.newArrayList(
-                    new SearchResultBuilder(
-                        adapter.getInterval().getStart(),
-                        adapter.searchDimensions(
-                            query,
-                            Filters.convertDimensionFilters(query.getDimensionsFilter())
-                        )
-                    ).build()
-                ).iterator();
-              }
-
-              @Override
-              public void cleanup(Iterator<Result<SearchResultValue>> toClean)
-              {
-
-              }
-            }
-        );
-      }
-    };
-
+    return new SearchQueryRunner(segment);
   }
 
   @Override
@@ -101,5 +65,50 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
   public QueryToolChest<Result<SearchResultValue>, SearchQuery> getToolchest()
   {
     return toolChest;
+  }
+
+  private static class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
+  {
+    private final StorageAdapter adapter;
+
+    public SearchQueryRunner(Segment segment)
+    {
+      this.adapter = segment.asStorageAdapter();
+    }
+
+    @Override
+    public Sequence<Result<SearchResultValue>> run(final Query<Result<SearchResultValue>> input)
+    {
+      if (!(input instanceof SearchQuery)) {
+        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
+      }
+
+      final SearchQuery query = (SearchQuery) input;
+
+      return new BaseSequence<Result<SearchResultValue>, Iterator<Result<SearchResultValue>>>(
+          new BaseSequence.IteratorMaker<Result<SearchResultValue>, Iterator<Result<SearchResultValue>>>()
+          {
+            @Override
+            public Iterator<Result<SearchResultValue>> make()
+            {
+              return Iterators.singletonIterator(
+                  new SearchResultBuilder(
+                      adapter.getInterval().getStart(),
+                      adapter.searchDimensions(
+                          query,
+                          Filters.convertDimensionFilters(query.getDimensionsFilter())
+                      )
+                  ).build()
+              );
+            }
+
+            @Override
+            public void cleanup(Iterator<Result<SearchResultValue>> toClean)
+            {
+
+            }
+          }
+      );
+    }
   }
 }

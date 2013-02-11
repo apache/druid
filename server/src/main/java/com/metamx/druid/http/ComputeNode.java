@@ -38,7 +38,7 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.QueryableLoaderConfig;
-import com.metamx.druid.loading.StorageAdapterLoader;
+import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.metrics.ServerMonitor;
 import com.metamx.druid.query.MetricsEmittingExecutorService;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
@@ -71,7 +71,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
   }
 
   private DruidServer druidServer;
-  private StorageAdapterLoader adapterLoader;
+  private SegmentLoader segmentLoader;
 
   public ComputeNode(
       Properties props,
@@ -84,10 +84,10 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
-  public ComputeNode setAdapterLoader(StorageAdapterLoader storageAdapterLoader)
+  public ComputeNode setSegmentLoader(SegmentLoader segmentLoader)
   {
-    Preconditions.checkState(this.adapterLoader == null, "Cannot set adapterLoader once it has already been set.");
-    this.adapterLoader = storageAdapterLoader;
+    Preconditions.checkState(this.segmentLoader == null, "Cannot set segmentLoader once it has already been set.");
+    this.segmentLoader = segmentLoader;
     return this;
   }
 
@@ -104,10 +104,10 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     return druidServer;
   }
 
-  public StorageAdapterLoader getAdapterLoader()
+  public SegmentLoader getSegmentLoader()
   {
     initializeAdapterLoader();
-    return adapterLoader;
+    return segmentLoader;
   }
 
   protected void doInit() throws Exception
@@ -126,10 +126,12 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
             getConfigFactory().buildWithReplacements(
                 ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
             )
-        ), emitter, new ServiceMetricEvent.Builder()
+        ),
+        emitter,
+        new ServiceMetricEvent.Builder()
     );
 
-    final ServerManager serverManager = new ServerManager(adapterLoader, conglomerate, emitter, executorService);
+    final ServerManager serverManager = new ServerManager(segmentLoader, conglomerate, emitter, executorService);
 
     final ZkCoordinator coordinator = new ZkCoordinator(
         getJsonMapper(),
@@ -157,7 +159,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
 
   private void initializeAdapterLoader()
   {
-    if (adapterLoader == null) {
+    if (segmentLoader == null) {
       final Properties props = getProps();
       try {
         final RestS3Service s3Client = new RestS3Service(
@@ -167,7 +169,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
             )
         );
 
-        setAdapterLoader(
+        setSegmentLoader(
             ServerInit.makeDefaultQueryableLoader(s3Client, getConfigFactory().build(QueryableLoaderConfig.class))
         );
       }

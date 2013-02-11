@@ -21,82 +21,105 @@ package com.metamx.druid.query.metadata;
 
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.metamx.common.ISE;
+import com.google.common.collect.Maps;
 import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Query;
-import com.metamx.druid.StorageAdapter;
+import com.metamx.druid.index.QueryableIndex;
+import com.metamx.druid.index.Segment;
 import com.metamx.druid.query.ConcatQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryToolChest;
-import com.metamx.druid.query.metadata.SegmentMetadataQuery;
-import com.metamx.druid.query.metadata.SegmentMetadataQueryEngine;
-import com.metamx.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
-import com.metamx.druid.result.SegmentMetadataResultValue;
-import com.metamx.druid.result.Result;
 
+import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Result<SegmentMetadataResultValue>, SegmentMetadataQuery>
+public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<SegmentAnalysis, SegmentMetadataQuery>
 {
-  private static final SegmentMetadataQueryQueryToolChest toolChest = new SegmentMetadataQueryQueryToolChest()
-  {
-    @Override
-    public QueryRunner<Result<SegmentMetadataResultValue>> mergeResults(QueryRunner<Result<SegmentMetadataResultValue>> runner)
-    {
-      return new ConcatQueryRunner<Result<SegmentMetadataResultValue>>(Sequences.simple(ImmutableList.of(runner)));
-    }
-  };
+  private static final SegmentAnalyzer analyzer = new SegmentAnalyzer();
 
+  private static final SegmentMetadataQueryQueryToolChest toolChest = new SegmentMetadataQueryQueryToolChest();
 
   @Override
-  public QueryRunner<Result<SegmentMetadataResultValue>> createRunner(final StorageAdapter adapter)
+  public QueryRunner<SegmentAnalysis> createRunner(final Segment segment)
   {
-    return new QueryRunner<Result<SegmentMetadataResultValue>>()
+    return new QueryRunner<SegmentAnalysis>()
     {
       @Override
-      public Sequence<Result<SegmentMetadataResultValue>> run(Query<Result<SegmentMetadataResultValue>> query)
+      public Sequence<SegmentAnalysis> run(Query<SegmentAnalysis> inQ)
       {
-        if (!(query instanceof SegmentMetadataQuery)) {
-          throw new ISE("Got a [%s] which isn't a %s", query.getClass(), SegmentMetadataQuery.class);
+        SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
+
+        final QueryableIndex index = segment.asQueryableIndex();
+        if (index == null) {
+          return Sequences.empty();
         }
-        return new SegmentMetadataQueryEngine().process((SegmentMetadataQuery) query, adapter);
+
+        final Map<String, ColumnAnalysis> analyzedColumns = analyzer.analyze(index);
+
+        // Initialize with the size of the whitespace, 1 byte per
+        long totalSize = analyzedColumns.size() * index.getNumRows();
+
+        Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
+        ColumnIncluderator includerator = query.getToInclude();
+        for (Map.Entry<String, ColumnAnalysis> entry : analyzedColumns.entrySet()) {
+          final String columnName = entry.getKey();
+          final ColumnAnalysis column = entry.getValue();
+
+          if (!column.isError()) {
+            totalSize += column.getSize();
+          }
+          if (includerator.include(columnName)) {
+            columns.put(columnName, column);
+          }
+        }
+
+        return Sequences.simple(
+            Arrays.asList(
+                new SegmentAnalysis(
+                    segment.getIdentifier(),
+                    Arrays.asList(segment.getDataInterval()),
+                    columns,
+                    totalSize
+                )
+            )
+        );
       }
     };
   }
 
   @Override
-  public QueryRunner<Result<SegmentMetadataResultValue>> mergeRunners(
-      final ExecutorService queryExecutor, Iterable<QueryRunner<Result<SegmentMetadataResultValue>>> queryRunners
+  public QueryRunner<SegmentAnalysis> mergeRunners(
+      final ExecutorService queryExecutor, Iterable<QueryRunner<SegmentAnalysis>> queryRunners
   )
   {
-    return new ConcatQueryRunner<Result<SegmentMetadataResultValue>>(
+    return new ConcatQueryRunner<SegmentAnalysis>(
             Sequences.map(
                 Sequences.simple(queryRunners),
-                new Function<QueryRunner<Result<SegmentMetadataResultValue>>, QueryRunner<Result<SegmentMetadataResultValue>>>()
+                new Function<QueryRunner<SegmentAnalysis>, QueryRunner<SegmentAnalysis>>()
                 {
                   @Override
-                  public QueryRunner<Result<SegmentMetadataResultValue>> apply(final QueryRunner<Result<SegmentMetadataResultValue>> input)
+                  public QueryRunner<SegmentAnalysis> apply(final QueryRunner<SegmentAnalysis> input)
                   {
-                    return new QueryRunner<Result<SegmentMetadataResultValue>>()
+                    return new QueryRunner<SegmentAnalysis>()
                     {
                       @Override
-                      public Sequence<Result<SegmentMetadataResultValue>> run(final Query<Result<SegmentMetadataResultValue>> query)
+                      public Sequence<SegmentAnalysis> run(final Query<SegmentAnalysis> query)
                       {
 
-                        Future<Sequence<Result<SegmentMetadataResultValue>>> future = queryExecutor.submit(
-                            new Callable<Sequence<Result<SegmentMetadataResultValue>>>()
+                        Future<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
+                            new Callable<Sequence<SegmentAnalysis>>()
                             {
                               @Override
-                              public Sequence<Result<SegmentMetadataResultValue>> call() throws Exception
+                              public Sequence<SegmentAnalysis> call() throws Exception
                               {
-                                return new ExecutorExecutingSequence<Result<SegmentMetadataResultValue>>(
+                                return new ExecutorExecutingSequence<SegmentAnalysis>(
                                     input.run(query),
                                     queryExecutor
                                 );
@@ -121,7 +144,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Res
   }
 
   @Override
-  public QueryToolChest getToolchest()
+  public QueryToolChest<SegmentAnalysis, SegmentMetadataQuery> getToolchest()
   {
     return toolChest;
   }

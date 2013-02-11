@@ -25,19 +25,18 @@ import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.DruidProcessingConfig;
-import com.metamx.druid.GroupByQueryEngine;
-import com.metamx.druid.GroupByQueryEngineConfig;
+import com.metamx.druid.loading.DelegatingSegmentLoader;
+import com.metamx.druid.loading.MMappedQueryableIndexFactory;
+import com.metamx.druid.loading.QueryableIndexFactory;
+import com.metamx.druid.loading.S3SegmentPuller;
+import com.metamx.druid.loading.SingleSegmentLoader;
+import com.metamx.druid.query.group.GroupByQueryEngine;
+import com.metamx.druid.query.group.GroupByQueryEngineConfig;
 import com.metamx.druid.Query;
 import com.metamx.druid.collect.StupidPool;
-import com.metamx.druid.loading.DelegatingStorageAdapterLoader;
-import com.metamx.druid.loading.MMappedStorageAdapterFactory;
 import com.metamx.druid.loading.QueryableLoaderConfig;
-import com.metamx.druid.loading.RealtimeSegmentGetter;
-import com.metamx.druid.loading.S3SegmentGetter;
-import com.metamx.druid.loading.S3ZippedSegmentGetter;
-import com.metamx.druid.loading.SingleStorageAdapterLoader;
-import com.metamx.druid.loading.StorageAdapterFactory;
-import com.metamx.druid.loading.StorageAdapterLoader;
+import com.metamx.druid.loading.S3ZippedSegmentPuller;
+import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.query.group.GroupByQueryRunnerFactory;
@@ -63,28 +62,26 @@ public class ServerInit
 {
   private static Logger log = new Logger(ServerInit.class);
 
-  public static StorageAdapterLoader makeDefaultQueryableLoader(
+  public static SegmentLoader makeDefaultQueryableLoader(
       RestS3Service s3Client,
       QueryableLoaderConfig config
   )
   {
-    DelegatingStorageAdapterLoader delegateLoader = new DelegatingStorageAdapterLoader();
+    DelegatingSegmentLoader delegateLoader = new DelegatingSegmentLoader();
 
-    final S3SegmentGetter segmentGetter = new S3SegmentGetter(s3Client, config);
-    final S3ZippedSegmentGetter zippedGetter = new S3ZippedSegmentGetter(s3Client, config);
-    final RealtimeSegmentGetter realtimeGetter = new RealtimeSegmentGetter(config);
-    final StorageAdapterFactory factory;
+    final S3SegmentPuller segmentGetter = new S3SegmentPuller(s3Client, config);
+    final S3ZippedSegmentPuller zippedGetter = new S3ZippedSegmentPuller(s3Client, config);
+    final QueryableIndexFactory factory;
     if ("mmap".equals(config.getQueryableFactoryType())) {
-      factory = new MMappedStorageAdapterFactory();
+      factory = new MMappedQueryableIndexFactory();
     } else {
       throw new ISE("Unknown queryableFactoryType[%s]", config.getQueryableFactoryType());
     }
 
     delegateLoader.setLoaderTypes(
-        ImmutableMap.<String, StorageAdapterLoader>builder()
-                    .put("s3", new SingleStorageAdapterLoader(segmentGetter, factory))
-                    .put("s3_zip", new SingleStorageAdapterLoader(zippedGetter, factory))
-                    .put("realtime", new SingleStorageAdapterLoader(realtimeGetter, factory))
+        ImmutableMap.<String, SegmentLoader>builder()
+                    .put("s3", new SingleSegmentLoader(segmentGetter, factory))
+                    .put("s3_zip", new SingleSegmentLoader(zippedGetter, factory))
                     .build()
     );
 
