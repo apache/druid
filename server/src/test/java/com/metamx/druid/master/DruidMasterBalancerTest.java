@@ -80,6 +80,7 @@ public class DruidMasterBalancerTest
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
         new NoneShardSpec(),
+        0,
         11L
     );
     segment2 = new DataSegment(
@@ -90,6 +91,7 @@ public class DruidMasterBalancerTest
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
         new NoneShardSpec(),
+        0,
         7L
     );
     segment3 = new DataSegment(
@@ -100,6 +102,7 @@ public class DruidMasterBalancerTest
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
         new NoneShardSpec(),
+        0,
         4L
     );
     segment4 = new DataSegment(
@@ -110,6 +113,7 @@ public class DruidMasterBalancerTest
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
         new NoneShardSpec(),
+        0,
         8L
     );
 
