@@ -29,7 +29,6 @@ import com.metamx.druid.query.ChainedExecutionQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryToolChest;
-import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
 
@@ -78,7 +77,7 @@ public class TimeBoundaryQueryRunnerFactory
     public Sequence<Result<TimeBoundaryResultValue>> run(Query<Result<TimeBoundaryResultValue>> input)
     {
       if (!(input instanceof TimeBoundaryQuery)) {
-        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
+        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TimeBoundaryQuery.class);
       }
 
       final TimeBoundaryQuery legacyQuery = (TimeBoundaryQuery) input;
