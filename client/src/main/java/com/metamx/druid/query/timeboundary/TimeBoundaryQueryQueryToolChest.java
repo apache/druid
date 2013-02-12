@@ -74,19 +74,9 @@ public class TimeBoundaryQueryQueryToolChest
     TimelineObjectHolder<String, ServerSelector> min = null;
     TimelineObjectHolder<String, ServerSelector> max = null;
 
-    // keep track of all segments in a given shard
-    Map<String, Set<TimelineObjectHolder<String, ServerSelector>>> segmentGroups = Maps.newHashMap();
-
     for(TimelineObjectHolder<String, ServerSelector> e : input) {
       final long start = e.getInterval().getStartMillis();
       final long end = e.getInterval().getEndMillis();
-      final String version = e.getVersion();
-
-      if(segmentGroups.containsKey(version)) {
-        segmentGroups.get(version).add(e);
-      } else {
-        segmentGroups.put(version, Sets.newHashSet(e));
-      }
 
       if(min == null || start < minMillis) {
         min = e;
@@ -98,7 +88,7 @@ public class TimeBoundaryQueryQueryToolChest
       }
     }
 
-    return Lists.newArrayList(Sets.union(segmentGroups.get(min.getVersion()), segmentGroups.get(max.getVersion())));
+    return min == max ? Lists.newArrayList(min) : Lists.newArrayList(min , max);
   }
 
   @Override
