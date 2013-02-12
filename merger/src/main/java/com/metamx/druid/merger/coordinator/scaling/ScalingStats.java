@@ -3,26 +3,37 @@ package com.metamx.druid.merger.coordinator.scaling;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeComparator;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
  */
 public class ScalingStats
 {
-  private static enum EVENT
+  public static enum EVENT
   {
     PROVISION,
     TERMINATE
   }
+
+  private static final Comparator<ScalingEvent> comparator = new Comparator<ScalingEvent>()
+
+  {
+    @Override
+    public int compare(ScalingEvent s1, ScalingEvent s2)
+    {
+      return -s1.getTimestamp().compareTo(s2.getTimestamp());
+    }
+  };
 
   private final MinMaxPriorityQueue<ScalingEvent> recentNodes;
 
   public ScalingStats(int capacity)
   {
     this.recentNodes = MinMaxPriorityQueue
-        .orderedBy(DateTimeComparator.getInstance())
+        .orderedBy(comparator)
         .maximumSize(capacity)
         .create();
   }
@@ -51,10 +62,8 @@ public class ScalingStats
 
   public List<ScalingEvent> toList()
   {
-    List<ScalingEvent> retVal = Lists.newArrayList();
-    while (!recentNodes.isEmpty()) {
-      retVal.add(recentNodes.poll());
-    }
+    List<ScalingEvent> retVal = Lists.newArrayList(recentNodes);
+    Collections.sort(retVal, comparator);
     return retVal;
   }
 
@@ -73,6 +82,21 @@ public class ScalingStats
       this.data = data;
       this.timestamp = timestamp;
       this.event = event;
+    }
+
+    public AutoScalingData getData()
+    {
+      return data;
+    }
+
+    public DateTime getTimestamp()
+    {
+      return timestamp;
+    }
+
+    public EVENT getEvent()
+    {
+      return event;
     }
 
     @Override

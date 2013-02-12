@@ -37,17 +37,20 @@ import java.util.List;
 public class TestTask extends DefaultMergeTask
 {
   private final String id;
+  private final TaskStatus status;
 
   public TestTask(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
-      @JsonProperty("aggregations") List<AggregatorFactory> aggregators
+      @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
+      @JsonProperty("taskStatus") TaskStatus status
   )
   {
     super(dataSource, segments, aggregators);
 
     this.id = id;
+    this.status = status;
   }
 
   @Override
@@ -63,9 +66,15 @@ public class TestTask extends DefaultMergeTask
     return Type.TEST;
   }
 
+  @JsonProperty
+  public TaskStatus getStatus()
+  {
+    return status;
+  }
+
   @Override
   public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
   {
-    return TaskStatus.success("task1");
+    return status;
   }
 }

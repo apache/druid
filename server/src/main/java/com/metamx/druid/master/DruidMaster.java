@@ -21,6 +21,7 @@ package com.metamx.druid.master;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -42,9 +43,12 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.merge.ClientKillQuery;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
 import com.netflix.curator.x.discovery.ServiceProvider;
@@ -53,6 +57,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +92,9 @@ public class DruidMaster
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ServiceProvider serviceProvider;
 
+  private final HttpClient httpClient;
+  private final HttpResponseHandler responseHandler;
+
   private final ObjectMapper jsonMapper;
 
   public DruidMaster(
@@ -100,7 +108,9 @@ public class DruidMaster
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       Map<String, LoadQueuePeon> loadManagementPeons,
-      ServiceProvider serviceProvider
+      ServiceProvider serviceProvider,
+      HttpClient httpClient,
+      HttpResponseHandler responseHandler
   )
   {
     this.config = config;
@@ -121,6 +131,8 @@ public class DruidMaster
     this.loadManagementPeons = loadManagementPeons;
 
     this.serviceProvider = serviceProvider;
+    this.httpClient = httpClient;
+    this.responseHandler = responseHandler;
   }
 
   public boolean isClusterMaster()
@@ -329,6 +341,27 @@ public class DruidMaster
 
     if (!dropPeon.getSegmentsToDrop().contains(segment)) {
       dropPeon.dropSegment(segment, callback);
+    }
+  }
+
+  public void killSegments(ClientKillQuery killQuery)
+  {
+    try {
+      httpClient.post(
+          new URL(
+              String.format(
+                  "http://%s:%s/mmx/merger/v1/index",
+                  serviceProvider.getInstance().getAddress(),
+                  serviceProvider.getInstance().getPort()
+              )
+          )
+      )
+                .setContent("application/json", jsonMapper.writeValueAsBytes(killQuery))
+                .go(responseHandler)
+                .get();
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
     }
   }
 
@@ -590,7 +623,7 @@ public class DruidMaster
                 public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
                 {
                   // Display info about all historical servers
-                  Iterable<DruidServer> servers =FunctionalIterable
+                  Iterable<DruidServer> servers = FunctionalIterable
                       .create(serverInventoryManager.getInventory())
                       .filter(
                           new Predicate<DruidServer>()

@@ -104,4 +104,15 @@ public class WorkerWrapper implements Closeable
   {
     statusCache.close();
   }
+
+  @Override
+  public String toString()
+  {
+    return "WorkerWrapper{" +
+           "worker=" + worker +
+           ", statusCache=" + statusCache +
+           ", cacheConverter=" + cacheConverter +
+           ", lastCompletedTaskTime=" + lastCompletedTaskTime +
+           '}';
+  }
 }

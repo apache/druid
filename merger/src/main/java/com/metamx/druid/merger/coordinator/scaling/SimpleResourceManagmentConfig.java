@@ -38,4 +38,8 @@ public abstract class SimpleResourceManagmentConfig
   @Config("druid.indexer.numEventsToTrack")
   @Default("20")
   public abstract int getNumEventsToTrack();
+
+  @Config("druid.indexer.maxPendingTaskDuration")
+  @Default("20")
+  public abstract Duration getMaxPendingTaskDuration();
 }

@@ -22,6 +22,8 @@ package com.metamx.druid.merger.coordinator;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.task.Task;
 
+import java.util.Collection;
+
 /**
  * Interface for handing off tasks. Used by a {@link com.metamx.druid.merger.coordinator.exec.TaskConsumer} to run tasks that
  * have been locked.
@@ -37,4 +39,10 @@ public interface TaskRunner
    * @param callback callback to be called exactly once
    */
   public void run(Task task, TaskContext context, TaskCallback callback);
+
+  public Collection<TaskWrapper> getRunningTasks();
+
+  public Collection<TaskWrapper> getPendingTasks();
+
+  public Collection<WorkerWrapper> getWorkers();
 }

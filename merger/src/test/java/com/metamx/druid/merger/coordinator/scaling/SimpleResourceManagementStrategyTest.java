@@ -24,9 +24,14 @@ import com.google.common.collect.Sets;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.TestTask;
+import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.merger.coordinator.TaskWrapper;
 import com.metamx.druid.merger.coordinator.WorkerWrapper;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
+import com.metamx.druid.merger.worker.Worker;
+import junit.framework.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -35,6 +40,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -58,18 +64,21 @@ public class SimpleResourceManagementStrategyTest
         Lists.<DataSegment>newArrayList(
             new DataSegment(
                 "dummyDs",
-                new Interval(new DateTime(), new DateTime()),
+                new Interval("2012-01-01/2012-01-02"),
                 new DateTime().toString(),
                 null,
                 null,
                 null,
                 null,
+                0,
                 0
             )
-        ), Lists.<AggregatorFactory>newArrayList()
+        ),
+        Lists.<AggregatorFactory>newArrayList(),
+        TaskStatus.success("task1")
     );
     simpleResourceManagementStrategy = new SimpleResourceManagementStrategy(
-        new TestAutoScalingStrategy(),
+        autoScalingStrategy,
         new SimpleResourceManagmentConfig()
         {
           @Override
@@ -89,6 +98,12 @@ public class SimpleResourceManagementStrategyTest
           {
             return 1;
           }
+
+          @Override
+          public Duration getMaxPendingTaskDuration()
+          {
+            return new Duration(0);
+          }
         },
         workerSetupManager
     );
@@ -97,27 +112,155 @@ public class SimpleResourceManagementStrategyTest
   @Test
   public void testSuccessfulProvision() throws Exception
   {
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+            .andReturn(Lists.<String>newArrayList());
     EasyMock.expect(autoScalingStrategy.provision()).andReturn(
         new AutoScalingData(Lists.<String>newArrayList(), Lists.newArrayList())
     );
     EasyMock.replay(autoScalingStrategy);
 
-    simpleResourceManagementStrategy.doProvision(
-        Arrays.<Task>asList(
-            testTask
+    boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
+        Arrays.<TaskWrapper>asList(
+            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
         ),
         Arrays.<WorkerWrapper>asList(
             new TestWorkerWrapper(testTask)
         )
     );
 
+    Assert.assertTrue(provisionedSomething);
+    Assert.assertTrue(simpleResourceManagementStrategy.getStats().toList().size() == 1);
+    Assert.assertTrue(
+        simpleResourceManagementStrategy.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
+    );
+
     EasyMock.verify(autoScalingStrategy);
   }
 
   @Test
-  public void testDoTerminate() throws Exception
+  public void testSomethingProvisioning() throws Exception
   {
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+            .andReturn(Lists.<String>newArrayList()).times(2);
+    EasyMock.expect(autoScalingStrategy.provision()).andReturn(
+        new AutoScalingData(Lists.<String>newArrayList("fake"), Lists.newArrayList("faker"))
+    );
+    EasyMock.replay(autoScalingStrategy);
 
+    boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
+        Arrays.<TaskWrapper>asList(
+            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        ),
+        Arrays.<WorkerWrapper>asList(
+            new TestWorkerWrapper(testTask)
+        )
+    );
+
+    Assert.assertTrue(provisionedSomething);
+    Assert.assertTrue(simpleResourceManagementStrategy.getStats().toList().size() == 1);
+    DateTime createdTime = simpleResourceManagementStrategy.getStats().toList().get(0).getTimestamp();
+    Assert.assertTrue(
+        simpleResourceManagementStrategy.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
+    );
+
+    provisionedSomething = simpleResourceManagementStrategy.doProvision(
+        Arrays.<TaskWrapper>asList(
+            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        ),
+        Arrays.<WorkerWrapper>asList(
+            new TestWorkerWrapper(testTask)
+        )
+    );
+
+    Assert.assertFalse(provisionedSomething);
+    Assert.assertTrue(
+        simpleResourceManagementStrategy.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
+    );
+    DateTime anotherCreatedTime = simpleResourceManagementStrategy.getStats().toList().get(0).getTimestamp();
+    Assert.assertTrue(
+        createdTime.equals(anotherCreatedTime)
+    );
+
+    EasyMock.verify(autoScalingStrategy);
+  }
+
+  @Test
+  public void testDoSuccessfulTerminate() throws Exception
+  {
+    EasyMock.expect(workerSetupManager.getWorkerSetupData()).andReturn(new WorkerSetupData("0", 0, null, null));
+    EasyMock.replay(workerSetupManager);
+
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+            .andReturn(Lists.<String>newArrayList());
+    EasyMock.expect(autoScalingStrategy.terminate(EasyMock.<List<String>>anyObject())).andReturn(
+        new AutoScalingData(Lists.<String>newArrayList(), Lists.newArrayList())
+    );
+    EasyMock.replay(autoScalingStrategy);
+
+    boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
+        Arrays.<TaskWrapper>asList(
+            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        ),
+        Arrays.<WorkerWrapper>asList(
+            new TestWorkerWrapper(null)
+        )
+    );
+
+    Assert.assertTrue(terminatedSomething);
+    Assert.assertTrue(simpleResourceManagementStrategy.getStats().toList().size() == 1);
+    Assert.assertTrue(
+        simpleResourceManagementStrategy.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.TERMINATE
+    );
+
+    EasyMock.verify(workerSetupManager);
+    EasyMock.verify(autoScalingStrategy);
+  }
+
+  @Test
+  public void testSomethingTerminating() throws Exception
+  {
+    EasyMock.expect(workerSetupManager.getWorkerSetupData()).andReturn(new WorkerSetupData("0", 0, null, null));
+    EasyMock.replay(workerSetupManager);
+
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+            .andReturn(Lists.<String>newArrayList()).times(2);
+    EasyMock.expect(autoScalingStrategy.terminate(EasyMock.<List<String>>anyObject())).andReturn(
+        new AutoScalingData(Lists.<String>newArrayList("foobar"), Lists.newArrayList("foobrick"))
+    );
+    EasyMock.replay(autoScalingStrategy);
+
+    boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
+        Arrays.<TaskWrapper>asList(
+            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        ),
+        Arrays.<WorkerWrapper>asList(
+            new TestWorkerWrapper(null)
+        )
+    );
+
+    Assert.assertTrue(terminatedSomething);
+    Assert.assertTrue(simpleResourceManagementStrategy.getStats().toList().size() == 1);
+    Assert.assertTrue(
+        simpleResourceManagementStrategy.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.TERMINATE
+    );
+
+    terminatedSomething = simpleResourceManagementStrategy.doTerminate(
+        Arrays.<TaskWrapper>asList(
+            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        ),
+        Arrays.<WorkerWrapper>asList(
+            new TestWorkerWrapper(null)
+        )
+    );
+
+    Assert.assertFalse(terminatedSomething);
+    Assert.assertTrue(simpleResourceManagementStrategy.getStats().toList().size() == 1);
+    Assert.assertTrue(
+        simpleResourceManagementStrategy.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.TERMINATE
+    );
+
+    EasyMock.verify(workerSetupManager);
+    EasyMock.verify(autoScalingStrategy);
   }
 
   private static class TestWorkerWrapper extends WorkerWrapper
@@ -128,7 +271,7 @@ public class SimpleResourceManagementStrategyTest
         Task testTask
     )
     {
-      super(null, null, null);
+      super(new Worker("host", "ip", 3, "version"), null, null);
 
       this.testTask = testTask;
     }
@@ -136,6 +279,9 @@ public class SimpleResourceManagementStrategyTest
     @Override
     public Set<String> getRunningTasks()
     {
+      if (testTask == null) {
+        return Sets.newHashSet();
+      }
       return Sets.newHashSet(testTask.getId());
     }
   }

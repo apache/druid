@@ -1,5 +1,6 @@
 package com.metamx.druid.merger.common.task;
 
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.coordinator.TaskContext;
@@ -31,7 +32,7 @@ public class V8toV9UpgradeTask extends AbstractTask
 
   @Override
   public TaskStatus run(
-      TaskContext context, TaskToolbox toolbox
+      TaskContext context, TaskToolbox toolbox, TaskCallback callback
   ) throws Exception
   {
     throw new UnsupportedOperationException();

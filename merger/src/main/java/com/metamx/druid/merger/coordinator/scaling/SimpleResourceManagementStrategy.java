@@ -23,9 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.merger.coordinator.TaskWrapper;
 import com.metamx.druid.merger.coordinator.WorkerWrapper;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.EmittingLogger;
@@ -34,7 +33,6 @@ import org.joda.time.Duration;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
@@ -67,54 +65,39 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   @Override
-  public void doProvision(Collection<Task> availableTasks, Collection<WorkerWrapper> workerWrappers)
+  public boolean doProvision(Collection<TaskWrapper> pendingTasks, Collection<WorkerWrapper> workerWrappers)
   {
-    boolean nothingProvisioning = Sets.difference(
-        currentlyProvisioning,
-        Sets.newHashSet(
-            autoScalingStrategy.ipToIdLookup(
-                Lists.newArrayList(
-                    Iterables.transform(
-                        workerWrappers, new Function<WorkerWrapper, String>()
-                    {
-                      @Override
-                      public String apply(WorkerWrapper input)
-                      {
-                        return input.getWorker().getIp();
-                      }
-                    }
-                    )
-                )
+    List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
+        Lists.newArrayList(
+            Iterables.transform(
+                workerWrappers,
+                new Function<WorkerWrapper, String>()
+                {
+                  @Override
+                  public String apply(WorkerWrapper input)
+                  {
+                    return input.getWorker().getIp();
+                  }
+                }
             )
         )
-    ).isEmpty();
+    );
 
-    boolean moreTasksThanWorkerCapacity = !Sets.difference(
-        Sets.newHashSet(availableTasks),
-        Sets.newHashSet(
-            Iterables.concat(
-                Iterables.transform(
-                    workerWrappers,
-                    new Function<WorkerWrapper, Set<String>>()
-                    {
-                      @Override
-                      public Set<String> apply(WorkerWrapper input)
-                      {
-                        return input.getRunningTasks();
-                      }
-                    }
-                )
-            )
-        )
-    ).isEmpty();
+    for (String workerNodeId : workerNodeIds) {
+      currentlyProvisioning.remove(workerNodeId);
+    }
 
-    if (nothingProvisioning && moreTasksThanWorkerCapacity) {
+    boolean nothingProvisioning = currentlyProvisioning.isEmpty();
+
+    if (nothingProvisioning && hasTaskPendingBeyondThreshold(pendingTasks)) {
       AutoScalingData provisioned = autoScalingStrategy.provision();
 
       if (provisioned != null) {
         currentlyProvisioning.addAll(provisioned.getNodeIds());
         lastProvisionTime = new DateTime();
         scalingStats.addProvisionEvent(provisioned);
+
+        return true;
       }
     } else {
       Duration durSinceLastProvision = new Duration(new DateTime(), lastProvisionTime);
@@ -130,35 +113,39 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
           currentlyProvisioning
       );
     }
+
+    return false;
   }
 
   @Override
-  public void doTerminate(Collection<Task> availableTasks, Collection<WorkerWrapper> workerWrappers)
+  public boolean doTerminate(Collection<TaskWrapper> pendingTasks, Collection<WorkerWrapper> workerWrappers)
   {
-    boolean nothingTerminating = Sets.difference(
-        currentlyTerminating,
-        Sets.newHashSet(
-            autoScalingStrategy.ipToIdLookup(
-                Lists.newArrayList(
-                    Iterables.transform(
-                        workerWrappers, new Function<WorkerWrapper, String>()
-                    {
-                      @Override
-                      public String apply(WorkerWrapper input)
-                      {
-                        return input.getWorker().getIp();
-                      }
-                    }
-                    )
-                )
+    List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
+        Lists.newArrayList(
+            Iterables.transform(
+                workerWrappers,
+                new Function<WorkerWrapper, String>()
+                {
+                  @Override
+                  public String apply(WorkerWrapper input)
+                  {
+                    return input.getWorker().getIp();
+                  }
+                }
             )
         )
-    ).isEmpty();
+    );
+
+    for (String workerNodeId : workerNodeIds) {
+      currentlyTerminating.remove(workerNodeId);
+    }
+
+    boolean nothingTerminating = currentlyTerminating.isEmpty();
 
     if (nothingTerminating) {
       final int minNumWorkers = workerSetupManager.getWorkerSetupData().getMinNumWorkers();
       if (workerWrappers.size() <= minNumWorkers) {
-        return;
+        return false;
       }
 
       List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList(
@@ -171,13 +158,16 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
                     public boolean apply(WorkerWrapper input)
                     {
                       return input.getRunningTasks().isEmpty()
-                             && System.currentTimeMillis() - input.getLastCompletedTaskTime()
-                                                                  .getMillis()
-                                > config.getMaxWorkerIdleTimeMillisBeforeDeletion();
+                             && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
+                                >= config.getMaxWorkerIdleTimeMillisBeforeDeletion();
                     }
                   }
               )
       );
+
+      if (thoseLazyWorkers.isEmpty()) {
+        return false;
+      }
 
       AutoScalingData terminated = autoScalingStrategy.terminate(
           Lists.transform(
@@ -196,7 +186,9 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       if (terminated != null) {
         currentlyTerminating.addAll(terminated.getNodeIds());
         lastTerminateTime = new DateTime();
-        scalingStats.addProvisionEvent(terminated);
+        scalingStats.addTerminateEvent(terminated);
+
+        return true;
       }
     } else {
       Duration durSinceLastTerminate = new Duration(new DateTime(), lastTerminateTime);
@@ -212,11 +204,25 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
           currentlyTerminating
       );
     }
+
+    return false;
   }
 
   @Override
   public ScalingStats getStats()
   {
     return scalingStats;
+  }
+
+  private boolean hasTaskPendingBeyondThreshold(Collection<TaskWrapper> pendingTasks)
+  {
+    long now = System.currentTimeMillis();
+    for (TaskWrapper pendingTask : pendingTasks) {
+      if (new Duration(pendingTask.getCreatedTime(), now).isEqual(config.getMaxPendingTaskDuration()) ||
+          new Duration(pendingTask.getCreatedTime(), now).isLongerThan(config.getMaxPendingTaskDuration())) {
+        return true;
+      }
+    }
+    return false;
   }
 }

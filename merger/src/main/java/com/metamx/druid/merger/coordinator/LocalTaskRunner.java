@@ -20,6 +20,7 @@
 package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskCallback;
@@ -29,6 +30,7 @@ import com.metamx.druid.merger.common.task.Task;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -107,5 +109,23 @@ public class LocalTaskRunner implements TaskRunner
           }
         }
     );
+  }
+
+  @Override
+  public Collection<TaskWrapper> getRunningTasks()
+  {
+    return Lists.newArrayList();
+  }
+
+  @Override
+  public Collection<TaskWrapper> getPendingTasks()
+  {
+    return Lists.newArrayList();
+  }
+
+  @Override
+  public Collection<WorkerWrapper> getWorkers()
+  {
+    return Lists.newArrayList();
   }
 }

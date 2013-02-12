@@ -543,7 +543,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
                 workerSetupManager
             );
 
-            initializeWorkerScaling(remoteTaskRunner);
+            initializeResourceManagement(remoteTaskRunner);
 
             return remoteTaskRunner;
           }
@@ -565,7 +565,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
-  private void initializeWorkerScaling(RemoteTaskRunner taskRunner)
+  private void initializeResourceManagement(TaskRunner taskRunner)
   {
     final ScheduledExecutorService scalingScheduledExec = Executors.newScheduledThreadPool(
         1,
@@ -595,7 +595,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
 
     ResourceManagmentScheduler resourceManagmentScheduler = new ResourceManagmentScheduler(
-        taskQueue,
         taskRunner,
         new SimpleResourceManagementStrategy(
             strategy,

@@ -19,24 +19,33 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.google.common.primitives.Longs;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.task.Task;
 
 /**
  */
-public class TaskWrapper
+public class TaskWrapper implements Comparable<TaskWrapper>
 {
   private final Task task;
   private final TaskContext taskContext;
   private final TaskCallback callback;
   private final RetryPolicy retryPolicy;
+  private final long createdTime;
 
-  public TaskWrapper(Task task, TaskContext taskContext, TaskCallback callback, RetryPolicy retryPolicy)
+  public TaskWrapper(
+      Task task,
+      TaskContext taskContext,
+      TaskCallback callback,
+      RetryPolicy retryPolicy,
+      long createdTime
+  )
   {
     this.task = task;
     this.taskContext = taskContext;
     this.callback = callback;
     this.retryPolicy = retryPolicy;
+    this.createdTime = createdTime;
   }
 
   public Task getTask()
@@ -57,5 +66,66 @@ public class TaskWrapper
   public RetryPolicy getRetryPolicy()
   {
     return retryPolicy;
+  }
+
+  public long getCreatedTime()
+  {
+    return createdTime;
+  }
+
+  @Override
+  public int compareTo(TaskWrapper taskWrapper)
+  {
+    return Longs.compare(createdTime, taskWrapper.getCreatedTime());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    TaskWrapper that = (TaskWrapper) o;
+
+    if (callback != null ? !callback.equals(that.callback) : that.callback != null) {
+      return false;
+    }
+    if (retryPolicy != null ? !retryPolicy.equals(that.retryPolicy) : that.retryPolicy != null) {
+      return false;
+    }
+    if (task != null ? !task.equals(that.task) : that.task != null) {
+      return false;
+    }
+    if (taskContext != null ? !taskContext.equals(that.taskContext) : that.taskContext != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = task != null ? task.hashCode() : 0;
+    result = 31 * result + (taskContext != null ? taskContext.hashCode() : 0);
+    result = 31 * result + (callback != null ? callback.hashCode() : 0);
+    result = 31 * result + (retryPolicy != null ? retryPolicy.hashCode() : 0);
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TaskWrapper{" +
+           "task=" + task +
+           ", taskContext=" + taskContext +
+           ", callback=" + callback +
+           ", retryPolicy=" + retryPolicy +
+           ", createdTime=" + createdTime +
+           '}';
   }
 }

@@ -24,8 +24,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.PeriodGranularity;
-import com.metamx.druid.merger.coordinator.RemoteTaskRunner;
-import com.metamx.druid.merger.coordinator.TaskQueue;
+import com.metamx.druid.merger.coordinator.TaskRunner;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -33,18 +32,17 @@ import org.joda.time.Period;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
- * The ResourceManagmentScheduler manages when worker nodes should potentially be created or destroyed.
- * It uses a {@link TaskQueue} to return the available tasks in the system and a {@link RemoteTaskRunner} to return
- * the status of the worker nodes in the system.
- * The ResourceManagmentScheduler does not contain the logic to decide whether provision or termination should actually occur.
- * That decision is made in the {@link ResourceManagementStrategy}.
+ * The ResourceManagmentScheduler schedules a check for when worker nodes should potentially be created or destroyed.
+ * It uses a {@link TaskRunner} to return all pending tasks in the system and the status of the worker nodes in
+ * the system.
+ * The ResourceManagmentScheduler does not contain the logic to decide whether provision or termination should actually
+ * occur. That decision is made in the {@link ResourceManagementStrategy}.
  */
 public class ResourceManagmentScheduler
 {
   private static final Logger log = new Logger(ResourceManagmentScheduler.class);
 
-  private final TaskQueue taskQueue;
-  private final RemoteTaskRunner remoteTaskRunner;
+  private final TaskRunner taskRunner;
   private final ResourceManagementStrategy resourceManagementStrategy;
   private final ResourceManagementSchedulerConfig config;
   private final ScheduledExecutorService exec;
@@ -53,15 +51,13 @@ public class ResourceManagmentScheduler
   private volatile boolean started = false;
 
   public ResourceManagmentScheduler(
-      TaskQueue taskQueue,
-      RemoteTaskRunner remoteTaskRunner,
+      TaskRunner taskRunner,
       ResourceManagementStrategy resourceManagementStrategy,
       ResourceManagementSchedulerConfig config,
       ScheduledExecutorService exec
   )
   {
-    this.taskQueue = taskQueue;
-    this.remoteTaskRunner = remoteTaskRunner;
+    this.taskRunner = taskRunner;
     this.resourceManagementStrategy = resourceManagementStrategy;
     this.config = config;
     this.exec = exec;
@@ -84,8 +80,8 @@ public class ResourceManagmentScheduler
             public void run()
             {
               resourceManagementStrategy.doProvision(
-                  taskQueue.getAvailableTasks(),
-                  remoteTaskRunner.getAvailableWorkers()
+                  taskRunner.getPendingTasks(),
+                  taskRunner.getWorkers()
               );
             }
           }
@@ -109,8 +105,8 @@ public class ResourceManagmentScheduler
             public void run()
             {
               resourceManagementStrategy.doTerminate(
-                  taskQueue.getAvailableTasks(),
-                  remoteTaskRunner.getAvailableWorkers()
+                  taskRunner.getPendingTasks(),
+                  taskRunner.getWorkers()
               );
             }
           }
