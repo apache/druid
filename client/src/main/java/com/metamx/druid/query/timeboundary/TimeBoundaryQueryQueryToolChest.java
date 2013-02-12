@@ -215,18 +215,6 @@ public class TimeBoundaryQueryQueryToolChest
     };
   }
 
-  @Override
-  public QueryRunner<Result<TimeBoundaryResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeBoundaryResultValue>> runner)
-  {
-    return runner;
-  }
-
-  @Override
-  public QueryRunner<Result<TimeBoundaryResultValue>> postMergeQueryDecoration(QueryRunner<Result<TimeBoundaryResultValue>> runner)
-  {
-    return runner;
-  }
-
   public Ordering<Result<TimeBoundaryResultValue>> getOrdering()
   {
     return Ordering.natural();

@@ -48,9 +48,18 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public abstract ServiceMetricEvent.Builder makeMetricBuilder(QueryType query);
   public abstract Function<ResultType, ResultType> makeMetricManipulatorFn(QueryType query, MetricManipulationFn fn);
   public abstract TypeReference<ResultType> getResultTypeReference();
-  public abstract <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query);
-  public abstract QueryRunner<ResultType> preMergeQueryDecoration(QueryRunner<ResultType> runner);
-  public abstract QueryRunner<ResultType> postMergeQueryDecoration(QueryRunner<ResultType> runner);
+
+    public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query) {
+    return null;
+  }
+
+  public QueryRunner<ResultType> preMergeQueryDecoration(QueryRunner<ResultType> runner) {
+    return runner;
+  }
+
+  public QueryRunner<ResultType> postMergeQueryDecoration(QueryRunner<ResultType> runner) {
+    return runner;
+  }
 
   public Iterable<SegmentDescriptor> filterSegments(QueryType query, Iterable<SegmentDescriptor> intervals) {
     return intervals;

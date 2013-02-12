@@ -176,22 +176,4 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   {
     return TYPE_REFERENCE;
   }
-
-  @Override
-  public CacheStrategy<Row, Object, GroupByQuery> getCacheStrategy(GroupByQuery query)
-  {
-    return null;
-  }
-
-  @Override
-  public QueryRunner<Row> preMergeQueryDecoration(QueryRunner<Row> runner)
-  {
-    return runner;
-  }
-
-  @Override
-  public QueryRunner<Row> postMergeQueryDecoration(QueryRunner<Row> runner)
-  {
-    return runner;
-  }
 }

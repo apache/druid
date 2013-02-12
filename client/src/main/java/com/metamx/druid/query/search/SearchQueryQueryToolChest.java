@@ -262,12 +262,6 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     );
   }
 
-  @Override
-  public QueryRunner<Result<SearchResultValue>> postMergeQueryDecoration(final QueryRunner<Result<SearchResultValue>> runner)
-  {
-    return runner;
-  }
-
   private static class SearchThresholdAdjustingQueryRunner implements QueryRunner<Result<SearchResultValue>>
   {
     private final QueryRunner<Result<SearchResultValue>> runner;

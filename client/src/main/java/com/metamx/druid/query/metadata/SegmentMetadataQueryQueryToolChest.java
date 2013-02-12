@@ -219,18 +219,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     };
   }
 
-  @Override
-  public QueryRunner<SegmentAnalysis> preMergeQueryDecoration(QueryRunner<SegmentAnalysis> runner)
-  {
-    return runner;
-  }
-
-  @Override
-  public QueryRunner<SegmentAnalysis> postMergeQueryDecoration(QueryRunner<SegmentAnalysis> runner)
-  {
-    return runner;
-  }
-
   private Ordering<SegmentAnalysis> getOrdering()
   {
     return new Ordering<SegmentAnalysis>()

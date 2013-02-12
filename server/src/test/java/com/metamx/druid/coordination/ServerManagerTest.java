@@ -422,23 +422,5 @@ public class ServerManagerTest
     {
       return new TypeReference<T>(){};
     }
-
-    @Override
-    public <Typer> CacheStrategy<T, Typer, QueryType> getCacheStrategy(QueryType query)
-    {
-      return null;
-    }
-
-    @Override
-    public QueryRunner<T> preMergeQueryDecoration(QueryRunner<T> runner)
-    {
-      return runner;
-    }
-
-    @Override
-    public QueryRunner<T> postMergeQueryDecoration(QueryRunner<T> runner)
-    {
-      return runner;
-    }
   }
 }

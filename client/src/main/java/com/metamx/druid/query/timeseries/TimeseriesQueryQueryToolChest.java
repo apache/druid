@@ -258,12 +258,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     return new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(runner, Period.months(1));
   }
 
-  @Override
-  public QueryRunner<Result<TimeseriesResultValue>> postMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
-  {
-    return runner;
-  }
-
   public Ordering<Result<TimeseriesResultValue>> getOrdering()
   {
     return Ordering.natural();
