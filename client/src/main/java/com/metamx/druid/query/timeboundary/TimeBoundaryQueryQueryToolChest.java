@@ -37,7 +37,6 @@ import com.metamx.druid.query.CacheStrategy;
 import com.metamx.druid.query.MetricManipulationFn;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChest;
-import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
 import com.metamx.emitter.service.ServiceMetricEvent;
