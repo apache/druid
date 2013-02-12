@@ -143,6 +143,7 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
+    EasyMock.expect(druidServer1.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
     EasyMock.expect(druidServer2.getName()).andReturn("to").atLeastOnce();
@@ -150,6 +151,7 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
+    EasyMock.expect(druidServer2.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
     EasyMock.replay(druidServer3);
@@ -202,6 +204,7 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
+    EasyMock.expect(druidServer1.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
     EasyMock.expect(druidServer2.getName()).andReturn("2").atLeastOnce();
@@ -209,6 +212,7 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
+    EasyMock.expect(druidServer2.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
     EasyMock.expect(druidServer3.getName()).andReturn("3").atLeastOnce();
@@ -216,6 +220,7 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer3.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer3.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer3.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
+    EasyMock.expect(druidServer3.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer3);
 
     EasyMock.expect(druidServer4.getName()).andReturn("4").atLeastOnce();
@@ -223,6 +228,7 @@ public class DruidMasterBalancerTest
     EasyMock.expect(druidServer4.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer4.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer4.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
+    EasyMock.expect(druidServer4.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer4);
 
     // Mock stuff that the master needs

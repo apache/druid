@@ -20,14 +20,11 @@
 package com.metamx.druid.master;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -61,7 +58,7 @@ public class BalancerCostAnalyzer
    *            pairwise cost matrix).  This is the cost of a cluster if each
    *            segment were to get its own compute node.
    */
-  public double calculateNormalization(List<ServerHolder> serverHolders)
+  public double calculateNormalization(final List<ServerHolder> serverHolders)
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
@@ -78,7 +75,7 @@ public class BalancerCostAnalyzer
    *            A list of ServerHolders for a particular tier.
    * @return    The initial cost of the Druid tier.
    */
-  public double calculateInitialTotalCost(List<ServerHolder> serverHolders)
+  public double calculateInitialTotalCost(final List<ServerHolder> serverHolders)
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
@@ -105,7 +102,7 @@ public class BalancerCostAnalyzer
    *            The second DataSegment.
    * @return    The joint cost of placing the two DataSegments together on one node.
    */
-  public double computeJointSegmentCosts(DataSegment segment1, DataSegment segment2)
+  public double computeJointSegmentCosts(final DataSegment segment1, final DataSegment segment2)
   {
     final Interval gap = segment1.getInterval().gap(segment2.getInterval());
 
@@ -150,7 +147,7 @@ public class BalancerCostAnalyzer
    * @return    A ServerHolder sampled with probability proportional to the
    *            number of segments on that server
    */
-  private ServerHolder sampleServer(List<ServerHolder> serverHolders, int numSegments)
+  private ServerHolder sampleServer(final List<ServerHolder> serverHolders, final int numSegments)
   {
     final int num = rand.nextInt(numSegments);
     int cumulativeSegments = 0;
@@ -172,7 +169,7 @@ public class BalancerCostAnalyzer
    *            The total number of segments on a particular tier.
    * @return    A BalancerSegmentHolder sampled uniformly at random.
    */
-  public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders, int numSegments)
+  public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders, final int numSegments)
   {
     /** We want to sample from each server w.p. numSegmentsOnServer / totalSegments */
     ServerHolder fromServerHolder = sampleServer(serverHolders, numSegments);
@@ -191,30 +188,19 @@ public class BalancerCostAnalyzer
    *            A DataSegment that we are proposing to move.
    * @param     serverHolders
    *            An iterable of ServerHolders for a particular tier.
-   * @return    A MinMaxPriorityQueue of costs of putting the proposalSegment on the server and ServerHolders.
+   * @return    A ServerHolder with the new home for a segment.
    */
-  public MinMaxPriorityQueue<Pair<Double, ServerHolder>> findNewSegmentHome(DataSegment proposalSegment, Iterable<ServerHolder> serverHolders)
+  public ServerHolder findNewSegmentHome(final DataSegment proposalSegment, final Iterable<ServerHolder> serverHolders)
   {
-    // Just need a regular priority queue for the min. element.
-    final MinMaxPriorityQueue<Pair<Double, ServerHolder>> costServerPairs = MinMaxPriorityQueue.orderedBy(
-        new Comparator<Pair<Double, ServerHolder>>()
-        {
-          @Override
-          public int compare(
-              Pair<Double, ServerHolder> o,
-              Pair<Double, ServerHolder> o1
-          )
-          {
-            return Double.compare(o.lhs, o1.lhs);
-          }
-        }
-    ).create();
-
     final long proposalSegmentSize = proposalSegment.getSize();
+    double minCost = Double.MAX_VALUE;
+    ServerHolder toServer = null;
 
     for (ServerHolder server : serverHolders) {
-      /** Only calculate costs if the server has enough space. */
-      if (proposalSegmentSize > server.getAvailableSize()) {
+      /** Don't calculate cost if the server doesn't have enough space or is serving/loading the segment. */
+      if (proposalSegmentSize > server.getAvailableSize()
+          || server.isServingSegment(proposalSegment)
+          || server.isLoadingSegment(proposalSegment)) {
         break;
       }
 
@@ -231,10 +217,13 @@ public class BalancerCostAnalyzer
         cost += computeJointSegmentCosts(proposalSegment, segment);
       }
 
-      costServerPairs.add(Pair.of(cost, server));
+      if (cost < minCost) {
+        minCost = cost;
+        toServer = server;
+      }
     }
 
-    return costServerPairs;
+    return toServer;
   }
 
 }

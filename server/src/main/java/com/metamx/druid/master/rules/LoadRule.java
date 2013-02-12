@@ -62,14 +62,14 @@ public abstract class LoadRule implements Rule
     final List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(serverQueue);
     final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
     final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
-    MinMaxPriorityQueue<Pair<Double, ServerHolder>> serverCostQueue = analyzer.findNewSegmentHome(segment, serverHolderList);
 
     stats.accumulate(
         assign(
             params.getReplicationManager(),
             expectedReplicants,
             totalReplicants,
-            serverCostQueue,
+            analyzer,
+            serverHolderList,
             segment
         )
     );
@@ -81,16 +81,17 @@ public abstract class LoadRule implements Rule
 
   private MasterStats assign(
       final ReplicationThrottler replicationManager,
-      int expectedReplicants,
+      final int expectedReplicants,
       int totalReplicants,
-      MinMaxPriorityQueue<Pair<Double, ServerHolder>> serverQueue,
+      final BalancerCostAnalyzer analyzer,
+      final List<ServerHolder> serverHolderList,
       final DataSegment segment
   )
   {
-    MasterStats stats = new MasterStats();
+    final MasterStats stats = new MasterStats();
 
     while (totalReplicants < expectedReplicants) {
-      ServerHolder holder = serverQueue.pollFirst().rhs;
+      ServerHolder holder = analyzer.findNewSegmentHome(segment, serverHolderList);
 
       if (holder == null) {
         log.warn(
@@ -100,10 +101,6 @@ public abstract class LoadRule implements Rule
             expectedReplicants
         );
         break;
-      }
-
-      if (holder.isServingSegment(segment) || holder.isLoadingSegment(segment)) {
-        continue;
       }
 
       if (totalReplicants > 0) { // don't throttle if there's only 1 copy of this segment in the cluster
