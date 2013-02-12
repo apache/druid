@@ -29,6 +29,8 @@ import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Query;
+import com.metamx.druid.TimelineObjectHolder;
+import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.collect.OrderedMergeSequence;
 import com.metamx.druid.query.BySegmentSkippingQueryRunner;
 import com.metamx.druid.query.CacheStrategy;
@@ -64,16 +66,19 @@ public class TimeBoundaryQueryQueryToolChest
 
 
   @Override
-  public Iterable<SegmentDescriptor> filterSegments(TimeBoundaryQuery query, Iterable<SegmentDescriptor> input) {
+  public List<TimelineObjectHolder<String, ServerSelector>> filterSegments(
+      TimeBoundaryQuery query,
+      List<TimelineObjectHolder<String, ServerSelector>> input
+  ) {
     long minMillis = Long.MAX_VALUE;
     long maxMillis = Long.MIN_VALUE;
-    SegmentDescriptor min = null;
-    SegmentDescriptor max = null;
+    TimelineObjectHolder<String, ServerSelector> min = null;
+    TimelineObjectHolder<String, ServerSelector> max = null;
 
     // keep track of all segments in a given shard
-    Map<String, Set<SegmentDescriptor>> segmentGroups = Maps.newHashMap();
+    Map<String, Set<TimelineObjectHolder<String, ServerSelector>>> segmentGroups = Maps.newHashMap();
 
-    for(SegmentDescriptor e : input) {
+    for(TimelineObjectHolder<String, ServerSelector> e : input) {
       final long start = e.getInterval().getStartMillis();
       final long end = e.getInterval().getEndMillis();
       final String version = e.getVersion();
@@ -94,7 +99,7 @@ public class TimeBoundaryQueryQueryToolChest
       }
     }
 
-    return Sets.union(segmentGroups.get(min.getVersion()), segmentGroups.get(max.getVersion()));
+    return Lists.newArrayList(Sets.union(segmentGroups.get(min.getVersion()), segmentGroups.get(max.getVersion())));
   }
 
   @Override

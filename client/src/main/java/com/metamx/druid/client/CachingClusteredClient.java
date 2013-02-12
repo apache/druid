@@ -139,49 +139,26 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     // build set of segments to query
     Set<Pair<ServerSelector, SegmentDescriptor>> segments = Sets.newLinkedHashSet();
 
+    List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
+
     for (Interval interval : rewrittenQuery.getIntervals()) {
-      List<TimelineObjectHolder<String, ServerSelector>> serversLookup = timeline.lookup(interval);
-
-      for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
-        for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
-          ServerSelector selector = chunk.getObject();
-          final SegmentDescriptor descriptor = new SegmentDescriptor(
-              holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
-          );
-
-          segments.add(Pair.of(selector, descriptor));
-        }
-      }
+      serversLookup.addAll(timeline.lookup(interval));
     }
 
     // Let tool chest filter out unneeded segments
-    final Set<SegmentDescriptor> filteredSegmentDescriptors = Sets.newLinkedHashSet(toolChest.filterSegments(
-        query,
-        Iterables.transform(
-            segments, new Function<Pair<ServerSelector, SegmentDescriptor>, SegmentDescriptor>()
-        {
-          @Override
-          public SegmentDescriptor apply(
-              @Nullable Pair<ServerSelector, SegmentDescriptor> input
-          )
-          {
-            return input.rhs;
-          }
-        }
-        )
-    ));
+    final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
+        toolChest.filterSegments(query, serversLookup);
 
-    // remove unneeded segments from list of segments to query
-    segments = Sets.newLinkedHashSet(Iterables.filter(segments, new Predicate<Pair<ServerSelector, SegmentDescriptor>>()
-    {
-      @Override
-      public boolean apply(
-          @Nullable Pair<ServerSelector, SegmentDescriptor> input
-      )
-      {
-        return filteredSegmentDescriptors.contains(input.rhs);
+    for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
+      for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
+        ServerSelector selector = chunk.getObject();
+        final SegmentDescriptor descriptor = new SegmentDescriptor(
+            holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
+        );
+
+        segments.add(Pair.of(selector, descriptor));
       }
-    }));
+    }
 
     final byte[] queryCacheKey;
     if(strategy != null) {
