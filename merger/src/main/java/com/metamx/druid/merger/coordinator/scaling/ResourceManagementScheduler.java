@@ -32,15 +32,15 @@ import org.joda.time.Period;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
- * The ResourceManagmentScheduler schedules a check for when worker nodes should potentially be created or destroyed.
+ * The ResourceManagementScheduler schedules a check for when worker nodes should potentially be created or destroyed.
  * It uses a {@link TaskRunner} to return all pending tasks in the system and the status of the worker nodes in
  * the system.
- * The ResourceManagmentScheduler does not contain the logic to decide whether provision or termination should actually
+ * The ResourceManagementScheduler does not contain the logic to decide whether provision or termination should actually
  * occur. That decision is made in the {@link ResourceManagementStrategy}.
  */
-public class ResourceManagmentScheduler
+public class ResourceManagementScheduler
 {
-  private static final Logger log = new Logger(ResourceManagmentScheduler.class);
+  private static final Logger log = new Logger(ResourceManagementScheduler.class);
 
   private final TaskRunner taskRunner;
   private final ResourceManagementStrategy resourceManagementStrategy;
@@ -50,7 +50,7 @@ public class ResourceManagmentScheduler
   private final Object lock = new Object();
   private volatile boolean started = false;
 
-  public ResourceManagmentScheduler(
+  public ResourceManagementScheduler(
       TaskRunner taskRunner,
       ResourceManagementStrategy resourceManagementStrategy,
       ResourceManagementSchedulerConfig config,
@@ -124,6 +124,7 @@ public class ResourceManagmentScheduler
         return;
       }
       exec.shutdown();
+      started = false;
     }
   }
 

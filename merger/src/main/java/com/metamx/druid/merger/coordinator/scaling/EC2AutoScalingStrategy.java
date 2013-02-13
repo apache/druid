@@ -72,7 +72,6 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
       WorkerSetupData setupData = workerSetupManager.getWorkerSetupData();
       EC2NodeData workerConfig = setupData.getNodeData();
 
-      log.info("Creating new instance(s)...");
       RunInstancesResult result = amazonEC2Client.runInstances(
           new RunInstancesRequest(
               workerConfig.getAmiId(),

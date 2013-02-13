@@ -142,44 +142,47 @@ public class DruidMaster
 
   public Map<String, Double> getLoadStatus()
   {
-    Map<String, Integer> availableSegmentMap = Maps.newHashMap();
-
-    for (DataSegment segment : getAvailableDataSegments()) {
-      Integer count = availableSegmentMap.get(segment.getDataSource());
-      int newCount = (count == null) ? 0 : count.intValue();
-      availableSegmentMap.put(segment.getDataSource(), ++newCount);
+    // find available segments
+    Map<String, Set<DataSegment>> availableSegments = Maps.newHashMap();
+    for (DataSegment dataSegment : getAvailableDataSegments()) {
+      Set<DataSegment> segments = availableSegments.get(dataSegment.getDataSource());
+      if (segments == null) {
+        segments = Sets.newHashSet();
+        availableSegments.put(dataSegment.getDataSource(), segments);
+      }
+      segments.add(dataSegment);
     }
 
-    Map<String, Set<DataSegment>> loadedDataSources = Maps.newHashMap();
-    for (DruidServer server : serverInventoryManager.getInventory()) {
-      for (DruidDataSource dataSource : server.getDataSources()) {
-        if (!loadedDataSources.containsKey(dataSource.getName())) {
-          TreeSet<DataSegment> setToAdd = Sets.newTreeSet(DataSegment.bucketMonthComparator());
-          setToAdd.addAll(dataSource.getSegments());
-          loadedDataSources.put(dataSource.getName(), setToAdd);
-        } else {
-          loadedDataSources.get(dataSource.getName()).addAll(dataSource.getSegments());
+    // find segments currently loaded
+    Map<String, Set<DataSegment>> segmentsInCluster = Maps.newHashMap();
+    for (DruidServer druidServer : serverInventoryManager.getInventory()) {
+      for (DruidDataSource druidDataSource : druidServer.getDataSources()) {
+        Set<DataSegment> segments = segmentsInCluster.get(druidDataSource.getName());
+        if (segments == null) {
+          segments = Sets.newHashSet();
+          segmentsInCluster.put(druidDataSource.getName(), segments);
         }
+        segments.addAll(druidDataSource.getSegments());
       }
     }
 
-    Map<String, Integer> loadedSegmentMap = Maps.newHashMap();
-    for (Map.Entry<String, Set<DataSegment>> entry : loadedDataSources.entrySet()) {
-      loadedSegmentMap.put(entry.getKey(), entry.getValue().size());
-    }
-
-    Map<String, Double> retVal = Maps.newHashMap();
-
-    for (Map.Entry<String, Integer> entry : availableSegmentMap.entrySet()) {
-      String key = entry.getKey();
-      if (!loadedSegmentMap.containsKey(key) || entry.getValue().doubleValue() == 0.0) {
-        retVal.put(key, 0.0);
-      } else {
-        retVal.put(key, 100 * loadedSegmentMap.get(key).doubleValue() / entry.getValue().doubleValue());
+    // compare available segments with currently loaded
+    Map<String, Double> loadStatus = Maps.newHashMap();
+    for (Map.Entry<String, Set<DataSegment>> entry : availableSegments.entrySet()) {
+      String dataSource = entry.getKey();
+      Set<DataSegment> segmentsAvailable = entry.getValue();
+      Set<DataSegment> loadedSegments = segmentsInCluster.get(dataSource);
+      if (loadedSegments == null) {
+        loadedSegments = Sets.newHashSet();
       }
+      Set<DataSegment> unloadedSegments = Sets.difference(segmentsAvailable, loadedSegments);
+      loadStatus.put(
+          dataSource,
+          100 * ((double) (segmentsAvailable.size() - unloadedSegments.size()) / (double) segmentsAvailable.size())
+      );
     }
 
-    return retVal;
+    return loadStatus;
   }
 
   public int lookupSegmentLifetime(DataSegment segment)

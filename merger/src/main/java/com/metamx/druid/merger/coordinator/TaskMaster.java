@@ -27,6 +27,8 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.exec.TaskConsumer;
+import com.metamx.druid.merger.coordinator.scaling.ResourceManagementScheduler;
+import com.metamx.druid.merger.coordinator.scaling.ResourceManagementSchedulerFactory;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.netflix.curator.framework.CuratorFramework;
@@ -56,6 +58,7 @@ public class TaskMaster
       final ServiceDiscoveryConfig serviceDiscoveryConfig,
       final MergerDBCoordinator mergerDBCoordinator,
       final TaskRunnerFactory runnerFactory,
+      final ResourceManagementSchedulerFactory managementSchedulerFactory,
       final CuratorFramework curator,
       final ServiceEmitter emitter
       )
@@ -72,11 +75,13 @@ public class TaskMaster
           log.info("By the power of Grayskull, I have the power!");
 
           final TaskRunner runner = runnerFactory.build();
+          final ResourceManagementScheduler scheduler = managementSchedulerFactory.build(runner);
           final TaskConsumer consumer = new TaskConsumer(queue, runner, mergerDBCoordinator, emitter);
 
           // Sensible order to start stuff:
           final Lifecycle leaderLifecycle = new Lifecycle();
           leaderLifecycle.addManagedInstance(queue);
+          leaderLifecycle.addManagedInstance(scheduler);
           leaderLifecycle.addManagedInstance(runner);
           Initialization.makeServiceDiscoveryClient(curator, serviceDiscoveryConfig, leaderLifecycle);
           leaderLifecycle.addManagedInstance(consumer);

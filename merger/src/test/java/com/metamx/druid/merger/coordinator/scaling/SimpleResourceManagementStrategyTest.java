@@ -26,7 +26,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.TestTask;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.merger.coordinator.TaskWrapper;
+import com.metamx.druid.merger.coordinator.TaskRunnerWorkItem;
 import com.metamx.druid.merger.coordinator.WorkerWrapper;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
@@ -120,8 +120,8 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.replay(autoScalingStrategy);
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
-        Arrays.<TaskWrapper>asList(
-            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        Arrays.<TaskRunnerWorkItem>asList(
+            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<WorkerWrapper>asList(
             new TestWorkerWrapper(testTask)
@@ -148,8 +148,8 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.replay(autoScalingStrategy);
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
-        Arrays.<TaskWrapper>asList(
-            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        Arrays.<TaskRunnerWorkItem>asList(
+            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<WorkerWrapper>asList(
             new TestWorkerWrapper(testTask)
@@ -164,8 +164,8 @@ public class SimpleResourceManagementStrategyTest
     );
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
-        Arrays.<TaskWrapper>asList(
-            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        Arrays.<TaskRunnerWorkItem>asList(
+            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<WorkerWrapper>asList(
             new TestWorkerWrapper(testTask)
@@ -198,8 +198,8 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.replay(autoScalingStrategy);
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
-        Arrays.<TaskWrapper>asList(
-            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        Arrays.<TaskRunnerWorkItem>asList(
+            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<WorkerWrapper>asList(
             new TestWorkerWrapper(null)
@@ -230,8 +230,8 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.replay(autoScalingStrategy);
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
-        Arrays.<TaskWrapper>asList(
-            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        Arrays.<TaskRunnerWorkItem>asList(
+            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<WorkerWrapper>asList(
             new TestWorkerWrapper(null)
@@ -245,8 +245,8 @@ public class SimpleResourceManagementStrategyTest
     );
 
     terminatedSomething = simpleResourceManagementStrategy.doTerminate(
-        Arrays.<TaskWrapper>asList(
-            new TaskWrapper(testTask, null, null, null, System.currentTimeMillis())
+        Arrays.<TaskRunnerWorkItem>asList(
+            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<WorkerWrapper>asList(
             new TestWorkerWrapper(null)

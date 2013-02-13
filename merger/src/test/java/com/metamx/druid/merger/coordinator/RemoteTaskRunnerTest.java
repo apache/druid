@@ -164,11 +164,6 @@ public class RemoteTaskRunnerTest
     }
     catch (ISE expected) {
     }
-    finally {
-      cf.delete().guaranteed().forPath(
-          String.format("%s/worker1/task1", statusPath)
-      );
-    }
   }
 
   @Test
@@ -231,7 +226,7 @@ public class RemoteTaskRunnerTest
 
     // Really don't like this way of waiting for the task to appear
     int count = 0;
-    while (!remoteTaskRunner.isTaskRunning(task1.getId())) {
+    while (remoteTaskRunner.findWorkerRunningTask(task1.getId()) == null) {
       Thread.sleep(500);
       if (count > 10) {
         throw new ISE("WTF?! Task still not announced in ZK?");
@@ -249,7 +244,7 @@ public class RemoteTaskRunnerTest
 
     // Really don't like this way of waiting for the task to disappear
     count = 0;
-    while (remoteTaskRunner.isTaskRunning(task1.getId())) {
+    while (remoteTaskRunner.findWorkerRunningTask(task1.getId()) != null) {
       Thread.sleep(500);
       if (count > 10) {
         throw new ISE("WTF?! Task still not announced in ZK?");

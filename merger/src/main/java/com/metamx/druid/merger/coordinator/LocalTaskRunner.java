@@ -112,13 +112,13 @@ public class LocalTaskRunner implements TaskRunner
   }
 
   @Override
-  public Collection<TaskWrapper> getRunningTasks()
+  public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
     return Lists.newArrayList();
   }
 
   @Override
-  public Collection<TaskWrapper> getPendingTasks()
+  public Collection<TaskRunnerWorkItem> getPendingTasks()
   {
     return Lists.newArrayList();
   }

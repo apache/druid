@@ -93,6 +93,8 @@ public class TaskMonitor
                 final TaskContext taskContext = taskHolder.getTaskContext();
 
                 if (workerCuratorCoordinator.statusExists(task.getId())) {
+                  log.warn("Got task %s that I am already running...", task.getId());
+                  workerCuratorCoordinator.unannounceTask(task.getId());
                   return;
                 }
 

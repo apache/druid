@@ -29,7 +29,7 @@ import org.skife.config.Default;
 public abstract class ResourceManagementSchedulerConfig
 {
   @Config("druid.indexer.provisionResources.duration")
-  @Default("PT1H")
+  @Default("PT1M")
   public abstract Duration getProvisionResourcesDuration();
 
   @Config("druid.indexer.terminateResources.duration")

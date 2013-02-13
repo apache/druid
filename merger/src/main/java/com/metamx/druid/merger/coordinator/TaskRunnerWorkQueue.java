@@ -17,29 +17,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator.scaling;
+package com.metamx.druid.merger.coordinator;
 
-import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import org.joda.time.DateTime;
+
+import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  */
-public abstract class SimpleResourceManagmentConfig
+public class TaskRunnerWorkQueue extends ConcurrentSkipListMap<String, TaskRunnerWorkItem>
 {
-  @Config("druid.indexer.maxWorkerIdleTimeMillisBeforeDeletion")
-  @Default("600000")
-  public abstract int getMaxWorkerIdleTimeMillisBeforeDeletion();
-
-  @Config("druid.indexer.maxScalingDuration")
-  @Default("PT15M")
-  public abstract Duration getMaxScalingDuration();
-
-  @Config("druid.indexer.numEventsToTrack")
-  @Default("50")
-  public abstract int getNumEventsToTrack();
-
-  @Config("druid.indexer.maxPendingTaskDuration")
-  @Default("PT30S")
-  public abstract Duration getMaxPendingTaskDuration();
+  @Override
+  public TaskRunnerWorkItem put(String s, TaskRunnerWorkItem taskRunnerWorkItem)
+  {
+    return super.put(s, taskRunnerWorkItem.withQueueInsertionTime(new DateTime()));
+  }
 }

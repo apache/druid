@@ -19,26 +19,30 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import com.google.common.primitives.Longs;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.task.Task;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeComparator;
 
 /**
+ * A holder for a task and different components associated with the task
  */
-public class TaskWrapper implements Comparable<TaskWrapper>
+public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 {
   private final Task task;
   private final TaskContext taskContext;
   private final TaskCallback callback;
   private final RetryPolicy retryPolicy;
-  private final long createdTime;
+  private final DateTime createdTime;
 
-  public TaskWrapper(
+  private volatile DateTime queueInsertionTime;
+
+  public TaskRunnerWorkItem(
       Task task,
       TaskContext taskContext,
       TaskCallback callback,
       RetryPolicy retryPolicy,
-      long createdTime
+      DateTime createdTime
   )
   {
     this.task = task;
@@ -68,15 +72,26 @@ public class TaskWrapper implements Comparable<TaskWrapper>
     return retryPolicy;
   }
 
-  public long getCreatedTime()
+  public DateTime getCreatedTime()
   {
     return createdTime;
   }
 
-  @Override
-  public int compareTo(TaskWrapper taskWrapper)
+  public DateTime getQueueInsertionTime()
   {
-    return Longs.compare(createdTime, taskWrapper.getCreatedTime());
+    return queueInsertionTime;
+  }
+
+  public TaskRunnerWorkItem withQueueInsertionTime(DateTime time)
+  {
+    this.queueInsertionTime = time;
+    return this;
+  }
+
+  @Override
+  public int compareTo(TaskRunnerWorkItem taskRunnerWorkItem)
+  {
+    return DateTimeComparator.getInstance().compare(createdTime, taskRunnerWorkItem.getCreatedTime());
   }
 
   @Override
@@ -89,7 +104,7 @@ public class TaskWrapper implements Comparable<TaskWrapper>
       return false;
     }
 
-    TaskWrapper that = (TaskWrapper) o;
+    TaskRunnerWorkItem that = (TaskRunnerWorkItem) o;
 
     if (callback != null ? !callback.equals(that.callback) : that.callback != null) {
       return false;
@@ -120,7 +135,7 @@ public class TaskWrapper implements Comparable<TaskWrapper>
   @Override
   public String toString()
   {
-    return "TaskWrapper{" +
+    return "TaskRunnerWorkItem{" +
            "task=" + task +
            ", taskContext=" + taskContext +
            ", callback=" + callback +

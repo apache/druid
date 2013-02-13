@@ -40,9 +40,9 @@ public interface TaskRunner
    */
   public void run(Task task, TaskContext context, TaskCallback callback);
 
-  public Collection<TaskWrapper> getRunningTasks();
+  public Collection<TaskRunnerWorkItem> getRunningTasks();
 
-  public Collection<TaskWrapper> getPendingTasks();
+  public Collection<TaskRunnerWorkItem> getPendingTasks();
 
   public Collection<WorkerWrapper> getWorkers();
 }

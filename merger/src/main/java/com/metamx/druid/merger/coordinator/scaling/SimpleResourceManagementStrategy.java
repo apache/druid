@@ -24,7 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.druid.merger.coordinator.TaskWrapper;
+import com.metamx.druid.merger.coordinator.TaskRunnerWorkItem;
 import com.metamx.druid.merger.coordinator.WorkerWrapper;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.EmittingLogger;
@@ -65,7 +65,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   @Override
-  public boolean doProvision(Collection<TaskWrapper> pendingTasks, Collection<WorkerWrapper> workerWrappers)
+  public boolean doProvision(Collection<TaskRunnerWorkItem> pendingTasks, Collection<WorkerWrapper> workerWrappers)
   {
     List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
         Lists.newArrayList(
@@ -89,15 +89,17 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
 
     boolean nothingProvisioning = currentlyProvisioning.isEmpty();
 
-    if (nothingProvisioning && hasTaskPendingBeyondThreshold(pendingTasks)) {
-      AutoScalingData provisioned = autoScalingStrategy.provision();
+    if (nothingProvisioning) {
+      if (hasTaskPendingBeyondThreshold(pendingTasks)) {
+        AutoScalingData provisioned = autoScalingStrategy.provision();
 
-      if (provisioned != null) {
-        currentlyProvisioning.addAll(provisioned.getNodeIds());
-        lastProvisionTime = new DateTime();
-        scalingStats.addProvisionEvent(provisioned);
+        if (provisioned != null) {
+          currentlyProvisioning.addAll(provisioned.getNodeIds());
+          lastProvisionTime = new DateTime();
+          scalingStats.addProvisionEvent(provisioned);
 
-        return true;
+          return true;
+        }
       }
     } else {
       Duration durSinceLastProvision = new Duration(new DateTime(), lastProvisionTime);
@@ -118,7 +120,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   @Override
-  public boolean doTerminate(Collection<TaskWrapper> pendingTasks, Collection<WorkerWrapper> workerWrappers)
+  public boolean doTerminate(Collection<TaskRunnerWorkItem> pendingTasks, Collection<WorkerWrapper> workerWrappers)
   {
     List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
         Lists.newArrayList(
@@ -214,12 +216,15 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     return scalingStats;
   }
 
-  private boolean hasTaskPendingBeyondThreshold(Collection<TaskWrapper> pendingTasks)
+  private boolean hasTaskPendingBeyondThreshold(Collection<TaskRunnerWorkItem> pendingTasks)
   {
     long now = System.currentTimeMillis();
-    for (TaskWrapper pendingTask : pendingTasks) {
-      if (new Duration(pendingTask.getCreatedTime(), now).isEqual(config.getMaxPendingTaskDuration()) ||
-          new Duration(pendingTask.getCreatedTime(), now).isLongerThan(config.getMaxPendingTaskDuration())) {
+    for (TaskRunnerWorkItem pendingTask : pendingTasks) {
+      if (new Duration(pendingTask.getQueueInsertionTime().getMillis(), now).isEqual(config.getMaxPendingTaskDuration())
+          ||
+          new Duration(
+              pendingTask.getQueueInsertionTime().getMillis(), now
+          ).isLongerThan(config.getMaxPendingTaskDuration())) {
         return true;
       }
     }
