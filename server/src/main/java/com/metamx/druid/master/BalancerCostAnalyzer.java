@@ -201,7 +201,7 @@ public class BalancerCostAnalyzer
       if (proposalSegmentSize > server.getAvailableSize()
           || server.isServingSegment(proposalSegment)
           || server.isLoadingSegment(proposalSegment)) {
-        break;
+        continue;
       }
 
       /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
