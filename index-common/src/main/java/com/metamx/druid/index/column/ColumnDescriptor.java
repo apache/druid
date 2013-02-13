@@ -19,12 +19,14 @@
 
 package com.metamx.druid.index.column;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.druid.index.serde.ColumnPartSerde;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

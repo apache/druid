@@ -19,10 +19,11 @@
 
 package com.metamx.druid.query.metadata;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.BaseQuery;
 import com.metamx.druid.Query;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import java.util.Map;
 

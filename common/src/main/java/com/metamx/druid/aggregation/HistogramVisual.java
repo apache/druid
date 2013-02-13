@@ -19,16 +19,19 @@
 
 package com.metamx.druid.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 import java.util.Arrays;
 
 public class HistogramVisual
 {
   @JsonProperty final public double[] breaks;
-  @JsonProperty final public double[] counts;
+  @JsonProperty
+  final public double[] counts;
   // an array of the quantiles including the min. and max.
   @JsonProperty final public double[] quantiles;
 

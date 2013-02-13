@@ -19,13 +19,15 @@
 
 package com.metamx.druid.merger.common;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.task.Task;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 import java.util.Collections;
 import java.util.List;

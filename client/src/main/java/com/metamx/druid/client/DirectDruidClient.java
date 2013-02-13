@@ -19,6 +19,13 @@
 
 package com.metamx.druid.client;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
@@ -40,13 +47,12 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.io.AppendableByteArrayInputStream;
 import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.InputStreamResponseHandler;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.JsonToken;
-import org.codehaus.jackson.ObjectCodec;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.type.TypeFactory;
-import org.codehaus.jackson.smile.SmileFactory;
-import org.codehaus.jackson.type.JavaType;
+
+
+
+
+
+
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;

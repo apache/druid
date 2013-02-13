@@ -19,10 +19,12 @@
 
 package com.metamx.druid.index.brita;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import com.metamx.druid.query.search.SearchQuerySpec;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 import javax.annotation.Nullable;
 

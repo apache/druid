@@ -19,9 +19,11 @@
 
 package com.metamx.druid.indexer.granularity;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

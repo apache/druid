@@ -19,9 +19,11 @@
 
 package com.metamx.druid.result;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.metamx.druid.query.search.SearchHit;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonValue;
+
+
 
 import java.util.Iterator;
 import java.util.List;

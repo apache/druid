@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.worker;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -32,7 +33,7 @@ import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.state.ConnectionState;
 import com.netflix.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.DateTime;
 
 import java.util.Arrays;

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator.setup;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
@@ -28,7 +29,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.coordinator.config.WorkerSetupManagerConfig;
 import org.apache.commons.collections.MapUtils;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.Duration;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.FoldController;

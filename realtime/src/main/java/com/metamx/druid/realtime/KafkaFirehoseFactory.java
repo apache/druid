@@ -19,6 +19,8 @@
 
 package com.metamx.druid.realtime;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.exception.FormattedException;
@@ -30,8 +32,8 @@ import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaMessageStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.Message;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 import java.io.IOException;
 import java.nio.CharBuffer;

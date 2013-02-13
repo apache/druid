@@ -19,19 +19,21 @@
 
 package com.metamx.druid.jackson;
 
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.JsonToken;
-import org.codehaus.jackson.map.DeserializationContext;
-import org.codehaus.jackson.map.KeyDeserializer;
-import org.codehaus.jackson.map.deser.std.StdDeserializer;
-import org.codehaus.jackson.map.ext.JodaDeserializers;
-import org.codehaus.jackson.map.module.SimpleModule;
-import org.codehaus.jackson.map.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.KeyDeserializer;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.fasterxml.jackson.datatype.joda.deser.DurationDeserializer;
+import com.fasterxml.jackson.datatype.joda.deser.PeriodDeserializer;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.joda.time.ReadableInstant;
+import org.joda.time.Period;
 import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.IOException;
@@ -47,6 +49,10 @@ public class JodaStuff
     module.addSerializer(DateTime.class, ToStringSerializer.instance);
     module.addDeserializer(Interval.class, new JodaStuff.IntervalDeserializer());
     module.addSerializer(Interval.class, ToStringSerializer.instance);
+    module.addDeserializer(Period.class, new PeriodDeserializer());
+    module.addSerializer(Period.class, ToStringSerializer.instance);
+    module.addDeserializer(Duration.class, new DurationDeserializer());
+    module.addSerializer(Duration.class, ToStringSerializer.instance);
 
     return module;
   }

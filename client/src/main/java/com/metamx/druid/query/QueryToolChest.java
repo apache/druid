@@ -19,11 +19,12 @@
 
 package com.metamx.druid.query;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
 import com.metamx.druid.Query;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.type.TypeReference;
+
 
 /**
  * The broker-side (also used by server in some cases) API for a specific Query type.  This API is still undergoing

@@ -19,6 +19,8 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryGranularity;
@@ -33,9 +35,9 @@ import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.coordinator.TaskContext;
 import com.metamx.druid.shard.NoneShardSpec;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.ObjectMapper;
+
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

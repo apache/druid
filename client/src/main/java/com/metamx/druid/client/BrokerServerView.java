@@ -19,6 +19,7 @@
 
 package com.metamx.druid.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -28,7 +29,7 @@ import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChestWarehouse;
 import com.metamx.http.client.HttpClient;
-import org.codehaus.jackson.map.ObjectMapper;
+
 
 import javax.annotation.Nullable;
 import java.util.Iterator;

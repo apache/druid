@@ -19,9 +19,11 @@
 
 package com.metamx.druid.query.dimension;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.druid.query.extraction.DimExtractionFn;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+
 
 /**
  */

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.coordination;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -33,7 +34,7 @@ import com.metamx.druid.loading.NoopSegmentLoader;
 import com.metamx.druid.metrics.NoopServiceEmitter;
 import com.metamx.druid.query.NoopQueryRunnerFactoryConglomerate;
 import com.metamx.druid.shard.NoneShardSpec;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.loading;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Closeables;
@@ -29,7 +30,7 @@ import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.acl.gs.GSAccessControlList;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
