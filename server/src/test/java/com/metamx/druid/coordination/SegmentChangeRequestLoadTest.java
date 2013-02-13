@@ -19,13 +19,15 @@
 
 package com.metamx.druid.coordination;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.shard.NoneShardSpec;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
+
+
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;

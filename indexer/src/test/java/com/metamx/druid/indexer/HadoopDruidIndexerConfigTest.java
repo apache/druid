@@ -19,12 +19,13 @@
 
 package com.metamx.druid.indexer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.partitions.PartitionsSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,8 +40,8 @@ public class HadoopDruidIndexerConfigTest
 
     try {
       cfg = jsonMapper.readValue(
-          "{"
-          + "\"granularitySpec\":{"
+            "{"
+          + " \"granularitySpec\":{"
           + "   \"type\":\"uniform\","
           + "   \"gran\":\"hour\","
           + "   \"intervals\":[\"2012-01-01/P1D\"]"

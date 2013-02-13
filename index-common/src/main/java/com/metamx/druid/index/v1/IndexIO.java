@@ -19,6 +19,7 @@
 
 package com.metamx.druid.index.v1;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -61,7 +62,7 @@ import com.metamx.druid.kv.VSizeIndexedInts;
 import com.metamx.druid.utils.SerializerUtils;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;

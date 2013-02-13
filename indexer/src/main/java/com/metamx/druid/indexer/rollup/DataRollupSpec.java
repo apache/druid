@@ -19,10 +19,11 @@
 
 package com.metamx.druid.indexer.rollup;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.Granularity;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import java.util.List;
 

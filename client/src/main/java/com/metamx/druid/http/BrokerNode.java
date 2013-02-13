@@ -19,6 +19,8 @@
 
 package com.metamx.druid.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Guice;
@@ -53,8 +55,8 @@ import com.metamx.http.client.HttpClientInit;
 import com.metamx.metrics.Monitor;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.x.discovery.ServiceDiscovery;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.smile.SmileFactory;
+
+
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;

@@ -32,7 +32,7 @@ import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.commons.io.FileUtils;
-import org.codehaus.jackson.map.ObjectMapper;
+
 
 import java.io.File;
 import java.util.concurrent.ExecutorService;

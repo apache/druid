@@ -19,11 +19,12 @@
 
 package com.metamx.druid.indexer.path;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import java.io.IOException;
 

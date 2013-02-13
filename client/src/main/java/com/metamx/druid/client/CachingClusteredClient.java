@@ -19,6 +19,8 @@
 
 package com.metamx.druid.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -53,8 +55,8 @@ import com.metamx.druid.query.segment.MultipleSpecificSegmentSpec;
 import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

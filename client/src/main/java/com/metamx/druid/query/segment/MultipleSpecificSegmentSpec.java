@@ -19,13 +19,15 @@
 
 package com.metamx.druid.query.segment;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.metamx.druid.Query;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.utils.JodaUtils;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 import org.joda.time.Interval;
 
 import java.util.List;

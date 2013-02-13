@@ -19,13 +19,15 @@
 
 package com.metamx.druid.input;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.exception.FormattedException;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;

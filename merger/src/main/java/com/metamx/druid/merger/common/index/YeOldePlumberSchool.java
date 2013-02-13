@@ -19,6 +19,10 @@
 
 package com.metamx.druid.merger.common.index;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -39,10 +43,10 @@ import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.PlumberSchool;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.Sink;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonTypeName;
-import org.codehaus.jackson.map.annotate.JacksonInject;
+
+
+
+
 import org.joda.time.Interval;
 
 import java.io.File;

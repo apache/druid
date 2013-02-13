@@ -19,10 +19,12 @@
 
 package com.metamx.druid.merger.common;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskContext;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 /**
  */

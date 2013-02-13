@@ -1,5 +1,8 @@
 package druid.examples;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.guava.Runnables;
@@ -7,9 +10,9 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonTypeName;
+
+
+
 
 import java.io.IOException;
 import java.util.HashMap;

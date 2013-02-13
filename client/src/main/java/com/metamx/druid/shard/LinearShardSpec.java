@@ -1,9 +1,10 @@
 package com.metamx.druid.shard;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.partition.LinearPartitionChunk;
 import com.metamx.druid.partition.PartitionChunk;
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import java.util.Map;
 

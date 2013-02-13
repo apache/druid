@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -48,7 +49,7 @@ import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
 import com.netflix.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;

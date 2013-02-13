@@ -19,6 +19,7 @@
 
 package com.metamx.druid.coordination;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -33,7 +34,7 @@ import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.DateTime;
 
 import java.io.File;

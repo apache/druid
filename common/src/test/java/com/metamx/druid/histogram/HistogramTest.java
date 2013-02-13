@@ -19,10 +19,11 @@
 
 package com.metamx.druid.histogram;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.metamx.druid.aggregation.Histogram;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.junit.Assert;
 import org.junit.Test;
 

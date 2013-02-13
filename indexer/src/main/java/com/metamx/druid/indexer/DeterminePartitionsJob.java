@@ -19,6 +19,7 @@
 
 package com.metamx.druid.indexer;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -63,7 +64,7 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-import org.codehaus.jackson.type.TypeReference;
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;

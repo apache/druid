@@ -19,6 +19,10 @@
 
 package com.metamx.druid.client;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -31,10 +35,10 @@ import com.metamx.druid.jackson.CommaListJoinSerializer;
 import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.annotate.JsonDeserialize;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
+
+
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

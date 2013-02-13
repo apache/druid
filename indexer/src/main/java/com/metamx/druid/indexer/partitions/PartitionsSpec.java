@@ -1,7 +1,11 @@
 package com.metamx.druid.indexer.partitions;
 
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
 
@@ -14,6 +18,7 @@ public class PartitionsSpec
 
   private final boolean assumeGrouped;
 
+  @JsonCreator
   public PartitionsSpec(
       @JsonProperty("partitionDimension") @Nullable String partitionDimension,
       @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
