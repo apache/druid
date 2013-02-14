@@ -260,7 +260,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
             emitter,
             taskQueue,
             new TaskStorageQueryAdapter(taskStorage),
-            workerSetupManager
+            workerSetupManager,
+            taskMaster
         )
     );
 

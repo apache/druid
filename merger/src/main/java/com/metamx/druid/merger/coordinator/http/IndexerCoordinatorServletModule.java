@@ -22,6 +22,7 @@ package com.metamx.druid.merger.coordinator.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
+import com.metamx.druid.merger.coordinator.TaskMaster;
 import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
@@ -44,6 +45,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
   private final TaskQueue tasks;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
   private final WorkerSetupManager workerSetupManager;
+  private final TaskMaster taskMaster;
 
   public IndexerCoordinatorServletModule(
       ObjectMapper jsonMapper,
@@ -51,7 +53,8 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
       ServiceEmitter emitter,
       TaskQueue tasks,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
-      WorkerSetupManager workerSetupManager
+      WorkerSetupManager workerSetupManager,
+      TaskMaster taskMaster
   )
   {
     this.jsonMapper = jsonMapper;
@@ -60,18 +63,21 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
     this.tasks = tasks;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
     this.workerSetupManager = workerSetupManager;
+    this.taskMaster = taskMaster;
   }
 
   @Override
   protected void configureServlets()
   {
     bind(IndexerCoordinatorResource.class);
+    bind(IndexerCoordinatorInfoResource.class);
     bind(ObjectMapper.class).toInstance(jsonMapper);
     bind(IndexerCoordinatorConfig.class).toInstance(indexerCoordinatorConfig);
     bind(ServiceEmitter.class).toInstance(emitter);
     bind(TaskQueue.class).toInstance(tasks);
     bind(TaskStorageQueryAdapter.class).toInstance(taskStorageQueryAdapter);
     bind(WorkerSetupManager.class).toInstance(workerSetupManager);
+    bind(TaskMaster.class).toInstance(taskMaster);
 
     serve("/*").with(GuiceContainer.class);
   }

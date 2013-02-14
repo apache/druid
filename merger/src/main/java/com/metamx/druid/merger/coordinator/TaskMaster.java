@@ -49,6 +49,7 @@ public class TaskMaster
   private final Condition mayBeStopped = giant.newCondition();
 
   private volatile boolean leading = false;
+  private volatile TaskRunner taskRunner;
 
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
@@ -75,6 +76,7 @@ public class TaskMaster
           log.info("By the power of Grayskull, I have the power!");
 
           final TaskRunner runner = runnerFactory.build();
+          taskRunner = runner;
           final ResourceManagementScheduler scheduler = managementSchedulerFactory.build(runner);
           final TaskConsumer consumer = new TaskConsumer(queue, runner, mergerDBCoordinator, emitter);
 
@@ -185,5 +187,10 @@ public class TaskMaster
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  public TaskRunner getTaskRunner()
+  {
+    return taskRunner;
   }
 }
