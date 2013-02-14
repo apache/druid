@@ -44,5 +44,5 @@ public interface TaskRunner
 
   public Collection<TaskRunnerWorkItem> getPendingTasks();
 
-  public Collection<WorkerWrapper> getWorkers();
+  public Collection<ZkWorker> getWorkers();
 }

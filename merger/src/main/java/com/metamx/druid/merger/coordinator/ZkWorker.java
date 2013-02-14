@@ -36,8 +36,9 @@ import java.io.IOException;
 import java.util.Set;
 
 /**
+ * Holds information about a worker and a listener for task status changes associated with the worker.
  */
-public class WorkerWrapper implements Closeable
+public class ZkWorker implements Closeable
 {
   private final Worker worker;
   private final PathChildrenCache statusCache;
@@ -45,7 +46,7 @@ public class WorkerWrapper implements Closeable
 
   private volatile DateTime lastCompletedTaskTime = new DateTime();
 
-  public WorkerWrapper(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
+  public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
     this.worker = worker;
     this.statusCache = statusCache;
@@ -108,7 +109,7 @@ public class WorkerWrapper implements Closeable
   @Override
   public String toString()
   {
-    return "WorkerWrapper{" +
+    return "ZkWorker{" +
            "worker=" + worker +
            ", statusCache=" + statusCache +
            ", cacheConverter=" + cacheConverter +

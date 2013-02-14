@@ -124,7 +124,7 @@ public class LocalTaskRunner implements TaskRunner
   }
 
   @Override
-  public Collection<WorkerWrapper> getWorkers()
+  public Collection<ZkWorker> getWorkers()
   {
     return Lists.newArrayList();
   }

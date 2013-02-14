@@ -25,7 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.merger.coordinator.TaskRunnerWorkItem;
-import com.metamx.druid.merger.coordinator.WorkerWrapper;
+import com.metamx.druid.merger.coordinator.ZkWorker;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
@@ -65,16 +65,16 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   @Override
-  public boolean doProvision(Collection<TaskRunnerWorkItem> pendingTasks, Collection<WorkerWrapper> workerWrappers)
+  public boolean doProvision(Collection<TaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
     List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
         Lists.newArrayList(
             Iterables.transform(
-                workerWrappers,
-                new Function<WorkerWrapper, String>()
+                zkWorkers,
+                new Function<ZkWorker, String>()
                 {
                   @Override
-                  public String apply(WorkerWrapper input)
+                  public String apply(ZkWorker input)
                   {
                     return input.getWorker().getIp();
                   }
@@ -120,16 +120,16 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   @Override
-  public boolean doTerminate(Collection<TaskRunnerWorkItem> pendingTasks, Collection<WorkerWrapper> workerWrappers)
+  public boolean doTerminate(Collection<TaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
     List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
         Lists.newArrayList(
             Iterables.transform(
-                workerWrappers,
-                new Function<WorkerWrapper, String>()
+                zkWorkers,
+                new Function<ZkWorker, String>()
                 {
                   @Override
-                  public String apply(WorkerWrapper input)
+                  public String apply(ZkWorker input)
                   {
                     return input.getWorker().getIp();
                   }
@@ -146,18 +146,18 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
 
     if (nothingTerminating) {
       final int minNumWorkers = workerSetupManager.getWorkerSetupData().getMinNumWorkers();
-      if (workerWrappers.size() <= minNumWorkers) {
+      if (zkWorkers.size() <= minNumWorkers) {
         return false;
       }
 
-      List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList(
+      List<ZkWorker> thoseLazyWorkers = Lists.newArrayList(
           FunctionalIterable
-              .create(workerWrappers)
+              .create(zkWorkers)
               .filter(
-                  new Predicate<WorkerWrapper>()
+                  new Predicate<ZkWorker>()
                   {
                     @Override
-                    public boolean apply(WorkerWrapper input)
+                    public boolean apply(ZkWorker input)
                     {
                       return input.getRunningTasks().isEmpty()
                              && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
@@ -174,10 +174,10 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       AutoScalingData terminated = autoScalingStrategy.terminate(
           Lists.transform(
               thoseLazyWorkers.subList(minNumWorkers, thoseLazyWorkers.size() - 1),
-              new Function<WorkerWrapper, String>()
+              new Function<ZkWorker, String>()
               {
                 @Override
-                public String apply(WorkerWrapper input)
+                public String apply(ZkWorker input)
                 {
                   return input.getWorker().getIp();
                 }

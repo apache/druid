@@ -27,7 +27,7 @@ import com.metamx.druid.merger.TestTask;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskRunnerWorkItem;
-import com.metamx.druid.merger.coordinator.WorkerWrapper;
+import com.metamx.druid.merger.coordinator.ZkWorker;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.Worker;
@@ -123,8 +123,8 @@ public class SimpleResourceManagementStrategyTest
         Arrays.<TaskRunnerWorkItem>asList(
             new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
-        Arrays.<WorkerWrapper>asList(
-            new TestWorkerWrapper(testTask)
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(testTask)
         )
     );
 
@@ -151,8 +151,8 @@ public class SimpleResourceManagementStrategyTest
         Arrays.<TaskRunnerWorkItem>asList(
             new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
-        Arrays.<WorkerWrapper>asList(
-            new TestWorkerWrapper(testTask)
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(testTask)
         )
     );
 
@@ -167,8 +167,8 @@ public class SimpleResourceManagementStrategyTest
         Arrays.<TaskRunnerWorkItem>asList(
             new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
-        Arrays.<WorkerWrapper>asList(
-            new TestWorkerWrapper(testTask)
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(testTask)
         )
     );
 
@@ -201,8 +201,8 @@ public class SimpleResourceManagementStrategyTest
         Arrays.<TaskRunnerWorkItem>asList(
             new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
-        Arrays.<WorkerWrapper>asList(
-            new TestWorkerWrapper(null)
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(null)
         )
     );
 
@@ -233,8 +233,8 @@ public class SimpleResourceManagementStrategyTest
         Arrays.<TaskRunnerWorkItem>asList(
             new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
-        Arrays.<WorkerWrapper>asList(
-            new TestWorkerWrapper(null)
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(null)
         )
     );
 
@@ -248,8 +248,8 @@ public class SimpleResourceManagementStrategyTest
         Arrays.<TaskRunnerWorkItem>asList(
             new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
         ),
-        Arrays.<WorkerWrapper>asList(
-            new TestWorkerWrapper(null)
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(null)
         )
     );
 
@@ -263,11 +263,11 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.verify(autoScalingStrategy);
   }
 
-  private static class TestWorkerWrapper extends WorkerWrapper
+  private static class TestZkWorker extends ZkWorker
   {
     private final Task testTask;
 
-    private TestWorkerWrapper(
+    private TestZkWorker(
         Task testTask
     )
     {

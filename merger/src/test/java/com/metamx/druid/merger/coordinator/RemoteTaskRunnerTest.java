@@ -247,7 +247,7 @@ public class RemoteTaskRunnerTest
     while (remoteTaskRunner.findWorkerRunningTask(task1.getId()) != null) {
       Thread.sleep(500);
       if (count > 10) {
-        throw new ISE("WTF?! Task still not announced in ZK?");
+        throw new ISE("WTF?! Task still exists in ZK?");
       }
       count++;
     }

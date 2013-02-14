@@ -20,7 +20,7 @@
 package com.metamx.druid.merger.coordinator.scaling;
 
 import com.metamx.druid.merger.coordinator.TaskRunnerWorkItem;
-import com.metamx.druid.merger.coordinator.WorkerWrapper;
+import com.metamx.druid.merger.coordinator.ZkWorker;
 
 import java.util.Collection;
 
@@ -30,9 +30,9 @@ import java.util.Collection;
  */
 public interface ResourceManagementStrategy
 {
-  public boolean doProvision(Collection<TaskRunnerWorkItem> runningTasks, Collection<WorkerWrapper> workerWrappers);
+  public boolean doProvision(Collection<TaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
 
-  public boolean doTerminate(Collection<TaskRunnerWorkItem> runningTasks, Collection<WorkerWrapper> workerWrappers);
+  public boolean doTerminate(Collection<TaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
 
   public ScalingStats getStats();
 }
