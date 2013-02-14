@@ -19,9 +19,11 @@
 
 package com.metamx.druid.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.druid.processing.MetricSelectorFactory;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+
 
 import java.util.Comparator;
 import java.util.List;
@@ -36,7 +38,7 @@ import java.util.List;
  * provided to the Aggregator through the MetricSelector object, so whatever creates that object gets to choose how
  * the data is actually stored and accessed.
  */
-@JsonTypeInfo(use=JsonTypeInfo.Id.NAME, property="type")
+@JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="type")
 @JsonSubTypes(value={
     @JsonSubTypes.Type(name="count", value=CountAggregatorFactory.class),
     @JsonSubTypes.Type(name="longSum", value=LongSumAggregatorFactory.class),

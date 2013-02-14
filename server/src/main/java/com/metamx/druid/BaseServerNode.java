@@ -19,6 +19,7 @@
 
 package com.metamx.druid;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -29,7 +30,7 @@ import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.nio.ByteBuffer;

@@ -19,26 +19,45 @@
 
 package com.metamx.druid.jackson;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationConfig;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.google.common.base.Throwables;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.Version;
-import org.codehaus.jackson.map.DeserializationConfig;
-import org.codehaus.jackson.map.DeserializationContext;
-import org.codehaus.jackson.map.JsonDeserializer;
-import org.codehaus.jackson.map.JsonSerializer;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.SerializerProvider;
-import org.codehaus.jackson.map.Serializers;
-import org.codehaus.jackson.map.module.SimpleModule;
-import org.codehaus.jackson.map.ser.std.ToStringSerializer;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import org.joda.time.DateTimeZone;
+import org.skife.jdbi.v2.sqlobject.customizers.Mapper;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
@@ -153,9 +172,12 @@ public class DefaultObjectMapper extends ObjectMapper
     );
     registerModule(serializerModule);
 
-    configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    configure(SerializationConfig.Feature.AUTO_DETECT_GETTERS, false);
-    configure(SerializationConfig.Feature.AUTO_DETECT_FIELDS, false);
-    configure(SerializationConfig.Feature.INDENT_OUTPUT, false);
+    configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    configure(MapperFeature.AUTO_DETECT_GETTERS, false);
+    configure(MapperFeature.AUTO_DETECT_CREATORS, false);
+    configure(MapperFeature.AUTO_DETECT_FIELDS, false);
+    configure(MapperFeature.AUTO_DETECT_IS_GETTERS, false);
+    configure(MapperFeature.AUTO_DETECT_SETTERS, false);
+    configure(SerializationFeature.INDENT_OUTPUT, false);
   }
 }

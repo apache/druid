@@ -19,6 +19,8 @@
 
 package com.metamx.druid.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -27,8 +29,8 @@ import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.SingleDimensionShardSpec;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;

@@ -91,7 +91,7 @@ public abstract class LoadRule implements Rule
     final MasterStats stats = new MasterStats();
 
     while (totalReplicants < expectedReplicants) {
-      ServerHolder holder = analyzer.findNewSegmentHome(segment, serverHolderList);
+      final ServerHolder holder = analyzer.findNewSegmentHome(segment, serverHolderList);
 
       if (holder == null) {
         log.warn(
@@ -105,7 +105,11 @@ public abstract class LoadRule implements Rule
 
       if (totalReplicants > 0) { // don't throttle if there's only 1 copy of this segment in the cluster
         if (!replicationManager.canAddReplicant(getTier()) ||
-            !replicationManager.registerReplicantCreation(getTier(), segment.getIdentifier())) {
+            !replicationManager.registerReplicantCreation(
+                getTier(),
+                segment.getIdentifier(),
+                holder.getServer().getHost()
+            )) {
           break;
         }
       }
@@ -117,7 +121,11 @@ public abstract class LoadRule implements Rule
             @Override
             protected void execute()
             {
-              replicationManager.unregisterReplicantCreation(getTier(), segment.getIdentifier());
+              replicationManager.unregisterReplicantCreation(
+                  getTier(),
+                  segment.getIdentifier(),
+                  holder.getServer().getHost()
+              );
             }
           }
       );
@@ -163,21 +171,25 @@ public abstract class LoadRule implements Rule
 
       List<ServerHolder> droppedServers = Lists.newArrayList();
       while (actualNumReplicantsForType > expectedNumReplicantsForType) {
-        ServerHolder holder = serverQueue.pollLast();
+        final ServerHolder holder = serverQueue.pollLast();
         if (holder == null) {
           log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
           break;
         }
 
-        if (expectedNumReplicantsForType > 0) { // don't throttle unless we are removing extra replicants
-          if (!replicationManager.canDestroyReplicant(getTier()) ||
-              !replicationManager.registerReplicantTermination(getTier(), segment.getIdentifier())) {
-            serverQueue.add(holder);
-            break;
-          }
-        }
-
         if (holder.isServingSegment(segment)) {
+          if (expectedNumReplicantsForType > 0) { // don't throttle unless we are removing extra replicants
+            if (!replicationManager.canDestroyReplicant(getTier()) ||
+                !replicationManager.registerReplicantTermination(
+                    getTier(),
+                    segment.getIdentifier(),
+                    holder.getServer().getHost()
+                )) {
+              serverQueue.add(holder);
+              break;
+            }
+          }
+
           holder.getPeon().dropSegment(
               segment,
               new LoadPeonCallback()
@@ -185,7 +197,11 @@ public abstract class LoadRule implements Rule
                 @Override
                 protected void execute()
                 {
-                  replicationManager.unregisterReplicantTermination(getTier(), segment.getIdentifier());
+                  replicationManager.unregisterReplicantTermination(
+                      getTier(),
+                      segment.getIdentifier(),
+                      holder.getServer().getHost()
+                  );
                 }
               }
           );

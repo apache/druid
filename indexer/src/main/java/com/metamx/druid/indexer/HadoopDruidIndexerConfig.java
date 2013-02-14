@@ -19,6 +19,11 @@
 
 package com.metamx.druid.indexer;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -54,11 +59,11 @@ import com.metamx.druid.utils.JodaUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
+
+
+
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.ISODateTimeFormat;
@@ -97,24 +102,24 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
-    if (argSpec.containsKey("registererers")) {
-      List<Registererer> registererers = Lists.transform(
-          MapUtils.getList(argSpec, "registererers"),
-          new Function<Object, Registererer>()
+    List<Registererer> registererers = Lists.transform(
+        MapUtils.getList(argSpec, "registererers", ImmutableList.of()),
+        new Function<Object, Registererer>()
+        {
+          @Override
+          public Registererer apply(@Nullable Object input)
           {
-            @Override
-            public Registererer apply(@Nullable Object input)
-            {
-              try {
-                return (Registererer) Class.forName((String) input).newInstance();
-              }
-              catch (Exception e) {
-                throw Throwables.propagate(e);
-              }
+            try {
+              return (Registererer) Class.forName((String) input).newInstance();
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
             }
           }
-      );
+        }
+    );
 
+    if (!registererers.isEmpty()) {
       RegisteringNode.registerHandlers(registererers, Arrays.asList(jsonMapper));
     }
 
@@ -125,13 +130,7 @@ public class HadoopDruidIndexerConfig
   public static HadoopDruidIndexerConfig fromFile(File file)
   {
     try {
-      return fromMap(
-          (Map<String, Object>) jsonMapper.readValue(
-              file, new TypeReference<Map<String, Object>>()
-          {
-          }
-          )
-      );
+      return fromMap((Map<String, Object>) jsonMapper.readValue(file, new TypeReference<Map<String, Object>>(){}));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -191,14 +190,14 @@ public class HadoopDruidIndexerConfig
   public HadoopDruidIndexerConfig(
       final @JsonProperty("intervals") List<Interval> intervals,
       final @JsonProperty("dataSource") String dataSource,
-      final @JsonProperty("timestampColumnName") String timestampColumnName,
+      final @JsonProperty("timestampColumn") String timestampColumnName,
       final @JsonProperty("timestampFormat") String timestampFormat,
       final @JsonProperty("dataSpec") DataSpec dataSpec,
       final @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       final @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
       final @JsonProperty("pathSpec") PathSpec pathSpec,
-      final @JsonProperty("jobOutputDir") String jobOutputDir,
-      final @JsonProperty("segmentOutputDir") String segmentOutputDir,
+      final @JsonProperty("workingPath") String jobOutputDir,
+      final @JsonProperty("segmentOutputPath") String segmentOutputDir,
       final @JsonProperty("version") DateTime version,
       final @JsonProperty("partitionDimension") String partitionDimension,
       final @JsonProperty("targetPartitionSize") Long targetPartitionSize,
@@ -221,7 +220,7 @@ public class HadoopDruidIndexerConfig
     this.pathSpec = pathSpec;
     this.jobOutputDir = jobOutputDir;
     this.segmentOutputDir = segmentOutputDir;
-    this.version = version;
+    this.version = version == null ? new DateTime() : version;
     this.partitionsSpec = partitionsSpec;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure;

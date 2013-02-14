@@ -19,11 +19,12 @@
 
 package com.metamx.druid.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import org.codehaus.jackson.annotate.JsonValue;
+
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;

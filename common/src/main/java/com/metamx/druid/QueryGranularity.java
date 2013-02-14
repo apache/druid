@@ -19,14 +19,17 @@
 
 package com.metamx.druid;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.common.IAE;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+
+
 import org.joda.time.DateTime;
 import org.joda.time.ReadableDuration;
 
-@JsonTypeInfo(use=JsonTypeInfo.Id.NAME, property = "type", defaultImpl = QueryGranularity.class)
+@JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property = "type", defaultImpl = QueryGranularity.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "period",   value = PeriodGranularity.class),
     @JsonSubTypes.Type(name = "duration", value = DurationGranularity.class),

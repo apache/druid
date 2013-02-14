@@ -19,8 +19,9 @@
 
 package com.metamx.druid.client;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import java.util.Collections;
 import java.util.Map;

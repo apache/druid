@@ -19,6 +19,7 @@
 
 package com.metamx.druid.master;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -49,8 +50,7 @@ import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
 import com.netflix.curator.x.discovery.ServiceProvider;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.joda.time.DateTime;
+
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;

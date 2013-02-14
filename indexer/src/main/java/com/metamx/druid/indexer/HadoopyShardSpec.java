@@ -19,9 +19,11 @@
 
 package com.metamx.druid.indexer;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.shard.ShardSpec;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 /**
  * ShardSpec + a shard ID that is unique across this run. The shard ID is used for grouping and partitioning.

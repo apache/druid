@@ -19,9 +19,11 @@
 
 package com.metamx.druid.merger.worker;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 /**
  * A container for worker metadata.

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
@@ -33,7 +34,7 @@ import org.I0Itec.zkclient.IZkChildListener;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
-import org.codehaus.jackson.map.ObjectMapper;
+
 
 import java.io.IOException;
 import java.util.Arrays;

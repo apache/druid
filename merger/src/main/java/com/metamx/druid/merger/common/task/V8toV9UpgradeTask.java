@@ -1,9 +1,10 @@
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.coordinator.TaskContext;
-import org.codehaus.jackson.annotate.JsonProperty;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

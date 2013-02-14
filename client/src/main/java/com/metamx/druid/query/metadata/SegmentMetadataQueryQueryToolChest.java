@@ -19,6 +19,7 @@
 
 package com.metamx.druid.query.metadata;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -39,7 +40,7 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.ResultMergeQueryRunner;
 import com.metamx.druid.utils.JodaUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.type.TypeReference;
+
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 

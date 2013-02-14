@@ -19,6 +19,7 @@
 
 package com.metamx.druid.master;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -41,7 +42,7 @@ import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
 import com.metamx.http.client.response.ToStringResponseHandler;
 import com.netflix.curator.x.discovery.ServiceProvider;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

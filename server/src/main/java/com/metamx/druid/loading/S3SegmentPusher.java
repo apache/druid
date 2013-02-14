@@ -19,6 +19,7 @@
 
 package com.metamx.druid.loading;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Closeables;
@@ -29,16 +30,13 @@ import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.acl.gs.GSAccessControlList;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -105,6 +103,7 @@ public class S3SegmentPusher implements SegmentPusher
       final String outputBucket = config.getBucket();
       toPush.setBucketName(outputBucket);
       toPush.setKey(outputKey + "/index.zip");
+      toPush.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
 
       log.info("Pushing %s.", toPush);
       s3Client.putObject(outputBucket, toPush);
@@ -124,6 +123,7 @@ public class S3SegmentPusher implements SegmentPusher
       S3Object descriptorObject = new S3Object(descriptorFile);
       descriptorObject.setBucketName(outputBucket);
       descriptorObject.setKey(outputKey + "/descriptor.json");
+      descriptorObject.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
 
       log.info("Pushing %s", descriptorObject);
       s3Client.putObject(outputBucket, descriptorObject);

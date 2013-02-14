@@ -19,6 +19,8 @@
 
 package com.metamx.druid;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.common.guava.Sequence;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.group.GroupByQuery;
@@ -28,8 +30,8 @@ import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
