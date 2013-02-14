@@ -27,6 +27,7 @@ import com.metamx.druid.loading.S3ZippedSegmentPuller;
 import com.metamx.druid.loading.SegmentKiller;
 import com.metamx.druid.loading.SegmentPuller;
 import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -41,6 +42,7 @@ import java.util.Map;
 public class TaskToolbox
 {
   private final TaskConfig config;
+  private final TaskActionClient taskActionClient;
   private final ServiceEmitter emitter;
   private final RestS3Service s3Client;
   private final SegmentPusher segmentPusher;
@@ -49,6 +51,7 @@ public class TaskToolbox
 
   public TaskToolbox(
       TaskConfig config,
+      TaskActionClient taskActionClient,
       ServiceEmitter emitter,
       RestS3Service s3Client,
       SegmentPusher segmentPusher,
@@ -57,6 +60,7 @@ public class TaskToolbox
   )
   {
     this.config = config;
+    this.taskActionClient = taskActionClient;
     this.emitter = emitter;
     this.s3Client = s3Client;
     this.segmentPusher = segmentPusher;
@@ -69,14 +73,14 @@ public class TaskToolbox
     return config;
   }
 
+  public TaskActionClient getTaskActionClient()
+  {
+    return taskActionClient;
+  }
+
   public ServiceEmitter getEmitter()
   {
     return emitter;
-  }
-
-  public RestS3Service getS3Client()
-  {
-    return s3Client;
   }
 
   public SegmentPusher getSegmentPusher()

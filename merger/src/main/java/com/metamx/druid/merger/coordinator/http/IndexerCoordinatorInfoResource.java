@@ -21,7 +21,7 @@ package com.metamx.druid.merger.coordinator.http;
 
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.merger.coordinator.TaskMaster;
+import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -35,12 +35,12 @@ public class IndexerCoordinatorInfoResource
 {
   private static final Logger log = new Logger(IndexerCoordinatorInfoResource.class);
 
-  private final TaskMaster taskMaster;
+  private final TaskMasterLifecycle taskMasterLifecycle;
 
   @Inject
-  public IndexerCoordinatorInfoResource(TaskMaster taskMaster)
+  public IndexerCoordinatorInfoResource(TaskMasterLifecycle taskMasterLifecycle)
   {
-    this.taskMaster = taskMaster;
+    this.taskMasterLifecycle = taskMasterLifecycle;
   }
 
   @GET
@@ -48,10 +48,10 @@ public class IndexerCoordinatorInfoResource
   @Produces("application/json")
   public Response getPendingTasks()
   {
-    if (taskMaster.getTaskRunner() == null) {
+    if (taskMasterLifecycle.getTaskRunner() == null) {
       return Response.noContent().build();
     }
-    return Response.ok(taskMaster.getTaskRunner().getPendingTasks()).build();
+    return Response.ok(taskMasterLifecycle.getTaskRunner().getPendingTasks()).build();
   }
 
   @GET
@@ -59,9 +59,9 @@ public class IndexerCoordinatorInfoResource
   @Produces("application/json")
   public Response getRunningTasks()
   {
-    if (taskMaster.getTaskRunner() == null) {
+    if (taskMasterLifecycle.getTaskRunner() == null) {
       return Response.noContent().build();
     }
-    return Response.ok(taskMaster.getTaskRunner().getRunningTasks()).build();
+    return Response.ok(taskMasterLifecycle.getTaskRunner().getRunningTasks()).build();
   }
 }

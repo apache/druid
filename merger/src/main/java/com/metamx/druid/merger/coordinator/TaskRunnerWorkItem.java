@@ -30,7 +30,6 @@ import org.joda.time.DateTimeComparator;
 public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 {
   private final Task task;
-  private final TaskContext taskContext;
   private final TaskCallback callback;
   private final RetryPolicy retryPolicy;
   private final DateTime createdTime;
@@ -39,14 +38,12 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 
   public TaskRunnerWorkItem(
       Task task,
-      TaskContext taskContext,
       TaskCallback callback,
       RetryPolicy retryPolicy,
       DateTime createdTime
   )
   {
     this.task = task;
-    this.taskContext = taskContext;
     this.callback = callback;
     this.retryPolicy = retryPolicy;
     this.createdTime = createdTime;
@@ -55,11 +52,6 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
   public Task getTask()
   {
     return task;
-  }
-
-  public TaskContext getTaskContext()
-  {
-    return taskContext;
   }
 
   public TaskCallback getCallback()
@@ -115,9 +107,6 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
     if (task != null ? !task.equals(that.task) : that.task != null) {
       return false;
     }
-    if (taskContext != null ? !taskContext.equals(that.taskContext) : that.taskContext != null) {
-      return false;
-    }
 
     return true;
   }
@@ -126,7 +115,6 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
   public int hashCode()
   {
     int result = task != null ? task.hashCode() : 0;
-    result = 31 * result + (taskContext != null ? taskContext.hashCode() : 0);
     result = 31 * result + (callback != null ? callback.hashCode() : 0);
     result = 31 * result + (retryPolicy != null ? retryPolicy.hashCode() : 0);
     return result;
@@ -137,7 +125,6 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
   {
     return "TaskRunnerWorkItem{" +
            "task=" + task +
-           ", taskContext=" + taskContext +
            ", callback=" + callback +
            ", retryPolicy=" + retryPolicy +
            ", createdTime=" + createdTime +

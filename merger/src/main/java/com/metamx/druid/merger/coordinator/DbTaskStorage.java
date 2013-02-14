@@ -24,10 +24,15 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.actions.TaskAction;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
 
@@ -37,6 +42,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.StatementException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -104,18 +110,11 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
-  public void setStatus(final String taskid, final TaskStatus status)
+  public void setStatus(final TaskStatus status)
   {
-    Preconditions.checkNotNull(taskid, "task");
     Preconditions.checkNotNull(status, "status");
-    Preconditions.checkArgument(
-        taskid.equals(status.getId()),
-        "Task/Status ID mismatch[%s/%s]",
-        taskid,
-        status.getId()
-    );
 
-    log.info("Updating task %s to status: %s", taskid, status);
+    log.info("Updating task %s to status: %s", status.getId(), status);
 
     int updated = dbi.withHandle(
         new HandleCallback<Integer>()
@@ -125,12 +124,13 @@ public class DbTaskStorage implements TaskStorage
           {
             return handle.createStatement(
                 String.format(
-                    "UPDATE %s SET status_code = :status_code, status_payload = :status_payload WHERE id = :id",
+                    "UPDATE %s SET status_code = :status_code, status_payload = :status_payload WHERE id = :id AND status_code = :old_status_code",
                     dbConnectorConfig.getTaskTable()
                 )
             )
-                  .bind("id", taskid)
+                  .bind("id", status.getId())
                   .bind("status_code", status.getStatusCode().toString())
+                  .bind("old_status_code", TaskStatus.Status.RUNNING.toString())
                   .bind("status_payload", jsonMapper.writeValueAsString(status))
                   .execute();
           }
@@ -138,38 +138,8 @@ public class DbTaskStorage implements TaskStorage
     );
 
     if(updated != 1) {
-      throw new IllegalStateException(String.format("Task not found: %s", taskid));
+      throw new IllegalStateException(String.format("Running task not found: %s", status.getId()));
     }
-  }
-
-  @Override
-  public void setVersion(final String taskid, final String version)
-  {
-    Preconditions.checkNotNull(taskid, "task");
-    Preconditions.checkNotNull(version, "version");
-
-    log.info("Updating task %s to version: %s", taskid, version);
-
-    dbi.withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle) throws Exception
-          {
-            handle.createStatement(
-                String.format(
-                    "UPDATE %s SET version = :version WHERE id = :id",
-                    dbConnectorConfig.getTaskTable()
-                )
-            )
-                  .bind("id", taskid)
-                  .bind("version", version)
-                  .execute();
-
-            return null;
-          }
-        }
-    );
   }
 
   @Override
@@ -233,36 +203,6 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
-  public Optional<String> getVersion(final String taskid)
-  {
-    return dbi.withHandle(
-        new HandleCallback<Optional<String>>()
-        {
-          @Override
-          public Optional<String> withHandle(Handle handle) throws Exception
-          {
-            final List<Map<String, Object>> dbStatuses =
-                handle.createQuery(
-                    String.format(
-                        "SELECT version FROM %s WHERE id = :id",
-                        dbConnectorConfig.getTaskTable()
-                    )
-                )
-                      .bind("id", taskid)
-                      .list();
-
-            if(dbStatuses.size() == 0) {
-              return Optional.absent();
-            } else {
-              final Map<String, Object> dbStatus = Iterables.getOnlyElement(dbStatuses);
-              return Optional.fromNullable((String) dbStatus.get("version"));
-            }
-          }
-        }
-    );
-  }
-
-  @Override
   public List<Task> getRunningTasks()
   {
     return dbi.withHandle(
@@ -295,6 +235,185 @@ public class DbTaskStorage implements TaskStorage
               }
             }
             );
+          }
+        }
+    );
+  }
+
+  @Override
+  public void addLock(final String taskid, final TaskLock taskLock)
+  {
+    Preconditions.checkNotNull(taskid, "taskid");
+    Preconditions.checkNotNull(taskLock, "taskLock");
+
+    log.info(
+        "Adding lock on interval[%s] version[%s] for task: %s",
+        taskLock.getInterval(),
+        taskLock.getVersion(),
+        taskid
+    );
+
+    dbi.withHandle(
+        new HandleCallback<Integer>()
+        {
+          @Override
+          public Integer withHandle(Handle handle) throws Exception
+          {
+            return handle.createStatement(
+                String.format(
+                    "INSERT INTO %s (task_id, lock_payload) VALUES (:task_id, :lock_payload)",
+                    dbConnectorConfig.getTaskLockTable()
+                )
+            )
+                         .bind("task_id", taskid)
+                         .bind("lock_payload", jsonMapper.writeValueAsString(taskLock))
+                         .execute();
+          }
+        }
+    );
+  }
+
+  @Override
+  public void removeLock(String taskid, TaskLock taskLockToRemove)
+  {
+    Preconditions.checkNotNull(taskid, "taskid");
+    Preconditions.checkNotNull(taskLockToRemove, "taskLockToRemove");
+
+    final Map<Long, TaskLock> taskLocks = getLocksWithIds(taskid);
+
+    for(final Map.Entry<Long, TaskLock> taskLockWithId : taskLocks.entrySet()) {
+      final long id = taskLockWithId.getKey();
+      final TaskLock taskLock = taskLockWithId.getValue();
+
+      if(taskLock.equals(taskLockToRemove)) {
+        log.info("Deleting TaskLock with id[%d]: %s", id, taskLock);
+
+        dbi.withHandle(
+            new HandleCallback<Integer>()
+            {
+              @Override
+              public Integer withHandle(Handle handle) throws Exception
+              {
+                return handle.createStatement(
+                    String.format(
+                        "DELETE FROM %s WHERE id = :id",
+                        dbConnectorConfig.getTaskLockTable()
+                    )
+                )
+                             .bind("id", id)
+                             .execute();
+              }
+            }
+        );
+      }
+    }
+  }
+
+  @Override
+  public List<TaskLock> getLocks(String taskid)
+  {
+    return ImmutableList.copyOf(
+        Iterables.transform(
+            getLocksWithIds(taskid).entrySet(), new Function<Map.Entry<Long, TaskLock>, TaskLock>()
+        {
+          @Override
+          public TaskLock apply(Map.Entry<Long, TaskLock> e)
+          {
+            return e.getValue();
+          }
+        }
+        )
+    );
+  }
+
+  @Override
+  public <T> void addAuditLog(final TaskAction<T> taskAction)
+  {
+    Preconditions.checkNotNull(taskAction, "taskAction");
+
+    log.info("Logging action for task[%s]: %s", taskAction.getTask().getId(), taskAction);
+
+    dbi.withHandle(
+        new HandleCallback<Integer>()
+        {
+          @Override
+          public Integer withHandle(Handle handle) throws Exception
+          {
+            return handle.createStatement(
+                String.format(
+                    "INSERT INTO %s (task_id, log_payload) VALUES (:task_id, :log_payload)",
+                    dbConnectorConfig.getTaskLogTable()
+                )
+            )
+                         .bind("task_id", taskAction.getTask().getId())
+                         .bind("log_payload", jsonMapper.writeValueAsString(taskAction))
+                         .execute();
+          }
+        }
+    );
+  }
+
+  @Override
+  public List<TaskAction> getAuditLogs(final String taskid)
+  {
+    return dbi.withHandle(
+        new HandleCallback<List<TaskAction>>()
+        {
+          @Override
+          public List<TaskAction> withHandle(Handle handle) throws Exception
+          {
+            final List<Map<String, Object>> dbTaskLogs =
+                handle.createQuery(
+                    String.format(
+                        "SELECT log_payload FROM %s WHERE task_id = :task_id",
+                        dbConnectorConfig.getTaskLogTable()
+                    )
+                )
+                      .bind("task_id", taskid)
+                      .list();
+
+            return Lists.transform(
+                dbTaskLogs, new Function<Map<String, Object>, TaskAction>()
+            {
+              @Override
+              public TaskAction apply(Map<String, Object> row)
+              {
+                try {
+                  return jsonMapper.readValue(row.get("payload").toString(), TaskAction.class);
+                } catch(Exception e) {
+                  throw Throwables.propagate(e);
+                }
+              }
+            }
+            );
+          }
+        }
+    );
+  }
+
+  private Map<Long, TaskLock> getLocksWithIds(final String taskid)
+  {
+    return dbi.withHandle(
+        new HandleCallback<Map<Long, TaskLock>>()
+        {
+          @Override
+          public Map<Long, TaskLock> withHandle(Handle handle) throws Exception
+          {
+            final List<Map<String, Object>> dbTaskLocks =
+                handle.createQuery(
+                    String.format(
+                        "SELECT id, lock_payload FROM %s WHERE task_id = :task_id",
+                        dbConnectorConfig.getTaskLockTable()
+                    )
+                )
+                      .bind("task_id", taskid)
+                      .list();
+
+            final Map<Long, TaskLock> retMap = Maps.newHashMap();
+            for(final Map<String, Object> row : dbTaskLocks) {
+              retMap.put((Long)row.get("id"), jsonMapper.readValue(row.get("lock_payload").toString(), TaskLock.class));
+            }
+            return retMap;
           }
         }
     );

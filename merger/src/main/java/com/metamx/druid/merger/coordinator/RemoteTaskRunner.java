@@ -32,7 +32,6 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.merger.common.TaskCallback;
-import com.metamx.druid.merger.common.TaskHolder;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
@@ -213,17 +212,16 @@ public class RemoteTaskRunner implements TaskRunner
    * A task will be run only if there is no current knowledge in the RemoteTaskRunner of the task.
    *
    * @param task     task to run
-   * @param context  task context to run under
    * @param callback callback to be called exactly once
    */
   @Override
-  public void run(Task task, TaskContext context, TaskCallback callback)
+  public void run(Task task, TaskCallback callback)
   {
     if (runningTasks.containsKey(task.getId()) || pendingTasks.containsKey(task.getId())) {
       throw new ISE("Assigned a task[%s] that is already running or pending, WTF is happening?!", task.getId());
     }
     TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(
-        task, context, callback, retryPolicyFactory.makeRetryPolicy(), new DateTime()
+        task, callback, retryPolicyFactory.makeRetryPolicy(), new DateTime()
     );
     addPendingTask(taskRunnerWorkItem);
   }
@@ -360,11 +358,10 @@ public class RemoteTaskRunner implements TaskRunner
   private void announceTask(Worker theWorker, TaskRunnerWorkItem taskRunnerWorkItem) throws Exception
   {
     final Task task = taskRunnerWorkItem.getTask();
-    final TaskContext taskContext = taskRunnerWorkItem.getTaskContext();
 
     log.info("Coordinator asking Worker[%s] to add task[%s]", theWorker.getHost(), task.getId());
 
-    byte[] rawBytes = jsonMapper.writeValueAsBytes(new TaskHolder(task, taskContext));
+    byte[] rawBytes = jsonMapper.writeValueAsBytes(task);
     if (rawBytes.length > config.getMaxNumBytes()) {
       throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
     }
@@ -377,7 +374,7 @@ public class RemoteTaskRunner implements TaskRunner
               theWorker.getHost(),
               task.getId()
           ),
-          jsonMapper.writeValueAsBytes(new TaskHolder(task, taskContext))
+          rawBytes
       );
 
     runningTasks.put(task.getId(), pendingTasks.remove(task.getId()));

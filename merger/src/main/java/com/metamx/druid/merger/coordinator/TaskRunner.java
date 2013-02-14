@@ -25,8 +25,8 @@ import com.metamx.druid.merger.common.task.Task;
 import java.util.Collection;
 
 /**
- * Interface for handing off tasks. Used by a {@link com.metamx.druid.merger.coordinator.exec.TaskConsumer} to run tasks that
- * have been locked.
+ * Interface for handing off tasks. Used by a {@link com.metamx.druid.merger.coordinator.exec.TaskConsumer} to
+ * run tasks that have been locked.
  */
 public interface TaskRunner
 {
@@ -35,10 +35,9 @@ public interface TaskRunner
    * status, but should be called exactly once with a non-RUNNING status (e.g. SUCCESS, FAILED, CONTINUED...).
    *
    * @param task task to run
-   * @param context task context to run under
    * @param callback callback to be called exactly once
    */
-  public void run(Task task, TaskContext context, TaskCallback callback);
+  public void run(Task task, TaskCallback callback);
 
   public Collection<TaskRunnerWorkItem> getRunningTasks();
 

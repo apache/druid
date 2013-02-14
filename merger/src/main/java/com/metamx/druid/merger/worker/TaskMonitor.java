@@ -21,19 +21,15 @@ package com.metamx.druid.merger.worker;
 
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.merger.common.TaskCallback;
-import com.metamx.druid.merger.common.TaskHolder;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.merger.coordinator.TaskContext;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.commons.io.FileUtils;
-
 
 import java.io.File;
 import java.util.concurrent.ExecutorService;
@@ -85,12 +81,10 @@ public class TaskMonitor
                 throws Exception
             {
               if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
-                final TaskHolder taskHolder = toolbox.getObjectMapper().readValue(
+                final Task task = toolbox.getObjectMapper().readValue(
                     cf.getData().forPath(pathChildrenCacheEvent.getData().getPath()),
-                    TaskHolder.class
+                    Task.class
                 );
-                final Task task = taskHolder.getTask();
-                final TaskContext taskContext = taskHolder.getTaskContext();
 
                 if (workerCuratorCoordinator.statusExists(task.getId())) {
                   log.warn("Got task %s that I am already running...", task.getId());
@@ -113,14 +107,7 @@ public class TaskMonitor
                         try {
                           workerCuratorCoordinator.unannounceTask(task.getId());
                           workerCuratorCoordinator.announceStatus(TaskStatus.running(task.getId()));
-                          taskStatus = task.run(taskContext, toolbox, new TaskCallback()
-                          {
-                            @Override
-                            public void notify(TaskStatus status)
-                            {
-                              workerCuratorCoordinator.updateStatus(status);
-                            }
-                          });
+                          taskStatus = task.run(toolbox);
                         }
                         catch (Exception e) {
                           log.makeAlert(e, "Failed to run task")

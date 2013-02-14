@@ -29,7 +29,6 @@ import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DbConnectorConfig;
-import com.metamx.druid.merger.common.TaskStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.DBI;
@@ -46,6 +45,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -129,51 +129,24 @@ public class MergerDBCoordinator
     return segments;
   }
 
-  public void commitTaskStatus(final TaskStatus taskStatus)
+  public void announceHistoricalSegments(final Set<DataSegment> segments) throws Exception
   {
-    try {
-      dbi.inTransaction(
-          new TransactionCallback<Void>()
-          {
-            @Override
-            public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-            {
-              for(final DataSegment segment : taskStatus.getSegments())
-              {
-                log.info("Publishing segment[%s] for task[%s]", segment.getIdentifier(), taskStatus.getId());
-                announceHistoricalSegment(handle, segment);
-              }
-
-              for(final DataSegment segment : taskStatus.getSegmentsNuked())
-              {
-                log.info("Deleting segment[%s] for task[%s]", segment.getIdentifier(), taskStatus.getId());
-                deleteSegment(handle, segment);
-              }
-
-              return null;
-            }
-          }
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(String.format("Exception commit task to DB: %s", taskStatus.getId()), e);
-    }
-  }
-
-  public void announceHistoricalSegment(final DataSegment segment) throws Exception
-  {
-    dbi.withHandle(
-        new HandleCallback<Void>()
+    dbi.inTransaction(
+        new TransactionCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            announceHistoricalSegment(handle, segment);
+            for(final DataSegment segment : segments) {
+              announceHistoricalSegment(handle, segment);
+            }
+
             return null;
           }
         }
     );
   }
+
 
   private void announceHistoricalSegment(final Handle handle, final DataSegment segment) throws Exception
   {
@@ -218,15 +191,18 @@ public class MergerDBCoordinator
     }
   }
 
-  public void deleteSegment(final DataSegment segment)
+  public void deleteSegments(final Set<DataSegment> segments) throws Exception
   {
-    dbi.withHandle(
-        new HandleCallback<Void>()
+    dbi.inTransaction(
+        new TransactionCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            deleteSegment(handle, segment);
+            for(final DataSegment segment : segments) {
+              deleteSegment(handle, segment);
+            }
+
             return null;
           }
         }

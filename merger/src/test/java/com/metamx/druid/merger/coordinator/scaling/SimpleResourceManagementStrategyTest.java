@@ -121,7 +121,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -149,7 +149,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -165,7 +165,7 @@ public class SimpleResourceManagementStrategyTest
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -199,7 +199,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -231,7 +231,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -246,7 +246,7 @@ public class SimpleResourceManagementStrategyTest
 
     terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)

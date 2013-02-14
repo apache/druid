@@ -24,11 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.task.DefaultMergeTask;
-import com.metamx.druid.merger.coordinator.TaskContext;
 
 import java.util.List;
 
@@ -63,9 +61,10 @@ public class TestTask extends DefaultMergeTask
   }
 
   @Override
-  public Type getType()
+  @JsonProperty
+  public String getType()
   {
-    return Type.TEST;
+    return "test";
   }
 
   @JsonProperty
@@ -75,7 +74,7 @@ public class TestTask extends DefaultMergeTask
   }
 
   @Override
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     return status;
   }

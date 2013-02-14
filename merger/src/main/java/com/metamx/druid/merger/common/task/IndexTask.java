@@ -27,10 +27,9 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.indexer.granularity.GranularitySpec;
-import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.coordinator.TaskContext;
+import com.metamx.druid.merger.common.actions.SpawnTasksAction;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
@@ -121,19 +120,20 @@ public class IndexTask extends AbstractTask
   }
 
   @Override
-  public Type getType()
+  public String getType()
   {
-    return Type.INDEX;
+    return "index";
   }
 
   @Override
-  public TaskStatus preflight(TaskContext context) throws Exception
+  public TaskStatus preflight(TaskToolbox toolbox) throws Exception
   {
-    return TaskStatus.success(getId()).withNextTasks(toSubtasks());
+    toolbox.getTaskActionClient().submit(new SpawnTasksAction(this, toSubtasks()));
+    return TaskStatus.success(getId());
   }
 
   @Override
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     throw new IllegalStateException("IndexTasks should not be run!");
   }

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
@@ -131,7 +130,6 @@ public class RemoteTaskRunnerTest
   {
     remoteTaskRunner.run(
         task1,
-        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
         null
     );
   }
@@ -147,19 +145,10 @@ public class RemoteTaskRunnerTest
             Lists.<AggregatorFactory>newArrayList(),
             TaskStatus.running(task1.getId())
         ),
-        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
         null
     );
     try {
-      remoteTaskRunner.run(
-          task1,
-          new TaskContext(
-              new DateTime().toString(),
-              Sets.<DataSegment>newHashSet(),
-              Sets.<DataSegment>newHashSet()
-          ),
-          null
-      );
+      remoteTaskRunner.run(task1, null);
       fail("ISE expected");
     }
     catch (ISE expected) {
@@ -191,7 +180,6 @@ public class RemoteTaskRunnerTest
               Lists.<AggregatorFactory>newArrayList(),
               TaskStatus.success("foo")
           ),
-          new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
           null
       );
     }
@@ -213,7 +201,6 @@ public class RemoteTaskRunnerTest
             Lists.<AggregatorFactory>newArrayList(),
             TaskStatus.running(task1.getId())
         ),
-        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
         new TaskCallback()
         {
           @Override
@@ -313,7 +300,7 @@ public class RemoteTaskRunnerTest
               {
                 return 0;
               }
-            }, null, null, null, null, jsonMapper
+            }, null, null, null, null, null, jsonMapper
         ),
         Executors.newSingleThreadExecutor()
     );

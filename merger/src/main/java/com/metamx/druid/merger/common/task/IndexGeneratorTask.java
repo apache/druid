@@ -21,27 +21,26 @@ package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.input.InputRow;
-import com.metamx.druid.merger.common.TaskCallback;
+import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.actions.LockListAction;
+import com.metamx.druid.merger.common.actions.SegmentInsertAction;
 import com.metamx.druid.merger.common.index.YeOldePlumberSchool;
-import com.metamx.druid.merger.coordinator.TaskContext;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.realtime.Sink;
-
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -79,7 +78,7 @@ public class IndexGeneratorTask extends AbstractTask
         ),
         groupId,
         schema.getDataSource(),
-        interval
+        Preconditions.checkNotNull(interval, "interval")
     );
 
     this.firehoseFactory = firehoseFactory;
@@ -87,14 +86,20 @@ public class IndexGeneratorTask extends AbstractTask
   }
 
   @Override
-  public Type getType()
+  public String getType()
   {
-    return Type.INDEX;
+    return "index_generator";
   }
 
   @Override
-  public TaskStatus run(final TaskContext context, final TaskToolbox toolbox, TaskCallback callback) throws Exception
+  public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    // We should have a lock from before we started running
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction(this)));
+
+    // We know this exists
+    final Interval interval = getFixedInterval().get();
+
     // Set up temporary directory for indexing
     final File tmpDir = new File(
         String.format(
@@ -103,9 +108,9 @@ public class IndexGeneratorTask extends AbstractTask
             String.format(
                 "%s_%s_%s_%s_%s",
                 this.getDataSource(),
-                this.getInterval().getStart(),
-                this.getInterval().getEnd(),
-                context.getVersion(),
+                interval.getStart(),
+                interval.getEnd(),
+                myLock.getVersion(),
                 schema.getShardSpec().getPartitionNum()
             )
         )
@@ -128,8 +133,8 @@ public class IndexGeneratorTask extends AbstractTask
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
     final Firehose firehose = firehoseFactory.connect();
     final Plumber plumber = new YeOldePlumberSchool(
-        getInterval(),
-        context.getVersion(),
+        interval,
+        myLock.getVersion(),
         wrappedSegmentPusher,
         tmpDir
     ).findPlumber(schema, metrics);
@@ -177,8 +182,11 @@ public class IndexGeneratorTask extends AbstractTask
         metrics.rowOutput()
     );
 
+    // Request segment pushes
+    toolbox.getTaskActionClient().submit(new SegmentInsertAction(this, ImmutableSet.copyOf(pushedSegments)));
+
     // Done
-    return TaskStatus.success(getId(), ImmutableSet.copyOf(pushedSegments));
+    return TaskStatus.success(getId());
   }
 
   /**
@@ -187,7 +195,7 @@ public class IndexGeneratorTask extends AbstractTask
    * @return true or false
    */
   private boolean shouldIndex(InputRow inputRow) {
-    if(!getInterval().contains(inputRow.getTimestampFromEpoch())) {
+    if(!getFixedInterval().get().contains(inputRow.getTimestampFromEpoch())) {
       return false;
     }
 

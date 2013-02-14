@@ -20,16 +20,17 @@
 package com.metamx.druid.merger.coordinator;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.merger.common.TaskCallback;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.actions.LocalTaskActionClient;
+import com.metamx.druid.merger.common.actions.SpawnTasksAction;
+import com.metamx.druid.merger.common.actions.TaskActionToolbox;
 import com.metamx.druid.merger.common.task.AbstractTask;
 import com.metamx.druid.merger.common.task.Task;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,7 +44,8 @@ public class TaskQueueTest
   public void testEmptyQueue() throws Exception
   {
     final TaskStorage ts = new LocalTaskStorage();
-    final TaskQueue tq = newTaskQueueWithStorage(ts);
+    final TaskLockbox tl = new TaskLockbox(ts);
+    final TaskQueue tq = newTaskQueue(ts, tl);
 
     // get task status for nonexistent task
     Assert.assertFalse("getStatus", ts.getStatus("foo").isPresent());
@@ -52,9 +54,10 @@ public class TaskQueueTest
     Assert.assertNull("poll", tq.poll());
   }
 
-  public static TaskQueue newTaskQueueWithStorage(TaskStorage storage)
+  public static TaskQueue newTaskQueue(TaskStorage storage, TaskLockbox lockbox)
   {
-    final TaskQueue tq = new TaskQueue(storage);
+    final TaskQueue tq = new TaskQueue(storage, lockbox);
+    tq.bootstrap();
     tq.start();
     return tq;
   }
@@ -63,7 +66,8 @@ public class TaskQueueTest
   public void testAddRemove() throws Exception
   {
     final TaskStorage ts = new LocalTaskStorage();
-    final TaskQueue tq = newTaskQueueWithStorage(ts);
+    final TaskLockbox tl = new TaskLockbox(ts);
+    final TaskQueue tq = newTaskQueue(ts, tl);
 
     final Task[] tasks = {
         newTask("T0", "G0", "bar", new Interval("2011/P1Y")),
@@ -96,9 +100,9 @@ public class TaskQueueTest
     // take max number of tasks
     final List<Task> taken = Lists.newArrayList();
     while (true) {
-      final VersionedTaskWrapper taskWrapper = tq.poll();
-      if(taskWrapper != null) {
-        taken.add(taskWrapper.getTask());
+      final Task task = tq.poll();
+      if(task != null) {
+        taken.add(task);
       } else {
         break;
       }
@@ -114,8 +118,7 @@ public class TaskQueueTest
     );
 
     // mark one done
-    final TestCommitRunnable commit1 = newCommitRunnable();
-    tq.notify(tasks[2], tasks[2].run(null, null, null), commit1);
+    tq.notify(tasks[2], tasks[2].run(null));
 
     // get its status back
     Assert.assertEquals(
@@ -124,20 +127,12 @@ public class TaskQueueTest
         ts.getStatus(tasks[2].getId()).get().getStatusCode()
     );
 
-    Assert.assertEquals("Commit #1 wasRun", commit1.wasRun(), true);
-
-    // Can't do a task twice
-    final TestCommitRunnable commit2 = newCommitRunnable();
-    tq.notify(tasks[2], tasks[2].run(null, null, null), commit2);
-
-    Assert.assertEquals("Commit #2 wasRun", commit2.wasRun(), false);
-
-    // we should be able to get one more task now
+    // We should be able to get one more task now
     taken.clear();
     while (true) {
-      final VersionedTaskWrapper taskWrapper = tq.poll();
-      if(taskWrapper != null) {
-        taken.add(taskWrapper.getTask());
+      final Task task = tq.poll();
+      if(task != null) {
+        taken.add(task);
       } else {
         break;
       }
@@ -160,7 +155,17 @@ public class TaskQueueTest
   public void testContinues() throws Exception
   {
     final TaskStorage ts = new LocalTaskStorage();
-    final TaskQueue tq = newTaskQueueWithStorage(ts);
+    final TaskLockbox tl = new TaskLockbox(ts);
+    final TaskQueue tq = newTaskQueue(ts, tl);
+    final TaskToolbox tb = new TaskToolbox(
+        null,
+        new LocalTaskActionClient(ts, new TaskActionToolbox(tq, tl, null, null)),
+        null,
+        null,
+        null,
+        null,
+        null
+    );
 
     final Task t0 = newTask("T0", "G0", "bar", new Interval("2011/P1Y"));
     final Task t1 = newContinuedTask("T1", "G1", "bar", new Interval("2013/P1Y"), Lists.newArrayList(t0));
@@ -168,17 +173,17 @@ public class TaskQueueTest
 
     Assert.assertTrue("T0 isPresent (#1)",  !ts.getStatus("T0").isPresent());
     Assert.assertTrue("T1 isPresent (#1)",   ts.getStatus("T1").isPresent());
-    Assert.assertTrue("T1 isRunnable (#1)",  ts.getStatus("T1").get().isRunnable());
+    Assert.assertTrue("T1 isRunnable (#1)", ts.getStatus("T1").get().isRunnable());
     Assert.assertTrue("T1 isComplete (#1)", !ts.getStatus("T1").get().isComplete());
 
     // should be able to get t1 out
-    Assert.assertEquals("poll #1", "T1", tq.poll().getTask().getId());
+    Assert.assertEquals("poll #1", "T1", tq.poll().getId());
     Assert.assertNull("poll #2", tq.poll());
 
     // report T1 done. Should cause T0 to be created
-    tq.notify(t1, t1.run(null, null, null));
+    tq.notify(t1, t1.run(tb));
 
-    Assert.assertTrue("T0 isPresent (#2)",   ts.getStatus("T0").isPresent());
+    Assert.assertTrue("T0 isPresent (#2)", ts.getStatus("T0").isPresent());
     Assert.assertTrue("T0 isRunnable (#2)",  ts.getStatus("T0").get().isRunnable());
     Assert.assertTrue("T0 isComplete (#2)", !ts.getStatus("T0").get().isComplete());
     Assert.assertTrue("T1 isPresent (#2)",   ts.getStatus("T1").isPresent());
@@ -186,13 +191,13 @@ public class TaskQueueTest
     Assert.assertTrue("T1 isComplete (#2)",  ts.getStatus("T1").get().isComplete());
 
     // should be able to get t0 out
-    Assert.assertEquals("poll #3", "T0", tq.poll().getTask().getId());
+    Assert.assertEquals("poll #3", "T0", tq.poll().getId());
     Assert.assertNull("poll #4", tq.poll());
 
     // report T0 done. Should cause T0, T1 to be marked complete
-    tq.notify(t0, t0.run(null, null, null));
+    tq.notify(t0, t0.run(tb));
 
-    Assert.assertTrue("T0 isPresent (#3)",   ts.getStatus("T0").isPresent());
+    Assert.assertTrue("T0 isPresent (#3)", ts.getStatus("T0").isPresent());
     Assert.assertTrue("T0 isRunnable (#3)", !ts.getStatus("T0").get().isRunnable());
     Assert.assertTrue("T0 isComplete (#3)",  ts.getStatus("T0").get().isComplete());
     Assert.assertTrue("T1 isPresent (#3)",   ts.getStatus("T1").isPresent());
@@ -207,7 +212,17 @@ public class TaskQueueTest
   public void testConcurrency() throws Exception
   {
     final TaskStorage ts = new LocalTaskStorage();
-    final TaskQueue tq = newTaskQueueWithStorage(ts);
+    final TaskLockbox tl = new TaskLockbox(ts);
+    final TaskQueue tq = newTaskQueue(ts, tl);
+    final TaskToolbox tb = new TaskToolbox(
+        null,
+        new LocalTaskActionClient(ts, new TaskActionToolbox(tq, tl, null, null)),
+        null,
+        null,
+        null,
+        null,
+        null
+    );
 
     // Imagine a larger task that splits itself up into pieces
     final Task t1 = newTask("T1", "G0", "bar", new Interval("2011-01-01/P1D"));
@@ -224,15 +239,16 @@ public class TaskQueueTest
 
     tq.add(t0);
 
-    final VersionedTaskWrapper wt0 = tq.poll();
-    Assert.assertEquals("wt0 task id", "T0", wt0.getTask().getId());
+    final Task wt0 = tq.poll();
+    final TaskLock wt0Lock = Iterables.getOnlyElement(tl.findLocksForTask(wt0));
+    Assert.assertEquals("wt0 task id", "T0", wt0.getId());
     Assert.assertNull("null poll #1", tq.poll());
 
     // Sleep a bit to avoid false test passes
     Thread.sleep(5);
 
     // Finish t0
-    tq.notify(t0, t0.run(null, null, null));
+    tq.notify(t0, t0.run(tb));
 
     // take max number of tasks
     final Set<String> taken = Sets.newHashSet();
@@ -241,15 +257,16 @@ public class TaskQueueTest
       // Sleep a bit to avoid false test passes
       Thread.sleep(5);
 
-      final VersionedTaskWrapper taskWrapper = tq.poll();
+      final Task task = tq.poll();
 
-      if(taskWrapper != null) {
+      if(task != null) {
+        final TaskLock taskLock = Iterables.getOnlyElement(tl.findLocksForTask(task));
         Assert.assertEquals(
-            String.format("%s version", taskWrapper.getTask().getId()),
-            wt0.getVersion(),
-            taskWrapper.getVersion()
+            String.format("%s version", task.getId()),
+            wt0Lock.getVersion(),
+            taskLock.getVersion()
         );
-        taken.add(taskWrapper.getTask().getId());
+        taken.add(task.getId());
       } else {
         break;
       }
@@ -259,34 +276,36 @@ public class TaskQueueTest
     Assert.assertEquals("taken", Sets.newHashSet("T1", "T3"), taken);
 
     // Finish t1
-    tq.notify(t1, t1.run(null, null, null));
+    tq.notify(t1, t1.run(null));
     Assert.assertNull("null poll #2", tq.poll());
 
     // Finish t3
-    tq.notify(t3, t3.run(null, null, null));
+    tq.notify(t3, t3.run(tb));
 
     // We should be able to get t2 now
-    final VersionedTaskWrapper wt2 = tq.poll();
-    Assert.assertEquals("wt2 task id", "T2", wt2.getTask().getId());
-    Assert.assertEquals("wt2 group id", "G1", wt2.getTask().getGroupId());
-    Assert.assertNotSame("wt2 version", wt0.getVersion(), wt2.getVersion());
+    final Task wt2 = tq.poll();
+    final TaskLock wt2Lock = Iterables.getOnlyElement(tl.findLocksForTask(wt2));
+    Assert.assertEquals("wt2 task id", "T2", wt2.getId());
+    Assert.assertEquals("wt2 group id", "G1", wt2.getGroupId());
+    Assert.assertNotSame("wt2 version", wt0Lock.getVersion(), wt2Lock.getVersion());
     Assert.assertNull("null poll #3", tq.poll());
 
     // Finish t2
-    tq.notify(t2, t2.run(null, null, null));
+    tq.notify(t2, t2.run(tb));
 
     // We should be able to get t4
     // And it should be in group G0, but that group should have a different version than last time
     // (Since the previous transaction named "G0" has ended and transaction names are not necessarily tied to
     // one version if they end and are re-started)
-    final VersionedTaskWrapper wt4 = tq.poll();
-    Assert.assertEquals("wt4 task id", "T4", wt4.getTask().getId());
-    Assert.assertEquals("wt4 group id", "G0", wt4.getTask().getGroupId());
-    Assert.assertNotSame("wt4 version", wt0.getVersion(), wt4.getVersion());
-    Assert.assertNotSame("wt4 version", wt2.getVersion(), wt4.getVersion());
+    final Task wt4 = tq.poll();
+    final TaskLock wt4Lock = Iterables.getOnlyElement(tl.findLocksForTask(wt4));
+    Assert.assertEquals("wt4 task id", "T4", wt4.getId());
+    Assert.assertEquals("wt4 group id", "G0", wt4.getGroupId());
+    Assert.assertNotSame("wt4 version", wt0Lock.getVersion(), wt4Lock.getVersion());
+    Assert.assertNotSame("wt4 version", wt2Lock.getVersion(), wt4Lock.getVersion());
 
     // Kind of done testing at this point, but let's finish t4 anyway
-    tq.notify(t4, t4.run(null, null, null));
+    tq.notify(t4, t4.run(tb));
     Assert.assertNull("null poll #4", tq.poll());
   }
 
@@ -294,131 +313,28 @@ public class TaskQueueTest
   public void testBootstrap() throws Exception
   {
     final TaskStorage storage = new LocalTaskStorage();
+    final TaskLockbox lockbox = new TaskLockbox(storage);
+
     storage.insert(newTask("T1", "G1", "bar", new Interval("2011-01-01/P1D")), TaskStatus.running("T1"));
     storage.insert(newTask("T2", "G2", "bar", new Interval("2011-02-01/P1D")), TaskStatus.running("T2"));
-    storage.setVersion("T1", "1234");
+    storage.addLock("T1", new TaskLock("G1", "bar", new Interval("2011-01-01/P1D"), "1234"));
 
-    final TaskQueue tq = newTaskQueueWithStorage(storage);
+    final TaskQueue tq = newTaskQueue(storage, lockbox);
 
-    final VersionedTaskWrapper vt1 = tq.poll();
-    Assert.assertEquals("vt1 id", "T1", vt1.getTask().getId());
-    Assert.assertEquals("vt1 version", "1234", vt1.getVersion());
+    final Task vt1 = tq.poll();
+    final TaskLock vt1Lock = Iterables.getOnlyElement(lockbox.findLocksForTask(vt1));
+    Assert.assertEquals("vt1 id", "T1", vt1.getId());
+    Assert.assertEquals("vt1 version", "1234", vt1Lock.getVersion());
 
-    tq.notify(vt1.getTask(), TaskStatus.success("T1", ImmutableSet.<DataSegment>of()));
+    tq.notify(vt1, TaskStatus.success("T1"));
 
     // re-bootstrap
     tq.stop();
-    storage.setStatus("T2", TaskStatus.failure("T2"));
+    storage.setStatus(TaskStatus.failure("T2"));
+    tq.bootstrap();
     tq.start();
 
     Assert.assertNull("null poll", tq.poll());
-  }
-
-  @Test
-  public void testRealtimeish() throws Exception
-  {
-    final TaskStorage ts = new LocalTaskStorage();
-    final TaskQueue tq = newTaskQueueWithStorage(ts);
-
-    class StructThingy
-    {
-      boolean pushed = false;
-      boolean pass1 = false;
-      boolean pass2 = false;
-    }
-
-    final StructThingy structThingy = new StructThingy();
-
-    // Test a task that acts sort of like the realtime task, to make sure this case works.
-    final Task rtTask = new AbstractTask("id1", "ds", new Interval("2010-01-01T00:00:00Z/PT1H"))
-    {
-      @Override
-      public Type getType()
-      {
-        return Type.TEST;
-      }
-
-      @Override
-      public TaskStatus run(
-          TaskContext context, TaskToolbox toolbox, TaskCallback callback
-      ) throws Exception
-      {
-        final Set<DataSegment> segments = ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource("ds")
-                       .interval(new Interval("2010-01-01T00:00:00Z/PT1H"))
-                       .version(context.getVersion())
-                       .build()
-        );
-
-        final List<Task> nextTasks = ImmutableList.of(
-            newTask(
-                "id2",
-                "id2",
-                "ds",
-                new Interval(
-                    "2010-01-01T01:00:00Z/PT1H"
-                )
-            )
-        );
-
-        final TaskStatus status1 = TaskStatus.running("id1").withNextTasks(nextTasks);
-        final TaskStatus status2 = TaskStatus.running("id1").withNextTasks(nextTasks).withSegments(segments);
-        final TaskStatus status3 = TaskStatus.success("id1").withNextTasks(nextTasks).withSegments(segments);
-
-        // Create a new realtime task!
-        callback.notify(status1);
-        if(ts.getStatus("id2").get().getStatusCode() == TaskStatus.Status.RUNNING) {
-          // test immediate creation of nextTask
-          structThingy.pass1 = true;
-        }
-
-        // Hand off a segment!
-        callback.notify(status2);
-        if(structThingy.pushed) {
-          // test immediate handoff of segment
-          structThingy.pass2 = true;
-        }
-
-        // Return success!
-        return status3;
-      }
-    };
-
-    tq.add(rtTask);
-
-    final VersionedTaskWrapper vt = tq.poll();
-    final TaskCallback callback = new TaskCallback()
-    {
-      @Override
-      public void notify(final TaskStatus status)
-      {
-        final Runnable commitRunnable = new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            if(status.getNextTasks().size() > 0) {
-              structThingy.pushed = true;
-            }
-          }
-        };
-
-        tq.notify(vt.getTask(), status, commitRunnable);
-      }
-    };
-
-    callback.notify(vt.getTask().run(new TaskContext(vt.getVersion(), null, null), null, callback));
-
-    // OK, finally ready to test stuff.
-    Assert.assertTrue("pass1", structThingy.pass1);
-    Assert.assertTrue("pass2", structThingy.pass2);
-    Assert.assertTrue("id1 isSuccess", ts.getStatus("id1").get().isSuccess());
-    Assert.assertTrue(
-        "id1 isSuccess (merged)",
-        new TaskStorageQueryAdapter(ts).getSameGroupMergedStatus("id1").get().isSuccess()
-    );
-    Assert.assertTrue("id2 isRunnable", ts.getStatus("id2").get().isRunnable());
   }
 
   private static Task newTask(final String id, final String groupId, final String dataSource, final Interval interval)
@@ -426,30 +342,15 @@ public class TaskQueueTest
     return new AbstractTask(id, groupId, dataSource, interval)
     {
       @Override
-      public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
+      public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
-        return TaskStatus.success(
-            id,
-            ImmutableSet.of(
-                new DataSegment(
-                    dataSource,
-                    interval,
-                    new DateTime("2012-01-02").toString(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    -1
-                )
-            )
-        );
+        return TaskStatus.success(id);
       }
 
       @Override
-      public Type getType()
+      public String getType()
       {
-        return Type.TEST;
+        return "null";
       }
     };
   }
@@ -465,37 +366,17 @@ public class TaskQueueTest
     return new AbstractTask(id, groupId, dataSource, interval)
     {
       @Override
-      public Type getType()
+      public String getType()
       {
-        return Type.TEST;
+        return "null";
       }
 
       @Override
-      public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
+      public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
-        return TaskStatus.success(id).withNextTasks(nextTasks);
+        toolbox.getTaskActionClient().submit(new SpawnTasksAction(this, nextTasks));
+        return TaskStatus.success(id);
       }
     };
-  }
-
-  private static TestCommitRunnable newCommitRunnable()
-  {
-    return new TestCommitRunnable();
-  }
-
-  private static class TestCommitRunnable implements Runnable
-  {
-    private boolean _wasRun = false;
-
-    @Override
-    public void run()
-    {
-      _wasRun = true;
-    }
-
-    public boolean wasRun()
-    {
-      return _wasRun;
-    }
   }
 }

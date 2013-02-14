@@ -42,10 +42,10 @@ import com.metamx.druid.loading.S3SegmentPusherConfig;
 import com.metamx.druid.loading.SegmentKiller;
 import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.actions.RemoteTaskActionClient;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
-import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.worker.TaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
@@ -64,8 +64,6 @@ import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
-
-
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
@@ -99,7 +97,9 @@ public class WorkerNode extends RegisteringNode
   private final Properties props;
   private final ConfigurationObjectFactory configFactory;
 
+  private RestS3Service s3Service = null;
   private List<Monitor> monitors = null;
+  private HttpClient httpClient = null;
   private ServiceEmitter emitter = null;
   private TaskConfig taskConfig = null;
   private WorkerConfig workerConfig = null;
@@ -126,9 +126,21 @@ public class WorkerNode extends RegisteringNode
     this.configFactory = configFactory;
   }
 
+  public WorkerNode setHttpClient(HttpClient httpClient)
+  {
+    this.httpClient = httpClient;
+    return this;
+  }
+
   public WorkerNode setEmitter(ServiceEmitter emitter)
   {
     this.emitter = emitter;
+    return this;
+  }
+
+  public WorkerNode setS3Service(RestS3Service s3Service)
+  {
+    this.s3Service = s3Service;
     return this;
   }
 
@@ -158,7 +170,9 @@ public class WorkerNode extends RegisteringNode
 
   public void init() throws Exception
   {
+    initializeHttpClient();
     initializeEmitter();
+    initializeS3Service();
     initializeMonitors();
     initializeMergerConfig();
     initializeTaskToolbox();
@@ -237,7 +251,7 @@ public class WorkerNode extends RegisteringNode
   {
     InjectableValues.Std injectables = new InjectableValues.Std();
 
-    injectables.addValue("s3Client", taskToolbox.getS3Client())
+    injectables.addValue("s3Client", s3Service)
                .addValue("segmentPusher", taskToolbox.getSegmentPusher());
 
     jsonMapper.setInjectableValues(injectables);
@@ -248,13 +262,18 @@ public class WorkerNode extends RegisteringNode
     jsonMapper.registerSubtypes(StaticS3FirehoseFactory.class);
   }
 
+  private void initializeHttpClient()
+  {
+    if (httpClient == null) {
+      httpClient = HttpClientInit.createClient(
+          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
+      );
+    }
+  }
+
   private void initializeEmitter()
   {
     if (emitter == null) {
-      final HttpClient httpClient = HttpClientInit.createClient(
-          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
-      );
-
       emitter = new ServiceEmitter(
           PropUtils.getProperty(props, "druid.service"),
           PropUtils.getProperty(props, "druid.host"),
@@ -262,6 +281,18 @@ public class WorkerNode extends RegisteringNode
       );
     }
     EmittingLogger.registerEmitter(emitter);
+  }
+
+  private void initializeS3Service() throws S3ServiceException
+  {
+    if(s3Service == null) {
+      s3Service = new RestS3Service(
+          new AWSCredentials(
+              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+          )
+      );
+    }
   }
 
   private void initializeMonitors()
@@ -287,21 +318,23 @@ public class WorkerNode extends RegisteringNode
   public void initializeTaskToolbox() throws S3ServiceException
   {
     if (taskToolbox == null) {
-      final RestS3Service s3Client = new RestS3Service(
-          new AWSCredentials(
-              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
-          )
-      );
       final SegmentPusher segmentPusher = new S3SegmentPusher(
-          s3Client,
+          s3Service,
           configFactory.build(S3SegmentPusherConfig.class),
           jsonMapper
       );
       final SegmentKiller segmentKiller = new S3SegmentKiller(
-          s3Client
+          s3Service
       );
-      taskToolbox = new TaskToolbox(taskConfig, emitter, s3Client, segmentPusher, segmentKiller, jsonMapper);
+      taskToolbox = new TaskToolbox(
+          taskConfig,
+          new RemoteTaskActionClient(httpClient, jsonMapper),
+          emitter,
+          s3Service,
+          segmentPusher,
+          segmentKiller,
+          jsonMapper
+      );
     }
   }
 

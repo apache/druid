@@ -23,15 +23,18 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskStatus;
-import com.metamx.druid.merger.common.task.MergeTask;
+import com.metamx.druid.merger.common.actions.TaskAction;
 import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.merger.coordinator.TaskQueue;
+import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.service.ServiceEmitter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -40,6 +43,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
+import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -50,34 +55,34 @@ public class IndexerCoordinatorResource
 
   private final IndexerCoordinatorConfig config;
   private final ServiceEmitter emitter;
-  private final TaskQueue tasks;
+  private final TaskMasterLifecycle taskMasterLifecycle;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
   private final WorkerSetupManager workerSetupManager;
+  private final ObjectMapper jsonMapper;
 
   @Inject
   public IndexerCoordinatorResource(
       IndexerCoordinatorConfig config,
       ServiceEmitter emitter,
-      TaskQueue tasks,
+      TaskMasterLifecycle taskMasterLifecycle,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
-      WorkerSetupManager workerSetupManager
-
+      WorkerSetupManager workerSetupManager,
+      ObjectMapper jsonMapper
   ) throws Exception
   {
     this.config = config;
     this.emitter = emitter;
-    this.tasks = tasks;
+    this.taskMasterLifecycle = taskMasterLifecycle;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
     this.workerSetupManager = workerSetupManager;
+    this.jsonMapper = jsonMapper;
   }
 
   @POST
   @Path("/merge")
   @Consumes("application/json")
   @Produces("application/json")
-  public Response doMerge(
-      final MergeTask task
-  )
+  public Response doMerge(final Task task)
   {
     // legacy endpoint
     return doIndex(task);
@@ -87,9 +92,7 @@ public class IndexerCoordinatorResource
   @Path("/index")
   @Consumes("application/json")
   @Produces("application/json")
-  public Response doIndex(
-      final Task task
-  )
+  public Response doIndex(final Task task)
   {
     // verify against whitelist
     if (config.isWhitelistEnabled() && !config.getWhitelistDatasources().contains(task.getDataSource())) {
@@ -103,14 +106,14 @@ public class IndexerCoordinatorResource
                      .build();
     }
 
-    tasks.add(task);
-    return okResponse(task.getId());
+    taskMasterLifecycle.getTaskQueue().add(task);
+    return Response.ok(ImmutableMap.of("task", task.getId())).build();
   }
 
   @GET
-  @Path("/status/{taskid}")
+  @Path("/task/{taskid}/status")
   @Produces("application/json")
-  public Response doStatus(@PathParam("taskid") String taskid)
+  public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
     final Optional<TaskStatus> status = taskStorageQueryAdapter.getSameGroupMergedStatus(taskid);
     if (!status.isPresent()) {
@@ -120,9 +123,30 @@ public class IndexerCoordinatorResource
     }
   }
 
-  private Response okResponse(final String taskid)
+  @GET
+  @Path("/task/{taskid}/segments")
+  @Produces("application/json")
+  public Response getTaskSegments(@PathParam("taskid") String taskid)
   {
-    return Response.ok(ImmutableMap.of("task", taskid)).build();
+    final Set<DataSegment> segments = taskStorageQueryAdapter.getSameGroupNewSegments(taskid);
+    return Response.ok().entity(segments).build();
+  }
+
+  // Legacy endpoint
+  // TODO Remove
+  @Deprecated
+  @GET
+  @Path("/status/{taskid}")
+  @Produces("application/json")
+  public Response getLegacyStatus(@PathParam("taskid") String taskid)
+  {
+    final Optional<TaskStatus> status = taskStorageQueryAdapter.getSameGroupMergedStatus(taskid);
+    final Set<DataSegment> segments = taskStorageQueryAdapter.getSameGroupNewSegments(taskid);
+
+    final Map<String, Object> ret = jsonMapper.convertValue(status, new TypeReference<Map<String, Object>>(){});
+    ret.put("segments", segments);
+
+    return Response.ok().entity(ret).build();
   }
 
   @GET
@@ -144,5 +168,14 @@ public class IndexerCoordinatorResource
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
     return Response.ok().build();
+  }
+
+  @POST
+  @Path("/action")
+  @Produces("application/json")
+  public <T> Response doAction(final TaskAction<T> action)
+  {
+    final T ret = taskMasterLifecycle.getTaskToolbox().getTaskActionClient().submit(action);
+    return Response.ok().entity(ret).build();
   }
 }

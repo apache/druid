@@ -22,16 +22,13 @@ package com.metamx.druid.merger.coordinator.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
-import com.metamx.druid.merger.coordinator.TaskMaster;
-import com.metamx.druid.merger.coordinator.TaskQueue;
+import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-
-
 
 import javax.inject.Singleton;
 
@@ -42,28 +39,25 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
   private final ObjectMapper jsonMapper;
   private final IndexerCoordinatorConfig indexerCoordinatorConfig;
   private final ServiceEmitter emitter;
-  private final TaskQueue tasks;
+  private final TaskMasterLifecycle taskMasterLifecycle;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
   private final WorkerSetupManager workerSetupManager;
-  private final TaskMaster taskMaster;
 
   public IndexerCoordinatorServletModule(
       ObjectMapper jsonMapper,
       IndexerCoordinatorConfig indexerCoordinatorConfig,
       ServiceEmitter emitter,
-      TaskQueue tasks,
+      TaskMasterLifecycle taskMasterLifecycle,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
-      WorkerSetupManager workerSetupManager,
-      TaskMaster taskMaster
+      WorkerSetupManager workerSetupManager
   )
   {
     this.jsonMapper = jsonMapper;
     this.indexerCoordinatorConfig = indexerCoordinatorConfig;
     this.emitter = emitter;
-    this.tasks = tasks;
+    this.taskMasterLifecycle = taskMasterLifecycle;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
     this.workerSetupManager = workerSetupManager;
-    this.taskMaster = taskMaster;
   }
 
   @Override
@@ -74,10 +68,9 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
     bind(ObjectMapper.class).toInstance(jsonMapper);
     bind(IndexerCoordinatorConfig.class).toInstance(indexerCoordinatorConfig);
     bind(ServiceEmitter.class).toInstance(emitter);
-    bind(TaskQueue.class).toInstance(tasks);
+    bind(TaskMasterLifecycle.class).toInstance(taskMasterLifecycle);
     bind(TaskStorageQueryAdapter.class).toInstance(taskStorageQueryAdapter);
     bind(WorkerSetupManager.class).toInstance(workerSetupManager);
-    bind(TaskMaster.class).toInstance(taskMaster);
 
     serve("/*").with(GuiceContainer.class);
   }
