@@ -19,6 +19,7 @@
 
 package com.metamx.druid.indexer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.logger.Logger;
@@ -30,7 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;

@@ -19,6 +19,8 @@
 
 package com.metamx.druid.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
@@ -27,8 +29,8 @@ import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.master.DruidMaster;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import org.codehaus.jackson.jaxrs.JacksonJsonProvider;
-import org.codehaus.jackson.map.ObjectMapper;
+
+
 
 import javax.inject.Singleton;
 

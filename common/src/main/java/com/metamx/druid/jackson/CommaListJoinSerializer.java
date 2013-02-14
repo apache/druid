@@ -19,18 +19,22 @@
 
 package com.metamx.druid.jackson;
 
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.ser.std.StdScalarSerializer;
 import com.google.common.base.Joiner;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.map.SerializerProvider;
-import org.codehaus.jackson.map.ser.std.ScalarSerializerBase;
+
+
+
+
 
 import java.io.IOException;
 import java.util.List;
 
 /**
  */
-public class CommaListJoinSerializer extends ScalarSerializerBase<List<String>>
+public class CommaListJoinSerializer extends StdScalarSerializer<List<String>>
 {
   private static final Joiner joiner = Joiner.on(",");
 

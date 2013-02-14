@@ -11,7 +11,7 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
 import junit.framework.Assert;
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.joda.time.Interval;
 import org.junit.Test;
 

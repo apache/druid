@@ -11,8 +11,8 @@ import com.metamx.druid.merger.common.actions.LockListAction;
 import com.metamx.druid.merger.common.actions.SegmentListUnusedAction;
 import com.metamx.druid.merger.common.actions.SegmentNukeAction;
 import com.metamx.druid.merger.common.TaskLock;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

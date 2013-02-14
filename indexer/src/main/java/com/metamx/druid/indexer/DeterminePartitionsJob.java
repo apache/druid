@@ -19,6 +19,7 @@
 
 package com.metamx.druid.indexer;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -63,7 +64,7 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-import org.codehaus.jackson.type.TypeReference;
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
@@ -78,13 +79,16 @@ import java.util.Set;
 
 /**
  * Determines appropriate ShardSpecs for a job by determining whether or not partitioning is necessary, and if so,
- * choosing the highest cardinality dimension that satisfies the criteria:
+ * choosing the best dimension that satisfies the criteria:
  *
  * <ul>
  *   <li>Must have exactly one value per row.</li>
  *   <li>Must not generate oversized partitions. A dimension with N rows having the same value will necessarily
  *   put all those rows in the same partition, and that partition may be much larger than the target size.</li>
  * </ul>
+ *
+ * "Best" means a very high cardinality dimension, or, if none exist, the dimension that minimizes segment size
+ * variance.
  */
 public class DeterminePartitionsJob implements Jobby
 {
@@ -146,7 +150,7 @@ public class DeterminePartitionsJob implements Jobby
         log.info("Job %s submitted, status available at: %s", groupByJob.getJobName(), groupByJob.getTrackingURL());
 
         if(!groupByJob.waitForCompletion(true)) {
-          log.error("Job failed: %s", groupByJob.getJobID().toString());
+          log.error("Job failed: %s", groupByJob.getJobID());
           return false;
         }
       } else {
@@ -499,6 +503,7 @@ public class DeterminePartitionsJob implements Jobby
   {
     private static final double SHARD_COMBINE_THRESHOLD = 0.25;
     private static final double SHARD_OVERSIZE_THRESHOLD = 1.5;
+    private static final int HIGH_CARDINALITY_THRESHOLD = 3000000;
 
     @Override
     protected void innerReduce(
@@ -633,7 +638,9 @@ public class DeterminePartitionsJob implements Jobby
 
       final int totalRows = dimPartitionss.values().iterator().next().getRows();
 
-      int maxCardinality = -1;
+      int maxCardinality = Integer.MIN_VALUE;
+      long minVariance = Long.MAX_VALUE;
+      DimPartitions minVariancePartitions = null;
       DimPartitions maxCardinalityPartitions = null;
 
       for(final DimPartitions dimPartitions : dimPartitionss.values()) {
@@ -659,9 +666,17 @@ public class DeterminePartitionsJob implements Jobby
           continue;
         }
 
-        if(dimPartitions.getCardinality() > maxCardinality) {
-          maxCardinality = dimPartitions.getCardinality();
+        final int cardinality = dimPartitions.getCardinality();
+        final long variance = dimPartitions.getVariance();
+
+        if(cardinality > maxCardinality) {
+          maxCardinality = cardinality;
           maxCardinalityPartitions = dimPartitions;
+        }
+
+        if(variance < minVariance) {
+          minVariance = variance;
+          minVariancePartitions = dimPartitions;
         }
       }
 
@@ -674,8 +689,12 @@ public class DeterminePartitionsJob implements Jobby
           context, config.makeSegmentPartitionInfoPath(new Bucket(0, bucket, 0)), config.isOverwriteFiles()
       );
 
+      final DimPartitions chosenPartitions = maxCardinality > HIGH_CARDINALITY_THRESHOLD
+                                             ? maxCardinalityPartitions
+                                             : minVariancePartitions;
+
       final List<ShardSpec> chosenShardSpecs = Lists.transform(
-          maxCardinalityPartitions.partitions, new Function<DimPartition, ShardSpec>()
+          chosenPartitions.partitions, new Function<DimPartition, ShardSpec>()
       {
         @Override
         public ShardSpec apply(DimPartition dimPartition)
@@ -749,6 +768,19 @@ public class DeterminePartitionsJob implements Jobby
         sum += dimPartition.cardinality;
       }
       return sum;
+    }
+
+    public long getVariance()
+    {
+      final long meanRows = getRows() / partitions.size();
+
+      long variance = 0;
+      for(final DimPartition dimPartition : partitions) {
+        variance += (dimPartition.rows - meanRows) * (dimPartition.rows - meanRows);
+      }
+
+      variance /= partitions.size();
+      return variance;
     }
 
     public int getRows()

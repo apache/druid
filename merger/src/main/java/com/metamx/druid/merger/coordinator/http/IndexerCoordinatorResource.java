@@ -33,8 +33,8 @@ import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.service.ServiceEmitter;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;

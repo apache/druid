@@ -393,6 +393,7 @@ public class IndexGeneratorJob implements Jobby
           dimensionNames,
           metricNames,
           config.getShardSpec(bucket).getActualSpec(),
+          IndexIO.getVersionFromDir(mergedBase),
           size
       );
 

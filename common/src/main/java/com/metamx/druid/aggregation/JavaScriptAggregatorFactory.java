@@ -19,14 +19,16 @@
 
 package com.metamx.druid.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.metamx.common.IAE;
 import com.metamx.druid.processing.FloatMetricSelector;
 import com.metamx.druid.processing.MetricSelectorFactory;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Script;

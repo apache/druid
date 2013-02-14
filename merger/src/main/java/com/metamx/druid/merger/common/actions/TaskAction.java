@@ -1,9 +1,9 @@
 package com.metamx.druid.merger.common.actions;
 
 import com.metamx.druid.merger.common.task.Task;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-import org.codehaus.jackson.type.TypeReference;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {

@@ -19,9 +19,10 @@
 
 package com.metamx.druid.realtime;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.druid.loading.S3SegmentPusherConfig;
 import com.metamx.druid.loading.SegmentPusher;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 /**

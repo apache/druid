@@ -20,8 +20,8 @@
 package com.metamx.druid.merger.common;
 
 import com.google.common.base.Objects;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 
 /**

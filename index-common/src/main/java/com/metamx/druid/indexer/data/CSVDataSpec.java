@@ -19,11 +19,13 @@
 
 package com.metamx.druid.indexer.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.parsers.CSVParser;
 import com.metamx.common.parsers.Parser;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 import java.util.List;
 

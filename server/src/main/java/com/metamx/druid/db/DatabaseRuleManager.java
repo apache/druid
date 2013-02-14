@@ -19,6 +19,8 @@
 
 package com.metamx.druid.db;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -29,8 +31,8 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.master.rules.PeriodLoadRule;
 import com.metamx.druid.master.rules.Rule;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;

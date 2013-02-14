@@ -19,12 +19,11 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
-import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
 import org.joda.time.Interval;
 
 /**
@@ -71,7 +70,7 @@ public interface Task
 
   /**
    * Execute preflight checks for a task. This typically runs on the coordinator, and will be run while
-   * holding a lock on our dataSouce and interval. If this method throws an exception, the task should be
+   * holding a lock on our dataSource and interval. If this method throws an exception, the task should be
    * considered a failure.
    *
    * @param toolbox Toolbox for this task

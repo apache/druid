@@ -20,7 +20,6 @@
 package com.metamx.druid.master;
 
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryManager;
@@ -123,6 +122,18 @@ public class DruidMasterTest
           public String getMergerServiceName()
           {
             return "";
+          }
+
+          @Override
+          public int getReplicantLifetime()
+          {
+            return 0;
+          }
+
+          @Override
+          public int getReplicantThrottleLimit()
+          {
+            return 0;
           }
         },
         null,

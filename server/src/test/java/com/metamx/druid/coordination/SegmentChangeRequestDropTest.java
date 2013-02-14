@@ -19,12 +19,15 @@
 
 package com.metamx.druid.coordination;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.shard.NoneShardSpec;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
+
+
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -52,6 +55,7 @@ public class SegmentChangeRequestDropTest
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
         new NoneShardSpec(),
+        IndexIO.CURRENT_VERSION_ID,
         1
     );
 
@@ -61,7 +65,7 @@ public class SegmentChangeRequestDropTest
         mapper.writeValueAsString(segmentDrop), new TypeReference<Map<String, Object>>(){}
     );
 
-    Assert.assertEquals(10, objectMap.size());
+    Assert.assertEquals(11, objectMap.size());
     Assert.assertEquals("drop", objectMap.get("action"));
     Assert.assertEquals("something", objectMap.get("dataSource"));
     Assert.assertEquals(interval.toString(), objectMap.get("interval"));
@@ -70,6 +74,7 @@ public class SegmentChangeRequestDropTest
     Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
     Assert.assertEquals("met1,met2", objectMap.get("metrics"));
     Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assert.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
   }
 }

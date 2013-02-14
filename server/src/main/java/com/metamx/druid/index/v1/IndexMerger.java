@@ -407,7 +407,7 @@ public class IndexMerger
     try {
       fileOutputStream = new FileOutputStream(indexFile);
       channel = fileOutputStream.getChannel();
-      channel.write(ByteBuffer.wrap(new byte[]{IndexIO.CURRENT_VERSION_ID}));
+      channel.write(ByteBuffer.wrap(new byte[]{IndexIO.V8_VERSION}));
 
       GenericIndexed.fromIterable(mergedDimensions, GenericIndexed.stringStrategy).writeToChannel(channel);
       GenericIndexed.fromIterable(mergedMetrics, GenericIndexed.stringStrategy).writeToChannel(channel);
@@ -770,7 +770,7 @@ public class IndexMerger
     }
 
     createIndexDrdFile(
-        IndexIO.CURRENT_VERSION_ID,
+        IndexIO.V8_VERSION,
         v8OutDir,
         GenericIndexed.fromIterable(mergedDimensions, GenericIndexed.stringStrategy),
         GenericIndexed.fromIterable(mergedMetrics, GenericIndexed.stringStrategy),

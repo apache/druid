@@ -19,6 +19,10 @@
 
 package com.metamx.druid.merger.common.index;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -39,10 +43,10 @@ import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.PlumberSchool;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.Sink;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonTypeName;
-import org.codehaus.jackson.map.annotate.JacksonInject;
+
+
+
+
 import org.joda.time.Interval;
 
 import java.io.File;
@@ -83,9 +87,7 @@ public class YeOldePlumberSchool implements PlumberSchool
     final Sink theSink = new Sink(interval, schema);
 
     // Temporary directory to hold spilled segments.
-    final File persistDir = new File(
-        tmpSegmentDir, theSink.getSegment().withVersion(version).getIdentifier()
-    );
+    final File persistDir = new File(tmpSegmentDir, theSink.getSegment().withVersion(version).getIdentifier());
 
     // Set of spilled segments. Will be merged at the end.
     final Set<File> spilled = Sets.newHashSet();
@@ -144,7 +146,8 @@ public class YeOldePlumberSchool implements PlumberSchool
 
           final DataSegment segmentToUpload = theSink.getSegment()
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
-                                                     .withVersion(version);
+                                                     .withVersion(version)
+                                                     .withBinaryVersion(IndexIO.getVersionFromDir(fileToUpload));
 
           segmentPusher.push(fileToUpload, segmentToUpload);
 

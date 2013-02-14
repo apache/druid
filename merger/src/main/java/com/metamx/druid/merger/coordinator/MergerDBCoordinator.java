@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
@@ -28,8 +29,6 @@ import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DbConnectorConfig;
-import com.metamx.druid.merger.common.TaskStatus;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.DBI;
@@ -42,7 +41,6 @@ import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;

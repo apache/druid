@@ -19,15 +19,18 @@
 
 package com.metamx.druid.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.SingleDimensionShardSpec;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -60,12 +63,13 @@ public class DataSegmentTest
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
         new NoneShardSpec(),
+        IndexIO.CURRENT_VERSION_ID,
         1
     );
 
     final Map<String, Object> objectMap = mapper.readValue(mapper.writeValueAsString(segment), new TypeReference<Map<String, Object>>(){});
 
-    Assert.assertEquals(9, objectMap.size());
+    Assert.assertEquals(10, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
     Assert.assertEquals(interval.toString(), objectMap.get("interval"));
     Assert.assertEquals("1", objectMap.get("version"));
@@ -73,6 +77,7 @@ public class DataSegmentTest
     Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
     Assert.assertEquals("met1,met2", objectMap.get("metrics"));
     Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assert.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
 
     DataSegment deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);

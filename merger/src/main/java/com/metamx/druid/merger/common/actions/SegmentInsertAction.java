@@ -9,9 +9,9 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.type.TypeReference;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.util.List;
 import java.util.Set;

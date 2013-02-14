@@ -19,6 +19,7 @@
 
 package com.metamx.druid.coordination;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -27,12 +28,13 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.client.ZKPhoneBook;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.NoopSegmentLoader;
 import com.metamx.druid.metrics.NoopServiceEmitter;
 import com.metamx.druid.query.NoopQueryRunnerFactoryConglomerate;
 import com.metamx.druid.shard.NoneShardSpec;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -196,6 +198,7 @@ public class ZkCoordinatorTest
         Arrays.asList("dim1", "dim2", "dim3"),
         Arrays.asList("metric1", "metric2"),
         new NoneShardSpec(),
+        IndexIO.CURRENT_VERSION_ID,
         123l
     );
   }

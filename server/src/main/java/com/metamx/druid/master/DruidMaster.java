@@ -19,6 +19,7 @@
 
 package com.metamx.druid.master;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -53,7 +54,6 @@ import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
 import com.netflix.curator.x.discovery.ServiceProvider;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -623,21 +623,20 @@ public class DruidMaster
                 public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
                 {
                   // Display info about all historical servers
-                  Iterable<DruidServer> servers =
-                      FunctionalIterable.create(serverInventoryManager.getInventory())
-                                        .filter(
-                                            new Predicate<DruidServer>()
-                                            {
-                                              @Override
-                                              public boolean apply(
-                                                  @Nullable DruidServer input
-                                              )
-                                              {
-                                                return input.getType()
-                                                            .equalsIgnoreCase("historical");
-                                              }
-                                            }
-                                        );
+                  Iterable<DruidServer> servers =FunctionalIterable
+                      .create(serverInventoryManager.getInventory())
+                      .filter(
+                          new Predicate<DruidServer>()
+                          {
+                            @Override
+                            public boolean apply(
+                                @Nullable DruidServer input
+                            )
+                            {
+                              return input.getType().equalsIgnoreCase("historical");
+                            }
+                          }
+                      );
                   if (log.isDebugEnabled()) {
                     log.debug("Servers");
                     for (DruidServer druidServer : servers) {
@@ -698,11 +697,16 @@ public class DruidMaster
                                .withLoadManagementPeons(loadManagementPeons)
                                .withDruidCluster(cluster)
                                .withDatabaseRuleManager(databaseRuleManager)
+                               .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .build();
                 }
               },
-              new DruidMasterRuleRunner(DruidMaster.this),
+              new DruidMasterRuleRunner(
+                  DruidMaster.this,
+                  config.getReplicantLifetime(),
+                  config.getReplicantThrottleLimit()
+              ),
               new DruidMasterCleanup(DruidMaster.this),
               new DruidMasterBalancer(DruidMaster.this, new BalancerAnalyzer()),
               new DruidMasterLogger()

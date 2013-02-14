@@ -19,15 +19,17 @@
 
 package com.metamx.druid.merge;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.druid.client.DataSegment;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+
 
 import java.util.List;
 
 /**
  */
-@JsonTypeInfo(use=JsonTypeInfo.Id.NAME, property="type", defaultImpl = ClientDefaultMergeQuery.class)
+@JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="type", defaultImpl = ClientDefaultMergeQuery.class)
 @JsonSubTypes(value={
     @JsonSubTypes.Type(name="append", value=ClientAppendQuery.class)
 })

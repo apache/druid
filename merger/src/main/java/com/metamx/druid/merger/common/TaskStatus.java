@@ -19,18 +19,11 @@
 
 package com.metamx.druid.merger.common;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.merger.common.task.Task;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonProperty;
-
-import java.util.List;
-import java.util.Set;
 
 /**
  * Represents the status of a task. The task may be ongoing ({@link #isComplete()} false) or it may be

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.index.v1;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -61,7 +62,7 @@ import com.metamx.druid.kv.VSizeIndexedInts;
 import com.metamx.druid.utils.SerializerUtils;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;
@@ -109,7 +110,7 @@ public class IndexIO
 
 
   private static volatile IndexIOHandler handler = null;
-  public static final byte CURRENT_VERSION_ID = 0x8;
+  public static final int CURRENT_VERSION_ID = V9_VERSION;
 
   public static Index readIndex(File inDir) throws IOException
   {
@@ -170,7 +171,7 @@ public class IndexIO
     }
   }
 
-  private static int getVersionFromDir(File inDir) throws IOException
+  public static int getVersionFromDir(File inDir) throws IOException
   {
     File versionFile = new File(inDir, "version.bin");
     if (versionFile.exists()) {

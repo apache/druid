@@ -19,8 +19,11 @@
 
 package com.metamx.druid.realtime;
 
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.io.IOException;
 

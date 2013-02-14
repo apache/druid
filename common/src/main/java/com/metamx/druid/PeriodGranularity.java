@@ -19,8 +19,10 @@
 
 package com.metamx.druid;
 
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;

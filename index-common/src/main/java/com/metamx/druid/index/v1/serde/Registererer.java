@@ -19,7 +19,8 @@
 
 package com.metamx.druid.index.v1.serde;
 
-import org.codehaus.jackson.map.ObjectMapper;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This is a "factory" interface for registering handlers in the system.  It exists because I'm unaware of

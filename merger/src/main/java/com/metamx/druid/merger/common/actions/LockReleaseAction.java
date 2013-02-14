@@ -3,9 +3,9 @@ package com.metamx.druid.merger.common.actions;
 import com.google.common.base.Throwables;
 import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.task.Task;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.type.TypeReference;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.joda.time.Interval;
 
 import java.util.List;

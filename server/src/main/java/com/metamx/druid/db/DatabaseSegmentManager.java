@@ -19,6 +19,7 @@
 
 package com.metamx.druid.db;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -32,7 +33,7 @@ import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;

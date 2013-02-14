@@ -19,25 +19,24 @@
 
 package com.metamx.druid.loading;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Closeables;
 import com.metamx.common.ISE;
 import com.metamx.common.StreamUtils;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.acl.gs.GSAccessControlList;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -63,9 +62,9 @@ public class S3SegmentPusher implements SegmentPusher
   }
 
   @Override
-  public DataSegment push(File file, DataSegment segment) throws IOException
+  public DataSegment push(final File indexFilesDir, DataSegment segment) throws IOException
   {
-    log.info("Uploading [%s] to S3", file);
+    log.info("Uploading [%s] to S3", indexFilesDir);
     String outputKey = JOINER.join(
         config.getBaseKey().isEmpty() ? null : config.getBaseKey(),
         segment.getDataSource(),
@@ -77,8 +76,6 @@ public class S3SegmentPusher implements SegmentPusher
         segment.getVersion(),
         segment.getShardSpec().getPartitionNum()
     );
-
-    File indexFilesDir = file;
 
     long indexSize = 0;
     final File zipOutFile = File.createTempFile("druid", "index.zip");
@@ -106,24 +103,27 @@ public class S3SegmentPusher implements SegmentPusher
       final String outputBucket = config.getBucket();
       toPush.setBucketName(outputBucket);
       toPush.setKey(outputKey + "/index.zip");
+      toPush.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
 
       log.info("Pushing %s.", toPush);
       s3Client.putObject(outputBucket, toPush);
 
-      DataSegment outputSegment = segment.withSize(indexSize)
-                                         .withLoadSpec(
-                                             ImmutableMap.<String, Object>of(
-                                                 "type", "s3_zip",
-                                                 "bucket", outputBucket,
-                                                 "key", toPush.getKey()
-                                             )
-                                         );
+      segment = segment.withSize(indexSize)
+                       .withLoadSpec(
+                           ImmutableMap.<String, Object>of(
+                               "type", "s3_zip",
+                               "bucket", outputBucket,
+                               "key", toPush.getKey()
+                           )
+                       )
+                       .withBinaryVersion(IndexIO.getVersionFromDir(indexFilesDir));
 
       File descriptorFile = File.createTempFile("druid", "descriptor.json");
       StreamUtils.copyToFileAndClose(new ByteArrayInputStream(jsonMapper.writeValueAsBytes(segment)), descriptorFile);
       S3Object descriptorObject = new S3Object(descriptorFile);
       descriptorObject.setBucketName(outputBucket);
       descriptorObject.setKey(outputKey + "/descriptor.json");
+      descriptorObject.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
 
       log.info("Pushing %s", descriptorObject);
       s3Client.putObject(outputBucket, descriptorObject);
@@ -137,7 +137,7 @@ public class S3SegmentPusher implements SegmentPusher
       log.info("Deleting descriptor file[%s]", descriptorFile);
       descriptorFile.delete();
 
-      return outputSegment;
+      return segment;
     }
     catch (NoSuchAlgorithmException e) {
       throw new IOException(e);

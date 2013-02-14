@@ -19,6 +19,8 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -31,14 +33,12 @@ import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.index.v1.IncrementalIndexAdapter;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.index.v1.IndexableAdapter;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.LockListAction;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
-import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.shard.NoneShardSpec;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

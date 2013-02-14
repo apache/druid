@@ -1,14 +1,17 @@
 package druid.examples.twitter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonTypeName;
+
+
+
 import twitter4j.ConnectionLifeCycleListener;
 import twitter4j.HashtagEntity;
 import twitter4j.Status;

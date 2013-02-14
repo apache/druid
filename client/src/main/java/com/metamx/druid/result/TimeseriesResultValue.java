@@ -19,7 +19,9 @@
 
 package com.metamx.druid.result;
 
-import org.codehaus.jackson.annotate.JsonCreator;
+
+
+import com.fasterxml.jackson.annotation.JsonCreator;
 
 import java.util.Map;
 

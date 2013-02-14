@@ -19,9 +19,11 @@
 
 package com.metamx.druid.query.extraction;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ibm.icu.text.SimpleDateFormat;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 import java.nio.ByteBuffer;
 import java.text.ParseException;

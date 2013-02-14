@@ -19,13 +19,15 @@
 
 package com.metamx.druid.indexer.granularity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

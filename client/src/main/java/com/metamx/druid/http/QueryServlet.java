@@ -19,6 +19,8 @@
 
 package com.metamx.druid.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
@@ -31,8 +33,8 @@ import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
+
+
 import org.joda.time.DateTime;
 import org.mortbay.jetty.Request;
 

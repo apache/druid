@@ -19,8 +19,9 @@
 
 package com.metamx.druid.query.dimension;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.metamx.common.IAE;
-import org.codehaus.jackson.annotate.JsonCreator;
+
 
 import java.util.Map;
 

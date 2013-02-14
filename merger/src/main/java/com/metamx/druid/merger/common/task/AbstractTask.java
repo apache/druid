@@ -19,12 +19,13 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import org.codehaus.jackson.annotate.JsonProperty;
 import org.joda.time.Interval;
 
 public abstract class AbstractTask implements Task

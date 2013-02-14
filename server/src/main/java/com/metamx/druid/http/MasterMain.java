@@ -19,6 +19,7 @@
 
 package com.metamx.druid.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -67,7 +68,7 @@ import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.x.discovery.ServiceDiscovery;
 import com.netflix.curator.x.discovery.ServiceProvider;
 import org.I0Itec.zkclient.ZkClient;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;

@@ -19,6 +19,8 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -27,20 +29,18 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.LockListAction;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
 import com.metamx.druid.merger.common.index.YeOldePlumberSchool;
-import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.Sink;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

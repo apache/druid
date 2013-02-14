@@ -5,7 +5,7 @@ import com.google.common.base.Throwables;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.ToStringResponseHandler;
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.net.URI;
 import java.net.URISyntaxException;

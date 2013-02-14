@@ -19,11 +19,13 @@
 
 package com.metamx.druid.aggregation.post;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 import java.util.Comparator;
 import java.util.Iterator;

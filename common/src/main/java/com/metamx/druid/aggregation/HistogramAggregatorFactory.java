@@ -19,13 +19,15 @@
 
 package com.metamx.druid.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
 import com.metamx.druid.processing.MetricSelectorFactory;
 import org.apache.commons.codec.binary.Base64;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;

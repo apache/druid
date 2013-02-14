@@ -19,13 +19,14 @@
 
 package com.metamx.druid.realtime;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.phonebook.PhoneBook;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;

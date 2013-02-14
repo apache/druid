@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.common;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.druid.loading.S3SegmentGetterConfig;
 import com.metamx.druid.loading.S3SegmentPuller;
@@ -30,7 +31,7 @@ import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.emitter.service.ServiceEmitter;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 import java.io.File;
