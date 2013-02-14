@@ -20,10 +20,10 @@
 package com.metamx.druid.merger.common.task;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.metamx.druid.merger.common.TaskStatus;
-import com.metamx.druid.merger.coordinator.TaskContext;
-import org.codehaus.jackson.annotate.JsonCreator;
+import com.metamx.druid.merger.common.TaskToolbox;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.joda.time.Interval;
 
@@ -32,30 +32,19 @@ public abstract class AbstractTask implements Task
   private final String id;
   private final String groupId;
   private final String dataSource;
-  private final Interval interval;
+  private final Optional<Interval> interval;
 
-  public AbstractTask(String id, String dataSource, Interval interval)
+  protected AbstractTask(String id, String dataSource, Interval interval)
   {
     this(id, id, dataSource, interval);
   }
 
-  @JsonCreator
-  public AbstractTask(
-      @JsonProperty("id") String id,
-      @JsonProperty("groupId") String groupId,
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval
-  )
+  protected AbstractTask(String id, String groupId, String dataSource, Interval interval)
   {
-    Preconditions.checkNotNull(id, "id");
-    Preconditions.checkNotNull(groupId, "groupId");
-    Preconditions.checkNotNull(dataSource, "dataSource");
-    Preconditions.checkNotNull(interval, "interval");
-
-    this.id = id;
-    this.groupId = groupId;
-    this.dataSource = dataSource;
-    this.interval = interval;
+    this.id = Preconditions.checkNotNull(id, "id");
+    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    this.interval = Optional.fromNullable(interval);
   }
 
   @JsonProperty
@@ -79,15 +68,22 @@ public abstract class AbstractTask implements Task
     return dataSource;
   }
 
-  @JsonProperty
   @Override
-  public Interval getInterval()
+  public Optional<Interval> getFixedInterval()
   {
     return interval;
   }
 
+  // Awesome hack to get around lack of serde for Optional<T>
+  // TODO Look into jackson-datatype-guava
+  @JsonProperty("interval")
+  private Interval getNullableIntervalForJackson()
+  {
+    return interval.orNull();
+  }
+
   @Override
-  public TaskStatus preflight(TaskContext context) throws Exception
+  public TaskStatus preflight(TaskToolbox toolbox) throws Exception
   {
     return TaskStatus.running(id);
   }
@@ -99,7 +95,7 @@ public abstract class AbstractTask implements Task
                   .add("id", id)
                   .add("type", getType())
                   .add("dataSource", dataSource)
-                  .add("interval", getInterval())
+                  .add("interval", getFixedInterval())
                   .toString();
   }
 }

@@ -19,7 +19,9 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryGranularity;
@@ -29,10 +31,11 @@ import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.index.v1.IncrementalIndexAdapter;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.index.v1.IndexableAdapter;
-import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.coordinator.TaskContext;
+import com.metamx.druid.merger.common.actions.LockListAction;
+import com.metamx.druid.merger.common.actions.SegmentInsertAction;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.shard.NoneShardSpec;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -60,29 +63,31 @@ public class DeleteTask extends AbstractTask
             new DateTime().toString()
         ),
         dataSource,
-        interval
+        Preconditions.checkNotNull(interval, "interval")
     );
   }
 
   @Override
-  public Type getType()
+  public String getType()
   {
-    return Task.Type.DELETE;
+    return "delete";
   }
 
   @Override
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     // Strategy: Create an empty segment covering the interval to be deleted
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction(this)));
+    final Interval interval = this.getFixedInterval().get();
     final IncrementalIndex empty = new IncrementalIndex(0, QueryGranularity.NONE, new AggregatorFactory[0]);
-    final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(this.getInterval(), empty);
+    final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(interval, empty);
 
     // Create DataSegment
     final DataSegment segment =
         DataSegment.builder()
                    .dataSource(this.getDataSource())
-                   .interval(this.getInterval())
-                   .version(context.getVersion())
+                   .interval(interval)
+                   .version(myLock.getVersion())
                    .shardSpec(new NoneShardSpec())
                    .build();
 
@@ -99,6 +104,8 @@ public class DeleteTask extends AbstractTask
         segment.getVersion()
     );
 
-    return TaskStatus.success(getId(), ImmutableSet.of(uploadedSegment));
+    toolbox.getTaskActionClient().submit(new SegmentInsertAction(this, ImmutableSet.of(uploadedSegment)));
+
+    return TaskStatus.success(getId());
   }
 }

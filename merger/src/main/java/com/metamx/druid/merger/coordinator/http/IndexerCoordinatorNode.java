@@ -48,11 +48,13 @@ import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.S3SegmentKiller;
-import com.metamx.druid.loading.SegmentKiller;
 import com.metamx.druid.loading.S3SegmentPusher;
 import com.metamx.druid.loading.S3SegmentPusherConfig;
+import com.metamx.druid.loading.SegmentKiller;
 import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.actions.LocalTaskActionClient;
+import com.metamx.druid.merger.common.actions.TaskActionToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
@@ -62,7 +64,8 @@ import com.metamx.druid.merger.coordinator.LocalTaskStorage;
 import com.metamx.druid.merger.coordinator.MergerDBCoordinator;
 import com.metamx.druid.merger.coordinator.RemoteTaskRunner;
 import com.metamx.druid.merger.coordinator.RetryPolicyFactory;
-import com.metamx.druid.merger.coordinator.TaskMaster;
+import com.metamx.druid.merger.coordinator.TaskLockbox;
+import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.TaskRunner;
 import com.metamx.druid.merger.coordinator.TaskRunnerFactory;
@@ -134,18 +137,20 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private ServiceEmitter emitter = null;
   private DbConnectorConfig dbConnectorConfig = null;
   private DBI dbi = null;
+  private RestS3Service s3Service = null;
   private IndexerCoordinatorConfig config = null;
   private TaskConfig taskConfig = null;
   private TaskToolbox taskToolbox = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
   private TaskStorage taskStorage = null;
   private TaskQueue taskQueue = null;
+  private TaskLockbox taskLockbox = null;
   private CuratorFramework curatorFramework = null;
   private ScheduledExecutorFactory scheduledExecutorFactory = null;
   private IndexerZkConfig indexerZkConfig;
   private WorkerSetupManager workerSetupManager = null;
   private TaskRunnerFactory taskRunnerFactory = null;
-  private TaskMaster taskMaster = null;
+  private TaskMasterLifecycle taskMasterLifecycle = null;
   private Server server = null;
 
   private boolean initialized = false;
@@ -183,6 +188,18 @@ public class IndexerCoordinatorNode extends RegisteringNode
     return this;
   }
 
+  public IndexerCoordinatorNode setS3Service(RestS3Service s3Service)
+  {
+    this.s3Service = s3Service;
+    return this;
+  }
+
+  public IndexerCoordinatorNode setTaskLockbox(TaskLockbox taskLockbox)
+  {
+    this.taskLockbox = taskLockbox;
+    return this;
+  }
+
   public IndexerCoordinatorNode setMergeDbCoordinator(MergerDBCoordinator mergeDbCoordinator)
   {
     this.mergerDBCoordinator = mergeDbCoordinator;
@@ -216,17 +233,19 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initializeDB();
     initializeIndexerCoordinatorConfig();
     initializeTaskConfig();
+    initializeS3Service();
     initializeMergeDBCoordinator();
-    initializeTaskToolbox();
     initializeTaskStorage();
+    initializeTaskLockbox();
     initializeTaskQueue();
+    initializeTaskToolbox();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeCurator();
     initializeIndexerZkConfig();
     initializeWorkerSetupManager();
     initializeTaskRunnerFactory();
-    initializeTaskMaster();
+    initializeTaskMasterLifecycle();
     initializeServer();
 
     final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
@@ -243,7 +262,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             jsonMapper,
             config,
             emitter,
-            taskQueue,
+            taskMasterLifecycle,
             new TaskStorageQueryAdapter(taskStorage),
             workerSetupManager
         )
@@ -263,7 +282,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
                   @Override
                   public boolean doLocal()
                   {
-                    return taskMaster.isLeading();
+                    return taskMasterLifecycle.isLeading();
                   }
 
                   @Override
@@ -273,7 +292,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
                       return new URL(
                           String.format(
                               "http://%s%s",
-                              taskMaster.getLeader(),
+                              taskMasterLifecycle.getLeader(),
                               requestURI
                           )
                       );
@@ -291,20 +310,20 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initialized = true;
   }
 
-  private void initializeTaskMaster()
+  private void initializeTaskMasterLifecycle()
   {
-    if (taskMaster == null) {
+    if (taskMasterLifecycle == null) {
       final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
-      taskMaster = new TaskMaster(
+      taskMasterLifecycle = new TaskMasterLifecycle(
           taskQueue,
+          taskToolbox,
           config,
           serviceDiscoveryConfig,
-          mergerDBCoordinator,
           taskRunnerFactory,
           curatorFramework,
           emitter
       );
-      lifecycle.addManagedInstance(taskMaster);
+      lifecycle.addManagedInstance(taskMasterLifecycle);
     }
   }
 
@@ -359,7 +378,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   {
     InjectableValues.Std injectables = new InjectableValues.Std();
 
-    injectables.addValue("s3Client", taskToolbox.getS3Client())
+    injectables.addValue("s3Client", s3Service)
                .addValue("segmentPusher", taskToolbox.getSegmentPusher());
 
     jsonMapper.setInjectableValues(injectables);
@@ -419,24 +438,39 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
-  public void initializeTaskToolbox() throws S3ServiceException
+  public void initializeS3Service() throws S3ServiceException
+  {
+    this.s3Service = new RestS3Service(
+        new AWSCredentials(
+            PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+            PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+        )
+    );
+  }
+
+  public void initializeTaskToolbox()
   {
     if (taskToolbox == null) {
-      final RestS3Service s3Client = new RestS3Service(
-          new AWSCredentials(
-              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
-          )
-      );
       final SegmentPusher segmentPusher = new S3SegmentPusher(
-          s3Client,
+          s3Service,
           configFactory.build(S3SegmentPusherConfig.class),
           jsonMapper
       );
       final SegmentKiller segmentKiller = new S3SegmentKiller(
-          s3Client
+          s3Service
       );
-      taskToolbox = new TaskToolbox(taskConfig, emitter, s3Client, segmentPusher, segmentKiller, jsonMapper);
+      taskToolbox = new TaskToolbox(
+          taskConfig,
+          new LocalTaskActionClient(
+              taskStorage,
+              new TaskActionToolbox(taskQueue, taskLockbox, mergerDBCoordinator, emitter)
+          ),
+          emitter,
+          s3Service,
+          segmentPusher,
+          segmentKiller,
+          jsonMapper
+      );
     }
   }
 
@@ -454,8 +488,15 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public void initializeTaskQueue()
   {
     if (taskQueue == null) {
-      // Don't start it here. The TaskMaster will handle that when it feels like it.
-      taskQueue = new TaskQueue(taskStorage);
+      // Don't start it here. The TaskMasterLifecycle will handle that when it feels like it.
+      taskQueue = new TaskQueue(taskStorage, taskLockbox);
+    }
+  }
+
+  public void initializeTaskLockbox()
+  {
+    if (taskLockbox == null) {
+      taskLockbox = new TaskLockbox(taskStorage);
     }
   }
 

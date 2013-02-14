@@ -57,7 +57,7 @@ public class LocalTaskRunner implements TaskRunner
   }
 
   @Override
-  public void run(final Task task, final TaskContext context, final TaskCallback callback)
+  public void run(final Task task, final TaskCallback callback)
   {
     exec.submit(
         new Runnable()
@@ -71,7 +71,7 @@ public class LocalTaskRunner implements TaskRunner
 
             try {
               log.info("Running task: %s", task.getId());
-              status = task.run(context, toolbox, callback);
+              status = task.run(toolbox);
             }
             catch (InterruptedException e) {
               log.error(e, "Interrupted while running task[%s]", task);

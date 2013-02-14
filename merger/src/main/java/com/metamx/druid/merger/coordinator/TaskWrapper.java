@@ -27,14 +27,12 @@ import com.metamx.druid.merger.common.task.Task;
 public class TaskWrapper
 {
   private final Task task;
-  private final TaskContext taskContext;
   private final TaskCallback callback;
   private final RetryPolicy retryPolicy;
 
-  public TaskWrapper(Task task, TaskContext taskContext, TaskCallback callback, RetryPolicy retryPolicy)
+  public TaskWrapper(Task task, TaskCallback callback, RetryPolicy retryPolicy)
   {
     this.task = task;
-    this.taskContext = taskContext;
     this.callback = callback;
     this.retryPolicy = retryPolicy;
   }
@@ -42,11 +40,6 @@ public class TaskWrapper
   public Task getTask()
   {
     return task;
-  }
-
-  public TaskContext getTaskContext()
-  {
-    return taskContext;
   }
 
   public TaskCallback getCallback()

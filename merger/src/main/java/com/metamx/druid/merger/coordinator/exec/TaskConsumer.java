@@ -20,29 +20,23 @@
 package com.metamx.druid.merger.coordinator.exec;
 
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableSet;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.merger.coordinator.MergerDBCoordinator;
-import com.metamx.druid.merger.coordinator.TaskContext;
 import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.TaskRunner;
-import com.metamx.druid.merger.coordinator.VersionedTaskWrapper;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
-import java.util.Set;
 
 public class TaskConsumer implements Runnable
 {
   private final TaskQueue queue;
   private final TaskRunner runner;
-  private final MergerDBCoordinator mergerDBCoordinator;
+  private final TaskToolbox toolbox;
   private final ServiceEmitter emitter;
   private final Thread thready;
 
@@ -53,13 +47,13 @@ public class TaskConsumer implements Runnable
   public TaskConsumer(
       TaskQueue queue,
       TaskRunner runner,
-      MergerDBCoordinator mergerDBCoordinator,
+      TaskToolbox toolbox,
       ServiceEmitter emitter
   )
   {
     this.queue = queue;
     this.runner = runner;
-    this.mergerDBCoordinator = mergerDBCoordinator;
+    this.toolbox = toolbox;
     this.emitter = emitter;
     this.thready = new Thread(this);
   }
@@ -85,12 +79,9 @@ public class TaskConsumer implements Runnable
       while (!Thread.currentThread().isInterrupted()) {
 
         final Task task;
-        final String version;
 
         try {
-          final VersionedTaskWrapper taskWrapper = queue.take();
-          task = taskWrapper.getTask();
-          version = taskWrapper.getVersion();
+          task = queue.take();
         }
         catch (InterruptedException e) {
           log.info(e, "Interrupted while waiting for new work");
@@ -98,17 +89,17 @@ public class TaskConsumer implements Runnable
         }
 
         try {
-          handoff(task, version);
+          handoff(task);
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to hand off task")
              .addData("task", task.getId())
-             .addData("type", task.getType().toString())
+             .addData("type", task.getType())
              .addData("dataSource", task.getDataSource())
-             .addData("interval", task.getInterval())
+             .addData("interval", task.getFixedInterval())
              .emit();
 
-          // Retry would be nice, but only after we have a way to throttle and limit them.  Just fail for now.
+          // Retry would be nice, but only after we have a way to throttle and limit them. Just fail for now.
           if (!shutdown) {
             queue.notify(task, TaskStatus.failure(task.getId()));
           }
@@ -122,32 +113,17 @@ public class TaskConsumer implements Runnable
     }
   }
 
-  private void handoff(final Task task, final String version) throws Exception
+  private void handoff(final Task task) throws Exception
   {
-    final TaskContext context = new TaskContext(
-        version,
-        ImmutableSet.copyOf(
-            mergerDBCoordinator.getUsedSegmentsForInterval(
-                task.getDataSource(),
-                task.getInterval()
-            )
-        ),
-        ImmutableSet.copyOf(
-            mergerDBCoordinator.getUnusedSegmentsForInterval(
-                task.getDataSource(),
-                task.getInterval()
-            )
-        )
-    );
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
         .setUser2(task.getDataSource())
-        .setUser4(task.getType().toString())
-        .setUser5(task.getInterval().toString());
+        .setUser4(task.getType())
+        .setUser5(task.getFixedInterval().toString());
 
     // Run preflight checks
     TaskStatus preflightStatus;
     try {
-      preflightStatus = task.preflight(context);
+      preflightStatus = task.preflight(toolbox);
       log.info("Preflight done for task: %s", task.getId());
     }
     catch (Exception e) {
@@ -161,11 +137,9 @@ public class TaskConsumer implements Runnable
       return;
     }
 
-    // Hand off work to TaskRunner
-    // TODO -- Should something in the TaskCallback enforce that each returned status is logically after the previous?
-    // TODO -- Probably yes. But make sure it works in the face of RTR retries.
+    // Hand off work to TaskRunner, with a callback
     runner.run(
-        task, context, new TaskCallback()
+        task, new TaskCallback()
     {
       @Override
       public void notify(final TaskStatus statusFromRunner)
@@ -180,82 +154,26 @@ public class TaskConsumer implements Runnable
             return;
           }
 
-          queue.notify(
-              task, statusFromRunner, new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              try {
-                // Validate status
-                for (final DataSegment segment : statusFromRunner.getSegments()) {
-                  verifyDataSourceAndInterval(task, context, segment);
-
-                  // Verify version (must be equal to our context version)
-                  if (!context.getVersion().equals(segment.getVersion())) {
-                    throw new IllegalStateException(
-                        String.format(
-                            "Segment for task[%s] has invalid version: %s",
-                            task.getId(),
-                            segment.getIdentifier()
-                        )
-                    );
-                  }
-                }
-
-                for (final DataSegment segment : statusFromRunner.getSegmentsNuked()) {
-                  verifyDataSourceAndInterval(task, context, segment);
-
-                  // Verify version (must be less than our context version)
-                  if (segment.getVersion().compareTo(context.getVersion()) >= 0) {
-                    throw new IllegalStateException(
-                        String.format(
-                            "Segment-to-nuke for task[%s] has invalid version: %s",
-                            task.getId(),
-                            segment.getIdentifier()
-                        )
-                    );
-                  }
-                }
-
-                mergerDBCoordinator.commitTaskStatus(statusFromRunner);
-              }
-              catch (Exception e) {
-                log.error(e, "Exception while publishing segments for task: %s", task);
-                throw Throwables.propagate(e);
-              }
-            }
-          }
-          );
+          queue.notify(task, statusFromRunner);
 
           // Emit event and log, if the task is done
           if (statusFromRunner.isComplete()) {
-            builder.setUser3(statusFromRunner.getStatusCode().toString());
-
-            for (DataSegment segment : statusFromRunner.getSegments()) {
-              emitter.emit(builder.build("indexer/segment/bytes", segment.getSize()));
-            }
-
-            for (DataSegment segmentNuked : statusFromRunner.getSegmentsNuked()) {
-              emitter.emit(builder.build("indexer/segmentNuked/bytes", segmentNuked.getSize()));
-            }
-
-            emitter.emit(builder.build("indexer/time/run/millis", statusFromRunner.getDuration()));
+            metricBuilder.setUser3(statusFromRunner.getStatusCode().toString());
+            emitter.emit(metricBuilder.build("indexer/time/run/millis", statusFromRunner.getDuration()));
 
             if (statusFromRunner.isFailure()) {
               log.makeAlert("Failed to index")
                  .addData("task", task.getId())
-                 .addData("type", task.getType().toString())
+                 .addData("type", task.getType())
                  .addData("dataSource", task.getDataSource())
-                 .addData("interval", task.getInterval())
+                 .addData("interval", task.getFixedInterval())
                  .emit();
             }
 
             log.info(
-                "Task %s: %s (%d segments) (%d run duration)",
+                "Task %s: %s (%d run duration)",
                 statusFromRunner.getStatusCode(),
                 task,
-                statusFromRunner.getSegments().size(),
                 statusFromRunner.getDuration()
             );
           }
@@ -269,70 +187,5 @@ public class TaskConsumer implements Runnable
       }
     }
     );
-  }
-
-  private void deleteSegments(Task task, TaskContext context, Set<DataSegment> segments) throws Exception
-  {
-    for (DataSegment segment : segments) {
-      verifyDataSourceAndInterval(task, context, segment);
-
-      // Verify version (must be less than our context version)
-      if (segment.getVersion().compareTo(context.getVersion()) >= 0) {
-        throw new IllegalStateException(
-            String.format(
-                "Segment-to-nuke for task[%s] has invalid version: %s",
-                task.getId(),
-                segment.getIdentifier()
-            )
-        );
-      }
-
-      log.info("Deleting segment[%s] for task[%s]", segment.getIdentifier(), task.getId());
-      mergerDBCoordinator.deleteSegment(segment);
-    }
-  }
-
-  private void publishSegments(Task task, TaskContext context, Set<DataSegment> segments) throws Exception
-  {
-    for (DataSegment segment : segments) {
-      verifyDataSourceAndInterval(task, context, segment);
-
-      // Verify version (must be equal to our context version)
-      if (!context.getVersion().equals(segment.getVersion())) {
-        throw new IllegalStateException(
-            String.format(
-                "Segment for task[%s] has invalid version: %s",
-                task.getId(),
-                segment.getIdentifier()
-            )
-        );
-      }
-
-      log.info("Publishing segment[%s] for task[%s]", segment.getIdentifier(), task.getId());
-      mergerDBCoordinator.announceHistoricalSegment(segment);
-    }
-  }
-
-  private void verifyDataSourceAndInterval(Task task, TaskContext context, DataSegment segment)
-  {
-    if (!task.getDataSource().equals(segment.getDataSource())) {
-      throw new IllegalStateException(
-          String.format(
-              "Segment for task[%s] has invalid dataSource: %s",
-              task.getId(),
-              segment.getIdentifier()
-          )
-      );
-    }
-
-    if (!task.getInterval().contains(segment.getInterval())) {
-      throw new IllegalStateException(
-          String.format(
-              "Segment for task[%s] has invalid interval: %s",
-              task.getId(),
-              segment.getIdentifier()
-          )
-      );
-    }
   }
 }

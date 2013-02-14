@@ -34,7 +34,6 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.PeriodGranularity;
 import com.metamx.druid.merger.common.TaskCallback;
-import com.metamx.druid.merger.common.TaskHolder;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
@@ -276,14 +275,12 @@ public class RemoteTaskRunner implements TaskRunner
   }
 
   @Override
-  public void run(Task task, TaskContext context, TaskCallback callback)
+  public void run(Task task, TaskCallback callback)
   {
     if (tasks.containsKey(task.getId())) {
       throw new ISE("Assigned a task[%s] that already exists, WTF is happening?!", task.getId());
     }
-    TaskWrapper taskWrapper = new TaskWrapper(
-        task, context, callback, retryPolicyFactory.makeRetryPolicy()
-    );
+    TaskWrapper taskWrapper = new TaskWrapper(task, callback, retryPolicyFactory.makeRetryPolicy());
     tasks.put(taskWrapper.getTask().getId(), taskWrapper);
     assignTask(taskWrapper);
   }
@@ -606,13 +603,12 @@ public class RemoteTaskRunner implements TaskRunner
   {
     synchronized (statusLock) {
       final Task task = taskWrapper.getTask();
-      final TaskContext taskContext = taskWrapper.getTaskContext();
       try {
         log.info("Coordinator asking Worker[%s] to add task[%s]", theWorker.getHost(), task.getId());
 
         tasks.put(task.getId(), taskWrapper);
 
-        byte[] rawBytes = jsonMapper.writeValueAsBytes(new TaskHolder(task, taskContext));
+        byte[] rawBytes = jsonMapper.writeValueAsBytes(task);
 
         if (rawBytes.length > config.getMaxNumBytes()) {
           throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
@@ -626,7 +622,7 @@ public class RemoteTaskRunner implements TaskRunner
                   theWorker.getHost(),
                   task.getId()
               ),
-              jsonMapper.writeValueAsBytes(new TaskHolder(task, taskContext))
+              jsonMapper.writeValueAsBytes(task)
           );
 
         // Syncing state with Zookeeper

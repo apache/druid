@@ -21,11 +21,17 @@ package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.actions.SegmentInsertAction;
+import com.metamx.druid.merger.common.actions.SpawnTasksAction;
+import com.metamx.druid.merger.common.actions.TaskAction;
 import com.metamx.druid.merger.common.task.Task;
 
 import java.util.List;
@@ -62,8 +68,29 @@ public class TaskStorageQueryAdapter
 
     resultBuilder.put(taskid, statusOptional);
 
+    final Iterable<Task> nextTasks = FunctionalIterable
+        .create(storage.getAuditLogs(taskid)).filter(
+            new Predicate<TaskAction>()
+            {
+              @Override
+              public boolean apply(TaskAction taskAction)
+              {
+                return taskAction instanceof SpawnTasksAction;
+              }
+            }
+        ).transformCat(
+            new Function<TaskAction, Iterable<Task>>()
+            {
+              @Override
+              public Iterable<Task> apply(TaskAction taskAction)
+              {
+                return ((SpawnTasksAction) taskAction).getNewTasks();
+              }
+            }
+        );
+
     if(taskOptional.isPresent() && statusOptional.isPresent()) {
-      for(final Task nextTask : statusOptional.get().getNextTasks()) {
+      for(final Task nextTask : nextTasks) {
         if(nextTask.getGroupId().equals(taskOptional.get().getGroupId())) {
           resultBuilder.putAll(getSameGroupChildStatuses(nextTask.getId()));
         }
@@ -84,19 +111,11 @@ public class TaskStorageQueryAdapter
     int nFailures = 0;
     int nTotal = 0;
 
-    final Set<DataSegment> segments = Sets.newHashSet();
-    final Set<DataSegment> segmentsNuked = Sets.newHashSet();
-    final List<Task> nextTasks = Lists.newArrayList();
-
     for(final Optional<TaskStatus> statusOption : statuses.values()) {
       nTotal ++;
 
       if(statusOption.isPresent()) {
         final TaskStatus status = statusOption.get();
-
-        segments.addAll(status.getSegments());
-        segmentsNuked.addAll(status.getSegmentsNuked());
-        nextTasks.addAll(status.getNextTasks());
 
         if(status.isSuccess()) {
           nSuccesses ++;
@@ -111,10 +130,7 @@ public class TaskStorageQueryAdapter
     if(nTotal == 0) {
       status = Optional.absent();
     } else if(nSuccesses == nTotal) {
-      status = Optional.of(TaskStatus.success(taskid)
-                         .withSegments(segments)
-                         .withSegmentsNuked(segmentsNuked)
-                         .withNextTasks(nextTasks));
+      status = Optional.of(TaskStatus.success(taskid));
     } else if(nFailures > 0) {
       status = Optional.of(TaskStatus.failure(taskid));
     } else {
@@ -125,21 +141,37 @@ public class TaskStorageQueryAdapter
   }
 
   /**
-   * Returns running tasks along with their preferred versions. If no version is present for a task, the
-   * version field of the returned {@link VersionedTaskWrapper} will be null.
+   * Returns all segments created by descendants for a particular task that stayed within the same task group. Includes
+   * that task, plus any tasks it spawned, and so on. Does not include spawned tasks that ended up in a different task
+   * group. Does not include this task's parents or siblings.
    */
-  public List<VersionedTaskWrapper> getRunningTaskVersions()
+  public Set<DataSegment> getSameGroupNewSegments(final String taskid)
   {
-    return Lists.transform(
-        storage.getRunningTasks(),
-        new Function<Task, VersionedTaskWrapper>()
-        {
-          @Override
-          public VersionedTaskWrapper apply(Task task)
-          {
-            return new VersionedTaskWrapper(task, storage.getVersion(task.getId()).orNull());
-          }
+    // TODO: This is useful for regular index tasks (so we know what was published), but
+    // TODO: for long-lived index tasks the list can get out of hand. We may want a limit.
+
+    final Optional<Task> taskOptional = storage.getTask(taskid);
+    final Set<DataSegment> segments = Sets.newHashSet();
+    final List<Task> nextTasks = Lists.newArrayList();
+
+    for(final TaskAction action : storage.getAuditLogs(taskid)) {
+      if(action instanceof SpawnTasksAction) {
+        nextTasks.addAll(((SpawnTasksAction) action).getNewTasks());
+      }
+
+      if(action instanceof SegmentInsertAction) {
+        segments.addAll(((SegmentInsertAction) action).getSegments());
+      }
+    }
+
+    if(taskOptional.isPresent()) {
+      for(final Task nextTask : nextTasks) {
+        if(nextTask.getGroupId().equals(taskOptional.get().getGroupId())) {
+          segments.addAll(getSameGroupNewSegments(nextTask.getId()));
         }
-    );
+      }
+    }
+
+    return segments;
   }
 }

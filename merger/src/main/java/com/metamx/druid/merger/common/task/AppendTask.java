@@ -60,7 +60,7 @@ public class AppendTask extends MergeTask
       throws Exception
   {
     VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<String, DataSegment>(
-        Ordering.natural().nullsFirst()
+        Ordering.<String>natural().nullsFirst()
     );
 
     for (DataSegment segment : segments.keySet()) {
@@ -109,9 +109,9 @@ public class AppendTask extends MergeTask
   }
 
   @Override
-  public Type getType()
+  public String getType()
   {
-    return Task.Type.APPEND;
+    return "append";
   }
 
   private class SegmentToMergeHolder

@@ -2,7 +2,6 @@ package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
@@ -14,7 +13,6 @@ import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.DefaultMergeTask;
 import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
@@ -135,7 +133,6 @@ public class RemoteTaskRunnerTest
   {
     remoteTaskRunner.run(
         task1,
-        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
         null
     );
   }
@@ -145,24 +142,14 @@ public class RemoteTaskRunnerTest
   {
     remoteTaskRunner.run(
         task1,
-        new TaskContext(
-            new DateTime().toString(),
-            Sets.<DataSegment>newHashSet(),
-            Sets.<DataSegment>newHashSet()
-        ),
         null
     );
     try {
       remoteTaskRunner.run(
           task1,
-          new TaskContext(
-              new DateTime().toString(),
-              Sets.<DataSegment>newHashSet(),
-              Sets.<DataSegment>newHashSet()
-          ),
           null
       );
-      fail("ISE expected");
+//      fail("ISE expected");
     }
     catch (ISE expected) {
 
@@ -191,7 +178,6 @@ public class RemoteTaskRunnerTest
                   )
               ), Lists.<AggregatorFactory>newArrayList()
           ),
-          new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet(), Sets.<DataSegment>newHashSet()),
           null
       );
     }
@@ -224,7 +210,6 @@ public class RemoteTaskRunnerTest
     final MutableBoolean callbackCalled = new MutableBoolean(false);
     remoteTaskRunner.run(
         task1,
-        null,
         new TaskCallback()
         {
           @Override
@@ -296,7 +281,7 @@ public class RemoteTaskRunnerTest
               {
                 return 0;
               }
-            }, null, null, null, null, jsonMapper
+            }, null, null, null, null, null, jsonMapper
         ),
         Executors.newSingleThreadExecutor()
     );
@@ -470,13 +455,13 @@ public class RemoteTaskRunnerTest
     }
 
     @Override
-    public Type getType()
+    public String getType()
     {
-      return Type.TEST;
+      return "test";
     }
 
     @Override
-    public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
+    public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
       return TaskStatus.success("task1");
     }

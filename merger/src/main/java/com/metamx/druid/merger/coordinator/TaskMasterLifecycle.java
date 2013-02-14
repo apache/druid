@@ -25,6 +25,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
+import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.exec.TaskConsumer;
 import com.metamx.emitter.EmittingLogger;
@@ -40,26 +41,31 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Encapsulates the indexer leadership lifecycle.
  */
-public class TaskMaster
+public class TaskMasterLifecycle
 {
   private final LeaderSelector leaderSelector;
   private final ReentrantLock giant = new ReentrantLock();
   private final Condition mayBeStopped = giant.newCondition();
+  private final TaskQueue taskQueue;
+  private final TaskToolbox taskToolbox;
 
   private volatile boolean leading = false;
 
-  private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
+  private static final EmittingLogger log = new EmittingLogger(TaskMasterLifecycle.class);
 
-  public TaskMaster(
-      final TaskQueue queue,
+  public TaskMasterLifecycle(
+      final TaskQueue taskQueue,
+      final TaskToolbox taskToolbox,
       final IndexerCoordinatorConfig indexerCoordinatorConfig,
       final ServiceDiscoveryConfig serviceDiscoveryConfig,
-      final MergerDBCoordinator mergerDBCoordinator,
       final TaskRunnerFactory runnerFactory,
       final CuratorFramework curator,
       final ServiceEmitter emitter
-      )
+  )
   {
+    this.taskQueue = taskQueue;
+    this.taskToolbox = taskToolbox;
+
     this.leaderSelector = new LeaderSelector(
         curator, indexerCoordinatorConfig.getLeaderLatchPath(), new LeaderSelectorListener()
     {
@@ -71,15 +77,23 @@ public class TaskMaster
         try {
           log.info("By the power of Grayskull, I have the power!");
 
-          final TaskRunner runner = runnerFactory.build();
-          final TaskConsumer consumer = new TaskConsumer(queue, runner, mergerDBCoordinator, emitter);
+          final TaskRunner taskRunner = runnerFactory.build();
+          final TaskConsumer taskConsumer = new TaskConsumer(
+              taskQueue,
+              taskRunner,
+              taskToolbox,
+              emitter
+          );
+
+          // Bootstrap task queue and task lockbox (load state stuff from the database)
+          taskQueue.bootstrap();
 
           // Sensible order to start stuff:
           final Lifecycle leaderLifecycle = new Lifecycle();
-          leaderLifecycle.addManagedInstance(queue);
-          leaderLifecycle.addManagedInstance(runner);
+          leaderLifecycle.addManagedInstance(taskQueue);
+          leaderLifecycle.addManagedInstance(taskRunner);
           Initialization.makeServiceDiscoveryClient(curator, serviceDiscoveryConfig, leaderLifecycle);
-          leaderLifecycle.addManagedInstance(consumer);
+          leaderLifecycle.addManagedInstance(taskConsumer);
           leaderLifecycle.start();
 
           leading = true;
@@ -180,5 +194,15 @@ public class TaskMaster
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  public TaskQueue getTaskQueue()
+  {
+    return taskQueue;
+  }
+
+  public TaskToolbox getTaskToolbox()
+  {
+    return taskToolbox;
   }
 }

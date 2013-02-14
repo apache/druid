@@ -49,9 +49,9 @@ public class MergeTaskTest
     }
 
     @Override
-    public Type getType()
+    public String getType()
     {
-      return Type.TEST;
+      return "test";
     }
   };
 
@@ -64,13 +64,13 @@ public class MergeTaskTest
   @Test
   public void testInterval()
   {
-    Assert.assertEquals(new Interval("2012-01-03/2012-01-07"), testMergeTask.getInterval());
+    Assert.assertEquals(new Interval("2012-01-03/2012-01-07"), testMergeTask.getFixedInterval().get());
   }
 
   @Test
   public void testID()
   {
-    final String desiredPrefix = "merge_foo_" + DigestUtils.shaHex(
+    final String desiredPrefix = "merge_foo_" + DigestUtils.sha1Hex(
         "2012-01-03T00:00:00.000Z_2012-01-05T00:00:00.000Z_V1_0"
         + "_2012-01-04T00:00:00.000Z_2012-01-06T00:00:00.000Z_V1_0"
         + "_2012-01-05T00:00:00.000Z_2012-01-07T00:00:00.000Z_V1_0"

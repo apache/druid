@@ -20,6 +20,7 @@
 package com.metamx.druid.merger.common.task;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -28,10 +29,9 @@ import com.google.common.collect.TreeMultiset;
 import com.google.common.primitives.Ints;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.input.InputRow;
-import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.coordinator.TaskContext;
+import com.metamx.druid.merger.common.actions.SpawnTasksAction;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.Schema;
@@ -75,7 +75,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
         ),
         groupId,
         schema.getDataSource(),
-        interval
+        Preconditions.checkNotNull(interval, "interval")
     );
 
     this.firehoseFactory = firehoseFactory;
@@ -84,21 +84,20 @@ public class IndexDeterminePartitionsTask extends AbstractTask
   }
 
   @Override
-  public Type getType()
+  public String getType()
   {
-    return Type.INDEX;
+    return "index_partitions";
   }
 
   @Override
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox, TaskCallback callback) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     log.info("Running with targetPartitionSize[%d]", targetPartitionSize);
 
-    // This is similar to what DeterminePartitionsJob does in the hadoop indexer, but we don't require
-    // a preconfigured partition dimension (we'll just pick the one with highest cardinality).
+    // TODO: Replace/merge/whatever with hadoop determine-partitions code
 
-    // NOTE: Space-efficiency (stores all unique dimension values, although at least not all combinations)
-    // NOTE: Time-efficiency (runs all this on one single node instead of through map/reduce)
+    // We know this exists
+    final Interval interval = getFixedInterval().get();
 
     // Blacklist dimensions that have multiple values per row
     final Set<String> unusableDimensions = Sets.newHashSet();
@@ -114,7 +113,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
 
         final InputRow inputRow = firehose.nextRow();
 
-        if (getInterval().contains(inputRow.getTimestampFromEpoch())) {
+        if (interval.contains(inputRow.getTimestampFromEpoch())) {
 
           // Extract dimensions from event
           for (final String dim : inputRow.getDimensions()) {
@@ -229,28 +228,30 @@ public class IndexDeterminePartitionsTask extends AbstractTask
       }
     }
 
-    return TaskStatus.success(getId()).withNextTasks(
-        Lists.transform(
-            shardSpecs,
-            new Function<ShardSpec, Task>()
-            {
-              @Override
-              public Task apply(ShardSpec shardSpec)
-              {
-                return new IndexGeneratorTask(
-                    getGroupId(),
-                    getInterval(),
-                    firehoseFactory,
-                    new Schema(
-                        schema.getDataSource(),
-                        schema.getAggregators(),
-                        schema.getIndexGranularity(),
-                        shardSpec
-                    )
-                );
-              }
-            }
-        )
+    List<Task> nextTasks = Lists.transform(
+        shardSpecs,
+        new Function<ShardSpec, Task>()
+        {
+          @Override
+          public Task apply(ShardSpec shardSpec)
+          {
+            return new IndexGeneratorTask(
+                getGroupId(),
+                getFixedInterval().get(),
+                firehoseFactory,
+                new Schema(
+                    schema.getDataSource(),
+                    schema.getAggregators(),
+                    schema.getIndexGranularity(),
+                    shardSpec
+                )
+            );
+          }
+        }
     );
+
+    toolbox.getTaskActionClient().submit(new SpawnTasksAction(this, nextTasks));
+
+    return TaskStatus.success(getId());
   }
 }

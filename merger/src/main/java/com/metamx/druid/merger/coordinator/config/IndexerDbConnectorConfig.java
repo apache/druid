@@ -28,4 +28,12 @@ public abstract class IndexerDbConnectorConfig extends DbConnectorConfig
   @JsonProperty("taskTable")
   @Config("druid.database.taskTable")
   public abstract String getTaskTable();
+
+  @JsonProperty("taskLockTable")
+  @Config("druid.database.taskLockTable")
+  public abstract String getTaskLockTable();
+
+  @JsonProperty("taskLogTable")
+  @Config("druid.database.taskLogTable")
+  public abstract String getTaskLogTable();
 }

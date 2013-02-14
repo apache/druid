@@ -21,14 +21,20 @@ package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.actions.TaskAction;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.task.Task;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Implements an in-heap TaskStorage facility, with no persistence across restarts. This class is not
@@ -36,108 +42,178 @@ import java.util.Map;
  */
 public class LocalTaskStorage implements TaskStorage
 {
+  private final ReentrantLock giant = new ReentrantLock();
   private final Map<String, TaskStuff> tasks = Maps.newHashMap();
+  private final Multimap<String, TaskLock> taskLocks = HashMultimap.create();
+  private final Multimap<String, TaskAction> taskActions = ArrayListMultimap.create();
 
   private static final Logger log = new Logger(LocalTaskStorage.class);
 
   @Override
   public void insert(Task task, TaskStatus status)
   {
-    Preconditions.checkNotNull(task, "task");
-    Preconditions.checkNotNull(status, "status");
-    Preconditions.checkArgument(
-        task.getId().equals(status.getId()),
-        "Task/Status ID mismatch[%s/%s]",
-        task.getId(),
-        status.getId()
-    );
+    giant.lock();
 
-    if(tasks.containsKey(task.getId())) {
-      throw new TaskExistsException(task.getId());
+    try {
+      Preconditions.checkNotNull(task, "task");
+      Preconditions.checkNotNull(status, "status");
+      Preconditions.checkArgument(
+          task.getId().equals(status.getId()),
+          "Task/Status ID mismatch[%s/%s]",
+          task.getId(),
+          status.getId()
+      );
+
+      if(tasks.containsKey(task.getId())) {
+        throw new TaskExistsException(task.getId());
+      }
+
+      log.info("Inserting task %s with status: %s", task.getId(), status);
+      tasks.put(task.getId(), new TaskStuff(task, status));
+    } finally {
+      giant.unlock();
     }
-
-    log.info("Inserting task %s with status: %s", task.getId(), status);
-    tasks.put(task.getId(), new TaskStuff(task, status));
   }
 
   @Override
   public Optional<Task> getTask(String taskid)
   {
-    Preconditions.checkNotNull(taskid, "taskid");
-    if(tasks.containsKey(taskid)) {
-      return Optional.of(tasks.get(taskid).getTask());
-    } else {
-      return Optional.absent();
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(taskid, "taskid");
+      if(tasks.containsKey(taskid)) {
+        return Optional.of(tasks.get(taskid).getTask());
+      } else {
+        return Optional.absent();
+      }
+    } finally {
+      giant.unlock();
     }
   }
 
   @Override
-  public void setStatus(String taskid, TaskStatus status)
+  public void setStatus(TaskStatus status)
   {
-    Preconditions.checkNotNull(taskid, "taskid");
-    Preconditions.checkNotNull(status, "status");
-    Preconditions.checkState(tasks.containsKey(taskid), "Task ID must already be present: %s", taskid);
-    log.info("Updating task %s to status: %s", taskid, status);
-    tasks.put(taskid, tasks.get(taskid).withStatus(status));
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(status, "status");
+
+      final String taskid = status.getId();
+      Preconditions.checkState(tasks.containsKey(taskid), "Task ID must already be present: %s", taskid);
+      Preconditions.checkState(tasks.get(taskid).getStatus().isRunnable(), "Task status must be runnable: %s", taskid);
+      log.info("Updating task %s to status: %s", taskid, status);
+      tasks.put(taskid, tasks.get(taskid).withStatus(status));
+    } finally {
+      giant.unlock();
+    }
   }
 
   @Override
   public Optional<TaskStatus> getStatus(String taskid)
   {
-    Preconditions.checkNotNull(taskid, "taskid");
-    if(tasks.containsKey(taskid)) {
-      return Optional.of(tasks.get(taskid).getStatus());
-    } else {
-      return Optional.absent();
-    }
-  }
+    giant.lock();
 
-  @Override
-  public void setVersion(String taskid, String version)
-  {
-    Preconditions.checkNotNull(taskid, "taskid");
-    Preconditions.checkNotNull(version, "status");
-    Preconditions.checkState(tasks.containsKey(taskid), "Task ID must already be present: %s", taskid);
-    log.info("Updating task %s to version: %s", taskid, version);
-    tasks.put(taskid, tasks.get(taskid).withVersion(version));
-  }
-
-  @Override
-  public Optional<String> getVersion(String taskid)
-  {
-    Preconditions.checkNotNull(taskid, "taskid");
-    if(tasks.containsKey(taskid)) {
-      return tasks.get(taskid).getVersion();
-    } else {
-      return Optional.absent();
+    try {
+      Preconditions.checkNotNull(taskid, "taskid");
+      if(tasks.containsKey(taskid)) {
+        return Optional.of(tasks.get(taskid).getStatus());
+      } else {
+        return Optional.absent();
+      }
+    } finally {
+      giant.unlock();
     }
   }
 
   @Override
   public List<Task> getRunningTasks()
   {
-    final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
-    for(final TaskStuff taskStuff : tasks.values()) {
-      if(taskStuff.getStatus().isRunnable()) {
-        listBuilder.add(taskStuff.getTask());
-      }
-    }
+    giant.lock();
 
-    return listBuilder.build();
+    try {
+      final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
+      for(final TaskStuff taskStuff : tasks.values()) {
+        if(taskStuff.getStatus().isRunnable()) {
+          listBuilder.add(taskStuff.getTask());
+        }
+      }
+
+      return listBuilder.build();
+    } finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public void addLock(final String taskid, final TaskLock taskLock)
+  {
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(taskLock, "taskLock");
+      taskLocks.put(taskid, taskLock);
+    } finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public void removeLock(final String taskid, final TaskLock taskLock)
+  {
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(taskLock, "taskLock");
+      taskLocks.remove(taskid, taskLock);
+    } finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public List<TaskLock> getLocks(final String taskid)
+  {
+    giant.lock();
+
+    try {
+      return ImmutableList.copyOf(taskLocks.get(taskid));
+    } finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public <T> void addAuditLog(TaskAction<T> taskAction)
+  {
+    giant.lock();
+
+    try {
+      taskActions.put(taskAction.getTask().getId(), taskAction);
+    } finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public List<TaskAction> getAuditLogs(String taskid)
+  {
+    giant.lock();
+
+    try {
+      return ImmutableList.copyOf(taskActions.get(taskid));
+    } finally {
+      giant.unlock();
+    }
   }
 
   private static class TaskStuff
   {
     final Task task;
     final TaskStatus status;
-    final Optional<String> version;
 
     private TaskStuff(Task task, TaskStatus status)
-    {
-      this(task, status, Optional.<String>absent());
-    }
-
-    private TaskStuff(Task task, TaskStatus status, Optional<String> version)
     {
       Preconditions.checkNotNull(task);
       Preconditions.checkNotNull(status);
@@ -145,7 +221,6 @@ public class LocalTaskStorage implements TaskStorage
 
       this.task = task;
       this.status = status;
-      this.version = version;
     }
 
     public Task getTask()
@@ -158,19 +233,9 @@ public class LocalTaskStorage implements TaskStorage
       return status;
     }
 
-    public Optional<String> getVersion()
-    {
-      return version;
-    }
-
     private TaskStuff withStatus(TaskStatus _status)
     {
-      return new TaskStuff(task, _status, version);
-    }
-
-    private TaskStuff withVersion(String _version)
-    {
-      return new TaskStuff(task, status, Optional.of(_version));
+      return new TaskStuff(task, _status);
     }
   }
 }
