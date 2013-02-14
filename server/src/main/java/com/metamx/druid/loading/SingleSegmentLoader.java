@@ -20,7 +20,6 @@
 package com.metamx.druid.loading;
 
 import com.google.common.base.Joiner;
-import com.google.common.io.Closeables;
 import com.google.inject.Inject;
 import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;
@@ -29,12 +28,8 @@ import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.QueryableIndexSegment;
 import com.metamx.druid.index.Segment;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 
 import java.io.*;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 /**
  */
@@ -42,24 +37,25 @@ public class SingleSegmentLoader implements SegmentLoader
 {
   private static final Logger log = new Logger(SingleSegmentLoader.class);
 
-  private final SegmentPuller segmentPuller;
+  private final DataSegmentPuller dataSegmentPuller;
   private final QueryableIndexFactory factory;
   private File cacheDirectory;
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
 
   @Inject
   public SingleSegmentLoader(
-          SegmentPuller segmentPuller,
-          QueryableIndexFactory factory,
-          File cacheDirectory)
+      DataSegmentPuller dataSegmentPuller,
+      QueryableIndexFactory factory,
+      File cacheDirectory
+  )
   {
-    this.segmentPuller = segmentPuller;
+    this.dataSegmentPuller = dataSegmentPuller;
     this.factory = factory;
     this.cacheDirectory = cacheDirectory;
   }
 
   @Override
-  public Segment getSegment(DataSegment segment) throws StorageAdapterLoadingException
+  public Segment getSegment(DataSegment segment) throws SegmentLoadingException
   {
     File segmentFiles = getSegmentFiles(segment);
     final QueryableIndex index = factory.factorize(segmentFiles);
@@ -67,43 +63,37 @@ public class SingleSegmentLoader implements SegmentLoader
     return new QueryableIndexSegment(segment.getIdentifier(), index);
   }
 
-  public File getSegmentFiles(DataSegment segment) throws StorageAdapterLoadingException {
+  public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+  {
     File cacheFile = getCacheFile(segment);
     if (cacheFile.exists()) {
       long localLastModified = cacheFile.lastModified();
-      long remoteLastModified = segmentPuller.getLastModified(segment);
-      if(remoteLastModified > 0 && localLastModified >= remoteLastModified){
+      long remoteLastModified = dataSegmentPuller.getLastModified(segment);
+      if (remoteLastModified > 0 && localLastModified >= remoteLastModified) {
         log.info(
             "Found cacheFile[%s] with modified[%s], which is same or after remote[%s].  Using.",
             cacheFile,
             localLastModified,
             remoteLastModified
         );
-        return cacheFile.getParentFile();
+        return cacheFile;
       }
     }
 
-    File pulledFile = segmentPuller.getSegmentFiles(segment);
+    dataSegmentPuller.getSegmentFiles(segment, cacheFile);
 
-    if(!cacheFile.getParentFile().mkdirs()){
+    if (!cacheFile.getParentFile().mkdirs()) {
       log.info("Unable to make parent file[%s]", cacheFile.getParentFile());
     }
     if (cacheFile.exists()) {
       cacheFile.delete();
     }
 
-    if(pulledFile.getName().endsWith(".zip")){
-      unzip(pulledFile, cacheFile.getParentFile());
-    } else if(pulledFile.getName().endsWith(".gz")){
-      gunzip(pulledFile, cacheFile);
-    } else {
-      moveToCache(pulledFile, cacheFile);
-    }
-
-    return cacheFile.getParentFile();
+    return cacheFile;
   }
 
-  private File getCacheFile(DataSegment segment) {
+  private File getCacheFile(DataSegment segment)
+  {
     String outputKey = JOINER.join(
         segment.getDataSource(),
         String.format(
@@ -118,15 +108,22 @@ public class SingleSegmentLoader implements SegmentLoader
     return new File(cacheDirectory, outputKey);
   }
 
-  private void moveToCache(File pulledFile, File cacheFile) throws StorageAdapterLoadingException {
+  private void moveToCache(File pulledFile, File cacheFile) throws SegmentLoadingException
+  {
     log.info("Rename pulledFile[%s] to cacheFile[%s]", pulledFile, cacheFile);
-    if(!pulledFile.renameTo(cacheFile)){
+    if (!pulledFile.renameTo(cacheFile)) {
       log.warn("Error renaming pulledFile[%s] to cacheFile[%s].  Copying instead.", pulledFile, cacheFile);
 
       try {
         StreamUtils.copyToFileAndClose(new FileInputStream(pulledFile), cacheFile);
-      } catch (IOException e) {
-        throw new StorageAdapterLoadingException(e,"Problem moving pulledFile[%s] to cache[%s]", pulledFile, cacheFile);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(
+            e,
+            "Problem moving pulledFile[%s] to cache[%s]",
+            pulledFile,
+            cacheFile
+        );
       }
       if (!pulledFile.delete()) {
         log.error("Could not delete pulledFile[%s].", pulledFile);
@@ -134,46 +131,8 @@ public class SingleSegmentLoader implements SegmentLoader
     }
   }
 
-  private void unzip(File pulledFile, File cacheFile) throws StorageAdapterLoadingException {
-    log.info("Unzipping file[%s] to [%s]", pulledFile, cacheFile);
-    ZipInputStream zipIn = null;
-    OutputStream out = null;
-    ZipEntry entry = null;
-    try {
-      zipIn = new ZipInputStream(new BufferedInputStream(new FileInputStream(pulledFile)));
-      while ((entry = zipIn.getNextEntry()) != null) {
-        out = new FileOutputStream(new File(cacheFile, entry.getName()));
-        IOUtils.copy(zipIn, out);
-        zipIn.closeEntry();
-        Closeables.closeQuietly(out);
-        out = null;
-      }
-    } catch(IOException e) {
-      throw new StorageAdapterLoadingException(e,"Problem unzipping[%s]", pulledFile);
-    }
-    finally {
-      Closeables.closeQuietly(out);
-      Closeables.closeQuietly(zipIn);
-    }
-  }
-
-  private void gunzip(File pulledFile, File cacheFile) throws StorageAdapterLoadingException {
-    log.info("Gunzipping file[%s] to [%s]", pulledFile, cacheFile);
-    try {
-      StreamUtils.copyToFileAndClose(
-          new GZIPInputStream(new FileInputStream(pulledFile)),
-          cacheFile
-      );
-    } catch (IOException e) {
-      throw new StorageAdapterLoadingException(e,"Problem gunzipping[%s]", pulledFile);
-    }
-    if (!pulledFile.delete()) {
-      log.error("Could not delete tmpFile[%s].", pulledFile);
-    }
-  }
-
   @Override
-  public void cleanup(DataSegment segment) throws StorageAdapterLoadingException
+  public void cleanup(DataSegment segment) throws SegmentLoadingException
   {
     File cacheFile = getCacheFile(segment).getParentFile();
 
@@ -182,8 +141,7 @@ public class SingleSegmentLoader implements SegmentLoader
       FileUtils.deleteDirectory(cacheFile);
     }
     catch (IOException e) {
-      throw new StorageAdapterLoadingException(e, e.getMessage());
+      throw new SegmentLoadingException(e, e.getMessage());
     }
   }
-
 }

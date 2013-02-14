@@ -44,24 +44,24 @@ public class DelegatingSegmentLoader implements SegmentLoader
   }
 
   @Override
-  public Segment getSegment(DataSegment segment) throws StorageAdapterLoadingException
+  public Segment getSegment(DataSegment segment) throws SegmentLoadingException
   {
     return getLoader(segment.getLoadSpec()).getSegment(segment);
   }
 
   @Override
-  public void cleanup(DataSegment segment) throws StorageAdapterLoadingException
+  public void cleanup(DataSegment segment) throws SegmentLoadingException
   {
     getLoader(segment.getLoadSpec()).cleanup(segment);
   }
 
-  private SegmentLoader getLoader(Map<String, Object> loadSpec) throws StorageAdapterLoadingException
+  private SegmentLoader getLoader(Map<String, Object> loadSpec) throws SegmentLoadingException
   {
     String type = MapUtils.getString(loadSpec, "type");
     SegmentLoader loader = loaderTypes.get(type);
 
     if (loader == null) {
-      throw new StorageAdapterLoadingException("Unknown loader type[%s].  Known types are %s", type, loaderTypes.keySet());
+      throw new SegmentLoadingException("Unknown loader type[%s].  Known types are %s", type, loaderTypes.keySet());
     }
     return loader;
   }

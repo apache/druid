@@ -20,14 +20,13 @@
 package com.metamx.druid.merger.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
-import com.metamx.druid.loading.S3SegmentPuller;
-import com.metamx.druid.loading.SegmentPuller;
-import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPuller;
+import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.loading.SingleSegmentLoader;
-import com.metamx.druid.loading.StorageAdapterLoadingException;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -35,6 +34,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,14 +45,14 @@ public class TaskToolbox
   private final IndexerCoordinatorConfig config;
   private final ServiceEmitter emitter;
   private final RestS3Service s3Client;
-  private final SegmentPusher segmentPusher;
+  private final DataSegmentPusher segmentPusher;
   private final ObjectMapper objectMapper;
 
   public TaskToolbox(
       IndexerCoordinatorConfig config,
       ServiceEmitter emitter,
       RestS3Service s3Client,
-      SegmentPusher segmentPusher,
+      DataSegmentPusher segmentPusher,
       ObjectMapper objectMapper
   )
   {
@@ -78,7 +78,7 @@ public class TaskToolbox
     return s3Client;
   }
 
-  public SegmentPusher getSegmentPusher()
+  public DataSegmentPusher getSegmentPusher()
   {
     return segmentPusher;
   }
@@ -88,30 +88,20 @@ public class TaskToolbox
     return objectMapper;
   }
 
-  public Map<String, SegmentPuller> getSegmentGetters(final Task task)
+  public Map<DataSegment, File> getSegments(final Task task, List<DataSegment> segments)
+      throws SegmentLoadingException
   {
-    LoaderPullerAdapter puller = new LoaderPullerAdapter(new File(config.getTaskDir(task), "fetched_segments"));
+    final SingleSegmentLoader loader = new SingleSegmentLoader(
+        new S3DataSegmentPuller(s3Client),
+        new MMappedQueryableIndexFactory(),
+        new File(config.getTaskDir(task), "fetched_segments")
+    );
 
-    return ImmutableMap.<String, SegmentPuller>builder()
-                       .put("s3", puller)
-                       .put("s3_union", puller)
-                       .put("s3_zip", puller)
-                       .build();
-  }
-
-  class LoaderPullerAdapter implements SegmentPuller{
-    private SingleSegmentLoader loader;
-    public LoaderPullerAdapter(File cacheDir){
-      loader = new SingleSegmentLoader(new S3SegmentPuller(s3Client), new MMappedQueryableIndexFactory(), cacheDir);
-    }
-    @Override
-    public File getSegmentFiles(DataSegment loadSpec) throws StorageAdapterLoadingException {
-      return loader.getSegmentFiles(loadSpec);
+    Map<DataSegment, File> retVal = Maps.newLinkedHashMap();
+    for (DataSegment segment : segments) {
+      retVal.put(segment, loader.getSegmentFiles(segment));
     }
 
-    @Override
-    public long getLastModified(DataSegment segment) throws StorageAdapterLoadingException {
-      return -1;
-    }
+    return retVal;
   }
 }

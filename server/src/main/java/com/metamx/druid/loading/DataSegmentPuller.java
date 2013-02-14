@@ -22,12 +22,26 @@ package com.metamx.druid.loading;
 import com.metamx.druid.client.DataSegment;
 
 import java.io.File;
-import java.util.Map;
 
 /**
  */
-public interface SegmentPuller
+public interface DataSegmentPuller
 {
-  public File getSegmentFiles(DataSegment loadSpec) throws StorageAdapterLoadingException;
-  long getLastModified(DataSegment segment) throws StorageAdapterLoadingException;
+  /**
+   * Pull down segment files for the given DataSegment and put them in the given directory.
+   *
+   * @param segment The segment to pull down files for
+   * @param dir The directory to store the files in
+   * @throws SegmentLoadingException if there are any errors
+   */
+  public void getSegmentFiles(DataSegment segment, File dir) throws SegmentLoadingException;
+
+  /**
+   * Returns the last modified time of the given segment.
+   *
+   * @param segment The segment to check the last modified time for
+   * @return the last modified time in millis from the epoch
+   * @throws SegmentLoadingException if there are any errors
+   */
+  public long getLastModified(DataSegment segment) throws SegmentLoadingException;
 }

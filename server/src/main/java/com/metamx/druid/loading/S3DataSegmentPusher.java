@@ -41,19 +41,19 @@ import java.security.NoSuchAlgorithmException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-public class S3SegmentPusher implements SegmentPusher
+public class S3DataSegmentPusher implements DataSegmentPusher
 {
-  private static final EmittingLogger log = new EmittingLogger(S3SegmentPusher.class);
+  private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
 
   private final RestS3Service s3Client;
   private final S3SegmentPusherConfig config;
   private final ObjectMapper jsonMapper;
 
-  public S3SegmentPusher(
-    RestS3Service s3Client,
-    S3SegmentPusherConfig config,
-    ObjectMapper jsonMapper
+  public S3DataSegmentPusher(
+      RestS3Service s3Client,
+      S3SegmentPusherConfig config,
+      ObjectMapper jsonMapper
   )
   {
     this.s3Client = s3Client;

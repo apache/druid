@@ -20,16 +20,18 @@
 package com.metamx.druid.realtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3SegmentPusherConfig;
-import com.metamx.druid.loading.SegmentPusher;
 
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 /**
  * A placeholder class to make the move of the SegmentPushers to a new package backwards compatible
+ *
+ * Exists in 0.2, can be removed from 0.3 on
  */
 @Deprecated
-public class S3SegmentPusher extends com.metamx.druid.loading.S3SegmentPusher implements SegmentPusher
+public class S3SegmentPusher extends com.metamx.druid.loading.S3DataSegmentPusher implements DataSegmentPusher
 {
   public S3SegmentPusher(
       RestS3Service s3Client,

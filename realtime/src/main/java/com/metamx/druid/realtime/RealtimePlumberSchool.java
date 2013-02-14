@@ -48,7 +48,7 @@ import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.query.MetricsEmittingQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
@@ -95,7 +95,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
   private volatile QueryRunnerFactoryConglomerate conglomerate = null;
-  private volatile SegmentPusher segmentPusher = null;
+  private volatile DataSegmentPusher dataSegmentPusher = null;
   private volatile MetadataUpdater metadataUpdater = null;
   private volatile ServerView serverView = null;
   private ServiceEmitter emitter;
@@ -130,9 +130,9 @@ public class RealtimePlumberSchool implements PlumberSchool
   }
 
   @JacksonInject("segmentPusher")
-  public void setSegmentPusher(SegmentPusher segmentPusher)
+  public void setDataSegmentPusher(DataSegmentPusher dataSegmentPusher)
   {
-    this.segmentPusher = segmentPusher;
+    this.dataSegmentPusher = dataSegmentPusher;
   }
 
   @JacksonInject("metadataUpdater")
@@ -325,7 +325,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
                             QueryableIndex index = IndexIO.loadIndex(mergedFile);
 
-                            DataSegment segment = segmentPusher.push(
+                            DataSegment segment = dataSegmentPusher.push(
                                 mergedFile,
                                 sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
                             );
@@ -512,7 +512,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private void verifyState()
   {
     Preconditions.checkNotNull(conglomerate, "must specify a queryRunnerFactoryConglomerate to do this action.");
-    Preconditions.checkNotNull(segmentPusher, "must specify a segmentPusher to do this action.");
+    Preconditions.checkNotNull(dataSegmentPusher, "must specify a segmentPusher to do this action.");
     Preconditions.checkNotNull(metadataUpdater, "must specify a metadataUpdater to do this action.");
     Preconditions.checkNotNull(serverView, "must specify a serverView to do this action.");
     Preconditions.checkNotNull(emitter, "must specify a serviceEmitter to do this action.");

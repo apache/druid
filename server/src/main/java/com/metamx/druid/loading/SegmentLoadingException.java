@@ -19,14 +19,24 @@
 
 package com.metamx.druid.loading;
 
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-
 /**
- * @deprecated
  */
-public class S3ZippedSegmentPuller extends S3SegmentPuller
+public class SegmentLoadingException extends Exception
 {
-  public S3ZippedSegmentPuller(RestS3Service s3Client) {
-    super(s3Client);
+  public SegmentLoadingException(
+      String formatString,
+      Object... objs
+  )
+  {
+    super(String.format(formatString, objs));
+  }
+
+  public SegmentLoadingException(
+      Throwable cause,
+      String formatString,
+      Object... objs
+  )
+  {
+    super(String.format(formatString, objs), cause);
   }
 }

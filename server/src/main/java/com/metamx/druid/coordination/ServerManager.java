@@ -30,7 +30,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.collect.CountingMap;
 import com.metamx.druid.index.Segment;
 import com.metamx.druid.loading.SegmentLoader;
-import com.metamx.druid.loading.StorageAdapterLoadingException;
+import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.partition.PartitionHolder;
 import com.metamx.druid.query.BySegmentQueryRunner;
@@ -104,24 +104,24 @@ public class ServerManager implements QuerySegmentWalker
     }
   }
 
-  public void loadSegment(final DataSegment segment) throws StorageAdapterLoadingException
+  public void loadSegment(final DataSegment segment) throws SegmentLoadingException
   {
     final Segment adapter;
     try {
       adapter = segmentLoader.getSegment(segment);
     }
-    catch (StorageAdapterLoadingException e) {
+    catch (SegmentLoadingException e) {
       try {
         segmentLoader.cleanup(segment);
       }
-      catch (StorageAdapterLoadingException e1) {
+      catch (SegmentLoadingException e1) {
         // ignore
       }
       throw e;
     }
 
     if (adapter == null) {
-      throw new StorageAdapterLoadingException("Null adapter from loadSpec[%s]", segment.getLoadSpec());
+      throw new SegmentLoadingException("Null adapter from loadSpec[%s]", segment.getLoadSpec());
     }
 
     synchronized (lock) {
@@ -139,7 +139,7 @@ public class ServerManager implements QuerySegmentWalker
       );
       if ((entry != null) && (entry.getChunk(segment.getShardSpec().getPartitionNum()) != null)) {
         log.info("Told to load a adapter for a segment[%s] that already exists", segment.getIdentifier());
-        throw new StorageAdapterLoadingException("Segment already exists[%s]", segment.getIdentifier());
+        throw new SegmentLoadingException("Segment already exists[%s]", segment.getIdentifier());
       }
 
       loadedIntervals.add(
@@ -154,7 +154,7 @@ public class ServerManager implements QuerySegmentWalker
     }
   }
 
-  public void dropSegment(final DataSegment segment) throws StorageAdapterLoadingException
+  public void dropSegment(final DataSegment segment) throws SegmentLoadingException
   {
     String dataSource = segment.getDataSource();
     synchronized (lock) {

@@ -35,7 +35,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
@@ -61,7 +61,7 @@ public class YeOldePlumberSchool implements PlumberSchool
 {
   private final Interval interval;
   private final String version;
-  private final SegmentPusher segmentPusher;
+  private final DataSegmentPusher dataSegmentPusher;
   private final File tmpSegmentDir;
 
   private static final Logger log = new Logger(YeOldePlumberSchool.class);
@@ -70,13 +70,13 @@ public class YeOldePlumberSchool implements PlumberSchool
   public YeOldePlumberSchool(
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
-      @JacksonInject("segmentPusher") SegmentPusher segmentPusher,
+      @JacksonInject("segmentPusher") DataSegmentPusher dataSegmentPusher,
       @JacksonInject("tmpSegmentDir") File tmpSegmentDir
   )
   {
     this.interval = interval;
     this.version = version;
-    this.segmentPusher = segmentPusher;
+    this.dataSegmentPusher = dataSegmentPusher;
     this.tmpSegmentDir = tmpSegmentDir;
   }
 
@@ -149,7 +149,7 @@ public class YeOldePlumberSchool implements PlumberSchool
                                                      .withVersion(version)
                                                      .withBinaryVersion(IndexIO.getVersionFromDir(fileToUpload));
 
-          segmentPusher.push(fileToUpload, segmentToUpload);
+          dataSegmentPusher.push(fileToUpload, segmentToUpload);
 
           log.info(
               "Uploaded segment[%s]",

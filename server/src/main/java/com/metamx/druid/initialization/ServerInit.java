@@ -28,7 +28,7 @@ import com.metamx.druid.DruidProcessingConfig;
 import com.metamx.druid.loading.DelegatingSegmentLoader;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
 import com.metamx.druid.loading.QueryableIndexFactory;
-import com.metamx.druid.loading.S3SegmentPuller;
+import com.metamx.druid.loading.S3DataSegmentPuller;
 import com.metamx.druid.loading.SingleSegmentLoader;
 import com.metamx.druid.query.group.GroupByQueryEngine;
 import com.metamx.druid.query.group.GroupByQueryEngineConfig;
@@ -68,7 +68,7 @@ public class ServerInit
   {
     DelegatingSegmentLoader delegateLoader = new DelegatingSegmentLoader();
 
-    final S3SegmentPuller segmentGetter = new S3SegmentPuller(s3Client);
+    final S3DataSegmentPuller segmentGetter = new S3DataSegmentPuller(s3Client);
 
     final QueryableIndexFactory factory;
     if ("mmap".equals(config.getQueryableFactoryType())) {

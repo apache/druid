@@ -49,9 +49,9 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.loading.S3SegmentPusher;
+import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusher;
 import com.metamx.druid.loading.S3SegmentPusherConfig;
-import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
@@ -403,12 +403,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
               PropUtils.getProperty(props, "com.metamx.aws.secretKey")
           )
       );
-      final SegmentPusher segmentPusher = new S3SegmentPusher(
+      final DataSegmentPusher dataSegmentPusher = new S3DataSegmentPusher(
           s3Client,
           configFactory.build(S3SegmentPusherConfig.class),
           jsonMapper
       );
-      taskToolbox = new TaskToolbox(config, emitter, s3Client, segmentPusher, jsonMapper);
+      taskToolbox = new TaskToolbox(config, emitter, s3Client, dataSegmentPusher, jsonMapper);
     }
   }
 
