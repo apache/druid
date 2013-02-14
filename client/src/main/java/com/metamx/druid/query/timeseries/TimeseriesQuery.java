@@ -19,6 +19,9 @@
 
 package com.metamx.druid.query.timeseries;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.metamx.druid.BaseQuery;
@@ -31,10 +34,10 @@ import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeName;
+
+
+
+
 
 import java.util.List;
 import java.util.Map;

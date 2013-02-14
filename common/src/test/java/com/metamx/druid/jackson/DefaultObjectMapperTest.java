@@ -17,22 +17,24 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.index.v1.serde;
-
+package com.metamx.druid.jackson;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import junit.framework.Assert;
+import org.joda.time.DateTime;
+import org.junit.Test;
 
 /**
- * This is a "factory" interface for registering handlers in the system.  It exists because I'm unaware of
- * another way to register the complex serdes in the MR jobs that run on Hadoop.  As such, instances of this interface
- * must be instantiatable via a no argument default constructor (the MR jobs on Hadoop use reflection to instantiate
- * instances).
- *
- * The name is not a typo, I felt that it needed an extra "er" to make the pronunciation that much more difficult.
  */
-public interface Registererer
+public class DefaultObjectMapperTest
 {
-  public void register();
+  ObjectMapper mapper = new DefaultObjectMapper();
 
-  public void registerSubType(ObjectMapper jsonMapper);
+  @Test
+  public void testDateTime() throws Exception
+  {
+    final DateTime time = new DateTime();
+
+    Assert.assertEquals(String.format("\"%s\"", time), mapper.writeValueAsString(time));
+  }
 }

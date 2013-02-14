@@ -19,6 +19,7 @@
 
 package com.metamx.druid.indexer.path;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -32,7 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
-import org.codehaus.jackson.annotate.JsonProperty;
+
 import org.jets3t.service.model.S3Object;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;

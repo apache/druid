@@ -1,5 +1,7 @@
 package com.metamx.druid.merger.coordinator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -27,8 +29,6 @@ import com.netflix.curator.retry.ExponentialBackoffRetry;
 import com.netflix.curator.test.TestingCluster;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.zookeeper.CreateMode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.jsontype.NamedType;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;

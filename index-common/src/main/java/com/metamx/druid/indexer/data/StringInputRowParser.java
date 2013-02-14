@@ -19,6 +19,8 @@
 
 package com.metamx.druid.indexer.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -27,8 +29,8 @@ import com.metamx.common.parsers.Parser;
 import com.metamx.common.parsers.ToLowerCaseParser;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 import org.joda.time.DateTime;
 
 import java.util.List;

@@ -1,20 +1,14 @@
 package com.metamx.druid.merger.common.task;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.coordinator.TaskContext;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-
-import java.util.List;
-import java.util.Set;
 
 /**
  */

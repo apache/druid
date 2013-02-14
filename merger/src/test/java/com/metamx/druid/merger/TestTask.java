@@ -19,6 +19,9 @@
 
 package com.metamx.druid.merger;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskCallback;
@@ -26,8 +29,6 @@ import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.task.DefaultMergeTask;
 import com.metamx.druid.merger.coordinator.TaskContext;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonTypeName;
 
 import java.util.List;
 
@@ -39,6 +40,7 @@ public class TestTask extends DefaultMergeTask
   private final String id;
   private final TaskStatus status;
 
+  @JsonCreator
   public TestTask(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,

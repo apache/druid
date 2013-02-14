@@ -19,6 +19,8 @@
 
 package com.metamx.druid.query.timeboundary;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -28,8 +30,8 @@ import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

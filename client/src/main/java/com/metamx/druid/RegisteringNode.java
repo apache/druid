@@ -19,8 +19,9 @@
 
 package com.metamx.druid;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.druid.index.v1.serde.Registererer;
-import org.codehaus.jackson.map.ObjectMapper;
+
 
 import java.util.Arrays;
 import java.util.List;

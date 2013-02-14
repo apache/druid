@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
@@ -27,7 +28,7 @@ import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.worker.Worker;
 import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;

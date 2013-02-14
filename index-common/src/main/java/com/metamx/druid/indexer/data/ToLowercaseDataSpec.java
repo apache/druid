@@ -19,9 +19,10 @@
 
 package com.metamx.druid.indexer.data;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.metamx.common.parsers.Parser;
 import com.metamx.common.parsers.ToLowerCaseParser;
-import org.codehaus.jackson.annotate.JsonValue;
+
 
 import java.util.List;
 

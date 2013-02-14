@@ -19,6 +19,10 @@
 
 package com.metamx.druid.merger.common.index;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -31,10 +35,10 @@ import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonTypeName;
-import org.codehaus.jackson.map.annotate.JacksonInject;
+
+
+
+
 import org.jets3t.service.S3Service;
 import org.jets3t.service.model.S3Object;
 

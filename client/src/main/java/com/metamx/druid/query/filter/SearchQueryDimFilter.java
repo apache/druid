@@ -19,9 +19,10 @@
 
 package com.metamx.druid.query.filter;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.metamx.druid.query.search.SearchQuerySpec;
-import org.codehaus.jackson.annotate.JsonProperty;
+
 
 import java.nio.ByteBuffer;
 
