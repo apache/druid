@@ -94,11 +94,12 @@ public class TaskMasterLifecycle
           leaderLifecycle.addManagedInstance(taskRunner);
           Initialization.makeServiceDiscoveryClient(curator, serviceDiscoveryConfig, leaderLifecycle);
           leaderLifecycle.addManagedInstance(taskConsumer);
-          leaderLifecycle.start();
 
           leading = true;
 
           try {
+            leaderLifecycle.start();
+
             while (leading) {
               mayBeStopped.await();
             }
