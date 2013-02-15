@@ -19,6 +19,8 @@
 
 package com.metamx.druid.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Guice;
@@ -34,13 +36,13 @@ import com.metamx.druid.client.BrokerServerView;
 import com.metamx.druid.client.CachingClusteredClient;
 import com.metamx.druid.client.ClientConfig;
 import com.metamx.druid.client.ClientInventoryManager;
-import com.metamx.druid.client.cache.CacheBroker;
+import com.metamx.druid.client.cache.Cache;
 import com.metamx.druid.client.cache.CacheConfig;
 import com.metamx.druid.client.cache.CacheMonitor;
-import com.metamx.druid.client.cache.MapCacheBroker;
-import com.metamx.druid.client.cache.MapCacheBrokerConfig;
-import com.metamx.druid.client.cache.MemcachedCacheBroker;
-import com.metamx.druid.client.cache.MemcachedCacheBrokerConfig;
+import com.metamx.druid.client.cache.MapCache;
+import com.metamx.druid.client.cache.MapCacheConfig;
+import com.metamx.druid.client.cache.MemcachedCache;
+import com.metamx.druid.client.cache.MemcachedCacheConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -53,8 +55,8 @@ import com.metamx.http.client.HttpClientInit;
 import com.metamx.metrics.Monitor;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.x.discovery.ServiceDiscovery;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.smile.SmileFactory;
+
+
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
@@ -78,7 +80,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
 
   private QueryToolChestWarehouse warehouse = null;
   private HttpClient brokerHttpClient = null;
-  private CacheBroker cacheBroker = null;
+  private Cache cache = null;
 
   private boolean useDiscovery = true;
 
@@ -122,15 +124,15 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     return this;
   }
 
-  public CacheBroker getCacheBroker()
+  public Cache getCache()
   {
     initializeCacheBroker();
-    return cacheBroker;
+    return cache;
   }
 
-  public BrokerNode setCacheBroker(CacheBroker cacheBroker)
+  public BrokerNode setCache(Cache cache)
   {
-    checkFieldNotSetAndSet("cacheBroker", cacheBroker);
+    checkFieldNotSetAndSet("cache", cache);
     return this;
   }
 
@@ -185,7 +187,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     final Lifecycle lifecycle = getLifecycle();
 
     final List<Monitor> monitors = getMonitors();
-    monitors.add(new CacheMonitor(cacheBroker));
+    monitors.add(new CacheMonitor(cache));
     startMonitoring(monitors);
 
     final BrokerServerView view = new BrokerServerView(warehouse, getSmileMapper(), brokerHttpClient);
@@ -194,7 +196,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     );
     lifecycle.addManagedInstance(clientInventoryManager);
 
-    final CachingClusteredClient baseClient = new CachingClusteredClient(warehouse, view, cacheBroker, getSmileMapper());
+    final CachingClusteredClient baseClient = new CachingClusteredClient(warehouse, view, cache, getSmileMapper());
     lifecycle.addManagedInstance(baseClient);
 
 
@@ -239,25 +241,25 @@ public class BrokerNode extends QueryableNode<BrokerNode>
 
   private void initializeCacheBroker()
   {
-    if (cacheBroker == null) {
+    if (cache == null) {
       String cacheType = getConfigFactory()
           .build(CacheConfig.class)
           .getType();
 
       if (cacheType.equals(CACHE_TYPE_LOCAL)) {
-        setCacheBroker(
-            MapCacheBroker.create(
+        setCache(
+            MapCache.create(
                 getConfigFactory().buildWithReplacements(
-                    MapCacheBrokerConfig.class,
+                    MapCacheConfig.class,
                     ImmutableMap.of("prefix", CACHE_PROPERTY_PREFIX)
                 )
             )
         );
       } else if (cacheType.equals(CACHE_TYPE_MEMCACHED)) {
-        setCacheBroker(
-            MemcachedCacheBroker.create(
+        setCache(
+            MemcachedCache.create(
                 getConfigFactory().buildWithReplacements(
-                    MemcachedCacheBrokerConfig.class,
+                    MemcachedCacheConfig.class,
                     ImmutableMap.of("prefix", CACHE_PROPERTY_PREFIX)
                 )
             )

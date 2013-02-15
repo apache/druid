@@ -19,12 +19,15 @@
 
 package com.metamx.druid.utils;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.TreeSet;
@@ -41,7 +44,7 @@ public class JodaUtils
     for (Interval interval : intervals) {
       sortedIntervals.add(interval);
     }
-    
+
     if (sortedIntervals.isEmpty()) {
       return Lists.newArrayList();
     }
@@ -82,6 +85,21 @@ public class JodaUtils
     return new Interval(minStart, maxEnd);
   }
 
+  public static boolean overlaps(final Interval i, Iterable<Interval> intervals)
+  {
+    return Iterables.any(
+        intervals, new Predicate<Interval>()
+    {
+      @Override
+      public boolean apply(@Nullable Interval input)
+      {
+        return input.overlaps(i);
+      }
+    }
+    );
+
+  }
+
   public static DateTime minDateTime(DateTime... times)
   {
     if (times == null) {
@@ -89,8 +107,10 @@ public class JodaUtils
     }
 
     switch (times.length) {
-      case 0: return null;
-      case 1: return times[0];
+      case 0:
+        return null;
+      case 1:
+        return times[0];
       default:
         DateTime min = times[0];
         for (int i = 1; i < times.length; ++i) {
@@ -107,8 +127,10 @@ public class JodaUtils
     }
 
     switch (times.length) {
-      case 0: return null;
-      case 1: return times[0];
+      case 0:
+        return null;
+      case 1:
+        return times[0];
       default:
         DateTime max = times[0];
         for (int i = 1; i < times.length; ++i) {

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.coordination;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
@@ -39,6 +40,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.brita.Filter;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.SegmentIdAttachedStorageAdapter;
 import com.metamx.druid.index.v1.processing.Cursor;
 import com.metamx.druid.loading.SegmentLoader;
@@ -59,7 +61,7 @@ import com.metamx.druid.result.SearchResultValue;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.type.TypeReference;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -238,6 +240,7 @@ public class ServerManagerTest
               Arrays.asList("dim1", "dim2", "dim3"),
               Arrays.asList("metric1", "metric2"),
               new NoneShardSpec(),
+              IndexIO.CURRENT_VERSION_ID,
               123l
           )
       );
@@ -259,6 +262,7 @@ public class ServerManagerTest
               Arrays.asList("dim1", "dim2", "dim3"),
               Arrays.asList("metric1", "metric2"),
               new NoneShardSpec(),
+              IndexIO.CURRENT_VERSION_ID,
               123l
           )
       );
@@ -328,7 +332,7 @@ public class ServerManagerTest
     }
 
     @Override
-    public String getSegmentIdentifier()
+    public String getIdentifier()
     {
       return version;
     }
@@ -388,7 +392,7 @@ public class ServerManagerTest
     }
   }
 
-  public static class NoopQueryToolChest<T, QueryType extends Query<T>> implements QueryToolChest<T, QueryType>
+  public static class NoopQueryToolChest<T, QueryType extends Query<T>> extends QueryToolChest<T, QueryType>
   {
     @Override
     public QueryRunner<T> mergeResults(QueryRunner<T> runner)
@@ -418,24 +422,6 @@ public class ServerManagerTest
     public TypeReference<T> getResultTypeReference()
     {
       return new TypeReference<T>(){};
-    }
-
-    @Override
-    public CacheStrategy<T, QueryType> getCacheStrategy(QueryType query)
-    {
-      return null;
-    }
-
-    @Override
-    public QueryRunner<T> preMergeQueryDecoration(QueryRunner<T> runner)
-    {
-      return runner;
-    }
-
-    @Override
-    public QueryRunner<T> postMergeQueryDecoration(QueryRunner<T> runner)
-    {
-      return runner;
     }
   }
 }

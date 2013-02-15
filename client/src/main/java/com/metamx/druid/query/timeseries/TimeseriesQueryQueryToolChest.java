@@ -19,6 +19,7 @@
 
 package com.metamx.druid.query.timeseries;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -28,6 +29,7 @@ import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.druid.Query;
+import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.ResultGranularTimestampComparator;
 import com.metamx.druid.TimeseriesBinaryFn;
 import com.metamx.druid.aggregation.AggregatorFactory;
@@ -44,11 +46,12 @@ import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.type.TypeReference;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 import org.joda.time.Period;
+import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -58,12 +61,15 @@ import java.util.Map;
 
 /**
  */
-public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
+public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
   private static final byte TIMESERIES_QUERY = 0x0;
 
   private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Result<TimeseriesResultValue>> TYPE_REFERENCE = new TypeReference<Result<TimeseriesResultValue>>()
+  {
+  };
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
   {
   };
 
@@ -100,10 +106,7 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
   @Override
   public Sequence<Result<TimeseriesResultValue>> mergeSequences(Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences)
   {
-    return new OrderedMergeSequence<Result<TimeseriesResultValue>>(
-        getOrdering(),
-        seqOfSequences
-    );
+    return new OrderedMergeSequence<Result<TimeseriesResultValue>>(getOrdering(), seqOfSequences);
   }
 
   @Override
@@ -156,9 +159,9 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
   }
 
   @Override
-  public CacheStrategy<Result<TimeseriesResultValue>, TimeseriesQuery> getCacheStrategy(final TimeseriesQuery query)
+  public CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery> getCacheStrategy(final TimeseriesQuery query)
   {
-    return new CacheStrategy<Result<TimeseriesResultValue>, TimeseriesQuery>()
+    return new CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery>()
     {
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
       private final List<PostAggregator> postAggs = query.getPostAggregatorSpecs();
@@ -178,6 +181,12 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
             .put(filterBytes)
             .put(aggregatorBytes)
             .array();
+      }
+
+      @Override
+      public TypeReference<Object> getCacheObjectClazz()
+      {
+        return OBJECT_TYPE_REFERENCE;
       }
 
       @Override
@@ -206,6 +215,8 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
       {
         return new Function<Object, Result<TimeseriesResultValue>>()
         {
+          private final QueryGranularity granularity = query.getGranularity();
+
           @Override
           public Result<TimeseriesResultValue> apply(@Nullable Object input)
           {
@@ -215,7 +226,8 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
             Iterator<Object> resultIter = results.iterator();
 
-            DateTime timestamp = new DateTime(resultIter.next());
+            DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
+
             while (aggsIter.hasNext() && resultIter.hasNext()) {
               final AggregatorFactory factory = aggsIter.next();
               retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
@@ -247,16 +259,8 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
     return new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(runner, Period.months(1));
   }
 
-  @Override
-  public QueryRunner<Result<TimeseriesResultValue>> postMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
-  {
-    return runner;
-  }
-
   public Ordering<Result<TimeseriesResultValue>> getOrdering()
   {
     return Ordering.natural();
   }
-
-
 }

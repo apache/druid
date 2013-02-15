@@ -19,9 +19,11 @@
 
 package com.metamx.druid.index.serde;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.druid.index.column.ColumnBuilder;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
+
+
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

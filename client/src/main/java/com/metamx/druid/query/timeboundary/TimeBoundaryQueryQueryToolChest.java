@@ -19,6 +19,7 @@
 
 package com.metamx.druid.query.timeboundary;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
@@ -26,6 +27,7 @@ import com.google.common.collect.Ordering;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.druid.LogicalSegment;
 import com.metamx.druid.Query;
 import com.metamx.druid.collect.OrderedMergeSequence;
 import com.metamx.druid.query.BySegmentSkippingQueryRunner;
@@ -36,9 +38,8 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.type.TypeReference;
-import org.joda.time.DateTime;
 
+import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -46,13 +47,29 @@ import java.util.List;
 /**
  */
 public class TimeBoundaryQueryQueryToolChest
-    implements QueryToolChest<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>
+    extends QueryToolChest<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>
 {
   private static final byte TIMEBOUNDARY_QUERY = 0x3;
 
   private static final TypeReference<Result<TimeBoundaryResultValue>> TYPE_REFERENCE = new TypeReference<Result<TimeBoundaryResultValue>>()
   {
   };
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
+  {
+  };
+
+  @Override
+  public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> input)
+  {
+    if(input.size() <= 1) {
+      return input;
+    }
+
+    return Lists.newArrayList(
+        input.get(0),
+        input.get(input.size() - 1)
+    );
+  }
 
   @Override
   public QueryRunner<Result<TimeBoundaryResultValue>> mergeResults(
@@ -106,9 +123,9 @@ public class TimeBoundaryQueryQueryToolChest
   }
 
   @Override
-  public CacheStrategy<Result<TimeBoundaryResultValue>, TimeBoundaryQuery> getCacheStrategy(TimeBoundaryQuery query)
+  public CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery> getCacheStrategy(TimeBoundaryQuery query)
   {
-    return new CacheStrategy<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>()
+    return new CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery>()
     {
       @Override
       public byte[] computeCacheKey(TimeBoundaryQuery query)
@@ -117,6 +134,12 @@ public class TimeBoundaryQueryQueryToolChest
                          .put(TIMEBOUNDARY_QUERY)
                          .put(query.getCacheKey())
                          .array();
+      }
+
+      @Override
+      public TypeReference<Object> getCacheObjectClazz()
+      {
+        return OBJECT_TYPE_REFERENCE;
       }
 
       @Override
@@ -157,18 +180,6 @@ public class TimeBoundaryQueryQueryToolChest
         return new MergeSequence<Result<TimeBoundaryResultValue>>(getOrdering(), seqOfSequences);
       }
     };
-  }
-
-  @Override
-  public QueryRunner<Result<TimeBoundaryResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeBoundaryResultValue>> runner)
-  {
-    return runner;
-  }
-
-  @Override
-  public QueryRunner<Result<TimeBoundaryResultValue>> postMergeQueryDecoration(QueryRunner<Result<TimeBoundaryResultValue>> runner)
-  {
-    return runner;
   }
 
   public Ordering<Result<TimeBoundaryResultValue>> getOrdering()

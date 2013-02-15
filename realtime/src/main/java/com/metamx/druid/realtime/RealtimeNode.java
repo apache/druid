@@ -19,6 +19,12 @@
 
 package com.metamx.druid.realtime;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.BeanProperty;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
@@ -47,12 +53,12 @@ import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.Monitor;
-import org.codehaus.jackson.map.BeanProperty;
-import org.codehaus.jackson.map.DeserializationContext;
-import org.codehaus.jackson.map.InjectableValues;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.smile.SmileFactory;
-import org.codehaus.jackson.type.TypeReference;
+
+
+
+
+
+
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;

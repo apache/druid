@@ -22,7 +22,6 @@ package com.metamx.druid.query;
 import com.google.common.collect.Lists;
 import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.CountAggregatorFactory;
 import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
@@ -35,13 +34,6 @@ import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.QueryableIndexSegment;
 import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.v1.IncrementalIndex;
-import com.metamx.druid.index.v1.IncrementalIndexStorageAdapter;
-import com.metamx.druid.index.v1.Index;
-import com.metamx.druid.index.v1.IndexStorageAdapter;
-import com.metamx.druid.index.v1.MMappedIndex;
-import com.metamx.druid.index.v1.MMappedIndexQueryableIndex;
-import com.metamx.druid.index.v1.MMappedIndexStorageAdapter;
-import com.metamx.druid.index.v1.QueryableIndexStorageAdapter;
 import com.metamx.druid.index.v1.TestIndex;
 import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
@@ -132,7 +124,7 @@ public class QueryRunnerTestHelper
     );
   }
 
-  private static <T> QueryRunner<T> makeQueryRunner(
+  public static <T> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
       Segment adapter
   )

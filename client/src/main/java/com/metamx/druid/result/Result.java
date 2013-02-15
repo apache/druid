@@ -19,9 +19,11 @@
 
 package com.metamx.druid.result;
 
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonUnwrapped;
+
+
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 
 /**
@@ -71,7 +73,7 @@ public class Result<T> implements Comparable<Result<T>>
 
     Result result = (Result) o;
 
-    if (timestamp != null ? !timestamp.equals(result.timestamp) : result.timestamp != null) {
+    if (timestamp != null ? !(timestamp.isEqual(result.timestamp) && timestamp.getZone().getOffset(timestamp) == result.timestamp.getZone().getOffset(result.timestamp)) : result.timestamp != null) {
       return false;
     }
     if (value != null ? !value.equals(result.value) : result.value != null) {

@@ -19,11 +19,12 @@
 
 package com.metamx;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 

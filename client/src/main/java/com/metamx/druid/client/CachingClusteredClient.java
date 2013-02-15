@@ -19,6 +19,8 @@
 
 package com.metamx.druid.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -28,6 +30,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
@@ -41,7 +44,6 @@ import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.cache.Cache;
-import com.metamx.druid.client.cache.CacheBroker;
 import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.query.CacheStrategy;
@@ -53,7 +55,8 @@ import com.metamx.druid.query.segment.MultipleSpecificSegmentSpec;
 import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
-import org.codehaus.jackson.map.ObjectMapper;
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -64,6 +67,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 
 /**
@@ -74,19 +78,19 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
   private final QueryToolChestWarehouse warehouse;
   private final ServerView serverView;
-  private final CacheBroker cacheBroker;
+  private final Cache cache;
   private final ObjectMapper objectMapper;
 
   public CachingClusteredClient(
       QueryToolChestWarehouse warehouse,
       ServerView serverView,
-      CacheBroker cacheBroker,
+      Cache cache,
       ObjectMapper objectMapper
   )
   {
     this.warehouse = warehouse;
     this.serverView = serverView;
-    this.cacheBroker = cacheBroker;
+    this.cache = cache;
     this.objectMapper = objectMapper;
 
     serverView.registerSegmentCallback(
@@ -98,7 +102,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           @Override
           public ServerView.CallbackAction segmentRemoved(DruidServer server, DataSegment segment)
           {
-            CachingClusteredClient.this.cacheBroker.provideCache(segment.getIdentifier()).close();
+            CachingClusteredClient.this.cache.close(segment.getIdentifier());
             return ServerView.CallbackAction.CONTINUE;
           }
         }
@@ -109,9 +113,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> query)
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    final CacheStrategy<T, Query<T>> strategy = toolChest.getCacheStrategy(query);
+    final CacheStrategy<T, Object, Query<T>> strategy = toolChest.getCacheStrategy(query);
 
-    final Map<DruidServer, List<SegmentDescriptor>> segs = Maps.newTreeMap();
+    final Map<DruidServer, List<SegmentDescriptor>> serverSegments = Maps.newTreeMap();
+
     final List<Pair<DateTime, byte[]>> cachedResults = Lists.newArrayList();
     final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
@@ -131,69 +136,85 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       return Sequences.empty();
     }
 
-    byte[] queryCacheKey = null;
-    if (strategy != null) {
-      queryCacheKey = strategy.computeCacheKey(query);
-    }
+    // build set of segments to query
+    Set<Pair<ServerSelector, SegmentDescriptor>> segments = Sets.newLinkedHashSet();
+
+    List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
 
     for (Interval interval : rewrittenQuery.getIntervals()) {
-      List<TimelineObjectHolder<String, ServerSelector>> serversLookup = timeline.lookup(interval);
+      serversLookup.addAll(timeline.lookup(interval));
+    }
 
-      for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
-        for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
-          ServerSelector selector = chunk.getObject();
-          final SegmentDescriptor descriptor = new SegmentDescriptor(
-              holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
+    // Let tool chest filter out unneeded segments
+    final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
+        toolChest.filterSegments(query, serversLookup);
+
+    for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
+      for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
+        ServerSelector selector = chunk.getObject();
+        final SegmentDescriptor descriptor = new SegmentDescriptor(
+            holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
+        );
+
+        segments.add(Pair.of(selector, descriptor));
+      }
+    }
+
+    final byte[] queryCacheKey;
+    if(strategy != null) {
+      queryCacheKey = strategy.computeCacheKey(query);
+    } else {
+      queryCacheKey = null;
+    }
+
+    // Pull cached segments from cache and remove from set of segments to query
+    if(useCache && queryCacheKey != null) {
+      Map<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> cacheKeys = Maps.newHashMap();
+      for(Pair<ServerSelector, SegmentDescriptor> e : segments) {
+        cacheKeys.put(e, computeSegmentCacheKey(e.lhs.getSegment().getIdentifier(), e.rhs, queryCacheKey));
+      }
+
+      Map<Cache.NamedKey, byte[]> cachedValues = cache.getBulk(cacheKeys.values());
+
+      for(Map.Entry<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> entry : cacheKeys.entrySet()) {
+        Pair<ServerSelector, SegmentDescriptor> segment = entry.getKey();
+        Cache.NamedKey segmentCacheKey = entry.getValue();
+
+        final ServerSelector selector = segment.lhs;
+        final SegmentDescriptor descriptor = segment.rhs;
+        final Interval segmentQueryInterval = descriptor.getInterval();
+
+        final byte[] cachedValue = cachedValues.get(segmentCacheKey);
+
+        if (cachedValue != null) {
+          cachedResults.add(Pair.of(segmentQueryInterval.getStart(), cachedValue));
+
+          // remove cached segment from set of segments to query
+          segments.remove(segment);
+        }
+        else {
+          final String segmentIdentifier = selector.getSegment().getIdentifier();
+          cachePopulatorMap.put(
+              String.format("%s_%s", segmentIdentifier, segmentQueryInterval),
+              new CachePopulator(cache, objectMapper, segmentCacheKey)
           );
-
-          if (queryCacheKey == null) {
-            final DruidServer server = selector.pick();
-            List<SegmentDescriptor> descriptors = segs.get(server);
-
-            if (descriptors == null) {
-              descriptors = Lists.newArrayList();
-              segs.put(server, descriptors);
-            }
-
-            descriptors.add(descriptor);
-          }
-          else {
-            final Interval segmentQueryInterval = holder.getInterval();
-            final byte[] versionBytes = descriptor.getVersion().getBytes();
-
-            final byte[] cacheKey = ByteBuffer
-                .allocate(16 + versionBytes.length + 4 + queryCacheKey.length)
-                .putLong(segmentQueryInterval.getStartMillis())
-                .putLong(segmentQueryInterval.getEndMillis())
-                .put(versionBytes)
-                .putInt(descriptor.getPartitionNumber())
-                .put(queryCacheKey)
-                .array();
-            final String segmentIdentifier = selector.getSegment().getIdentifier();
-            final Cache cache = cacheBroker.provideCache(segmentIdentifier);
-            final byte[] cachedValue = cache.get(cacheKey);
-
-            if (useCache && cachedValue != null) {
-              cachedResults.add(Pair.of(segmentQueryInterval.getStart(), cachedValue));
-            } else {
-              final DruidServer server = selector.pick();
-              List<SegmentDescriptor> descriptors = segs.get(server);
-
-              if (descriptors == null) {
-                descriptors = Lists.newArrayList();
-                segs.put(server, descriptors);
-              }
-
-              descriptors.add(descriptor);
-              cachePopulatorMap.put(
-                  String.format("%s_%s", segmentIdentifier, segmentQueryInterval),
-                  new CachePopulator(cache, objectMapper, cacheKey)
-              );
-            }
-          }
         }
       }
     }
+
+    // Compile list of all segments not pulled from cache
+    for(Pair<ServerSelector, SegmentDescriptor> segment : segments) {
+      final DruidServer server = segment.lhs.pick();
+      List<SegmentDescriptor> descriptors = serverSegments.get(server);
+
+      if (descriptors == null) {
+        descriptors = Lists.newArrayList();
+        serverSegments.put(server, descriptors);
+      }
+
+      descriptors.add(segment.rhs);
+    }
+
 
     return new LazySequence<T>(
         new Supplier<Sequence<T>>()
@@ -229,6 +250,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             }
 
             final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache();
+            final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
             for (Pair<DateTime, byte[]> cachedResultPair : cachedResults) {
               final byte[] cachedResult = cachedResultPair.rhs;
               Sequence<Object> cachedSequence = new BaseSequence<Object, Iterator<Object>>(
@@ -243,7 +265,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                         }
 
                         return objectMapper.readValues(
-                            objectMapper.getJsonFactory().createJsonParser(cachedResult), Object.class
+                            objectMapper.getJsonFactory().createJsonParser(cachedResult),
+                            cacheObjectClazz
                         );
                       }
                       catch (IOException e) {
@@ -264,7 +287,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           @SuppressWarnings("unchecked")
           private void addSequencesFromServer(ArrayList<Pair<DateTime, Sequence<T>>> listOfSequences)
           {
-            for (Map.Entry<DruidServer, List<SegmentDescriptor>> entry : segs.entrySet()) {
+            for (Map.Entry<DruidServer, List<SegmentDescriptor>> entry : serverSegments.entrySet()) {
               final DruidServer server = entry.getKey();
               final List<SegmentDescriptor> descriptors = entry.getValue();
 
@@ -328,13 +351,29 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     );
   }
 
+  private Cache.NamedKey computeSegmentCacheKey(String segmentIdentifier, SegmentDescriptor descriptor, byte[] queryCacheKey)
+  {
+    final Interval segmentQueryInterval = descriptor.getInterval();
+    final byte[] versionBytes = descriptor.getVersion().getBytes();
+
+    return new Cache.NamedKey(
+        segmentIdentifier, ByteBuffer
+        .allocate(16 + versionBytes.length + 4 + queryCacheKey.length)
+        .putLong(segmentQueryInterval.getStartMillis())
+        .putLong(segmentQueryInterval.getEndMillis())
+        .put(versionBytes)
+        .putInt(descriptor.getPartitionNumber())
+        .put(queryCacheKey).array()
+    );
+  }
+
   private static class CachePopulator
   {
     private final Cache cache;
     private final ObjectMapper mapper;
-    private final byte[] key;
+    private final Cache.NamedKey key;
 
-    public CachePopulator(Cache cache, ObjectMapper mapper, byte[] key)
+    public CachePopulator(Cache cache, ObjectMapper mapper, Cache.NamedKey key)
     {
       this.cache = cache;
       this.mapper = mapper;

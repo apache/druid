@@ -80,4 +80,12 @@ public abstract class DruidMasterConfig
   {
     return Integer.MAX_VALUE;
   }
+
+  @Config("druid.master.replicant.lifetime")
+  @Default("15")
+  public abstract int getReplicantLifetime();
+
+  @Config("druid.master.replicant.throttleLimit")
+  @Default("10")
+  public abstract int getReplicantThrottleLimit();
 }

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.index.v1;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
@@ -109,6 +110,53 @@ public class IndexMergerTest
       FileUtils.deleteQuietly(tempDir1);
       FileUtils.deleteQuietly(tempDir2);
       FileUtils.deleteQuietly(mergedDir);
+    }
+  }
+
+  @Test
+  public void testPersistEmptyColumn() throws Exception
+  {
+    final IncrementalIndex toPersist1 = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
+    final IncrementalIndex toPersist2 = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
+    final File tmpDir1 = Files.createTempDir();
+    final File tmpDir2 = Files.createTempDir();
+    final File tmpDir3 = Files.createTempDir();
+
+    try {
+      toPersist1.add(
+          new MapBasedInputRow(
+              1L,
+              ImmutableList.of("dim1", "dim2"),
+              ImmutableMap.<String, Object>of("dim1", ImmutableList.of(), "dim2", "foo")
+          )
+      );
+
+      toPersist2.add(
+          new MapBasedInputRow(
+              1L,
+              ImmutableList.of("dim1", "dim2"),
+              ImmutableMap.<String, Object>of("dim1", ImmutableList.of(), "dim2", "bar")
+          )
+      );
+
+      final QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tmpDir1));
+      final QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tmpDir2));
+      final QueryableIndex merged = IndexIO.loadIndex(
+          IndexMerger.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, tmpDir3)
+      );
+
+      Assert.assertEquals(1, index1.getTimeColumn().getLength());
+      Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(index1.getAvailableDimensions()));
+
+      Assert.assertEquals(1, index2.getTimeColumn().getLength());
+      Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(index2.getAvailableDimensions()));
+
+      Assert.assertEquals(1, merged.getTimeColumn().getLength());
+      Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(merged.getAvailableDimensions()));
+    } finally {
+      FileUtils.deleteQuietly(tmpDir1);
+      FileUtils.deleteQuietly(tmpDir2);
+      FileUtils.deleteQuietly(tmpDir3);
     }
   }
 }

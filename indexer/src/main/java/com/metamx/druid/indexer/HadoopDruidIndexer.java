@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import org.codehaus.jackson.map.ObjectMapper;
+
 
 import java.util.List;
 

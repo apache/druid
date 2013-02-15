@@ -19,6 +19,8 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -36,8 +38,8 @@ import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.realtime.Sink;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

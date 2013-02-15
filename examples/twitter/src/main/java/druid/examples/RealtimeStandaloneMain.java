@@ -1,5 +1,6 @@
 package druid.examples;
 
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -14,7 +15,7 @@ import com.metamx.druid.realtime.RealtimeNode;
 import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.phonebook.PhoneBook;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
-import org.codehaus.jackson.map.jsontype.NamedType;
+
 
 import java.io.File;
 import java.io.IOException;

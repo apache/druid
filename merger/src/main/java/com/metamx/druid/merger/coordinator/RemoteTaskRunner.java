@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -48,7 +49,7 @@ import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
 import com.netflix.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -177,22 +178,19 @@ public class RemoteTaskRunner implements TaskRunner
                   return;
                 }
 
-                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList(
-                    FunctionalIterable
-                        .create(zkWorkers.values())
-                        .filter(
-                            new Predicate<WorkerWrapper>()
-                            {
-                              @Override
-                              public boolean apply(WorkerWrapper input)
-                              {
-                                return input.getRunningTasks().isEmpty()
-                                       && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
-                                          > config.getMaxWorkerIdleTimeMillisBeforeDeletion();
-                              }
-                            }
-                        )
-                );
+                int workerCount = 0;
+                List<WorkerWrapper> thoseLazyWorkers = Lists.newArrayList();
+                for (WorkerWrapper workerWrapper : zkWorkers.values()) {
+                  workerCount++;
+
+                  if (workerCount > workerSetupManager.getWorkerSetupData().getMinNumWorkers() &&
+                      workerWrapper.getRunningTasks().isEmpty() &&
+                      System.currentTimeMillis() - workerWrapper.getLastCompletedTaskTime().getMillis()
+                      > config.getMaxWorkerIdleTimeMillisBeforeDeletion()
+                      ) {
+                    thoseLazyWorkers.add(workerWrapper);
+                  }
+                }
 
                 AutoScalingData terminated = strategy.terminate(
                     Lists.transform(

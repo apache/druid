@@ -19,6 +19,8 @@
 
 package com.metamx.druid.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -46,8 +48,8 @@ import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.Monitor;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.smile.SmileFactory;
+
+
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
@@ -126,7 +128,9 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
             getConfigFactory().buildWithReplacements(
                 ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
             )
-        ), emitter, new ServiceMetricEvent.Builder()
+        ),
+        emitter,
+        new ServiceMetricEvent.Builder()
     );
 
     final ServerManager serverManager = new ServerManager(segmentLoader, conglomerate, emitter, executorService);

@@ -46,6 +46,16 @@ public class TestHelper
     assertResults(expectedResults, results, failMsg);
   }
 
+  public static <T> void assertExpectedObjects(Iterable<T> expectedResults, Iterable<T> results, String failMsg)
+  {
+    assertObjects(expectedResults, results, failMsg);
+  }
+
+  public static <T> void assertExpectedObjects(Iterable<T> expectedResults, Sequence<T> results, String failMsg)
+  {
+    assertObjects(expectedResults, Sequences.toList(results, Lists.<T>newArrayList()), failMsg);
+  }
+
   private static <T> void assertResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> actualResults, String failMsg)
   {
     Iterator<? extends Result> resultsIter = actualResults.iterator();
@@ -59,6 +69,46 @@ public class TestHelper
 
       assertResult(failMsg, expectedNext, next);
       assertResult(
+          String.format("%sSecond iterator bad, multiple calls to iterator() should be safe", failMsg),
+          expectedNext,
+          next2
+      );
+    }
+
+    if (resultsIter.hasNext()) {
+      Assert.fail(
+          String.format("%sExpected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
+      );
+    }
+
+    if (resultsIter2.hasNext()) {
+      Assert.fail(
+          String.format("%sExpected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
+      );
+    }
+
+    if (expectedResultsIter.hasNext()) {
+      Assert.fail(
+          String.format(
+              "%sExpected expectedResultsIter to be exhausted, next element was %s", failMsg, expectedResultsIter.next()
+          )
+      );
+    }
+  }
+
+  private static <T> void assertObjects(Iterable<T> expectedResults, Iterable<T> actualResults, String failMsg)
+  {
+    Iterator resultsIter = actualResults.iterator();
+    Iterator resultsIter2 = actualResults.iterator();
+    Iterator expectedResultsIter = expectedResults.iterator();
+
+    while (resultsIter.hasNext() && resultsIter2.hasNext() && expectedResultsIter.hasNext()) {
+      Object expectedNext = expectedResultsIter.next();
+      final Object next = resultsIter.next();
+      final Object next2 = resultsIter2.next();
+
+      Assert.assertEquals(failMsg, expectedNext, next);
+      Assert.assertEquals(
           String.format("%sSecond iterator bad, multiple calls to iterator() should be safe", failMsg),
           expectedNext,
           next2

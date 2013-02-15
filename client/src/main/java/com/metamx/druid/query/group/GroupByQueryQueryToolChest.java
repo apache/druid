@@ -19,6 +19,7 @@
 
 package com.metamx.druid.query.group;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -29,9 +30,11 @@ import com.metamx.common.guava.ConcatSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Query;
+import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.input.Rows;
 import com.metamx.druid.query.CacheStrategy;
@@ -41,7 +44,7 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.type.TypeReference;
+
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
@@ -51,7 +54,7 @@ import java.util.Properties;
 
 /**
  */
-public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQuery>
+public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery>
 {
 
   private static final TypeReference<Row> TYPE_REFERENCE = new TypeReference<Row>(){};
@@ -99,10 +102,11 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
             }
         );
 
+        final QueryGranularity gran = query.getGranularity();
         final IncrementalIndex index = runner.run(query).accumulate(
             new IncrementalIndex(
-                condensed.get(0).getStartMillis(),
-                query.getGranularity(),
+                gran.truncate(condensed.get(0).getStartMillis()),
+                gran,
                 aggs.toArray(new AggregatorFactory[aggs.size()])
             ),
             new Accumulator<IncrementalIndex, Row>()
@@ -119,7 +123,21 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
             }
         );
 
-        return Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs()));
+        // convert millis back to timestamp according to granularity to preserve time zone information
+        return Sequences.map(
+            Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
+            new Function<Row, Row>()
+            {
+              private final QueryGranularity granularity = query.getGranularity();
+
+              @Override
+              public Row apply(Row input)
+              {
+                final MapBasedRow row = (MapBasedRow) input;
+                return new MapBasedRow(granularity.toDateTime(row.getTimestampFromEpoch()), row.getEvent());
+              }
+            }
+        );
       }
     };
   }
@@ -158,23 +176,5 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
   public TypeReference<Row> getResultTypeReference()
   {
     return TYPE_REFERENCE;
-  }
-
-  @Override
-  public CacheStrategy<Row, GroupByQuery> getCacheStrategy(GroupByQuery query)
-  {
-    return null;
-  }
-
-  @Override
-  public QueryRunner<Row> preMergeQueryDecoration(QueryRunner<Row> runner)
-  {
-    return runner;
-  }
-
-  @Override
-  public QueryRunner<Row> postMergeQueryDecoration(QueryRunner<Row> runner)
-  {
-    return runner;
   }
 }

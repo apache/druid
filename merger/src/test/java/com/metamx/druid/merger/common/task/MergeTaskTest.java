@@ -32,12 +32,14 @@ import java.util.Map;
 
 public class MergeTaskTest
 {
-  final List<DataSegment> segments =
-      ImmutableList
-          .<DataSegment>builder()
-          .add(new DataSegment("foo", new Interval("2012-01-04/2012-01-06"), "V1", null, null, null, null, -1))
-          .add(new DataSegment("foo", new Interval("2012-01-05/2012-01-07"), "V1", null, null, null, null, -1))
-          .add(new DataSegment("foo", new Interval("2012-01-03/2012-01-05"), "V1", null, null, null, null, -1))
+  private final DataSegment.Builder segmentBuilder = DataSegment.builder()
+                                                                .dataSource("foo")
+                                                                .version("V1");
+
+  final List<DataSegment> segments = ImmutableList.<DataSegment>builder()
+          .add(segmentBuilder.interval(new Interval("2012-01-04/2012-01-06")).build())
+          .add(segmentBuilder.interval(new Interval("2012-01-05/2012-01-07")).build())
+          .add(segmentBuilder.interval(new Interval("2012-01-03/2012-01-05")).build())
           .build();
 
   final MergeTask testMergeTask = new MergeTask("foo", segments)

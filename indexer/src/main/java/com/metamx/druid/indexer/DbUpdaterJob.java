@@ -19,14 +19,13 @@
 
 package com.metamx.druid.indexer;
 
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;

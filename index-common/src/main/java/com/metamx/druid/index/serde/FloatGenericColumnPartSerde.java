@@ -19,11 +19,13 @@
 
 package com.metamx.druid.index.serde;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.index.column.ColumnBuilder;
 import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.index.v1.CompressedFloatsIndexedSupplier;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

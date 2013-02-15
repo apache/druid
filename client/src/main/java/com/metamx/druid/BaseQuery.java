@@ -19,12 +19,14 @@
 
 package com.metamx.druid;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
+import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
-import org.codehaus.jackson.annotate.JsonProperty;
+
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -72,7 +74,12 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public Sequence<T> run(QuerySegmentWalker walker)
   {
-    return querySegmentSpec.lookup(this, walker).run(this);
+    return run(querySegmentSpec.lookup(this, walker));
+  }
+
+  public Sequence<T> run(QueryRunner<T> runner)
+  {
+    return runner.run(this);
   }
 
   @Override

@@ -29,7 +29,6 @@ import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.collect.CountingMap;
 import com.metamx.druid.index.Segment;
-import com.metamx.druid.index.v1.SegmentIdAttachedStorageAdapter;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.StorageAdapterLoadingException;
 import com.metamx.druid.partition.PartitionChunk;
@@ -330,7 +329,7 @@ public class ServerManager implements QuerySegmentWalker
               }
             },
             new BySegmentQueryRunner<T>(
-                adapter.getSegmentIdentifier(),
+                adapter.getIdentifier(),
                 adapter.getDataInterval().getStart(),
                 factory.createRunner(adapter)
             )

@@ -19,6 +19,8 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -38,8 +40,8 @@ import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
 import com.metamx.druid.shard.SingleDimensionShardSpec;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -49,7 +51,8 @@ import java.util.Set;
 
 public class IndexDeterminePartitionsTask extends AbstractTask
 {
-  @JsonProperty private final FirehoseFactory firehoseFactory;
+  @JsonProperty
+  private final FirehoseFactory firehoseFactory;
   @JsonProperty private final Schema schema;
   @JsonProperty private final long targetPartitionSize;
 

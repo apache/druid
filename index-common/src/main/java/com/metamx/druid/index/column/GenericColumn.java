@@ -29,7 +29,7 @@ import java.io.Closeable;
  */
 public interface GenericColumn extends Closeable
 {
-  public int size();
+  public int length();
   public ValueType getType();
   public boolean hasMultipleValues();
 

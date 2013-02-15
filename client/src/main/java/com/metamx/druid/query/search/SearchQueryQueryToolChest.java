@@ -19,6 +19,7 @@
 
 package com.metamx.druid.query.search;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -49,7 +50,7 @@ import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.type.TypeReference;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
@@ -64,7 +65,7 @@ import java.util.Set;
 
 /**
  */
-public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchResultValue>, SearchQuery>
+public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResultValue>, SearchQuery>
 {
   private static final byte SEARCH_QUERY = 0x2;
 
@@ -81,6 +82,10 @@ public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchRe
 
     maxSearchLimit = PropUtils.getPropertyAsInt(props, "com.metamx.query.search.maxSearchLimit", 1000);
   }
+
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
+  {
+  };
 
   @Override
   public QueryRunner<Result<SearchResultValue>> mergeResults(QueryRunner<Result<SearchResultValue>> runner)
@@ -143,9 +148,9 @@ public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchRe
   }
 
   @Override
-  public CacheStrategy<Result<SearchResultValue>, SearchQuery> getCacheStrategy(SearchQuery query)
+  public CacheStrategy<Result<SearchResultValue>, Object, SearchQuery> getCacheStrategy(SearchQuery query)
   {
-    return new CacheStrategy<Result<SearchResultValue>, SearchQuery>()
+    return new CacheStrategy<Result<SearchResultValue>, Object, SearchQuery>()
     {
       @Override
       public byte[] computeCacheKey(SearchQuery query)
@@ -181,6 +186,12 @@ public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchRe
         }
 
         return queryCacheKey.array();
+      }
+
+      @Override
+      public TypeReference<Object> getCacheObjectClazz()
+      {
+        return OBJECT_TYPE_REFERENCE;
       }
 
       @Override
@@ -250,12 +261,6 @@ public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchRe
     return new SearchThresholdAdjustingQueryRunner(
         new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, Period.months(1))
     );
-  }
-
-  @Override
-  public QueryRunner<Result<SearchResultValue>> postMergeQueryDecoration(final QueryRunner<Result<SearchResultValue>> runner)
-  {
-    return runner;
   }
 
   private static class SearchThresholdAdjustingQueryRunner implements QueryRunner<Result<SearchResultValue>>

@@ -17,28 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client.cache;
+package com.metamx.druid.query.segment;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
+import org.joda.time.Interval;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  */
-public abstract class MapCacheBrokerConfig
+public class QuerySegmentSpecs
 {
-  @Config("${prefix}.sizeInBytes")
-  @Default("0")
-  public abstract long getSizeInBytes();
-
-  @Config("${prefix}.initialSize")
-  public int getInitialSize()
+  public static QuerySegmentSpec create(String isoInterval)
   {
-    return 500000;
+    return new LegacySegmentSpec(isoInterval);
   }
 
-  @Config("${prefix}.logEvictionCount")
-  public int getLogEvictionCount()
+  public static QuerySegmentSpec create(Interval interval)
   {
-    return 0;
+    return create(Arrays.asList(interval));
+  }
+
+  public static QuerySegmentSpec create(List<Interval> intervals)
+  {
+    return new MultipleIntervalSegmentSpec(intervals);
   }
 }

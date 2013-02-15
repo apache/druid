@@ -38,7 +38,7 @@ public abstract class RemoteTaskRunnerConfig extends IndexerZkConfig
   public abstract DateTime getTerminateResourcesOriginDateTime();
 
   @Config("druid.indexer.maxWorkerIdleTimeMillisBeforeDeletion")
-  @Default("10000")
+  @Default("600000")
   public abstract int getMaxWorkerIdleTimeMillisBeforeDeletion();
 
   @Config("druid.indexer.maxScalingDuration")

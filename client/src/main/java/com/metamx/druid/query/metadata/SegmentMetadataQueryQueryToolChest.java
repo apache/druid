@@ -19,35 +19,120 @@
 
 package com.metamx.druid.query.metadata;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.metamx.common.guava.ConcatSequence;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
+import com.metamx.common.ISE;
+import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
+import com.metamx.common.guava.nary.BinaryFn;
+import com.metamx.druid.Query;
+import com.metamx.druid.collect.OrderedMergeSequence;
 import com.metamx.druid.query.CacheStrategy;
-import com.metamx.druid.query.ConcatQueryRunner;
 import com.metamx.druid.query.MetricManipulationFn;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChest;
-import com.metamx.druid.result.Result;
-import com.metamx.druid.result.SegmentMetadataResultValue;
+import com.metamx.druid.query.ResultMergeQueryRunner;
+import com.metamx.druid.utils.JodaUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.codehaus.jackson.type.TypeReference;
+
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
+import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-public class SegmentMetadataQueryQueryToolChest implements QueryToolChest<Result<SegmentMetadataResultValue>, SegmentMetadataQuery>
+
+public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
-
-  private static final TypeReference<Result<SegmentMetadataResultValue>> TYPE_REFERENCE = new TypeReference<Result<SegmentMetadataResultValue>>(){};
+  private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<SegmentAnalysis>(){};
+  private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
 
   @Override
-  public QueryRunner<Result<SegmentMetadataResultValue>> mergeResults(final QueryRunner<Result<SegmentMetadataResultValue>> runner)
+  public QueryRunner<SegmentAnalysis> mergeResults(final QueryRunner<SegmentAnalysis> runner)
   {
-    return new ConcatQueryRunner<Result<SegmentMetadataResultValue>>(Sequences.simple(ImmutableList.of(runner)));
+    return new ResultMergeQueryRunner<SegmentAnalysis>(runner)
+    {
+      @Override
+      protected Ordering<SegmentAnalysis> makeOrdering(Query<SegmentAnalysis> query)
+      {
+        if (((SegmentMetadataQuery) query).isMerge()) {
+          // Merge everything always
+          return new Ordering<SegmentAnalysis>()
+          {
+            @Override
+            public int compare(
+                @Nullable SegmentAnalysis left, @Nullable SegmentAnalysis right
+            )
+            {
+              return 0;
+            }
+          };
+        }
+
+        return getOrdering(); // No two elements should be equal, so it should never merge
+      }
+
+      @Override
+      protected BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis> createMergeFn(final Query<SegmentAnalysis> inQ)
+      {
+        return new BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis>()
+        {
+          private final SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
+
+          @Override
+          public SegmentAnalysis apply(SegmentAnalysis arg1, SegmentAnalysis arg2)
+          {
+            if (arg1 == null) {
+              return arg2;
+            }
+
+            if (arg2 == null) {
+              return arg1;
+            }
+
+            if (!query.isMerge()) {
+              throw new ISE("Merging when a merge isn't supposed to happen[%s], [%s]", arg1, arg2);
+            }
+
+            List<Interval> newIntervals = JodaUtils.condenseIntervals(
+                Iterables.concat(arg1.getIntervals(), arg2.getIntervals())
+            );
+
+            final Map<String, ColumnAnalysis> leftColumns = arg1.getColumns();
+            final Map<String, ColumnAnalysis> rightColumns = arg2.getColumns();
+            Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
+
+            Set<String> rightColumnNames = Sets.newHashSet(rightColumns.keySet());
+            for (Map.Entry<String, ColumnAnalysis> entry : leftColumns.entrySet()) {
+              final String columnName = entry.getKey();
+              columns.put(columnName, entry.getValue().fold(rightColumns.get(columnName)));
+              rightColumnNames.remove(columnName);
+            }
+
+            for (String columnName : rightColumnNames) {
+              columns.put(columnName, rightColumns.get(columnName));
+            }
+
+            return new SegmentAnalysis("merged", newIntervals, columns, arg1.getSize() + arg2.getSize());
+          }
+        };
+      }
+    };
+  }
+
+  @Override
+  public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
+  {
+    return new OrderedMergeSequence<SegmentAnalysis>(getOrdering(), seqOfSequences);
   }
 
   @Override
@@ -67,13 +152,7 @@ public class SegmentMetadataQueryQueryToolChest implements QueryToolChest<Result
   }
 
   @Override
-  public Sequence<Result<SegmentMetadataResultValue>> mergeSequences(Sequence<Sequence<Result<SegmentMetadataResultValue>>> seqOfSequences)
-  {
-    return new ConcatSequence<Result<SegmentMetadataResultValue>>(seqOfSequences);
-  }
-
-  @Override
-  public Function<Result<SegmentMetadataResultValue>, Result<SegmentMetadataResultValue>> makeMetricManipulatorFn(
+  public Function<SegmentAnalysis, SegmentAnalysis> makeMetricManipulatorFn(
       SegmentMetadataQuery query, MetricManipulationFn fn
   )
   {
@@ -81,26 +160,75 @@ public class SegmentMetadataQueryQueryToolChest implements QueryToolChest<Result
   }
 
   @Override
-  public TypeReference<Result<SegmentMetadataResultValue>> getResultTypeReference()
+  public TypeReference<SegmentAnalysis> getResultTypeReference()
   {
     return TYPE_REFERENCE;
   }
 
   @Override
-  public CacheStrategy<Result<SegmentMetadataResultValue>, SegmentMetadataQuery> getCacheStrategy(SegmentMetadataQuery query)
+  public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(SegmentMetadataQuery query)
   {
-    return null;
+    return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
+    {
+      @Override
+      public byte[] computeCacheKey(SegmentMetadataQuery query)
+      {
+        byte[] includerBytes = query.getToInclude().getCacheKey();
+        return ByteBuffer.allocate(1 + includerBytes.length)
+                         .put(SEGMENT_METADATA_CACHE_PREFIX)
+                         .put(includerBytes)
+                         .array();
+      }
+
+      @Override
+      public TypeReference<SegmentAnalysis> getCacheObjectClazz()
+      {
+        return getResultTypeReference();
+      }
+
+      @Override
+      public Function<SegmentAnalysis, SegmentAnalysis> prepareForCache()
+      {
+        return new Function<SegmentAnalysis, SegmentAnalysis>()
+        {
+          @Override
+          public SegmentAnalysis apply(@Nullable SegmentAnalysis input)
+          {
+            return input;
+          }
+        };
+      }
+
+      @Override
+      public Function<SegmentAnalysis, SegmentAnalysis> pullFromCache()
+      {
+        return new Function<SegmentAnalysis, SegmentAnalysis>()
+        {
+          @Override
+          public SegmentAnalysis apply(@Nullable SegmentAnalysis input)
+          {
+            return input;
+          }
+        };
+      }
+
+      @Override
+      public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
+      {
+        return new MergeSequence<SegmentAnalysis>(getOrdering(), seqOfSequences);
+      }
+    };
   }
 
-  @Override
-  public QueryRunner<Result<SegmentMetadataResultValue>> preMergeQueryDecoration(QueryRunner<Result<SegmentMetadataResultValue>> runner)
+  private Ordering<SegmentAnalysis> getOrdering()
   {
-    return runner;
-  }
-
-  @Override
-  public QueryRunner<Result<SegmentMetadataResultValue>> postMergeQueryDecoration(QueryRunner<Result<SegmentMetadataResultValue>> runner)
-  {
-    return runner;
+    return new Ordering<SegmentAnalysis>()
+    {
+      @Override
+      public int compare(SegmentAnalysis left, SegmentAnalysis right)
+      {
+        return left.getId().compareTo(right.getId());
+      }
+    };
   }
 }

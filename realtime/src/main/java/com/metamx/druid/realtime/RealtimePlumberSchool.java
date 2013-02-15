@@ -19,6 +19,11 @@
 
 package com.metamx.druid.realtime;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -33,7 +38,6 @@ import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.Query;
-import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerView;
@@ -44,9 +48,6 @@ import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.index.v1.MMappedIndex;
-import com.metamx.druid.index.v1.MMappedIndexQueryableIndex;
-import com.metamx.druid.index.v1.MMappedIndexStorageAdapter;
 import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.query.MetricsEmittingQueryRunner;
 import com.metamx.druid.query.QueryRunner;
@@ -57,11 +58,11 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.apache.commons.io.FileUtils;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonSubTypes;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-import org.codehaus.jackson.map.annotate.JacksonInject;
+
+
+
+
+
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;

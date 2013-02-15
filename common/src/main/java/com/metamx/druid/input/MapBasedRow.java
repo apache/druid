@@ -19,13 +19,15 @@
 
 package com.metamx.druid.input;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.exception.FormattedException;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -37,7 +39,7 @@ import java.util.Map;
  */
 public class MapBasedRow implements Row
 {
-  private final long timestamp;
+  private final DateTime timestamp;
   private final Map<String, Object> event;
 
   @JsonCreator
@@ -46,22 +48,21 @@ public class MapBasedRow implements Row
       @JsonProperty("event")  Map<String, Object> event
   )
   {
-    this(timestamp.getMillis(), event);
+    this.timestamp = timestamp;
+    this.event = event;
   }
 
   public MapBasedRow(
       long timestamp,
       Map<String, Object> event
-  )
-  {
-    this.timestamp = timestamp;
-    this.event = event;
+  ) {
+    this(new DateTime(timestamp), event);
   }
 
   @Override
   public long getTimestampFromEpoch()
   {
-    return timestamp;
+    return timestamp.getMillis();
   }
 
   @Override
@@ -120,7 +121,7 @@ public class MapBasedRow implements Row
   @JsonProperty
   public DateTime getTimestamp()
   {
-    return new DateTime(timestamp);
+    return timestamp;
   }
 
   @JsonProperty
@@ -133,9 +134,38 @@ public class MapBasedRow implements Row
   public String toString()
   {
     return "MapBasedRow{" +
-           "timestamp=" + new DateTime(timestamp) +
+           "timestamp=" + timestamp +
            ", event=" + event +
            '}';
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    MapBasedRow that = (MapBasedRow) o;
+
+    if (!event.equals(that.event)) {
+      return false;
+    }
+    if (!timestamp.equals(that.timestamp)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = timestamp.hashCode();
+    result = 31 * result + event.hashCode();
+    return result;
+  }
 }

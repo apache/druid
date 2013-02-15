@@ -19,7 +19,8 @@
 
 package com.metamx.druid.index.column;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */

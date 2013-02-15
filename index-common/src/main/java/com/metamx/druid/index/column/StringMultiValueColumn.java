@@ -67,7 +67,7 @@ public class StringMultiValueColumn extends AbstractColumn
     return new DictionaryEncodedColumn()
     {
       @Override
-      public int size()
+      public int length()
       {
         return column.size();
       }

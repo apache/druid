@@ -28,6 +28,7 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
@@ -36,7 +37,7 @@ import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.codec.binary.Base64;
-import org.codehaus.jackson.map.ObjectMapper;
+
 
 import javax.annotation.Nullable;
 import java.util.List;

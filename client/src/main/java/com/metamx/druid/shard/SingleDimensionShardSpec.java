@@ -19,11 +19,12 @@
 
 package com.metamx.druid.shard;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.partition.StringPartitionChunk;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.annotate.JsonTypeName;
+
+
 
 import java.util.List;
 import java.util.Map;

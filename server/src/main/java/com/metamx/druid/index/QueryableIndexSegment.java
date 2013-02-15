@@ -37,7 +37,7 @@ public class QueryableIndexSegment implements Segment
   }
 
   @Override
-  public String getSegmentIdentifier()
+  public String getIdentifier()
   {
     return identifier;
   }

@@ -40,6 +40,7 @@ import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -257,6 +258,46 @@ public class TimeseriesQueryRunnerTest
     TestHelper.assertExpectedResults(expectedResults, results);
   }
 
+  @Test
+  public void testTimeseriesWithTimeZone()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .intervals("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          new LongSumAggregatorFactory(
+                                              "idx",
+                                              "index"
+                                          )
+                                      )
+                                  )
+                                  .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles")))
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-03-31", DateTimeZone.forID("America/Los_Angeles")),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L)
+            )
+        ),
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-04-01T", DateTimeZone.forID("America/Los_Angeles")),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L)
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    TestHelper.assertExpectedResults(expectedResults, results);
+  }
 
   @Test
   public void testTimeseriesWithVaryingGran()
