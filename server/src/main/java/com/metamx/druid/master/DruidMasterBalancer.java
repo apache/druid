@@ -70,7 +70,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
       if (holder.getLifetime() <= 0) {
         log.makeAlert("[%s]: Balancer move segments queue has a segment stuck", tier)
             .addData("segment", holder.getSegment().getIdentifier())
-            .addData("server", holder.getServer())
+            .addData("server", holder.getServer().getStringProps())
             .emit();
       }
     }
