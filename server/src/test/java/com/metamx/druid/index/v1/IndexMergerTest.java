@@ -19,6 +19,7 @@
 
 package com.metamx.druid.index.v1;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
@@ -110,5 +111,34 @@ public class IndexMergerTest
       FileUtils.deleteQuietly(tempDir2);
       FileUtils.deleteQuietly(mergedDir);
     }
+  }
+
+  @Test
+  public void testPersistEmptyColumn() throws Exception
+  {
+    final IncrementalIndex toPersist = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
+    final File tmpDir = Files.createTempDir();
+
+    try {
+      toPersist.add(
+          new MapBasedInputRow(
+              1L,
+              ImmutableList.of("dim1", "dim2"),
+              ImmutableMap.<String, Object>of("dim1", ImmutableList.of(), "dim2", "foo")
+          )
+      );
+
+      final QueryableIndex merged = IndexIO.loadIndex(
+          IndexMerger.persist(toPersist, tmpDir)
+      );
+
+      Assert.assertEquals(1, merged.getTimeColumn().getLength());
+      Assert.assertEquals(ImmutableList.of("dim1", "dim2"), ImmutableList.copyOf(merged.getAvailableDimensions()));
+      Assert.assertEquals(null, merged.getColumn("dim1"));
+    } finally {
+      FileUtils.deleteQuietly(tmpDir);
+    }
+
+
   }
 }
