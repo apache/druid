@@ -139,18 +139,24 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     // build set of segments to query
     Set<Pair<ServerSelector, SegmentDescriptor>> segments = Sets.newLinkedHashSet();
 
+    List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
+
     for (Interval interval : rewrittenQuery.getIntervals()) {
-      List<TimelineObjectHolder<String, ServerSelector>> serversLookup = timeline.lookup(interval);
+      serversLookup.addAll(timeline.lookup(interval));
+    }
 
-      for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
-        for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
-          ServerSelector selector = chunk.getObject();
-          final SegmentDescriptor descriptor = new SegmentDescriptor(
-              holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
-          );
+    // Let tool chest filter out unneeded segments
+    final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
+        toolChest.filterSegments(query, serversLookup);
 
-          segments.add(Pair.of(selector, descriptor));
-        }
+    for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
+      for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
+        ServerSelector selector = chunk.getObject();
+        final SegmentDescriptor descriptor = new SegmentDescriptor(
+            holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
+        );
+
+        segments.add(Pair.of(selector, descriptor));
       }
     }
 
