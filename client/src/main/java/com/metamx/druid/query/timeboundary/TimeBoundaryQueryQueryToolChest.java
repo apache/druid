@@ -22,7 +22,6 @@ package com.metamx.druid.query.timeboundary;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.common.guava.MergeSequence;
@@ -67,8 +66,8 @@ public class TimeBoundaryQueryQueryToolChest
     }
 
     return Lists.newArrayList(
-        Iterables.getFirst(input, null),
-        Iterables.getLast(input)
+        input.get(0),
+        input.get(input.size() - 1)
     );
   }
 
