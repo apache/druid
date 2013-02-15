@@ -19,7 +19,6 @@
 
 package com.metamx.druid.utils;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
@@ -66,26 +65,16 @@ public class JodaUtils
 
   public static Interval umbrellaInterval(Iterable<Interval> intervals)
   {
-    DateTime minStart = null;
-    DateTime maxEnd = null;
+    ArrayList<DateTime> startDates = Lists.newArrayList();
+    ArrayList<DateTime> endDates = Lists.newArrayList();
 
     for (Interval interval : intervals) {
-      DateTime curStart = interval.getStart();
-      DateTime curEnd = interval.getEnd();
-
-      if (minStart == null || maxEnd == null) {
-        minStart = curStart;
-        maxEnd = curEnd;
-      }
-
-      if (curStart.isBefore(minStart)) {
-        minStart = curStart;
-      }
-
-      if (curEnd.isAfter(maxEnd)) {
-        maxEnd = curEnd;
-      }
+      startDates.add(interval.getStart());
+      endDates.add(interval.getEnd());
     }
+
+    DateTime minStart = minDateTime(startDates.toArray(new DateTime[]{}));
+    DateTime maxEnd = maxDateTime(endDates.toArray(new DateTime[]{}));
 
     if (minStart == null || maxEnd == null) {
       throw new IllegalArgumentException("Empty list of intervals");

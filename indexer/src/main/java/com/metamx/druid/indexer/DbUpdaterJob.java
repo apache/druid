@@ -20,6 +20,7 @@
 package com.metamx.druid.indexer;
 
 
+import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DbConnector;
@@ -29,6 +30,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.util.List;
@@ -59,39 +61,45 @@ public class DbUpdaterJob implements Jobby
   {
     final List<DataSegment> segments = IndexGeneratorJob.getPublishedSegments(config);
 
-    for (final DataSegment segment : segments) {
-
-      dbi.withHandle(
-          new HandleCallback<Void>()
+    dbi.withHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle) throws Exception
           {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  String.format(
-                      "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
-                      + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                      spec.getSegmentTable()
-                  )
-              )
-                    .bind("id", segment.getIdentifier())
-                    .bind("dataSource", segment.getDataSource())
-                    .bind("created_date", new DateTime().toString())
-                    .bind("start", segment.getInterval().getStart().toString())
-                    .bind("end", segment.getInterval().getEnd().toString())
-                    .bind("partitioned", segment.getShardSpec().getPartitionNum())
-                    .bind("version", segment.getVersion())
-                    .bind("used", true)
-                    .bind("payload", jsonMapper.writeValueAsString(segment))
-                    .execute();
+            final PreparedBatch batch = handle.prepareBatch(
+                String.format(
+                    "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                    spec.getSegmentTable()
+                )
+            );
+            for (final DataSegment segment : segments) {
 
-              return null;
+              batch.add(
+                  new ImmutableMap.Builder()
+                      .put("id", segment.getIdentifier())
+                      .put("dataSource", segment.getDataSource())
+                      .put("created_date", new DateTime().toString())
+                      .put("start", segment.getInterval().getStart().toString())
+                      .put("end", segment.getInterval().getEnd().toString())
+                      .put("partitioned", segment.getShardSpec().getPartitionNum())
+                      .put("version", segment.getVersion())
+                      .put("used", true)
+                      .put("payload", jsonMapper.writeValueAsString(segment))
+                      .build()
+              );
+
+              log.info("Published %s", segment.getIdentifier());
+
             }
-          }
-      );
+            batch.execute();
 
-      log.info("Published %s", segment.getIdentifier());
-    }
+            return null;
+          }
+        }
+    );
+
     return true;
   }
 

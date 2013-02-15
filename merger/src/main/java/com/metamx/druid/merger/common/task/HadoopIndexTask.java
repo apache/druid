@@ -28,7 +28,7 @@ public class HadoopIndexTask extends AbstractTask
    * @param config is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *               for creating Druid index segments. It may be modified.
    *               <p/>
-   *               Here, we will ensure that the UpDaterJobSpec field of the config is set to null, such that the
+   *               Here, we will ensure that the UpdaterJobSpec field of the config is set to null, such that the
    *               job does not push a list of published segments the database. Instead, we will use the method
    *               IndexGeneratorJob.getPublishedSegments() to simply return a list of the published
    *               segments, and let the indexing service report these segments to the database.
@@ -67,7 +67,7 @@ public class HadoopIndexTask extends AbstractTask
       // Hack alert! Bypassing SegmentPusher...
       S3SegmentPusher segmentPusher = (S3SegmentPusher) toolbox.getSegmentPusher();
       String s3Path = String.format(
-          "s3://%s/%s/%s",
+          "s3n%s/%s/%s",
           segmentPusher.getConfig().getBucket(),
           segmentPusher.getConfig().getBaseKey(),
           getDataSource()
