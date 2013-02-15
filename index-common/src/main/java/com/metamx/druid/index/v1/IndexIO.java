@@ -370,6 +370,7 @@ public class IndexIO
       }
 
       LinkedHashSet<String> skippedFiles = Sets.newLinkedHashSet();
+      Set<String> skippedDimensions = Sets.newLinkedHashSet();
       for (String filename : v8SmooshedFiles.getInternalFilenames()) {
         log.info("Processing file[%s]", filename);
         if (filename.startsWith("dim_")) {
@@ -391,6 +392,12 @@ public class IndexIO
           GenericIndexed<String> dictionary = GenericIndexed.read(
               dimBuffer, GenericIndexed.stringStrategy
           );
+
+          if (dictionary.size() == 0) {
+            log.info("Dimension[%s] had cardinality 0, equivalent to no column, so skipping.", dimension);
+            skippedDimensions.add(dimension);
+            continue;
+          }
 
           VSizeIndexedInts singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
@@ -555,35 +562,37 @@ public class IndexIO
           channel.write(ByteBuffer.wrap(specBytes));
           serdeficator.write(channel);
           channel.close();
-        } else if ("index.drd".equals(filename)) {
-          final ByteBuffer indexBuffer = v8SmooshedFiles.mapFile(filename);
-
-          indexBuffer.get(); // Skip the version byte
-          final GenericIndexed<String> dims = GenericIndexed.read(
-              indexBuffer, GenericIndexed.stringStrategy
-          );
-          final GenericIndexed<String> availableMetrics = GenericIndexed.read(
-              indexBuffer, GenericIndexed.stringStrategy
-          );
-          final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
-
-          Set<String> columns = Sets.newTreeSet();
-          columns.addAll(Lists.newArrayList(dims));
-          columns.addAll(Lists.newArrayList(availableMetrics));
-
-          GenericIndexed<String> cols = GenericIndexed.fromIterable(columns, GenericIndexed.stringStrategy);
-
-          final int numBytes = cols.getSerializedSize() + dims.getSerializedSize() + 16;
-          final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
-          cols.writeToChannel(writer);
-          dims.writeToChannel(writer);
-          serializerUtils.writeLong(writer, dataInterval.getStartMillis());
-          serializerUtils.writeLong(writer, dataInterval.getEndMillis());
-          writer.close();
         } else {
           skippedFiles.add(filename);
         }
       }
+
+      final ByteBuffer indexBuffer = v8SmooshedFiles.mapFile("index.drd");
+
+      indexBuffer.get(); // Skip the version byte
+      final GenericIndexed<String> dims = GenericIndexed.read(
+          indexBuffer, GenericIndexed.stringStrategy
+      );
+      final GenericIndexed<String> availableMetrics = GenericIndexed.read(
+          indexBuffer, GenericIndexed.stringStrategy
+      );
+      final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
+
+      Set<String> columns = Sets.newTreeSet();
+      columns.addAll(Lists.newArrayList(dims));
+      columns.addAll(Lists.newArrayList(availableMetrics));
+      columns.removeAll(skippedDimensions);
+
+      GenericIndexed<String> cols = GenericIndexed.fromIterable(columns, GenericIndexed.stringStrategy);
+
+      final int numBytes = cols.getSerializedSize() + dims.getSerializedSize() + 16;
+      final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
+      cols.writeToChannel(writer);
+      dims.writeToChannel(writer);
+      serializerUtils.writeLong(writer, dataInterval.getStartMillis());
+      serializerUtils.writeLong(writer, dataInterval.getEndMillis());
+      writer.close();
+
       log.info("Skipped files[%s]", skippedFiles);
 
       v9Smoosher.close();
