@@ -51,7 +51,7 @@ import java.util.Map;
 import java.util.Set;
 
 
-public class SegmentMetadataQueryQueryToolChest implements QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
+public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
   private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<SegmentAnalysis>(){};
   private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
@@ -218,18 +218,6 @@ public class SegmentMetadataQueryQueryToolChest implements QueryToolChest<Segmen
         return new MergeSequence<SegmentAnalysis>(getOrdering(), seqOfSequences);
       }
     };
-  }
-
-  @Override
-  public QueryRunner<SegmentAnalysis> preMergeQueryDecoration(QueryRunner<SegmentAnalysis> runner)
-  {
-    return runner;
-  }
-
-  @Override
-  public QueryRunner<SegmentAnalysis> postMergeQueryDecoration(QueryRunner<SegmentAnalysis> runner)
-  {
-    return runner;
   }
 
   private Ordering<SegmentAnalysis> getOrdering()

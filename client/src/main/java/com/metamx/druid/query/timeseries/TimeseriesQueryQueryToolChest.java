@@ -61,7 +61,7 @@ import java.util.Map;
 
 /**
  */
-public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
+public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
   private static final byte TIMESERIES_QUERY = 0x0;
 
@@ -257,12 +257,6 @@ public class TimeseriesQueryQueryToolChest implements QueryToolChest<Result<Time
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
   {
     return new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(runner, Period.months(1));
-  }
-
-  @Override
-  public QueryRunner<Result<TimeseriesResultValue>> postMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
-  {
-    return runner;
   }
 
   public Ordering<Result<TimeseriesResultValue>> getOrdering()

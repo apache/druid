@@ -392,7 +392,7 @@ public class ServerManagerTest
     }
   }
 
-  public static class NoopQueryToolChest<T, QueryType extends Query<T>> implements QueryToolChest<T, QueryType>
+  public static class NoopQueryToolChest<T, QueryType extends Query<T>> extends QueryToolChest<T, QueryType>
   {
     @Override
     public QueryRunner<T> mergeResults(QueryRunner<T> runner)
@@ -422,24 +422,6 @@ public class ServerManagerTest
     public TypeReference<T> getResultTypeReference()
     {
       return new TypeReference<T>(){};
-    }
-
-    @Override
-    public <Typer> CacheStrategy<T, Typer, QueryType> getCacheStrategy(QueryType query)
-    {
-      return null;
-    }
-
-    @Override
-    public QueryRunner<T> preMergeQueryDecoration(QueryRunner<T> runner)
-    {
-      return runner;
-    }
-
-    @Override
-    public QueryRunner<T> postMergeQueryDecoration(QueryRunner<T> runner)
-    {
-      return runner;
     }
   }
 }
