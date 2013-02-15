@@ -21,6 +21,7 @@ package com.metamx.druid.index.v1;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -62,7 +63,6 @@ import com.metamx.druid.kv.VSizeIndexedInts;
 import com.metamx.druid.utils.SerializerUtils;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;
@@ -369,8 +369,8 @@ public class IndexIO
         );
       }
 
-      LinkedHashSet<String> skippedFiles = Sets.newLinkedHashSet();
-      Set<String> skippedDimensions = Sets.newLinkedHashSet();
+      final LinkedHashSet<String> skippedFiles = Sets.newLinkedHashSet();
+      final Set<String> skippedDimensions = Sets.newLinkedHashSet();
       for (String filename : v8SmooshedFiles.getInternalFilenames()) {
         log.info("Processing file[%s]", filename);
         if (filename.startsWith("dim_")) {
@@ -570,8 +570,21 @@ public class IndexIO
       final ByteBuffer indexBuffer = v8SmooshedFiles.mapFile("index.drd");
 
       indexBuffer.get(); // Skip the version byte
-      final GenericIndexed<String> dims = GenericIndexed.read(
+      final GenericIndexed<String> dims8 = GenericIndexed.read(
           indexBuffer, GenericIndexed.stringStrategy
+      );
+      final GenericIndexed<String> dims9 = GenericIndexed.fromIterable(
+          Iterables.filter(
+              dims8, new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String s)
+            {
+              return !skippedDimensions.contains(s);
+            }
+          }
+          ),
+          GenericIndexed.stringStrategy
       );
       final GenericIndexed<String> availableMetrics = GenericIndexed.read(
           indexBuffer, GenericIndexed.stringStrategy
@@ -579,16 +592,15 @@ public class IndexIO
       final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
 
       Set<String> columns = Sets.newTreeSet();
-      columns.addAll(Lists.newArrayList(dims));
+      columns.addAll(Lists.newArrayList(dims9));
       columns.addAll(Lists.newArrayList(availableMetrics));
-      columns.removeAll(skippedDimensions);
 
       GenericIndexed<String> cols = GenericIndexed.fromIterable(columns, GenericIndexed.stringStrategy);
 
-      final int numBytes = cols.getSerializedSize() + dims.getSerializedSize() + 16;
+      final int numBytes = cols.getSerializedSize() + dims9.getSerializedSize() + 16;
       final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
       cols.writeToChannel(writer);
-      dims.writeToChannel(writer);
+      dims9.writeToChannel(writer);
       serializerUtils.writeLong(writer, dataInterval.getStartMillis());
       serializerUtils.writeLong(writer, dataInterval.getEndMillis());
       writer.close();
