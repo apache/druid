@@ -20,6 +20,7 @@
 package com.metamx.druid.loading;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;
@@ -39,19 +40,19 @@ public class SingleSegmentLoader implements SegmentLoader
 
   private final DataSegmentPuller dataSegmentPuller;
   private final QueryableIndexFactory factory;
-  private File cacheDirectory;
+  private final SegmentLoaderConfig config;
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
 
   @Inject
   public SingleSegmentLoader(
       DataSegmentPuller dataSegmentPuller,
       QueryableIndexFactory factory,
-      File cacheDirectory
+      SegmentLoaderConfig config
   )
   {
     this.dataSegmentPuller = dataSegmentPuller;
     this.factory = factory;
-    this.cacheDirectory = cacheDirectory;
+    this.config = config;
   }
 
   @Override
@@ -65,34 +66,37 @@ public class SingleSegmentLoader implements SegmentLoader
 
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
-    File cacheFile = getCacheFile(segment);
-    if (cacheFile.exists()) {
-      long localLastModified = cacheFile.lastModified();
+    File localStorageDir = new File(config.getCacheDirectory(), DataSegmentPusherUtil.getStorageDir(segment));
+    if (localStorageDir.exists()) {
+      long localLastModified = localStorageDir.lastModified();
       long remoteLastModified = dataSegmentPuller.getLastModified(segment);
       if (remoteLastModified > 0 && localLastModified >= remoteLastModified) {
         log.info(
-            "Found cacheFile[%s] with modified[%s], which is same or after remote[%s].  Using.",
-            cacheFile,
-            localLastModified,
-            remoteLastModified
+            "Found localStorageDir[%s] with modified[%s], which is same or after remote[%s].  Using.",
+            localStorageDir, localLastModified, remoteLastModified
         );
-        return cacheFile;
+        return localStorageDir;
       }
     }
 
-    dataSegmentPuller.getSegmentFiles(segment, cacheFile);
-
-    if (!cacheFile.getParentFile().mkdirs()) {
-      log.info("Unable to make parent file[%s]", cacheFile.getParentFile());
+    if (localStorageDir.exists()) {
+      try {
+        FileUtils.deleteDirectory(localStorageDir);
+      }
+      catch (IOException e) {
+        log.warn(e, "Exception deleting previously existing local dir[%s]", localStorageDir);
+      }
     }
-    if (cacheFile.exists()) {
-      cacheFile.delete();
+    if (!localStorageDir.mkdirs()) {
+      log.info("Unable to make parent file[%s]", localStorageDir);
     }
 
-    return cacheFile;
+    dataSegmentPuller.getSegmentFiles(segment, localStorageDir);
+
+    return localStorageDir;
   }
 
-  private File getCacheFile(DataSegment segment)
+  private File getLocalStorageDir(DataSegment segment)
   {
     String outputKey = JOINER.join(
         segment.getDataSource(),
@@ -105,7 +109,7 @@ public class SingleSegmentLoader implements SegmentLoader
         segment.getShardSpec().getPartitionNum()
     );
 
-    return new File(cacheDirectory, outputKey);
+    return new File(config.getCacheDirectory(), outputKey);
   }
 
   private void moveToCache(File pulledFile, File cacheFile) throws SegmentLoadingException
@@ -134,7 +138,7 @@ public class SingleSegmentLoader implements SegmentLoader
   @Override
   public void cleanup(DataSegment segment) throws SegmentLoadingException
   {
-    File cacheFile = getCacheFile(segment).getParentFile();
+    File cacheFile = getLocalStorageDir(segment).getParentFile();
 
     try {
       log.info("Deleting directory[%s]", cacheFile);

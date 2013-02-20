@@ -48,10 +48,12 @@ public class RealtimeStandaloneMain
 
     rn.setPhoneBook(dummyPhoneBook);
     MetadataUpdater dummyMetadataUpdater =
-        new MetadataUpdater(new DefaultObjectMapper(),
+        new MetadataUpdater(
+            new DefaultObjectMapper(),
             Config.createFactory(Initialization.loadProperties()).build(MetadataUpdaterConfig.class),
             dummyPhoneBook,
-            null) {
+            null
+        ) {
           @Override
           public void publishSegment(DataSegment segment) throws IOException
           {

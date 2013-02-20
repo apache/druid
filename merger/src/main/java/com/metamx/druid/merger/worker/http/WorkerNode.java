@@ -37,6 +37,7 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.S3DataSegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusherConfig;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
@@ -45,7 +46,6 @@ import com.metamx.druid.merger.worker.TaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import com.metamx.druid.loading.S3SegmentPusherConfig;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
@@ -292,7 +292,7 @@ public class WorkerNode extends RegisteringNode
       );
       final DataSegmentPusher dataSegmentPusher = new S3DataSegmentPusher(
           s3Client,
-          configFactory.build(S3SegmentPusherConfig.class),
+          configFactory.build(S3DataSegmentPusherConfig.class),
           jsonMapper
       );
       taskToolbox = new TaskToolbox(coordinatorConfig, emitter, s3Client, dataSegmentPusher, jsonMapper);

@@ -266,8 +266,7 @@ public class DeterminePartitionsJob implements Jobby
         Context context
     ) throws IOException, InterruptedException
     {
-      // Create group key
-      // TODO -- There are more efficient ways to do this
+      // Create group key, there are probably more efficient ways of doing this
       final Map<String, Set<String>> dims = Maps.newTreeMap();
       for(final String dim : inputRow.getDimensions()) {
         final Set<String> dimValues = ImmutableSortedSet.copyOf(inputRow.getDimension(dim));

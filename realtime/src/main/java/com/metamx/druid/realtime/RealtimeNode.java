@@ -47,8 +47,10 @@ import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.loading.LocalDataSegmentPusher;
+import com.metamx.druid.loading.LocalDataSegmentPusherConfig;
 import com.metamx.druid.loading.S3DataSegmentPusher;
-import com.metamx.druid.loading.S3SegmentPusherConfig;
+import com.metamx.druid.loading.S3DataSegmentPusherConfig;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -258,20 +260,30 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
   {
     if (dataSegmentPusher == null) {
       final Properties props = getProps();
-      final RestS3Service s3Client;
-      try {
-        s3Client = new RestS3Service(
-            new AWSCredentials(
-                PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-                PropUtils.getProperty(props, "com.metamx.aws.secretKey")
-            )
+      if (Boolean.parseBoolean(props.getProperty("druid.pusher.local", "false"))) {
+        dataSegmentPusher = new LocalDataSegmentPusher(
+            getConfigFactory().build(LocalDataSegmentPusherConfig.class), getJsonMapper()
         );
       }
-      catch (S3ServiceException e) {
-        throw Throwables.propagate(e);
-      }
+      else {
 
-      dataSegmentPusher = new S3DataSegmentPusher(s3Client, getConfigFactory().build(S3SegmentPusherConfig.class), getJsonMapper());
+        final RestS3Service s3Client;
+        try {
+          s3Client = new RestS3Service(
+              new AWSCredentials(
+                  PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+                  PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+              )
+          );
+        }
+        catch (S3ServiceException e) {
+          throw Throwables.propagate(e);
+        }
+
+        dataSegmentPusher = new S3DataSegmentPusher(
+            s3Client, getConfigFactory().build(S3DataSegmentPusherConfig.class), getJsonMapper()
+        );
+      }
     }
   }
 

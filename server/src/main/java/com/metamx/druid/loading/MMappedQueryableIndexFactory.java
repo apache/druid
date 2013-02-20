@@ -66,7 +66,7 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
       catch (IOException e2) {
         log.error(e, "Problem deleting parentDir[%s]", parentDir);
       }
-      throw new SegmentLoadingException(e, e.getMessage());
+      throw new SegmentLoadingException(e, "%s", e.getMessage());
     }
   }
 }

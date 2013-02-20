@@ -21,6 +21,7 @@ package com.metamx.druid.utils;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+import com.google.common.io.Files;
 import com.metamx.common.ISE;
 import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;
@@ -29,6 +30,7 @@ import sun.misc.IOUtils;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +38,7 @@ import java.io.OutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 /**
  */
@@ -43,10 +46,43 @@ public class CompressionUtils
 {
   private static final Logger log = new Logger(CompressionUtils.class);
 
+  public static long zip(File directory, File outputZipFile) throws IOException
+  {
+    if (!directory.isDirectory()) {
+      throw new IOException(String.format("directory[%s] is not a directory", directory));
+    }
+
+    if (!outputZipFile.getName().endsWith(".zip")) {
+      log.warn("No .zip suffix[%s], putting files from [%s] into it anyway.", outputZipFile, directory);
+    }
+
+    long totalSize = 0;
+    ZipOutputStream zipOut = null;
+    try {
+      zipOut = new ZipOutputStream(new FileOutputStream(outputZipFile));
+      File[] files = directory.listFiles();
+      for (File file : files) {
+        log.info("Adding file[%s] with size[%,d].  Total size[%,d]", file, file.length(), totalSize);
+        if (file.length() >= Integer.MAX_VALUE) {
+          zipOut.close();
+          outputZipFile.delete();
+          throw new IOException(String.format("file[%s] too large [%,d]", file, file.length()));
+        }
+        zipOut.putNextEntry(new ZipEntry(file.getName()));
+        totalSize += ByteStreams.copy(Files.newInputStreamSupplier(file), zipOut);
+      }
+    }
+    finally {
+      Closeables.closeQuietly(zipOut);
+    }
+
+    return totalSize;
+  }
+
   public static void unzip(File pulledFile, File outDir) throws IOException
   {
     if (!(outDir.exists() && outDir.isDirectory())) {
-      throw new ISE("outDir[%s] must exist and be a directory");
+      throw new ISE("outDir[%s] must exist and be a directory", outDir);
     }
 
     log.info("Unzipping file[%s] to [%s]", pulledFile, outDir);

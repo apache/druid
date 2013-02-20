@@ -51,7 +51,7 @@ import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentPusher;
-import com.metamx.druid.loading.S3SegmentPusherConfig;
+import com.metamx.druid.loading.S3DataSegmentPusherConfig;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
@@ -405,7 +405,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
       );
       final DataSegmentPusher dataSegmentPusher = new S3DataSegmentPusher(
           s3Client,
-          configFactory.build(S3SegmentPusherConfig.class),
+          configFactory.build(S3DataSegmentPusherConfig.class),
           jsonMapper
       );
       taskToolbox = new TaskToolbox(config, emitter, s3Client, dataSegmentPusher, jsonMapper);

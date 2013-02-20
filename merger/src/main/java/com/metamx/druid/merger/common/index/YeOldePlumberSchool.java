@@ -45,11 +45,11 @@ import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.Sink;
 
 
-
-
+import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -120,12 +120,12 @@ public class YeOldePlumberSchool implements PlumberSchool
       @Override
       public void finishJob()
       {
+        // The segment we will upload
+        File fileToUpload = null;
+
         try {
           // User should have persisted everything by now.
           Preconditions.checkState(!theSink.swappable(), "All data must be persisted before fininshing the job!");
-
-          // The segment we will upload
-          final File fileToUpload;
 
           if(spilled.size() == 0) {
             throw new IllegalStateException("Nothing indexed?");
@@ -159,6 +159,17 @@ public class YeOldePlumberSchool implements PlumberSchool
         } catch(Exception e) {
           log.warn(e, "Failed to merge and upload");
           throw Throwables.propagate(e);
+        }
+        finally {
+          try {
+            if (fileToUpload != null) {
+              log.info("Deleting Index File[%s]", fileToUpload);
+              FileUtils.deleteDirectory(fileToUpload);
+            }
+          }
+          catch (IOException e) {
+            log.warn(e, "Error deleting directory[%s]", fileToUpload);
+          }
         }
       }
 

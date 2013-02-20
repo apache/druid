@@ -46,7 +46,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import org.apache.commons.codec.digest.DigestUtils;
 
 
-
+import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -167,6 +167,9 @@ public abstract class MergeTask extends AbstractTask
 
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
+
+      log.info("Deleting Uploaded Files[%s]", fileToUpload);
+      FileUtils.deleteDirectory(fileToUpload);
 
       return TaskStatus.success(getId(), Lists.newArrayList(uploadedSegment));
     }

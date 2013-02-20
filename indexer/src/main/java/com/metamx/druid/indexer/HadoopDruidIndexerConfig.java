@@ -662,8 +662,9 @@ public class HadoopDruidIndexerConfig
 
     return new Path(
         String.format(
-            "%s/%s_%s/%s/%s",
+            "%s/%s/%s_%s/%s/%s",
             getSegmentOutputDir(),
+            dataSource,
             bucketInterval.getStart().toString(),
             bucketInterval.getEnd().toString(),
             getVersion().toString(),

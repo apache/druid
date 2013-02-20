@@ -22,6 +22,7 @@ package com.metamx.druid.merger.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import com.google.common.io.Files;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
@@ -37,7 +38,7 @@ import com.metamx.druid.merger.coordinator.TaskContext;
 import com.metamx.druid.shard.NoneShardSpec;
 
 
-
+import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -101,6 +102,9 @@ public class DeleteTask extends AbstractTask
         segment.getInterval(),
         segment.getVersion()
     );
+
+    log.info("Deleting Uploaded Files[%s]", fileToUpload);
+    FileUtils.deleteDirectory(fileToUpload);
 
     return TaskStatus.success(getId(), Lists.newArrayList(uploadedSegment));
   }

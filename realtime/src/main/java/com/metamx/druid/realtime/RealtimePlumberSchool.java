@@ -307,7 +307,7 @@ public class RealtimePlumberSchool implements PlumberSchool
                             }
                           }
 
-                          final File mergedFile;
+                          File mergedFile = null;
                           try {
                             List<QueryableIndex> indexes = Lists.newArrayList();
                             for (FireHydrant fireHydrant : sink) {
@@ -336,6 +336,19 @@ public class RealtimePlumberSchool implements PlumberSchool
                             log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
                                .addData("interval", interval)
                                .emit();
+                          }
+
+
+                          if (mergedFile != null) {
+                            try {
+                              if (mergedFile != null) {
+                                log.info("Deleting Index File[%s]", mergedFile);
+                                FileUtils.deleteDirectory(mergedFile);
+                              }
+                            }
+                            catch (IOException e) {
+                              log.warn(e, "Error deleting directory[%s]", mergedFile);
+                            }
                           }
                         }
                       }

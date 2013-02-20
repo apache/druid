@@ -25,6 +25,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
 import com.metamx.druid.loading.S3DataSegmentPuller;
+import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.loading.SingleSegmentLoader;
 import com.metamx.druid.merger.common.task.Task;
@@ -94,7 +95,14 @@ public class TaskToolbox
     final SingleSegmentLoader loader = new SingleSegmentLoader(
         new S3DataSegmentPuller(s3Client),
         new MMappedQueryableIndexFactory(),
-        new File(config.getTaskDir(task), "fetched_segments")
+        new SegmentLoaderConfig()
+        {
+          @Override
+          public File getCacheDirectory()
+          {
+            return new File(config.getTaskDir(task), "fetched_segments");
+          }
+        }
     );
 
     Map<DataSegment, File> retVal = Maps.newLinkedHashMap();
