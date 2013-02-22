@@ -1,5 +1,6 @@
 package com.metamx.druid.merger.coordinator.scaling;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import org.joda.time.DateTime;
@@ -60,6 +61,7 @@ public class ScalingStats
     );
   }
 
+  @JsonProperty
   public List<ScalingEvent> toList()
   {
     List<ScalingEvent> retVal = Lists.newArrayList(recentNodes);
@@ -84,16 +86,19 @@ public class ScalingStats
       this.event = event;
     }
 
+    @JsonProperty
     public AutoScalingData getData()
     {
       return data;
     }
 
+    @JsonProperty
     public DateTime getTimestamp()
     {
       return timestamp;
     }
 
+    @JsonProperty
     public EVENT getEvent()
     {
       return event;

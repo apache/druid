@@ -41,9 +41,11 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.RegisteringNode;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
+import com.metamx.druid.http.ComputeMain;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
+import com.metamx.druid.http.RedirectServlet;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
@@ -283,8 +285,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
         )
     );
 
-    final Context root = new Context(server, "/", Context.SESSIONS);
+    final Context staticContext = new Context(server, "/static", Context.SESSIONS);
+    staticContext.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
+    staticContext.setResourceBase(IndexerCoordinatorNode.class.getClassLoader().getResource("static").toExternalForm());
+
+    final Context root = new Context(server, "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/mmx/*");
     root.addEventListener(new GuiceServletConfig(injector));

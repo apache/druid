@@ -52,7 +52,8 @@ public class TaskMasterLifecycle
   private final TaskToolbox taskToolbox;
 
   private volatile boolean leading = false;
-  private volatile TaskRunner theRunner;
+  private volatile TaskRunner taskRunner;
+  private volatile ResourceManagementScheduler resourceManagementScheduler;
 
   private static final EmittingLogger log = new EmittingLogger(TaskMasterLifecycle.class);
 
@@ -81,9 +82,8 @@ public class TaskMasterLifecycle
         try {
           log.info("By the power of Grayskull, I have the power!");
 
-          final TaskRunner taskRunner = runnerFactory.build();
-          theRunner = taskRunner;
-          final ResourceManagementScheduler scheduler = managementSchedulerFactory.build(theRunner);
+          taskRunner = runnerFactory.build();
+          resourceManagementScheduler = managementSchedulerFactory.build(taskRunner);
           final TaskConsumer taskConsumer = new TaskConsumer(
               taskQueue,
               taskRunner,
@@ -208,7 +208,7 @@ public class TaskMasterLifecycle
 
   public TaskRunner getTaskRunner()
   {
-    return theRunner;
+    return taskRunner;
   }
 
   public TaskQueue getTaskQueue()
@@ -219,5 +219,10 @@ public class TaskMasterLifecycle
   public TaskToolbox getTaskToolbox()
   {
     return taskToolbox;
+  }
+
+  public ResourceManagementScheduler getResourceManagementScheduler()
+  {
+    return resourceManagementScheduler;
   }
 }

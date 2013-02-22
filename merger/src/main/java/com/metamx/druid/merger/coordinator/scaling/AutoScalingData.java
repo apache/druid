@@ -19,6 +19,8 @@
 
 package com.metamx.druid.merger.coordinator.scaling;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 /**
@@ -34,11 +36,13 @@ public class AutoScalingData<T>
     this.nodes = nodes;
   }
 
+  @JsonProperty
   public List<String> getNodeIds()
   {
     return nodeIds;
   }
 
+  @JsonProperty
   public List<T> getNodes()
   {
     return nodes;
