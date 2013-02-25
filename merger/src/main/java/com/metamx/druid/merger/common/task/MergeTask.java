@@ -31,27 +31,22 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.loading.SegmentPuller;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.LockListAction;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
 import com.metamx.druid.merger.common.actions.SegmentListUsedAction;
-import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.apache.commons.codec.digest.DigestUtils;
-
-
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -151,13 +146,7 @@ public abstract class MergeTask extends AbstractTask
 
 
       // download segments to merge
-      final Map<String, SegmentPuller> segmentGetters = toolbox.getSegmentGetters(this);
-      final Map<DataSegment, File> gettedSegments = Maps.newHashMap();
-      for (final DataSegment segment : segments) {
-        Map<String, Object> loadSpec = segment.getLoadSpec();
-        SegmentPuller segmentPuller = segmentGetters.get(loadSpec.get("type"));
-        gettedSegments.put(segment, segmentPuller.getSegmentFiles(segment));
-      }
+      final Map<DataSegment, File> gettedSegments = toolbox.getSegments(this, segments);
 
       // merge files together
       final File fileToUpload = merge(gettedSegments, new File(taskDir, "merged"));

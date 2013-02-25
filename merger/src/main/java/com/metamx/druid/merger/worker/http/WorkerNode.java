@@ -36,11 +36,11 @@ import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusherConfig;
 import com.metamx.druid.loading.S3SegmentKiller;
-import com.metamx.druid.loading.S3SegmentPusher;
-import com.metamx.druid.loading.S3SegmentPusherConfig;
 import com.metamx.druid.loading.SegmentKiller;
-import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.RemoteTaskActionClient;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
@@ -318,9 +318,9 @@ public class WorkerNode extends RegisteringNode
   public void initializeTaskToolbox() throws S3ServiceException
   {
     if (taskToolbox == null) {
-      final SegmentPusher segmentPusher = new S3SegmentPusher(
+      final DataSegmentPusher dataSegmentPusher = new S3DataSegmentPusher(
           s3Service,
-          configFactory.build(S3SegmentPusherConfig.class),
+          configFactory.build(S3DataSegmentPusherConfig.class),
           jsonMapper
       );
       final SegmentKiller segmentKiller = new S3SegmentKiller(
@@ -331,7 +331,7 @@ public class WorkerNode extends RegisteringNode
           new RemoteTaskActionClient(httpClient, jsonMapper),
           emitter,
           s3Service,
-          segmentPusher,
+          dataSegmentPusher,
           segmentKiller,
           jsonMapper
       );

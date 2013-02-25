@@ -28,7 +28,7 @@ import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.input.InputRow;
-import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
@@ -118,7 +118,7 @@ public class IndexGeneratorTask extends AbstractTask
 
     // We need to track published segments.
     final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<DataSegment>();
-    final SegmentPusher wrappedSegmentPusher = new SegmentPusher()
+    final DataSegmentPusher wrappedDataSegmentPusher = new DataSegmentPusher()
     {
       @Override
       public DataSegment push(File file, DataSegment segment) throws IOException
@@ -135,7 +135,7 @@ public class IndexGeneratorTask extends AbstractTask
     final Plumber plumber = new YeOldePlumberSchool(
         interval,
         myLock.getVersion(),
-        wrappedSegmentPusher,
+        wrappedDataSegmentPusher,
         tmpDir
     ).findPlumber(schema, metrics);
 

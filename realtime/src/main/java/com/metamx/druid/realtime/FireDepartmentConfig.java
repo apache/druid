@@ -19,6 +19,7 @@
 
 package com.metamx.druid.realtime;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
@@ -31,6 +32,7 @@ public class FireDepartmentConfig
   private final int maxRowsInMemory;
   private final Period intermediatePersistPeriod;
 
+  @JsonCreator
   public FireDepartmentConfig(
       @JsonProperty("maxRowsInMemory") int maxRowsInMemory,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod

@@ -21,13 +21,12 @@ package com.metamx.druid.loading;
 
 import org.skife.config.Config;
 
+import java.io.File;
+
 /**
  */
-public abstract class QueryableLoaderConfig extends S3SegmentGetterConfig
+public abstract class LocalDataSegmentPusherConfig
 {
-  @Config("druid.queryable.factory")
-  public String getQueryableFactoryType()
-  {
-    return "mmap";
-  }
+  @Config("druid.pusher.local.storageDirectory")
+  public abstract File getStorageDirectory();
 }

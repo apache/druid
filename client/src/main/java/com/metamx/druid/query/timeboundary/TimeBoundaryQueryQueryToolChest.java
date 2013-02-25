@@ -27,6 +27,7 @@ import com.google.common.collect.Ordering;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.druid.LogicalSegment;
 import com.metamx.druid.Query;
 import com.metamx.druid.collect.OrderedMergeSequence;
 import com.metamx.druid.query.BySegmentSkippingQueryRunner;
@@ -37,7 +38,6 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -47,7 +47,7 @@ import java.util.List;
 /**
  */
 public class TimeBoundaryQueryQueryToolChest
-    implements QueryToolChest<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>
+    extends QueryToolChest<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>
 {
   private static final byte TIMEBOUNDARY_QUERY = 0x3;
 
@@ -57,6 +57,16 @@ public class TimeBoundaryQueryQueryToolChest
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
   {
   };
+
+  @Override
+  public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> input)
+  {
+    if(input.size() <= 1) {
+      return input;
+    }
+
+    return Lists.newArrayList(input.get(0), input.get(input.size() - 1));
+  }
 
   @Override
   public QueryRunner<Result<TimeBoundaryResultValue>> mergeResults(
@@ -167,18 +177,6 @@ public class TimeBoundaryQueryQueryToolChest
         return new MergeSequence<Result<TimeBoundaryResultValue>>(getOrdering(), seqOfSequences);
       }
     };
-  }
-
-  @Override
-  public QueryRunner<Result<TimeBoundaryResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeBoundaryResultValue>> runner)
-  {
-    return runner;
-  }
-
-  @Override
-  public QueryRunner<Result<TimeBoundaryResultValue>> postMergeQueryDecoration(QueryRunner<Result<TimeBoundaryResultValue>> runner)
-  {
-    return runner;
   }
 
   public Ordering<Result<TimeBoundaryResultValue>> getOrdering()
