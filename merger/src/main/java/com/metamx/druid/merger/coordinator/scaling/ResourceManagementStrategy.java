@@ -17,28 +17,22 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.merger.coordinator.scaling;
 
-import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.merger.coordinator.TaskRunnerWorkItem;
+import com.metamx.druid.merger.coordinator.ZkWorker;
 
-public class VersionedTaskWrapper
+import java.util.Collection;
+
+/**
+ * The ResourceManagementStrategy decides if worker nodes should be provisioned or determined
+ * based on the available tasks in the system and the state of the workers in the system.
+ */
+public interface ResourceManagementStrategy
 {
-  final Task task;
-  final String version;
+  public boolean doProvision(Collection<TaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
 
-  public VersionedTaskWrapper(Task task, String version)
-  {
-    this.task = task;
-    this.version = version;
-  }
+  public boolean doTerminate(Collection<TaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
 
-  public Task getTask()
-  {
-    return task;
-  }
-
-  public String getVersion()
-  {
-    return version;
-  }
+  public ScalingStats getStats();
 }

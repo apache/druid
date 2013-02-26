@@ -25,13 +25,14 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
 import com.metamx.druid.loading.S3DataSegmentPuller;
+import com.metamx.druid.loading.SegmentKiller;
 import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.loading.SingleSegmentLoader;
+import com.metamx.druid.merger.common.actions.TaskActionClient;
+import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.emitter.service.ServiceEmitter;
-
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 import java.io.File;
@@ -43,30 +44,41 @@ import java.util.Map;
  */
 public class TaskToolbox
 {
-  private final IndexerCoordinatorConfig config;
+  private final TaskConfig config;
+  private final TaskActionClient taskActionClient;
   private final ServiceEmitter emitter;
   private final RestS3Service s3Client;
   private final DataSegmentPusher segmentPusher;
+  private final SegmentKiller segmentKiller;
   private final ObjectMapper objectMapper;
 
   public TaskToolbox(
-      IndexerCoordinatorConfig config,
+      TaskConfig config,
+      TaskActionClient taskActionClient,
       ServiceEmitter emitter,
       RestS3Service s3Client,
       DataSegmentPusher segmentPusher,
+      SegmentKiller segmentKiller,
       ObjectMapper objectMapper
   )
   {
     this.config = config;
+    this.taskActionClient = taskActionClient;
     this.emitter = emitter;
     this.s3Client = s3Client;
     this.segmentPusher = segmentPusher;
+    this.segmentKiller = segmentKiller;
     this.objectMapper = objectMapper;
   }
 
-  public IndexerCoordinatorConfig getConfig()
+  public TaskConfig getConfig()
   {
     return config;
+  }
+
+  public TaskActionClient getTaskActionClient()
+  {
+    return taskActionClient;
   }
 
   public ServiceEmitter getEmitter()
@@ -74,14 +86,14 @@ public class TaskToolbox
     return emitter;
   }
 
-  public RestS3Service getS3Client()
-  {
-    return s3Client;
-  }
-
   public DataSegmentPusher getSegmentPusher()
   {
     return segmentPusher;
+  }
+
+  public SegmentKiller getSegmentKiller()
+  {
+    return segmentKiller;
   }
 
   public ObjectMapper getObjectMapper()

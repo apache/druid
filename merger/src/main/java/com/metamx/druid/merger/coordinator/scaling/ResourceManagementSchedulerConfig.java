@@ -17,44 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.merger.coordinator.scaling;
 
-import com.metamx.druid.merger.common.task.Task;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
+import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
-public class TaskWrapper
+public abstract class ResourceManagementSchedulerConfig
 {
-  private final Task task;
-  private final TaskContext taskContext;
-  private final TaskCallback callback;
-  private final RetryPolicy retryPolicy;
+  @Config("druid.indexer.provisionResources.duration")
+  @Default("PT1M")
+  public abstract Duration getProvisionResourcesDuration();
 
-  public TaskWrapper(Task task, TaskContext taskContext, TaskCallback callback, RetryPolicy retryPolicy)
-  {
-    this.task = task;
-    this.taskContext = taskContext;
-    this.callback = callback;
-    this.retryPolicy = retryPolicy;
-  }
+  @Config("druid.indexer.terminateResources.duration")
+  @Default("PT1H")
+  public abstract Duration getTerminateResourcesDuration();
 
-  public Task getTask()
-  {
-    return task;
-  }
-
-  public TaskContext getTaskContext()
-  {
-    return taskContext;
-  }
-
-  public TaskCallback getCallback()
-  {
-    return callback;
-  }
-
-  public RetryPolicy getRetryPolicy()
-  {
-    return retryPolicy;
-  }
+  @Config("druid.indexer.terminateResources.originDateTime")
+  @Default("2012-01-01T00:55:00.000Z")
+  public abstract DateTime getTerminateResourcesOriginDateTime();
 }

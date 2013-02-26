@@ -22,7 +22,7 @@ package com.metamx.druid.merger.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -33,18 +33,15 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.coordinator.TaskContext;
+import com.metamx.druid.merger.common.actions.SpawnTasksAction;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
 import com.metamx.druid.shard.SingleDimensionShardSpec;
-
-
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,8 +50,15 @@ public class IndexDeterminePartitionsTask extends AbstractTask
 {
   @JsonProperty
   private final FirehoseFactory firehoseFactory;
-  @JsonProperty private final Schema schema;
-  @JsonProperty private final long targetPartitionSize;
+
+  @JsonProperty
+  private final Schema schema;
+
+  @JsonProperty
+  private final long targetPartitionSize;
+
+  @JsonProperty
+  private final int rowFlushBoundary;
 
   private static final Logger log = new Logger(IndexTask.class);
 
@@ -64,7 +68,8 @@ public class IndexDeterminePartitionsTask extends AbstractTask
       @JsonProperty("interval") Interval interval,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("schema") Schema schema,
-      @JsonProperty("targetPartitionSize") long targetPartitionSize
+      @JsonProperty("targetPartitionSize") long targetPartitionSize,
+      @JsonProperty("rowFlushBoundary") int rowFlushBoundary
   )
   {
     super(
@@ -76,30 +81,30 @@ public class IndexDeterminePartitionsTask extends AbstractTask
         ),
         groupId,
         schema.getDataSource(),
-        interval
+        Preconditions.checkNotNull(interval, "interval")
     );
 
     this.firehoseFactory = firehoseFactory;
     this.schema = schema;
     this.targetPartitionSize = targetPartitionSize;
+    this.rowFlushBoundary = rowFlushBoundary;
   }
 
   @Override
-  public Type getType()
+  public String getType()
   {
-    return Type.INDEX;
+    return "index_partitions";
   }
 
   @Override
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     log.info("Running with targetPartitionSize[%d]", targetPartitionSize);
 
-    // This is similar to what DeterminePartitionsJob does in the hadoop indexer, but we don't require
-    // a preconfigured partition dimension (we'll just pick the one with highest cardinality).
+    // TODO: Replace/merge/whatever with hadoop determine-partitions code
 
-    // XXX - Space-efficiency (stores all unique dimension values, although at least not all combinations)
-    // XXX - Time-efficiency (runs all this on one single node instead of through map/reduce)
+    // We know this exists
+    final Interval interval = getFixedInterval().get();
 
     // Blacklist dimensions that have multiple values per row
     final Set<String> unusableDimensions = Sets.newHashSet();
@@ -111,24 +116,24 @@ public class IndexDeterminePartitionsTask extends AbstractTask
     final Firehose firehose = firehoseFactory.connect();
 
     try {
-      while(firehose.hasMore()) {
+      while (firehose.hasMore()) {
 
         final InputRow inputRow = firehose.nextRow();
 
-        if(getInterval().contains(inputRow.getTimestampFromEpoch())) {
+        if (interval.contains(inputRow.getTimestampFromEpoch())) {
 
           // Extract dimensions from event
           for (final String dim : inputRow.getDimensions()) {
             final List<String> dimValues = inputRow.getDimension(dim);
 
-            if(!unusableDimensions.contains(dim)) {
+            if (!unusableDimensions.contains(dim)) {
 
-              if(dimValues.size() == 1) {
+              if (dimValues.size() == 1) {
 
                 // Track this value
                 TreeMultiset<String> dimensionValueMultiset = dimensionValueMultisets.get(dim);
 
-                if(dimensionValueMultiset == null) {
+                if (dimensionValueMultiset == null) {
                   dimensionValueMultiset = TreeMultiset.create();
                   dimensionValueMultisets.put(dim, dimensionValueMultiset);
                 }
@@ -149,7 +154,8 @@ public class IndexDeterminePartitionsTask extends AbstractTask
         }
 
       }
-    } finally {
+    }
+    finally {
       firehose.close();
     }
 
@@ -169,7 +175,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
       }
     };
 
-    if(dimensionValueMultisets.isEmpty()) {
+    if (dimensionValueMultisets.isEmpty()) {
       // No suitable partition dimension. We'll make one big segment and hope for the best.
       log.info("No suitable partition dimension found");
       shardSpecs.add(new NoneShardSpec());
@@ -191,9 +197,9 @@ public class IndexDeterminePartitionsTask extends AbstractTask
       // Iterate over unique partition dimension values in sorted order
       String currentPartitionStart = null;
       int currentPartitionSize = 0;
-      for(final String partitionDimValue : partitionDimValues.elementSet()) {
+      for (final String partitionDimValue : partitionDimValues.elementSet()) {
         currentPartitionSize += partitionDimValues.count(partitionDimValue);
-        if(currentPartitionSize >= targetPartitionSize) {
+        if (currentPartitionSize >= targetPartitionSize) {
           final ShardSpec shardSpec = new SingleDimensionShardSpec(
               partitionDim,
               currentPartitionStart,
@@ -229,28 +235,31 @@ public class IndexDeterminePartitionsTask extends AbstractTask
       }
     }
 
-    return TaskStatus.continued(
-        getId(),
-        Lists.transform(
-            shardSpecs, new Function<ShardSpec, Task>()
+    List<Task> nextTasks = Lists.transform(
+        shardSpecs,
+        new Function<ShardSpec, Task>()
         {
           @Override
           public Task apply(ShardSpec shardSpec)
           {
             return new IndexGeneratorTask(
                 getGroupId(),
-                getInterval(),
+                getFixedInterval().get(),
                 firehoseFactory,
                 new Schema(
                     schema.getDataSource(),
                     schema.getAggregators(),
                     schema.getIndexGranularity(),
                     shardSpec
-                )
+                ),
+                rowFlushBoundary
             );
           }
         }
-        )
     );
+
+    toolbox.getTaskActionClient().submit(new SpawnTasksAction(this, nextTasks));
+
+    return TaskStatus.success(getId());
   }
 }

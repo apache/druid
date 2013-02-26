@@ -17,41 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.common;
+package com.metamx.druid.merger.coordinator.scaling;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.merger.coordinator.TaskContext;
-
-
+import com.metamx.druid.merger.coordinator.TaskRunner;
 
 /**
  */
-public class TaskHolder
+public interface ResourceManagementSchedulerFactory
 {
-  private final Task task;
-  private final TaskContext taskContext;
-
-  @JsonCreator
-  public TaskHolder(
-      @JsonProperty("task") Task task,
-      @JsonProperty("taskContext") TaskContext taskContext
-  )
-  {
-    this.task = task;
-    this.taskContext = taskContext;
-  }
-
-  @JsonProperty
-  public Task getTask()
-  {
-    return task;
-  }
-
-  @JsonProperty
-  public TaskContext getTaskContext()
-  {
-    return taskContext;
-  }
+  public ResourceManagementScheduler build(TaskRunner runner);
 }

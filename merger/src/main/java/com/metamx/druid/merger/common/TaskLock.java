@@ -17,40 +17,30 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.merger.common;
 
-import com.google.common.base.Function;
 import com.google.common.base.Objects;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
-import com.metamx.druid.merger.common.task.Task;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 
-import java.util.Set;
-import java.util.TreeSet;
-
 /**
- * Represents a transaction as well as the lock it holds. Not immutable: the task set can change.
+ * Represents a lock held by some task. Immutable.
  */
-public class TaskGroup
+public class TaskLock
 {
   private final String groupId;
   private final String dataSource;
   private final Interval interval;
   private final String version;
-  private final Set<Task> taskSet = new TreeSet<Task>(
-      new Ordering<Task>()
-      {
-        @Override
-        public int compare(Task task, Task task1)
-        {
-          return task.getId().compareTo(task1.getId());
-        }
-      }.nullsFirst()
-  );
 
-  public TaskGroup(String groupId, String dataSource, Interval interval, String version)
+  @JsonCreator
+  public TaskLock(
+      @JsonProperty("groupId") String groupId,
+      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("version") String version
+  )
   {
     this.groupId = groupId;
     this.dataSource = dataSource;
@@ -58,29 +48,48 @@ public class TaskGroup
     this.version = version;
   }
 
+  @JsonProperty
   public String getGroupId()
   {
     return groupId;
   }
 
+  @JsonProperty
   public String getDataSource()
   {
     return dataSource;
   }
 
+  @JsonProperty
   public Interval getInterval()
   {
     return interval;
   }
 
+  @JsonProperty
   public String getVersion()
   {
     return version;
   }
 
-  public Set<Task> getTaskSet()
+  @Override
+  public boolean equals(Object o)
   {
-    return taskSet;
+    if (!(o instanceof TaskLock)) {
+      return false;
+    } else {
+      final TaskLock x = (TaskLock) o;
+      return Objects.equal(this.groupId, x.groupId) &&
+             Objects.equal(this.dataSource, x.dataSource) &&
+             Objects.equal(this.interval, x.interval) &&
+             Objects.equal(this.version, x.version);
+    }
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(groupId, dataSource, interval, version);
   }
 
   @Override
@@ -91,21 +100,6 @@ public class TaskGroup
                   .add("dataSource", dataSource)
                   .add("interval", interval)
                   .add("version", version)
-                  .add(
-                      "taskSet",
-                      Lists.newArrayList(
-                          Iterables.transform(
-                              taskSet, new Function<Task, Object>()
-                          {
-                            @Override
-                            public Object apply(Task task)
-                            {
-                              return task.getId();
-                            }
-                          }
-                          )
-                      )
-                  )
                   .toString();
   }
 }

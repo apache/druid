@@ -17,11 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.merger.coordinator.scaling;
 
-import com.metamx.druid.merger.common.TaskStatus;
+import java.util.List;
 
-public interface TaskCallback
+/**
+ */
+public class TestAutoScalingStrategy<T> implements AutoScalingStrategy<T>
 {
-  public void notify(TaskStatus status);
+  @Override
+  public AutoScalingData<T> provision()
+  {
+    return null;
+  }
+
+  @Override
+  public AutoScalingData<T> terminate(List<String> ids)
+  {
+    return null;
+  }
+
+  @Override
+  public List<String> ipToIdLookup(List<String> ips)
+  {
+    return null;
+  }
 }

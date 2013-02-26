@@ -52,9 +52,6 @@ public abstract class IndexerCoordinatorConfig
   @Default("local")
   public abstract String getStorageImpl();
 
-  @Config("druid.merger.taskDir")
-  public abstract File getBaseTaskDir();
-
   @Config("druid.merger.whitelist.enabled")
   @Default("false")
   public abstract boolean isWhitelistEnabled();
@@ -62,10 +59,6 @@ public abstract class IndexerCoordinatorConfig
   @Config("druid.merger.whitelist.datasources")
   @Default("")
   public abstract String getWhitelistDatasourcesString();
-
-  public File getTaskDir(final Task task) {
-    return new File(getBaseTaskDir(), task.getId());
-  }
 
   public Set<String> getWhitelistDatasources()
   {
@@ -79,10 +72,6 @@ public abstract class IndexerCoordinatorConfig
 
     return whitelistDatasources;
   }
-
-  @Config("druid.merger.rowFlushBoundary")
-  @Default("500000")
-  public abstract long getRowFlushBoundary();
 
   @Config("druid.indexer.strategy")
   @Default("noop")

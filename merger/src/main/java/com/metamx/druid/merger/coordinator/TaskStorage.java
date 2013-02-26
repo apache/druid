@@ -21,6 +21,8 @@ package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Optional;
 import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.actions.TaskAction;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.task.Task;
 
 import java.util.List;
@@ -29,20 +31,34 @@ public interface TaskStorage
 {
   /**
    * Adds a task to the storage facility with a particular status. If the task ID already exists, this method
-   * will throw an exception.
+   * will throw a {@link TaskExistsException}.
    */
   public void insert(Task task, TaskStatus status);
 
   /**
-   * Updates task status in the storage facility.
+   * Persists task status in the storage facility. This method should throw an exception if the task status lifecycle
+   * is not respected (absent -> RUNNING -> SUCCESS/FAILURE).
    */
-  public void setStatus(String taskid, TaskStatus status);
+  public void setStatus(TaskStatus status);
 
   /**
-   * Updates task version in the storage facility. If the task already has a version, this method will throw
-   * an exception.
+   * Persists lock state in the storage facility.
    */
-  public void setVersion(String taskid, String version);
+  public void addLock(String taskid, TaskLock taskLock);
+
+  /**
+   * Removes lock state from the storage facility. It is harmless to keep old locks in the storage facility, but
+   * this method can help reclaim wasted space.
+   */
+  public void removeLock(String taskid, TaskLock taskLock);
+
+  /**
+   * Returns task as stored in the storage facility. If the task ID does not exist, this will return an
+   * absentee Optional.
+   *
+   * TODO -- This method probably wants to be combined with {@link #getStatus}.
+   */
+  public Optional<Task> getTask(String taskid);
 
   /**
    * Returns task status as stored in the storage facility. If the task ID does not exist, this will return
@@ -51,13 +67,22 @@ public interface TaskStorage
   public Optional<TaskStatus> getStatus(String taskid);
 
   /**
-   * Returns task version as stored in the storage facility. If the task ID does not exist, or if the task ID exists
-   * but was not yet assigned a version, this will return an absentee Optional.
+   * Add an action taken by a task to the audit log.
    */
-  public Optional<String> getVersion(String taskid);
+  public <T> void addAuditLog(TaskAction<T> taskAction);
+
+  /**
+   * Returns all actions taken by a task.
+   */
+  public List<TaskAction> getAuditLogs(String taskid);
 
   /**
    * Returns a list of currently-running tasks as stored in the storage facility, in no particular order.
    */
   public List<Task> getRunningTasks();
+
+  /**
+   * Returns a list of locks for a particular task.
+   */
+  public List<TaskLock> getLocks(String taskid);
 }

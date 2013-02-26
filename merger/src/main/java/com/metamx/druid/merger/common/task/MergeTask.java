@@ -22,6 +22,7 @@ package com.metamx.druid.merger.common.task;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
@@ -33,20 +34,20 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.hash.Hashing;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.coordinator.TaskContext;
+import com.metamx.druid.merger.common.actions.LockListAction;
+import com.metamx.druid.merger.common.actions.SegmentInsertAction;
+import com.metamx.druid.merger.common.actions.SegmentListUsedAction;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import org.apache.commons.codec.digest.DigestUtils;
-
-
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -116,11 +117,12 @@ public abstract class MergeTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction(this)));
     final ServiceEmitter emitter = toolbox.getEmitter();
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    final DataSegment mergedSegment = computeMergedSegment(getDataSource(), context.getVersion(), segments);
+    final DataSegment mergedSegment = computeMergedSegment(getDataSource(), myLock.getVersion(), segments);
     final File taskDir = toolbox.getConfig().getTaskDir(this);
 
     try {
@@ -168,10 +170,9 @@ public abstract class MergeTask extends AbstractTask
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
 
-      log.info("Deleting Uploaded Files[%s]", fileToUpload);
-      FileUtils.deleteDirectory(fileToUpload);
+      toolbox.getTaskActionClient().submit(new SegmentInsertAction(this, ImmutableSet.of(uploadedSegment)));
 
-      return TaskStatus.success(getId(), Lists.newArrayList(uploadedSegment));
+      return TaskStatus.success(getId());
     }
     catch (Exception e) {
       log.error(
@@ -200,7 +201,7 @@ public abstract class MergeTask extends AbstractTask
    * we are operating on every segment that overlaps the chosen interval.
    */
   @Override
-  public TaskStatus preflight(TaskContext context)
+  public TaskStatus preflight(TaskToolbox toolbox)
   {
     final Function<DataSegment, String> toIdentifier = new Function<DataSegment, String>()
     {
@@ -211,7 +212,13 @@ public abstract class MergeTask extends AbstractTask
       }
     };
 
-    final Set<String> current = ImmutableSet.copyOf(Iterables.transform(context.getCurrentSegments(), toIdentifier));
+    final Set<String> current = ImmutableSet.copyOf(
+        Iterables.transform(
+            toolbox.getTaskActionClient()
+                   .submit(new SegmentListUsedAction(this, getDataSource(), getFixedInterval().get())),
+            toIdentifier
+        )
+    );
     final Set<String> requested = ImmutableSet.copyOf(Iterables.transform(segments, toIdentifier));
 
     final Set<String> missingFromRequested = Sets.difference(current, requested);
@@ -249,7 +256,7 @@ public abstract class MergeTask extends AbstractTask
     return Objects.toStringHelper(this)
                   .add("id", getId())
                   .add("dataSource", getDataSource())
-                  .add("interval", getInterval())
+                  .add("interval", getFixedInterval())
                   .add("segments", segments)
                   .toString();
   }
@@ -275,7 +282,11 @@ public abstract class MergeTask extends AbstractTask
         )
     );
 
-    return String.format("%s_%s", dataSource, DigestUtils.shaHex(segmentIDs).toLowerCase());
+    return String.format(
+        "%s_%s",
+        dataSource,
+        Hashing.sha1().hashString(segmentIDs, Charsets.UTF_8).toString().toLowerCase()
+    );
   }
 
   private static Interval computeMergedInterval(final List<DataSegment> segments)

@@ -43,4 +43,13 @@ public class AutoScalingData<T>
   {
     return nodes;
   }
+
+  @Override
+  public String toString()
+  {
+    return "AutoScalingData{" +
+           "nodeIds=" + nodeIds +
+           ", nodes=" + nodes +
+           '}';
+  }
 }

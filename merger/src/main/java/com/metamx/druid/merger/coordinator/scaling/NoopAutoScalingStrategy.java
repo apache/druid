@@ -17,43 +17,37 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.merger.coordinator.scaling;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.client.DataSegment;
+import com.metamx.emitter.EmittingLogger;
 
-
-
-import java.util.Set;
+import java.util.List;
 
 /**
- * Information gathered by the coordinator, after acquiring a lock, that may be useful to a task.
+ * This class just logs when scaling should occur.
  */
-public class TaskContext
+public class NoopAutoScalingStrategy implements AutoScalingStrategy<String>
 {
-  final String version;
-  final Set<DataSegment> currentSegments;
+  private static final EmittingLogger log = new EmittingLogger(NoopAutoScalingStrategy.class);
 
-  @JsonCreator
-  public TaskContext(
-      @JsonProperty("version") String version,
-      @JsonProperty("currentSegments") Set<DataSegment> currentSegments
-  )
+  @Override
+  public AutoScalingData<String> provision()
   {
-    this.version = version;
-    this.currentSegments = currentSegments;
+    log.info("If I were a real strategy I'd create something now");
+    return null;
   }
 
-  @JsonProperty
-  public String getVersion()
+  @Override
+  public AutoScalingData<String> terminate(List<String> nodeIds)
   {
-    return version;
+    log.info("If I were a real strategy I'd terminate %s now", nodeIds);
+    return null;
   }
 
-  @JsonProperty
-  public Set<DataSegment> getCurrentSegments()
+  @Override
+  public List<String> ipToIdLookup(List<String> ips)
   {
-    return currentSegments;
+    log.info("I'm not a real strategy so I'm returning what I got %s", ips);
+    return ips;
   }
 }

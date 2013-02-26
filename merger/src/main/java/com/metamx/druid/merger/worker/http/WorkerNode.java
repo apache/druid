@@ -35,18 +35,22 @@ import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentPusherConfig;
+import com.metamx.druid.loading.S3SegmentKiller;
+import com.metamx.druid.loading.SegmentKiller;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.actions.RemoteTaskActionClient;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
+import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
-import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.worker.TaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -61,8 +65,8 @@ import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
-
-
+import com.netflix.curator.x.discovery.ServiceDiscovery;
+import com.netflix.curator.x.discovery.ServiceProvider;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
@@ -96,12 +100,16 @@ public class WorkerNode extends RegisteringNode
   private final Properties props;
   private final ConfigurationObjectFactory configFactory;
 
+  private RestS3Service s3Service = null;
   private List<Monitor> monitors = null;
+  private HttpClient httpClient = null;
   private ServiceEmitter emitter = null;
-  private IndexerCoordinatorConfig coordinatorConfig = null; // FIXME needed for task toolbox, but shouldn't be
+  private TaskConfig taskConfig = null;
   private WorkerConfig workerConfig = null;
   private TaskToolbox taskToolbox = null;
   private CuratorFramework curatorFramework = null;
+  private ServiceDiscovery serviceDiscovery = null;
+  private ServiceProvider coordinatorServiceProvider = null;
   private WorkerCuratorCoordinator workerCuratorCoordinator = null;
   private TaskMonitor taskMonitor = null;
   private Server server = null;
@@ -123,9 +131,21 @@ public class WorkerNode extends RegisteringNode
     this.configFactory = configFactory;
   }
 
+  public WorkerNode setHttpClient(HttpClient httpClient)
+  {
+    this.httpClient = httpClient;
+    return this;
+  }
+
   public WorkerNode setEmitter(ServiceEmitter emitter)
   {
     this.emitter = emitter;
+    return this;
+  }
+
+  public WorkerNode setS3Service(RestS3Service s3Service)
+  {
+    this.s3Service = s3Service;
     return this;
   }
 
@@ -138,6 +158,18 @@ public class WorkerNode extends RegisteringNode
   public WorkerNode setCuratorFramework(CuratorFramework curatorFramework)
   {
     this.curatorFramework = curatorFramework;
+    return this;
+  }
+
+  public WorkerNode setCoordinatorServiceProvider(ServiceProvider coordinatorServiceProvider)
+  {
+    this.coordinatorServiceProvider = coordinatorServiceProvider;
+    return this;
+  }
+
+  public WorkerNode setServiceDiscovery(ServiceDiscovery serviceDiscovery)
+  {
+    this.serviceDiscovery = serviceDiscovery;
     return this;
   }
 
@@ -155,13 +187,17 @@ public class WorkerNode extends RegisteringNode
 
   public void init() throws Exception
   {
+    initializeHttpClient();
     initializeEmitter();
+    initializeS3Service();
     initializeMonitors();
     initializeMergerConfig();
+    initializeCuratorFramework();
+    initializeServiceDiscovery();
+    initializeCoordinatorServiceProvider();
     initializeTaskToolbox();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
-    initializeCuratorFramework();
     initializeCuratorCoordinator();
     initializeTaskMonitor();
     initializeServer();
@@ -234,7 +270,7 @@ public class WorkerNode extends RegisteringNode
   {
     InjectableValues.Std injectables = new InjectableValues.Std();
 
-    injectables.addValue("s3Client", taskToolbox.getS3Client())
+    injectables.addValue("s3Client", s3Service)
                .addValue("segmentPusher", taskToolbox.getSegmentPusher());
 
     jsonMapper.setInjectableValues(injectables);
@@ -245,13 +281,18 @@ public class WorkerNode extends RegisteringNode
     jsonMapper.registerSubtypes(StaticS3FirehoseFactory.class);
   }
 
+  private void initializeHttpClient()
+  {
+    if (httpClient == null) {
+      httpClient = HttpClientInit.createClient(
+          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
+      );
+    }
+  }
+
   private void initializeEmitter()
   {
     if (emitter == null) {
-      final HttpClient httpClient = HttpClientInit.createClient(
-          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
-      );
-
       emitter = new ServiceEmitter(
           PropUtils.getProperty(props, "druid.service"),
           PropUtils.getProperty(props, "druid.host"),
@@ -259,6 +300,18 @@ public class WorkerNode extends RegisteringNode
       );
     }
     EmittingLogger.registerEmitter(emitter);
+  }
+
+  private void initializeS3Service() throws S3ServiceException
+  {
+    if(s3Service == null) {
+      s3Service = new RestS3Service(
+          new AWSCredentials(
+              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+          )
+      );
+    }
   }
 
   private void initializeMonitors()
@@ -272,8 +325,8 @@ public class WorkerNode extends RegisteringNode
 
   private void initializeMergerConfig()
   {
-    if (coordinatorConfig == null) {
-      coordinatorConfig = configFactory.build(IndexerCoordinatorConfig.class);
+    if (taskConfig == null) {
+      taskConfig = configFactory.build(TaskConfig.class);
     }
 
     if (workerConfig == null) {
@@ -284,28 +337,58 @@ public class WorkerNode extends RegisteringNode
   public void initializeTaskToolbox() throws S3ServiceException
   {
     if (taskToolbox == null) {
-      final RestS3Service s3Client = new RestS3Service(
-          new AWSCredentials(
-              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
-          )
-      );
       final DataSegmentPusher dataSegmentPusher = new S3DataSegmentPusher(
-          s3Client,
+          s3Service,
           configFactory.build(S3DataSegmentPusherConfig.class),
           jsonMapper
       );
-      taskToolbox = new TaskToolbox(coordinatorConfig, emitter, s3Client, dataSegmentPusher, jsonMapper);
+      final SegmentKiller segmentKiller = new S3SegmentKiller(
+          s3Service
+      );
+      taskToolbox = new TaskToolbox(
+          taskConfig,
+          new RemoteTaskActionClient(httpClient, coordinatorServiceProvider, jsonMapper),
+          emitter,
+          s3Service,
+          dataSegmentPusher,
+          segmentKiller,
+          jsonMapper
+      );
     }
   }
 
   public void initializeCuratorFramework() throws IOException
   {
-    final CuratorConfig curatorConfig = configFactory.build(CuratorConfig.class);
-    curatorFramework = Initialization.makeCuratorFrameworkClient(
-        curatorConfig,
-        lifecycle
-    );
+    if (curatorFramework == null) {
+      final CuratorConfig curatorConfig = configFactory.build(CuratorConfig.class);
+      curatorFramework = Initialization.makeCuratorFrameworkClient(
+          curatorConfig,
+          lifecycle
+      );
+    }
+  }
+
+  public void initializeServiceDiscovery() throws Exception
+  {
+    if (serviceDiscovery == null) {
+      final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
+      this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
+          curatorFramework,
+          config,
+          lifecycle
+      );
+    }
+  }
+
+  public void initializeCoordinatorServiceProvider()
+  {
+    if (coordinatorServiceProvider == null) {
+      this.coordinatorServiceProvider = Initialization.makeServiceProvider(
+          workerConfig.getMasterService(),
+          serviceDiscovery,
+          lifecycle
+      );
+    }
   }
 
   public void initializeCuratorCoordinator()

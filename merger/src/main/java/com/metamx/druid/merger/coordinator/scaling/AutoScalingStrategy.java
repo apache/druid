@@ -19,35 +19,21 @@
 
 package com.metamx.druid.merger.coordinator.scaling;
 
-import com.metamx.emitter.EmittingLogger;
-
 import java.util.List;
 
 /**
- * This class just logs when scaling should occur.
+ * The AutoScalingStrategy has the actual methods to provision and terminate worker nodes.
  */
-public class NoopScalingStrategy implements ScalingStrategy<String>
+public interface AutoScalingStrategy<T>
 {
-  private static final EmittingLogger log = new EmittingLogger(NoopScalingStrategy.class);
+  public AutoScalingData<T> provision();
 
-  @Override
-  public AutoScalingData<String> provision()
-  {
-    log.info("If I were a real strategy I'd create something now");
-    return null;
-  }
+  public AutoScalingData<T> terminate(List<String> ids);
 
-  @Override
-  public AutoScalingData<String> terminate(List<String> nodeIds)
-  {
-    log.info("If I were a real strategy I'd terminate %s now", nodeIds);
-    return null;
-  }
-
-  @Override
-  public List<String> ipLookup(List<String> ips)
-  {
-    log.info("I'm not a real strategy so I'm returning what I got %s", ips);
-    return ips;
-  }
+  /**
+   * Provides a lookup of ip addresses to node ids
+   * @param ips - nodes ips
+   * @return node ids
+   */
+  public List<String> ipToIdLookup(List<String> ips);
 }

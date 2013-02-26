@@ -19,20 +19,27 @@
 
 package com.metamx.druid.merger.coordinator.scaling;
 
-import java.util.List;
+import org.joda.time.Duration;
+import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
-public interface ScalingStrategy<T>
+public abstract class SimpleResourceManagmentConfig
 {
-  public AutoScalingData<T> provision();
+  @Config("druid.indexer.maxWorkerIdleTimeMillisBeforeDeletion")
+  @Default("600000")
+  public abstract int getMaxWorkerIdleTimeMillisBeforeDeletion();
 
-  public AutoScalingData<T> terminate(List<String> ids);
+  @Config("druid.indexer.maxScalingDuration")
+  @Default("PT15M")
+  public abstract Duration getMaxScalingDuration();
 
-  /**
-   * Provides a lookup of ip addresses to node ids
-   * @param ips
-   * @return
-   */
-  public List<String> ipLookup(List<String> ips);
+  @Config("druid.indexer.numEventsToTrack")
+  @Default("50")
+  public abstract int getNumEventsToTrack();
+
+  @Config("druid.indexer.maxPendingTaskDuration")
+  @Default("PT30S")
+  public abstract Duration getMaxPendingTaskDuration();
 }

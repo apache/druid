@@ -75,7 +75,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   public boolean accept(String dimVal)
   {
     for (String value : values) {
-      if (!dimVal.toLowerCase().contains(value)) {
+      if (dimVal == null || !dimVal.toLowerCase().contains(value)) {
         return false;
       }
     }
