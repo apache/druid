@@ -34,7 +34,7 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
   private static final Logger log = new Logger(MMappedQueryableIndexFactory.class);
 
   @Override
-  public QueryableIndex factorize(File parentDir) throws StorageAdapterLoadingException
+  public QueryableIndex factorize(File parentDir) throws SegmentLoadingException
   {
     try {
       if (! IndexIO.canBeMapped(parentDir)) {
@@ -46,11 +46,11 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
 
         IndexIO.storeLatest(IndexIO.readIndex(parentDir), canBeMappedDir);
         if (! IndexIO.canBeMapped(canBeMappedDir)) {
-          throw new StorageAdapterLoadingException("WTF!? newly written file[%s] cannot be mapped!?", canBeMappedDir);
+          throw new SegmentLoadingException("WTF!? newly written file[%s] cannot be mapped!?", canBeMappedDir);
         }
         for (File file : canBeMappedDir.listFiles()) {
           if (! file.renameTo(new File(parentDir, file.getName()))) {
-            throw new StorageAdapterLoadingException("Couldn't rename[%s] to [%s]", canBeMappedDir, parentDir);
+            throw new SegmentLoadingException("Couldn't rename[%s] to [%s]", canBeMappedDir, parentDir);
           }
         }
         FileUtils.deleteDirectory(canBeMappedDir);
@@ -66,7 +66,7 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
       catch (IOException e2) {
         log.error(e, "Problem deleting parentDir[%s]", parentDir);
       }
-      throw new StorageAdapterLoadingException(e, e.getMessage());
+      throw new SegmentLoadingException(e, "%s", e.getMessage());
     }
   }
 }

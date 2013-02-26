@@ -21,25 +21,26 @@ package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.input.InputRow;
+import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.actions.LockListAction;
+import com.metamx.druid.merger.common.actions.SegmentInsertAction;
 import com.metamx.druid.merger.common.index.YeOldePlumberSchool;
-import com.metamx.druid.merger.coordinator.TaskContext;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.realtime.Sink;
-
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -57,6 +58,9 @@ public class IndexGeneratorTask extends AbstractTask
   @JsonProperty
   private final Schema schema;
 
+  @JsonProperty
+  private final int rowFlushBoundary;
+
   private static final Logger log = new Logger(IndexTask.class);
 
   @JsonCreator
@@ -64,7 +68,8 @@ public class IndexGeneratorTask extends AbstractTask
       @JsonProperty("groupId") String groupId,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("schema") Schema schema
+      @JsonProperty("schema") Schema schema,
+      @JsonProperty("rowFlushBoundary") int rowFlushBoundary
   )
   {
     super(
@@ -77,22 +82,29 @@ public class IndexGeneratorTask extends AbstractTask
         ),
         groupId,
         schema.getDataSource(),
-        interval
+        Preconditions.checkNotNull(interval, "interval")
     );
 
     this.firehoseFactory = firehoseFactory;
     this.schema = schema;
+    this.rowFlushBoundary = rowFlushBoundary;
   }
 
   @Override
-  public Type getType()
+  public String getType()
   {
-    return Type.INDEX;
+    return "index_generator";
   }
 
   @Override
-  public TaskStatus run(final TaskContext context, final TaskToolbox toolbox) throws Exception
+  public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    // We should have a lock from before we started running
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction(this)));
+
+    // We know this exists
+    final Interval interval = getFixedInterval().get();
+
     // Set up temporary directory for indexing
     final File tmpDir = new File(
         String.format(
@@ -101,9 +113,9 @@ public class IndexGeneratorTask extends AbstractTask
             String.format(
                 "%s_%s_%s_%s_%s",
                 this.getDataSource(),
-                this.getInterval().getStart(),
-                this.getInterval().getEnd(),
-                context.getVersion(),
+                interval.getStart(),
+                interval.getEnd(),
+                myLock.getVersion(),
                 schema.getShardSpec().getPartitionNum()
             )
         )
@@ -111,7 +123,7 @@ public class IndexGeneratorTask extends AbstractTask
 
     // We need to track published segments.
     final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<DataSegment>();
-    final SegmentPusher wrappedSegmentPusher = new SegmentPusher()
+    final DataSegmentPusher wrappedDataSegmentPusher = new DataSegmentPusher()
     {
       @Override
       public DataSegment push(File file, DataSegment segment) throws IOException
@@ -126,11 +138,16 @@ public class IndexGeneratorTask extends AbstractTask
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
     final Firehose firehose = firehoseFactory.connect();
     final Plumber plumber = new YeOldePlumberSchool(
-        getInterval(),
-        context.getVersion(),
-        wrappedSegmentPusher,
+        interval,
+        myLock.getVersion(),
+        wrappedDataSegmentPusher,
         tmpDir
     ).findPlumber(schema, metrics);
+
+    // rowFlushBoundary for this job
+    final int myRowFlushBoundary = this.rowFlushBoundary > 0
+                                   ? rowFlushBoundary
+                                   : toolbox.getConfig().getDefaultRowFlushBoundary();
 
     try {
       while(firehose.hasMore()) {
@@ -150,7 +167,7 @@ public class IndexGeneratorTask extends AbstractTask
           int numRows = sink.add(inputRow);
           metrics.incrementProcessed();
 
-          if(numRows >= toolbox.getConfig().getRowFlushBoundary()) {
+          if(numRows >= myRowFlushBoundary) {
             plumber.persist(firehose.commit());
           }
         } else {
@@ -175,8 +192,11 @@ public class IndexGeneratorTask extends AbstractTask
         metrics.rowOutput()
     );
 
+    // Request segment pushes
+    toolbox.getTaskActionClient().submit(new SegmentInsertAction(this, ImmutableSet.copyOf(pushedSegments)));
+
     // Done
-    return TaskStatus.success(getId(), ImmutableList.copyOf(pushedSegments));
+    return TaskStatus.success(getId());
   }
 
   /**
@@ -185,7 +205,7 @@ public class IndexGeneratorTask extends AbstractTask
    * @return true or false
    */
   private boolean shouldIndex(InputRow inputRow) {
-    if(!getInterval().contains(inputRow.getTimestampFromEpoch())) {
+    if(!getFixedInterval().get().contains(inputRow.getTimestampFromEpoch())) {
       return false;
     }
 

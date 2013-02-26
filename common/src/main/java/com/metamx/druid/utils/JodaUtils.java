@@ -19,12 +19,15 @@
 
 package com.metamx.druid.utils;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.TreeSet;
@@ -61,6 +64,17 @@ public class JodaUtils
     retVal.add(currInterval);
 
     return retVal;
+  }
+
+  public static boolean overlaps(final Interval i, Iterable<Interval> intervals) {
+    return Iterables.any(intervals, new Predicate<Interval>()
+    {
+      @Override
+      public boolean apply(@Nullable Interval input)
+      {
+        return input.overlaps(i);
+      }
+    });
   }
 
   public static DateTime minDateTime(DateTime... times)

@@ -152,6 +152,8 @@ public class DruidMasterTest
         new NoopServiceEmitter(),
         scheduledExecutorFactory,
         loadManagementPeons,
+        null,
+        null,
         null
     );
   }

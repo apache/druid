@@ -22,6 +22,7 @@ package com.metamx.druid.master;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -43,9 +44,12 @@ import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.merge.ClientKillQuery;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
 import com.netflix.curator.x.discovery.ServiceProvider;
@@ -55,6 +59,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -89,6 +94,9 @@ public class DruidMaster
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ServiceProvider serviceProvider;
 
+  private final HttpClient httpClient;
+  private final HttpResponseHandler responseHandler;
+
   private final ObjectMapper jsonMapper;
 
   public DruidMaster(
@@ -102,7 +110,9 @@ public class DruidMaster
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       Map<String, LoadQueuePeon> loadManagementPeons,
-      ServiceProvider serviceProvider
+      ServiceProvider serviceProvider,
+      HttpClient httpClient,
+      HttpResponseHandler responseHandler
   )
   {
     this.config = config;
@@ -123,6 +133,8 @@ public class DruidMaster
     this.loadManagementPeons = loadManagementPeons;
 
     this.serviceProvider = serviceProvider;
+    this.httpClient = httpClient;
+    this.responseHandler = responseHandler;
   }
 
   public boolean isClusterMaster()
@@ -132,44 +144,47 @@ public class DruidMaster
 
   public Map<String, Double> getLoadStatus()
   {
-    Map<String, Integer> availableSegmentMap = Maps.newHashMap();
-
-    for (DataSegment segment : getAvailableDataSegments()) {
-      Integer count = availableSegmentMap.get(segment.getDataSource());
-      int newCount = (count == null) ? 0 : count.intValue();
-      availableSegmentMap.put(segment.getDataSource(), ++newCount);
+    // find available segments
+    Map<String, Set<DataSegment>> availableSegments = Maps.newHashMap();
+    for (DataSegment dataSegment : getAvailableDataSegments()) {
+      Set<DataSegment> segments = availableSegments.get(dataSegment.getDataSource());
+      if (segments == null) {
+        segments = Sets.newHashSet();
+        availableSegments.put(dataSegment.getDataSource(), segments);
+      }
+      segments.add(dataSegment);
     }
 
-    Map<String, Set<DataSegment>> loadedDataSources = Maps.newHashMap();
-    for (DruidServer server : serverInventoryManager.getInventory()) {
-      for (DruidDataSource dataSource : server.getDataSources()) {
-        if (!loadedDataSources.containsKey(dataSource.getName())) {
-          TreeSet<DataSegment> setToAdd = Sets.newTreeSet(DataSegment.bucketMonthComparator());
-          setToAdd.addAll(dataSource.getSegments());
-          loadedDataSources.put(dataSource.getName(), setToAdd);
-        } else {
-          loadedDataSources.get(dataSource.getName()).addAll(dataSource.getSegments());
+    // find segments currently loaded
+    Map<String, Set<DataSegment>> segmentsInCluster = Maps.newHashMap();
+    for (DruidServer druidServer : serverInventoryManager.getInventory()) {
+      for (DruidDataSource druidDataSource : druidServer.getDataSources()) {
+        Set<DataSegment> segments = segmentsInCluster.get(druidDataSource.getName());
+        if (segments == null) {
+          segments = Sets.newHashSet();
+          segmentsInCluster.put(druidDataSource.getName(), segments);
         }
+        segments.addAll(druidDataSource.getSegments());
       }
     }
 
-    Map<String, Integer> loadedSegmentMap = Maps.newHashMap();
-    for (Map.Entry<String, Set<DataSegment>> entry : loadedDataSources.entrySet()) {
-      loadedSegmentMap.put(entry.getKey(), entry.getValue().size());
-    }
-
-    Map<String, Double> retVal = Maps.newHashMap();
-
-    for (Map.Entry<String, Integer> entry : availableSegmentMap.entrySet()) {
-      String key = entry.getKey();
-      if (!loadedSegmentMap.containsKey(key) || entry.getValue().doubleValue() == 0.0) {
-        retVal.put(key, 0.0);
-      } else {
-        retVal.put(key, 100 * loadedSegmentMap.get(key).doubleValue() / entry.getValue().doubleValue());
+    // compare available segments with currently loaded
+    Map<String, Double> loadStatus = Maps.newHashMap();
+    for (Map.Entry<String, Set<DataSegment>> entry : availableSegments.entrySet()) {
+      String dataSource = entry.getKey();
+      Set<DataSegment> segmentsAvailable = entry.getValue();
+      Set<DataSegment> loadedSegments = segmentsInCluster.get(dataSource);
+      if (loadedSegments == null) {
+        loadedSegments = Sets.newHashSet();
       }
+      Set<DataSegment> unloadedSegments = Sets.difference(segmentsAvailable, loadedSegments);
+      loadStatus.put(
+          dataSource,
+          100 * ((double) (segmentsAvailable.size() - unloadedSegments.size()) / (double) segmentsAvailable.size())
+      );
     }
 
-    return retVal;
+    return loadStatus;
   }
 
   public int lookupSegmentLifetime(DataSegment segment)
@@ -331,6 +346,27 @@ public class DruidMaster
 
     if (!dropPeon.getSegmentsToDrop().contains(segment)) {
       dropPeon.dropSegment(segment, callback);
+    }
+  }
+
+  public void killSegments(ClientKillQuery killQuery)
+  {
+    try {
+      httpClient.post(
+          new URL(
+              String.format(
+                  "http://%s:%s/mmx/merger/v1/index",
+                  serviceProvider.getInstance().getAddress(),
+                  serviceProvider.getInstance().getPort()
+              )
+          )
+      )
+                .setContent("application/json", jsonMapper.writeValueAsBytes(killQuery))
+                .go(responseHandler)
+                .get();
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
     }
   }
 
@@ -593,7 +629,7 @@ public class DruidMaster
                 public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
                 {
                   // Display info about all historical servers
-                  Iterable<DruidServer> servers =FunctionalIterable
+                  Iterable<DruidServer> servers = FunctionalIterable
                       .create(serverInventoryManager.getInventory())
                       .filter(
                           new Predicate<DruidServer>()

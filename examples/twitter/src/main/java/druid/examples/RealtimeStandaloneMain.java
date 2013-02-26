@@ -12,7 +12,7 @@ import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.realtime.MetadataUpdater;
 import com.metamx.druid.realtime.MetadataUpdaterConfig;
 import com.metamx.druid.realtime.RealtimeNode;
-import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.phonebook.PhoneBook;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
 
@@ -48,10 +48,12 @@ public class RealtimeStandaloneMain
 
     rn.setPhoneBook(dummyPhoneBook);
     MetadataUpdater dummyMetadataUpdater =
-        new MetadataUpdater(new DefaultObjectMapper(),
+        new MetadataUpdater(
+            new DefaultObjectMapper(),
             Config.createFactory(Initialization.loadProperties()).build(MetadataUpdaterConfig.class),
             dummyPhoneBook,
-            null) {
+            null
+        ) {
           @Override
           public void publishSegment(DataSegment segment) throws IOException
           {
@@ -74,8 +76,8 @@ public class RealtimeStandaloneMain
     // dummyMetadataUpdater will not send updates to db because standalone demo has no db
     rn.setMetadataUpdater(dummyMetadataUpdater);
 
-    rn.setSegmentPusher(
-        new SegmentPusher()
+    rn.setDataSegmentPusher(
+        new DataSegmentPusher()
         {
           @Override
           public DataSegment push(File file, DataSegment segment) throws IOException

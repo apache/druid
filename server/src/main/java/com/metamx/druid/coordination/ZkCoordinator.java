@@ -29,7 +29,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.loading.StorageAdapterLoadingException;
+import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.phonebook.PhoneBook;
@@ -245,14 +245,14 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       }
       catch (IOException e) {
         removeSegment(segment);
-        throw new StorageAdapterLoadingException(
+        throw new SegmentLoadingException(
             "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
         );
       }
 
       yp.announce(servedSegmentsLocation, segment.getIdentifier(), segment);
     }
-    catch (StorageAdapterLoadingException e) {
+    catch (SegmentLoadingException e) {
       log.error(e, "Failed to load segment[%s]", segment);
       emitter.emit(
           new AlertEvent.Builder().build(

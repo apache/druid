@@ -62,6 +62,9 @@ public class InsensitiveContainsSearchQuerySpec implements SearchQuerySpec
   @Override
   public boolean accept(String dimVal)
   {
+    if (dimVal == null) {
+      return false;
+    }
     return dimVal.toLowerCase().contains(value);
   }
 
@@ -80,8 +83,8 @@ public class InsensitiveContainsSearchQuerySpec implements SearchQuerySpec
   public String toString()
   {
     return "InsensitiveContainsSearchQuerySpec{" +
-             "value=" + value +
-             ", sortSpec=" + sortSpec +
+           "value=" + value +
+           ", sortSpec=" + sortSpec +
            "}";
   }
 }

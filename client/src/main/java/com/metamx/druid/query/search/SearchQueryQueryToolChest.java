@@ -65,7 +65,7 @@ import java.util.Set;
 
 /**
  */
-public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchResultValue>, SearchQuery>
+public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResultValue>, SearchQuery>
 {
   private static final byte SEARCH_QUERY = 0x2;
 
@@ -261,12 +261,6 @@ public class SearchQueryQueryToolChest implements QueryToolChest<Result<SearchRe
     return new SearchThresholdAdjustingQueryRunner(
         new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, Period.months(1))
     );
-  }
-
-  @Override
-  public QueryRunner<Result<SearchResultValue>> postMergeQueryDecoration(final QueryRunner<Result<SearchResultValue>> runner)
-  {
-    return runner;
   }
 
   private static class SearchThresholdAdjustingQueryRunner implements QueryRunner<Result<SearchResultValue>>

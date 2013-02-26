@@ -19,7 +19,6 @@
 
 package com.metamx.druid.client;
 
-import com.google.common.collect.Maps;
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import com.metamx.phonebook.PhoneBook;
@@ -27,12 +26,13 @@ import com.metamx.phonebook.PhoneBookPeon;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
 public class ServerInventoryManager extends InventoryManager<DruidServer>
 {
-  private static final Map<String, Integer> removedSegments = Maps.newHashMap();
+  private static final Map<String, Integer> removedSegments = new ConcurrentHashMap<String, Integer>();
 
   public ServerInventoryManager(
       ServerInventoryManagerConfig config,

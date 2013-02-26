@@ -44,6 +44,11 @@ public class RetryPolicy
     this.retryCount = 0;
   }
 
+  public Duration getRetryDelay()
+  {
+    return currRetryDelay;
+  }
+
   public Duration getAndIncrementRetryDelay()
   {
     Duration retVal = new Duration(currRetryDelay);

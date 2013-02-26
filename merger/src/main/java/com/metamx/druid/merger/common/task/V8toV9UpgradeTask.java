@@ -3,8 +3,6 @@ package com.metamx.druid.merger.common.task;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.coordinator.TaskContext;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -25,15 +23,13 @@ public class V8toV9UpgradeTask extends AbstractTask
   }
 
   @Override
-  public Type getType()
+  public String getType()
   {
-    throw new UnsupportedOperationException("Do we really need to return a Type?");
+    return "8to9";
   }
 
   @Override
-  public TaskStatus run(
-      TaskContext context, TaskToolbox toolbox
-  ) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     throw new UnsupportedOperationException();
   }

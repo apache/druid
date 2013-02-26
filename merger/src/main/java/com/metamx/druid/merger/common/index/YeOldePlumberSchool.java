@@ -35,7 +35,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
@@ -45,11 +45,11 @@ import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.Sink;
 
 
-
-
+import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -61,7 +61,7 @@ public class YeOldePlumberSchool implements PlumberSchool
 {
   private final Interval interval;
   private final String version;
-  private final SegmentPusher segmentPusher;
+  private final DataSegmentPusher dataSegmentPusher;
   private final File tmpSegmentDir;
 
   private static final Logger log = new Logger(YeOldePlumberSchool.class);
@@ -70,13 +70,13 @@ public class YeOldePlumberSchool implements PlumberSchool
   public YeOldePlumberSchool(
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
-      @JacksonInject("segmentPusher") SegmentPusher segmentPusher,
+      @JacksonInject("segmentPusher") DataSegmentPusher dataSegmentPusher,
       @JacksonInject("tmpSegmentDir") File tmpSegmentDir
   )
   {
     this.interval = interval;
     this.version = version;
-    this.segmentPusher = segmentPusher;
+    this.dataSegmentPusher = dataSegmentPusher;
     this.tmpSegmentDir = tmpSegmentDir;
   }
 
@@ -120,12 +120,12 @@ public class YeOldePlumberSchool implements PlumberSchool
       @Override
       public void finishJob()
       {
+        // The segment we will upload
+        File fileToUpload = null;
+
         try {
           // User should have persisted everything by now.
           Preconditions.checkState(!theSink.swappable(), "All data must be persisted before fininshing the job!");
-
-          // The segment we will upload
-          final File fileToUpload;
 
           if(spilled.size() == 0) {
             throw new IllegalStateException("Nothing indexed?");
@@ -149,7 +149,7 @@ public class YeOldePlumberSchool implements PlumberSchool
                                                      .withVersion(version)
                                                      .withBinaryVersion(IndexIO.getVersionFromDir(fileToUpload));
 
-          segmentPusher.push(fileToUpload, segmentToUpload);
+          dataSegmentPusher.push(fileToUpload, segmentToUpload);
 
           log.info(
               "Uploaded segment[%s]",
@@ -159,6 +159,17 @@ public class YeOldePlumberSchool implements PlumberSchool
         } catch(Exception e) {
           log.warn(e, "Failed to merge and upload");
           throw Throwables.propagate(e);
+        }
+        finally {
+          try {
+            if (fileToUpload != null) {
+              log.info("Deleting Index File[%s]", fileToUpload);
+              FileUtils.deleteDirectory(fileToUpload);
+            }
+          }
+          catch (IOException e) {
+            log.warn(e, "Error deleting directory[%s]", fileToUpload);
+          }
         }
       }
 

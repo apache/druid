@@ -1,27 +1,21 @@
 package com.metamx.druid.merger.coordinator;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.merger.TestTask;
+import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
-import com.metamx.druid.merger.common.task.DefaultMergeTask;
-import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
+import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
-import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
-import com.metamx.druid.merger.coordinator.scaling.ScalingStrategy;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.TaskMonitor;
@@ -34,10 +28,6 @@ import com.netflix.curator.retry.ExponentialBackoffRetry;
 import com.netflix.curator.test.TestingCluster;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.zookeeper.CreateMode;
-
-
-
-
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -48,8 +38,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -117,10 +105,12 @@ public class RemoteTaskRunnerTest
                 null,
                 null,
                 null,
-                null,
+                0,
                 0
             )
-        ), Lists.<AggregatorFactory>newArrayList()
+        ),
+        Lists.<AggregatorFactory>newArrayList(),
+        TaskStatus.success("task1")
     );
 
     makeRemoteTaskRunner();
@@ -140,36 +130,28 @@ public class RemoteTaskRunnerTest
   {
     remoteTaskRunner.run(
         task1,
-        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
         null
     );
   }
 
   @Test
-  public void testAlreadyExecutedTask() throws Exception
+  public void testExceptionThrownWithExistingTask() throws Exception
   {
-    final CountDownLatch latch = new CountDownLatch(1);
     remoteTaskRunner.run(
-        new TestTask(task1){
-          @Override
-          public TaskStatus run(
-              TaskContext context, TaskToolbox toolbox
-          ) throws Exception
-          {
-            latch.await();
-            return super.run(context, toolbox);
-          }
-        },
-        new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
+        new TestTask(
+            task1.getId(),
+            task1.getDataSource(),
+            task1.getSegments(),
+            Lists.<AggregatorFactory>newArrayList(),
+            TaskStatus.running(task1.getId())
+        ),
         null
     );
     try {
-      remoteTaskRunner.run(task1, new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()), null);
-      latch.countDown();
+      remoteTaskRunner.run(task1, null);
       fail("ISE expected");
     }
     catch (ISE expected) {
-      latch.countDown();
     }
   }
 
@@ -191,12 +173,13 @@ public class RemoteTaskRunnerTest
                       null,
                       null,
                       null,
-                      null,
+                      0,
                       0
                   )
-              ), Lists.<AggregatorFactory>newArrayList()
+              ),
+              Lists.<AggregatorFactory>newArrayList(),
+              TaskStatus.success("foo")
           ),
-          new TaskContext(new DateTime().toString(), Sets.<DataSegment>newHashSet()),
           null
       );
     }
@@ -207,27 +190,17 @@ public class RemoteTaskRunnerTest
   }
 
   @Test
-  public void testRunWithExistingCompletedTask() throws Exception
+  public void testRunWithCallback() throws Exception
   {
-    cf.create().creatingParentsIfNeeded().forPath(
-        String.format("%s/worker1/task1", statusPath),
-        jsonMapper.writeValueAsBytes(
-            TaskStatus.success(
-                "task1",
-                Lists.<DataSegment>newArrayList()
-            )
-        )
-    );
-
-    // Really don't like this way of waiting for the task to appear
-    while (remoteTaskRunner.getNumWorkers() == 0) {
-      Thread.sleep(500);
-    }
-
     final MutableBoolean callbackCalled = new MutableBoolean(false);
     remoteTaskRunner.run(
-        task1,
-        null,
+        new TestTask(
+            task1.getId(),
+            task1.getDataSource(),
+            task1.getSegments(),
+            Lists.<AggregatorFactory>newArrayList(),
+            TaskStatus.running(task1.getId())
+        ),
         new TaskCallback()
         {
           @Override
@@ -237,6 +210,34 @@ public class RemoteTaskRunnerTest
           }
         }
     );
+
+    // Really don't like this way of waiting for the task to appear
+    int count = 0;
+    while (remoteTaskRunner.findWorkerRunningTask(task1.getId()) == null) {
+      Thread.sleep(500);
+      if (count > 10) {
+        throw new ISE("WTF?! Task still not announced in ZK?");
+      }
+      count++;
+    }
+
+    Assert.assertTrue(remoteTaskRunner.getRunningTasks().size() == 1);
+
+    // Complete the task
+    cf.setData().forPath(
+        String.format("%s/worker1/task1", statusPath),
+        jsonMapper.writeValueAsBytes(TaskStatus.success(task1.getId()))
+    );
+
+    // Really don't like this way of waiting for the task to disappear
+    count = 0;
+    while (remoteTaskRunner.findWorkerRunningTask(task1.getId()) != null) {
+      Thread.sleep(500);
+      if (count > 10) {
+        throw new ISE("WTF?! Task still exists in ZK?");
+      }
+      count++;
+    }
 
     Assert.assertTrue("TaskCallback was not called!", callbackCalled.booleanValue());
   }
@@ -281,38 +282,8 @@ public class RemoteTaskRunnerTest
         cf,
         workerCuratorCoordinator,
         new TaskToolbox(
-            new IndexerCoordinatorConfig()
+            new TaskConfig()
             {
-              @Override
-              public String getServerName()
-              {
-                return "worker1";
-              }
-
-              @Override
-              public String getLeaderLatchPath()
-              {
-                return null;
-              }
-
-              @Override
-              public int getNumLocalThreads()
-              {
-                return 1;
-              }
-
-              @Override
-              public String getRunnerImpl()
-              {
-                return null;
-              }
-
-              @Override
-              public String getStorageImpl()
-              {
-                return null;
-              }
-
               @Override
               public File getBaseTaskDir()
               {
@@ -325,30 +296,11 @@ public class RemoteTaskRunnerTest
               }
 
               @Override
-              public boolean isWhitelistEnabled()
-              {
-                return false;
-              }
-
-              @Override
-              public String getWhitelistDatasourcesString()
-              {
-                return null;
-              }
-
-              @Override
-              public long getRowFlushBoundary()
+              public int getDefaultRowFlushBoundary()
               {
                 return 0;
               }
-
-
-              @Override
-              public String getStrategyImpl()
-              {
-                return null;
-              }
-            }, null, null, null, jsonMapper
+            }, null, null, null, null, null, jsonMapper
         ),
         Executors.newSingleThreadExecutor()
     );
@@ -368,7 +320,7 @@ public class RemoteTaskRunnerTest
             null,
             null
         )
-    );
+    ).atLeastOnce();
     EasyMock.replay(workerSetupManager);
 
     remoteTaskRunner = new RemoteTaskRunner(
@@ -378,7 +330,6 @@ public class RemoteTaskRunnerTest
         pathChildrenCache,
         scheduledExec,
         new RetryPolicyFactory(new TestRetryPolicyConfig()),
-        new TestScalingStrategy(),
         workerSetupManager
     );
 
@@ -388,8 +339,13 @@ public class RemoteTaskRunnerTest
         String.format("%s/worker1", announcementsPath),
         jsonMapper.writeValueAsBytes(worker1)
     );
-    while (remoteTaskRunner.getNumWorkers() == 0) {
-      Thread.sleep(50);
+    int count = 0;
+    while (remoteTaskRunner.getWorkers().size() == 0) {
+      Thread.sleep(500);
+      if (count > 10) {
+        throw new ISE("WTF?! Still can't find worker!");
+      }
+      count++;
     }
   }
 
@@ -414,53 +370,8 @@ public class RemoteTaskRunnerTest
     }
   }
 
-  private static class TestScalingStrategy<T> implements ScalingStrategy<T>
-  {
-    @Override
-    public AutoScalingData provision()
-    {
-      return null;
-    }
-
-    @Override
-    public AutoScalingData terminate(List<String> nodeIds)
-    {
-      return null;
-    }
-
-    @Override
-    public List<String> ipLookup(List<String> ips)
-    {
-      return ips;
-    }
-  }
-
   private static class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   {
-    @Override
-    public Duration getTerminateResourcesDuration()
-    {
-      return null;
-    }
-
-    @Override
-    public DateTime getTerminateResourcesOriginDateTime()
-    {
-      return null;
-    }
-
-    @Override
-    public int getMaxWorkerIdleTimeMillisBeforeDeletion()
-    {
-      return 0;
-    }
-
-    @Override
-    public Duration getMaxScalingDuration()
-    {
-      return null;
-    }
-
     @Override
     public String getAnnouncementPath()
     {
@@ -489,55 +400,6 @@ public class RemoteTaskRunnerTest
     public long getMaxNumBytes()
     {
       return 1000;
-    }
-  }
-
-  @JsonTypeName("test")
-  private static class TestTask extends DefaultMergeTask
-  {
-    private final String id;
-    private final String dataSource;
-    private final List<DataSegment> segments;
-    private final List<AggregatorFactory> aggregators;
-
-    @JsonCreator
-    public TestTask(
-        @JsonProperty("id") String id,
-        @JsonProperty("dataSource") String dataSource,
-        @JsonProperty("segments") List<DataSegment> segments,
-        @JsonProperty("aggregations") List<AggregatorFactory> aggregators
-    )
-    {
-      super(dataSource, segments, aggregators);
-
-      this.id = id;
-      this.dataSource = dataSource;
-      this.segments = segments;
-      this.aggregators = aggregators;
-    }
-
-    public TestTask(TestTask task)
-    {
-      this(task.id, task.dataSource, task.segments, task.aggregators);
-    }
-
-    @Override
-    @JsonProperty
-    public String getId()
-    {
-      return id;
-    }
-
-    @Override
-    public Type getType()
-    {
-      return Type.TEST;
-    }
-
-    @Override
-    public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
-    {
-      return TaskStatus.success("task1", Lists.<DataSegment>newArrayList());
     }
   }
 }
