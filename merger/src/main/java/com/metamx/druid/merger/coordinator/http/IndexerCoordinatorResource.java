@@ -21,6 +21,7 @@ package com.metamx.druid.merger.coordinator.http;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
@@ -176,6 +177,9 @@ public class IndexerCoordinatorResource
   public <T> Response doAction(final TaskAction<T> action)
   {
     final T ret = taskMasterLifecycle.getTaskToolbox().getTaskActionClient().submit(action);
-    return Response.ok().entity(ret).build();
+    final Map<String, Object> retMap = Maps.newHashMap();
+    retMap.put("result", ret);
+
+    return Response.ok().entity(retMap).build();
   }
 }

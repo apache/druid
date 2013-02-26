@@ -35,6 +35,7 @@ import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentPusher;
@@ -64,6 +65,8 @@ import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
+import com.netflix.curator.x.discovery.ServiceDiscovery;
+import com.netflix.curator.x.discovery.ServiceProvider;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
@@ -105,6 +108,8 @@ public class WorkerNode extends RegisteringNode
   private WorkerConfig workerConfig = null;
   private TaskToolbox taskToolbox = null;
   private CuratorFramework curatorFramework = null;
+  private ServiceDiscovery serviceDiscovery = null;
+  private ServiceProvider coordinatorServiceProvider = null;
   private WorkerCuratorCoordinator workerCuratorCoordinator = null;
   private TaskMonitor taskMonitor = null;
   private Server server = null;
@@ -156,6 +161,18 @@ public class WorkerNode extends RegisteringNode
     return this;
   }
 
+  public WorkerNode setCoordinatorServiceProvider(ServiceProvider coordinatorServiceProvider)
+  {
+    this.coordinatorServiceProvider = coordinatorServiceProvider;
+    return this;
+  }
+
+  public WorkerNode setServiceDiscovery(ServiceDiscovery serviceDiscovery)
+  {
+    this.serviceDiscovery = serviceDiscovery;
+    return this;
+  }
+
   public WorkerNode setWorkerCuratorCoordinator(WorkerCuratorCoordinator workerCuratorCoordinator)
   {
     this.workerCuratorCoordinator = workerCuratorCoordinator;
@@ -175,10 +192,12 @@ public class WorkerNode extends RegisteringNode
     initializeS3Service();
     initializeMonitors();
     initializeMergerConfig();
+    initializeCuratorFramework();
+    initializeServiceDiscovery();
+    initializeCoordinatorServiceProvider();
     initializeTaskToolbox();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
-    initializeCuratorFramework();
     initializeCuratorCoordinator();
     initializeTaskMonitor();
     initializeServer();
@@ -328,7 +347,7 @@ public class WorkerNode extends RegisteringNode
       );
       taskToolbox = new TaskToolbox(
           taskConfig,
-          new RemoteTaskActionClient(httpClient, jsonMapper),
+          new RemoteTaskActionClient(httpClient, coordinatorServiceProvider, jsonMapper),
           emitter,
           s3Service,
           dataSegmentPusher,
@@ -340,11 +359,36 @@ public class WorkerNode extends RegisteringNode
 
   public void initializeCuratorFramework() throws IOException
   {
-    final CuratorConfig curatorConfig = configFactory.build(CuratorConfig.class);
-    curatorFramework = Initialization.makeCuratorFrameworkClient(
-        curatorConfig,
-        lifecycle
-    );
+    if (curatorFramework == null) {
+      final CuratorConfig curatorConfig = configFactory.build(CuratorConfig.class);
+      curatorFramework = Initialization.makeCuratorFrameworkClient(
+          curatorConfig,
+          lifecycle
+      );
+    }
+  }
+
+  public void initializeServiceDiscovery() throws Exception
+  {
+    if (serviceDiscovery == null) {
+      final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
+      this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
+          curatorFramework,
+          config,
+          lifecycle
+      );
+    }
+  }
+
+  public void initializeCoordinatorServiceProvider()
+  {
+    if (coordinatorServiceProvider == null) {
+      this.coordinatorServiceProvider = Initialization.makeServiceProvider(
+          workerConfig.getMasterService(),
+          serviceDiscovery,
+          lifecycle
+      );
+    }
   }
 
   public void initializeCuratorCoordinator()
