@@ -13,7 +13,7 @@ public abstract class TaskConfig
 
   @Config("druid.merger.rowFlushBoundary")
   @Default("500000")
-  public abstract long getRowFlushBoundary();
+  public abstract int getDefaultRowFlushBoundary();
 
   public File getTaskDir(final Task task) {
     return new File(getBaseTaskDir(), task.getId());

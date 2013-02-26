@@ -58,6 +58,9 @@ public class IndexGeneratorTask extends AbstractTask
   @JsonProperty
   private final Schema schema;
 
+  @JsonProperty
+  private final int rowFlushBoundary;
+
   private static final Logger log = new Logger(IndexTask.class);
 
   @JsonCreator
@@ -65,7 +68,8 @@ public class IndexGeneratorTask extends AbstractTask
       @JsonProperty("groupId") String groupId,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("schema") Schema schema
+      @JsonProperty("schema") Schema schema,
+      @JsonProperty("rowFlushBoundary") int rowFlushBoundary
   )
   {
     super(
@@ -83,6 +87,7 @@ public class IndexGeneratorTask extends AbstractTask
 
     this.firehoseFactory = firehoseFactory;
     this.schema = schema;
+    this.rowFlushBoundary = rowFlushBoundary;
   }
 
   @Override
@@ -139,6 +144,11 @@ public class IndexGeneratorTask extends AbstractTask
         tmpDir
     ).findPlumber(schema, metrics);
 
+    // rowFlushBoundary for this job
+    final int myRowFlushBoundary = this.rowFlushBoundary > 0
+                                   ? rowFlushBoundary
+                                   : toolbox.getConfig().getDefaultRowFlushBoundary();
+
     try {
       while(firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
@@ -157,7 +167,7 @@ public class IndexGeneratorTask extends AbstractTask
           int numRows = sink.add(inputRow);
           metrics.incrementProcessed();
 
-          if(numRows >= toolbox.getConfig().getRowFlushBoundary()) {
+          if(numRows >= myRowFlushBoundary) {
             plumber.persist(firehose.commit());
           }
         } else {

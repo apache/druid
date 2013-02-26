@@ -106,7 +106,7 @@ public class TaskLifecycleTest
           }
 
           @Override
-          public long getRowFlushBoundary()
+          public int getDefaultRowFlushBoundary()
           {
             return 50000;
           }
@@ -182,7 +182,8 @@ public class TaskLifecycleTest
                 IR("2010-01-02T01", "a", "b", 2),
                 IR("2010-01-02T01", "a", "c", 1)
             )
-        )
+        ),
+        -1
     );
 
     final TaskStatus mergedStatus = runTask(indexTask);
@@ -216,7 +217,8 @@ public class TaskLifecycleTest
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
         10000,
-        newMockExceptionalFirehoseFactory()
+        newMockExceptionalFirehoseFactory(),
+        -1
     );
 
     final TaskStatus mergedStatus = runTask(indexTask);

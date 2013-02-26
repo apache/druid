@@ -26,7 +26,8 @@ public class TaskSerdeTest
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
         10000,
-        null
+        null,
+        -1
     );
 
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
@@ -52,7 +53,8 @@ public class TaskSerdeTest
             new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
             QueryGranularity.NONE,
             new NoneShardSpec()
-        )
+        ),
+        -1
     );
 
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
@@ -97,6 +99,7 @@ public class TaskSerdeTest
 
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
+    System.out.println(json);
     final Task task2 = jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals(task.getId(), task2.getId());

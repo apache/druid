@@ -42,11 +42,23 @@ import java.util.List;
 
 public class IndexTask extends AbstractTask
 {
-  @JsonProperty private final GranularitySpec granularitySpec;
-  @JsonProperty private final AggregatorFactory[] aggregators;
-  @JsonProperty private final QueryGranularity indexGranularity;
-  @JsonProperty private final long targetPartitionSize;
-  @JsonProperty private final FirehoseFactory firehoseFactory;
+  @JsonProperty
+  private final GranularitySpec granularitySpec;
+
+  @JsonProperty
+  private final AggregatorFactory[] aggregators;
+
+  @JsonProperty
+  private final QueryGranularity indexGranularity;
+
+  @JsonProperty
+  private final long targetPartitionSize;
+
+  @JsonProperty
+  private final FirehoseFactory firehoseFactory;
+
+  @JsonProperty
+  private final int rowFlushBoundary;
 
   private static final Logger log = new Logger(IndexTask.class);
 
@@ -57,7 +69,8 @@ public class IndexTask extends AbstractTask
       @JsonProperty("aggregators") AggregatorFactory[] aggregators,
       @JsonProperty("indexGranularity") QueryGranularity indexGranularity,
       @JsonProperty("targetPartitionSize") long targetPartitionSize,
-      @JsonProperty("firehose") FirehoseFactory firehoseFactory
+      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
+      @JsonProperty("rowFlushBoundary") int rowFlushBoundary
   )
   {
     super(
@@ -75,6 +88,7 @@ public class IndexTask extends AbstractTask
     this.indexGranularity = indexGranularity;
     this.targetPartitionSize = targetPartitionSize;
     this.firehoseFactory = firehoseFactory;
+    this.rowFlushBoundary = rowFlushBoundary;
   }
 
   public List<Task> toSubtasks()
@@ -95,7 +109,8 @@ public class IndexTask extends AbstractTask
                     indexGranularity,
                     new NoneShardSpec()
                 ),
-                targetPartitionSize
+                targetPartitionSize,
+                rowFlushBoundary
             )
         );
       } else {
@@ -110,7 +125,8 @@ public class IndexTask extends AbstractTask
                     aggregators,
                     indexGranularity,
                     new NoneShardSpec()
-                )
+                ),
+                rowFlushBoundary
             )
         );
       }
