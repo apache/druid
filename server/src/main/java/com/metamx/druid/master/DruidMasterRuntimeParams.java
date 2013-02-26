@@ -26,6 +26,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.emitter.service.ServiceEmitter;
+import org.joda.time.DateTime;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -49,6 +50,8 @@ public class DruidMasterRuntimeParams
   private final MasterStats stats;
   private final long mergeBytesLimit;
   private final int mergeSegmentsLimit;
+  private final int maxSegmentsToMove;
+  private final DateTime balancerReferenceTimestamp;
 
   public DruidMasterRuntimeParams(
       long startTime,
@@ -63,7 +66,9 @@ public class DruidMasterRuntimeParams
       long millisToWaitBeforeDeleting,
       MasterStats stats,
       long mergeBytesLimit,
-      int mergeSegmentsLimit
+      int mergeSegmentsLimit,
+      int maxSegmentsToMove,
+      DateTime balancerReferenceTimestamp
   )
   {
     this.startTime = startTime;
@@ -79,6 +84,8 @@ public class DruidMasterRuntimeParams
     this.stats = stats;
     this.mergeBytesLimit = mergeBytesLimit;
     this.mergeSegmentsLimit = mergeSegmentsLimit;
+    this.maxSegmentsToMove = maxSegmentsToMove;
+    this.balancerReferenceTimestamp = balancerReferenceTimestamp;
   }
 
   public long getStartTime()
@@ -146,6 +153,21 @@ public class DruidMasterRuntimeParams
     return mergeSegmentsLimit;
   }
 
+  public int getMaxSegmentsToMove()
+  {
+    return maxSegmentsToMove;
+  }
+
+  public DateTime getBalancerReferenceTimestamp()
+  {
+    return balancerReferenceTimestamp;
+  }
+
+  public BalancerCostAnalyzer getBalancerCostAnalyzer(DateTime referenceTimestamp)
+  {
+    return new BalancerCostAnalyzer(referenceTimestamp);
+  }
+
   public boolean hasDeletionWaitTimeElapsed()
   {
     return (System.currentTimeMillis() - getStartTime() > getMillisToWaitBeforeDeleting());
@@ -171,7 +193,9 @@ public class DruidMasterRuntimeParams
         millisToWaitBeforeDeleting,
         stats,
         mergeBytesLimit,
-        mergeSegmentsLimit
+        mergeSegmentsLimit,
+        maxSegmentsToMove,
+        balancerReferenceTimestamp
     );
   }
 
@@ -190,6 +214,8 @@ public class DruidMasterRuntimeParams
     private MasterStats stats;
     private long mergeBytesLimit;
     private int mergeSegmentsLimit;
+    private int maxSegmentsToMove;
+    private DateTime balancerReferenceTimestamp;
 
     Builder()
     {
@@ -206,6 +232,8 @@ public class DruidMasterRuntimeParams
       this.stats = new MasterStats();
       this.mergeBytesLimit = 0;
       this.mergeSegmentsLimit = 0;
+      this.maxSegmentsToMove = 0;
+      this.balancerReferenceTimestamp = null;
     }
 
     Builder(
@@ -221,7 +249,9 @@ public class DruidMasterRuntimeParams
         long millisToWaitBeforeDeleting,
         MasterStats stats,
         long mergeBytesLimit,
-        int mergeSegmentsLimit
+        int mergeSegmentsLimit,
+        int maxSegmentsToMove,
+        DateTime balancerReferenceTimestamp
     )
     {
       this.startTime = startTime;
@@ -237,6 +267,8 @@ public class DruidMasterRuntimeParams
       this.stats = stats;
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
+      this.maxSegmentsToMove = maxSegmentsToMove;
+      this.balancerReferenceTimestamp = balancerReferenceTimestamp;
     }
 
     public DruidMasterRuntimeParams build()
@@ -254,7 +286,9 @@ public class DruidMasterRuntimeParams
           millisToWaitBeforeDeleting,
           stats,
           mergeBytesLimit,
-          mergeSegmentsLimit
+          mergeSegmentsLimit,
+          maxSegmentsToMove,
+          balancerReferenceTimestamp
       );
     }
 
@@ -333,6 +367,18 @@ public class DruidMasterRuntimeParams
     public Builder withMergeSegmentsLimit(int mergeSegmentsLimit)
     {
       this.mergeSegmentsLimit = mergeSegmentsLimit;
+      return this;
+    }
+
+    public Builder withMaxSegmentsToMove(int maxSegmentsToMove)
+    {
+      this.maxSegmentsToMove = maxSegmentsToMove;
+      return this;
+    }
+
+    public Builder withBalancerReferenceTimestamp(DateTime balancerReferenceTimestamp)
+    {
+      this.balancerReferenceTimestamp = balancerReferenceTimestamp;
       return this;
     }
   }
