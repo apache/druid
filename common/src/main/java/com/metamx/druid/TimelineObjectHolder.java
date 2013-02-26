@@ -24,7 +24,7 @@ import org.joda.time.Interval;
 
 /**
 */
-public class TimelineObjectHolder<VersionType, ObjectType>
+public class TimelineObjectHolder<VersionType, ObjectType> implements LogicalSegment
 {
   private final Interval interval;
   private final VersionType version;
@@ -41,6 +41,7 @@ public class TimelineObjectHolder<VersionType, ObjectType>
     this.object = object;
   }
 
+  @Override
   public Interval getInterval()
   {
     return interval;

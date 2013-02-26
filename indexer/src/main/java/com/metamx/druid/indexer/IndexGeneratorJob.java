@@ -379,7 +379,8 @@ public class IndexGeneratorJob implements Jobby
         );
       } else if (outputFS instanceof LocalFileSystem) {
         loadSpec = ImmutableMap.<String, Object>of(
-            "type", "test"
+            "type", "local",
+            "path", indexOutURI.getPath()
         );
       } else {
         throw new ISE("Unknown file system[%s]", outputFS.getClass());

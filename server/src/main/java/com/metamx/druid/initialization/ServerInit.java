@@ -26,16 +26,16 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.DruidProcessingConfig;
 import com.metamx.druid.loading.DelegatingSegmentLoader;
+import com.metamx.druid.loading.LocalDataSegmentPuller;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
 import com.metamx.druid.loading.QueryableIndexFactory;
-import com.metamx.druid.loading.S3SegmentPuller;
+import com.metamx.druid.loading.S3DataSegmentPuller;
+import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SingleSegmentLoader;
 import com.metamx.druid.query.group.GroupByQueryEngine;
 import com.metamx.druid.query.group.GroupByQueryEngineConfig;
 import com.metamx.druid.Query;
 import com.metamx.druid.collect.StupidPool;
-import com.metamx.druid.loading.QueryableLoaderConfig;
-import com.metamx.druid.loading.S3ZippedSegmentPuller;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
@@ -64,24 +64,22 @@ public class ServerInit
 
   public static SegmentLoader makeDefaultQueryableLoader(
       RestS3Service s3Client,
-      QueryableLoaderConfig config
+      SegmentLoaderConfig config
   )
   {
     DelegatingSegmentLoader delegateLoader = new DelegatingSegmentLoader();
 
-    final S3SegmentPuller segmentGetter = new S3SegmentPuller(s3Client, config);
-    final S3ZippedSegmentPuller zippedGetter = new S3ZippedSegmentPuller(s3Client, config);
-    final QueryableIndexFactory factory;
-    if ("mmap".equals(config.getQueryableFactoryType())) {
-      factory = new MMappedQueryableIndexFactory();
-    } else {
-      throw new ISE("Unknown queryableFactoryType[%s]", config.getQueryableFactoryType());
-    }
+    final S3DataSegmentPuller segmentGetter = new S3DataSegmentPuller(s3Client);
+    final QueryableIndexFactory factory = new MMappedQueryableIndexFactory();
+
+    SingleSegmentLoader s3segmentLoader = new SingleSegmentLoader(segmentGetter, factory, config);
+    SingleSegmentLoader localSegmentLoader = new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config);
 
     delegateLoader.setLoaderTypes(
         ImmutableMap.<String, SegmentLoader>builder()
-                    .put("s3", new SingleSegmentLoader(segmentGetter, factory))
-                    .put("s3_zip", new SingleSegmentLoader(zippedGetter, factory))
+                    .put("s3", s3segmentLoader)
+                    .put("s3_zip", s3segmentLoader)
+                    .put("local", localSegmentLoader)
                     .build()
     );
 

@@ -31,7 +31,6 @@ import com.metamx.common.Pair;
 import com.metamx.common.guava.ConcatSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.Capabilities;
 import com.metamx.druid.Druids;
 import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
@@ -39,12 +38,9 @@ import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.Segment;
-import com.metamx.druid.index.brita.Filter;
 import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.index.v1.SegmentIdAttachedStorageAdapter;
-import com.metamx.druid.index.v1.processing.Cursor;
 import com.metamx.druid.loading.SegmentLoader;
-import com.metamx.druid.loading.StorageAdapterLoadingException;
+import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.metrics.NoopServiceEmitter;
 import com.metamx.druid.query.CacheStrategy;
 import com.metamx.druid.query.ConcatQueryRunner;
@@ -54,7 +50,6 @@ import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
-import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
@@ -62,7 +57,6 @@ import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -72,7 +66,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -101,7 +94,7 @@ public class ServerManagerTest
           }
 
           @Override
-          public void cleanup(DataSegment segment) throws StorageAdapterLoadingException
+          public void cleanup(DataSegment segment) throws SegmentLoadingException
           {
 
           }
@@ -245,7 +238,7 @@ public class ServerManagerTest
           )
       );
     }
-    catch (StorageAdapterLoadingException e) {
+    catch (SegmentLoadingException e) {
       throw new RuntimeException(e);
     }
   }
@@ -267,7 +260,7 @@ public class ServerManagerTest
           )
       );
     }
-    catch (StorageAdapterLoadingException e) {
+    catch (SegmentLoadingException e) {
       throw new RuntimeException(e);
     }
   }
@@ -392,7 +385,7 @@ public class ServerManagerTest
     }
   }
 
-  public static class NoopQueryToolChest<T, QueryType extends Query<T>> implements QueryToolChest<T, QueryType>
+  public static class NoopQueryToolChest<T, QueryType extends Query<T>> extends QueryToolChest<T, QueryType>
   {
     @Override
     public QueryRunner<T> mergeResults(QueryRunner<T> runner)
@@ -422,24 +415,6 @@ public class ServerManagerTest
     public TypeReference<T> getResultTypeReference()
     {
       return new TypeReference<T>(){};
-    }
-
-    @Override
-    public <Typer> CacheStrategy<T, Typer, QueryType> getCacheStrategy(QueryType query)
-    {
-      return null;
-    }
-
-    @Override
-    public QueryRunner<T> preMergeQueryDecoration(QueryRunner<T> runner)
-    {
-      return runner;
-    }
-
-    @Override
-    public QueryRunner<T> postMergeQueryDecoration(QueryRunner<T> runner)
-    {
-      return runner;
     }
   }
 }

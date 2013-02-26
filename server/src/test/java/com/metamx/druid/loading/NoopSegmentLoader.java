@@ -30,7 +30,7 @@ import org.joda.time.Interval;
 public class NoopSegmentLoader implements SegmentLoader
 {
   @Override
-  public Segment getSegment(final DataSegment segment) throws StorageAdapterLoadingException
+  public Segment getSegment(final DataSegment segment) throws SegmentLoadingException
   {
     return new Segment()
     {
@@ -61,7 +61,7 @@ public class NoopSegmentLoader implements SegmentLoader
   }
 
   @Override
-  public void cleanup(DataSegment loadSpec) throws StorageAdapterLoadingException
+  public void cleanup(DataSegment loadSpec) throws SegmentLoadingException
   {
   }
 }

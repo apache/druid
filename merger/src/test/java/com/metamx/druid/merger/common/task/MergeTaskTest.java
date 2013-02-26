@@ -19,9 +19,10 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.hash.Hashing;
 import com.metamx.druid.client.DataSegment;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -72,11 +73,12 @@ public class MergeTaskTest
   @Test
   public void testID()
   {
-    final String desiredPrefix = "merge_foo_" + DigestUtils.sha1Hex(
+    final String desiredPrefix = "merge_foo_" + Hashing.sha1().hashString(
         "2012-01-03T00:00:00.000Z_2012-01-05T00:00:00.000Z_V1_0"
         + "_2012-01-04T00:00:00.000Z_2012-01-06T00:00:00.000Z_V1_0"
         + "_2012-01-05T00:00:00.000Z_2012-01-07T00:00:00.000Z_V1_0"
-    ) + "_";
+        , Charsets.UTF_8
+    ).toString().toLowerCase() + "_";
     Assert.assertEquals(
         desiredPrefix,
         testMergeTask.getId().substring(0, desiredPrefix.length())

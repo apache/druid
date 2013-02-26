@@ -296,7 +296,7 @@ public class RemoteTaskRunnerTest
               }
 
               @Override
-              public long getRowFlushBoundary()
+              public int getDefaultRowFlushBoundary()
               {
                 return 0;
               }

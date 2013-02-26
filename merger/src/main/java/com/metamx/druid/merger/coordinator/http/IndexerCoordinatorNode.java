@@ -49,11 +49,11 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusherConfig;
 import com.metamx.druid.loading.S3SegmentKiller;
-import com.metamx.druid.loading.S3SegmentPusher;
-import com.metamx.druid.loading.S3SegmentPusherConfig;
 import com.metamx.druid.loading.SegmentKiller;
-import com.metamx.druid.loading.SegmentPusher;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.LocalTaskActionClient;
 import com.metamx.druid.merger.common.actions.TaskActionToolbox;
@@ -103,8 +103,6 @@ import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
-
-
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
@@ -467,9 +465,9 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public void initializeTaskToolbox()
   {
     if (taskToolbox == null) {
-      final SegmentPusher segmentPusher = new S3SegmentPusher(
+      final DataSegmentPusher dataSegmentPusher = new S3DataSegmentPusher(
           s3Service,
-          configFactory.build(S3SegmentPusherConfig.class),
+          configFactory.build(S3DataSegmentPusherConfig.class),
           jsonMapper
       );
       final SegmentKiller segmentKiller = new S3SegmentKiller(
@@ -483,7 +481,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
           ),
           emitter,
           s3Service,
-          segmentPusher,
+          dataSegmentPusher,
           segmentKiller,
           jsonMapper
       );

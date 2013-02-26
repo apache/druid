@@ -50,10 +50,15 @@ public class IndexDeterminePartitionsTask extends AbstractTask
 {
   @JsonProperty
   private final FirehoseFactory firehoseFactory;
+
   @JsonProperty
   private final Schema schema;
+
   @JsonProperty
   private final long targetPartitionSize;
+
+  @JsonProperty
+  private final int rowFlushBoundary;
 
   private static final Logger log = new Logger(IndexTask.class);
 
@@ -63,7 +68,8 @@ public class IndexDeterminePartitionsTask extends AbstractTask
       @JsonProperty("interval") Interval interval,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("schema") Schema schema,
-      @JsonProperty("targetPartitionSize") long targetPartitionSize
+      @JsonProperty("targetPartitionSize") long targetPartitionSize,
+      @JsonProperty("rowFlushBoundary") int rowFlushBoundary
   )
   {
     super(
@@ -81,6 +87,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
     this.firehoseFactory = firehoseFactory;
     this.schema = schema;
     this.targetPartitionSize = targetPartitionSize;
+    this.rowFlushBoundary = rowFlushBoundary;
   }
 
   @Override
@@ -244,7 +251,8 @@ public class IndexDeterminePartitionsTask extends AbstractTask
                     schema.getAggregators(),
                     schema.getIndexGranularity(),
                     shardSpec
-                )
+                ),
+                rowFlushBoundary
             );
           }
         }

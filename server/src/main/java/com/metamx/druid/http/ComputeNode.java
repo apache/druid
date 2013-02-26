@@ -39,7 +39,7 @@ import com.metamx.druid.coordination.ZkCoordinatorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.loading.QueryableLoaderConfig;
+import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.metrics.ServerMonitor;
 import com.metamx.druid.query.MetricsEmittingExecutorService;
@@ -172,7 +172,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
         );
 
         setSegmentLoader(
-            ServerInit.makeDefaultQueryableLoader(s3Client, getConfigFactory().build(QueryableLoaderConfig.class))
+            ServerInit.makeDefaultQueryableLoader(s3Client, getConfigFactory().build(SegmentLoaderConfig.class))
         );
       }
       catch (S3ServiceException e) {

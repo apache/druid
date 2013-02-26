@@ -69,18 +69,11 @@ public abstract class AbstractTask implements Task
     return dataSource;
   }
 
+  @JsonProperty("interval")
   @Override
   public Optional<Interval> getFixedInterval()
   {
     return interval;
-  }
-
-  // Awesome hack to get around lack of serde for Optional<T>
-  // TODO Look into jackson-datatype-guava
-  @JsonProperty("interval")
-  private Interval getNullableIntervalForJackson()
-  {
-    return interval.orNull();
   }
 
   @Override

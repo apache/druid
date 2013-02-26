@@ -20,9 +20,9 @@ import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.SegmentKiller;
-import com.metamx.druid.loading.SegmentPuller;
-import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
@@ -106,7 +106,7 @@ public class TaskLifecycleTest
           }
 
           @Override
-          public long getRowFlushBoundary()
+          public int getDefaultRowFlushBoundary()
           {
             return 50000;
           }
@@ -114,7 +114,7 @@ public class TaskLifecycleTest
         new LocalTaskActionClient(ts, new TaskActionToolbox(tq, tl, mdc, newMockEmitter())),
         newMockEmitter(),
         null, // s3 client
-        new SegmentPusher()
+        new DataSegmentPusher()
         {
           @Override
           public DataSegment push(File file, DataSegment segment) throws IOException
@@ -134,7 +134,9 @@ public class TaskLifecycleTest
     )
     {
       @Override
-      public Map<String, SegmentPuller> getSegmentGetters(Task task)
+      public Map<DataSegment, File> getSegments(
+          Task task, List<DataSegment> segments
+      ) throws SegmentLoadingException
       {
         return ImmutableMap.of();
       }
@@ -180,7 +182,8 @@ public class TaskLifecycleTest
                 IR("2010-01-02T01", "a", "b", 2),
                 IR("2010-01-02T01", "a", "c", 1)
             )
-        )
+        ),
+        -1
     );
 
     final TaskStatus mergedStatus = runTask(indexTask);
@@ -214,7 +217,8 @@ public class TaskLifecycleTest
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
         10000,
-        newMockExceptionalFirehoseFactory()
+        newMockExceptionalFirehoseFactory(),
+        -1
     );
 
     final TaskStatus mergedStatus = runTask(indexTask);

@@ -27,5 +27,5 @@ import java.io.File;
  */
 public interface QueryableIndexFactory
 {
-  public QueryableIndex factorize(File parentDir) throws StorageAdapterLoadingException;
+  public QueryableIndex factorize(File parentDir) throws SegmentLoadingException;
 }

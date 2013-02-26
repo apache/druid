@@ -39,6 +39,9 @@ public abstract class WorkerConfig
   @Config("druid.worker.version")
   public abstract String getVersion();
 
+  @Config("druid.worker.masterService")
+  public abstract String getMasterService();
+
   @Config("druid.worker.capacity")
   public int getCapacity()
   {
