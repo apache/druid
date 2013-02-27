@@ -44,7 +44,7 @@ import java.util.List;
 
 /**
  */
-public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
+public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
 {
   private static final EmittingLogger log = new EmittingLogger(EC2AutoScalingStrategy.class);
 
@@ -73,7 +73,6 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
       WorkerSetupData setupData = workerSetupManager.getWorkerSetupData();
       EC2NodeData workerConfig = setupData.getNodeData();
 
-      log.info("Creating new instance(s)...");
       RunInstancesResult result = amazonEC2Client.runInstances(
           new RunInstancesRequest(
               workerConfig.getAmiId(),
@@ -131,6 +130,10 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
   @Override
   public AutoScalingData<Instance> terminate(List<String> ids)
   {
+    if (ids.isEmpty()) {
+      return new AutoScalingData<Instance>(Lists.<String>newArrayList(), Lists.<Instance>newArrayList());
+    }
+
     DescribeInstancesResult result = amazonEC2Client.describeInstances(
         new DescribeInstancesRequest()
             .withFilters(
@@ -184,7 +187,7 @@ public class EC2AutoScalingStrategy implements ScalingStrategy<Instance>
   }
 
   @Override
-  public List<String> ipLookup(List<String> ips)
+  public List<String> ipToIdLookup(List<String> ips)
   {
     DescribeInstancesResult result = amazonEC2Client.describeInstances(
         new DescribeInstancesRequest()

@@ -19,10 +19,11 @@
 
 package com.metamx.druid.master.rules;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.metamx.common.Pair;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.master.BalancerCostAnalyzer;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
 import com.metamx.druid.master.LoadPeonCallback;
@@ -30,7 +31,9 @@ import com.metamx.druid.master.MasterStats;
 import com.metamx.druid.master.ReplicationThrottler;
 import com.metamx.druid.master.ServerHolder;
 import com.metamx.emitter.EmittingLogger;
+import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +59,21 @@ public abstract class LoadRule implements Rule
       return stats;
     }
 
-    stats.accumulate(assign(params.getReplicationManager(), expectedReplicants, totalReplicants, serverQueue, segment));
+    final List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(serverQueue);
+    final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
+    final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
+
+    stats.accumulate(
+        assign(
+            params.getReplicationManager(),
+            expectedReplicants,
+            totalReplicants,
+            analyzer,
+            serverHolderList,
+            segment
+        )
+    );
+
     stats.accumulate(drop(expectedReplicants, clusterReplicants, segment, params));
 
     return stats;
@@ -64,50 +81,25 @@ public abstract class LoadRule implements Rule
 
   private MasterStats assign(
       final ReplicationThrottler replicationManager,
-      int expectedReplicants,
+      final int expectedReplicants,
       int totalReplicants,
-      MinMaxPriorityQueue<ServerHolder> serverQueue,
+      final BalancerCostAnalyzer analyzer,
+      final List<ServerHolder> serverHolderList,
       final DataSegment segment
   )
   {
-    MasterStats stats = new MasterStats();
+    final MasterStats stats = new MasterStats();
 
-    List<ServerHolder> assignedServers = Lists.newArrayList();
     while (totalReplicants < expectedReplicants) {
-      final ServerHolder holder = serverQueue.pollFirst();
+      final ServerHolder holder = analyzer.findNewSegmentHome(segment, serverHolderList, true);
+
       if (holder == null) {
         log.warn(
-            "Not enough %s servers[%d] to assign segment[%s]! Expected Replicants[%d]",
+            "Not enough %s servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
             getTier(),
-            assignedServers.size() + serverQueue.size() + 1,
             segment.getIdentifier(),
             expectedReplicants
         );
-        break;
-      }
-      if (holder.isServingSegment(segment) || holder.isLoadingSegment(segment)) {
-        assignedServers.add(holder);
-        continue;
-      }
-
-      if (holder.getAvailableSize() < segment.getSize()) {
-        log.warn(
-            "Not enough node capacity, closest is [%s] with %,d available, skipping segment[%s].",
-            holder.getServer(),
-            holder.getAvailableSize(),
-            segment
-        );
-        log.makeAlert(
-            "Not enough node capacity",
-            ImmutableMap.<String, Object>builder()
-                        .put("segmentSkipped", segment.toString())
-                        .put("closestNode", holder.getServer().toString())
-                        .put("availableSize", holder.getAvailableSize())
-                        .build()
-        ).emit();
-        serverQueue.add(holder);
-        stats.addToTieredStat("unassignedCount", getTier(), 1);
-        stats.addToTieredStat("unassignedSize", getTier(), segment.getSize());
         break;
       }
 
@@ -118,7 +110,6 @@ public abstract class LoadRule implements Rule
                 segment.getIdentifier(),
                 holder.getServer().getHost()
             )) {
-          serverQueue.add(holder);
           break;
         }
       }
@@ -138,12 +129,10 @@ public abstract class LoadRule implements Rule
             }
           }
       );
-      assignedServers.add(holder);
 
       stats.addToTieredStat("assignedCount", getTier(), 1);
       ++totalReplicants;
     }
-    serverQueue.addAll(assignedServers);
 
     return stats;
   }

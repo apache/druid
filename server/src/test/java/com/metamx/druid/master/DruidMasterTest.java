@@ -125,6 +125,13 @@ public class DruidMasterTest
           }
 
           @Override
+          public int getMaxSegmentsToMove()
+          {
+            return 0;
+          }
+
+
+          @Override
           public int getReplicantLifetime()
           {
             return 0;
@@ -145,6 +152,8 @@ public class DruidMasterTest
         new NoopServiceEmitter(),
         scheduledExecutorFactory,
         loadManagementPeons,
+        null,
+        null,
         null
     );
   }

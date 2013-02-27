@@ -82,8 +82,8 @@ public class DefaultMergeTask extends MergeTask
   }
 
   @Override
-  public Type getType()
+  public String getType()
   {
-    return Task.Type.MERGE;
+    return "merge";
   }
 }

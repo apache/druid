@@ -38,8 +38,8 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
 import org.joda.time.DateTime;
+
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -65,10 +65,7 @@ public class TimeBoundaryQueryQueryToolChest
       return input;
     }
 
-    return Lists.newArrayList(
-        input.get(0),
-        input.get(input.size() - 1)
-    );
+    return Lists.newArrayList(input.get(0), input.get(input.size() - 1));
   }
 
   @Override

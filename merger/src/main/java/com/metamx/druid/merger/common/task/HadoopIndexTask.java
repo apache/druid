@@ -1,14 +1,18 @@
 package com.metamx.druid.merger.common.task;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
 import com.metamx.druid.indexer.HadoopDruidIndexerJob;
-import com.metamx.druid.loading.S3SegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusher;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.coordinator.TaskContext;
+import com.metamx.druid.merger.common.actions.LockListAction;
+import com.metamx.druid.merger.common.actions.SegmentInsertAction;
 import com.metamx.druid.utils.JodaUtils;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -35,7 +39,9 @@ public class HadoopIndexTask extends AbstractTask
    */
 
   @JsonCreator
-  public HadoopIndexTask(@JsonProperty("config") HadoopDruidIndexerConfig config)
+  public HadoopIndexTask(
+      @JsonProperty("config") HadoopDruidIndexerConfig config
+  )
   {
     super(
         String.format("index_hadoop_%s_interval_%s", config.getDataSource(), new DateTime()),
@@ -45,29 +51,31 @@ public class HadoopIndexTask extends AbstractTask
 
     if (config.isUpdaterJobSpecSet()) {
       throw new IllegalArgumentException(
-          "The UpDaterJobSpec field of the Hadoop Druid indexer config must be set to null "
+          "The UpdaterJobSpec field of the Hadoop Druid indexer config must be set to null"
       );
     }
     this.config = config;
   }
 
   @Override
-  public Type getType()
+  public String getType()
   {
-    return Type.HADOOPINDEX;
+    return "index_hadoop";
   }
 
   @Override
-  public TaskStatus run(TaskContext context, TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    log.info("Setting version to: %s", context.getVersion());
-    config.setVersion(context.getVersion());
+    // We should have a lock from before we started running
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction(this)));
+    log.info("Setting version to: %s", myLock.getVersion());
+    config.setVersion(myLock.getVersion());
 
-    if (toolbox.getSegmentPusher() instanceof S3SegmentPusher) {
-      // Hack alert! Bypassing SegmentPusher...
-      S3SegmentPusher segmentPusher = (S3SegmentPusher) toolbox.getSegmentPusher();
+    if (toolbox.getSegmentPusher() instanceof S3DataSegmentPusher) {
+      // Hack alert! Bypassing DataSegmentPusher...
+      S3DataSegmentPusher segmentPusher = (S3DataSegmentPusher) toolbox.getSegmentPusher();
       String s3Path = String.format(
-          "s3n%s/%s/%s",
+          "s3n://%s/%s/%s",
           segmentPusher.getConfig().getBucket(),
           segmentPusher.getConfig().getBaseKey(),
           getDataSource()
@@ -76,7 +84,7 @@ public class HadoopIndexTask extends AbstractTask
       log.info("Setting segment output path to: %s", s3Path);
       config.setSegmentOutputDir(s3Path);
     } else {
-      throw new IllegalStateException("Sorry, we only work with S3SegmentPushers! Bummer!");
+      throw new IllegalStateException("Sorry, we only work with S3DataSegmentPushers! Bummer!");
     }
 
     HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(config);
@@ -84,8 +92,12 @@ public class HadoopIndexTask extends AbstractTask
 
     if (job.run()) {
       List<DataSegment> publishedSegments = job.getPublishedSegments();
-      return TaskStatus.success(getId(), ImmutableList.copyOf(publishedSegments));
 
+      // Request segment pushes
+      toolbox.getTaskActionClient().submit(new SegmentInsertAction(this, ImmutableSet.copyOf(publishedSegments)));
+
+      // Done
+      return TaskStatus.success(getId());
     } else {
       return TaskStatus.failure(getId());
     }

@@ -19,40 +19,133 @@
 
 package com.metamx.druid.loading;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import com.metamx.common.StreamUtils;
+import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.QueryableIndexSegment;
 import com.metamx.druid.index.Segment;
+import org.apache.commons.io.FileUtils;
+
+import java.io.*;
 
 /**
  */
 public class SingleSegmentLoader implements SegmentLoader
 {
-  private final SegmentPuller segmentPuller;
+  private static final Logger log = new Logger(SingleSegmentLoader.class);
+
+  private final DataSegmentPuller dataSegmentPuller;
   private final QueryableIndexFactory factory;
+  private final SegmentLoaderConfig config;
+  private static final Joiner JOINER = Joiner.on("/").skipNulls();
 
   @Inject
   public SingleSegmentLoader(
-      SegmentPuller segmentPuller,
-      QueryableIndexFactory factory
+      DataSegmentPuller dataSegmentPuller,
+      QueryableIndexFactory factory,
+      SegmentLoaderConfig config
   )
   {
-    this.segmentPuller = segmentPuller;
+    this.dataSegmentPuller = dataSegmentPuller;
     this.factory = factory;
+    this.config = config;
   }
 
   @Override
-  public Segment getSegment(DataSegment segment) throws StorageAdapterLoadingException
+  public Segment getSegment(DataSegment segment) throws SegmentLoadingException
   {
-    final QueryableIndex index = factory.factorize(segmentPuller.getSegmentFiles(segment));
+    File segmentFiles = getSegmentFiles(segment);
+    final QueryableIndex index = factory.factorize(segmentFiles);
 
     return new QueryableIndexSegment(segment.getIdentifier(), index);
   }
 
-  @Override
-  public void cleanup(DataSegment segment) throws StorageAdapterLoadingException
+  public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
-    segmentPuller.cleanSegmentFiles(segment);
+    File localStorageDir = new File(config.getCacheDirectory(), DataSegmentPusherUtil.getStorageDir(segment));
+    if (localStorageDir.exists()) {
+      long localLastModified = localStorageDir.lastModified();
+      long remoteLastModified = dataSegmentPuller.getLastModified(segment);
+      if (remoteLastModified > 0 && localLastModified >= remoteLastModified) {
+        log.info(
+            "Found localStorageDir[%s] with modified[%s], which is same or after remote[%s].  Using.",
+            localStorageDir, localLastModified, remoteLastModified
+        );
+        return localStorageDir;
+      }
+    }
+
+    if (localStorageDir.exists()) {
+      try {
+        FileUtils.deleteDirectory(localStorageDir);
+      }
+      catch (IOException e) {
+        log.warn(e, "Exception deleting previously existing local dir[%s]", localStorageDir);
+      }
+    }
+    if (!localStorageDir.mkdirs()) {
+      log.info("Unable to make parent file[%s]", localStorageDir);
+    }
+
+    dataSegmentPuller.getSegmentFiles(segment, localStorageDir);
+
+    return localStorageDir;
+  }
+
+  private File getLocalStorageDir(DataSegment segment)
+  {
+    String outputKey = JOINER.join(
+        segment.getDataSource(),
+        String.format(
+            "%s_%s",
+            segment.getInterval().getStart(),
+            segment.getInterval().getEnd()
+        ),
+        segment.getVersion(),
+        segment.getShardSpec().getPartitionNum()
+    );
+
+    return new File(config.getCacheDirectory(), outputKey);
+  }
+
+  private void moveToCache(File pulledFile, File cacheFile) throws SegmentLoadingException
+  {
+    log.info("Rename pulledFile[%s] to cacheFile[%s]", pulledFile, cacheFile);
+    if (!pulledFile.renameTo(cacheFile)) {
+      log.warn("Error renaming pulledFile[%s] to cacheFile[%s].  Copying instead.", pulledFile, cacheFile);
+
+      try {
+        StreamUtils.copyToFileAndClose(new FileInputStream(pulledFile), cacheFile);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(
+            e,
+            "Problem moving pulledFile[%s] to cache[%s]",
+            pulledFile,
+            cacheFile
+        );
+      }
+      if (!pulledFile.delete()) {
+        log.error("Could not delete pulledFile[%s].", pulledFile);
+      }
+    }
+  }
+
+  @Override
+  public void cleanup(DataSegment segment) throws SegmentLoadingException
+  {
+    File cacheFile = getLocalStorageDir(segment).getParentFile();
+
+    try {
+      log.info("Deleting directory[%s]", cacheFile);
+      FileUtils.deleteDirectory(cacheFile);
+    }
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, e.getMessage());
+    }
   }
 }
