@@ -37,7 +37,8 @@ import org.joda.time.Interval;
     @JsonSubTypes.Type(name = "kill", value = KillTask.class),
     @JsonSubTypes.Type(name = "index", value = IndexTask.class),
     @JsonSubTypes.Type(name = "index_partitions", value = IndexDeterminePartitionsTask.class),
-    @JsonSubTypes.Type(name = "index_generator", value = IndexGeneratorTask.class)
+    @JsonSubTypes.Type(name = "index_generator", value = IndexGeneratorTask.class),
+    @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class)
 })
 public interface Task
 {

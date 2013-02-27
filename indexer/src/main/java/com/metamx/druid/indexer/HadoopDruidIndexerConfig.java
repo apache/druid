@@ -198,7 +198,7 @@ public class HadoopDruidIndexerConfig
       final @JsonProperty("pathSpec") PathSpec pathSpec,
       final @JsonProperty("workingPath") String jobOutputDir,
       final @JsonProperty("segmentOutputPath") String segmentOutputDir,
-      final @JsonProperty("version") DateTime version,
+      final @JsonProperty("version") String version,
       final @JsonProperty("partitionDimension") String partitionDimension,
       final @JsonProperty("targetPartitionSize") Long targetPartitionSize,
       final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
@@ -220,7 +220,7 @@ public class HadoopDruidIndexerConfig
     this.pathSpec = pathSpec;
     this.jobOutputDir = jobOutputDir;
     this.segmentOutputDir = segmentOutputDir;
-    this.version = version == null ? new DateTime().toString() : version.toString();
+    this.version = version == null ? new DateTime().toString() : version;
     this.partitionsSpec = partitionsSpec;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure;

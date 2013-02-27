@@ -300,6 +300,12 @@ public class RemoteTaskRunnerTest
               {
                 return 0;
               }
+
+              @Override
+              public String getHadoopWorkingPath()
+              {
+                return null;
+              }
             }, null, null, null, null, null, jsonMapper
         ),
         Executors.newSingleThreadExecutor()
