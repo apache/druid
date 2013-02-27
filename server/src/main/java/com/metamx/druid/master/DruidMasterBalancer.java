@@ -111,7 +111,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
       while (iter < maxSegmentsToMove) {
         iter++;
         final BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList, numSegments);
-        final ServerHolder holder = analyzer.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList);
+        final ServerHolder holder = analyzer.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList, false);
         if (holder == null) {
           continue;
         }
@@ -128,11 +128,13 @@ public class DruidMasterBalancer implements DruidMasterHelper
 
       stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
       stats.addToTieredStat("normalization", tier, (long) normalization);
+      stats.addToTieredStat("normalizedInitialCostTimesOneThousand", tier, (long) (normalizedInitialCost * 1000));
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
 
       log.info(
-          "Initial Total Cost: [%f], Initial Normalized Cost: [%f], Segments Moved: [%d]",
+          "Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f], Segments Moved: [%d]",
           initialTotalCost,
+          normalization,
           normalizedInitialCost,
           currentlyMovingSegments.get(tier).size()
       );

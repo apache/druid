@@ -91,7 +91,7 @@ public abstract class LoadRule implements Rule
     final MasterStats stats = new MasterStats();
 
     while (totalReplicants < expectedReplicants) {
-      final ServerHolder holder = analyzer.findNewSegmentHome(segment, serverHolderList);
+      final ServerHolder holder = analyzer.findNewSegmentHome(segment, serverHolderList, true);
 
       if (holder == null) {
         log.warn(

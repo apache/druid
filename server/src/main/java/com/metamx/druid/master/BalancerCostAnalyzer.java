@@ -188,19 +188,26 @@ public class BalancerCostAnalyzer
    *            A DataSegment that we are proposing to move.
    * @param     serverHolders
    *            An iterable of ServerHolders for a particular tier.
+   * @param     assign
+   *            A boolean that is true if used in assignment else false in balancing.
    * @return    A ServerHolder with the new home for a segment.
    */
-  public ServerHolder findNewSegmentHome(final DataSegment proposalSegment, final Iterable<ServerHolder> serverHolders)
+  public ServerHolder findNewSegmentHome(
+      final DataSegment proposalSegment,
+      final Iterable<ServerHolder> serverHolders,
+      final boolean assign
+  )
   {
     final long proposalSegmentSize = proposalSegment.getSize();
     double minCost = Double.MAX_VALUE;
     ServerHolder toServer = null;
 
     for (ServerHolder server : serverHolders) {
-      /** Don't calculate cost if the server doesn't have enough space or is serving/loading the segment. */
+      /** Don't calculate cost if the server doesn't have enough space or is loading the segment */
       if (proposalSegmentSize > server.getAvailableSize()
-          || server.isServingSegment(proposalSegment)
-          || server.isLoadingSegment(proposalSegment)) {
+          || server.isLoadingSegment(proposalSegment)
+          /** or if the ask is assignment and the server is serving the segment. */
+          || (assign && server.isServingSegment(proposalSegment)) ) {
         continue;
       }
 
