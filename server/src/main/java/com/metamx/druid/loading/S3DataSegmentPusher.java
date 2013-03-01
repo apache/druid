@@ -57,6 +57,11 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     this.jsonMapper = jsonMapper;
   }
 
+  public S3DataSegmentPusherConfig getConfig()
+  {
+    return config;
+  }
+
   @Override
   public DataSegment push(final File indexFilesDir, DataSegment segment) throws IOException
   {
