@@ -84,7 +84,7 @@ public class ClientInfoResource
   @Produces("application/json")
   public Map<String, Object> getDatasource(
       @PathParam("dataSourceName") String dataSourceName,
-      @QueryParam("interval") Interval interval
+      @QueryParam("interval") String interval
   )
   {
     return ImmutableMap.<String, Object>of(
@@ -98,19 +98,22 @@ public class ClientInfoResource
   @Produces("application/json")
   public Iterable<String> getDatasourceDimensions(
       @PathParam("dataSourceName") String dataSourceName,
-      @QueryParam("interval") Interval interval
+      @QueryParam("interval") String interval
   )
   {
     List<DataSegment> segments = getSegmentsForDatasources().get(dataSourceName);
 
-    if (interval == null) {
+    Interval theInterval;
+    if (interval == null || interval.isEmpty()) {
       DateTime now = new DateTime();
-      interval = new Interval(now.minusMillis(SEGMENT_HISTORY_MILLIS), now);
+      theInterval = new Interval(now.minusMillis(SEGMENT_HISTORY_MILLIS), now);
+    } else {
+      theInterval = new Interval(interval);
     }
 
     Set<String> dims = Sets.newHashSet();
     for (DataSegment segment : segments) {
-      if (interval.overlaps(segment.getInterval())) {
+      if (theInterval.overlaps(segment.getInterval())) {
         dims.addAll(segment.getDimensions());
       }
     }
@@ -123,19 +126,22 @@ public class ClientInfoResource
   @Produces("application/json")
   public Iterable<String> getDatasourceMetrics(
       @PathParam("dataSourceName") String dataSourceName,
-      @QueryParam("interval") Interval interval
+      @QueryParam("interval") String interval
   )
   {
     List<DataSegment> segments = getSegmentsForDatasources().get(dataSourceName);
 
-    if (interval == null) {
+    Interval theInterval;
+    if (interval == null || interval.isEmpty()) {
       DateTime now = new DateTime();
-      interval = new Interval(now.minusMillis(SEGMENT_HISTORY_MILLIS), now);
+      theInterval = new Interval(now.minusMillis(SEGMENT_HISTORY_MILLIS), now);
+    } else {
+      theInterval = new Interval(interval);
     }
 
     Set<String> metrics = Sets.newHashSet();
     for (DataSegment segment : segments) {
-      if (interval.overlaps(segment.getInterval())) {
+      if (theInterval.overlaps(segment.getInterval())) {
         metrics.addAll(segment.getMetrics());
       }
     }
