@@ -15,6 +15,9 @@ public abstract class TaskConfig
   @Default("500000")
   public abstract int getDefaultRowFlushBoundary();
 
+  @Config("druid.merger.hadoopWorkingPath")
+  public abstract String getHadoopWorkingPath();
+
   public File getTaskDir(final Task task) {
     return new File(getBaseTaskDir(), task.getId());
   }

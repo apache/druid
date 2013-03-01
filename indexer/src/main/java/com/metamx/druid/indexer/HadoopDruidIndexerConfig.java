@@ -175,7 +175,7 @@ public class HadoopDruidIndexerConfig
   private volatile PathSpec pathSpec;
   private volatile String jobOutputDir;
   private volatile String segmentOutputDir;
-  private volatile DateTime version = new DateTime();
+  private volatile String version = new DateTime().toString();
   private volatile PartitionsSpec partitionsSpec;
   private volatile boolean leaveIntermediate = false;
   private volatile boolean cleanupOnFailure = true;
@@ -198,7 +198,7 @@ public class HadoopDruidIndexerConfig
       final @JsonProperty("pathSpec") PathSpec pathSpec,
       final @JsonProperty("workingPath") String jobOutputDir,
       final @JsonProperty("segmentOutputPath") String segmentOutputDir,
-      final @JsonProperty("version") DateTime version,
+      final @JsonProperty("version") String version,
       final @JsonProperty("partitionDimension") String partitionDimension,
       final @JsonProperty("targetPartitionSize") Long targetPartitionSize,
       final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
@@ -220,7 +220,7 @@ public class HadoopDruidIndexerConfig
     this.pathSpec = pathSpec;
     this.jobOutputDir = jobOutputDir;
     this.segmentOutputDir = segmentOutputDir;
-    this.version = version == null ? new DateTime() : version;
+    this.version = version == null ? new DateTime().toString() : version;
     this.partitionsSpec = partitionsSpec;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure;
@@ -410,12 +410,12 @@ public class HadoopDruidIndexerConfig
   }
 
   @JsonProperty
-  public DateTime getVersion()
+  public String getVersion()
   {
     return version;
   }
 
-  public void setVersion(DateTime version)
+  public void setVersion(String version)
   {
     this.version = version;
   }
@@ -624,7 +624,7 @@ public class HadoopDruidIndexerConfig
    */
   public Path makeIntermediatePath()
   {
-    return new Path(String.format("%s/%s/%s", getJobOutputDir(), dataSource, getVersion().toString().replace(":", "")));
+    return new Path(String.format("%s/%s/%s", getJobOutputDir(), dataSource, getVersion().replace(":", "")));
   }
 
   public Path makeSegmentPartitionInfoPath(Bucket bucket)
@@ -667,7 +667,7 @@ public class HadoopDruidIndexerConfig
             dataSource,
             bucketInterval.getStart().toString(),
             bucketInterval.getEnd().toString(),
-            getVersion().toString(),
+            getVersion(),
             bucket.partitionNum
         )
     );

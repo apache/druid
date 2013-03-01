@@ -110,6 +110,12 @@ public class TaskLifecycleTest
           {
             return 50000;
           }
+
+          @Override
+          public String getHadoopWorkingPath()
+          {
+            return null;
+          }
         },
         new LocalTaskActionClient(ts, new TaskActionToolbox(tq, tl, mdc, newMockEmitter())),
         newMockEmitter(),
