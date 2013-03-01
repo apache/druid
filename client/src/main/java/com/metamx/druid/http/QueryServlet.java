@@ -150,7 +150,7 @@ public class QueryServlet extends HttpServlet
               ImmutableMap.<String, Object>builder()
                           .put("exception", e.toString())
                           .put("query", queryString)
-                          .put("host", req.getRemoteAddr())
+                          .put("peer", req.getRemoteAddr())
                           .build()
           )
       );
