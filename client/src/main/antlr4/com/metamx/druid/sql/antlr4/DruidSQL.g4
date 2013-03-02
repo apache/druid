@@ -15,6 +15,8 @@ unary minus
 import com.metamx.druid.aggregation.post.*;
 import com.metamx.druid.aggregation.*;
 import com.metamx.druid.query.filter.*;
+import com.metamx.druid.query.dimension.*;
+import com.metamx.druid.*;
 import com.google.common.base.*;
 import com.google.common.collect.Lists;
 import java.util.*;
@@ -26,6 +28,8 @@ import org.joda.time.*;
     public List<PostAggregator> postAggregators = new LinkedList<PostAggregator>();
     public DimFilter filter;
     public List<org.joda.time.Interval> intervals;
+    public QueryGranularity granularity = QueryGranularity.ALL;
+    public Map<String, DimensionSpec> groupByDimensions = new LinkedHashMap<String, DimensionSpec>();
     
     String dataSourceName = null;
     
@@ -34,7 +38,7 @@ import org.joda.time.*;
     }
     
     public String unescape(String quoted) {
-        String unquote = quoted.replaceFirst("^'(.*)'\$", "\$1");
+        String unquote = quoted.trim().replaceFirst("^'(.*)'\$", "\$1");
         return unquote.replace("''", "'");
     }
 
@@ -92,24 +96,25 @@ STAR: '*';
 PLUS: '+';
 MINUS: '-';
 DIV: '/';
+COMMA: ',';
+GROUP: 'group';
 
-IDENT : (LETTER|DIGIT)(LETTER | DIGIT | '_')* ;
+IDENT : (LETTER)(LETTER | DIGIT | '_')* ;
 QUOTED_STRING : '\'' ( ESCqs | ~'\'' )* '\'' ;
 ESCqs : '\'' '\'';
 
 fragment DIGIT : '0'..'9';
 fragment LETTER : 'a'..'z' | 'A'..'Z';
 
-INTEGER : [+-]?DIGIT+ ;
-DOUBLE: [+-]?DIGIT*\.?DIGIT+(EXPONENT)?;
+DOUBLE: DIGIT*\.?DIGIT+(EXPONENT)?;
 EXPONENT: ('e') ('+'|'-')? ('0'..'9')+;
 
-WS :  (' ' | '\t' | '\r' '\n' | '\n' | '\r')+ -> skip;
+WS :  (' '| '\t' | '\r' '\n' | '\n' | '\r')+ -> skip;
 
 
 
 query
-    : select_stmt where_stmt
+    : select_stmt where_stmt (groupby_stmt)?
     ;
 
 select_stmt
@@ -120,7 +125,19 @@ select_stmt
     ;
 
 where_stmt
-    : 'where' timeAndDimFilter
+    : 'where' f=timeAndDimFilter {
+        if($f.filter != null) this.filter = $f.filter;
+        this.intervals = Lists.newArrayList($f.interval);
+    }
+    ;
+
+groupby_stmt
+    : GROUP 'by' groupByExpression ( COMMA! groupByExpression )*
+    ;
+
+groupByExpression
+    : gran=granularityFn {this.granularity = $gran.granularity;}
+    | dim=IDENT { this.groupByDimensions.put($dim.text, new DefaultDimensionSpec($dim.text, $dim.text)); }
     ;
 
 datasource
@@ -177,25 +194,19 @@ aggregate returns [AggregatorFactory agg]
       | fn=COUNT OPEN! STAR CLOSE! { $agg = evalAgg("count", $fn.type); }
     ;
 
-/*
-fieldAccess returns [PostAggregator p]
-    : IDENT { $p = new FieldAccessPostAggregator($IDENT.text, $IDENT.text); }
-    ;
-*/
-
 constant returns [ConstantPostAggregator c]
-    : value=INTEGER { int v = Integer.parseInt($value.text); $c = new ConstantPostAggregator(Integer.toString(v), v); }
-    | value=DOUBLE  { double v = Double.parseDouble($value.text); $c = new ConstantPostAggregator(Double.toString(v), v); }
+    : value=DOUBLE  { double v = Double.parseDouble($value.text); $c = new ConstantPostAggregator(Double.toString(v), v); }
     ;
 
-timeAndDimFilter
-    : t=timeFilter (AND f=dimFilter)? {
-        if($f.ctx != null) this.filter = $f.filter;
-        this.intervals = Lists.newArrayList($t.interval);
+/* time filters must be top level filters */
+timeAndDimFilter returns [DimFilter filter, org.joda.time.Interval interval]
+    : t=timeFilter (AND f=dimFilter)?  {
+        if($f.ctx != null) $filter = $f.filter;
+        $interval = $t.interval;
     }
     | (f=dimFilter)? AND t=timeFilter {
-        if($f.ctx != null) this.filter = $f.filter;
-        this.intervals = Lists.newArrayList($t.interval);
+        if($f.ctx != null) $filter = $f.filter;
+        $interval = $t.interval;
     }
     ;
 
@@ -236,12 +247,23 @@ selectorDimFilter returns [SelectorDimFilter filter]
     }
     ;
 
-timeFilter returns [org.joda.time.Interval interval]
+timeFilter returns [org.joda.time.Interval interval, QueryGranularity granularity]
     : 'timestamp' 'between' s=timestamp AND e=timestamp {
         $interval = new org.joda.time.Interval(new DateTime(unescape($s.text)), new DateTime(unescape($e.text)));
     }
     ;
 
+granularityFn returns [QueryGranularity granularity]
+    : 'granularity' OPEN! 'timestamp' ',' str=QUOTED_STRING CLOSE! {
+        String granStr = unescape($str.text);
+        try {
+            $granularity = QueryGranularity.fromString(granStr);
+        } catch(IllegalArgumentException e) {
+            $granularity = new PeriodGranularity(new Period(granStr), null, null);
+        }
+    }
+    ;
+
 timestamp
-    : INTEGER | QUOTED_STRING
+    : DOUBLE | QUOTED_STRING
     ;
