@@ -148,7 +148,13 @@ datasource
     ;
 
 aliasedExpression returns [PostAggregator p]
-    : expression ( AS^ name=IDENT )? { $p = $expression.p; }
+    : expression ( AS^ name=IDENT )? {
+        if($name != null) {
+            postAggregators.add($expression.p);
+            $p = new FieldAccessPostAggregator($name.text, $expression.p.getName());
+        }
+        else $p = $expression.p;
+    }
     ;
 
 expression returns [PostAggregator p]
