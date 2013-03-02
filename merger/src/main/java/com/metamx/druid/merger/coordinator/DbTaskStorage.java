@@ -379,7 +379,7 @@ public class DbTaskStorage implements TaskStorage
               public TaskAction apply(Map<String, Object> row)
               {
                 try {
-                  return jsonMapper.readValue(row.get("payload").toString(), TaskAction.class);
+                  return jsonMapper.readValue(row.get("log_payload").toString(), TaskAction.class);
                 } catch(Exception e) {
                   throw Throwables.propagate(e);
                 }
