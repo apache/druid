@@ -47,9 +47,9 @@ import java.util.*;
 
     AggregatorFactory evalAgg(String name, int fn) {
         switch (fn) {
-            case SUM: return new DoubleSumAggregatorFactory("doubleSum:"+name, name);
-            case MIN: return new MinAggregatorFactory("min:"+name, name);
-            case MAX: return new MaxAggregatorFactory("max:"+name, name);
+            case SUM: return new DoubleSumAggregatorFactory("sum("+name+")", name);
+            case MIN: return new MinAggregatorFactory("min("+name+")", name);
+            case MAX: return new MaxAggregatorFactory("max("+name+")", name);
             case COUNT: return new CountAggregatorFactory(name);
         }
         throw new IllegalArgumentException("Unknown function [" + fn + "]"); 
@@ -200,7 +200,7 @@ primaryExpression returns [PostAggregator p]
 
 aggregate returns [AggregatorFactory agg]
     : fn=( SUM^ | MIN^ | MAX^ ) OPEN! name=(IDENT|COUNT) CLOSE! { $agg = evalAgg($name.text, $fn.type); }
-      | fn=COUNT OPEN! STAR CLOSE! { $agg = evalAgg("count", $fn.type); }
+      | fn=COUNT OPEN! STAR CLOSE! { $agg = evalAgg("count(*)", $fn.type); }
     ;
 
 constant returns [ConstantPostAggregator c]
