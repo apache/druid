@@ -408,9 +408,12 @@ public class RemoteTaskRunner implements TaskRunner
             public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
             {
               try {
+                if (event.getData() != null) {
+                  log.info("Event[%s]: %s", event.getType(), event.getData().getPath());
+                }
+
                 if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED) ||
                     event.getType().equals(PathChildrenCacheEvent.Type.CHILD_UPDATED)) {
-                  log.info("Event[%s]: %s", event.getType(), event.getData().getPath());
 
                   final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
                   final TaskStatus taskStatus;
@@ -471,8 +474,8 @@ public class RemoteTaskRunner implements TaskRunner
                     cleanup(worker.getHost(), taskId);
                     runPendingTasks();
                   }
-                } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_REMOVED)) {
-                  log.info("Event[%s]: %s", event.getType(), event.getData().getPath());
+                } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_REMOVED)
+                           || event.getType().equals(PathChildrenCacheEvent.Type.CONNECTION_LOST)) {
                   final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
                   if (runningTasks.containsKey(taskId)) {
                     log.info("Task %s just disappeared!", taskId);
