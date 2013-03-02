@@ -17,10 +17,13 @@ import com.metamx.druid.aggregation.*;
 import com.metamx.druid.query.filter.*;
 import com.metamx.druid.query.dimension.*;
 import com.metamx.druid.*;
+
 import com.google.common.base.*;
 import com.google.common.collect.Lists;
-import java.util.*;
 import org.joda.time.*;
+
+import java.text.*;
+import java.util.*;
 }
 
 @parser::members {
@@ -103,11 +106,11 @@ IDENT : (LETTER)(LETTER | DIGIT | '_')* ;
 QUOTED_STRING : '\'' ( ESCqs | ~'\'' )* '\'' ;
 ESCqs : '\'' '\'';
 
+NUMBER: ('+'|'-')?DIGIT*'.'?DIGIT+(EXPONENT)?;
+EXPONENT: ('e') ('+'|'-')? ('0'..'9')+;
 fragment DIGIT : '0'..'9';
 fragment LETTER : 'a'..'z' | 'A'..'Z';
 
-DOUBLE: DIGIT*\.?DIGIT+(EXPONENT)?;
-EXPONENT: ('e') ('+'|'-')? ('0'..'9')+;
 
 WS :  (' '| '\t' | '\r' '\n' | '\n' | '\r')+ -> skip;
 
@@ -173,7 +176,7 @@ unaryExpression returns [PostAggregator p]
         $p = new ArithmeticPostAggregator(
             "-"+$e.p.getName(),
             "*",
-            Lists.newArrayList($e.p, new ConstantPostAggregator("-1.0", -1.0))
+            Lists.newArrayList($e.p, new ConstantPostAggregator("-1", -1.0))
         );
     }
     | PLUS e=unaryExpression { $p = $e.p; }
@@ -195,7 +198,7 @@ aggregate returns [AggregatorFactory agg]
     ;
 
 constant returns [ConstantPostAggregator c]
-    : value=DOUBLE  { double v = Double.parseDouble($value.text); $c = new ConstantPostAggregator(Double.toString(v), v); }
+    : value=NUMBER  { double v = Double.parseDouble($value.text); $c = new ConstantPostAggregator(Double.toString(v), v); }
     ;
 
 /* time filters must be top level filters */
@@ -249,7 +252,7 @@ selectorDimFilter returns [SelectorDimFilter filter]
 
 timeFilter returns [org.joda.time.Interval interval, QueryGranularity granularity]
     : 'timestamp' 'between' s=timestamp AND e=timestamp {
-        $interval = new org.joda.time.Interval(new DateTime(unescape($s.text)), new DateTime(unescape($e.text)));
+        $interval = new org.joda.time.Interval($s.t, $e.t);
     }
     ;
 
@@ -264,6 +267,15 @@ granularityFn returns [QueryGranularity granularity]
     }
     ;
 
-timestamp
-    : DOUBLE | QUOTED_STRING
+timestamp returns [DateTime t]
+    : NUMBER {
+        String str = $NUMBER.text.trim();
+        try {
+            $t = new DateTime(NumberFormat.getInstance().parse(str));
+        }
+        catch(ParseException e) {
+            throw new IllegalArgumentException("Unable to parse number [" + str + "]");
+        }
+    }
+    | QUOTED_STRING { $t = new DateTime(unescape($QUOTED_STRING.text)); }
     ;
