@@ -53,10 +53,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -407,11 +405,11 @@ public class RemoteTaskRunner implements TaskRunner
             @Override
             public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
             {
+              log.info("Event: %s", event.getType());
+              if (event.getData() != null) {
+                log.info("Data: %s", event.getData().getPath());
+              }
               try {
-                if (event.getData() != null) {
-                  log.info("Event[%s]: %s", event.getType(), event.getData().getPath());
-                }
-
                 if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED) ||
                     event.getType().equals(PathChildrenCacheEvent.Type.CHILD_UPDATED)) {
 
@@ -474,12 +472,13 @@ public class RemoteTaskRunner implements TaskRunner
                     cleanup(worker.getHost(), taskId);
                     runPendingTasks();
                   }
-                } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_REMOVED)
-                           || event.getType().equals(PathChildrenCacheEvent.Type.CONNECTION_LOST)) {
+                } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_REMOVED)) {
                   final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
                   if (runningTasks.containsKey(taskId)) {
                     log.info("Task %s just disappeared!", taskId);
                     retryTask(runningTasks.get(taskId), worker.getHost());
+                  } else {
+                    log.info("Lost a task I didn't know about: %s", taskId);
                   }
                 }
               }
