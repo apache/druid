@@ -71,6 +71,8 @@ public class ResourceManagementScheduler
         return;
       }
 
+      log.info("Started Resource Management Scheduler");
+
       ScheduledExecutors.scheduleAtFixedRate(
           exec,
           config.getProvisionResourcesDuration(),
@@ -79,6 +81,7 @@ public class ResourceManagementScheduler
             @Override
             public void run()
             {
+              log.info("Running resource management strategy");
               resourceManagementStrategy.doProvision(
                   taskRunner.getPendingTasks(),
                   taskRunner.getWorkers()
@@ -123,6 +126,7 @@ public class ResourceManagementScheduler
       if (!started) {
         return;
       }
+      log.info("Stopping Resource Management Scheduler");
       exec.shutdown();
       started = false;
     }

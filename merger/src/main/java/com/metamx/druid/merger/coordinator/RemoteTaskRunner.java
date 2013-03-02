@@ -414,8 +414,9 @@ public class RemoteTaskRunner implements TaskRunner
             @Override
             public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
             {
-
               try {
+                log.info("Event[%s]: %s", event.getType(), event.getData().getPath());
+
                 if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED) ||
                     event.getType().equals(PathChildrenCacheEvent.Type.CHILD_UPDATED)) {
                   final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
