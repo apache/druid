@@ -472,6 +472,7 @@ public class RemoteTaskRunner implements TaskRunner
                     runPendingTasks();
                   }
                 } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_REMOVED)) {
+                  log.info("Event[%s]: %s", event.getType(), event.getData().getPath());
                   final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
                   if (runningTasks.containsKey(taskId)) {
                     log.info("Task %s just disappeared!", taskId);
