@@ -112,8 +112,6 @@ public class ZkWorker implements Closeable
   {
     return "ZkWorker{" +
            "worker=" + worker +
-           ", statusCache=" + statusCache +
-           ", cacheConverter=" + cacheConverter +
            ", lastCompletedTaskTime=" + lastCompletedTaskTime +
            '}';
   }

@@ -81,7 +81,6 @@ public class ResourceManagementScheduler
             @Override
             public void run()
             {
-              log.info("Running resource management strategy");
               resourceManagementStrategy.doProvision(
                   taskRunner.getPendingTasks(),
                   taskRunner.getWorkers()
