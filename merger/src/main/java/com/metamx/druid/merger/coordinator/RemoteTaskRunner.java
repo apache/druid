@@ -405,69 +405,69 @@ public class RemoteTaskRunner implements TaskRunner
             @Override
             public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
             {
-              try {
-                if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED) ||
-                    event.getType().equals(PathChildrenCacheEvent.Type.CHILD_UPDATED)) {
-                  final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
-                  final TaskStatus taskStatus = jsonMapper.readValue(
-                      event.getData().getData(), TaskStatus.class
-                  );
-
-                  // This can fail if a worker writes a bogus status. Retry if so.
-                  if (!taskStatus.getId().equals(taskId)) {
-                    retryTask(runningTasks.get(taskId), worker.getHost());
-                    return;
-                  }
-
-                  log.info(
-                      "Worker[%s] wrote %s status for task: %s",
-                      worker.getHost(),
-                      taskStatus.getStatusCode(),
-                      taskId
-                  );
-
-                  // Synchronizing state with ZK
-                  synchronized (statusLock) {
-                    statusLock.notify();
-                  }
-
-                  final TaskRunnerWorkItem taskRunnerWorkItem = runningTasks.get(taskId);
-                  if (taskRunnerWorkItem == null) {
-                    log.warn(
-                        "WTF?! Worker[%s] announcing a status for a task I didn't know about: %s",
-                        worker.getHost(),
-                        taskId
+              synchronized (statusLock) {
+                try {
+                  if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED) ||
+                      event.getType().equals(PathChildrenCacheEvent.Type.CHILD_UPDATED)) {
+                    final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
+                    final TaskStatus taskStatus = jsonMapper.readValue(
+                        event.getData().getData(), TaskStatus.class
                     );
-                  }
 
-                  if (taskStatus.isComplete()) {
-                    if (taskRunnerWorkItem != null) {
-                      final TaskCallback callback = taskRunnerWorkItem.getCallback();
-                      if (callback != null) {
-                        callback.notify(taskStatus);
-                      }
+                    // This can fail if a worker writes a bogus status. Retry if so.
+                    if (!taskStatus.getId().equals(taskId)) {
+                      retryTask(runningTasks.get(taskId), worker.getHost());
+                      return;
                     }
 
-                    // Worker is done with this task
-                    zkWorker.setLastCompletedTaskTime(new DateTime());
-                    cleanup(worker.getHost(), taskId);
-                    runPendingTasks();
-                  }
-                } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_REMOVED)) {
-                  final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
-                  if (runningTasks.containsKey(taskId)) {
-                    log.info("Task %s just disappeared!", taskId);
-                    retryTask(runningTasks.get(taskId), worker.getHost());
-                  } else {
-                    log.info("A task disappeared I didn't know about: %s", taskId);
+                    log.info(
+                        "Worker[%s] wrote %s status for task: %s",
+                        worker.getHost(),
+                        taskStatus.getStatusCode(),
+                        taskId
+                    );
+
+                    // Synchronizing state with ZK
+                    statusLock.notify();
+
+                    final TaskRunnerWorkItem taskRunnerWorkItem = runningTasks.get(taskId);
+                    if (taskRunnerWorkItem == null) {
+                      log.warn(
+                          "WTF?! Worker[%s] announcing a status for a task I didn't know about: %s",
+                          worker.getHost(),
+                          taskId
+                      );
+                    }
+
+                    if (taskStatus.isComplete()) {
+                      if (taskRunnerWorkItem != null) {
+                        final TaskCallback callback = taskRunnerWorkItem.getCallback();
+                        if (callback != null) {
+                          callback.notify(taskStatus);
+                        }
+                      }
+
+                      // Worker is done with this task
+                      zkWorker.setLastCompletedTaskTime(new DateTime());
+                      cleanup(worker.getHost(), taskId);
+                      runPendingTasks();
+                    }
+                  } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_REMOVED)) {
+                    final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
+                    if (runningTasks.containsKey(taskId)) {
+                      log.info("Task %s just disappeared!", taskId);
+                      retryTask(runningTasks.get(taskId), worker.getHost());
+                    } else {
+                      log.info("A task disappeared I didn't know about: %s", taskId);
+                    }
                   }
                 }
-              }
-              catch (Exception e) {
-                log.makeAlert(e, "Failed to handle new worker status")
-                   .addData("worker", worker.getHost())
-                   .addData("znode", event.getData().getPath())
-                   .emit();
+                catch (Exception e) {
+                  log.makeAlert(e, "Failed to handle new worker status")
+                     .addData("worker", worker.getHost())
+                     .addData("znode", event.getData().getPath())
+                     .emit();
+                }
               }
             }
           }
