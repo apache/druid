@@ -131,10 +131,6 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.antlr</groupId>
-            <artifactId>antlr4-runtime</artifactId>
-        </dependency>
     </dependencies>
 
     <build>
@@ -147,18 +143,6 @@
                             <goal>test-jar</goal>
                         </goals>
                     </execution>
-                </executions>
-              </plugin>
-
-              <plugin>
-                <groupId>org.antlr</groupId>
-                <artifactId>antlr4-maven-plugin</artifactId>
-                <executions>
-                  <execution>
-                    <goals>
-                      <goal>antlr4</goal>
-                    </goals>
-                  </execution>
                 </executions>
               </plugin>
         </plugins>
