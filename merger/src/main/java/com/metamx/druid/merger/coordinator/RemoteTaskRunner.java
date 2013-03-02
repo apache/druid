@@ -241,35 +241,28 @@ public class RemoteTaskRunner implements TaskRunner
    */
   private void runPendingTasks()
   {
-    Future future = runPendingTasksExec.submit(
+    runPendingTasksExec.submit(
         new Callable<Void>()
         {
           @Override
           public Void call() throws Exception
           {
-            // make a copy of the pending tasks because assignTask may delete tasks from pending and move them
-            // into running status
-            List<TaskRunnerWorkItem> copy = Lists.newArrayList(pendingTasks.values());
-            for (TaskRunnerWorkItem taskWrapper : copy) {
-              assignTask(taskWrapper);
+            try {
+              // make a copy of the pending tasks because assignTask may delete tasks from pending and move them
+              // into running status
+              List<TaskRunnerWorkItem> copy = Lists.newArrayList(pendingTasks.values());
+              for (TaskRunnerWorkItem taskWrapper : copy) {
+                assignTask(taskWrapper);
+              }
+            }
+            catch (Exception e) {
+              log.makeAlert(e, "Exception in running pending tasks").emit();
             }
 
             return null;
           }
         }
     );
-
-    try {
-      future.get();
-    }
-    catch (InterruptedException e) {
-      log.error(e, "InterruptedException in runPendingTasks()");
-      throw Throwables.propagate(e);
-    }
-    catch (ExecutionException e) {
-      log.error(e, "ExecutionException in runPendingTasks()");
-      throw Throwables.propagate(e.getCause());
-    }
   }
 
   /**
