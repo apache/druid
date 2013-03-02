@@ -1,6 +1,7 @@
 package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -400,6 +401,15 @@ public class TaskLockbox
     public Set<String> getTaskIds()
     {
       return taskIds;
+    }
+
+    @Override
+    public String toString()
+    {
+      return Objects.toStringHelper(this)
+                    .add("taskLock", taskLock)
+                    .add("taskIds", taskIds)
+                    .toString();
     }
   }
 }
