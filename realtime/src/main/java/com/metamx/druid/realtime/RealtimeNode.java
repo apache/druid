@@ -46,9 +46,11 @@ import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.loading.S3SegmentPusher;
-import com.metamx.druid.loading.S3SegmentPusherConfig;
-import com.metamx.druid.loading.SegmentPusher;
+import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.loading.LocalDataSegmentPusher;
+import com.metamx.druid.loading.LocalDataSegmentPusherConfig;
+import com.metamx.druid.loading.S3DataSegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusherConfig;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -86,7 +88,7 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
   private final Map<String, Object> injectablesMap = Maps.newLinkedHashMap();
 
   private MetadataUpdater metadataUpdater = null;
-  private SegmentPusher segmentPusher = null;
+  private DataSegmentPusher dataSegmentPusher = null;
   private List<FireDepartment> fireDepartments = null;
   private ServerView view = null;
 
@@ -117,10 +119,10 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     return this;
   }
 
-  public RealtimeNode setSegmentPusher(SegmentPusher segmentPusher)
+  public RealtimeNode setDataSegmentPusher(DataSegmentPusher dataSegmentPusher)
   {
-    Preconditions.checkState(this.segmentPusher == null, "Cannot set segmentPusher once it has already been set.");
-    this.segmentPusher = segmentPusher;
+    Preconditions.checkState(this.dataSegmentPusher == null, "Cannot set segmentPusher once it has already been set.");
+    this.dataSegmentPusher = dataSegmentPusher;
     return this;
   }
 
@@ -144,10 +146,10 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     return metadataUpdater;
   }
 
-  public SegmentPusher getSegmentPusher()
+  public DataSegmentPusher getDataSegmentPusher()
   {
     initializeSegmentPusher();
-    return segmentPusher;
+    return dataSegmentPusher;
   }
 
   public List<FireDepartment> getFireDepartments()
@@ -220,7 +222,7 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     }
 
     injectables.put("queryRunnerFactoryConglomerate", getConglomerate());
-    injectables.put("segmentPusher", segmentPusher);
+    injectables.put("segmentPusher", dataSegmentPusher);
     injectables.put("metadataUpdater", metadataUpdater);
     injectables.put("serverView", view);
     injectables.put("serviceEmitter", getEmitter());
@@ -256,22 +258,32 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
 
   private void initializeSegmentPusher()
   {
-    if (segmentPusher == null) {
+    if (dataSegmentPusher == null) {
       final Properties props = getProps();
-      final RestS3Service s3Client;
-      try {
-        s3Client = new RestS3Service(
-            new AWSCredentials(
-                PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-                PropUtils.getProperty(props, "com.metamx.aws.secretKey")
-            )
+      if (Boolean.parseBoolean(props.getProperty("druid.pusher.local", "false"))) {
+        dataSegmentPusher = new LocalDataSegmentPusher(
+            getConfigFactory().build(LocalDataSegmentPusherConfig.class), getJsonMapper()
         );
       }
-      catch (S3ServiceException e) {
-        throw Throwables.propagate(e);
-      }
+      else {
 
-      segmentPusher = new S3SegmentPusher(s3Client, getConfigFactory().build(S3SegmentPusherConfig.class), getJsonMapper());
+        final RestS3Service s3Client;
+        try {
+          s3Client = new RestS3Service(
+              new AWSCredentials(
+                  PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+                  PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+              )
+          );
+        }
+        catch (S3ServiceException e) {
+          throw Throwables.propagate(e);
+        }
+
+        dataSegmentPusher = new S3DataSegmentPusher(
+            s3Client, getConfigFactory().build(S3DataSegmentPusherConfig.class), getJsonMapper()
+        );
+      }
     }
   }
 

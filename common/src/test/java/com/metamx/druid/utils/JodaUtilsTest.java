@@ -32,6 +32,40 @@ import java.util.List;
 public class JodaUtilsTest
 {
   @Test
+  public void testUmbrellaIntervalsSimple() throws Exception
+  {
+    List<Interval> intervals = Arrays.asList(
+        new Interval("2011-03-03/2011-03-04"),
+        new Interval("2011-01-01/2011-01-02"),
+        new Interval("2011-02-01/2011-02-05"),
+        new Interval("2011-02-03/2011-02-08"),
+        new Interval("2011-01-01/2011-01-03"),
+        new Interval("2011-03-01/2011-03-02"),
+        new Interval("2011-03-05/2011-03-06"),
+        new Interval("2011-02-01/2011-02-02")
+    );
+
+    Assert.assertEquals(
+        new Interval("2011-01-01/2011-03-06"),
+        JodaUtils.umbrellaInterval(intervals)
+    );
+  }
+
+  @Test
+  public void testUmbrellaIntervalsNull() throws Exception
+  {
+    List<Interval> intervals = Arrays.asList();
+    Throwable thrown = null;
+    try {
+      Interval res = JodaUtils.umbrellaInterval(intervals);
+    }
+    catch (IllegalArgumentException e) {
+      thrown = e;
+    }
+    Assert.assertNotNull("Empty list of intervals", thrown);
+  }
+
+  @Test
   public void testCondenseIntervalsSimple() throws Exception
   {
     List<Interval> intervals = Arrays.asList(

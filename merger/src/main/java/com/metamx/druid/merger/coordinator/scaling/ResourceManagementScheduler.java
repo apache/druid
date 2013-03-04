@@ -71,6 +71,8 @@ public class ResourceManagementScheduler
         return;
       }
 
+      log.info("Started Resource Management Scheduler");
+
       ScheduledExecutors.scheduleAtFixedRate(
           exec,
           config.getProvisionResourcesDuration(),
@@ -123,6 +125,7 @@ public class ResourceManagementScheduler
       if (!started) {
         return;
       }
+      log.info("Stopping Resource Management Scheduler");
       exec.shutdown();
       started = false;
     }

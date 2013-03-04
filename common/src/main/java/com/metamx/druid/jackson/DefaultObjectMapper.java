@@ -36,6 +36,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.google.common.base.Throwables;
 import com.metamx.common.Granularity;
@@ -171,10 +172,11 @@ public class DefaultObjectMapper extends ObjectMapper
         }
     );
     registerModule(serializerModule);
+    registerModule(new GuavaModule());
 
     configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     configure(MapperFeature.AUTO_DETECT_GETTERS, false);
-    configure(MapperFeature.AUTO_DETECT_CREATORS, false);
+//    configure(MapperFeature.AUTO_DETECT_CREATORS, false); https://github.com/FasterXML/jackson-databind/issues/170
     configure(MapperFeature.AUTO_DETECT_FIELDS, false);
     configure(MapperFeature.AUTO_DETECT_IS_GETTERS, false);
     configure(MapperFeature.AUTO_DETECT_SETTERS, false);

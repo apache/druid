@@ -54,7 +54,7 @@ import java.util.Properties;
 
 /**
  */
-public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQuery>
+public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery>
 {
 
   private static final TypeReference<Row> TYPE_REFERENCE = new TypeReference<Row>(){};
@@ -176,23 +176,5 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
   public TypeReference<Row> getResultTypeReference()
   {
     return TYPE_REFERENCE;
-  }
-
-  @Override
-  public CacheStrategy<Row, Object, GroupByQuery> getCacheStrategy(GroupByQuery query)
-  {
-    return null;
-  }
-
-  @Override
-  public QueryRunner<Row> preMergeQueryDecoration(QueryRunner<Row> runner)
-  {
-    return runner;
-  }
-
-  @Override
-  public QueryRunner<Row> postMergeQueryDecoration(QueryRunner<Row> runner)
-  {
-    return runner;
   }
 }

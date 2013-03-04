@@ -19,7 +19,6 @@
 
 package com.metamx.druid.merger.common.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -69,18 +68,11 @@ public abstract class AbstractTask implements Task
     return dataSource;
   }
 
+  @JsonProperty("interval")
   @Override
-  public Optional<Interval> getFixedInterval()
+  public Optional<Interval> getImplicitLockInterval()
   {
     return interval;
-  }
-
-  // Awesome hack to get around lack of serde for Optional<T>
-  // TODO Look into jackson-datatype-guava
-  @JsonProperty("interval")
-  private Interval getNullableIntervalForJackson()
-  {
-    return interval.orNull();
   }
 
   @Override
@@ -96,7 +88,7 @@ public abstract class AbstractTask implements Task
                   .add("id", id)
                   .add("type", getType())
                   .add("dataSource", dataSource)
-                  .add("interval", getFixedInterval())
+                  .add("interval", getImplicitLockInterval())
                   .toString();
   }
 }

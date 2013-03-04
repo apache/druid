@@ -21,6 +21,7 @@ package com.metamx.druid.indexer;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -57,6 +58,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -149,7 +151,40 @@ public class IndexGeneratorJob implements Jobby
     }
   }
 
+  public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config) {
+
+    final Configuration conf = new Configuration();
+    final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.jsonMapper;
+
+    ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
+
+    for (String propName : System.getProperties().stringPropertyNames()) {
+      if (propName.startsWith("hadoop.")) {
+        conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
+      }
+    }
+
+    final Path descriptorInfoDir = config.makeDescriptorInfoDir();
+
+    try {
+      FileSystem fs = descriptorInfoDir.getFileSystem(conf);
+
+      for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
+        final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
+        publishedSegmentsBuilder.add(segment);
+        log.info("Adding segment %s to the list of published segments", segment.getIdentifier());
+      }
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+    List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
+
+    return publishedSegments;
+}
+
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Text>
+
   {
     @Override
     protected void innerMap(
@@ -379,7 +414,8 @@ public class IndexGeneratorJob implements Jobby
         );
       } else if (outputFS instanceof LocalFileSystem) {
         loadSpec = ImmutableMap.<String, Object>of(
-            "type", "test"
+            "type", "local",
+            "path", indexOutURI.getPath()
         );
       } else {
         throw new ISE("Unknown file system[%s]", outputFS.getClass());
@@ -388,7 +424,7 @@ public class IndexGeneratorJob implements Jobby
       DataSegment segment = new DataSegment(
           config.getDataSource(),
           interval,
-          config.getVersion().toString(),
+          config.getVersion(),
           loadSpec,
           dimensionNames,
           metricNames,

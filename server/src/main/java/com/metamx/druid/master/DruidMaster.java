@@ -54,6 +54,8 @@ import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
 import com.netflix.curator.x.discovery.ServiceProvider;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
+
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -601,6 +603,7 @@ public class DruidMaster
                                     .withEmitter(emitter)
                                     .withMergeBytesLimit(config.getMergeBytesLimit())
                                     .withMergeSegmentsLimit(config.getMergeSegmentsLimit())
+                                    .withMaxSegmentsToMove(config.getMaxSegmentsToMove())
                                     .build();
 
         for (DruidMasterHelper helper : helpers) {
@@ -701,6 +704,7 @@ public class DruidMaster
                                .withDatabaseRuleManager(databaseRuleManager)
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
+                               .withBalancerReferenceTimestamp(DateTime.now())
                                .build();
                 }
               },
@@ -710,7 +714,7 @@ public class DruidMaster
                   config.getReplicantThrottleLimit()
               ),
               new DruidMasterCleanup(DruidMaster.this),
-              new DruidMasterBalancer(DruidMaster.this, new BalancerAnalyzer()),
+              new DruidMasterBalancer(DruidMaster.this),
               new DruidMasterLogger()
           )
       );

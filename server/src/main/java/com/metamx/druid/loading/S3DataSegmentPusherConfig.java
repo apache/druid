@@ -19,15 +19,17 @@
 
 package com.metamx.druid.loading;
 
-import com.metamx.druid.client.DataSegment;
-
-import java.io.File;
-import java.util.Map;
+import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
-public interface SegmentPuller
+public abstract class S3DataSegmentPusherConfig
 {
-  public File getSegmentFiles(DataSegment loadSpec) throws StorageAdapterLoadingException;
-  public boolean cleanSegmentFiles(DataSegment loadSpec) throws StorageAdapterLoadingException;
+  @Config("druid.pusher.s3.bucket")
+  public abstract String getBucket();
+
+  @Config("druid.pusher.s3.baseKey")
+  @Default("")
+  public abstract String getBaseKey();
 }

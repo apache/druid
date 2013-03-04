@@ -50,10 +50,15 @@ public class IndexDeterminePartitionsTask extends AbstractTask
 {
   @JsonProperty
   private final FirehoseFactory firehoseFactory;
+
   @JsonProperty
   private final Schema schema;
+
   @JsonProperty
   private final long targetPartitionSize;
+
+  @JsonProperty
+  private final int rowFlushBoundary;
 
   private static final Logger log = new Logger(IndexTask.class);
 
@@ -63,7 +68,8 @@ public class IndexDeterminePartitionsTask extends AbstractTask
       @JsonProperty("interval") Interval interval,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("schema") Schema schema,
-      @JsonProperty("targetPartitionSize") long targetPartitionSize
+      @JsonProperty("targetPartitionSize") long targetPartitionSize,
+      @JsonProperty("rowFlushBoundary") int rowFlushBoundary
   )
   {
     super(
@@ -81,6 +87,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
     this.firehoseFactory = firehoseFactory;
     this.schema = schema;
     this.targetPartitionSize = targetPartitionSize;
+    this.rowFlushBoundary = rowFlushBoundary;
   }
 
   @Override
@@ -97,7 +104,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
     // TODO: Replace/merge/whatever with hadoop determine-partitions code
 
     // We know this exists
-    final Interval interval = getFixedInterval().get();
+    final Interval interval = getImplicitLockInterval().get();
 
     // Blacklist dimensions that have multiple values per row
     final Set<String> unusableDimensions = Sets.newHashSet();
@@ -237,14 +244,15 @@ public class IndexDeterminePartitionsTask extends AbstractTask
           {
             return new IndexGeneratorTask(
                 getGroupId(),
-                getFixedInterval().get(),
+                getImplicitLockInterval().get(),
                 firehoseFactory,
                 new Schema(
                     schema.getDataSource(),
                     schema.getAggregators(),
                     schema.getIndexGranularity(),
                     shardSpec
-                )
+                ),
+                rowFlushBoundary
             );
           }
         }

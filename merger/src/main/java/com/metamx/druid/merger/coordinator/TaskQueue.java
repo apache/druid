@@ -225,8 +225,8 @@ public class TaskQueue
       // Attempt to add this task to a running task group. Silently continue if this is not possible.
       // The main reason this is here is so when subtasks are added, they end up in the same task group
       // as their parent whenever possible.
-      if(task.getFixedInterval().isPresent()) {
-        taskLockbox.tryLock(task, task.getFixedInterval().get());
+      if(task.getImplicitLockInterval().isPresent()) {
+        taskLockbox.tryLock(task, task.getImplicitLockInterval().get());
       }
 
       return true;
@@ -274,9 +274,9 @@ public class TaskQueue
 
     try {
       for (final Task task : queue) {
-        if(task.getFixedInterval().isPresent()) {
+        if(task.getImplicitLockInterval().isPresent()) {
           // If this task has a fixed interval, attempt to lock it right now.
-          final Optional<TaskLock> maybeLock = taskLockbox.tryLock(task, task.getFixedInterval().get());
+          final Optional<TaskLock> maybeLock = taskLockbox.tryLock(task, task.getImplicitLockInterval().get());
           if(maybeLock.isPresent()) {
             log.info("Task claimed with fixed interval lock: %s", task.getId());
             queue.remove(task);

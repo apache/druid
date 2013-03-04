@@ -84,4 +84,15 @@ public class Worker
   {
     return version;
   }
+
+  @Override
+  public String toString()
+  {
+    return "Worker{" +
+           "host='" + host + '\'' +
+           ", ip='" + ip + '\'' +
+           ", capacity=" + capacity +
+           ", version='" + version + '\'' +
+           '}';
+  }
 }

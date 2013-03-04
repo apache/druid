@@ -17,28 +17,28 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.loading;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.loading.S3DataSegmentPusherConfig;
-
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import com.google.common.base.Joiner;
+import com.metamx.druid.client.DataSegment;
 
 /**
- * A placeholder class to make the move of the SegmentPushers to a new package backwards compatible
- *
- * Exists in 0.2, can be removed from 0.3 on
  */
-@Deprecated
-public class S3SegmentPusher extends com.metamx.druid.loading.S3DataSegmentPusher implements DataSegmentPusher
+public class DataSegmentPusherUtil
 {
-  public S3SegmentPusher(
-      RestS3Service s3Client,
-      S3DataSegmentPusherConfig config,
-      ObjectMapper jsonMapper
-  )
+  private static final Joiner JOINER = Joiner.on("/").skipNulls();
+
+  public static String getStorageDir(DataSegment segment)
   {
-    super(s3Client, config, jsonMapper);
+    return JOINER.join(
+        segment.getDataSource(),
+        String.format(
+            "%s_%s",
+            segment.getInterval().getStart(),
+            segment.getInterval().getEnd()
+        ),
+        segment.getVersion(),
+        segment.getShardSpec().getPartitionNum()
+    );
   }
 }

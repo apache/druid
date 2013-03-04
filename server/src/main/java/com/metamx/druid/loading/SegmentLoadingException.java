@@ -21,9 +21,9 @@ package com.metamx.druid.loading;
 
 /**
  */
-public class StorageAdapterLoadingException extends Exception
+public class SegmentLoadingException extends Exception
 {
-  public StorageAdapterLoadingException(
+  public SegmentLoadingException(
       String formatString,
       Object... objs
   )
@@ -31,7 +31,7 @@ public class StorageAdapterLoadingException extends Exception
     super(String.format(formatString, objs));
   }
 
-  public StorageAdapterLoadingException(
+  public SegmentLoadingException(
       Throwable cause,
       String formatString,
       Object... objs

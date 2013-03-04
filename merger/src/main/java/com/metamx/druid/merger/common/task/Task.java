@@ -27,7 +27,19 @@ import com.metamx.druid.merger.common.TaskToolbox;
 import org.joda.time.Interval;
 
 /**
- * Represents a task that can run on a worker. Immutable.
+ * Represents a task that can run on a worker. The general contracts surrounding Tasks are:
+ * <ul>
+ *   <li>Tasks must operate on a single datasource.</li>
+ *   <li>Tasks should be immutable, since the task ID is used as a proxy for the task in many locations.</li>
+ *   <li>Task IDs must be unique. This can be done by naming them using UUIDs or the current timestamp.</li>
+ *   <li>Tasks are each part of a "task group", which is a set of tasks that can share interval locks. These are
+ *   useful for producing sharded segments.</li>
+ *   <li>Tasks can optionally have an "implicit lock interval". Tasks with this property are guaranteed to have
+ *   a lock on that interval during their {@link #preflight(com.metamx.druid.merger.common.TaskToolbox)} and
+ *   {@link #run(com.metamx.druid.merger.common.TaskToolbox)} methods.</li>
+ *   <li>Tasks do not need to explicitly release locks; they are released upon task completion. Tasks may choose
+ *   to release locks early if they desire.</li>
+ * </ul>
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultMergeTask.class)
 @JsonSubTypes(value = {
@@ -37,7 +49,8 @@ import org.joda.time.Interval;
     @JsonSubTypes.Type(name = "kill", value = KillTask.class),
     @JsonSubTypes.Type(name = "index", value = IndexTask.class),
     @JsonSubTypes.Type(name = "index_partitions", value = IndexDeterminePartitionsTask.class),
-    @JsonSubTypes.Type(name = "index_generator", value = IndexGeneratorTask.class)
+    @JsonSubTypes.Type(name = "index_generator", value = IndexGeneratorTask.class),
+    @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class)
 })
 public interface Task
 {
@@ -63,15 +76,15 @@ public interface Task
   public String getDataSource();
 
   /**
-   * Returns fixed interval for this task, if any. Tasks without fixed intervals are not granted locks when started
-   * and must explicitly request them.
+   * Returns implicit lock interval for this task, if any. Tasks without implicit lock intervals are not granted locks
+   * when started and must explicitly request them.
    */
-  public Optional<Interval> getFixedInterval();
+  public Optional<Interval> getImplicitLockInterval();
 
   /**
    * Execute preflight checks for a task. This typically runs on the coordinator, and will be run while
-   * holding a lock on our dataSource and interval. If this method throws an exception, the task should be
-   * considered a failure.
+   * holding a lock on our dataSource and implicit lock interval (if any). If this method throws an exception, the
+   * task should be considered a failure.
    *
    * @param toolbox Toolbox for this task
    *
@@ -84,8 +97,8 @@ public interface Task
 
   /**
    * Execute a task. This typically runs on a worker as determined by a TaskRunner, and will be run while
-   * holding a lock on our dataSource and interval. If this method throws an exception, the task should be
-   * considered a failure.
+   * holding a lock on our dataSource and implicit lock interval (if any). If this method throws an exception, the task
+   * should be considered a failure.
    *
    * @param toolbox Toolbox for this task
    *

@@ -72,30 +72,30 @@ class SimpleColumn implements Column
   @Override
   public DictionaryEncodedColumn getDictionaryEncoding()
   {
-    return dictionaryEncodedColumn.get();
+    return dictionaryEncodedColumn == null ? null : dictionaryEncodedColumn.get();
   }
 
   @Override
   public RunLengthColumn getRunLengthColumn()
   {
-    return runLengthColumn.get();
+    return runLengthColumn == null ? null : runLengthColumn.get();
   }
 
   @Override
   public GenericColumn getGenericColumn()
   {
-    return genericColumn.get();
+    return genericColumn == null ? null : genericColumn.get();
   }
 
   @Override
   public ComplexColumn getComplexColumn()
   {
-    return complexColumn.get();
+    return complexColumn == null ? null : complexColumn.get();
   }
 
   @Override
   public BitmapIndex getBitmapIndex()
   {
-    return bitmapIndex.get();
+    return bitmapIndex == null ? null : bitmapIndex.get();
   }
 }

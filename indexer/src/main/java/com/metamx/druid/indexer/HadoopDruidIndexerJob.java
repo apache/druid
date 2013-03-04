@@ -47,6 +47,7 @@ public class HadoopDruidIndexerJob implements Jobby
   private final HadoopDruidIndexerConfig config;
   private final DbUpdaterJob dbUpdaterJob;
   private IndexGeneratorJob indexJob;
+  private volatile List<DataSegment> publishedSegments = null;
 
   public HadoopDruidIndexerJob(
       HadoopDruidIndexerConfig config
@@ -102,6 +103,8 @@ public class HadoopDruidIndexerJob implements Jobby
       }
     }
 
+    publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
+
     if (!config.isLeaveIntermediate()) {
       if (failedMessage == null || config.isCleanupOnFailure()) {
         Path workingPath = config.makeIntermediatePath();
@@ -147,8 +150,10 @@ public class HadoopDruidIndexerJob implements Jobby
   }
 
   public List<DataSegment> getPublishedSegments() {
-    Preconditions.checkState(dbUpdaterJob != null, "No updaterJobSpec set, cannot get published segments");
-    return dbUpdaterJob.getPublishedSegments();
+    if(publishedSegments == null) {
+      throw new IllegalStateException("Job hasn't run yet. No segments have been published yet.");
+    }
+    return publishedSegments;
   }
 
   public IndexGeneratorJob.IndexGeneratorStats getIndexJobStats()

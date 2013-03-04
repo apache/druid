@@ -20,16 +20,19 @@
 package com.metamx.druid.loading;
 
 import org.skife.config.Config;
-import org.skife.config.Default;
+
+import java.io.File;
 
 /**
  */
-public abstract class S3SegmentPusherConfig
+public abstract class SegmentLoaderConfig
 {
-  @Config("druid.pusher.s3.bucket")
-  public abstract String getBucket();
+  @Config({"druid.paths.indexCache", "druid.segmentCache.path"})
+  public abstract File getCacheDirectory();
 
-  @Config("druid.pusher.s3.baseKey")
-  @Default("")
-  public abstract String getBaseKey();
+  @Config("druid.segmentCache.deleteOnRemove")
+  public boolean deleteOnRemove()
+  {
+    return true;
+  }
 }

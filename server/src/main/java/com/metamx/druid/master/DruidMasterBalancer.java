@@ -19,18 +19,19 @@
 
 package com.metamx.druid.master;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.emitter.EmittingLogger;
+import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -47,31 +48,28 @@ public class DruidMasterBalancer implements DruidMasterHelper
         }
       }
   );
-  private static final EmittingLogger log = new EmittingLogger(DruidMasterBalancer.class);
+  protected static final EmittingLogger log = new EmittingLogger(DruidMasterBalancer.class);
 
-  private final BalancerAnalyzer analyzer;
-  private final DruidMaster master;
+  protected final DruidMaster master;
 
-  private final Map<String, ConcurrentHashMap<String, BalancerSegmentHolder>> currentlyMovingSegments = Maps.newHashMap();
+  protected final Map<String, ConcurrentHashMap<String, BalancerSegmentHolder>> currentlyMovingSegments = Maps.newHashMap();
 
   public DruidMasterBalancer(
-      DruidMaster master,
-      BalancerAnalyzer analyzer
+      DruidMaster master
   )
   {
     this.master = master;
-    this.analyzer = analyzer;
   }
 
-  private void reduceLifetimes(String tier)
+  protected void reduceLifetimes(String tier)
   {
     for (BalancerSegmentHolder holder : currentlyMovingSegments.get(tier).values()) {
       holder.reduceLifetime();
       if (holder.getLifetime() <= 0) {
         log.makeAlert("[%s]: Balancer move segments queue has a segment stuck", tier)
-            .addData("segment", holder.getSegment().getIdentifier())
-            .addData("server", holder.getServer())
-            .emit();
+           .addData("segment", holder.getSegment().getIdentifier())
+           .addData("server", holder.getFromServer().getStringProps())
+           .emit();
       }
     }
   }
@@ -79,7 +77,10 @@ public class DruidMasterBalancer implements DruidMasterHelper
   @Override
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
-    MasterStats stats = new MasterStats();
+    final MasterStats stats = new MasterStats();
+    final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
+    final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
+    final int maxSegmentsToMove = params.getMaxSegmentsToMove();
 
     for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry :
         params.getDruidCluster().getCluster().entrySet()) {
@@ -95,51 +96,51 @@ public class DruidMasterBalancer implements DruidMasterHelper
         continue;
       }
 
-      TreeSet<ServerHolder> serversByPercentUsed = Sets.newTreeSet(percentUsedComparator);
-      serversByPercentUsed.addAll(entry.getValue());
+      final List<ServerHolder> serverHolderList = Lists.newArrayList(entry.getValue());
 
-      if (serversByPercentUsed.size() <= 1) {
-        log.info(
-            "[%s]: No unique values found for highest and lowest percent used servers: nothing to balance", tier
-        );
+      if (serverHolderList.size() <= 1) {
+        log.info("[%s]: One or fewer servers found.  Cannot balance.", tier);
         continue;
       }
 
-      ServerHolder highestPercentUsedServer = serversByPercentUsed.first();
-      ServerHolder lowestPercentUsedServer = serversByPercentUsed.last();
+      int numSegments = 0;
+      for (ServerHolder server : serverHolderList) {
+        numSegments += server.getServer().getSegments().size();
+      }
 
-      analyzer.init(highestPercentUsedServer, lowestPercentUsedServer);
+      if (numSegments == 0) {
+        log.info("No segments found.  Cannot balance.");
+        continue;
+      }
 
-      log.info(
-          "[%s]: Percent difference in percent size used between highest/lowest servers: %s%%",
-          tier,
-          analyzer.getPercentDiff()
-      );
+      int iter = 0;
+      while (iter < maxSegmentsToMove) {
+        iter++;
+        final BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList, numSegments);
+        final ServerHolder holder = analyzer.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList);
+        if (holder == null) {
+          continue;
+        }
+        moveSegment(segmentToMove, holder.getServer(), params);
+      }
 
-      log.info(
-          "[%s]: Highest percent used [%s]: size used[%s], percent used[%s%%]",
-          tier,
-          highestPercentUsedServer.getServer().getName(),
-          highestPercentUsedServer.getSizeUsed(),
-          highestPercentUsedServer.getPercentUsed()
-      );
+      final double initialTotalCost = analyzer.calculateInitialTotalCost(serverHolderList);
+      final double normalization = analyzer.calculateNormalization(serverHolderList);
+      final double normalizedInitialCost = initialTotalCost / normalization;
 
-      log.info(
-          "[%s]: Lowest percent used [%s]: size used[%s], percent used[%s%%]",
-          tier,
-          lowestPercentUsedServer.getServer().getName(),
-          lowestPercentUsedServer.getSizeUsed(),
-          lowestPercentUsedServer.getPercentUsed()
-      );
-
-      // Use the analyzer to find segments to move and then move them
-      moveSegments(
-          lowestPercentUsedServer.getServer(),
-          analyzer.findSegmentsToMove(highestPercentUsedServer.getServer()),
-          params
-      );
-
+      stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
+      stats.addToTieredStat("normalization", tier, (long) normalization);
+      stats.addToTieredStat("normalizedInitialCostTimesOneThousand", tier, (long) (normalizedInitialCost * 1000));
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
+
+      log.info(
+          "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f], Segments Moved: [%d]",
+          tier,
+          initialTotalCost,
+          normalization,
+          normalizedInitialCost,
+          currentlyMovingSegments.get(tier).size()
+      );
     }
 
     return params.buildFromExisting()
@@ -147,49 +148,48 @@ public class DruidMasterBalancer implements DruidMasterHelper
                  .build();
   }
 
-  private void moveSegments(
-      final DruidServer server,
-      final Set<BalancerSegmentHolder> segments,
+  protected void moveSegment(
+      final BalancerSegmentHolder segment,
+      final DruidServer toServer,
       final DruidMasterRuntimeParams params
   )
   {
-    String toServer = server.getName();
-    LoadQueuePeon toPeon = params.getLoadManagementPeons().get(toServer);
+    final String toServerName = toServer.getName();
+    final LoadQueuePeon toPeon = params.getLoadManagementPeons().get(toServerName);
 
-    for (final BalancerSegmentHolder segment : Sets.newHashSet(segments)) {
-      String fromServer = segment.getServer().getName();
-      DataSegment segmentToMove = segment.getSegment();
-      final String segmentName = segmentToMove.getIdentifier();
+    final String fromServerName = segment.getFromServer().getName();
+    final DataSegment segmentToMove = segment.getSegment();
+    final String segmentName = segmentToMove.getIdentifier();
 
-      if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
-          (server.getSegment(segmentName) == null) &&
-          new ServerHolder(server, toPeon).getAvailableSize() > segmentToMove.getSize()) {
-        log.info("Moving [%s] from [%s] to [%s]", segmentName, fromServer, toServer);
-        try {
-          master.moveSegment(
-              fromServer,
-              toServer,
-              segmentToMove.getIdentifier(),
-              new LoadPeonCallback()
+    if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
+        (toServer.getSegment(segmentName) == null) &&
+        new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
+      log.info("Moving [%s] from [%s] to [%s]", segmentName, fromServerName, toServerName);
+      try {
+        master.moveSegment(
+            fromServerName,
+            toServerName,
+            segmentToMove.getIdentifier(),
+            new LoadPeonCallback()
+            {
+              @Override
+              protected void execute()
               {
-                @Override
-                protected void execute()
-                {
-                  Map<String, BalancerSegmentHolder> movingSegments = currentlyMovingSegments.get(server.getTier());
-                  if (movingSegments != null) {
-                    movingSegments.remove(segmentName);
-                  }
+                Map<String, BalancerSegmentHolder> movingSegments = currentlyMovingSegments.get(toServer.getTier());
+                if (movingSegments != null) {
+                  movingSegments.remove(segmentName);
                 }
               }
-          );
-          currentlyMovingSegments.get(server.getTier()).put(segmentName, segment);
-        }
-        catch (Exception e) {
-          log.makeAlert(e, String.format("[%s] : Moving exception", segmentName)).emit();
-        }
-      } else {
-        currentlyMovingSegments.get(server.getTier()).remove(segment);
+            }
+        );
+        currentlyMovingSegments.get(toServer.getTier()).put(segmentName, segment);
       }
+      catch (Exception e) {
+        log.makeAlert(e, String.format("[%s] : Moving exception", segmentName)).emit();
+      }
+    } else {
+      currentlyMovingSegments.get(toServer.getTier()).remove(segmentName);
     }
+
   }
 }

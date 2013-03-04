@@ -51,27 +51,8 @@ public class SegmentInsertAction implements TaskAction<Void>
   @Override
   public Void perform(TaskActionToolbox toolbox)
   {
-    // Verify that each of these segments-to-insert falls under some lock
-    // TODO: Should this be done while holding the giant lock on TaskLockbox? (To prevent anyone from grabbing
-    // TODO: these locks out from under us while the operation is ongoing.) Probably not necessary.
-    final List<TaskLock> taskLocks = toolbox.getTaskLockbox().findLocksForTask(task);
-    for(final DataSegment segment : segments) {
-      final boolean ok = Iterables.any(
-          taskLocks, new Predicate<TaskLock>()
-      {
-        @Override
-        public boolean apply(TaskLock taskLock)
-        {
-          return taskLock.getVersion().equals(segment.getVersion())
-                 && taskLock.getDataSource().equals(segment.getDataSource())
-                 && taskLock.getInterval().contains(segment.getInterval());
-        }
-      }
-      );
-
-      if(!ok) {
-        throw new ISE("No currently-held lock covers segment: %s", segment);
-      }
+    if(!toolbox.taskLockCoversSegments(task, segments, false)) {
+      throw new ISE("Segments not covered by locks for task: %s", task.getId());
     }
 
     try {

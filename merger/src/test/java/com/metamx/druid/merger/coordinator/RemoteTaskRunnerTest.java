@@ -21,6 +21,8 @@ import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.TaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.service.ServiceEmitter;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
@@ -158,35 +160,32 @@ public class RemoteTaskRunnerTest
   @Test
   public void testRunTooMuchZKData() throws Exception
   {
-    boolean exceptionOccurred = false;
-    try {
-      remoteTaskRunner.run(
-          new TestTask(
-              new String(new char[5000]),
-              "dummyDs",
-              Lists.<DataSegment>newArrayList(
-                  new DataSegment(
-                      "dummyDs",
-                      new Interval(new DateTime(), new DateTime()),
-                      new DateTime().toString(),
-                      null,
-                      null,
-                      null,
-                      null,
-                      0,
-                      0
-                  )
-              ),
-              Lists.<AggregatorFactory>newArrayList(),
-              TaskStatus.success("foo")
-          ),
-          null
-      );
-    }
-    catch (IllegalStateException e) {
-      exceptionOccurred = true;
-    }
-    Assert.assertTrue(exceptionOccurred);
+    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
+    EmittingLogger.registerEmitter(emitter);
+    EasyMock.replay(emitter);
+    remoteTaskRunner.run(
+        new TestTask(
+            new String(new char[5000]),
+            "dummyDs",
+            Lists.<DataSegment>newArrayList(
+                new DataSegment(
+                    "dummyDs",
+                    new Interval(new DateTime(), new DateTime()),
+                    new DateTime().toString(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    0,
+                    0
+                )
+            ),
+            Lists.<AggregatorFactory>newArrayList(),
+            TaskStatus.success("foo")
+        ),
+        null
+    );
+    EasyMock.verify(emitter);
   }
 
   @Test
@@ -296,9 +295,15 @@ public class RemoteTaskRunnerTest
               }
 
               @Override
-              public long getRowFlushBoundary()
+              public int getDefaultRowFlushBoundary()
               {
                 return 0;
+              }
+
+              @Override
+              public String getHadoopWorkingPath()
+              {
+                return null;
               }
             }, null, null, null, null, null, jsonMapper
         ),

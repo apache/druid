@@ -83,7 +83,7 @@ public class HadoopDruidIndexerAzkWrapper
 
     final HadoopDruidIndexerConfig config = jsonMapper.convertValue(theMap, HadoopDruidIndexerConfig.class);
     config.setIntervals(dataInterval);
-    config.setVersion(new DateTime());
+    config.setVersion(new DateTime().toString());
 
     new HadoopDruidIndexerJob(config).run();
   }
