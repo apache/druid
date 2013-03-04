@@ -20,15 +20,19 @@
 package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.actions.SegmentListUsedAction;
 import org.joda.time.Interval;
 
 public abstract class AbstractTask implements Task
 {
+  private static final Joiner ID_JOINER = Joiner.on("_");
+
   private final String id;
   private final String groupId;
   private final String dataSource;
@@ -90,5 +94,21 @@ public abstract class AbstractTask implements Task
                   .add("dataSource", dataSource)
                   .add("interval", getImplicitLockInterval())
                   .toString();
+  }
+
+  /** Start helper methods **/
+  public static String joinId(Object... objects)
+  {
+    return ID_JOINER.join(objects);
+  }
+
+  public SegmentListUsedAction makeListUsedAction()
+  {
+    return new SegmentListUsedAction(this, getDataSource(), getFixedInterval().get());
+  }
+
+  public TaskStatus success()
+  {
+    return TaskStatus.success(getId());
   }
 }
