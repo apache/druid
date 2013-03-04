@@ -223,9 +223,9 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.replay(workerSetupManager);
 
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
-            .andReturn(Lists.<String>newArrayList()).times(2);
+            .andReturn(Lists.<String>newArrayList("ip")).times(2);
     EasyMock.expect(autoScalingStrategy.terminate(EasyMock.<List<String>>anyObject())).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("foobar"), Lists.newArrayList("foobrick"))
+        new AutoScalingData(Lists.<String>newArrayList("ip"), Lists.newArrayList("ip"))
     );
     EasyMock.replay(autoScalingStrategy);
 
