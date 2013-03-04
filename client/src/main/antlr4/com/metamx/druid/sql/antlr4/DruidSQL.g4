@@ -1,15 +1,4 @@
-
 grammar DruidSQL;
-
-/*
-@lexer::header {
-  package com.metamx.druid.sql.antlr;
-}
-*/
-/*
-TODO: handle both multiply / division, addition - subtraction
-unary minus
-*/
 
 @header {
 import com.metamx.druid.aggregation.post.*;
