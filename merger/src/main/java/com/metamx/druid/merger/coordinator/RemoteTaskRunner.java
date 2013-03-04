@@ -457,8 +457,6 @@ public class RemoteTaskRunner implements TaskRunner
                     if (runningTasks.containsKey(taskId)) {
                       log.info("Task %s just disappeared!", taskId);
                       retryTask(runningTasks.get(taskId), worker.getHost());
-                    } else {
-                      log.info("A task disappeared I didn't know about: %s", taskId);
                     }
                   }
                 }
