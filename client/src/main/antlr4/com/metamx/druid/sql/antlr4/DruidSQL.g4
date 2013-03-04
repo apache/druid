@@ -90,6 +90,8 @@ PLUS: '+';
 MINUS: '-';
 DIV: '/';
 COMMA: ',';
+EQ: '=';
+NEQ: '!=';
 GROUP: 'group';
 
 IDENT : (LETTER)(LETTER | DIGIT | '_')* ;
@@ -238,13 +240,26 @@ andDimFilter returns [DimFilter filter]
 
 primaryDimFilter returns [DimFilter filter]
     : e=selectorDimFilter { $filter = $e.filter; }
-    | NOT f=dimFilter { $filter = new NotDimFilter($f.filter); }
+    | l=inListDimFilter   { $filter = $l.filter; }
+    | NOT f=dimFilter     { $filter = new NotDimFilter($f.filter); }
     | OPEN! f=dimFilter CLOSE! { $filter = $f.filter; }
     ;
 
-selectorDimFilter returns [SelectorDimFilter filter]
-    : dimension=IDENT '=' value=QUOTED_STRING {
-        $filter = new SelectorDimFilter($dimension.text, unescape($value.text));
+selectorDimFilter returns [DimFilter filter]
+    : dimension=IDENT op=(EQ|NEQ) value=QUOTED_STRING {
+        DimFilter f = new SelectorDimFilter($dimension.text, unescape($value.text));
+        switch($op.type) {
+            case(EQ): $filter = f; break;
+            case(NEQ): $filter = new NotDimFilter(f); break;
+        }
+    }
+    ;
+
+inListDimFilter returns [DimFilter filter]
+    : dimension=IDENT 'in' (OPEN! ( (list+=QUOTED_STRING (COMMA! list+=QUOTED_STRING)*) ) CLOSE!) {
+        List<DimFilter> filterList = new LinkedList<DimFilter>();
+        for(Token e : $list) filterList.add(new SelectorDimFilter($dimension.text, unescape(e.getText())));
+        $filter = new OrDimFilter(filterList);
     }
     ;
 
