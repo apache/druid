@@ -167,7 +167,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
               )
       );
 
-      if (thoseLazyWorkers.isEmpty()) {
+      if (thoseLazyWorkers.size() <= minNumWorkers) {
         return false;
       }
 

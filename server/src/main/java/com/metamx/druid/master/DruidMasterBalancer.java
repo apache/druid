@@ -19,6 +19,7 @@
 
 package com.metamx.druid.master;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.guava.Comparators;
@@ -66,9 +67,9 @@ public class DruidMasterBalancer implements DruidMasterHelper
       holder.reduceLifetime();
       if (holder.getLifetime() <= 0) {
         log.makeAlert("[%s]: Balancer move segments queue has a segment stuck", tier)
-            .addData("segment", holder.getSegment().getIdentifier())
-            .addData("server", holder.getFromServer().getStringProps())
-            .emit();
+           .addData("segment", holder.getSegment().getIdentifier())
+           .addData("server", holder.getFromServer().getStringProps())
+           .emit();
       }
     }
   }
@@ -95,7 +96,13 @@ public class DruidMasterBalancer implements DruidMasterHelper
         continue;
       }
 
-      final List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(entry.getValue());
+      final List<ServerHolder> serverHolderList = Lists.newArrayList(entry.getValue());
+
+      if (serverHolderList.size() <= 1) {
+        log.info("[%s]: One or fewer servers found.  Cannot balance.", tier);
+        continue;
+      }
+
       int numSegments = 0;
       for (ServerHolder server : serverHolderList) {
         numSegments += server.getServer().getSegments().size();
@@ -107,19 +114,14 @@ public class DruidMasterBalancer implements DruidMasterHelper
       }
 
       int iter = 0;
-
       while (iter < maxSegmentsToMove) {
         iter++;
         final BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList, numSegments);
-        final ServerHolder holder = analyzer.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList, false);
+        final ServerHolder holder = analyzer.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList);
         if (holder == null) {
           continue;
         }
-        final DruidServer toServer = holder.getServer();
-
-        if (!currentlyMovingSegments.get(tier).containsKey(segmentToMove.getSegment())) {
-          moveSegment(segmentToMove, toServer, params);
-        }
+        moveSegment(segmentToMove, holder.getServer(), params);
       }
 
       final double initialTotalCost = analyzer.calculateInitialTotalCost(serverHolderList);
@@ -132,21 +134,13 @@ public class DruidMasterBalancer implements DruidMasterHelper
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
 
       log.info(
-          "Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f], Segments Moved: [%d]",
+          "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f], Segments Moved: [%d]",
+          tier,
           initialTotalCost,
           normalization,
           normalizedInitialCost,
           currentlyMovingSegments.get(tier).size()
       );
-
-      if (serverHolderList.size() <= 1) {
-        log.info(
-            "[%s]: One or fewer servers found.  Cannot balance.",
-            tier
-        );
-        continue;
-      }
-
     }
 
     return params.buildFromExisting()
@@ -194,7 +188,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
         log.makeAlert(e, String.format("[%s] : Moving exception", segmentName)).emit();
       }
     } else {
-      currentlyMovingSegments.get(toServer.getTier()).remove(segment);
+      currentlyMovingSegments.get(toServer.getTier()).remove(segmentName);
     }
 
   }
