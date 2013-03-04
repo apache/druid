@@ -10,6 +10,7 @@ import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.sql.antlr4.DruidSQLLexer;
 import com.metamx.druid.sql.antlr4.DruidSQLParser;
 import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.BailErrorStrategy;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.TokenStream;
@@ -23,10 +24,11 @@ import java.util.ArrayList;
 
 public class SQLRunner
 {
-  private static final String STATEMENT = "select count(*), sum(count) / count(*) as avg from wikipedia where"
+  private static final String STATEMENT = "select count(*), (1 - count(*) / sum(count)) * 100 as ratio from wikipedia where"
                                           + " timestamp between '2013-02-01' and '2013-02-14'"
-                                          + " and namespace = 'article'"
-                                          + " and ( language = 'en' or language = 'fr' ) "
+                                          + " and (namespace = 'article' or page ~ 'Talk:.*')"
+                                          + " and language in ( 'en', 'fr' ) "
+                                          + " and user ~ '(?i)^david.*'"
                                           + " group by granularity(timestamp, 'day'), language";
 
   public static void main(String[] args) throws Exception
@@ -40,12 +42,12 @@ public class SQLRunner
     DruidSQLLexer lexer = new DruidSQLLexer(stream);
     TokenStream tokenStream = new CommonTokenStream(lexer);
     DruidSQLParser parser = new DruidSQLParser(tokenStream);
+    parser.setErrorHandler(new BailErrorStrategy());
 
 
-    DruidSQLParser.QueryContext q = parser.query();
-
-    parser.setBuildParseTree(true);
-    System.err.println(q.toStringTree(parser));
+    DruidSQLParser.QueryContext queryContext = parser.query();
+//    parser.setBuildParseTree(true);
+//    System.err.println(q.toStringTree(parser));
 
     Query query;
 
