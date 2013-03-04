@@ -174,9 +174,16 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
               )
       );
 
+      int maxPossibleNodesTerminated = zkWorkers.size() - minNumWorkers;
+      int numNodesToTerminate = Math.min(maxPossibleNodesTerminated, thoseLazyWorkers.size());
+      if (numNodesToTerminate <= 0) {
+        log.info("Found no nodes to terminate.");
+        return false;
+      }
+
       AutoScalingData terminated = autoScalingStrategy.terminate(
           Lists.transform(
-              thoseLazyWorkers.subList(minNumWorkers, thoseLazyWorkers.size()),
+              thoseLazyWorkers.subList(0, numNodesToTerminate),
               new Function<ZkWorker, String>()
               {
                 @Override
