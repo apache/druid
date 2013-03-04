@@ -92,6 +92,7 @@ DIV: '/';
 COMMA: ',';
 EQ: '=';
 NEQ: '!=';
+MATCH: '~';
 GROUP: 'group';
 
 IDENT : (LETTER)(LETTER | DIGIT | '_')* ;
@@ -246,11 +247,13 @@ primaryDimFilter returns [DimFilter filter]
     ;
 
 selectorDimFilter returns [DimFilter filter]
-    : dimension=IDENT op=(EQ|NEQ) value=QUOTED_STRING {
-        DimFilter f = new SelectorDimFilter($dimension.text, unescape($value.text));
+    : dimension=IDENT op=(EQ|NEQ|MATCH) value=QUOTED_STRING {
+        String dim = $dimension.text;
+        String val = unescape($value.text);
         switch($op.type) {
-            case(EQ): $filter = f; break;
-            case(NEQ): $filter = new NotDimFilter(f); break;
+            case(EQ): $filter = new SelectorDimFilter(dim, val); break;
+            case(NEQ): $filter = new NotDimFilter(new SelectorDimFilter(dim, val)); break;
+            case(MATCH): $filter = new RegexDimFilter(dim, val); break;
         }
     }
     ;
