@@ -103,7 +103,7 @@ public class IndexGeneratorTask extends AbstractTask
     final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction(this)));
 
     // We know this exists
-    final Interval interval = getFixedInterval().get();
+    final Interval interval = getImplicitLockInterval().get();
 
     // Set up temporary directory for indexing
     final File tmpDir = new File(
@@ -205,7 +205,7 @@ public class IndexGeneratorTask extends AbstractTask
    * @return true or false
    */
   private boolean shouldIndex(InputRow inputRow) {
-    if(!getFixedInterval().get().contains(inputRow.getTimestampFromEpoch())) {
+    if(!getImplicitLockInterval().get().contains(inputRow.getTimestampFromEpoch())) {
       return false;
     }
 

@@ -215,7 +215,7 @@ public abstract class MergeTask extends AbstractTask
     final Set<String> current = ImmutableSet.copyOf(
         Iterables.transform(
             toolbox.getTaskActionClient()
-                   .submit(new SegmentListUsedAction(this, getDataSource(), getFixedInterval().get())),
+                   .submit(new SegmentListUsedAction(this, getDataSource(), getImplicitLockInterval().get())),
             toIdentifier
         )
     );
@@ -256,7 +256,7 @@ public abstract class MergeTask extends AbstractTask
     return Objects.toStringHelper(this)
                   .add("id", getId())
                   .add("dataSource", getDataSource())
-                  .add("interval", getFixedInterval())
+                  .add("interval", getImplicitLockInterval())
                   .add("segments", segments)
                   .toString();
   }

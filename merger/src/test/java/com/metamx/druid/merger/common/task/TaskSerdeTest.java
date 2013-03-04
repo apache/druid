@@ -42,12 +42,12 @@ public class TaskSerdeTest
     final Task task2 = jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P2D")), task.getFixedInterval());
+    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P2D")), task.getImplicitLockInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getFixedInterval(), task2.getFixedInterval());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
   }
 
   @Test
@@ -71,12 +71,12 @@ public class TaskSerdeTest
     final Task task2 = jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getFixedInterval());
+    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getImplicitLockInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getFixedInterval(), task2.getFixedInterval());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
   }
 
   @Test
@@ -94,12 +94,12 @@ public class TaskSerdeTest
     final Task task2 = jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getFixedInterval());
+    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getImplicitLockInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getFixedInterval(), task2.getFixedInterval());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
   }
 
   @Test
@@ -117,8 +117,8 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getFixedInterval(), task2.getFixedInterval());
-    Assert.assertEquals(task.getFixedInterval().get(), task2.getFixedInterval().get());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
+    Assert.assertEquals(task.getImplicitLockInterval().get(), task2.getImplicitLockInterval().get());
   }
 
   @Test
@@ -156,11 +156,11 @@ public class TaskSerdeTest
     final Task task2 = jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getFixedInterval());
+    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getImplicitLockInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getFixedInterval(), task2.getFixedInterval());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
   }
 }

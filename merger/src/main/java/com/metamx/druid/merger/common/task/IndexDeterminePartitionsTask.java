@@ -104,7 +104,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
     // TODO: Replace/merge/whatever with hadoop determine-partitions code
 
     // We know this exists
-    final Interval interval = getFixedInterval().get();
+    final Interval interval = getImplicitLockInterval().get();
 
     // Blacklist dimensions that have multiple values per row
     final Set<String> unusableDimensions = Sets.newHashSet();
@@ -244,7 +244,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
           {
             return new IndexGeneratorTask(
                 getGroupId(),
-                getFixedInterval().get(),
+                getImplicitLockInterval().get(),
                 firehoseFactory,
                 new Schema(
                     schema.getDataSource(),
