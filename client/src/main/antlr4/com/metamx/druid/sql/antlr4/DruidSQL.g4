@@ -96,6 +96,7 @@ AS: 'as';
 OPEN: '(';
 CLOSE: ')';
 STAR: '*';
+NOT: '!' ;
 PLUS: '+';
 MINUS: '-';
 DIV: '/';
@@ -103,15 +104,16 @@ COMMA: ',';
 GROUP: 'group';
 
 IDENT : (LETTER)(LETTER | DIGIT | '_')* ;
-QUOTED_STRING : '\'' ( ESCqs | ~'\'' )* '\'' ;
-ESCqs : '\'' '\'';
+QUOTED_STRING : '\'' ( ESC | ~'\'' )*? '\'' ;
+ESC : '\'' '\'';
 
 NUMBER: ('+'|'-')?DIGIT*'.'?DIGIT+(EXPONENT)?;
 EXPONENT: ('e') ('+'|'-')? ('0'..'9')+;
 fragment DIGIT : '0'..'9';
 fragment LETTER : 'a'..'z' | 'A'..'Z';
 
-
+LINE_COMMENT : '--' .*? '\r'? '\n' -> skip ;
+COMMENT      : '/*' .*? '*/' -> skip ;
 WS :  (' '| '\t' | '\r' '\n' | '\n' | '\r')+ -> skip;
 
 
@@ -247,6 +249,7 @@ andDimFilter returns [DimFilter filter]
 
 primaryDimFilter returns [DimFilter filter]
     : e=selectorDimFilter { $filter = $e.filter; }
+    | NOT f=dimFilter { $filter = new NotDimFilter($f.filter); }
     | OPEN! f=dimFilter CLOSE! { $filter = $f.filter; }
     ;
 
