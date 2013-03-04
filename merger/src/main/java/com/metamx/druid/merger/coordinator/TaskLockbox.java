@@ -78,7 +78,7 @@ public class TaskLockbox
 
     try {
 
-      if(task.getFixedInterval().isPresent() && !task.getFixedInterval().get().equals(interval)) {
+      if(task.getImplicitLockInterval().isPresent() && !task.getImplicitLockInterval().get().equals(interval)) {
         // Task may only lock its fixed interval, if present
         throw new IAE("Task must lock its fixed interval: %s", task.getId());
       }
@@ -292,9 +292,9 @@ public class TaskLockbox
     try {
       final Iterable<TaskLockPosse> searchSpace;
 
-      if (task.getFixedInterval().isPresent()) {
+      if (task.getImplicitLockInterval().isPresent()) {
         // Narrow down search using findLockPossesForInterval
-        searchSpace = findLockPossesForInterval(task.getDataSource(), task.getFixedInterval().get());
+        searchSpace = findLockPossesForInterval(task.getDataSource(), task.getImplicitLockInterval().get());
       } else {
         // Scan through all locks for this datasource
         final NavigableMap<Interval, TaskLockPosse> dsRunning = running.get(task.getDataSource());

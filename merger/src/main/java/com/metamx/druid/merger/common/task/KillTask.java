@@ -59,8 +59,8 @@ public class KillTask extends AbstractTask
       throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
     }
 
-    if(!myLock.getInterval().equals(getFixedInterval().get())) {
-      throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getFixedInterval().get());
+    if(!myLock.getInterval().equals(getImplicitLockInterval().get())) {
+      throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getImplicitLockInterval().get());
     }
 
     // List unused segments

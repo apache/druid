@@ -96,7 +96,7 @@ public class TaskConsumer implements Runnable
              .addData("task", task.getId())
              .addData("type", task.getType())
              .addData("dataSource", task.getDataSource())
-             .addData("interval", task.getFixedInterval())
+             .addData("interval", task.getImplicitLockInterval())
              .emit();
 
           // Retry would be nice, but only after we have a way to throttle and limit them. Just fail for now.
@@ -118,7 +118,7 @@ public class TaskConsumer implements Runnable
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
         .setUser2(task.getDataSource())
         .setUser4(task.getType())
-        .setUser5(task.getFixedInterval().toString());
+        .setUser5(task.getImplicitLockInterval().toString());
 
     // Run preflight checks
     TaskStatus preflightStatus;
@@ -166,7 +166,7 @@ public class TaskConsumer implements Runnable
                  .addData("task", task.getId())
                  .addData("type", task.getType())
                  .addData("dataSource", task.getDataSource())
-                 .addData("interval", task.getFixedInterval())
+                 .addData("interval", task.getImplicitLockInterval())
                  .emit();
             }
 
