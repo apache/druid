@@ -52,8 +52,8 @@ import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.loading.S3SegmentKiller;
-import com.metamx.druid.loading.SegmentKiller;
+import com.metamx.druid.loading.S3DataSegmentKiller;
+import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.merger.common.actions.TaskActionToolbox;
@@ -489,7 +489,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public void initializeTaskToolbox()
   {
     if (taskToolboxFactory == null) {
-      final SegmentKiller segmentKiller = new S3SegmentKiller(s3Service);
+      final DataSegmentKiller dataSegmentKiller = new S3DataSegmentKiller(s3Service);
       taskToolboxFactory = new TaskToolboxFactory(
           taskConfig,
           new LocalTaskActionClientFactory(
@@ -499,7 +499,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
           emitter,
           s3Service,
           segmentPusher,
-          segmentKiller,
+          dataSegmentKiller,
           jsonMapper
       );
     }

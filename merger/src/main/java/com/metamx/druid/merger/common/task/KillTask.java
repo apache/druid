@@ -72,7 +72,7 @@ public class KillTask extends AbstractTask
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     // Confirm we have a lock (will throw if there isn't exactly one element)
-    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClientFactory().submit(new LockListAction()));
 
     if(!myLock.getDataSource().equals(getDataSource())) {
       throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
@@ -84,7 +84,7 @@ public class KillTask extends AbstractTask
 
     // List unused segments
     final List<DataSegment> unusedSegments = toolbox
-        .getTaskActionClient()
+        .getTaskActionClientFactory()
         .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
 
     // Verify none of these segments have versions > lock version
@@ -102,10 +102,12 @@ public class KillTask extends AbstractTask
     }
 
     // Kill segments
-    toolbox.getSegmentKiller().kill(unusedSegments);
+    for (DataSegment segment : unusedSegments) {
+      toolbox.getDataSegmentKiller().kill(segment);
+    }
 
     // Remove metadata for these segments
-    toolbox.getTaskActionClient().submit(new SegmentNukeAction(ImmutableSet.copyOf(unusedSegments)));
+    toolbox.getTaskActionClientFactory().submit(new SegmentNukeAction(ImmutableSet.copyOf(unusedSegments)));
 
     return TaskStatus.success(getId());
   }

@@ -101,7 +101,7 @@ public class TaskMonitor
                       public void run()
                       {
                         final long startTime = System.currentTimeMillis();
-                        final File taskDir = toolbox.getConfig().getTaskDir(task);
+                        final File taskDir = toolbox.getTaskDir();
 
                         log.info("Running task [%s]", task.getId());
 

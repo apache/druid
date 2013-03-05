@@ -27,7 +27,6 @@ import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskStatus;
-import com.metamx.druid.merger.common.actions.TaskAction;
 import com.metamx.druid.merger.common.actions.TaskActionHolder;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
@@ -185,7 +184,7 @@ public class IndexerCoordinatorResource
   public <T> Response doAction(final TaskActionHolder<T> holder)
   {
     final T ret = taskMasterLifecycle.getTaskToolbox(holder.getTask())
-                                     .getTaskActionClient()
+                                     .getTaskActionClientFactory()
                                      .submit(holder.getAction());
 
     final Map<String, Object> retMap = Maps.newHashMap();

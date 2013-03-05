@@ -20,25 +20,13 @@
 package com.metamx.druid.merger.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
-import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.loading.MMappedQueryableIndexFactory;
-import com.metamx.druid.loading.S3DataSegmentPuller;
-import com.metamx.druid.loading.SegmentKiller;
-import com.metamx.druid.loading.SegmentLoaderConfig;
-import com.metamx.druid.loading.SegmentLoadingException;
-import com.metamx.druid.loading.SingleSegmentLoader;
-import com.metamx.druid.merger.common.actions.TaskActionClient;
+import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-
-import java.io.File;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -46,29 +34,29 @@ import java.util.Map;
 public class TaskToolboxFactory
 {
   private final TaskConfig config;
-  private final TaskActionClientFactory taskActionClient;
+  private final TaskActionClientFactory taskActionClientFactory;
   private final ServiceEmitter emitter;
   private final RestS3Service s3Client;
   private final DataSegmentPusher segmentPusher;
-  private final SegmentKiller segmentKiller;
+  private final DataSegmentKiller dataSegmentKiller;
   private final ObjectMapper objectMapper;
 
   public TaskToolboxFactory(
       TaskConfig config,
-      TaskActionClientFactory taskActionClient,
+      TaskActionClientFactory taskActionClientFactory,
       ServiceEmitter emitter,
       RestS3Service s3Client,
       DataSegmentPusher segmentPusher,
-      SegmentKiller segmentKiller,
+      DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper
   )
   {
     this.config = config;
-    this.taskActionClient = taskActionClient;
+    this.taskActionClientFactory = taskActionClientFactory;
     this.emitter = emitter;
     this.s3Client = s3Client;
     this.segmentPusher = segmentPusher;
-    this.segmentKiller = segmentKiller;
+    this.dataSegmentKiller = dataSegmentKiller;
     this.objectMapper = objectMapper;
   }
 
@@ -81,11 +69,12 @@ public class TaskToolboxFactory
   {
     return new TaskToolbox(
         config,
-        taskActionClient == null ? null : taskActionClient.create(task),
+        task,
+        taskActionClientFactory,
         emitter,
         s3Client,
         segmentPusher,
-        segmentKiller,
+        dataSegmentKiller,
         objectMapper
     );
   }
