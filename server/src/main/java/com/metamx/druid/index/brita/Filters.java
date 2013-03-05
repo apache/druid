@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.metamx.druid.query.filter.AndDimFilter;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.filter.ExtractionDimFilter;
+import com.metamx.druid.query.filter.JavaScriptDimFilter;
 import com.metamx.druid.query.filter.NotDimFilter;
 import com.metamx.druid.query.filter.OrDimFilter;
 import com.metamx.druid.query.filter.RegexDimFilter;
@@ -84,6 +85,10 @@ public class Filters
       final SearchQueryDimFilter searchQueryFilter = (SearchQueryDimFilter) dimFilter;
 
       filter = new SearchQueryFilter(searchQueryFilter.getDimension(), searchQueryFilter.getQuery());
+    } else if (dimFilter instanceof JavaScriptDimFilter) {
+      final JavaScriptDimFilter javaScriptDimFilter = (JavaScriptDimFilter) dimFilter;
+
+      filter = new JavaScriptFilter(javaScriptDimFilter.getDimension(), javaScriptDimFilter.getFunction());
     }
 
     return filter;
