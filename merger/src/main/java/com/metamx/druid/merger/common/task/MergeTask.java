@@ -119,7 +119,7 @@ public abstract class MergeTask extends AbstractTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction(this)));
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
     final ServiceEmitter emitter = toolbox.getEmitter();
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     final DataSegment mergedSegment = computeMergedSegment(getDataSource(), myLock.getVersion(), segments);
@@ -170,7 +170,7 @@ public abstract class MergeTask extends AbstractTask
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
 
-      toolbox.getTaskActionClient().submit(new SegmentInsertAction(this, ImmutableSet.of(uploadedSegment)));
+      toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(uploadedSegment)));
 
       return TaskStatus.success(getId());
     }
@@ -215,7 +215,7 @@ public abstract class MergeTask extends AbstractTask
     final Set<String> current = ImmutableSet.copyOf(
         Iterables.transform(
             toolbox.getTaskActionClient()
-                   .submit(new SegmentListUsedAction(this, getDataSource(), getImplicitLockInterval().get())),
+                   .submit(new SegmentListUsedAction(getDataSource(), getImplicitLockInterval().get())),
             toIdentifier
         )
     );

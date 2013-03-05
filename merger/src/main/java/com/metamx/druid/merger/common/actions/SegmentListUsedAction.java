@@ -12,26 +12,17 @@ import java.util.List;
 
 public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
 {
-  private final Task task;
   private final String dataSource;
   private final Interval interval;
 
   @JsonCreator
   public SegmentListUsedAction(
-      @JsonProperty("task") Task task,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval
   )
   {
-    this.task = task;
     this.dataSource = dataSource;
     this.interval = interval;
-  }
-
-  @JsonProperty
-  public Task getTask()
-  {
-    return task;
   }
 
   @JsonProperty
@@ -52,7 +43,7 @@ public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
   }
 
   @Override
-  public List<DataSegment> perform(TaskActionToolbox toolbox)
+  public List<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     try {
       return toolbox.getMergerDBCoordinator().getUsedSegmentsForInterval(dataSource, interval);

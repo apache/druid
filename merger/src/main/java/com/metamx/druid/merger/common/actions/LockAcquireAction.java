@@ -11,23 +11,14 @@ import org.joda.time.Interval;
 
 public class LockAcquireAction implements TaskAction<Optional<TaskLock>>
 {
-  private final Task task;
   private final Interval interval;
 
   @JsonCreator
   public LockAcquireAction(
-      @JsonProperty("task") Task task,
       @JsonProperty("interval") Interval interval
   )
   {
-    this.task = task;
     this.interval = interval;
-  }
-
-  @JsonProperty
-  public Task getTask()
-  {
-    return task;
   }
 
   @JsonProperty
@@ -42,7 +33,7 @@ public class LockAcquireAction implements TaskAction<Optional<TaskLock>>
   }
 
   @Override
-  public Optional<TaskLock> perform(TaskActionToolbox toolbox)
+  public Optional<TaskLock> perform(Task task, TaskActionToolbox toolbox)
   {
     try {
       return toolbox.getTaskLockbox().tryLock(task, interval);

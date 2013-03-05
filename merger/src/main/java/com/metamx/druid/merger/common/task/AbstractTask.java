@@ -102,9 +102,9 @@ public abstract class AbstractTask implements Task
     return ID_JOINER.join(objects);
   }
 
-  public SegmentListUsedAction makeListUsedAction()
+  public SegmentListUsedAction makeImplicitListUsedAction()
   {
-    return new SegmentListUsedAction(this, getDataSource(), getFixedInterval().get());
+    return new SegmentListUsedAction(getDataSource(), getImplicitLockInterval().get());
   }
 
   public TaskStatus success()

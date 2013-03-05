@@ -24,7 +24,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
-import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskQueue;
 import com.metamx.druid.merger.coordinator.TaskRunner;
@@ -36,7 +36,7 @@ public class TaskConsumer implements Runnable
 {
   private final TaskQueue queue;
   private final TaskRunner runner;
-  private final TaskToolbox toolbox;
+  private final TaskToolboxFactory toolboxFactory;
   private final ServiceEmitter emitter;
   private final Thread thready;
 
@@ -47,13 +47,13 @@ public class TaskConsumer implements Runnable
   public TaskConsumer(
       TaskQueue queue,
       TaskRunner runner,
-      TaskToolbox toolbox,
+      TaskToolboxFactory toolboxFactory,
       ServiceEmitter emitter
   )
   {
     this.queue = queue;
     this.runner = runner;
-    this.toolbox = toolbox;
+    this.toolboxFactory = toolboxFactory;
     this.emitter = emitter;
     this.thready = new Thread(this);
   }
@@ -123,7 +123,7 @@ public class TaskConsumer implements Runnable
     // Run preflight checks
     TaskStatus preflightStatus;
     try {
-      preflightStatus = task.preflight(toolbox);
+      preflightStatus = task.preflight(toolboxFactory.build(task));
       log.info("Preflight done for task: %s", task.getId());
     }
     catch (Exception e) {

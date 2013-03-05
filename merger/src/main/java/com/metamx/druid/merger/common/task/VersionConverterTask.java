@@ -50,11 +50,10 @@ public class VersionConverterTask extends AbstractTask
   {
     final TaskActionClient taskClient = toolbox.getTaskActionClient();
 
-    List<DataSegment> segments = taskClient.submit(makeListUsedAction());
+    List<DataSegment> segments = taskClient.submit(makeImplicitListUsedAction());
 
     taskClient.submit(
         new SpawnTasksAction(
-            this,
             Lists.transform(
                 segments,
                 new Function<DataSegment, Task>()

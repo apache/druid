@@ -35,6 +35,7 @@ import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentPusher;
@@ -43,7 +44,9 @@ import com.metamx.druid.loading.S3DataSegmentPusherConfig;
 import com.metamx.druid.loading.S3SegmentKiller;
 import com.metamx.druid.loading.SegmentKiller;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.actions.RemoteTaskActionClient;
+import com.metamx.druid.merger.common.actions.RemoteTaskActionClientFactory;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
@@ -106,7 +109,8 @@ public class WorkerNode extends RegisteringNode
   private ServiceEmitter emitter = null;
   private TaskConfig taskConfig = null;
   private WorkerConfig workerConfig = null;
-  private TaskToolbox taskToolbox = null;
+  private DataSegmentPusher segmentPusher = null;
+  private TaskToolboxFactory taskToolboxFactory = null;
   private CuratorFramework curatorFramework = null;
   private ServiceDiscovery serviceDiscovery = null;
   private ServiceProvider coordinatorServiceProvider = null;
@@ -149,9 +153,15 @@ public class WorkerNode extends RegisteringNode
     return this;
   }
 
-  public WorkerNode setTaskToolbox(TaskToolbox taskToolbox)
+  public WorkerNode setSegmentPusher(DataSegmentPusher segmentPusher)
   {
-    this.taskToolbox = taskToolbox;
+    this.segmentPusher = segmentPusher;
+    return this;
+  }
+
+  public WorkerNode setTaskToolboxFactory(TaskToolboxFactory taskToolboxFactory)
+  {
+    this.taskToolboxFactory = taskToolboxFactory;
     return this;
   }
 
@@ -195,6 +205,7 @@ public class WorkerNode extends RegisteringNode
     initializeCuratorFramework();
     initializeServiceDiscovery();
     initializeCoordinatorServiceProvider();
+    initializeDataSegmentPusher();
     initializeTaskToolbox();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
@@ -271,7 +282,7 @@ public class WorkerNode extends RegisteringNode
     InjectableValues.Std injectables = new InjectableValues.Std();
 
     injectables.addValue("s3Client", s3Service)
-               .addValue("segmentPusher", taskToolbox.getSegmentPusher());
+               .addValue("segmentPusher", segmentPusher);
 
     jsonMapper.setInjectableValues(injectables);
   }
@@ -334,23 +345,23 @@ public class WorkerNode extends RegisteringNode
     }
   }
 
+  public void initializeDataSegmentPusher()
+  {
+    if (segmentPusher == null) {
+      segmentPusher = ServerInit.getSegmentPusher(props, configFactory, jsonMapper);
+    }
+  }
+
   public void initializeTaskToolbox() throws S3ServiceException
   {
-    if (taskToolbox == null) {
-      final DataSegmentPusher dataSegmentPusher = new S3DataSegmentPusher(
-          s3Service,
-          configFactory.build(S3DataSegmentPusherConfig.class),
-          jsonMapper
-      );
-      final SegmentKiller segmentKiller = new S3SegmentKiller(
-          s3Service
-      );
-      taskToolbox = new TaskToolbox(
+    if (taskToolboxFactory == null) {
+      final SegmentKiller segmentKiller = new S3SegmentKiller(s3Service);
+      taskToolboxFactory = new TaskToolboxFactory(
           taskConfig,
-          new RemoteTaskActionClient(httpClient, coordinatorServiceProvider, jsonMapper),
+          new RemoteTaskActionClientFactory(httpClient, coordinatorServiceProvider, jsonMapper),
           emitter,
           s3Service,
-          dataSegmentPusher,
+          segmentPusher,
           segmentKiller,
           jsonMapper
       );
@@ -417,7 +428,7 @@ public class WorkerNode extends RegisteringNode
           pathChildrenCache,
           curatorFramework,
           workerCuratorCoordinator,
-          taskToolbox,
+          taskToolboxFactory,
           workerExec
       );
       lifecycle.addManagedInstance(taskMonitor);

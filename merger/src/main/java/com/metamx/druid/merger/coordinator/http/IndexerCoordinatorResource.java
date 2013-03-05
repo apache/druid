@@ -27,6 +27,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.actions.TaskAction;
+import com.metamx.druid.merger.common.actions.TaskActionHolder;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
@@ -174,9 +175,12 @@ public class IndexerCoordinatorResource
   @POST
   @Path("/action")
   @Produces("application/json")
-  public <T> Response doAction(final TaskAction<T> action)
+  public <T> Response doAction(final TaskActionHolder<T> holder)
   {
-    final T ret = taskMasterLifecycle.getTaskToolbox().getTaskActionClient().submit(action);
+    final T ret = taskMasterLifecycle.getTaskToolbox(holder.getTask())
+                                     .getTaskActionClient()
+                                     .submit(holder.getAction());
+
     final Map<String, Object> retMap = Maps.newHashMap();
     retMap.put("result", ret);
 

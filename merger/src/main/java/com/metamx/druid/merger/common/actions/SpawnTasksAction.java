@@ -11,23 +11,14 @@ import java.util.List;
 
 public class SpawnTasksAction implements TaskAction<Void>
 {
-  private final Task task;
   private final List<Task> newTasks;
 
   @JsonCreator
   public SpawnTasksAction(
-      @JsonProperty("task") Task task,
       @JsonProperty("newTasks") List<Task> newTasks
   )
   {
-    this.task = task;
     this.newTasks = ImmutableList.copyOf(newTasks);
-  }
-
-  @JsonProperty
-  public Task getTask()
-  {
-    return task;
   }
 
   @JsonProperty
@@ -42,7 +33,7 @@ public class SpawnTasksAction implements TaskAction<Void>
   }
 
   @Override
-  public Void perform(TaskActionToolbox toolbox)
+  public Void perform(Task task, TaskActionToolbox toolbox)
   {
     try {
       for(final Task newTask : newTasks) {

@@ -52,7 +52,7 @@ import org.joda.time.Interval;
     @JsonSubTypes.Type(name = "index_generator", value = IndexGeneratorTask.class),
     @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
     @JsonSubTypes.Type(name = "version_converter", value = VersionConverterTask.class),
-    @JsonSubTypes.Type(name = "version_converter_sub", value = VersionConverterSubTask.class),
+    @JsonSubTypes.Type(name = "version_converter_sub", value = VersionConverterSubTask.class)
 })
 public interface Task
 {

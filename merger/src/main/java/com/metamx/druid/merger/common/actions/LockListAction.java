@@ -12,29 +12,13 @@ import java.util.List;
 
 public class LockListAction implements TaskAction<List<TaskLock>>
 {
-  private final Task task;
-
-  @JsonCreator
-  public LockListAction(
-      @JsonProperty("task") Task task
-  )
-  {
-    this.task = task;
-  }
-
-  @JsonProperty
-  public Task getTask()
-  {
-    return task;
-  }
-
   public TypeReference<List<TaskLock>> getReturnTypeReference()
   {
     return new TypeReference<List<TaskLock>>() {};
   }
 
   @Override
-  public List<TaskLock> perform(TaskActionToolbox toolbox)
+  public List<TaskLock> perform(Task task, TaskActionToolbox toolbox)
   {
     try {
       return toolbox.getTaskLockbox().findLocksForTask(task);

@@ -47,22 +47,21 @@ import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.loading.S3DataSegmentPusher;
-import com.metamx.druid.loading.S3DataSegmentPusherConfig;
 import com.metamx.druid.loading.S3SegmentKiller;
 import com.metamx.druid.loading.SegmentKiller;
-import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.common.actions.LocalTaskActionClient;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
+import com.metamx.druid.merger.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.merger.common.actions.TaskActionToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.DbTaskStorage;
+import com.metamx.druid.merger.coordinator.HeapMemoryTaskStorage;
 import com.metamx.druid.merger.coordinator.LocalTaskRunner;
-import com.metamx.druid.merger.coordinator.LocalTaskStorage;
 import com.metamx.druid.merger.coordinator.MergerDBCoordinator;
 import com.metamx.druid.merger.coordinator.RemoteTaskRunner;
 import com.metamx.druid.merger.coordinator.RetryPolicyFactory;
@@ -145,7 +144,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private RestS3Service s3Service = null;
   private IndexerCoordinatorConfig config = null;
   private TaskConfig taskConfig = null;
-  private TaskToolbox taskToolbox = null;
+  private DataSegmentPusher segmentPusher = null;
+  private TaskToolboxFactory taskToolboxFactory = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
   private TaskStorage taskStorage = null;
   private TaskQueue taskQueue = null;
@@ -206,6 +206,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
     return this;
   }
 
+  public IndexerCoordinatorNode setSegmentPusher(DataSegmentPusher segmentPusher)
+  {
+    this.segmentPusher = segmentPusher;
+    return this;
+  }
+
   public IndexerCoordinatorNode setMergeDbCoordinator(MergerDBCoordinator mergeDbCoordinator)
   {
     this.mergerDBCoordinator = mergeDbCoordinator;
@@ -250,6 +256,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initializeTaskStorage();
     initializeTaskLockbox();
     initializeTaskQueue();
+    initializeDataSegmentPusher();
     initializeTaskToolbox();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
@@ -329,7 +336,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
       final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
       taskMasterLifecycle = new TaskMasterLifecycle(
           taskQueue,
-          taskToolbox,
+          taskToolboxFactory,
           config,
           serviceDiscoveryConfig,
           taskRunnerFactory,
@@ -393,7 +400,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     InjectableValues.Std injectables = new InjectableValues.Std();
 
     injectables.addValue("s3Client", s3Service)
-               .addValue("segmentPusher", taskToolbox.getSegmentPusher());
+               .addValue("segmentPusher", segmentPusher);
 
     jsonMapper.setInjectableValues(injectables);
   }
@@ -462,26 +469,26 @@ public class IndexerCoordinatorNode extends RegisteringNode
     );
   }
 
+  public void initializeDataSegmentPusher()
+  {
+    if (segmentPusher == null) {
+      segmentPusher = ServerInit.getSegmentPusher(props, configFactory, jsonMapper);
+    }
+  }
+
   public void initializeTaskToolbox()
   {
-    if (taskToolbox == null) {
-      final DataSegmentPusher dataSegmentPusher = new S3DataSegmentPusher(
-          s3Service,
-          configFactory.build(S3DataSegmentPusherConfig.class),
-          jsonMapper
-      );
-      final SegmentKiller segmentKiller = new S3SegmentKiller(
-          s3Service
-      );
-      taskToolbox = new TaskToolbox(
+    if (taskToolboxFactory == null) {
+      final SegmentKiller segmentKiller = new S3SegmentKiller(s3Service);
+      taskToolboxFactory = new TaskToolboxFactory(
           taskConfig,
-          new LocalTaskActionClient(
+          new LocalTaskActionClientFactory(
               taskStorage,
               new TaskActionToolbox(taskQueue, taskLockbox, mergerDBCoordinator, emitter)
           ),
           emitter,
           s3Service,
-          dataSegmentPusher,
+          segmentPusher,
           segmentKiller,
           jsonMapper
       );
@@ -536,7 +543,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   {
     if (taskStorage == null) {
       if (config.getStorageImpl().equals("local")) {
-        taskStorage = new LocalTaskStorage();
+        taskStorage = new HeapMemoryTaskStorage();
       } else if (config.getStorageImpl().equals("db")) {
         final IndexerDbConnectorConfig dbConnectorConfig = configFactory.build(IndexerDbConnectorConfig.class);
         taskStorage = new DbTaskStorage(jsonMapper, dbConnectorConfig, new DbConnector(dbConnectorConfig).getDBI());
@@ -605,7 +612,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
           public TaskRunner build()
           {
             final ExecutorService runnerExec = Executors.newFixedThreadPool(config.getNumLocalThreads());
-            return new LocalTaskRunner(taskToolbox, runnerExec);
+            return new LocalTaskRunner(taskToolboxFactory, runnerExec);
           }
         };
       } else {
