@@ -87,11 +87,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 
       segment = segment.withSize(indexSize)
                        .withLoadSpec(
-                           ImmutableMap.<String, Object>of(
-                               "type", "s3_zip",
-                               "bucket", outputBucket,
-                               "key", toPush.getKey()
-                           )
+                           ImmutableMap.<String, Object>of("type", "s3_zip", "bucket", outputBucket, "key", toPush.getKey())
                        )
                        .withBinaryVersion(IndexIO.getVersionFromDir(indexFilesDir));
 

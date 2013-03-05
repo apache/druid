@@ -92,7 +92,7 @@ public class LocalTaskRunner implements TaskRunner
             }
 
             try {
-              final File taskDir = toolbox.getConfig().getTaskDir(task);
+              final File taskDir = toolbox.getTaskDir();
 
               if (taskDir.exists()) {
                 log.info("Removing task directory: %s", taskDir);

@@ -43,8 +43,8 @@ import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.LockListAction;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
-import com.metamx.druid.merger.common.actions.SegmentListUsedAction;
 import com.metamx.druid.shard.NoneShardSpec;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -67,7 +67,7 @@ public abstract class MergeTask extends AbstractTask
 {
   private final List<DataSegment> segments;
 
-  private static final Logger log = new Logger(MergeTask.class);
+  private static final EmittingLogger log = new EmittingLogger(MergeTask.class);
 
   protected MergeTask(final String dataSource, final List<DataSegment> segments)
   {
@@ -119,11 +119,11 @@ public abstract class MergeTask extends AbstractTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClientFactory().submit(new LockListAction()));
     final ServiceEmitter emitter = toolbox.getEmitter();
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     final DataSegment mergedSegment = computeMergedSegment(getDataSource(), myLock.getVersion(), segments);
-    final File taskDir = toolbox.getConfig().getTaskDir(this);
+    final File taskDir = toolbox.getTaskDir();
 
     try {
 
@@ -147,7 +147,7 @@ public abstract class MergeTask extends AbstractTask
 
 
       // download segments to merge
-      final Map<DataSegment, File> gettedSegments = toolbox.getSegments(this, segments);
+      final Map<DataSegment, File> gettedSegments = toolbox.getSegments(segments);
 
       // merge files together
       final File fileToUpload = merge(gettedSegments, new File(taskDir, "merged"));
@@ -170,27 +170,14 @@ public abstract class MergeTask extends AbstractTask
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
 
-      toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(uploadedSegment)));
+      toolbox.getTaskActionClientFactory().submit(new SegmentInsertAction(ImmutableSet.of(uploadedSegment)));
 
       return TaskStatus.success(getId());
     }
     catch (Exception e) {
-      log.error(
-          e,
-          String.format(
-              "Exception merging %s[%s] segments",
-              mergedSegment.getDataSource(),
-              mergedSegment.getInterval()
-          )
-      );
-      emitter.emit(
-          new AlertEvent.Builder().build(
-              "Exception merging",
-              ImmutableMap.<String, Object>builder()
-                          .put("exception", e.toString())
-                          .build()
-          )
-      );
+      log.makeAlert(e, "Exception merging[%s]", mergedSegment.getDataSource())
+         .addData("interval", mergedSegment.getInterval())
+         .emit();
 
       return TaskStatus.failure(getId());
     }
@@ -213,11 +200,7 @@ public abstract class MergeTask extends AbstractTask
     };
 
     final Set<String> current = ImmutableSet.copyOf(
-        Iterables.transform(
-            toolbox.getTaskActionClient()
-                   .submit(new SegmentListUsedAction(getDataSource(), getImplicitLockInterval().get())),
-            toIdentifier
-        )
+        Iterables.transform(toolbox.getTaskActionClientFactory().submit(defaultListUsedAction()), toIdentifier)
     );
     final Set<String> requested = ImmutableSet.copyOf(Iterables.transform(segments, toIdentifier));
 

@@ -21,11 +21,13 @@ package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
+import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
+import org.joda.time.DateTime;
 
 import java.io.File;
 import java.util.Arrays;
@@ -35,6 +37,8 @@ import java.util.Map;
  */
 public class VersionConverterSubTask extends AbstractTask
 {
+  private static final Logger log = new Logger(VersionConverterSubTask.class);
+
   private final DataSegment segment;
 
   protected VersionConverterSubTask(
@@ -50,6 +54,7 @@ public class VersionConverterSubTask extends AbstractTask
             segment.getInterval().getEnd(),
             segment.getShardSpec().getPartitionNum()
         ),
+        groupId,
         segment.getDataSource(),
         segment.getInterval()
     );
@@ -65,13 +70,23 @@ public class VersionConverterSubTask extends AbstractTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final Map<DataSegment, File> localSegments = toolbox.getSegments(this, Arrays.asList(segment));
+    log.info("Converting segment[%s]", segment);
+    final Map<DataSegment, File> localSegments = toolbox.getSegments(Arrays.asList(segment));
 
     final File location = localSegments.get(segment);
     final File outLocation = new File(location, "v9_out");
     if (IndexIO.convertSegment(location, outLocation)) {
-      final DataSegment updatedSegment = toolbox.getSegmentPusher().push(outLocation, segment);
-      toolbox.getTaskActionClient().submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));
+      final int outVersion = IndexIO.getVersionFromDir(outLocation);
+
+      // Appending to the version makes a new version that inherits most comparability parameters of the original
+      // version, but is "newer" than said original version.
+      DataSegment updatedSegment = segment.withVersion(String.format("%s_v%s", segment.getVersion(), outVersion));
+      updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment);
+
+      toolbox.getTaskActionClientFactory().submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));
+    }
+    else {
+      log.info("Conversion failed.");
     }
 
     return success();

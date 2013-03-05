@@ -261,6 +261,7 @@ public class DataSegment implements Comparable<DataSegment>
            ", loadSpec=" + loadSpec +
            ", interval=" + interval +
            ", dataSource='" + dataSource + '\'' +
+           ", binaryVersion='" + binaryVersion + '\'' +
            '}';
   }
 

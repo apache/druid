@@ -17,23 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.common.config;
+package com.metamx.druid.loading;
 
-import com.metamx.druid.merger.common.task.Task;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.metamx.druid.client.DataSegment;
 
-import java.io.File;
-
-public abstract class TaskConfig
+/**
+ */
+public interface DataSegmentKiller
 {
-  @Config("druid.merger.taskDir")
-  public abstract File getBaseTaskDir();
-
-  @Config("druid.merger.rowFlushBoundary")
-  @Default("500000")
-  public abstract int getDefaultRowFlushBoundary();
-
-  @Config("druid.merger.hadoopWorkingPath")
-  public abstract String getHadoopWorkingPath();
+  public void kill(DataSegment segments) throws SegmentLoadingException;
 }

@@ -25,11 +25,12 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
 import com.metamx.druid.loading.S3DataSegmentPuller;
-import com.metamx.druid.loading.SegmentKiller;
+import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.loading.SingleSegmentLoader;
 import com.metamx.druid.merger.common.actions.TaskActionClient;
+import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -45,29 +46,32 @@ import java.util.Map;
 public class TaskToolbox
 {
   private final TaskConfig config;
-  private final TaskActionClient taskActionClient;
+  private final Task task;
+  private final TaskActionClientFactory taskActionClientFactory;
   private final ServiceEmitter emitter;
   private final RestS3Service s3Client;
   private final DataSegmentPusher segmentPusher;
-  private final SegmentKiller segmentKiller;
+  private final DataSegmentKiller dataSegmentKiller;
   private final ObjectMapper objectMapper;
 
   public TaskToolbox(
       TaskConfig config,
-      TaskActionClient taskActionClient,
+      Task task,
+      TaskActionClientFactory taskActionClientFactory,
       ServiceEmitter emitter,
       RestS3Service s3Client,
       DataSegmentPusher segmentPusher,
-      SegmentKiller segmentKiller,
+      DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper
   )
   {
     this.config = config;
-    this.taskActionClient = taskActionClient;
+    this.task = task;
+    this.taskActionClientFactory = taskActionClientFactory;
     this.emitter = emitter;
     this.s3Client = s3Client;
     this.segmentPusher = segmentPusher;
-    this.segmentKiller = segmentKiller;
+    this.dataSegmentKiller = dataSegmentKiller;
     this.objectMapper = objectMapper;
   }
 
@@ -76,9 +80,9 @@ public class TaskToolbox
     return config;
   }
 
-  public TaskActionClient getTaskActionClient()
+  public TaskActionClient getTaskActionClientFactory()
   {
-    return taskActionClient;
+    return taskActionClientFactory.create(task);
   }
 
   public ServiceEmitter getEmitter()
@@ -91,9 +95,9 @@ public class TaskToolbox
     return segmentPusher;
   }
 
-  public SegmentKiller getSegmentKiller()
+  public DataSegmentKiller getDataSegmentKiller()
   {
-    return segmentKiller;
+    return dataSegmentKiller;
   }
 
   public ObjectMapper getObjectMapper()
@@ -101,7 +105,7 @@ public class TaskToolbox
     return objectMapper;
   }
 
-  public Map<DataSegment, File> getSegments(final Task task, List<DataSegment> segments)
+  public Map<DataSegment, File> getSegments(List<DataSegment> segments)
       throws SegmentLoadingException
   {
     final SingleSegmentLoader loader = new SingleSegmentLoader(
@@ -112,7 +116,7 @@ public class TaskToolbox
           @Override
           public File getCacheDirectory()
           {
-            return new File(config.getTaskDir(task), "fetched_segments");
+            return new File(getTaskDir(), "fetched_segments");
           }
         }
     );
@@ -124,4 +128,9 @@ public class TaskToolbox
 
     return retVal;
   }
+
+  public File getTaskDir() {
+    return new File(config.getBaseTaskDir(), task.getId());
+  }
+
 }
