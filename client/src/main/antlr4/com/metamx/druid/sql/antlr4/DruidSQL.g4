@@ -20,6 +20,7 @@ import java.util.*;
     public List<PostAggregator> postAggregators = new LinkedList<PostAggregator>();
     public DimFilter filter;
     public List<org.joda.time.Interval> intervals;
+    public List<String> fields = new LinkedList<String>();
     public QueryGranularity granularity = QueryGranularity.ALL;
     public Map<String, DimensionSpec> groupByDimensions = new LinkedHashMap<String, DimensionSpec>();
     
@@ -116,7 +117,10 @@ query
 
 select_stmt
     : 'select' e+=aliasedExpression (',' e+=aliasedExpression)* 'from' datasource {
-        for(AliasedExpressionContext a : $e) { postAggregators.add(a.p); }
+        for(AliasedExpressionContext a : $e) { 
+            postAggregators.add(a.p);
+            fields.add(a.p.getName());
+        }
         this.dataSourceName = $datasource.text;
     }
     ;
