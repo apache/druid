@@ -20,11 +20,10 @@ import com.metamx.druid.result.TimeseriesResultValue;
 import com.metamx.druid.sql.antlr4.DruidSQLLexer;
 import com.metamx.druid.sql.antlr4.DruidSQLParser;
 import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.BailErrorStrategy;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ConsoleErrorListener;
 import org.antlr.v4.runtime.TokenStream;
-import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -74,14 +73,20 @@ public class SQLRunner
     DruidSQLLexer lexer = new DruidSQLLexer(stream);
     TokenStream tokenStream = new CommonTokenStream(lexer);
     DruidSQLParser parser = new DruidSQLParser(tokenStream);
-    parser.setErrorHandler(new BailErrorStrategy());
+    lexer.removeErrorListeners();
+    parser.removeErrorListeners();
+
+    lexer.addErrorListener(ConsoleErrorListener.INSTANCE);
+    parser.addErrorListener(ConsoleErrorListener.INSTANCE);
 
     try {
       DruidSQLParser.QueryContext queryContext = parser.query();
+      if(parser.getNumberOfSyntaxErrors() > 0) throw new IllegalStateException();
 //      parser.setBuildParseTree(true);
 //      System.err.println(q.toStringTree(parser));
-    } catch(ParseCancellationException e) {
-      System.out.println(e.getCause().getMessage());
+    } catch(Exception e) {
+      String msg = e.getMessage();
+      if(msg != null) System.err.println(e);
       System.exit(1);
     }
 
