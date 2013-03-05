@@ -203,12 +203,16 @@ constant returns [ConstantPostAggregator c]
 
 /* time filters must be top level filters */
 timeAndDimFilter returns [DimFilter filter, org.joda.time.Interval interval]
-    : t=timeFilter (AND f=dimFilter)?  {
-        if($f.ctx != null) $filter = $f.filter;
-        $interval = $t.interval;
-    }
-    | (f=dimFilter)? AND t=timeFilter {
-        if($f.ctx != null) $filter = $f.filter;
+    : (f1=dimFilter AND)? t=timeFilter (AND f2=dimFilter)?  {
+        if($f1.ctx != null || $f2.ctx != null) {
+            if($f1.ctx != null && $f2.ctx != null) {
+                $filter = new AndDimFilter(Lists.newArrayList($f1.filter, $f2.filter));
+            } else if($f1.ctx != null) {
+                $filter = $f1.filter;
+            } else {
+                $filter = $f2.filter;
+            }
+        }
         $interval = $t.interval;
     }
     ;
