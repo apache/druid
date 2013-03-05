@@ -23,6 +23,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
@@ -45,21 +46,21 @@ public class TaskMonitor
   private final PathChildrenCache pathChildrenCache;
   private final CuratorFramework cf;
   private final WorkerCuratorCoordinator workerCuratorCoordinator;
-  private final TaskToolbox toolbox;
+  private final TaskToolboxFactory toolboxFactory;
   private final ExecutorService exec;
 
   public TaskMonitor(
       PathChildrenCache pathChildrenCache,
       CuratorFramework cf,
       WorkerCuratorCoordinator workerCuratorCoordinator,
-      TaskToolbox toolbox,
+      TaskToolboxFactory toolboxFactory,
       ExecutorService exec
   )
   {
     this.pathChildrenCache = pathChildrenCache;
     this.cf = cf;
     this.workerCuratorCoordinator = workerCuratorCoordinator;
-    this.toolbox = toolbox;
+    this.toolboxFactory = toolboxFactory;
     this.exec = exec;
   }
 
@@ -81,10 +82,11 @@ public class TaskMonitor
                 throws Exception
             {
               if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
-                final Task task = toolbox.getObjectMapper().readValue(
+                final Task task = toolboxFactory.getObjectMapper().readValue(
                     cf.getData().forPath(pathChildrenCacheEvent.getData().getPath()),
                     Task.class
                 );
+                final TaskToolbox toolbox = toolboxFactory.build(task);
 
                 if (workerCuratorCoordinator.statusExists(task.getId())) {
                   log.warn("Got task %s that I am already running...", task.getId());

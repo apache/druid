@@ -26,6 +26,8 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
+import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.exec.TaskConsumer;
 import com.metamx.druid.merger.coordinator.scaling.ResourceManagementScheduler;
@@ -49,7 +51,7 @@ public class TaskMasterLifecycle
   private final ReentrantLock giant = new ReentrantLock();
   private final Condition mayBeStopped = giant.newCondition();
   private final TaskQueue taskQueue;
-  private final TaskToolbox taskToolbox;
+  private final TaskToolboxFactory taskToolboxFactory;
 
   private volatile boolean leading = false;
   private volatile TaskRunner taskRunner;
@@ -59,7 +61,7 @@ public class TaskMasterLifecycle
 
   public TaskMasterLifecycle(
       final TaskQueue taskQueue,
-      final TaskToolbox taskToolbox,
+      final TaskToolboxFactory taskToolboxFactory,
       final IndexerCoordinatorConfig indexerCoordinatorConfig,
       final ServiceDiscoveryConfig serviceDiscoveryConfig,
       final TaskRunnerFactory runnerFactory,
@@ -69,7 +71,7 @@ public class TaskMasterLifecycle
   )
   {
     this.taskQueue = taskQueue;
-    this.taskToolbox = taskToolbox;
+    this.taskToolboxFactory = taskToolboxFactory;
 
     this.leaderSelector = new LeaderSelector(
         curator, indexerCoordinatorConfig.getLeaderLatchPath(), new LeaderSelectorListener()
@@ -87,7 +89,7 @@ public class TaskMasterLifecycle
           final TaskConsumer taskConsumer = new TaskConsumer(
               taskQueue,
               taskRunner,
-              taskToolbox,
+              taskToolboxFactory,
               emitter
           );
 
@@ -217,9 +219,9 @@ public class TaskMasterLifecycle
     return taskQueue;
   }
 
-  public TaskToolbox getTaskToolbox()
+  public TaskToolbox getTaskToolbox(Task task)
   {
-    return taskToolbox;
+    return taskToolboxFactory.build(task);
   }
 
   public ResourceManagementScheduler getResourceManagementScheduler()

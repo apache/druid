@@ -69,7 +69,7 @@ public interface TaskStorage
   /**
    * Add an action taken by a task to the audit log.
    */
-  public <T> void addAuditLog(TaskAction<T> taskAction);
+  public <T> void addAuditLog(Task task, TaskAction<T> taskAction);
 
   /**
    * Returns all actions taken by a task.

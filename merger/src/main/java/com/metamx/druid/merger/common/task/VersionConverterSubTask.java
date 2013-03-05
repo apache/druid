@@ -71,7 +71,7 @@ public class VersionConverterSubTask extends AbstractTask
     final File outLocation = new File(location, "v9_out");
     if (IndexIO.convertSegment(location, outLocation)) {
       final DataSegment updatedSegment = toolbox.getSegmentPusher().push(outLocation, segment);
-      toolbox.getTaskActionClient().submit(new SegmentInsertAction(this, Sets.newHashSet(updatedSegment)));
+      toolbox.getTaskActionClient().submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));
     }
 
     return success();

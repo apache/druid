@@ -12,6 +12,7 @@ import com.metamx.druid.merger.TestTask;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
@@ -280,7 +281,7 @@ public class RemoteTaskRunnerTest
         new PathChildrenCache(cf, String.format("%s/worker1", tasksPath), true),
         cf,
         workerCuratorCoordinator,
-        new TaskToolbox(
+        new TaskToolboxFactory(
             new TaskConfig()
             {
               @Override
