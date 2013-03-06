@@ -100,7 +100,7 @@ public class TaskMasterLifecycle
           leaderLifecycle.addManagedInstance(taskRunner);
           Initialization.makeServiceDiscoveryClient(curator, serviceDiscoveryConfig, leaderLifecycle);
           leaderLifecycle.addManagedInstance(taskConsumer);
-          leaderLifecycle.addManagedInstance(scheduler);
+          leaderLifecycle.addManagedInstance(resourceManagementScheduler);
 
           leading = true;
 

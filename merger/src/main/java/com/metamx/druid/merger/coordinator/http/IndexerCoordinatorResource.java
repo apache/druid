@@ -21,6 +21,7 @@ package com.metamx.druid.merger.coordinator.http;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
@@ -31,6 +32,8 @@ import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
+import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
+import com.metamx.druid.merger.coordinator.scaling.ScalingStats;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -228,6 +231,10 @@ public class IndexerCoordinatorResource
     if (taskMasterLifecycle.getResourceManagementScheduler() == null) {
       return Response.noContent().build();
     }
-    return Response.ok(taskMasterLifecycle.getResourceManagementScheduler().getStats()).build();
+    ScalingStats foo = new ScalingStats(10);
+    foo.addProvisionEvent(new AutoScalingData<String>(Lists.newArrayList("boo", "doo"), Lists.newArrayList("a", "b")));
+    foo.addTerminateEvent(new AutoScalingData<String>(Lists.newArrayList("d", "e"), Lists.newArrayList("f", "g")));
+    return Response.ok(foo).build();
+    //return Response.ok(taskMasterLifecycle.getResourceManagementScheduler().getStats()).build();
   }
 }

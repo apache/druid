@@ -1,6 +1,7 @@
 package com.metamx.druid.merger.coordinator.scaling;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import org.joda.time.DateTime;
@@ -20,7 +21,6 @@ public class ScalingStats
   }
 
   private static final Comparator<ScalingEvent> comparator = new Comparator<ScalingEvent>()
-
   {
     @Override
     public int compare(ScalingEvent s1, ScalingEvent s2)
@@ -29,11 +29,13 @@ public class ScalingStats
     }
   };
 
-  private final MinMaxPriorityQueue<ScalingEvent> recentNodes;
+  private final Object lock = new Object();
+
+  private final MinMaxPriorityQueue<ScalingEvent> recentEvents;
 
   public ScalingStats(int capacity)
   {
-    this.recentNodes = MinMaxPriorityQueue
+    this.recentEvents = MinMaxPriorityQueue
         .orderedBy(comparator)
         .maximumSize(capacity)
         .create();
@@ -41,32 +43,38 @@ public class ScalingStats
 
   public void addProvisionEvent(AutoScalingData data)
   {
-    recentNodes.add(
-        new ScalingEvent(
-            data,
-            new DateTime(),
-            EVENT.PROVISION
-        )
-    );
+    synchronized (lock) {
+      recentEvents.add(
+          new ScalingEvent(
+              data,
+              new DateTime(),
+              EVENT.PROVISION
+          )
+      );
+    }
   }
 
   public void addTerminateEvent(AutoScalingData data)
   {
-    recentNodes.add(
-        new ScalingEvent(
-            data,
-            new DateTime(),
-            EVENT.TERMINATE
-        )
-    );
+    synchronized (lock) {
+      recentEvents.add(
+          new ScalingEvent(
+              data,
+              new DateTime(),
+              EVENT.TERMINATE
+          )
+      );
+    }
   }
 
-  @JsonProperty
+  @JsonValue
   public List<ScalingEvent> toList()
   {
-    List<ScalingEvent> retVal = Lists.newArrayList(recentNodes);
-    Collections.sort(retVal, comparator);
-    return retVal;
+    synchronized (lock) {
+      List<ScalingEvent> retVal = Lists.newArrayList(recentEvents);
+      Collections.sort(retVal, comparator);
+      return retVal;
+    }
   }
 
   public static class ScalingEvent

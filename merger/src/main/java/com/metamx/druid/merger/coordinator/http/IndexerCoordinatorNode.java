@@ -41,11 +41,10 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.RegisteringNode;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
-import com.metamx.druid.http.ComputeMain;
 import com.metamx.druid.http.GuiceServletConfig;
+import com.metamx.druid.http.MasterMain;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
-import com.metamx.druid.http.RedirectServlet;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
@@ -113,6 +112,7 @@ import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
+import org.mortbay.resource.ResourceCollection;
 import org.skife.config.ConfigurationObjectFactory;
 import org.skife.jdbi.v2.DBI;
 
@@ -286,7 +286,11 @@ public class IndexerCoordinatorNode extends RegisteringNode
     final Context staticContext = new Context(server, "/static", Context.SESSIONS);
     staticContext.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
-    staticContext.setResourceBase(IndexerCoordinatorNode.class.getClassLoader().getResource("static").toExternalForm());
+    ResourceCollection resourceCollection = new ResourceCollection(new String[] {
+        IndexerCoordinatorNode.class.getClassLoader().getResource("static").toExternalForm(),
+        IndexerCoordinatorNode.class.getClassLoader().getResource("indexer_static").toExternalForm()
+    });
+    staticContext.setBaseResource(resourceCollection);
 
     final Context root = new Context(server, "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");

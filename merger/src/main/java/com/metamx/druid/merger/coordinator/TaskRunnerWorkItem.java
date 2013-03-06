@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.task.Task;
 import org.joda.time.DateTime;
@@ -49,6 +50,7 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
     this.createdTime = createdTime;
   }
 
+  @JsonProperty
   public Task getTask()
   {
     return task;
@@ -64,11 +66,13 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
     return retryPolicy;
   }
 
+  @JsonProperty
   public DateTime getCreatedTime()
   {
     return createdTime;
   }
 
+  @JsonProperty
   public DateTime getQueueInsertionTime()
   {
     return queueInsertionTime;
