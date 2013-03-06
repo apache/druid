@@ -231,10 +231,6 @@ public class IndexerCoordinatorResource
     if (taskMasterLifecycle.getResourceManagementScheduler() == null) {
       return Response.noContent().build();
     }
-    ScalingStats foo = new ScalingStats(10);
-    foo.addProvisionEvent(new AutoScalingData<String>(Lists.newArrayList("boo", "doo"), Lists.newArrayList("a", "b")));
-    foo.addTerminateEvent(new AutoScalingData<String>(Lists.newArrayList("d", "e"), Lists.newArrayList("f", "g")));
-    return Response.ok(foo).build();
-    //return Response.ok(taskMasterLifecycle.getResourceManagementScheduler().getStats()).build();
+    return Response.ok(taskMasterLifecycle.getResourceManagementScheduler().getStats()).build();
   }
 }
