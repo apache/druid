@@ -33,8 +33,6 @@ import com.metamx.druid.merger.common.actions.SpawnTasksAction;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
-
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
