@@ -93,7 +93,7 @@ public class QueryServlet extends HttpServlet
       query = objectMapper.readValue(requestQuery, Query.class);
 
       requestLogger.log(
-          new RequestLogLine(new DateTime(), req.getRemoteAddr(), jsonMapper.writer().writeValueAsString(query))
+          new RequestLogLine(new DateTime(), req.getRemoteAddr(), query)
       );
 
       Sequence<?> results = query.run(texasRanger);
