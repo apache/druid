@@ -19,6 +19,8 @@
 
 package com.metamx.druid.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.metamx.druid.Query;
 import org.joda.time.DateTime;
@@ -40,13 +42,13 @@ public class RequestLogLine
     this.query = query;
   }
 
-  public String getLine()
+  public String getLine(ObjectMapper objectMapper) throws JsonProcessingException
   {
     return JOINER.join(
         Arrays.asList(
             timestamp,
             remoteAddr,
-            query
+            objectMapper.writeValueAsString(query)
         )
     );
   }
