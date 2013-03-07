@@ -31,6 +31,8 @@ import java.util.List;
  */
 public class WorkerSetupData
 {
+  public static final String CONFIG_KEY = "worker.setup";
+
   private final String minVersion;
   private final int minNumWorkers;
   private final EC2NodeData nodeData;

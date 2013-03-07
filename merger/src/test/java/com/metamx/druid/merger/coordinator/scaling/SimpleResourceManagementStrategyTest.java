@@ -29,7 +29,6 @@ import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskRunnerWorkItem;
 import com.metamx.druid.merger.coordinator.ZkWorker;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
-import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.Worker;
 import junit.framework.Assert;
 import org.easymock.EasyMock;
@@ -42,21 +41,22 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
 public class SimpleResourceManagementStrategyTest
 {
   private AutoScalingStrategy autoScalingStrategy;
-  private WorkerSetupManager workerSetupManager;
   private Task testTask;
   private SimpleResourceManagementStrategy simpleResourceManagementStrategy;
+  private AtomicReference<WorkerSetupData> workerSetupData;
 
   @Before
   public void setUp() throws Exception
   {
-    workerSetupManager = EasyMock.createMock(WorkerSetupManager.class);
     autoScalingStrategy = EasyMock.createMock(AutoScalingStrategy.class);
+    workerSetupData = new AtomicReference<WorkerSetupData>(null);
 
     testTask = new TestTask(
         "task1",
@@ -105,7 +105,7 @@ public class SimpleResourceManagementStrategyTest
             return new Duration(0);
           }
         },
-        workerSetupManager
+        workerSetupData
     );
   }
 
@@ -187,8 +187,7 @@ public class SimpleResourceManagementStrategyTest
   @Test
   public void testDoSuccessfulTerminate() throws Exception
   {
-    EasyMock.expect(workerSetupManager.getWorkerSetupData()).andReturn(new WorkerSetupData("0", 0, null, null));
-    EasyMock.replay(workerSetupManager);
+    workerSetupData.set(new WorkerSetupData("0", 0, null, null));
 
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList());
@@ -212,15 +211,13 @@ public class SimpleResourceManagementStrategyTest
         simpleResourceManagementStrategy.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.TERMINATE
     );
 
-    EasyMock.verify(workerSetupManager);
     EasyMock.verify(autoScalingStrategy);
   }
 
   @Test
   public void testSomethingTerminating() throws Exception
   {
-    EasyMock.expect(workerSetupManager.getWorkerSetupData()).andReturn(new WorkerSetupData("0", 0, null, null));
-    EasyMock.replay(workerSetupManager);
+    workerSetupData.set(new WorkerSetupData("0", 0, null, null));
 
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList("ip")).times(2);
@@ -259,7 +256,6 @@ public class SimpleResourceManagementStrategyTest
         simpleResourceManagementStrategy.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.TERMINATE
     );
 
-    EasyMock.verify(workerSetupManager);
     EasyMock.verify(autoScalingStrategy);
   }
 

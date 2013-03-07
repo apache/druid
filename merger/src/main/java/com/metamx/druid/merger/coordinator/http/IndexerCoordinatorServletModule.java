@@ -22,10 +22,10 @@ package com.metamx.druid.merger.coordinator.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
+import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
-import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -41,7 +41,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
   private final ServiceEmitter emitter;
   private final TaskMasterLifecycle taskMasterLifecycle;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
-  private final WorkerSetupManager workerSetupManager;
+  private final JacksonConfigManager configManager;
 
   public IndexerCoordinatorServletModule(
       ObjectMapper jsonMapper,
@@ -49,7 +49,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
       ServiceEmitter emitter,
       TaskMasterLifecycle taskMasterLifecycle,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
-      WorkerSetupManager workerSetupManager
+      JacksonConfigManager configManager
   )
   {
     this.jsonMapper = jsonMapper;
@@ -57,7 +57,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
     this.emitter = emitter;
     this.taskMasterLifecycle = taskMasterLifecycle;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
-    this.workerSetupManager = workerSetupManager;
+    this.configManager = configManager;
   }
 
   @Override
@@ -70,7 +70,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
     bind(ServiceEmitter.class).toInstance(emitter);
     bind(TaskMasterLifecycle.class).toInstance(taskMasterLifecycle);
     bind(TaskStorageQueryAdapter.class).toInstance(taskStorageQueryAdapter);
-    bind(WorkerSetupManager.class).toInstance(workerSetupManager);
+    bind(JacksonConfigManager.class).toInstance(configManager);
 
     serve("/*").with(GuiceContainer.class);
   }

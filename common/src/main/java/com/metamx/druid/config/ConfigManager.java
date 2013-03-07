@@ -1,6 +1,5 @@
 package com.metamx.druid.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -40,6 +39,8 @@ public class ConfigManager
   private final ConcurrentMap<String, ConfigHolder> watchedConfigs;
   private final String selectStatement;
 
+  private volatile ConfigManager.PollingCallable poller;
+
   public ConfigManager(IDBI dbi, ConfigManagerConfig config)
   {
     this.dbi = dbi;
@@ -58,19 +59,8 @@ public class ConfigManager
         return;
       }
 
-      ScheduledExecutors.scheduleWithFixedDelay(
-          exec,
-          new Duration(0),
-          config.getPollDuration(),
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              poll();
-            }
-          }
-      );
+      poller = new PollingCallable();
+      ScheduledExecutors.scheduleWithFixedDelay(exec, new Duration(0), config.getPollDuration(), poller);
 
       started = true;
     }
@@ -83,6 +73,9 @@ public class ConfigManager
       if (!started) {
         return;
       }
+
+      poller.stop();
+      poller = null;
 
       started = false;
     }
@@ -119,8 +112,7 @@ public class ConfigManager
               {
                 if (!started) {
                   watchedConfigs.put(key, new ConfigHolder<T>(null, serde));
-                }
-                else {
+                } else {
                   try {
                     // Multiple of these callables can be submitted at the same time, but the callables themselves
                     // are executed serially, so double check that it hasn't already been populated.
@@ -200,10 +192,12 @@ public class ConfigManager
                     @Override
                     public Void withHandle(Handle handle) throws Exception
                     {
-                      handle.createStatement("INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload")
-                          .bind("name", key)
-                          .bind("payload", newBytes)
-                          .execute();
+                      handle.createStatement(
+                          "INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload"
+                      )
+                            .bind("name", key)
+                            .bind("payload", newBytes)
+                            .execute();
                       return null;
                     }
                   }
@@ -254,6 +248,27 @@ public class ConfigManager
         return true;
       }
       return false;
+    }
+  }
+
+  private class PollingCallable implements Callable<ScheduledExecutors.Signal>
+  {
+    private volatile boolean stop = false;
+
+    void stop()
+    {
+      stop = true;
+    }
+
+    @Override
+    public ScheduledExecutors.Signal call() throws Exception
+    {
+      if (stop) {
+        return ScheduledExecutors.Signal.STOP;
+      }
+
+      poll();
+      return ScheduledExecutors.Signal.REPEAT;
     }
   }
 }
