@@ -100,7 +100,7 @@ IDENT : (LETTER)(LETTER | DIGIT | '_')* ;
 QUOTED_STRING : '\'' ( ESC | ~'\'' )*? '\'' ;
 ESC : '\'' '\'';
 
-NUMBER: ('+'|'-')?DIGIT*'.'?DIGIT+(EXPONENT)?;
+NUMBER: DIGIT*'.'?DIGIT+(EXPONENT)?;
 EXPONENT: ('e') ('+'|'-')? ('0'..'9')+;
 fragment DIGIT : '0'..'9';
 fragment LETTER : 'a'..'z' | 'A'..'Z';
@@ -177,11 +177,17 @@ multiplyExpression returns [PostAggregator p]
 
 unaryExpression returns [PostAggregator p]
     : MINUS e=unaryExpression {
-        $p = new ArithmeticPostAggregator(
-            "-"+$e.p.getName(),
-            "*",
-            Lists.newArrayList($e.p, new ConstantPostAggregator("-1", -1.0))
-        );
+        if($e.p instanceof ConstantPostAggregator) {
+            ConstantPostAggregator c = (ConstantPostAggregator)$e.p;
+            double v = c.getConstantValue().doubleValue() * -1;
+            $p = new ConstantPostAggregator(Double.toString(v), v);
+        } else {
+            $p = new ArithmeticPostAggregator(
+                "-"+$e.p.getName(),
+                "*",
+                Lists.newArrayList($e.p, new ConstantPostAggregator("-1", -1.0))
+            );
+        }
     }
     | PLUS e=unaryExpression { $p = $e.p; }
     | primaryExpression { $p = $primaryExpression.p; }
