@@ -24,6 +24,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.metamx.common.logger.Logger;
+import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.emitter.service.ServiceEventBuilder;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.DefaultHashAlgorithm;
@@ -47,6 +50,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class MemcachedCache implements Cache
 {
+  private static final Logger log = new Logger(MemcachedCache.class);
+
   public static MemcachedCache create(final MemcachedCacheConfig config)
   {
     try {
@@ -60,9 +65,11 @@ public class MemcachedCache implements Cache
                                         .setHashAlg(DefaultHashAlgorithm.FNV1A_64_HASH)
                                         .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
                                         .setDaemon(true)
-                                        .setFailureMode(FailureMode.Retry)
+                                        .setFailureMode(FailureMode.Cancel)
                                         .setTranscoder(transcoder)
                                         .setShouldOptimize(true)
+                                        .setOpQueueMaxBlockTime(config.getTimeout())
+                                        .setOpTimeout(config.getTimeout())
                                         .build(),
           AddrUtil.getAddresses(config.getHosts())
         ),
@@ -84,6 +91,7 @@ public class MemcachedCache implements Cache
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
   private final AtomicLong timeoutCount = new AtomicLong(0);
+  private final AtomicLong errorCount = new AtomicLong(0);
 
   MemcachedCache(MemcachedClientIF client, String memcachedPrefix, int timeout, int expiration) {
     Preconditions.checkArgument(memcachedPrefix.length() <= MAX_PREFIX_LENGTH,
@@ -105,14 +113,23 @@ public class MemcachedCache implements Cache
         0,
         0,
         0,
-        timeoutCount.get()
+        timeoutCount.get(),
+        errorCount.get()
     );
   }
 
   @Override
   public byte[] get(NamedKey key)
   {
-    Future<Object> future = client.asyncGet(computeKeyHash(memcachedPrefix, key));
+    Future<Object> future;
+    try {
+      future = client.asyncGet(computeKeyHash(memcachedPrefix, key));
+    } catch(IllegalStateException e) {
+      // operation did not get queued in time (queue is full)
+      errorCount.incrementAndGet();
+      log.warn(e, "Unable to queue cache operation");
+      return null;
+    }
     try {
       byte[] bytes = (byte[]) future.get(timeout, TimeUnit.MILLISECONDS);
       if(bytes != null) {
@@ -133,14 +150,22 @@ public class MemcachedCache implements Cache
       throw Throwables.propagate(e);
     }
     catch(ExecutionException e) {
-      throw Throwables.propagate(e);
+      errorCount.incrementAndGet();
+      log.warn(e, "Exception pulling item from cache");
+      return null;
     }
   }
 
   @Override
   public void put(NamedKey key, byte[] value)
   {
-    client.set(computeKeyHash(memcachedPrefix, key), expiration, serializeValue(key, value));
+    try {
+      client.set(computeKeyHash(memcachedPrefix, key), expiration, serializeValue(key, value));
+    } catch(IllegalStateException e) {
+      // operation did not get queued in time (queue is full)
+      errorCount.incrementAndGet();
+      log.warn(e, "Unable to queue cache operation");
+    }
   }
 
   private static byte[] serializeValue(NamedKey key, byte[] value) {
@@ -183,7 +208,17 @@ public class MemcachedCache implements Cache
         }
     );
 
-    BulkFuture<Map<String, Object>> future = client.asyncGetBulk(keyLookup.keySet());
+    Map<NamedKey, byte[]> results = Maps.newHashMap();
+
+    BulkFuture<Map<String, Object>> future;
+    try {
+      future = client.asyncGetBulk(keyLookup.keySet());
+    } catch(IllegalStateException e) {
+      // operation did not get queued in time (queue is full)
+      errorCount.incrementAndGet();
+      log.warn(e, "Unable to queue cache operation");
+      return results;
+    }
 
     try {
       Map<String, Object> some = future.getSome(timeout, TimeUnit.MILLISECONDS);
@@ -195,7 +230,6 @@ public class MemcachedCache implements Cache
       missCount.addAndGet(keyLookup.size() - some.size());
       hitCount.addAndGet(some.size());
 
-      Map<NamedKey, byte[]> results = Maps.newHashMap();
       for(Map.Entry<String, Object> entry : some.entrySet()) {
         final NamedKey key = keyLookup.get(entry.getKey());
         final byte[] value = (byte[]) entry.getValue();
@@ -212,7 +246,9 @@ public class MemcachedCache implements Cache
       throw Throwables.propagate(e);
     }
     catch(ExecutionException e) {
-      throw Throwables.propagate(e);
+      errorCount.incrementAndGet();
+      log.warn(e, "Exception pulling item from cache");
+      return results;
     }
   }
 
