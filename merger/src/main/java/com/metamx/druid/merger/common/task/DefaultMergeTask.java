@@ -31,8 +31,6 @@ import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
 
-
-
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;

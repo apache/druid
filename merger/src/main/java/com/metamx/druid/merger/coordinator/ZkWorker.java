@@ -19,6 +19,8 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
@@ -66,11 +68,13 @@ public class ZkWorker implements Closeable
     };
   }
 
+  @JsonProperty
   public Worker getWorker()
   {
     return worker;
   }
 
+  @JsonProperty
   public Set<String> getRunningTasks()
   {
     return Sets.newHashSet(
@@ -86,11 +90,13 @@ public class ZkWorker implements Closeable
     return statusCache;
   }
 
+  @JsonProperty
   public DateTime getLastCompletedTaskTime()
   {
     return lastCompletedTaskTime;
   }
 
+  @JsonProperty
   public boolean isAtCapacity()
   {
     return statusCache.getCurrentData().size() >= worker.getCapacity();
