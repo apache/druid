@@ -17,23 +17,44 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator.config;
+package com.metamx.druid.client.indexing;
 
-import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Interval;
 
 /**
  */
-public abstract class WorkerSetupManagerConfig
+public class ClientKillQuery
 {
-  @Config("druid.indexer.configTable")
-  public abstract String getConfigTable();
+  private final String dataSource;
+  private final Interval interval;
 
-  @Config("druid.indexer.workerSetupConfigName")
-  public abstract String getWorkerSetupConfigName();
+  @JsonCreator
+  public ClientKillQuery(
+      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("interval") Interval interval
+  )
+  {
+    this.dataSource = dataSource;
+    this.interval = interval;
+  }
 
-  @Config("druid.indexer.poll.duration")
-  @Default("PT1M")
-  public abstract Duration getPollDuration();
+  @JsonProperty
+  public String getType()
+  {
+    return "kill";
+  }
+
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  @JsonProperty
+  public Interval getInterval()
+  {
+    return interval;
+  }
 }

@@ -17,45 +17,57 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merge;
-
-
+package com.metamx.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Interval;
+import com.metamx.druid.client.DataSegment;
 
-public class ClientDeleteQuery
+
+
+import java.util.List;
+
+/**
+ */
+public class ClientAppendQuery
 {
   private final String dataSource;
-  private final Interval interval;
+  private final List<DataSegment> segments;
 
   @JsonCreator
-  public ClientDeleteQuery(
+  public ClientAppendQuery(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval
+      @JsonProperty("segments") List<DataSegment> segments
   )
   {
     this.dataSource = dataSource;
-    this.interval = interval;
+    this.segments = segments;
   }
 
+  @JsonProperty
+  public String getType()
+  {
+    return "append";
+  }
+
+  @JsonProperty
   public String getDataSource()
   {
     return dataSource;
   }
 
-  public Interval getInterval()
+  @JsonProperty
+  public List<DataSegment> getSegments()
   {
-    return interval;
+    return segments;
   }
 
   @Override
   public String toString()
   {
-    return "ClientDeleteQuery{" +
+    return "ClientAppendQuery{" +
            "dataSource='" + dataSource + '\'' +
-           ", interval=" + interval +
+           ", segments=" + segments +
            '}';
   }
 }

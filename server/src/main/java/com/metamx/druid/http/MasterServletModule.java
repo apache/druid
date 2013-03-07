@@ -27,6 +27,7 @@ import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.master.DruidMaster;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
@@ -44,6 +45,7 @@ public class MasterServletModule extends JerseyServletModule
   private final DruidClusterInfo druidClusterInfo;
   private final DruidMaster master;
   private final ObjectMapper jsonMapper;
+  private final IndexingServiceClient indexingServiceClient;
 
   public MasterServletModule(
       ServerInventoryManager serverInventoryManager,
@@ -51,7 +53,8 @@ public class MasterServletModule extends JerseyServletModule
       DatabaseRuleManager databaseRuleManager,
       DruidClusterInfo druidClusterInfo,
       DruidMaster master,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      IndexingServiceClient indexingServiceClient
   )
   {
     this.serverInventoryManager = serverInventoryManager;
@@ -60,6 +63,7 @@ public class MasterServletModule extends JerseyServletModule
     this.druidClusterInfo = druidClusterInfo;
     this.master = master;
     this.jsonMapper = jsonMapper;
+    this.indexingServiceClient = indexingServiceClient;
   }
 
   @Override
@@ -72,6 +76,7 @@ public class MasterServletModule extends JerseyServletModule
     bind(DatabaseRuleManager.class).toInstance(databaseRuleManager);
     bind(DruidMaster.class).toInstance(master);
     bind(DruidClusterInfo.class).toInstance(druidClusterInfo);
+    bind(IndexingServiceClient.class).toInstance(indexingServiceClient);
 
     serve("/*").with(GuiceContainer.class);
   }
