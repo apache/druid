@@ -147,7 +147,8 @@ public class MemcachedCache implements Cache
       throw Throwables.propagate(e);
     }
     catch(ExecutionException e) {
-      throw Throwables.propagate(e);
+      log.warn(e, "Exception pulling item from cache");
+      return null;
     }
   }
 
@@ -240,7 +241,8 @@ public class MemcachedCache implements Cache
       throw Throwables.propagate(e);
     }
     catch(ExecutionException e) {
-      throw Throwables.propagate(e);
+      log.warn(e, "Exception pulling item from cache");
+      return results;
     }
   }
 
