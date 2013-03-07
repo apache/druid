@@ -59,7 +59,7 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
       return IndexIO.loadIndex(parentDir);
     }
     catch (IOException e) {
-      log.warn(e, "Got exception, deleting parentDir[%s]", parentDir);
+      log.warn(e, "Got exception!!!! Going to delete parentDir[%s]", parentDir);
       try {
         FileUtils.deleteDirectory(parentDir);
       }

@@ -67,6 +67,26 @@ public class SingleSegmentLoader implements SegmentLoader
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
     File localStorageDir = new File(config.getCacheDirectory(), DataSegmentPusherUtil.getStorageDir(segment));
+
+    final String legacyDir = DataSegmentPusherUtil.getLegacyStorageDir(segment);
+    if (legacyDir != null) {
+      File legacyStorageDir = new File(config.getCacheDirectory(), legacyDir);
+
+      if (legacyStorageDir.exists()) {
+        log.info("Found legacyStorageDir[%s], moving to new storage location[%s]", legacyStorageDir, localStorageDir);
+        if (localStorageDir.exists()) {
+          try {
+            FileUtils.deleteDirectory(localStorageDir);
+          }
+          catch (IOException e) {
+            throw new SegmentLoadingException(e, "Error deleting localDir[%s]", localStorageDir);
+          }
+        }
+
+        legacyStorageDir.renameTo(localStorageDir);
+      }
+    }
+
     if (localStorageDir.exists()) {
       long localLastModified = localStorageDir.lastModified();
       long remoteLastModified = dataSegmentPuller.getLastModified(segment);
