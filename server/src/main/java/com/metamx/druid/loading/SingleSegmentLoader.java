@@ -120,11 +120,7 @@ public class SingleSegmentLoader implements SegmentLoader
   {
     String outputKey = JOINER.join(
         segment.getDataSource(),
-        String.format(
-            "%s_%s",
-            segment.getInterval().getStart(),
-            segment.getInterval().getEnd()
-        ),
+        String.format("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),
         segment.getVersion(),
         segment.getShardSpec().getPartitionNum()
     );
