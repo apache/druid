@@ -29,6 +29,7 @@ public class CacheStats
   private final long sizeInBytes;
   private final long numEvictions;
   private final long numTimeouts;
+  private final long numErrors;
 
   public CacheStats(
       long numHits,
@@ -36,7 +37,8 @@ public class CacheStats
       long size,
       long sizeInBytes,
       long numEvictions,
-      long numTimeouts
+      long numTimeouts,
+      long numErrors
   )
   {
     this.numHits = numHits;
@@ -45,6 +47,7 @@ public class CacheStats
     this.sizeInBytes = sizeInBytes;
     this.numEvictions = numEvictions;
     this.numTimeouts = numTimeouts;
+    this.numErrors = numErrors;
   }
 
   public long getNumHits()
@@ -77,6 +80,11 @@ public class CacheStats
     return numTimeouts;
   }
 
+  public long getNumErrors()
+  {
+    return numErrors;
+  }
+
   public long numLookups()
   {
     return numHits + numMisses;
@@ -104,7 +112,8 @@ public class CacheStats
         size - oldStats.size,
         sizeInBytes - oldStats.sizeInBytes,
         numEvictions - oldStats.numEvictions,
-        numTimeouts - oldStats.numTimeouts
+        numTimeouts - oldStats.numTimeouts,
+        numErrors - oldStats.numErrors
     );
   }
 }
