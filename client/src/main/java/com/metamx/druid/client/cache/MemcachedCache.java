@@ -91,6 +91,7 @@ public class MemcachedCache implements Cache
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
   private final AtomicLong timeoutCount = new AtomicLong(0);
+  private final AtomicLong errorCount = new AtomicLong(0);
 
   MemcachedCache(MemcachedClientIF client, String memcachedPrefix, int timeout, int expiration) {
     Preconditions.checkArgument(memcachedPrefix.length() <= MAX_PREFIX_LENGTH,
@@ -112,7 +113,8 @@ public class MemcachedCache implements Cache
         0,
         0,
         0,
-        timeoutCount.get()
+        timeoutCount.get(),
+        errorCount.get()
     );
   }
 
@@ -124,6 +126,7 @@ public class MemcachedCache implements Cache
       future = client.asyncGet(computeKeyHash(memcachedPrefix, key));
     } catch(IllegalStateException e) {
       // operation did not get queued in time (queue is full)
+      errorCount.incrementAndGet();
       log.warn(e, "Unable to queue cache operation");
       return null;
     }
@@ -147,6 +150,7 @@ public class MemcachedCache implements Cache
       throw Throwables.propagate(e);
     }
     catch(ExecutionException e) {
+      errorCount.incrementAndGet();
       log.warn(e, "Exception pulling item from cache");
       return null;
     }
@@ -159,6 +163,7 @@ public class MemcachedCache implements Cache
       client.set(computeKeyHash(memcachedPrefix, key), expiration, serializeValue(key, value));
     } catch(IllegalStateException e) {
       // operation did not get queued in time (queue is full)
+      errorCount.incrementAndGet();
       log.warn(e, "Unable to queue cache operation");
     }
   }
@@ -209,8 +214,8 @@ public class MemcachedCache implements Cache
     try {
       future = client.asyncGetBulk(keyLookup.keySet());
     } catch(IllegalStateException e) {
-      timeoutCount.incrementAndGet();
       // operation did not get queued in time (queue is full)
+      errorCount.incrementAndGet();
       log.warn(e, "Unable to queue cache operation");
       return results;
     }
@@ -241,6 +246,7 @@ public class MemcachedCache implements Cache
       throw Throwables.propagate(e);
     }
     catch(ExecutionException e) {
+      errorCount.incrementAndGet();
       log.warn(e, "Exception pulling item from cache");
       return results;
     }

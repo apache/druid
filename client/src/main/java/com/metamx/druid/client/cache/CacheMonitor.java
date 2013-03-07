@@ -67,5 +67,6 @@ public class CacheMonitor extends AbstractMonitor
     emitter.emit(builder.build(String.format("%s/hitRate", metricPrefix), cacheStats.hitRate()));
     emitter.emit(builder.build(String.format("%s/averageBytes", metricPrefix), cacheStats.averageBytes()));
     emitter.emit(builder.build(String.format("%s/timeouts", metricPrefix), cacheStats.getNumTimeouts()));
+    emitter.emit(builder.build(String.format("%s/errors", metricPrefix), cacheStats.getNumErrors()));
   }
 }
