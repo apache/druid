@@ -38,7 +38,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.20.1-SNAPSHOT</metamx.java-util.version>
+        <metamx.java-util.version>0.21.0</metamx.java-util.version>
     </properties>
 
     <modules>

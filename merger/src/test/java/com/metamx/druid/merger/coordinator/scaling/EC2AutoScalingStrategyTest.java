@@ -33,7 +33,6 @@ import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.druid.merger.coordinator.setup.EC2NodeData;
 import com.metamx.druid.merger.coordinator.setup.GalaxyUserData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
-import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -42,6 +41,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -57,7 +57,7 @@ public class EC2AutoScalingStrategyTest
   private Reservation reservation;
   private Instance instance;
   private EC2AutoScalingStrategy strategy;
-  private WorkerSetupManager workerSetupManager;
+  private AtomicReference<WorkerSetupData> workerSetupData;
 
   @Before
   public void setUp() throws Exception
@@ -66,7 +66,7 @@ public class EC2AutoScalingStrategyTest
     runInstancesResult = EasyMock.createMock(RunInstancesResult.class);
     describeInstancesResult = EasyMock.createMock(DescribeInstancesResult.class);
     reservation = EasyMock.createMock(Reservation.class);
-    workerSetupManager = EasyMock.createMock(WorkerSetupManager.class);
+    workerSetupData = new AtomicReference<WorkerSetupData>(null);
 
     instance = new Instance()
         .withInstanceId(INSTANCE_ID)
@@ -85,7 +85,7 @@ public class EC2AutoScalingStrategyTest
             return "8080";
           }
         },
-        workerSetupManager
+        workerSetupData
     );
   }
 
@@ -96,13 +96,12 @@ public class EC2AutoScalingStrategyTest
     EasyMock.verify(runInstancesResult);
     EasyMock.verify(describeInstancesResult);
     EasyMock.verify(reservation);
-    EasyMock.verify(workerSetupManager);
   }
 
   @Test
   public void testScale()
   {
-    EasyMock.expect(workerSetupManager.getWorkerSetupData()).andReturn(
+    workerSetupData.set(
         new WorkerSetupData(
             "0",
             0,
@@ -110,7 +109,6 @@ public class EC2AutoScalingStrategyTest
             new GalaxyUserData("env", "version", "type")
         )
     );
-    EasyMock.replay(workerSetupManager);
 
     EasyMock.expect(amazonEC2Client.runInstances(EasyMock.anyObject(RunInstancesRequest.class))).andReturn(
         runInstancesResult

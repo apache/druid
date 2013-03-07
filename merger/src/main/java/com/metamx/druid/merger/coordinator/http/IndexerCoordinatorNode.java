@@ -54,9 +54,9 @@ import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentKiller;
-import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.merger.common.actions.TaskActionToolbox;
@@ -89,7 +89,7 @@ import com.metamx.druid.merger.coordinator.scaling.ResourceManagementSchedulerCo
 import com.metamx.druid.merger.coordinator.scaling.ResourceManagementSchedulerFactory;
 import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagementStrategy;
 import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagmentConfig;
-import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -124,6 +124,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -157,7 +158,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private CuratorFramework curatorFramework = null;
   private ScheduledExecutorFactory scheduledExecutorFactory = null;
   private IndexerZkConfig indexerZkConfig;
-  private WorkerSetupManager workerSetupManager = null;
   private TaskRunnerFactory taskRunnerFactory = null;
   private ResourceManagementSchedulerFactory resourceManagementSchedulerFactory = null;
   private TaskMasterLifecycle taskMasterLifecycle = null;
@@ -228,12 +228,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
     return this;
   }
 
-  public IndexerCoordinatorNode setWorkerSetupManager(WorkerSetupManager workerSetupManager)
-  {
-    this.workerSetupManager = workerSetupManager;
-    return this;
-  }
-
   public IndexerCoordinatorNode setTaskRunnerFactory(TaskRunnerFactory taskRunnerFactory)
   {
     this.taskRunnerFactory = taskRunnerFactory;
@@ -249,6 +243,10 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public void init() throws Exception
   {
     scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
+
+    final ConfigManagerConfig managerConfig = configFactory.build(ConfigManagerConfig.class);
+    DbConnector.createConfigTable(dbi, managerConfig.getConfigTable());
+    JacksonConfigManager configManager = new JacksonConfigManager(new ConfigManager(dbi, managerConfig), jsonMapper);
 
     initializeEmitter();
     initializeMonitors();
@@ -266,9 +264,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initializeJacksonSubtypes();
     initializeCurator();
     initializeIndexerZkConfig();
-    initializeWorkerSetupManager();
-    initializeTaskRunnerFactory();
-    initializeResourceManagement();
+    initializeTaskRunnerFactory(configManager);
+    initializeResourceManagement(configManager);
     initializeTaskMasterLifecycle();
     initializeServer();
 
@@ -288,7 +285,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             emitter,
             taskMasterLifecycle,
             new TaskStorageQueryAdapter(taskStorage),
-            workerSetupManager
+            configManager
         )
     );
 
@@ -565,20 +562,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
-  public void initializeWorkerSetupManager()
-  {
-    if (workerSetupManager == null) {
-      final ConfigManagerConfig configManagerConfig = configFactory.build(ConfigManagerConfig.class);
-      final ConfigManager configManager = new ConfigManager(dbi, configManagerConfig);
-      lifecycle.addManagedInstance(configManager);
-
-      DbConnector.createConfigTable(dbi, configManagerConfig.getConfigTable());
-      workerSetupManager = new WorkerSetupManager(new JacksonConfigManager(configManager, jsonMapper));
-    }
-    lifecycle.addManagedInstance(workerSetupManager);
-  }
-
-  public void initializeTaskRunnerFactory()
+  private void initializeTaskRunnerFactory(final JacksonConfigManager configManager)
   {
     if (taskRunnerFactory == null) {
       if (config.getRunnerImpl().equals("remote")) {
@@ -604,7 +588,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
                 new PathChildrenCache(curatorFramework, indexerZkConfig.getAnnouncementPath(), true),
                 retryScheduledExec,
                 new RetryPolicyFactory(configFactory.build(RetryPolicyConfig.class)),
-                workerSetupManager
+                configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class)
             );
 
             return remoteTaskRunner;
@@ -627,7 +611,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
-  private void initializeResourceManagement()
+  private void initializeResourceManagement(final JacksonConfigManager configManager)
   {
     if (resourceManagementSchedulerFactory == null) {
       resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
@@ -642,6 +626,9 @@ public class IndexerCoordinatorNode extends RegisteringNode
                   .setNameFormat("ScalingExec--%d")
                   .build()
           );
+          final AtomicReference<WorkerSetupData> workerSetupData = configManager.watch(
+              WorkerSetupData.CONFIG_KEY, WorkerSetupData.class
+          );
 
           AutoScalingStrategy strategy;
           if (config.getStrategyImpl().equalsIgnoreCase("ec2")) {
@@ -654,7 +641,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
                     )
                 ),
                 configFactory.build(EC2AutoScalingStrategyConfig.class),
-                workerSetupManager
+                workerSetupData
             );
           } else if (config.getStrategyImpl().equalsIgnoreCase("noop")) {
             strategy = new NoopAutoScalingStrategy();
@@ -667,7 +654,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
               new SimpleResourceManagementStrategy(
                   strategy,
                   configFactory.build(SimpleResourceManagmentConfig.class),
-                  workerSetupManager
+                  workerSetupData
               ),
               configFactory.build(ResourceManagementSchedulerConfig.class),
               scalingScheduledExec
