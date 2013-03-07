@@ -76,6 +76,7 @@ public class MapCache implements Cache
         byteCountingLRUMap.size(),
         byteCountingLRUMap.getNumBytes(),
         byteCountingLRUMap.getEvictionCount(),
+        0,
         0
     );
   }
