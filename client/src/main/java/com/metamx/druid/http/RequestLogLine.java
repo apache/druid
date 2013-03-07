@@ -31,9 +31,9 @@ public class RequestLogLine
 
   private final DateTime timestamp;
   private final String remoteAddr;
-  private final Query query;
+  private final String query;
 
-  public RequestLogLine(DateTime timestamp, String remoteAddr, Query query)
+  public RequestLogLine(DateTime timestamp, String remoteAddr, String query)
   {
     this.timestamp = timestamp;
     this.remoteAddr = remoteAddr;
