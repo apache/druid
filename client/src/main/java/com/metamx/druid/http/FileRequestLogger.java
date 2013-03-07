@@ -19,6 +19,7 @@
 
 package com.metamx.druid.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -38,6 +39,7 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class FileRequestLogger implements RequestLogger
 {
+  private final ObjectMapper objectMapper;
   private final ScheduledExecutorService exec;
   private final File baseDir;
 
@@ -46,9 +48,11 @@ public class FileRequestLogger implements RequestLogger
   private volatile DateTime currentDay;
   private volatile FileWriter fileWriter;
 
-  public FileRequestLogger(ScheduledExecutorService exec, File baseDir)
+
+  public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir)
   {
     this.exec = exec;
+    this.objectMapper = objectMapper;
     this.baseDir = baseDir;
   }
 
@@ -110,7 +114,7 @@ public class FileRequestLogger implements RequestLogger
   {
     synchronized (lock) {
       fileWriter.write(
-          String.format("%s%n", requestLogLine.getLine())
+          String.format("%s%n", requestLogLine.getLine(objectMapper))
       );
       fileWriter.flush();
     }

@@ -348,9 +348,10 @@ public class Initialization
     return serviceProvider;
   }
 
-  public static RequestLogger makeRequestLogger(ScheduledExecutorFactory factory, Properties props) throws IOException
+  public static RequestLogger makeRequestLogger(ObjectMapper objectMapper, ScheduledExecutorFactory factory, Properties props) throws IOException
   {
     return new FileRequestLogger(
+        objectMapper,
         factory.create(1, "RequestLogger-%s"),
         new File(PropUtils.getProperty(props, "druid.request.logging.dir"))
     );

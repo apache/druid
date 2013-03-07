@@ -248,7 +248,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   {
     if (requestLogger == null) {
       try {
-        setRequestLogger(Initialization.makeRequestLogger(getScheduledExecutorFactory(), getProps()));
+        setRequestLogger(Initialization.makeRequestLogger(getJsonMapper(), getScheduledExecutorFactory(), getProps()));
       }
       catch (IOException e) {
         throw Throwables.propagate(e);
