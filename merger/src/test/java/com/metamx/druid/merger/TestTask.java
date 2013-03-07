@@ -26,14 +26,14 @@ import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.common.task.DefaultMergeTask;
+import com.metamx.druid.merger.common.task.MergeTask;
 
 import java.util.List;
 
 /**
  */
 @JsonTypeName("test")
-public class TestTask extends DefaultMergeTask
+public class TestTask extends MergeTask
 {
   private final String id;
   private final TaskStatus status;

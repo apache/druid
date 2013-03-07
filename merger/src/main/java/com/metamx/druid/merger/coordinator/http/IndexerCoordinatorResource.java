@@ -98,18 +98,15 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response doIndex(final Task task)
   {
-    // verify against whitelist
-    if (config.isWhitelistEnabled() && !config.getWhitelistDatasources().contains(task.getDataSource())) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(
-                         ImmutableMap.of(
-                             "error",
-                             String.format("dataSource[%s] is not whitelisted", task.getDataSource())
-                         )
-                     )
-                     .build();
-    }
+    return taskPost(task);
+  }
 
+  @POST
+  @Path("/task")
+  @Consumes("application/json")
+  @Produces("application/json")
+  public Response taskPost(final Task task)
+  {
     taskMasterLifecycle.getTaskQueue().add(task);
     return Response.ok(ImmutableMap.of("task", task.getId())).build();
   }

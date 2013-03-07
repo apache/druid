@@ -34,8 +34,8 @@ import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.master.DruidMaster;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.master.rules.Rule;
-import com.metamx.druid.merge.ClientKillQuery;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -66,6 +66,7 @@ public class InfoResource
   private final DatabaseSegmentManager databaseSegmentManager;
   private final DatabaseRuleManager databaseRuleManager;
   private final DruidClusterInfo druidClusterInfo;
+  private final IndexingServiceClient indexingServiceClient;
 
   @Inject
   public InfoResource(
@@ -73,7 +74,8 @@ public class InfoResource
       ServerInventoryManager serverInventoryManager,
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
-      DruidClusterInfo druidClusterInfo
+      DruidClusterInfo druidClusterInfo,
+      IndexingServiceClient indexingServiceClient
   )
   {
     this.master = master;
@@ -81,6 +83,7 @@ public class InfoResource
     this.databaseSegmentManager = databaseSegmentManager;
     this.databaseRuleManager = databaseRuleManager;
     this.druidClusterInfo = druidClusterInfo;
+    this.indexingServiceClient = indexingServiceClient;
   }
 
   @GET
@@ -374,7 +377,7 @@ public class InfoResource
   )
   {
     if (kill != null && Boolean.valueOf(kill)) {
-      master.killSegments(new ClientKillQuery(dataSourceName, new Interval(interval)));
+      indexingServiceClient.killSegments(dataSourceName, new Interval(interval));
     } else {
       if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
         return Response.status(Response.Status.NOT_FOUND).build();

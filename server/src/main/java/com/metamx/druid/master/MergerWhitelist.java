@@ -17,25 +17,38 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merge;
+package com.metamx.druid.master;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.druid.client.DataSegment;
-
-
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.collect.Sets;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  */
-@JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="type", defaultImpl = ClientDefaultMergeQuery.class)
-@JsonSubTypes(value={
-    @JsonSubTypes.Type(name="append", value=ClientAppendQuery.class)
-})
-public interface ClientMergeQuery
+public class MergerWhitelist
 {
-  public String getDataSource();
+  public static final String CONFIG_KEY = "merger.whitelist";
 
-  public List<DataSegment> getSegments();
+  private final Set<String> dataSources;
+
+  @JsonCreator
+  public MergerWhitelist(Set<String> dataSources)
+  {
+    this.dataSources = Sets.newTreeSet(String.CASE_INSENSITIVE_ORDER);
+    this.dataSources.addAll(dataSources);
+  }
+
+  @JsonValue
+  public Set<String> getDataSources()
+  {
+    return dataSources;
+  }
+
+  public boolean contains(String val)
+  {
+    return dataSources.contains(val);
+  }
 }

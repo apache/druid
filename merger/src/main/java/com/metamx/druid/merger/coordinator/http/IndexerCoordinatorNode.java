@@ -39,6 +39,9 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.RegisteringNode;
+import com.metamx.druid.config.ConfigManager;
+import com.metamx.druid.config.ConfigManagerConfig;
+import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.GuiceServletConfig;
@@ -78,7 +81,6 @@ import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
-import com.metamx.druid.merger.coordinator.config.WorkerSetupManagerConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.EC2AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.NoopAutoScalingStrategy;
@@ -566,18 +568,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public void initializeWorkerSetupManager()
   {
     if (workerSetupManager == null) {
-      final WorkerSetupManagerConfig workerSetupManagerConfig = configFactory.build(WorkerSetupManagerConfig.class);
+      final ConfigManagerConfig configManagerConfig = configFactory.build(ConfigManagerConfig.class);
+      final ConfigManager configManager = new ConfigManager(dbi, configManagerConfig);
+      lifecycle.addManagedInstance(configManager);
 
-      DbConnector.createConfigTable(dbi, workerSetupManagerConfig.getConfigTable());
-      workerSetupManager = new WorkerSetupManager(
-          dbi, Executors.newScheduledThreadPool(
-          1,
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("WorkerSetupManagerExec--%d")
-              .build()
-      ), jsonMapper, workerSetupManagerConfig
-      );
+      DbConnector.createConfigTable(dbi, configManagerConfig.getConfigTable());
+      workerSetupManager = new WorkerSetupManager(new JacksonConfigManager(configManager, jsonMapper));
     }
     lifecycle.addManagedInstance(workerSetupManager);
   }
