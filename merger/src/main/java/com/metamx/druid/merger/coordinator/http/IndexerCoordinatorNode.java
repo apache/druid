@@ -243,14 +243,22 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public void init() throws Exception
   {
     scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
+    initializeDB();
 
     final ConfigManagerConfig managerConfig = configFactory.build(ConfigManagerConfig.class);
     DbConnector.createConfigTable(dbi, managerConfig.getConfigTable());
-    JacksonConfigManager configManager = new JacksonConfigManager(new ConfigManager(dbi, managerConfig), jsonMapper);
+    JacksonConfigManager configManager =
+        new JacksonConfigManager(
+            lifecycle.addManagedInstance(
+                new ConfigManager(
+                    dbi,
+                    managerConfig
+                )
+            ), jsonMapper
+        );
 
     initializeEmitter();
     initializeMonitors();
-    initializeDB();
     initializeIndexerCoordinatorConfig();
     initializeTaskConfig();
     initializeS3Service();
