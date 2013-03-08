@@ -8,7 +8,7 @@ import org.skife.config.Default;
  */
 public abstract class ConfigManagerConfig
 {
-  @Config("druid.indexer.configTable")
+  @Config("druid.database.configTable")
   public abstract String getConfigTable();
 
   @Config("druid.indexer.poll.duration")

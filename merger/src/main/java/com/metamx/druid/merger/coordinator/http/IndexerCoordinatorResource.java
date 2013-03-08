@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
@@ -35,8 +34,6 @@ import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
-import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
-import com.metamx.druid.merger.coordinator.scaling.ScalingStats;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.emitter.service.ServiceEmitter;
 
@@ -188,7 +185,7 @@ public class IndexerCoordinatorResource
   public <T> Response doAction(final TaskActionHolder<T> holder)
   {
     final T ret = taskMasterLifecycle.getTaskToolbox(holder.getTask())
-                                     .getTaskActionClientFactory()
+                                     .getTaskActionClient()
                                      .submit(holder.getAction());
 
     final Map<String, Object> retMap = Maps.newHashMap();

@@ -100,7 +100,7 @@ public class IndexGeneratorTask extends AbstractTask
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     // We should have a lock from before we started running
-    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClientFactory().submit(new LockListAction()));
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
     // We know this exists
     final Interval interval = getImplicitLockInterval().get();
@@ -190,7 +190,7 @@ public class IndexGeneratorTask extends AbstractTask
     );
 
     // Request segment pushes
-    toolbox.getTaskActionClientFactory().submit(new SegmentInsertAction(ImmutableSet.copyOf(pushedSegments)));
+    toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(pushedSegments)));
 
     // Done
     return TaskStatus.success(getId());

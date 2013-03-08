@@ -375,7 +375,7 @@ public class TaskQueueTest
       @Override
       public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
-        toolbox.getTaskActionClientFactory().submit(new SpawnTasksAction(nextTasks));
+        toolbox.getTaskActionClient().submit(new SpawnTasksAction(nextTasks));
         return TaskStatus.success(id);
       }
     };

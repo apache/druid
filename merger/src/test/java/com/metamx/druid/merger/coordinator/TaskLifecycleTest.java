@@ -66,7 +66,6 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
-import org.jets3t.service.ServiceException;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -283,8 +282,8 @@ public class TaskLifecycleTest
         // Sort of similar to what realtime tasks do:
 
         // Acquire lock for first interval
-        final Optional<TaskLock> lock1 = toolbox.getTaskActionClientFactory().submit(new LockAcquireAction(interval1));
-        final List<TaskLock> locks1 = toolbox.getTaskActionClientFactory().submit(new LockListAction());
+        final Optional<TaskLock> lock1 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval1));
+        final List<TaskLock> locks1 = toolbox.getTaskActionClient().submit(new LockListAction());
 
         // (Confirm lock sanity)
         Assert.assertTrue("lock1 present", lock1.isPresent());
@@ -292,8 +291,8 @@ public class TaskLifecycleTest
         Assert.assertEquals("locks1", ImmutableList.of(lock1.get()), locks1);
 
         // Acquire lock for second interval
-        final Optional<TaskLock> lock2 = toolbox.getTaskActionClientFactory().submit(new LockAcquireAction(interval2));
-        final List<TaskLock> locks2 = toolbox.getTaskActionClientFactory().submit(new LockListAction());
+        final Optional<TaskLock> lock2 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval2));
+        final List<TaskLock> locks2 = toolbox.getTaskActionClient().submit(new LockListAction());
 
         // (Confirm lock sanity)
         Assert.assertTrue("lock2 present", lock2.isPresent());
@@ -301,7 +300,7 @@ public class TaskLifecycleTest
         Assert.assertEquals("locks2", ImmutableList.of(lock1.get(), lock2.get()), locks2);
 
         // Push first segment
-        toolbox.getTaskActionClientFactory()
+        toolbox.getTaskActionClient()
                .submit(
                    new SegmentInsertAction(
                        ImmutableSet.of(
@@ -315,14 +314,14 @@ public class TaskLifecycleTest
                );
 
         // Release first lock
-        toolbox.getTaskActionClientFactory().submit(new LockReleaseAction(interval1));
-        final List<TaskLock> locks3 = toolbox.getTaskActionClientFactory().submit(new LockListAction());
+        toolbox.getTaskActionClient().submit(new LockReleaseAction(interval1));
+        final List<TaskLock> locks3 = toolbox.getTaskActionClient().submit(new LockListAction());
 
         // (Confirm lock sanity)
         Assert.assertEquals("locks3", ImmutableList.of(lock2.get()), locks3);
 
         // Push second segment
-        toolbox.getTaskActionClientFactory()
+        toolbox.getTaskActionClient()
                .submit(
                    new SegmentInsertAction(
                        ImmutableSet.of(
@@ -336,8 +335,8 @@ public class TaskLifecycleTest
                );
 
         // Release second lock
-        toolbox.getTaskActionClientFactory().submit(new LockReleaseAction(interval2));
-        final List<TaskLock> locks4 = toolbox.getTaskActionClientFactory().submit(new LockListAction());
+        toolbox.getTaskActionClient().submit(new LockReleaseAction(interval2));
+        final List<TaskLock> locks4 = toolbox.getTaskActionClient().submit(new LockListAction());
 
         // (Confirm lock sanity)
         Assert.assertEquals("locks4", ImmutableList.<TaskLock>of(), locks4);
@@ -370,7 +369,7 @@ public class TaskLifecycleTest
       public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
         final TaskLock myLock = Iterables.getOnlyElement(
-            toolbox.getTaskActionClientFactory()
+            toolbox.getTaskActionClient()
                    .submit(new LockListAction())
         );
 
@@ -380,7 +379,7 @@ public class TaskLifecycleTest
                                                .version(myLock.getVersion())
                                                .build();
 
-        toolbox.getTaskActionClientFactory().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
         return TaskStatus.success(getId());
       }
     };
@@ -406,7 +405,7 @@ public class TaskLifecycleTest
       @Override
       public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
-        final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClientFactory().submit(new LockListAction()));
+        final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
         final DataSegment segment = DataSegment.builder()
                                                .dataSource("ds")
@@ -414,7 +413,7 @@ public class TaskLifecycleTest
                                                .version(myLock.getVersion())
                                                .build();
 
-        toolbox.getTaskActionClientFactory().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
         return TaskStatus.success(getId());
       }
     };
@@ -440,7 +439,7 @@ public class TaskLifecycleTest
       @Override
       public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
-        final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClientFactory().submit(new LockListAction()));
+        final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
         final DataSegment segment = DataSegment.builder()
                                                .dataSource("ds")
@@ -448,7 +447,7 @@ public class TaskLifecycleTest
                                                .version(myLock.getVersion() + "1!!!1!!")
                                                .build();
 
-        toolbox.getTaskActionClientFactory().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
         return TaskStatus.success(getId());
       }
     };
