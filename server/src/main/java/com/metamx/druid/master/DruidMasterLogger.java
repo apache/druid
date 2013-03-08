@@ -55,30 +55,6 @@ public class DruidMasterLogger implements DruidMasterHelper
       }
     }
 
-    Map<String, AtomicLong> unassigned = stats.getPerTierStats().get("unassignedCount");
-    if (unassigned != null) {
-      for (Map.Entry<String, AtomicLong> entry : unassigned.entrySet()) {
-        emitter.emit(
-            new ServiceMetricEvent.Builder().build(
-                String.format("master/%s/unassigned/count", entry.getKey()),
-                entry.getValue().get()
-            )
-        );
-      }
-    }
-
-    Map<String, AtomicLong> sizes = stats.getPerTierStats().get("unassignedSize");
-    if (sizes != null) {
-      for (Map.Entry<String, AtomicLong> entry : sizes.entrySet()) {
-        emitter.emit(
-            new ServiceMetricEvent.Builder().build(
-                String.format("master/%s/unassigned/size", entry.getKey()),
-                entry.getValue().get()
-            )
-        );
-      }
-    }
-
     Map<String, AtomicLong> dropped = stats.getPerTierStats().get("droppedCount");
     if (dropped != null) {
       for (Map.Entry<String, AtomicLong> entry : dropped.entrySet()) {
@@ -88,6 +64,30 @@ public class DruidMasterLogger implements DruidMasterHelper
         );
       }
     }
+
+    emitter.emit(
+        new ServiceMetricEvent.Builder().build(
+            "master/cost/raw", stats.getGlobalStats().get("initialCost")
+        )
+    );
+
+    emitter.emit(
+        new ServiceMetricEvent.Builder().build(
+            "master/cost/normalization", stats.getGlobalStats().get("normalization")
+        )
+    );
+
+    emitter.emit(
+        new ServiceMetricEvent.Builder().build(
+            "master/cost/normalized", stats.getGlobalStats().get("normalizedInitialCostTimesOneThousand").doubleValue() / 1000d
+        )
+    );
+
+    emitter.emit(
+        new ServiceMetricEvent.Builder().build(
+            "master/moved/count", stats.getGlobalStats().get("movedCount")
+        )
+    );
 
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
