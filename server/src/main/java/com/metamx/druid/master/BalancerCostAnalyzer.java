@@ -20,11 +20,14 @@
 package com.metamx.druid.master;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.MinMaxPriorityQueue;
+import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -185,27 +188,79 @@ public class BalancerCostAnalyzer
   }
 
   /**
-   * The assignment application requires us to supply a proposal segment.
+   * For balancing, we want to only make a move if the minimum cost server is not already serving the segment.
    *
    * @param proposalSegment A DataSegment that we are proposing to move.
    * @param serverHolders   An iterable of ServerHolders for a particular tier.
    *
    * @return A ServerHolder with the new home for a segment.
    */
-  public ServerHolder findNewSegmentHome(
+  public ServerHolder findNewSegmentHomeBalance(
       final DataSegment proposalSegment,
       final Iterable<ServerHolder> serverHolders
   )
   {
+    MinMaxPriorityQueue<Pair<Double, ServerHolder>> costsAndServers = computeCosts(proposalSegment, serverHolders);
+    if (costsAndServers.isEmpty()) {
+      return null;
+    }
+
+    ServerHolder toServer = costsAndServers.pollFirst().rhs;
+    if (!toServer.isServingSegment(proposalSegment)) {
+      return toServer;
+    }
+
+    return null;
+  }
+
+  /**
+   * For assigment, we want to move to the lowest cost server that isn't already serving the segment.
+   *
+   * @param proposalSegment A DataSegment that we are proposing to move.
+   * @param serverHolders   An iterable of ServerHolders for a particular tier.
+   *
+   * @return A ServerHolder with the new home for a segment.
+   */
+  public ServerHolder findNewSegmentHomeAssign(
+      final DataSegment proposalSegment,
+      final Iterable<ServerHolder> serverHolders
+  )
+  {
+    MinMaxPriorityQueue<Pair<Double, ServerHolder>> costsAndServers = computeCosts(proposalSegment, serverHolders);
+    while (!costsAndServers.isEmpty()) {
+      ServerHolder toServer = costsAndServers.pollFirst().rhs;
+      if (!toServer.isServingSegment(proposalSegment)) {
+        return toServer;
+      }
+    }
+
+    return null;
+  }
+
+  private MinMaxPriorityQueue<Pair<Double, ServerHolder>> computeCosts(
+      final DataSegment proposalSegment,
+      final Iterable<ServerHolder> serverHolders
+  )
+  {
+    MinMaxPriorityQueue<Pair<Double, ServerHolder>> costsAndServers = MinMaxPriorityQueue.orderedBy(
+        new Comparator<Pair<Double, ServerHolder>>()
+        {
+          @Override
+          public int compare(
+              Pair<Double, ServerHolder> o,
+              Pair<Double, ServerHolder> o1
+          )
+          {
+            return Double.compare(o.lhs, o1.lhs);
+          }
+        }
+    ).create();
+
     final long proposalSegmentSize = proposalSegment.getSize();
-    double minCost = Double.MAX_VALUE;
-    ServerHolder toServer = null;
 
     for (ServerHolder server : serverHolders) {
       /** Don't calculate cost if the server doesn't have enough space or is loading the segment */
-      if (proposalSegmentSize > server.getAvailableSize() ||
-          server.isLoadingSegment(proposalSegment) ||
-          server.isServingSegment(proposalSegment)) {
+      if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
         continue;
       }
 
@@ -222,13 +277,10 @@ public class BalancerCostAnalyzer
         cost += computeJointSegmentCosts(proposalSegment, segment);
       }
 
-      if (cost < minCost) {
-        minCost = cost;
-        toServer = server;
-      }
+      costsAndServers.add(Pair.of(cost, server));
     }
 
-    return toServer;
+    return costsAndServers;
   }
 
 }

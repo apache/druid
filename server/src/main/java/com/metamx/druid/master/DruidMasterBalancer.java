@@ -117,7 +117,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
       while (iter < maxSegmentsToMove) {
         iter++;
         final BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList, numSegments);
-        final ServerHolder holder = analyzer.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList);
+        final ServerHolder holder = analyzer.findNewSegmentHomeBalance(segmentToMove.getSegment(), serverHolderList);
         if (holder == null) {
           continue;
         }
