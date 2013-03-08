@@ -219,13 +219,8 @@ public class TaskMasterLifecycle
     return taskQueue;
   }
 
-  public TaskToolbox getTaskToolbox(Task task)
+  public TaskToolbox getTaskToolbox()
   {
-    return taskToolboxFactory.build(task);
-  }
-
-  public ResourceManagementScheduler getResourceManagementScheduler()
-  {
-    return resourceManagementScheduler;
+    return taskToolbox;
   }
 }
