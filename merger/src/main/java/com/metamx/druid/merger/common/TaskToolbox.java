@@ -80,7 +80,7 @@ public class TaskToolbox
     return config;
   }
 
-  public TaskActionClient getTaskActionClientFactory()
+  public TaskActionClient getTaskActionClient()
   {
     return taskActionClientFactory.create(task);
   }

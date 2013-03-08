@@ -93,7 +93,7 @@ public class HadoopIndexTask extends AbstractTask
                                                        );
 
     // We should have a lock from before we started running
-    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClientFactory().submit(new LockListAction()));
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
     log.info("Setting version to: %s", myLock.getVersion());
     configCopy.setVersion(myLock.getVersion());
 
@@ -124,7 +124,7 @@ public class HadoopIndexTask extends AbstractTask
       List<DataSegment> publishedSegments = job.getPublishedSegments();
 
       // Request segment pushes
-      toolbox.getTaskActionClientFactory().submit(new SegmentInsertAction(ImmutableSet.copyOf(publishedSegments)));
+      toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(publishedSegments)));
 
       // Done
       return TaskStatus.success(getId());
