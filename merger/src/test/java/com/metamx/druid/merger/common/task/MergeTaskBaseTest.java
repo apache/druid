@@ -31,7 +31,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-public class MergeTaskTest
+public class MergeTaskBaseTest
 {
   private final DataSegment.Builder segmentBuilder = DataSegment.builder()
                                                                 .dataSource("foo")
@@ -43,7 +43,7 @@ public class MergeTaskTest
           .add(segmentBuilder.interval(new Interval("2012-01-03/2012-01-05")).build())
           .build();
 
-  final MergeTask testMergeTask = new MergeTask("foo", segments)
+  final MergeTaskBase testMergeTaskBase = new MergeTaskBase("foo", segments)
   {
     @Override
     protected File merge(Map<DataSegment, File> segments, File outDir) throws Exception
@@ -61,13 +61,13 @@ public class MergeTaskTest
   @Test
   public void testDataSource()
   {
-    Assert.assertEquals("foo", testMergeTask.getDataSource());
+    Assert.assertEquals("foo", testMergeTaskBase.getDataSource());
   }
 
   @Test
   public void testInterval()
   {
-    Assert.assertEquals(new Interval("2012-01-03/2012-01-07"), testMergeTask.getImplicitLockInterval().get());
+    Assert.assertEquals(new Interval("2012-01-03/2012-01-07"), testMergeTaskBase.getImplicitLockInterval().get());
   }
 
   @Test
@@ -81,7 +81,7 @@ public class MergeTaskTest
     ).toString().toLowerCase() + "_";
     Assert.assertEquals(
         desiredPrefix,
-        testMergeTask.getId().substring(0, desiredPrefix.length())
+        testMergeTaskBase.getId().substring(0, desiredPrefix.length())
     );
   }
 }

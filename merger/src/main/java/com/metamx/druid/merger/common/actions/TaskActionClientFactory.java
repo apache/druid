@@ -17,23 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator.config;
+package com.metamx.druid.merger.common.actions;
 
-import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.metamx.druid.merger.common.task.Task;
 
 /**
  */
-public abstract class WorkerSetupManagerConfig
+public interface TaskActionClientFactory
 {
-  @Config("druid.indexer.configTable")
-  public abstract String getConfigTable();
-
-  @Config("druid.indexer.workerSetupConfigName")
-  public abstract String getWorkerSetupConfigName();
-
-  @Config("druid.indexer.poll.duration")
-  @Default("PT1M")
-  public abstract Duration getPollDuration();
+  public TaskActionClient create(Task task);
 }

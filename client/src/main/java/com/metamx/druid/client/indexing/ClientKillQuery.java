@@ -17,25 +17,44 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merge;
+package com.metamx.druid.client.indexing;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.druid.client.DataSegment;
-
-
-
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Interval;
 
 /**
  */
-@JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="type", defaultImpl = ClientDefaultMergeQuery.class)
-@JsonSubTypes(value={
-    @JsonSubTypes.Type(name="append", value=ClientAppendQuery.class)
-})
-public interface ClientMergeQuery
+public class ClientKillQuery
 {
-  public String getDataSource();
+  private final String dataSource;
+  private final Interval interval;
 
-  public List<DataSegment> getSegments();
+  @JsonCreator
+  public ClientKillQuery(
+      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("interval") Interval interval
+  )
+  {
+    this.dataSource = dataSource;
+    this.interval = interval;
+  }
+
+  @JsonProperty
+  public String getType()
+  {
+    return "kill";
+  }
+
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  @JsonProperty
+  public Interval getInterval()
+  {
+    return interval;
+  }
 }

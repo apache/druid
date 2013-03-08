@@ -11,13 +11,12 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.merger.TestTask;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
-import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
-import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.druid.merger.worker.TaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
@@ -42,6 +41,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static junit.framework.Assert.fail;
 
@@ -60,7 +60,6 @@ public class RemoteTaskRunnerTest
   private PathChildrenCache pathChildrenCache;
   private RemoteTaskRunner remoteTaskRunner;
   private TaskMonitor taskMonitor;
-  private WorkerSetupManager workerSetupManager;
 
   private ScheduledExecutorService scheduledExec;
 
@@ -280,7 +279,7 @@ public class RemoteTaskRunnerTest
         new PathChildrenCache(cf, String.format("%s/worker1", tasksPath), true),
         cf,
         workerCuratorCoordinator,
-        new TaskToolbox(
+        new TaskToolboxFactory(
             new TaskConfig()
             {
               @Override
@@ -316,17 +315,6 @@ public class RemoteTaskRunnerTest
   private void makeRemoteTaskRunner() throws Exception
   {
     scheduledExec = EasyMock.createMock(ScheduledExecutorService.class);
-    workerSetupManager = EasyMock.createMock(WorkerSetupManager.class);
-
-    EasyMock.expect(workerSetupManager.getWorkerSetupData()).andReturn(
-        new WorkerSetupData(
-            "0",
-            0,
-            null,
-            null
-        )
-    ).atLeastOnce();
-    EasyMock.replay(workerSetupManager);
 
     remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
@@ -335,7 +323,7 @@ public class RemoteTaskRunnerTest
         pathChildrenCache,
         scheduledExec,
         new RetryPolicyFactory(new TestRetryPolicyConfig()),
-        workerSetupManager
+        new AtomicReference<WorkerSetupData>(new WorkerSetupData("0", 0, null, null))
     );
 
     // Create a single worker and wait for things for be ready

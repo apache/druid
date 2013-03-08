@@ -327,11 +327,11 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
-  public <T> void addAuditLog(final TaskAction<T> taskAction)
+  public <T> void addAuditLog(final Task task, final TaskAction<T> taskAction)
   {
     Preconditions.checkNotNull(taskAction, "taskAction");
 
-    log.info("Logging action for task[%s]: %s", taskAction.getTask().getId(), taskAction);
+    log.info("Logging action for task[%s]: %s", task.getId(), taskAction);
 
     dbi.withHandle(
         new HandleCallback<Integer>()
@@ -345,7 +345,7 @@ public class DbTaskStorage implements TaskStorage
                     dbConnectorConfig.getTaskLogTable()
                 )
             )
-                         .bind("task_id", taskAction.getTask().getId())
+                         .bind("task_id", task.getId())
                          .bind("log_payload", jsonMapper.writeValueAsString(taskAction))
                          .execute();
           }

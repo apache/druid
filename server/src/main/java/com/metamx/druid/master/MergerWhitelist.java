@@ -17,23 +17,38 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.common.config;
+package com.metamx.druid.master;
 
-import com.metamx.druid.merger.common.task.Task;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.collect.Sets;
 
-import java.io.File;
+import java.util.List;
+import java.util.Set;
 
-public abstract class TaskConfig
+/**
+ */
+public class MergerWhitelist
 {
-  @Config("druid.merger.taskDir")
-  public abstract File getBaseTaskDir();
+  public static final String CONFIG_KEY = "merger.whitelist";
 
-  @Config("druid.merger.rowFlushBoundary")
-  @Default("500000")
-  public abstract int getDefaultRowFlushBoundary();
+  private final Set<String> dataSources;
 
-  @Config("druid.merger.hadoopWorkingPath")
-  public abstract String getHadoopWorkingPath();
+  @JsonCreator
+  public MergerWhitelist(Set<String> dataSources)
+  {
+    this.dataSources = Sets.newTreeSet(String.CASE_INSENSITIVE_ORDER);
+    this.dataSources.addAll(dataSources);
+  }
+
+  @JsonValue
+  public Set<String> getDataSources()
+  {
+    return dataSources;
+  }
+
+  public boolean contains(String val)
+  {
+    return dataSources.contains(val);
+  }
 }

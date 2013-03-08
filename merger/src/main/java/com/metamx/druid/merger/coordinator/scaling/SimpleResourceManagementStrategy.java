@@ -27,16 +27,16 @@ import com.google.common.collect.Sets;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.merger.coordinator.TaskRunnerWorkItem;
 import com.metamx.druid.merger.coordinator.ZkWorker;
-import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -46,7 +46,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
 
   private final AutoScalingStrategy autoScalingStrategy;
   private final SimpleResourceManagmentConfig config;
-  private final WorkerSetupManager workerSetupManager;
+  private final AtomicReference<WorkerSetupData> workerSetupdDataRef;
   private final ScalingStats scalingStats;
 
   private final ConcurrentSkipListSet<String> currentlyProvisioning = new ConcurrentSkipListSet<String>();
@@ -58,12 +58,12 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   public SimpleResourceManagementStrategy(
       AutoScalingStrategy autoScalingStrategy,
       SimpleResourceManagmentConfig config,
-      WorkerSetupManager workerSetupManager
+      AtomicReference<WorkerSetupData> workerSetupdDataRef
   )
   {
     this.autoScalingStrategy = autoScalingStrategy;
     this.config = config;
-    this.workerSetupManager = workerSetupManager;
+    this.workerSetupdDataRef = workerSetupdDataRef;
     this.scalingStats = new ScalingStats(config.getNumEventsToTrack());
   }
 
@@ -151,7 +151,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     boolean nothingTerminating = currentlyTerminating.isEmpty();
 
     if (nothingTerminating) {
-      final int minNumWorkers = workerSetupManager.getWorkerSetupData().getMinNumWorkers();
+      final int minNumWorkers = workerSetupdDataRef.get().getMinNumWorkers();
       if (zkWorkers.size() <= minNumWorkers) {
         log.info("Only [%d <= %d] nodes in the cluster, not terminating anything.", zkWorkers.size(), minNumWorkers);
         return false;

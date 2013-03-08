@@ -17,23 +17,31 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.common.config;
+package com.metamx.druid.merger.common.actions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.druid.merger.common.task.Task;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.metamx.http.client.HttpClient;
+import com.netflix.curator.x.discovery.ServiceProvider;
 
-import java.io.File;
-
-public abstract class TaskConfig
+/**
+ */
+public class RemoteTaskActionClientFactory implements TaskActionClientFactory
 {
-  @Config("druid.merger.taskDir")
-  public abstract File getBaseTaskDir();
+  private final HttpClient httpClient;
+  private final ServiceProvider serviceProvider;
+  private final ObjectMapper jsonMapper;
 
-  @Config("druid.merger.rowFlushBoundary")
-  @Default("500000")
-  public abstract int getDefaultRowFlushBoundary();
+  public RemoteTaskActionClientFactory(HttpClient httpClient, ServiceProvider serviceProvider, ObjectMapper jsonMapper)
+  {
+    this.httpClient = httpClient;
+    this.serviceProvider = serviceProvider;
+    this.jsonMapper = jsonMapper;
+  }
 
-  @Config("druid.merger.hadoopWorkingPath")
-  public abstract String getHadoopWorkingPath();
+  @Override
+  public TaskActionClient create(Task task)
+  {
+    return new RemoteTaskActionClient(task, httpClient, serviceProvider, jsonMapper);
+  }
 }

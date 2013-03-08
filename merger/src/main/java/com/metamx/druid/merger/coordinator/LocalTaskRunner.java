@@ -26,6 +26,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.task.Task;
 import org.apache.commons.io.FileUtils;
 
@@ -38,17 +39,17 @@ import java.util.concurrent.ExecutorService;
  */
 public class LocalTaskRunner implements TaskRunner
 {
-  private final TaskToolbox toolbox;
+  private final TaskToolboxFactory toolboxFactory;
   private final ExecutorService exec;
 
   private static final Logger log = new Logger(LocalTaskRunner.class);
 
   public LocalTaskRunner(
-      TaskToolbox toolbox,
+      TaskToolboxFactory toolboxFactory,
       ExecutorService exec
   )
   {
-    this.toolbox = toolbox;
+    this.toolboxFactory = toolboxFactory;
     this.exec = exec;
   }
 
@@ -61,6 +62,8 @@ public class LocalTaskRunner implements TaskRunner
   @Override
   public void run(final Task task, final TaskCallback callback)
   {
+    final TaskToolbox toolbox = toolboxFactory.build(task);
+
     exec.submit(
         new Runnable()
         {
@@ -89,7 +92,7 @@ public class LocalTaskRunner implements TaskRunner
             }
 
             try {
-              final File taskDir = toolbox.getConfig().getTaskDir(task);
+              final File taskDir = toolbox.getTaskDir();
 
               if (taskDir.exists()) {
                 log.info("Removing task directory: %s", taskDir);

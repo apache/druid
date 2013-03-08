@@ -35,7 +35,7 @@ import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
-import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
@@ -57,6 +57,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The RemoteTaskRunner's primary responsibility is to assign tasks to worker nodes and manage retries in failure
@@ -82,7 +83,7 @@ public class RemoteTaskRunner implements TaskRunner
   private final PathChildrenCache workerPathCache;
   private final ScheduledExecutorService scheduledExec;
   private final RetryPolicyFactory retryPolicyFactory;
-  private final WorkerSetupManager workerSetupManager;
+  private final AtomicReference<WorkerSetupData> workerSetupData;
 
   // all workers that exist in ZK
   private final Map<String, ZkWorker> zkWorkers = new ConcurrentHashMap<String, ZkWorker>();
@@ -104,7 +105,7 @@ public class RemoteTaskRunner implements TaskRunner
       PathChildrenCache workerPathCache,
       ScheduledExecutorService scheduledExec,
       RetryPolicyFactory retryPolicyFactory,
-      WorkerSetupManager workerSetupManager
+      AtomicReference<WorkerSetupData> workerSetupData
   )
   {
     this.jsonMapper = jsonMapper;
@@ -113,7 +114,7 @@ public class RemoteTaskRunner implements TaskRunner
     this.workerPathCache = workerPathCache;
     this.scheduledExec = scheduledExec;
     this.retryPolicyFactory = retryPolicyFactory;
-    this.workerSetupManager = workerSetupManager;
+    this.workerSetupData = workerSetupData;
   }
 
   @LifecycleStart
@@ -548,7 +549,7 @@ public class RemoteTaskRunner implements TaskRunner
                   return (!input.isAtCapacity() &&
                           input.getWorker()
                                .getVersion()
-                               .compareTo(workerSetupManager.getWorkerSetupData().getMinVersion()) >= 0);
+                               .compareTo(workerSetupData.get().getMinVersion()) >= 0);
                 }
               }
           )

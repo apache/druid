@@ -142,7 +142,7 @@ public class IndexTask extends AbstractTask
   @Override
   public TaskStatus preflight(TaskToolbox toolbox) throws Exception
   {
-    toolbox.getTaskActionClient().submit(new SpawnTasksAction(this, toSubtasks()));
+    toolbox.getTaskActionClientFactory().submit(new SpawnTasksAction(toSubtasks()));
     return TaskStatus.success(getId());
   }
 

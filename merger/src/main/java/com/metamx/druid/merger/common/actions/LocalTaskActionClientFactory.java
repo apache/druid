@@ -17,23 +17,27 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.common.config;
+package com.metamx.druid.merger.common.actions;
 
 import com.metamx.druid.merger.common.task.Task;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.metamx.druid.merger.coordinator.TaskStorage;
 
-import java.io.File;
-
-public abstract class TaskConfig
+/**
+ */
+public class LocalTaskActionClientFactory implements TaskActionClientFactory
 {
-  @Config("druid.merger.taskDir")
-  public abstract File getBaseTaskDir();
+  private final TaskStorage storage;
+  private final TaskActionToolbox toolbox;
 
-  @Config("druid.merger.rowFlushBoundary")
-  @Default("500000")
-  public abstract int getDefaultRowFlushBoundary();
+  public LocalTaskActionClientFactory(TaskStorage storage, TaskActionToolbox toolbox)
+  {
+    this.storage = storage;
+    this.toolbox = toolbox;
+  }
 
-  @Config("druid.merger.hadoopWorkingPath")
-  public abstract String getHadoopWorkingPath();
+  @Override
+  public TaskActionClient create(Task task)
+  {
+    return new LocalTaskActionClient(task, storage, toolbox);
+  }
 }

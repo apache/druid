@@ -19,17 +19,24 @@
 
 package com.metamx.druid.initialization;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.DruidProcessingConfig;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.DelegatingSegmentLoader;
 import com.metamx.druid.loading.LocalDataSegmentPuller;
+import com.metamx.druid.loading.LocalDataSegmentPusher;
+import com.metamx.druid.loading.LocalDataSegmentPusherConfig;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
 import com.metamx.druid.loading.QueryableIndexFactory;
 import com.metamx.druid.loading.S3DataSegmentPuller;
+import com.metamx.druid.loading.S3DataSegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusherConfig;
 import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SingleSegmentLoader;
 import com.metamx.druid.query.group.GroupByQueryEngine;
@@ -48,12 +55,16 @@ import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import com.metamx.druid.utils.PropUtils;
+import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.security.AWSCredentials;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -143,6 +154,34 @@ public class ServerInit
     queryRunners.put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory());
     queryRunners.put(SegmentMetadataQuery.class, new SegmentMetadataQueryRunnerFactory());
     return queryRunners;
+  }
+
+  public static DataSegmentPusher getSegmentPusher(
+      final Properties props,
+      final ConfigurationObjectFactory configFactory,
+      final ObjectMapper jsonMapper
+  )
+  {
+    if (Boolean.parseBoolean(props.getProperty("druid.pusher.local", "false"))) {
+      return new LocalDataSegmentPusher(configFactory.build(LocalDataSegmentPusherConfig.class), jsonMapper);
+    }
+    else {
+
+      final RestS3Service s3Client;
+      try {
+        s3Client = new RestS3Service(
+            new AWSCredentials(
+                PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+                PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+            )
+        );
+      }
+      catch (S3ServiceException e) {
+        throw Throwables.propagate(e);
+      }
+
+      return new S3DataSegmentPusher(s3Client, configFactory.build(S3DataSegmentPusherConfig.class), jsonMapper);
+    }
   }
 
   private static class ComputeScratchPool extends StupidPool<ByteBuffer>

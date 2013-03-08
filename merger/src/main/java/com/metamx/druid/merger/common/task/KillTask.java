@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -53,7 +72,7 @@ public class KillTask extends AbstractTask
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     // Confirm we have a lock (will throw if there isn't exactly one element)
-    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction(this)));
+    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClientFactory().submit(new LockListAction()));
 
     if(!myLock.getDataSource().equals(getDataSource())) {
       throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
@@ -64,14 +83,9 @@ public class KillTask extends AbstractTask
     }
 
     // List unused segments
-    final List<DataSegment> unusedSegments = toolbox.getTaskActionClient()
-                                                    .submit(
-                                                        new SegmentListUnusedAction(
-                                                            this,
-                                                            myLock.getDataSource(),
-                                                            myLock.getInterval()
-                                                        )
-                                                    );
+    final List<DataSegment> unusedSegments = toolbox
+        .getTaskActionClientFactory()
+        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
 
     // Verify none of these segments have versions > lock version
     for(final DataSegment unusedSegment : unusedSegments) {
@@ -88,10 +102,12 @@ public class KillTask extends AbstractTask
     }
 
     // Kill segments
-    toolbox.getSegmentKiller().kill(unusedSegments);
+    for (DataSegment segment : unusedSegments) {
+      toolbox.getDataSegmentKiller().kill(segment);
+    }
 
     // Remove metadata for these segments
-    toolbox.getTaskActionClient().submit(new SegmentNukeAction(this, ImmutableSet.copyOf(unusedSegments)));
+    toolbox.getTaskActionClientFactory().submit(new SegmentNukeAction(ImmutableSet.copyOf(unusedSegments)));
 
     return TaskStatus.success(getId());
   }

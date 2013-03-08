@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merge;
+package com.metamx.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,14 +30,14 @@ import java.util.List;
 
 /**
  */
-public class ClientDefaultMergeQuery implements ClientMergeQuery
+public class ClientMergeQuery
 {
   private final String dataSource;
   private final List<DataSegment> segments;
   private final List<AggregatorFactory> aggregators;
 
   @JsonCreator
-  public ClientDefaultMergeQuery(
+  public ClientMergeQuery(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregators
@@ -50,14 +50,18 @@ public class ClientDefaultMergeQuery implements ClientMergeQuery
   }
 
   @JsonProperty
-  @Override
+  public String getType()
+  {
+    return "append";
+  }
+
+  @JsonProperty
   public String getDataSource()
   {
     return dataSource;
   }
 
   @JsonProperty
-  @Override
   public List<DataSegment> getSegments()
   {
     return segments;
@@ -72,7 +76,7 @@ public class ClientDefaultMergeQuery implements ClientMergeQuery
   @Override
   public String toString()
   {
-    return "ClientDefaultMergeQuery{" +
+    return "ClientMergeQuery{" +
            "dataSource='" + dataSource + '\'' +
            ", segments=" + segments +
            ", aggregators=" + aggregators +

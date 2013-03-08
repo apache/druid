@@ -39,6 +39,9 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.RegisteringNode;
+import com.metamx.druid.config.ConfigManager;
+import com.metamx.druid.config.ConfigManagerConfig;
+import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.GuiceServletConfig;
@@ -48,22 +51,21 @@ import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.loading.S3DataSegmentPusher;
-import com.metamx.druid.loading.S3DataSegmentPusherConfig;
-import com.metamx.druid.loading.S3SegmentKiller;
-import com.metamx.druid.loading.SegmentKiller;
-import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.common.actions.LocalTaskActionClient;
+import com.metamx.druid.loading.S3DataSegmentKiller;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
+import com.metamx.druid.merger.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.merger.common.actions.TaskActionToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.DbTaskStorage;
+import com.metamx.druid.merger.coordinator.HeapMemoryTaskStorage;
 import com.metamx.druid.merger.coordinator.LocalTaskRunner;
-import com.metamx.druid.merger.coordinator.LocalTaskStorage;
 import com.metamx.druid.merger.coordinator.MergerDBCoordinator;
 import com.metamx.druid.merger.coordinator.RemoteTaskRunner;
 import com.metamx.druid.merger.coordinator.RetryPolicyFactory;
@@ -79,7 +81,6 @@ import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
-import com.metamx.druid.merger.coordinator.config.WorkerSetupManagerConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.EC2AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.NoopAutoScalingStrategy;
@@ -88,7 +89,7 @@ import com.metamx.druid.merger.coordinator.scaling.ResourceManagementSchedulerCo
 import com.metamx.druid.merger.coordinator.scaling.ResourceManagementSchedulerFactory;
 import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagementStrategy;
 import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagmentConfig;
-import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
+import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -123,6 +124,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -147,7 +149,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private RestS3Service s3Service = null;
   private IndexerCoordinatorConfig config = null;
   private TaskConfig taskConfig = null;
-  private TaskToolbox taskToolbox = null;
+  private DataSegmentPusher segmentPusher = null;
+  private TaskToolboxFactory taskToolboxFactory = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
   private TaskStorage taskStorage = null;
   private TaskQueue taskQueue = null;
@@ -155,7 +158,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private CuratorFramework curatorFramework = null;
   private ScheduledExecutorFactory scheduledExecutorFactory = null;
   private IndexerZkConfig indexerZkConfig;
-  private WorkerSetupManager workerSetupManager = null;
   private TaskRunnerFactory taskRunnerFactory = null;
   private ResourceManagementSchedulerFactory resourceManagementSchedulerFactory = null;
   private TaskMasterLifecycle taskMasterLifecycle = null;
@@ -208,6 +210,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
     return this;
   }
 
+  public IndexerCoordinatorNode setSegmentPusher(DataSegmentPusher segmentPusher)
+  {
+    this.segmentPusher = segmentPusher;
+    return this;
+  }
+
   public IndexerCoordinatorNode setMergeDbCoordinator(MergerDBCoordinator mergeDbCoordinator)
   {
     this.mergerDBCoordinator = mergeDbCoordinator;
@@ -217,12 +225,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public IndexerCoordinatorNode setCuratorFramework(CuratorFramework curatorFramework)
   {
     this.curatorFramework = curatorFramework;
-    return this;
-  }
-
-  public IndexerCoordinatorNode setWorkerSetupManager(WorkerSetupManager workerSetupManager)
-  {
-    this.workerSetupManager = workerSetupManager;
     return this;
   }
 
@@ -242,6 +244,10 @@ public class IndexerCoordinatorNode extends RegisteringNode
   {
     scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
 
+    final ConfigManagerConfig managerConfig = configFactory.build(ConfigManagerConfig.class);
+    DbConnector.createConfigTable(dbi, managerConfig.getConfigTable());
+    JacksonConfigManager configManager = new JacksonConfigManager(new ConfigManager(dbi, managerConfig), jsonMapper);
+
     initializeEmitter();
     initializeMonitors();
     initializeDB();
@@ -252,14 +258,14 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initializeTaskStorage();
     initializeTaskLockbox();
     initializeTaskQueue();
+    initializeDataSegmentPusher();
     initializeTaskToolbox();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeCurator();
     initializeIndexerZkConfig();
-    initializeWorkerSetupManager();
-    initializeTaskRunnerFactory();
-    initializeResourceManagement();
+    initializeTaskRunnerFactory(configManager);
+    initializeResourceManagement(configManager);
     initializeTaskMasterLifecycle();
     initializeServer();
 
@@ -279,7 +285,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             emitter,
             taskMasterLifecycle,
             new TaskStorageQueryAdapter(taskStorage),
-            workerSetupManager
+            configManager
         )
     );
 
@@ -339,7 +345,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
       final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
       taskMasterLifecycle = new TaskMasterLifecycle(
           taskQueue,
-          taskToolbox,
+          taskToolboxFactory,
           config,
           serviceDiscoveryConfig,
           taskRunnerFactory,
@@ -403,7 +409,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     InjectableValues.Std injectables = new InjectableValues.Std();
 
     injectables.addValue("s3Client", s3Service)
-               .addValue("segmentPusher", taskToolbox.getSegmentPusher());
+               .addValue("segmentPusher", segmentPusher);
 
     jsonMapper.setInjectableValues(injectables);
   }
@@ -472,27 +478,27 @@ public class IndexerCoordinatorNode extends RegisteringNode
     );
   }
 
+  public void initializeDataSegmentPusher()
+  {
+    if (segmentPusher == null) {
+      segmentPusher = ServerInit.getSegmentPusher(props, configFactory, jsonMapper);
+    }
+  }
+
   public void initializeTaskToolbox()
   {
-    if (taskToolbox == null) {
-      final DataSegmentPusher dataSegmentPusher = new S3DataSegmentPusher(
-          s3Service,
-          configFactory.build(S3DataSegmentPusherConfig.class),
-          jsonMapper
-      );
-      final SegmentKiller segmentKiller = new S3SegmentKiller(
-          s3Service
-      );
-      taskToolbox = new TaskToolbox(
+    if (taskToolboxFactory == null) {
+      final DataSegmentKiller dataSegmentKiller = new S3DataSegmentKiller(s3Service);
+      taskToolboxFactory = new TaskToolboxFactory(
           taskConfig,
-          new LocalTaskActionClient(
+          new LocalTaskActionClientFactory(
               taskStorage,
               new TaskActionToolbox(taskQueue, taskLockbox, mergerDBCoordinator, emitter)
           ),
           emitter,
           s3Service,
-          dataSegmentPusher,
-          segmentKiller,
+          segmentPusher,
+          dataSegmentKiller,
           jsonMapper
       );
     }
@@ -546,7 +552,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   {
     if (taskStorage == null) {
       if (config.getStorageImpl().equals("local")) {
-        taskStorage = new LocalTaskStorage();
+        taskStorage = new HeapMemoryTaskStorage();
       } else if (config.getStorageImpl().equals("db")) {
         final IndexerDbConnectorConfig dbConnectorConfig = configFactory.build(IndexerDbConnectorConfig.class);
         taskStorage = new DbTaskStorage(jsonMapper, dbConnectorConfig, new DbConnector(dbConnectorConfig).getDBI());
@@ -556,26 +562,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
-  public void initializeWorkerSetupManager()
-  {
-    if (workerSetupManager == null) {
-      final WorkerSetupManagerConfig workerSetupManagerConfig = configFactory.build(WorkerSetupManagerConfig.class);
-
-      DbConnector.createConfigTable(dbi, workerSetupManagerConfig.getConfigTable());
-      workerSetupManager = new WorkerSetupManager(
-          dbi, Executors.newScheduledThreadPool(
-          1,
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("WorkerSetupManagerExec--%d")
-              .build()
-      ), jsonMapper, workerSetupManagerConfig
-      );
-    }
-    lifecycle.addManagedInstance(workerSetupManager);
-  }
-
-  public void initializeTaskRunnerFactory()
+  private void initializeTaskRunnerFactory(final JacksonConfigManager configManager)
   {
     if (taskRunnerFactory == null) {
       if (config.getRunnerImpl().equals("remote")) {
@@ -601,7 +588,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
                 new PathChildrenCache(curatorFramework, indexerZkConfig.getAnnouncementPath(), true),
                 retryScheduledExec,
                 new RetryPolicyFactory(configFactory.build(RetryPolicyConfig.class)),
-                workerSetupManager
+                configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class)
             );
 
             return remoteTaskRunner;
@@ -615,7 +602,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
           public TaskRunner build()
           {
             final ExecutorService runnerExec = Executors.newFixedThreadPool(config.getNumLocalThreads());
-            return new LocalTaskRunner(taskToolbox, runnerExec);
+            return new LocalTaskRunner(taskToolboxFactory, runnerExec);
           }
         };
       } else {
@@ -624,7 +611,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
-  private void initializeResourceManagement()
+  private void initializeResourceManagement(final JacksonConfigManager configManager)
   {
     if (resourceManagementSchedulerFactory == null) {
       resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
@@ -639,6 +626,9 @@ public class IndexerCoordinatorNode extends RegisteringNode
                   .setNameFormat("ScalingExec--%d")
                   .build()
           );
+          final AtomicReference<WorkerSetupData> workerSetupData = configManager.watch(
+              WorkerSetupData.CONFIG_KEY, WorkerSetupData.class
+          );
 
           AutoScalingStrategy strategy;
           if (config.getStrategyImpl().equalsIgnoreCase("ec2")) {
@@ -651,7 +641,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
                     )
                 ),
                 configFactory.build(EC2AutoScalingStrategyConfig.class),
-                workerSetupManager
+                workerSetupData
             );
           } else if (config.getStrategyImpl().equalsIgnoreCase("noop")) {
             strategy = new NoopAutoScalingStrategy();
@@ -664,7 +654,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
               new SimpleResourceManagementStrategy(
                   strategy,
                   configFactory.build(SimpleResourceManagmentConfig.class),
-                  workerSetupManager
+                  workerSetupData
               ),
               configFactory.build(ResourceManagementSchedulerConfig.class),
               scalingScheduledExec

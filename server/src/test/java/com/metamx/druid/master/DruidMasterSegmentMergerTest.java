@@ -23,12 +23,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
 import junit.framework.Assert;
 import org.joda.time.Interval;
 import org.junit.Test;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class DruidMasterSegmentMergerTest
 {
@@ -367,11 +369,7 @@ public class DruidMasterSegmentMergerTest
         DataSegment.builder().dataSource("foo").interval(new Interval("2012-01-06/P1D")).version("2").size(80).build()
     );
 
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableList.of(segments.get(4), segments.get(5))
-        ), merge(segments)
-    );
+    Assert.assertEquals(ImmutableList.of(ImmutableList.of(segments.get(4), segments.get(5))), merge(segments));
   }
 
   /**
@@ -380,16 +378,17 @@ public class DruidMasterSegmentMergerTest
   private static List<List<DataSegment>> merge(final Collection<DataSegment> segments)
   {
     final List<List<DataSegment>> retVal = Lists.newArrayList();
-    final MergerClient mergerClient = new MergerClient()
+    final IndexingServiceClient indexingServiceClient = new IndexingServiceClient(null, null, null)
     {
       @Override
-      public void runRequest(String dataSource, List<DataSegment> segmentsToMerge)
+      public void mergeSegments(List<DataSegment> segmentsToMerge)
       {
         retVal.add(segmentsToMerge);
       }
     };
 
-    final DruidMasterSegmentMerger merger = new DruidMasterSegmentMerger(mergerClient);
+    final AtomicReference<MergerWhitelist> whitelistRef = new AtomicReference<MergerWhitelist>(null);
+    final DruidMasterSegmentMerger merger = new DruidMasterSegmentMerger(indexingServiceClient, whitelistRef);
     final DruidMasterRuntimeParams params = DruidMasterRuntimeParams.newBuilder()
                                                                     .withAvailableSegments(ImmutableSet.copyOf(segments))
                                                                     .withMergeBytesLimit(mergeBytesLimit)

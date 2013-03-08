@@ -20,33 +20,20 @@
 package com.metamx.druid.merger.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
-import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.loading.MMappedQueryableIndexFactory;
-import com.metamx.druid.loading.S3DataSegmentPuller;
 import com.metamx.druid.loading.DataSegmentKiller;
-import com.metamx.druid.loading.SegmentLoaderConfig;
-import com.metamx.druid.loading.SegmentLoadingException;
-import com.metamx.druid.loading.SingleSegmentLoader;
-import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
-import java.io.File;
-import java.util.List;
-import java.util.Map;
-
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
  */
-public class TaskToolbox
+public class TaskToolboxFactory
 {
   private final TaskConfig config;
-  private final Task task;
   private final TaskActionClientFactory taskActionClientFactory;
   private final ServiceEmitter emitter;
   private final RestS3Service s3Client;
@@ -54,9 +41,8 @@ public class TaskToolbox
   private final DataSegmentKiller dataSegmentKiller;
   private final ObjectMapper objectMapper;
 
-  public TaskToolbox(
+  public TaskToolboxFactory(
       TaskConfig config,
-      Task task,
       TaskActionClientFactory taskActionClientFactory,
       ServiceEmitter emitter,
       RestS3Service s3Client,
@@ -66,7 +52,6 @@ public class TaskToolbox
   )
   {
     this.config = config;
-    this.task = task;
     this.taskActionClientFactory = taskActionClientFactory;
     this.emitter = emitter;
     this.s3Client = s3Client;
@@ -75,62 +60,22 @@ public class TaskToolbox
     this.objectMapper = objectMapper;
   }
 
-  public TaskConfig getConfig()
-  {
-    return config;
-  }
-
-  public TaskActionClient getTaskActionClientFactory()
-  {
-    return taskActionClientFactory.create(task);
-  }
-
-  public ServiceEmitter getEmitter()
-  {
-    return emitter;
-  }
-
-  public DataSegmentPusher getSegmentPusher()
-  {
-    return segmentPusher;
-  }
-
-  public DataSegmentKiller getDataSegmentKiller()
-  {
-    return dataSegmentKiller;
-  }
-
   public ObjectMapper getObjectMapper()
   {
     return objectMapper;
   }
 
-  public Map<DataSegment, File> getSegments(List<DataSegment> segments)
-      throws SegmentLoadingException
+  public TaskToolbox build(Task task)
   {
-    final SingleSegmentLoader loader = new SingleSegmentLoader(
-        new S3DataSegmentPuller(s3Client),
-        new MMappedQueryableIndexFactory(),
-        new SegmentLoaderConfig()
-        {
-          @Override
-          public File getCacheDirectory()
-          {
-            return new File(getTaskDir(), "fetched_segments");
-          }
-        }
+    return new TaskToolbox(
+        config,
+        task,
+        taskActionClientFactory,
+        emitter,
+        s3Client,
+        segmentPusher,
+        dataSegmentKiller,
+        objectMapper
     );
-
-    Map<DataSegment, File> retVal = Maps.newLinkedHashMap();
-    for (DataSegment segment : segments) {
-      retVal.put(segment, loader.getSegmentFiles(segment));
-    }
-
-    return retVal;
   }
-
-  public File getTaskDir() {
-    return new File(config.getBaseTaskDir(), task.getId());
-  }
-
 }

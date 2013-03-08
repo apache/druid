@@ -258,7 +258,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
         }
     );
 
-    toolbox.getTaskActionClient().submit(new SpawnTasksAction(this, nextTasks));
+    toolbox.getTaskActionClientFactory().submit(new SpawnTasksAction(nextTasks));
 
     return TaskStatus.success(getId());
   }

@@ -18,23 +18,14 @@ import java.util.Set;
 
 public class SegmentNukeAction implements TaskAction<Void>
 {
-  private final Task task;
   private final Set<DataSegment> segments;
 
   @JsonCreator
   public SegmentNukeAction(
-      @JsonProperty("task") Task task,
       @JsonProperty("segments") Set<DataSegment> segments
   )
   {
-    this.task = task;
     this.segments = ImmutableSet.copyOf(segments);
-  }
-
-  @JsonProperty
-  public Task getTask()
-  {
-    return task;
   }
 
   @JsonProperty
@@ -49,7 +40,7 @@ public class SegmentNukeAction implements TaskAction<Void>
   }
 
   @Override
-  public Void perform(TaskActionToolbox toolbox)
+  public Void perform(Task task, TaskActionToolbox toolbox)
   {
     if(!toolbox.taskLockCoversSegments(task, segments, true)) {
       throw new ISE("Segments not covered by locks for task: %s", task.getId());

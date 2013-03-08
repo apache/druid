@@ -26,7 +26,8 @@ import com.google.common.collect.Sets;
 import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.common.actions.LocalTaskActionClient;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
+import com.metamx.druid.merger.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.merger.common.actions.SpawnTasksAction;
 import com.metamx.druid.merger.common.actions.TaskActionToolbox;
 import com.metamx.druid.merger.common.task.AbstractTask;
@@ -43,7 +44,7 @@ public class TaskQueueTest
   @Test
   public void testEmptyQueue() throws Exception
   {
-    final TaskStorage ts = new LocalTaskStorage();
+    final TaskStorage ts = new HeapMemoryTaskStorage();
     final TaskLockbox tl = new TaskLockbox(ts);
     final TaskQueue tq = newTaskQueue(ts, tl);
 
@@ -65,7 +66,7 @@ public class TaskQueueTest
   @Test
   public void testAddRemove() throws Exception
   {
-    final TaskStorage ts = new LocalTaskStorage();
+    final TaskStorage ts = new HeapMemoryTaskStorage();
     final TaskLockbox tl = new TaskLockbox(ts);
     final TaskQueue tq = newTaskQueue(ts, tl);
 
@@ -154,12 +155,12 @@ public class TaskQueueTest
   @Test
   public void testContinues() throws Exception
   {
-    final TaskStorage ts = new LocalTaskStorage();
+    final TaskStorage ts = new HeapMemoryTaskStorage();
     final TaskLockbox tl = new TaskLockbox(ts);
     final TaskQueue tq = newTaskQueue(ts, tl);
-    final TaskToolbox tb = new TaskToolbox(
+    final TaskToolboxFactory tb = new TaskToolboxFactory(
         null,
-        new LocalTaskActionClient(ts, new TaskActionToolbox(tq, tl, null, null)),
+        new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tq, tl, null, null)),
         null,
         null,
         null,
@@ -181,7 +182,7 @@ public class TaskQueueTest
     Assert.assertNull("poll #2", tq.poll());
 
     // report T1 done. Should cause T0 to be created
-    tq.notify(t1, t1.run(tb));
+    tq.notify(t1, t1.run(tb.build(t1)));
 
     Assert.assertTrue("T0 isPresent (#2)", ts.getStatus("T0").isPresent());
     Assert.assertTrue("T0 isRunnable (#2)",  ts.getStatus("T0").get().isRunnable());
@@ -195,7 +196,7 @@ public class TaskQueueTest
     Assert.assertNull("poll #4", tq.poll());
 
     // report T0 done. Should cause T0, T1 to be marked complete
-    tq.notify(t0, t0.run(tb));
+    tq.notify(t0, t0.run(tb.build(t0)));
 
     Assert.assertTrue("T0 isPresent (#3)", ts.getStatus("T0").isPresent());
     Assert.assertTrue("T0 isRunnable (#3)", !ts.getStatus("T0").get().isRunnable());
@@ -211,12 +212,12 @@ public class TaskQueueTest
   @Test
   public void testConcurrency() throws Exception
   {
-    final TaskStorage ts = new LocalTaskStorage();
+    final TaskStorage ts = new HeapMemoryTaskStorage();
     final TaskLockbox tl = new TaskLockbox(ts);
     final TaskQueue tq = newTaskQueue(ts, tl);
-    final TaskToolbox tb = new TaskToolbox(
+    final TaskToolboxFactory tb = new TaskToolboxFactory(
         null,
-        new LocalTaskActionClient(ts, new TaskActionToolbox(tq, tl, null, null)),
+        new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tq, tl, null, null)),
         null,
         null,
         null,
@@ -248,7 +249,7 @@ public class TaskQueueTest
     Thread.sleep(5);
 
     // Finish t0
-    tq.notify(t0, t0.run(tb));
+    tq.notify(t0, t0.run(tb.build(t0)));
 
     // take max number of tasks
     final Set<String> taken = Sets.newHashSet();
@@ -280,7 +281,7 @@ public class TaskQueueTest
     Assert.assertNull("null poll #2", tq.poll());
 
     // Finish t3
-    tq.notify(t3, t3.run(tb));
+    tq.notify(t3, t3.run(tb.build(t3)));
 
     // We should be able to get t2 now
     final Task wt2 = tq.poll();
@@ -291,7 +292,7 @@ public class TaskQueueTest
     Assert.assertNull("null poll #3", tq.poll());
 
     // Finish t2
-    tq.notify(t2, t2.run(tb));
+    tq.notify(t2, t2.run(tb.build(t2)));
 
     // We should be able to get t4
     // And it should be in group G0, but that group should have a different version than last time
@@ -305,14 +306,14 @@ public class TaskQueueTest
     Assert.assertNotSame("wt4 version", wt2Lock.getVersion(), wt4Lock.getVersion());
 
     // Kind of done testing at this point, but let's finish t4 anyway
-    tq.notify(t4, t4.run(tb));
+    tq.notify(t4, t4.run(tb.build(t4)));
     Assert.assertNull("null poll #4", tq.poll());
   }
 
   @Test
   public void testBootstrap() throws Exception
   {
-    final TaskStorage storage = new LocalTaskStorage();
+    final TaskStorage storage = new HeapMemoryTaskStorage();
     final TaskLockbox lockbox = new TaskLockbox(storage);
 
     storage.insert(newTask("T1", "G1", "bar", new Interval("2011-01-01/P1D")), TaskStatus.running("T1"));
@@ -374,7 +375,7 @@ public class TaskQueueTest
       @Override
       public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
-        toolbox.getTaskActionClient().submit(new SpawnTasksAction(this, nextTasks));
+        toolbox.getTaskActionClientFactory().submit(new SpawnTasksAction(nextTasks));
         return TaskStatus.success(id);
       }
     };

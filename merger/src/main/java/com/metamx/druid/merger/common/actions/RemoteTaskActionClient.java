@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.merger.common.task.Task;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.ToStringResponseHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,14 +17,16 @@ import java.util.Map;
 
 public class RemoteTaskActionClient implements TaskActionClient
 {
+  private final Task task;
   private final HttpClient httpClient;
   private final ServiceProvider serviceProvider;
   private final ObjectMapper jsonMapper;
 
   private static final Logger log = new Logger(RemoteTaskActionClient.class);
 
-  public RemoteTaskActionClient(HttpClient httpClient, ServiceProvider serviceProvider, ObjectMapper jsonMapper)
+  public RemoteTaskActionClient(Task task, HttpClient httpClient, ServiceProvider serviceProvider, ObjectMapper jsonMapper)
   {
+    this.task = task;
     this.httpClient = httpClient;
     this.serviceProvider = serviceProvider;
     this.jsonMapper = jsonMapper;
@@ -33,7 +36,7 @@ public class RemoteTaskActionClient implements TaskActionClient
   public <RetType> RetType submit(TaskAction<RetType> taskAction)
   {
     try {
-      byte[] dataToSend = jsonMapper.writeValueAsBytes(taskAction);
+      byte[] dataToSend = jsonMapper.writeValueAsBytes(new TaskActionHolder(task, taskAction));
 
       final String response = httpClient.post(getServiceUri().toURL())
                                         .setContent("application/json", dataToSend)
