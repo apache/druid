@@ -185,8 +185,10 @@ public class MasterMain
         masterYp
     );
 
+    final ConfigManagerConfig configManagerConfig = configFactory.build(ConfigManagerConfig.class);
+    DbConnector.createConfigTable(dbi, configManagerConfig.getConfigTable());
     JacksonConfigManager configManager = new JacksonConfigManager(
-        new ConfigManager(dbi, configFactory.build(ConfigManagerConfig.class)), jsonMapper
+        new ConfigManager(dbi, configManagerConfig), jsonMapper
     );
 
     final DruidMaster master = new DruidMaster(
