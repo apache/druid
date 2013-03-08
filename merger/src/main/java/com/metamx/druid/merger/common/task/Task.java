@@ -41,16 +41,18 @@ import org.joda.time.Interval;
  *   to release locks early if they desire.</li>
  * </ul>
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultMergeTask.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "append", value = AppendTask.class),
-    @JsonSubTypes.Type(name = "merge", value = DefaultMergeTask.class),
+    @JsonSubTypes.Type(name = "merge", value = MergeTask.class),
     @JsonSubTypes.Type(name = "delete", value = DeleteTask.class),
     @JsonSubTypes.Type(name = "kill", value = KillTask.class),
     @JsonSubTypes.Type(name = "index", value = IndexTask.class),
     @JsonSubTypes.Type(name = "index_partitions", value = IndexDeterminePartitionsTask.class),
     @JsonSubTypes.Type(name = "index_generator", value = IndexGeneratorTask.class),
-    @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class)
+    @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
+    @JsonSubTypes.Type(name = "version_converter", value = VersionConverterTask.class),
+    @JsonSubTypes.Type(name = "version_converter_sub", value = VersionConverterTask.SubTask.class)
 })
 public interface Task
 {

@@ -1,17 +1,20 @@
 package com.metamx.druid.merger.common.actions;
 
+import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskStorage;
 import com.metamx.emitter.EmittingLogger;
 
 public class LocalTaskActionClient implements TaskActionClient
 {
+  private final Task task;
   private final TaskStorage storage;
   private final TaskActionToolbox toolbox;
 
   private static final EmittingLogger log = new EmittingLogger(LocalTaskActionClient.class);
 
-  public LocalTaskActionClient(TaskStorage storage, TaskActionToolbox toolbox)
+  public LocalTaskActionClient(Task task, TaskStorage storage, TaskActionToolbox toolbox)
   {
+    this.task = task;
     this.storage = storage;
     this.toolbox = toolbox;
   }
@@ -19,15 +22,15 @@ public class LocalTaskActionClient implements TaskActionClient
   @Override
   public <RetType> RetType submit(TaskAction<RetType> taskAction)
   {
-    final RetType ret = taskAction.perform(toolbox);
+    final RetType ret = taskAction.perform(task, toolbox);
 
     // Add audit log
     try {
-      storage.addAuditLog(taskAction);
+      storage.addAuditLog(task, taskAction);
     }
     catch (Exception e) {
       log.makeAlert(e, "Failed to record action in audit log")
-         .addData("task", taskAction.getTask().getId())
+         .addData("task", task.getId())
          .addData("actionClass", taskAction.getClass().getName())
          .emit();
     }

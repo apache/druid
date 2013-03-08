@@ -19,8 +19,6 @@
 
 package com.metamx.druid.master;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
@@ -32,22 +30,19 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Ordering;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.partition.PartitionChunk;
-import com.metamx.http.client.HttpClientConfig;
-import com.metamx.http.client.HttpClientInit;
-import com.metamx.http.client.response.ToStringResponseHandler;
-import com.netflix.curator.x.discovery.ServiceProvider;
 
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -55,44 +50,40 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
 {
   private static final Logger log = new Logger(DruidMasterSegmentMerger.class);
 
-  private final MergerClient mergerClient;
+  private final IndexingServiceClient indexingServiceClient;
+  private final AtomicReference<MergerWhitelist> whiteListRef;
 
-  public DruidMasterSegmentMerger(MergerClient mergerClient)
+  public DruidMasterSegmentMerger(
+      IndexingServiceClient indexingServiceClient,
+      AtomicReference<MergerWhitelist> whitelistRef
+  )
   {
-    this.mergerClient = mergerClient;
-  }
-
-  public DruidMasterSegmentMerger(ObjectMapper jsonMapper, ServiceProvider serviceProvider)
-  {
-    this.mergerClient = new HttpMergerClient(
-        HttpClientInit.createClient(
-            HttpClientConfig.builder().withNumConnections(1).build(),
-            new Lifecycle()
-        ),
-        new ToStringResponseHandler(Charsets.UTF_8),
-        jsonMapper,
-        serviceProvider
-    );
+    this.indexingServiceClient = indexingServiceClient;
+    this.whiteListRef = whitelistRef;
   }
 
   @Override
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
+    MergerWhitelist whitelist = whiteListRef.get();
+
     MasterStats stats = new MasterStats();
     Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = Maps.newHashMap();
 
     // Find serviced segments by using a timeline
     for (DataSegment dataSegment : params.getAvailableSegments()) {
-      VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(dataSegment.getDataSource());
-      if (timeline == null) {
-        timeline = new VersionedIntervalTimeline<String, DataSegment>(Ordering.<String>natural());
-        dataSources.put(dataSegment.getDataSource(), timeline);
+      if (whitelist == null || whitelist.contains(dataSegment.getDataSource())) {
+        VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(dataSegment.getDataSource());
+        if (timeline == null) {
+          timeline = new VersionedIntervalTimeline<String, DataSegment>(Ordering.<String>natural());
+          dataSources.put(dataSegment.getDataSource(), timeline);
+        }
+        timeline.add(
+            dataSegment.getInterval(),
+            dataSegment.getVersion(),
+            dataSegment.getShardSpec().createChunk(dataSegment)
+        );
       }
-      timeline.add(
-          dataSegment.getInterval(),
-          dataSegment.getVersion(),
-          dataSegment.getShardSpec().createChunk(dataSegment)
-      );
     }
 
     // Find segments to merge
@@ -161,7 +152,7 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
     log.info("[%s] Found %d segments to merge %s", dataSource, segments.size(), segmentNames);
 
     try {
-      mergerClient.runRequest(dataSource, segments);
+      indexingServiceClient.mergeSegments(segments);
     }
     catch (Exception e) {
       log.error(

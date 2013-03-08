@@ -12,23 +12,14 @@ import java.util.List;
 
 public class LockReleaseAction implements TaskAction<Void>
 {
-  private final Task task;
   private final Interval interval;
 
   @JsonCreator
   public LockReleaseAction(
-      @JsonProperty("task") Task task,
       @JsonProperty("interval") Interval interval
   )
   {
-    this.task = task;
     this.interval = interval;
-  }
-
-  @JsonProperty
-  public Task getTask()
-  {
-    return task;
   }
 
   @JsonProperty
@@ -43,7 +34,7 @@ public class LockReleaseAction implements TaskAction<Void>
   }
 
   @Override
-  public Void perform(TaskActionToolbox toolbox)
+  public Void perform(Task task, TaskActionToolbox toolbox)
   {
     try {
       toolbox.getTaskLockbox().unlock(task, interval);

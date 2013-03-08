@@ -19,10 +19,8 @@
 
 package com.metamx.druid.master;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -41,32 +39,30 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryManager;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
+import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
-import com.metamx.druid.merge.ClientKillQuery;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
-import com.netflix.curator.x.discovery.ServiceProvider;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -83,26 +79,22 @@ public class DruidMaster
 
   private final DruidMasterConfig config;
   private final DruidClusterInfo clusterInfo;
+  private final JacksonConfigManager configManager;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final ServerInventoryManager serverInventoryManager;
   private final DatabaseRuleManager databaseRuleManager;
   private final PhoneBook yp;
   private final ServiceEmitter emitter;
+  private final IndexingServiceClient indexingServiceClient;
   private final ScheduledExecutorService exec;
   private final ScheduledExecutorService peonExec;
   private final PhoneBookPeon masterPeon;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
-  private final ServiceProvider serviceProvider;
-
-  private final HttpClient httpClient;
-  private final HttpResponseHandler responseHandler;
-
-  private final ObjectMapper jsonMapper;
 
   public DruidMaster(
       DruidMasterConfig config,
       DruidClusterInfo clusterInfo,
-      ObjectMapper jsonMapper,
+      JacksonConfigManager configManager,
       DatabaseSegmentManager databaseSegmentManager,
       ServerInventoryManager serverInventoryManager,
       DatabaseRuleManager databaseRuleManager,
@@ -110,31 +102,25 @@ public class DruidMaster
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       Map<String, LoadQueuePeon> loadManagementPeons,
-      ServiceProvider serviceProvider,
-      HttpClient httpClient,
-      HttpResponseHandler responseHandler
+      IndexingServiceClient indexingServiceClient
   )
   {
     this.config = config;
     this.clusterInfo = clusterInfo;
-
-    this.jsonMapper = jsonMapper;
+    this.configManager = configManager;
 
     this.databaseSegmentManager = databaseSegmentManager;
     this.serverInventoryManager = serverInventoryManager;
     this.databaseRuleManager = databaseRuleManager;
     this.yp = zkPhoneBook;
     this.emitter = emitter;
+    this.indexingServiceClient = indexingServiceClient;
 
     this.masterPeon = new MasterListeningPeon();
     this.exec = scheduledExecutorFactory.create(1, "Master-Exec--%d");
     this.peonExec = scheduledExecutorFactory.create(1, "Master-PeonExec--%d");
 
     this.loadManagementPeons = loadManagementPeons;
-
-    this.serviceProvider = serviceProvider;
-    this.httpClient = httpClient;
-    this.responseHandler = responseHandler;
   }
 
   public boolean isClusterMaster()
@@ -349,27 +335,6 @@ public class DruidMaster
     }
   }
 
-  public void killSegments(ClientKillQuery killQuery)
-  {
-    try {
-      httpClient.post(
-          new URL(
-              String.format(
-                  "http://%s:%s/mmx/merger/v1/index",
-                  serviceProvider.getInstance().getAddress(),
-                  serviceProvider.getInstance().getPort()
-              )
-          )
-      )
-                .setContent("application/json", jsonMapper.writeValueAsBytes(killQuery))
-                .go(responseHandler)
-                .get();
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
   public Set<DataSegment> getAvailableDataSegments()
   {
     Set<DataSegment> availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
@@ -390,7 +355,9 @@ public class DruidMaster
 
     for (DataSegment dataSegment : dataSegments) {
       if (dataSegment.getSize() < 0) {
-        log.warn("No size on Segment[%s], wtf?", dataSegment);
+        log.makeAlert("No size on Segment, wtf?")
+           .addData("segment", dataSegment)
+           .emit();
       }
       availableSegments.add(dataSegment);
     }
@@ -466,8 +433,14 @@ public class DruidMaster
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
 
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
-        if (config.isMergeSegments() && serviceProvider != null) {
-          masterRunnables.add(Pair.of(new MasterSegmentMergerRunnable(), config.getMasterSegmentMergerPeriod()));
+        if (config.isMergeSegments() && indexingServiceClient != null) {
+
+          masterRunnables.add(
+              Pair.of(
+                  new MasterSegmentMergerRunnable(configManager.watch(MergerWhitelist.CONFIG_KEY, MergerWhitelist.class)),
+                  config.getMasterSegmentMergerPeriod()
+              )
+          );
         }
 
         for (final Pair<? extends MasterRunnable, Duration> masterRunnable : masterRunnables) {
@@ -526,6 +499,39 @@ public class DruidMaster
         serverInventoryManager.stop();
         master = false;
       }
+    }
+  }
+
+  public static class DruidMasterVersionConverter implements DruidMasterHelper
+  {
+    private final IndexingServiceClient indexingServiceClient;
+    private final AtomicReference<MergerWhitelist> whitelistRef;
+
+    public DruidMasterVersionConverter(
+        IndexingServiceClient indexingServiceClient,
+        AtomicReference<MergerWhitelist> whitelistRef
+    )
+    {
+      this.indexingServiceClient = indexingServiceClient;
+      this.whitelistRef = whitelistRef;
+    }
+
+    @Override
+    public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
+    {
+      MergerWhitelist whitelist = whitelistRef.get();
+
+      for (DataSegment dataSegment : params.getAvailableSegments()) {
+        if (whitelist == null || whitelist.contains(dataSegment.getDataSource())) {
+          final Integer binaryVersion = dataSegment.getBinaryVersion();
+
+          if (binaryVersion == null || binaryVersion < IndexIO.CURRENT_VERSION_ID) {
+            indexingServiceClient.upgradeSegment(dataSegment);
+          }
+        }
+      }
+
+      return params;
     }
   }
 
@@ -723,12 +729,13 @@ public class DruidMaster
 
   private class MasterSegmentMergerRunnable extends MasterRunnable
   {
-    private MasterSegmentMergerRunnable()
+    private MasterSegmentMergerRunnable(final AtomicReference<MergerWhitelist> whitelistRef)
     {
       super(
           ImmutableList.of(
               new DruidMasterSegmentInfoLoader(DruidMaster.this),
-              new DruidMasterSegmentMerger(jsonMapper, serviceProvider),
+              new DruidMasterVersionConverter(indexingServiceClient, whitelistRef),
+              new DruidMasterSegmentMerger(indexingServiceClient, whitelistRef),
               new DruidMasterHelper()
               {
                 @Override
@@ -739,8 +746,7 @@ public class DruidMaster
 
                   params.getEmitter().emit(
                       new ServiceMetricEvent.Builder().build(
-                          "master/merge/count",
-                          stats.getGlobalStats().get("mergedCount")
+                          "master/merge/count", stats.getGlobalStats().get("mergedCount")
                       )
                   );
 

@@ -44,7 +44,7 @@ import java.util.Map;
 
 /**
  */
-public class AppendTask extends MergeTask
+public class AppendTask extends MergeTaskBase
 {
   @JsonCreator
   public AppendTask(

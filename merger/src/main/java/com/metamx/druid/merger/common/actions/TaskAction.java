@@ -18,7 +18,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 })
 public interface TaskAction<RetType>
 {
-  public Task getTask(); // TODO Look into replacing this with task ID so stuff serializes smaller
   public TypeReference<RetType> getReturnTypeReference(); // T_T
-  public RetType perform(TaskActionToolbox toolbox);
+  public RetType perform(Task task, TaskActionToolbox toolbox);
 }

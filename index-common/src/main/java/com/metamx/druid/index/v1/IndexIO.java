@@ -199,6 +199,19 @@ public class IndexIO
     }
   }
 
+  public static boolean convertSegment(File toConvert, File converted) throws IOException
+  {
+    final int version = getVersionFromDir(toConvert);
+
+    switch (version) {
+      case 8:
+        DefaultIndexIOHandler.convertV8toV9(toConvert, converted);
+        return true;
+      default:
+        return false;
+    }
+  }
+
   public static interface IndexIOHandler
   {
     /**
@@ -229,7 +242,7 @@ public class IndexIO
     public void storeLatest(Index index, File file) throws IOException;
   }
 
-  static class DefaultIndexIOHandler implements IndexIOHandler
+  public static class DefaultIndexIOHandler implements IndexIOHandler
   {
     private static final Logger log = new Logger(DefaultIndexIOHandler.class);
     @Override

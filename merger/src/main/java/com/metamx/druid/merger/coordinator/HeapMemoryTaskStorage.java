@@ -40,14 +40,14 @@ import java.util.concurrent.locks.ReentrantLock;
  * Implements an in-heap TaskStorage facility, with no persistence across restarts. This class is not
  * thread safe.
  */
-public class LocalTaskStorage implements TaskStorage
+public class HeapMemoryTaskStorage implements TaskStorage
 {
   private final ReentrantLock giant = new ReentrantLock();
   private final Map<String, TaskStuff> tasks = Maps.newHashMap();
   private final Multimap<String, TaskLock> taskLocks = HashMultimap.create();
   private final Multimap<String, TaskAction> taskActions = ArrayListMultimap.create();
 
-  private static final Logger log = new Logger(LocalTaskStorage.class);
+  private static final Logger log = new Logger(HeapMemoryTaskStorage.class);
 
   @Override
   public void insert(Task task, TaskStatus status)
@@ -185,12 +185,12 @@ public class LocalTaskStorage implements TaskStorage
   }
 
   @Override
-  public <T> void addAuditLog(TaskAction<T> taskAction)
+  public <T> void addAuditLog(Task task, TaskAction<T> taskAction)
   {
     giant.lock();
 
     try {
-      taskActions.put(taskAction.getTask().getId(), taskAction);
+      taskActions.put(task.getId(), taskAction);
     } finally {
       giant.unlock();
     }

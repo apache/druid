@@ -17,53 +17,38 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merge;
+package com.metamx.druid.merger.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.client.DataSegment;
-
-
-
-import java.util.List;
+import com.metamx.druid.merger.common.task.Task;
 
 /**
  */
-public class ClientAppendQuery implements ClientMergeQuery
+public class TaskActionHolder<T>
 {
-  private final String dataSource;
-  private final List<DataSegment> segments;
+  private final Task task;
+  private final TaskAction<T> action;
 
   @JsonCreator
-  public ClientAppendQuery(
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("segments") List<DataSegment> segments
+  public TaskActionHolder(
+      @JsonProperty("task") Task task,
+      @JsonProperty("action") TaskAction action
   )
   {
-    this.dataSource = dataSource;
-    this.segments = segments;
+    this.task = task;
+    this.action = action;
   }
 
   @JsonProperty
-  @Override
-  public String getDataSource()
+  public Task getTask()
   {
-    return dataSource;
+    return task;
   }
 
   @JsonProperty
-  @Override
-  public List<DataSegment> getSegments()
+  public TaskAction<T> getAction()
   {
-    return segments;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "ClientAppendQuery{" +
-           "dataSource='" + dataSource + '\'' +
-           ", segments=" + segments +
-           '}';
+    return action;
   }
 }

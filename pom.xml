@@ -38,7 +38,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.20.0</metamx.java-util.version>
+        <metamx.java-util.version>0.21.0</metamx.java-util.version>
     </properties>
 
     <modules>
@@ -165,17 +165,17 @@
             <dependency>
               <groupId>com.fasterxml.jackson.core</groupId>
               <artifactId>jackson-annotations</artifactId>
-              <version>2.1.2</version>
+              <version>2.1.4</version>
             </dependency>
             <dependency>
               <groupId>com.fasterxml.jackson.core</groupId>
               <artifactId>jackson-core</artifactId>
-              <version>2.1.3</version>
+              <version>2.1.4</version>
             </dependency>
             <dependency>
               <groupId>com.fasterxml.jackson.core</groupId>
               <artifactId>jackson-databind</artifactId>
-              <version>2.1.4-mmx-2</version>
+              <version>2.1.4</version>
             </dependency>
             <dependency>
               <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -190,12 +190,12 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.dataformat</groupId>
                 <artifactId>jackson-dataformat-smile</artifactId>
-                <version>2.1.3</version>
+                <version>2.1.4</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.jaxrs</groupId>
                 <artifactId>jackson-jaxrs-json-provider</artifactId>
-                <version>2.1.3</version>
+                <version>2.1.4</version>
             </dependency>
             <dependency>
                 <groupId>org.codehaus.jackson</groupId>

@@ -34,13 +34,13 @@ import com.google.common.collect.Lists;
 import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.druid.merger.coordinator.setup.EC2NodeData;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
-import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.codec.binary.Base64;
 
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -51,26 +51,26 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
   private final ObjectMapper jsonMapper;
   private final AmazonEC2Client amazonEC2Client;
   private final EC2AutoScalingStrategyConfig config;
-  private final WorkerSetupManager workerSetupManager;
+  private final AtomicReference<WorkerSetupData> workerSetupDataRef;
 
   public EC2AutoScalingStrategy(
       ObjectMapper jsonMapper,
       AmazonEC2Client amazonEC2Client,
       EC2AutoScalingStrategyConfig config,
-      WorkerSetupManager workerSetupManager
+      AtomicReference<WorkerSetupData> workerSetupDataRef
   )
   {
     this.jsonMapper = jsonMapper;
     this.amazonEC2Client = amazonEC2Client;
     this.config = config;
-    this.workerSetupManager = workerSetupManager;
+    this.workerSetupDataRef = workerSetupDataRef;
   }
 
   @Override
   public AutoScalingData<Instance> provision()
   {
     try {
-      WorkerSetupData setupData = workerSetupManager.getWorkerSetupData();
+      WorkerSetupData setupData = workerSetupDataRef.get();
       EC2NodeData workerConfig = setupData.getNodeData();
 
       RunInstancesResult result = amazonEC2Client.runInstances(

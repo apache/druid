@@ -33,6 +33,9 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.ServerInventoryManager;
 import com.metamx.druid.client.ServerInventoryManagerConfig;
+import com.metamx.druid.config.ConfigManager;
+import com.metamx.druid.config.ConfigManagerConfig;
+import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.coordination.DruidClusterInfoConfig;
 import com.metamx.druid.db.DatabaseRuleManager;
@@ -49,6 +52,7 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterConfig;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.master.LoadQueuePeon;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
@@ -86,7 +90,7 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class MasterMain
 {
-  private static final Logger log = new Logger(ServerMain.class);
+  private static final Logger log = new Logger(MasterMain.class);
 
   public static void main(String[] args) throws Exception
   {
@@ -166,13 +170,14 @@ public class MasterMain
         lifecycle
     );
 
-    ServiceProvider serviceProvider = null;
+    IndexingServiceClient indexingServiceClient = null;
     if (druidMasterConfig.getMergerServiceName() != null) {
-      serviceProvider = Initialization.makeServiceProvider(
+      ServiceProvider serviceProvider = Initialization.makeServiceProvider(
           druidMasterConfig.getMergerServiceName(),
           serviceDiscovery,
           lifecycle
       );
+      indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider);
     }
 
     final DruidClusterInfo druidClusterInfo = new DruidClusterInfo(
@@ -180,10 +185,14 @@ public class MasterMain
         masterYp
     );
 
+    JacksonConfigManager configManager = new JacksonConfigManager(
+        new ConfigManager(dbi, configFactory.build(ConfigManagerConfig.class)), jsonMapper
+    );
+
     final DruidMaster master = new DruidMaster(
         druidMasterConfig,
         druidClusterInfo,
-        jsonMapper,
+        configManager,
         databaseSegmentManager,
         serverInventoryManager,
         databaseRuleManager,
@@ -191,9 +200,7 @@ public class MasterMain
         emitter,
         scheduledExecutorFactory,
         new ConcurrentHashMap<String, LoadQueuePeon>(),
-        serviceProvider,
-        httpClient,
-        new ToStringResponseHandler(Charsets.UTF_8)
+        indexingServiceClient
     );
     lifecycle.addManagedInstance(master);
 
@@ -226,7 +233,8 @@ public class MasterMain
             databaseRuleManager,
             druidClusterInfo,
             master,
-            jsonMapper
+            jsonMapper,
+            indexingServiceClient
         )
     );
 

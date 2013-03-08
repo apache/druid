@@ -19,6 +19,8 @@
 
 package com.metamx.druid.merger.coordinator.http;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -26,8 +28,9 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.merger.common.TaskStatus;
-import com.metamx.druid.merger.common.actions.TaskAction;
+import com.metamx.druid.merger.common.actions.TaskActionHolder;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
@@ -35,10 +38,7 @@ import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingData;
 import com.metamx.druid.merger.coordinator.scaling.ScalingStats;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
-import com.metamx.druid.merger.coordinator.setup.WorkerSetupManager;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -49,6 +49,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -61,8 +62,10 @@ public class IndexerCoordinatorResource
   private final ServiceEmitter emitter;
   private final TaskMasterLifecycle taskMasterLifecycle;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
-  private final WorkerSetupManager workerSetupManager;
+  private final JacksonConfigManager configManager;
   private final ObjectMapper jsonMapper;
+
+  private AtomicReference<WorkerSetupData> workerSetupDataRef = null;
 
   @Inject
   public IndexerCoordinatorResource(
@@ -70,7 +73,7 @@ public class IndexerCoordinatorResource
       ServiceEmitter emitter,
       TaskMasterLifecycle taskMasterLifecycle,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
-      WorkerSetupManager workerSetupManager,
+      JacksonConfigManager configManager,
       ObjectMapper jsonMapper
   ) throws Exception
   {
@@ -78,7 +81,7 @@ public class IndexerCoordinatorResource
     this.emitter = emitter;
     this.taskMasterLifecycle = taskMasterLifecycle;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
-    this.workerSetupManager = workerSetupManager;
+    this.configManager = configManager;
     this.jsonMapper = jsonMapper;
   }
 
@@ -98,18 +101,15 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response doIndex(final Task task)
   {
-    // verify against whitelist
-    if (config.isWhitelistEnabled() && !config.getWhitelistDatasources().contains(task.getDataSource())) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(
-                         ImmutableMap.of(
-                             "error",
-                             String.format("dataSource[%s] is not whitelisted", task.getDataSource())
-                         )
-                     )
-                     .build();
-    }
+    return taskPost(task);
+  }
 
+  @POST
+  @Path("/task")
+  @Consumes("application/json")
+  @Produces("application/json")
+  public Response taskPost(final Task task)
+  {
     taskMasterLifecycle.getTaskQueue().add(task);
     return Response.ok(ImmutableMap.of("task", task.getId())).build();
   }
@@ -162,7 +162,11 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response getWorkerSetupData()
   {
-    return Response.ok(workerSetupManager.getWorkerSetupData()).build();
+    if (workerSetupDataRef == null) {
+      workerSetupDataRef = configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class);
+    }
+
+    return Response.ok(workerSetupDataRef.get()).build();
   }
 
   @POST
@@ -172,7 +176,7 @@ public class IndexerCoordinatorResource
       final WorkerSetupData workerSetupData
   )
   {
-    if (!workerSetupManager.setWorkerSetupData(workerSetupData)) {
+    if (!configManager.set(WorkerSetupData.CONFIG_KEY, workerSetupData)) {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
     return Response.ok().build();
@@ -181,9 +185,12 @@ public class IndexerCoordinatorResource
   @POST
   @Path("/action")
   @Produces("application/json")
-  public <T> Response doAction(final TaskAction<T> action)
+  public <T> Response doAction(final TaskActionHolder<T> holder)
   {
-    final T ret = taskMasterLifecycle.getTaskToolbox().getTaskActionClient().submit(action);
+    final T ret = taskMasterLifecycle.getTaskToolbox(holder.getTask())
+                                     .getTaskActionClientFactory()
+                                     .submit(holder.getAction());
+
     final Map<String, Object> retMap = Maps.newHashMap();
     retMap.put("result", ret);
 

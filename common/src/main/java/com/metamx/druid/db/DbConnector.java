@@ -65,7 +65,7 @@ public class DbConnector
         dbi,
         configTableName,
         String.format(
-            "CREATE table %s (name VARCHAR(255) NOT NULL, payload LONGTEXT NOT NULL, PRIMARY KEY(name))",
+            "CREATE table %s (name VARCHAR(255) NOT NULL, payload BLOB NOT NULL, PRIMARY KEY(name))",
             configTableName
         )
     );
@@ -84,12 +84,7 @@ public class DbConnector
             @Override
             public Void withHandle(Handle handle) throws Exception
             {
-              List<Map<String, Object>> table = handle.select(
-                  String.format(
-                      "SHOW tables LIKE '%s'",
-                      tableName
-                  )
-              );
+              List<Map<String, Object>> table = handle.select(String.format("SHOW tables LIKE '%s'", tableName));
 
               if (table.isEmpty()) {
                 log.info("Creating table[%s]", tableName);
