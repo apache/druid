@@ -22,6 +22,7 @@ package com.metamx.druid.merger.worker.http;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.ISE;
@@ -32,7 +33,6 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.BaseServerNode;
-import com.metamx.druid.Query;
 import com.metamx.druid.client.ClientConfig;
 import com.metamx.druid.client.ClientInventoryManager;
 import com.metamx.druid.client.MutableServerView;
@@ -45,23 +45,20 @@ import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentKiller;
-import com.metamx.druid.loading.DataSegmentKiller;
+import com.metamx.druid.merger.common.RetryPolicyFactory;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.actions.RemoteTaskActionClientFactory;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
+import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
-import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.merger.worker.WorkerTaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
+import com.metamx.druid.merger.worker.WorkerTaskMonitor;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import com.metamx.druid.query.NoopQueryRunner;
-import com.metamx.druid.query.QueryRunner;
-import com.metamx.druid.query.segment.QuerySegmentWalker;
-import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.realtime.MetadataUpdaterConfig;
 import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.druid.realtime.ZkSegmentAnnouncer;
@@ -84,7 +81,6 @@ import com.netflix.curator.x.discovery.ServiceProvider;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
-import org.joda.time.Interval;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -388,7 +384,17 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
       lifecycle.addManagedInstance(segmentAnnouncer);
       taskToolboxFactory = new TaskToolboxFactory(
           taskConfig,
-          new RemoteTaskActionClientFactory(httpClient, coordinatorServiceProvider, getJsonMapper()),
+          new RemoteTaskActionClientFactory(
+              httpClient,
+              coordinatorServiceProvider,
+              new RetryPolicyFactory(
+                  configFactory.buildWithReplacements(
+                      RetryPolicyConfig.class,
+                      ImmutableMap.of("base_path", "druid.worker.taskActionClient")
+                  )
+              ),
+              getJsonMapper()
+          ),
           emitter,
           s3Service,
           segmentPusher,

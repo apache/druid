@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
@@ -40,7 +41,6 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.BaseServerNode;
-import com.metamx.druid.RegisteringNode;
 import com.metamx.druid.client.ClientConfig;
 import com.metamx.druid.client.ClientInventoryManager;
 import com.metamx.druid.client.MutableServerView;
@@ -73,7 +73,7 @@ import com.metamx.druid.merger.coordinator.HeapMemoryTaskStorage;
 import com.metamx.druid.merger.coordinator.LocalTaskRunner;
 import com.metamx.druid.merger.coordinator.MergerDBCoordinator;
 import com.metamx.druid.merger.coordinator.RemoteTaskRunner;
-import com.metamx.druid.merger.coordinator.RetryPolicyFactory;
+import com.metamx.druid.merger.common.RetryPolicyFactory;
 import com.metamx.druid.merger.coordinator.TaskLockbox;
 import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskQueue;
@@ -85,7 +85,7 @@ import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
-import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
+import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.EC2AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.NoopAutoScalingStrategy;
@@ -95,7 +95,6 @@ import com.metamx.druid.merger.coordinator.scaling.ResourceManagementSchedulerFa
 import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagementStrategy;
 import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagmentConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
-import com.metamx.druid.merger.worker.http.WorkerNode;
 import com.metamx.druid.realtime.MetadataUpdaterConfig;
 import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.druid.realtime.ZkSegmentAnnouncer;
@@ -127,7 +126,6 @@ import org.skife.config.ConfigurationObjectFactory;
 import org.skife.jdbi.v2.DBI;
 
 import java.net.URL;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -636,7 +634,12 @@ public class IndexerCoordinatorNode extends BaseServerNode<IndexerCoordinatorNod
                 curatorFramework,
                 new PathChildrenCache(curatorFramework, indexerZkConfig.getAnnouncementPath(), true),
                 retryScheduledExec,
-                new RetryPolicyFactory(configFactory.build(RetryPolicyConfig.class)),
+                new RetryPolicyFactory(
+                    configFactory.buildWithReplacements(
+                        RetryPolicyConfig.class,
+                        ImmutableMap.of("base_path", "druid.indexing")
+                    )
+                ),
                 configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class)
             );
 

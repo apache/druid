@@ -14,6 +14,7 @@ import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.LockAcquireAction;
+import com.metamx.druid.merger.common.actions.LockListAction;
 import com.metamx.druid.merger.common.actions.LockReleaseAction;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
 import com.metamx.druid.query.QueryRunner;
@@ -109,14 +110,20 @@ public class RealtimeIndexTask extends AbstractTask
       throw new IllegalStateException("WTF?!? run with non-null plumber??!");
     }
 
+    // Shed any locks we might have (e.g. if we were uncleanly killed and restarted) since we'll reacquire
+    // them if we actually need them
+    for (final TaskLock taskLock : toolbox.getTaskActionClient().submit(new LockListAction())) {
+      toolbox.getTaskActionClient().submit(new LockReleaseAction(taskLock.getInterval()));
+    }
+
     boolean normalExit = true;
 
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
     final Period intermediatePersistPeriod = fireDepartmentConfig.getIntermediatePersistPeriod();
     final Firehose firehose = firehoseFactory.connect();
 
-    // TODO Take PlumberSchool in constructor (although that will need jackson injectables for stuff like
-    // TODO the ServerView, which seems kind of odd?)
+    // TODO -- Take PlumberSchool in constructor (although that will need jackson injectables for stuff like
+    // TODO -- the ServerView, which seems kind of odd?)
     final RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
         windowPeriod,
         new File(toolbox.getTaskDir(), "persist"),
@@ -125,12 +132,19 @@ public class RealtimeIndexTask extends AbstractTask
 
     final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
 
+    // TODO -- We're adding stuff to talk to the coordinator in various places in the plumber, and may
+    // TODO -- want to be more robust to coordinator downtime (currently we'll block/throw in whatever
+    // TODO -- thread triggered the coordinator behavior, which will typically be either the main
+    // TODO -- data processing loop or the persist thread)
+
     // Wrap default SegmentAnnouncer such that we unlock intervals as we unannounce segments
     final SegmentAnnouncer lockingSegmentAnnouncer = new SegmentAnnouncer()
     {
       @Override
       public void announceSegment(final DataSegment segment) throws IOException
       {
+        // NOTE: Side effect: Calling announceSegment causes a lock to be acquired
+        toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
@@ -146,8 +160,10 @@ public class RealtimeIndexTask extends AbstractTask
     };
 
     // TODO -- This can block if there is lock contention, which will block plumber.getSink (and thus the firehose)
-    // TODO -- Shouldn't usually be bad, since we don't expect people to submit tasks that intersect with the
-    // TODO -- realtime window, but if they do it can be problematic
+    // TODO -- Shouldn't usually happen, since we don't expect people to submit tasks that intersect with the
+    // TODO -- realtime window, but if they do it can be problematic.
+    // TODO -- If we decide to care, we can use more threads in the plumber such that waiting for the coordinator
+    // TODO -- doesn't block data processing.
     final RealtimePlumberSchool.VersioningPolicy versioningPolicy = new RealtimePlumberSchool.VersioningPolicy()
     {
       @Override

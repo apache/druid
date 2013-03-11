@@ -17,9 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.merger.common;
 
-import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
+import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.Duration;
 

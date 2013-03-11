@@ -31,6 +31,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.druid.merger.common.RetryPolicyFactory;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
@@ -274,20 +275,24 @@ public class RemoteTaskRunner implements TaskRunner
   private void retryTask(final TaskRunnerWorkItem taskRunnerWorkItem, final String workerId)
   {
     final String taskId = taskRunnerWorkItem.getTask().getId();
-    log.info("Retry scheduled in %s for %s", taskRunnerWorkItem.getRetryPolicy().getRetryDelay(), taskId);
-    scheduledExec.schedule(
-        new Runnable()
-        {
-          @Override
-          public void run()
+    if (!taskRunnerWorkItem.getRetryPolicy().hasExceededRetryThreshold()) {
+      log.info("Retry scheduled in %s for %s", taskRunnerWorkItem.getRetryPolicy().getRetryDelay(), taskId);
+      scheduledExec.schedule(
+          new Runnable()
           {
-            cleanup(workerId, taskId);
-            addPendingTask(taskRunnerWorkItem);
-          }
-        },
-        taskRunnerWorkItem.getRetryPolicy().getAndIncrementRetryDelay().getMillis(),
-        TimeUnit.MILLISECONDS
-    );
+            @Override
+            public void run()
+            {
+              cleanup(workerId, taskId);
+              addPendingTask(taskRunnerWorkItem);
+            }
+          },
+          taskRunnerWorkItem.getRetryPolicy().getAndIncrementRetryDelay().getMillis(),
+          TimeUnit.MILLISECONDS
+      );
+    } else {
+      log.makeAlert("Task exceeded retry threshold").addData("task", taskId).emit();
+    }
   }
 
   /**

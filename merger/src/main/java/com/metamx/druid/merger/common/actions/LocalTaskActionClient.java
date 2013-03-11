@@ -24,6 +24,8 @@ public class LocalTaskActionClient implements TaskActionClient
   @Override
   public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
   {
+    log.info("Performing action for task[%s]: %s", task.getId(), taskAction);
+
     final RetType ret = taskAction.perform(task, toolbox);
 
     // Add audit log
