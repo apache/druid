@@ -4,6 +4,8 @@ import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskStorage;
 import com.metamx.emitter.EmittingLogger;
 
+import java.io.IOException;
+
 public class LocalTaskActionClient implements TaskActionClient
 {
   private final Task task;
@@ -20,7 +22,7 @@ public class LocalTaskActionClient implements TaskActionClient
   }
 
   @Override
-  public <RetType> RetType submit(TaskAction<RetType> taskAction)
+  public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
   {
     final RetType ret = taskAction.perform(task, toolbox);
 

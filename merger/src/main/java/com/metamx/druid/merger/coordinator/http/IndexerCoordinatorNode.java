@@ -23,6 +23,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
@@ -38,14 +39,18 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.BaseServerNode;
 import com.metamx.druid.RegisteringNode;
+import com.metamx.druid.client.ClientConfig;
+import com.metamx.druid.client.ClientInventoryManager;
+import com.metamx.druid.client.MutableServerView;
+import com.metamx.druid.client.OnlyNewSegmentWatcherServerView;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.GuiceServletConfig;
-import com.metamx.druid.http.MasterMain;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
@@ -90,6 +95,10 @@ import com.metamx.druid.merger.coordinator.scaling.ResourceManagementSchedulerFa
 import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagementStrategy;
 import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagmentConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
+import com.metamx.druid.merger.worker.http.WorkerNode;
+import com.metamx.druid.realtime.MetadataUpdaterConfig;
+import com.metamx.druid.realtime.SegmentAnnouncer;
+import com.metamx.druid.realtime.ZkSegmentAnnouncer;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -128,7 +137,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class IndexerCoordinatorNode extends RegisteringNode
+public class IndexerCoordinatorNode extends BaseServerNode<IndexerCoordinatorNode>
 {
   private static final Logger log = new Logger(IndexerCoordinatorNode.class);
 
@@ -137,7 +146,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
     return new Builder();
   }
 
-  private final ObjectMapper jsonMapper;
   private final Lifecycle lifecycle;
   private final Properties props;
   private final ConfigurationObjectFactory configFactory;
@@ -161,20 +169,21 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private TaskRunnerFactory taskRunnerFactory = null;
   private ResourceManagementSchedulerFactory resourceManagementSchedulerFactory = null;
   private TaskMasterLifecycle taskMasterLifecycle = null;
+  private MutableServerView newSegmentServerView = null;
   private Server server = null;
 
   private boolean initialized = false;
 
   public IndexerCoordinatorNode(
-      ObjectMapper jsonMapper,
-      Lifecycle lifecycle,
       Properties props,
+      Lifecycle lifecycle,
+      ObjectMapper jsonMapper,
+      ObjectMapper smileMapper,
       ConfigurationObjectFactory configFactory
   )
   {
-    super(Arrays.asList(jsonMapper));
+    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
 
-    this.jsonMapper = jsonMapper;
     this.lifecycle = lifecycle;
     this.props = props;
     this.configFactory = configFactory;
@@ -195,6 +204,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public IndexerCoordinatorNode setTaskQueue(TaskQueue taskQueue)
   {
     this.taskQueue = taskQueue;
+    return this;
+  }
+
+  public IndexerCoordinatorNode setNewSegmentServerView(MutableServerView newSegmentServerView)
+  {
+    this.newSegmentServerView = newSegmentServerView;
     return this;
   }
 
@@ -240,7 +255,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     return this;
   }
 
-  public void init() throws Exception
+  public void doInit() throws Exception
   {
     scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
     initializeDB();
@@ -254,7 +269,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
                     dbi,
                     managerConfig
                 )
-            ), jsonMapper
+            ), getJsonMapper()
         );
 
     initializeEmitter();
@@ -263,6 +278,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initializeTaskConfig();
     initializeS3Service();
     initializeMergeDBCoordinator();
+    initializeNewSegmentServerView();
     initializeTaskStorage();
     initializeTaskLockbox();
     initializeTaskQueue();
@@ -288,7 +304,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
 
     final Injector injector = Guice.createInjector(
         new IndexerCoordinatorServletModule(
-            jsonMapper,
+            getJsonMapper(),
             config,
             emitter,
             taskMasterLifecycle,
@@ -305,6 +321,9 @@ public class IndexerCoordinatorNode extends RegisteringNode
         IndexerCoordinatorNode.class.getClassLoader().getResource("indexer_static").toExternalForm()
     });
     staticContext.setBaseResource(resourceCollection);
+
+    // TODO -- Need a QueryServlet and some kind of QuerySegmentWalker if we want to support querying tasks
+    // TODO -- (e.g. for realtime) in local mode
 
     final Context root = new Context(server, "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
@@ -419,12 +438,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
     injectables.addValue("s3Client", s3Service)
                .addValue("segmentPusher", segmentPusher);
 
-    jsonMapper.setInjectableValues(injectables);
+    getJsonMapper().setInjectableValues(injectables);
   }
 
   private void initializeJacksonSubtypes()
   {
-    jsonMapper.registerSubtypes(StaticS3FirehoseFactory.class);
+    getJsonMapper().registerSubtypes(StaticS3FirehoseFactory.class);
   }
 
   private void initializeEmitter()
@@ -437,7 +456,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
       emitter = new ServiceEmitter(
           PropUtils.getProperty(props, "druid.service"),
           PropUtils.getProperty(props, "druid.host"),
-          Emitters.create(props, httpClient, jsonMapper, lifecycle)
+          Emitters.create(props, httpClient, getJsonMapper(), lifecycle)
       );
     }
     EmittingLogger.registerEmitter(emitter);
@@ -476,6 +495,21 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
+  private void initializeNewSegmentServerView()
+  {
+    if (newSegmentServerView == null) {
+      final MutableServerView view = new OnlyNewSegmentWatcherServerView();
+      final ClientInventoryManager clientInventoryManager = new ClientInventoryManager(
+          getConfigFactory().build(ClientConfig.class),
+          getPhoneBook(),
+          view
+      );
+      lifecycle.addManagedInstance(clientInventoryManager);
+
+      this.newSegmentServerView = view;
+    }
+  }
+
   public void initializeS3Service() throws S3ServiceException
   {
     this.s3Service = new RestS3Service(
@@ -489,13 +523,17 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public void initializeDataSegmentPusher()
   {
     if (segmentPusher == null) {
-      segmentPusher = ServerInit.getSegmentPusher(props, configFactory, jsonMapper);
+      segmentPusher = ServerInit.getSegmentPusher(props, configFactory, getJsonMapper());
     }
   }
 
   public void initializeTaskToolbox()
   {
     if (taskToolboxFactory == null) {
+      final SegmentAnnouncer segmentAnnouncer = new ZkSegmentAnnouncer(
+          configFactory.build(MetadataUpdaterConfig.class),
+          getPhoneBook()
+      );
       final DataSegmentKiller dataSegmentKiller = new S3DataSegmentKiller(s3Service);
       taskToolboxFactory = new TaskToolboxFactory(
           taskConfig,
@@ -507,7 +545,10 @@ public class IndexerCoordinatorNode extends RegisteringNode
           s3Service,
           segmentPusher,
           dataSegmentKiller,
-          jsonMapper
+          segmentAnnouncer,
+          newSegmentServerView,
+          getConglomerate(),
+          getJsonMapper()
       );
     }
   }
@@ -516,7 +557,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   {
     if (mergerDBCoordinator == null) {
       mergerDBCoordinator = new MergerDBCoordinator(
-          jsonMapper,
+          getJsonMapper(),
           dbConnectorConfig,
           dbi
       );
@@ -563,7 +604,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
         taskStorage = new HeapMemoryTaskStorage();
       } else if (config.getStorageImpl().equals("db")) {
         final IndexerDbConnectorConfig dbConnectorConfig = configFactory.build(IndexerDbConnectorConfig.class);
-        taskStorage = new DbTaskStorage(jsonMapper, dbConnectorConfig, new DbConnector(dbConnectorConfig).getDBI());
+        taskStorage = new DbTaskStorage(getJsonMapper(), dbConnectorConfig, new DbConnector(dbConnectorConfig).getDBI());
       } else {
         throw new ISE("Invalid storage implementation: %s", config.getStorageImpl());
       }
@@ -590,7 +631,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             );
 
             RemoteTaskRunner remoteTaskRunner = new RemoteTaskRunner(
-                jsonMapper,
+                getJsonMapper(),
                 configFactory.build(RemoteTaskRunnerConfig.class),
                 curatorFramework,
                 new PathChildrenCache(curatorFramework, indexerZkConfig.getAnnouncementPath(), true),
@@ -641,7 +682,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
           AutoScalingStrategy strategy;
           if (config.getStrategyImpl().equalsIgnoreCase("ec2")) {
             strategy = new EC2AutoScalingStrategy(
-                jsonMapper,
+                getJsonMapper(),
                 new AmazonEC2Client(
                     new BasicAWSCredentials(
                         PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
@@ -675,6 +716,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public static class Builder
   {
     private ObjectMapper jsonMapper = null;
+    private ObjectMapper smileMapper = null;
     private Lifecycle lifecycle = null;
     private Properties props = null;
     private ConfigurationObjectFactory configFactory = null;
@@ -705,8 +747,13 @@ public class IndexerCoordinatorNode extends RegisteringNode
 
     public IndexerCoordinatorNode build()
     {
-      if (jsonMapper == null) {
+      if (jsonMapper == null && smileMapper == null) {
         jsonMapper = new DefaultObjectMapper();
+        smileMapper = new DefaultObjectMapper(new SmileFactory());
+        smileMapper.getJsonFactory().setCodec(smileMapper);
+      }
+      else if (jsonMapper == null || smileMapper == null) {
+        throw new ISE("Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.", jsonMapper, smileMapper);
       }
 
       if (lifecycle == null) {
@@ -721,7 +768,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
         configFactory = Config.createFactory(props);
       }
 
-      return new IndexerCoordinatorNode(jsonMapper, lifecycle, props, configFactory);
+      return new IndexerCoordinatorNode(props, lifecycle, jsonMapper, smileMapper, configFactory);
     }
   }
 }

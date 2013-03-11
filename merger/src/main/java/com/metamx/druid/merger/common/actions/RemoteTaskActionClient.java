@@ -11,9 +11,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.curator.x.discovery.ServiceInstance;
 import com.netflix.curator.x.discovery.ServiceProvider;
 
+import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class RemoteTaskActionClient implements TaskActionClient
 {
@@ -33,26 +34,37 @@ public class RemoteTaskActionClient implements TaskActionClient
   }
 
   @Override
-  public <RetType> RetType submit(TaskAction<RetType> taskAction)
+  public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
   {
+    byte[] dataToSend = jsonMapper.writeValueAsBytes(new TaskActionHolder(task, taskAction));
+
+    final URI serviceUri;
     try {
-      byte[] dataToSend = jsonMapper.writeValueAsBytes(new TaskActionHolder(task, taskAction));
-
-      final String response = httpClient.post(getServiceUri().toURL())
-                                        .setContent("application/json", dataToSend)
-                                        .go(new ToStringResponseHandler(Charsets.UTF_8))
-                                        .get();
-
-      final Map<String, Object> responseDict = jsonMapper.readValue(
-          response,
-          new TypeReference<Map<String, Object>>() {}
-      );
-
-      return jsonMapper.convertValue(responseDict.get("result"), taskAction.getReturnTypeReference());
+      serviceUri = getServiceUri();
     }
     catch (Exception e) {
+      throw new IOException("Failed to locate service uri", e);
+    }
+
+    final String response;
+
+    try {
+      response = httpClient.post(serviceUri.toURL())
+                           .setContent("application/json", dataToSend)
+                           .go(new ToStringResponseHandler(Charsets.UTF_8))
+                           .get();
+    }
+    catch (Exception e) {
+      Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
       throw Throwables.propagate(e);
     }
+
+    final Map<String, Object> responseDict = jsonMapper.readValue(
+        response,
+        new TypeReference<Map<String, Object>>() {}
+    );
+
+    return jsonMapper.convertValue(responseDict.get("result"), taskAction.getReturnTypeReference());
   }
 
   private URI getServiceUri() throws Exception

@@ -21,35 +21,47 @@ package com.metamx.druid.merger.worker;
 
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.druid.Query;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.query.NoopQueryRunner;
+import com.metamx.druid.query.QueryRunner;
+import com.metamx.druid.query.segment.QuerySegmentWalker;
+import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.commons.io.FileUtils;
+import org.joda.time.Interval;
 
 import java.io.File;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 
 /**
  * The monitor watches ZK at a specified path for new tasks to appear. Upon starting the monitor, a listener will be
  * created that waits for new tasks. Tasks are executed as soon as they are seen.
+ *
+ * The monitor implements {@link QuerySegmentWalker} so tasks can offer up queryable data. This is useful for
+ * realtime index tasks.
  */
-public class TaskMonitor
+public class WorkerTaskMonitor implements QuerySegmentWalker
 {
-  private static final EmittingLogger log = new EmittingLogger(TaskMonitor.class);
+  private static final EmittingLogger log = new EmittingLogger(WorkerTaskMonitor.class);
 
   private final PathChildrenCache pathChildrenCache;
   private final CuratorFramework cf;
   private final WorkerCuratorCoordinator workerCuratorCoordinator;
   private final TaskToolboxFactory toolboxFactory;
   private final ExecutorService exec;
+  private final List<Task> running = new CopyOnWriteArrayList<Task>();
 
-  public TaskMonitor(
+  public WorkerTaskMonitor(
       PathChildrenCache pathChildrenCache,
       CuratorFramework cf,
       WorkerCuratorCoordinator workerCuratorCoordinator,
@@ -88,7 +100,7 @@ public class TaskMonitor
                 );
                 final TaskToolbox toolbox = toolboxFactory.build(task);
 
-                if (workerCuratorCoordinator.statusExists(task.getId())) {
+                if (isTaskRunning(task)) {
                   log.warn("Got task %s that I am already running...", task.getId());
                   workerCuratorCoordinator.unannounceTask(task.getId());
                   return;
@@ -104,6 +116,7 @@ public class TaskMonitor
                         final File taskDir = toolbox.getTaskDir();
 
                         log.info("Running task [%s]", task.getId());
+                        running.add(task);
 
                         TaskStatus taskStatus;
                         try {
@@ -116,6 +129,8 @@ public class TaskMonitor
                              .addData("task", task.getId())
                              .emit();
                           taskStatus = TaskStatus.failure(task.getId());
+                        } finally {
+                          running.remove(task);
                         }
 
                         taskStatus = taskStatus.withDuration(System.currentTimeMillis() - startTime);
@@ -151,10 +166,21 @@ public class TaskMonitor
       );
     }
     catch (Exception e) {
-      log.makeAlert(e, "Exception starting TaskMonitor")
+      log.makeAlert(e, "Exception starting WorkerTaskMonitor")
          .addData("exception", e.toString())
          .emit();
     }
+  }
+
+  private boolean isTaskRunning(final Task task)
+  {
+    for (final Task runningTask : running) {
+      if (runningTask.equals(task.getId())) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   @LifecycleStop
@@ -165,9 +191,43 @@ public class TaskMonitor
       exec.shutdown();
     }
     catch (Exception e) {
-      log.makeAlert(e, "Exception stopping TaskMonitor")
+      log.makeAlert(e, "Exception stopping WorkerTaskMonitor")
          .addData("exception", e.toString())
          .emit();
     }
+  }
+
+  @Override
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+  {
+    return getQueryRunnerImpl(query);
+  }
+
+  @Override
+  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+  {
+    return getQueryRunnerImpl(query);
+  }
+
+  private <T> QueryRunner<T> getQueryRunnerImpl(Query<T> query) {
+    QueryRunner<T> queryRunner = null;
+
+    for (final Task task : running) {
+      if (task.getDataSource().equals(query.getDataSource())) {
+        final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
+
+        if (taskQueryRunner != null) {
+          if (queryRunner == null) {
+            queryRunner = taskQueryRunner;
+          } else {
+            log.makeAlert("Found too many query runners for datasource")
+               .addData("dataSource", query.getDataSource())
+               .emit();
+          }
+        }
+      }
+    }
+
+    return queryRunner == null ? new NoopQueryRunner<T>() : queryRunner;
   }
 }

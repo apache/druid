@@ -44,6 +44,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -184,12 +185,17 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public <T> Response doAction(final TaskActionHolder<T> holder)
   {
-    final T ret = taskMasterLifecycle.getTaskToolbox(holder.getTask())
-                                     .getTaskActionClient()
-                                     .submit(holder.getAction());
+    final Map<String, Object> retMap;
 
-    final Map<String, Object> retMap = Maps.newHashMap();
-    retMap.put("result", ret);
+    try {
+      final T ret = taskMasterLifecycle.getTaskToolbox(holder.getTask())
+                                       .getTaskActionClient()
+                                       .submit(holder.getAction());
+      retMap = Maps.newHashMap();
+      retMap.put("result", ret);
+    } catch(IOException e) {
+      return Response.serverError().build();
+    }
 
     return Response.ok().entity(retMap).build();
   }

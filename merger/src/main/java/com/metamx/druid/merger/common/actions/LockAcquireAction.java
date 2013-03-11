@@ -1,15 +1,14 @@
 package com.metamx.druid.merger.common.actions;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
-import com.metamx.druid.merger.common.TaskLock;
-import com.metamx.druid.merger.common.task.Task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Throwables;
+import com.metamx.druid.merger.common.TaskLock;
+import com.metamx.druid.merger.common.task.Task;
 import org.joda.time.Interval;
 
-public class LockAcquireAction implements TaskAction<Optional<TaskLock>>
+public class LockAcquireAction implements TaskAction<TaskLock>
 {
   private final Interval interval;
 
@@ -27,18 +26,29 @@ public class LockAcquireAction implements TaskAction<Optional<TaskLock>>
     return interval;
   }
 
-  public TypeReference<Optional<TaskLock>> getReturnTypeReference()
+  public TypeReference<TaskLock> getReturnTypeReference()
   {
-    return new TypeReference<Optional<TaskLock>>() {};
+    return new TypeReference<TaskLock>()
+    {
+    };
   }
 
   @Override
-  public Optional<TaskLock> perform(Task task, TaskActionToolbox toolbox)
+  public TaskLock perform(Task task, TaskActionToolbox toolbox)
   {
     try {
-      return toolbox.getTaskLockbox().tryLock(task, interval);
-    } catch (Exception e) {
+      return toolbox.getTaskLockbox().lock(task, interval);
+    }
+    catch (InterruptedException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LockAcquireAction{" +
+           "interval=" + interval +
+           '}';
   }
 }

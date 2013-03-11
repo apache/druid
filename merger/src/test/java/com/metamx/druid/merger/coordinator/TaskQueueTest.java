@@ -165,6 +165,9 @@ public class TaskQueueTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
 
@@ -218,6 +221,9 @@ public class TaskQueueTest
     final TaskToolboxFactory tb = new TaskToolboxFactory(
         null,
         new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tq, tl, null, null)),
+        null,
+        null,
+        null,
         null,
         null,
         null,

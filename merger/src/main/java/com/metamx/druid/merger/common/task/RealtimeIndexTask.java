@@ -1,0 +1,257 @@
+package com.metamx.druid.merger.common.task;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.io.Closeables;
+import com.metamx.common.exception.FormattedException;
+import com.metamx.druid.Query;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.v1.IndexGranularity;
+import com.metamx.druid.input.InputRow;
+import com.metamx.druid.merger.common.TaskLock;
+import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.actions.LockAcquireAction;
+import com.metamx.druid.merger.common.actions.LockReleaseAction;
+import com.metamx.druid.merger.common.actions.SegmentInsertAction;
+import com.metamx.druid.query.QueryRunner;
+import com.metamx.druid.realtime.FireDepartmentConfig;
+import com.metamx.druid.realtime.FireDepartmentMetrics;
+import com.metamx.druid.realtime.Firehose;
+import com.metamx.druid.realtime.FirehoseFactory;
+import com.metamx.druid.realtime.MetadataUpdater;
+import com.metamx.druid.realtime.Plumber;
+import com.metamx.druid.realtime.RealtimePlumberSchool;
+import com.metamx.druid.realtime.Schema;
+import com.metamx.druid.realtime.SegmentAnnouncer;
+import com.metamx.druid.realtime.SegmentPublisher;
+import com.metamx.druid.realtime.Sink;
+import com.metamx.emitter.EmittingLogger;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.joda.time.Period;
+
+import java.io.File;
+import java.io.IOException;
+
+public class RealtimeIndexTask extends AbstractTask
+{
+  @JsonProperty
+  final Schema schema;
+
+  @JsonProperty
+  final FirehoseFactory firehoseFactory;
+
+  @JsonProperty
+  final FireDepartmentConfig fireDepartmentConfig;
+
+  @JsonProperty
+  final Period windowPeriod;
+
+  @JsonProperty
+  final IndexGranularity segmentGranularity;
+
+  private volatile Plumber plumber = null;
+
+  private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
+
+  @JsonCreator
+  public RealtimeIndexTask(
+      @JsonProperty("schema") Schema schema,
+      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
+      @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig, // TODO rename?
+      @JsonProperty("windowPeriod") Period windowPeriod,
+      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity
+  )
+  {
+    super(
+        String.format(
+            "index_realtime_%s_%d_%s",
+            schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime()
+        ),
+        String.format(
+            "index_realtime_%s",
+            schema.getDataSource()
+        ),
+        schema.getDataSource(),
+        null
+    );
+
+    this.schema = schema;
+    this.firehoseFactory = firehoseFactory;
+    this.fireDepartmentConfig = fireDepartmentConfig;
+    this.windowPeriod = windowPeriod;
+    this.segmentGranularity = segmentGranularity;
+  }
+
+  @Override
+  public String getType()
+  {
+    return "index_realtime";
+  }
+
+  @Override
+  public <T> QueryRunner<T> getQueryRunner(Query<T> query)
+  {
+    if (plumber != null) {
+      return plumber.getQueryRunner(query);
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  {
+    if (this.plumber != null) {
+      throw new IllegalStateException("WTF?!? run with non-null plumber??!");
+    }
+
+    boolean normalExit = true;
+
+    final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
+    final Period intermediatePersistPeriod = fireDepartmentConfig.getIntermediatePersistPeriod();
+    final Firehose firehose = firehoseFactory.connect();
+
+    // TODO Take PlumberSchool in constructor (although that will need jackson injectables for stuff like
+    // TODO the ServerView, which seems kind of odd?)
+    final RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
+        windowPeriod,
+        new File(toolbox.getTaskDir(), "persist"),
+        segmentGranularity
+    );
+
+    final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
+
+    // Wrap default SegmentAnnouncer such that we unlock intervals as we unannounce segments
+    final SegmentAnnouncer lockingSegmentAnnouncer = new SegmentAnnouncer()
+    {
+      @Override
+      public void announceSegment(final DataSegment segment) throws IOException
+      {
+        toolbox.getSegmentAnnouncer().announceSegment(segment);
+      }
+
+      @Override
+      public void unannounceSegment(final DataSegment segment) throws IOException
+      {
+        try {
+          toolbox.getSegmentAnnouncer().unannounceSegment(segment);
+        } finally {
+          toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
+        }
+      }
+    };
+
+    // TODO -- This can block if there is lock contention, which will block plumber.getSink (and thus the firehose)
+    // TODO -- Shouldn't usually be bad, since we don't expect people to submit tasks that intersect with the
+    // TODO -- realtime window, but if they do it can be problematic
+    final RealtimePlumberSchool.VersioningPolicy versioningPolicy = new RealtimePlumberSchool.VersioningPolicy()
+    {
+      @Override
+      public String getVersion(final Interval interval)
+      {
+        try {
+          // NOTE: Side effect: Calling getVersion causes a lock to be acquired
+          final TaskLock myLock = toolbox.getTaskActionClient()
+                                         .submit(new LockAcquireAction(interval));
+
+          return myLock.getVersion();
+        } catch (IOException e) {
+          throw Throwables.propagate(e);
+        }
+      }
+    };
+
+    // TODO - Might need to have task id in segmentPusher path or some other way of making redundant realtime
+    // TODO - workers not step on each other's toes when pushing segments to S3
+    realtimePlumberSchool.setDataSegmentPusher(toolbox.getSegmentPusher());
+    realtimePlumberSchool.setConglomerate(toolbox.getQueryRunnerFactoryConglomerate());
+    realtimePlumberSchool.setVersioningPolicy(versioningPolicy);
+    realtimePlumberSchool.setMetadataUpdater(new MetadataUpdater(lockingSegmentAnnouncer, segmentPublisher));
+    realtimePlumberSchool.setServerView(toolbox.getNewSegmentServerView());
+    realtimePlumberSchool.setServiceEmitter(toolbox.getEmitter());
+
+    this.plumber = realtimePlumberSchool.findPlumber(schema, metrics);
+
+    try {
+      plumber.startJob();
+
+      long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+      while (firehose.hasMore()) {
+        final InputRow inputRow;
+        try {
+          inputRow = firehose.nextRow();
+
+          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
+          if (sink == null) {
+            metrics.incrementThrownAway();
+            log.debug("Throwing away event[%s]", inputRow);
+
+            if (System.currentTimeMillis() > nextFlush) {
+              plumber.persist(firehose.commit());
+              nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+            }
+
+            continue;
+          }
+
+          if (sink.isEmpty()) {
+            log.info("Task %s: New sink: %s", getId(), sink);
+          }
+
+          int currCount = sink.add(inputRow);
+          metrics.incrementProcessed();
+          if (currCount >= fireDepartmentConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
+            plumber.persist(firehose.commit());
+            nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+          }
+        }
+        catch (FormattedException e) {
+          log.warn(e, "unparseable line");
+          metrics.incrementUnparseable();
+        }
+      }
+    }
+    catch (Exception e) {
+      log.makeAlert(e, "Exception aborted realtime processing[%s]", schema.getDataSource())
+         .emit();
+      normalExit = false;
+      throw Throwables.propagate(e);
+    }
+    finally {
+      Closeables.closeQuietly(firehose);
+
+      if (normalExit) {
+        try {
+          plumber.persist(firehose.commit());
+          plumber.finishJob();
+        } catch(Exception e) {
+          log.makeAlert(e, "Failed to finish realtime task").emit();
+        }
+      }
+    }
+
+    return TaskStatus.success(getId());
+  }
+
+  public static class TaskActionSegmentPublisher implements SegmentPublisher
+  {
+    final Task task;
+    final TaskToolbox taskToolbox;
+
+    public TaskActionSegmentPublisher(Task task, TaskToolbox taskToolbox)
+    {
+      this.task = task;
+      this.taskToolbox = taskToolbox;
+    }
+
+    @Override
+    public void publishSegment(DataSegment segment) throws IOException
+    {
+      taskToolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+    }
+  }
+}

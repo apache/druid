@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
 
+import java.io.IOException;
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "lockAcquire", value = LockAcquireAction.class),
@@ -19,5 +21,5 @@ import com.fasterxml.jackson.core.type.TypeReference;
 public interface TaskAction<RetType>
 {
   public TypeReference<RetType> getReturnTypeReference(); // T_T
-  public RetType perform(Task task, TaskActionToolbox toolbox);
+  public RetType perform(Task task, TaskActionToolbox toolbox) throws IOException;
 }

@@ -36,11 +36,15 @@ public class LockReleaseAction implements TaskAction<Void>
   @Override
   public Void perform(Task task, TaskActionToolbox toolbox)
   {
-    try {
-      toolbox.getTaskLockbox().unlock(task, interval);
-      return null;
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+    toolbox.getTaskLockbox().unlock(task, interval);
+    return null;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LockReleaseAction{" +
+           "interval=" + interval +
+           '}';
   }
 }

@@ -26,6 +26,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -48,6 +49,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -181,38 +183,42 @@ public abstract class MergeTaskBase extends AbstractTask
   @Override
   public TaskStatus preflight(TaskToolbox toolbox)
   {
-    final Function<DataSegment, String> toIdentifier = new Function<DataSegment, String>()
-    {
-      @Override
-      public String apply(DataSegment dataSegment)
+    try {
+      final Function<DataSegment, String> toIdentifier = new Function<DataSegment, String>()
       {
-        return dataSegment.getIdentifier();
+        @Override
+        public String apply(DataSegment dataSegment)
+        {
+          return dataSegment.getIdentifier();
+        }
+      };
+
+      final Set<String> current = ImmutableSet.copyOf(
+          Iterables.transform(toolbox.getTaskActionClient().submit(defaultListUsedAction()), toIdentifier)
+      );
+      final Set<String> requested = ImmutableSet.copyOf(Iterables.transform(segments, toIdentifier));
+
+      final Set<String> missingFromRequested = Sets.difference(current, requested);
+      if (!missingFromRequested.isEmpty()) {
+        throw new ISE(
+            "Merge is invalid: current segment(s) are not in the requested set: %s",
+            Joiner.on(", ").join(missingFromRequested)
+        );
       }
-    };
 
-    final Set<String> current = ImmutableSet.copyOf(
-        Iterables.transform(toolbox.getTaskActionClient().submit(defaultListUsedAction()), toIdentifier)
-    );
-    final Set<String> requested = ImmutableSet.copyOf(Iterables.transform(segments, toIdentifier));
+      final Set<String> missingFromCurrent = Sets.difference(requested, current);
+      if (!missingFromCurrent.isEmpty()) {
+        throw new ISE(
+            "Merge is invalid: requested segment(s) are not in the current set: %s",
+            Joiner.on(", ").join(missingFromCurrent)
+        );
+      }
 
-    final Set<String> missingFromRequested = Sets.difference(current, requested);
-    if (!missingFromRequested.isEmpty()) {
-      throw new ISE(
-          "Merge is invalid: current segment(s) are not in the requested set: %s",
-          Joiner.on(", ").join(missingFromRequested)
-      );
+      return TaskStatus.running(getId());
     }
-
-    final Set<String> missingFromCurrent = Sets.difference(requested, current);
-    if (!missingFromCurrent.isEmpty()) {
-      throw new ISE(
-          "Merge is invalid: requested segment(s) are not in the current set: %s",
-          Joiner.on(", ").join(missingFromCurrent)
-      );
+    catch (IOException e) {
+      throw Throwables.propagate(e);
     }
-
-    return TaskStatus.running(getId());
-
   }
 
   protected abstract File merge(Map<DataSegment, File> segments, File outDir)
@@ -270,12 +276,12 @@ public abstract class MergeTaskBase extends AbstractTask
     DateTime start = null;
     DateTime end = null;
 
-    for(final DataSegment segment : segments) {
-      if(start == null || segment.getInterval().getStart().isBefore(start)) {
+    for (final DataSegment segment : segments) {
+      if (start == null || segment.getInterval().getStart().isBefore(start)) {
         start = segment.getInterval().getStart();
       }
 
-      if(end == null || segment.getInterval().getEnd().isAfter(end)) {
+      if (end == null || segment.getInterval().getEnd().isAfter(end)) {
         end = segment.getInterval().getEnd();
       }
     }

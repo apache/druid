@@ -17,9 +17,9 @@ import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
-import com.metamx.druid.merger.worker.TaskMonitor;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
+import com.metamx.druid.merger.worker.WorkerTaskMonitor;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.netflix.curator.framework.CuratorFramework;
@@ -59,7 +59,7 @@ public class RemoteTaskRunnerTest
   private CuratorFramework cf;
   private PathChildrenCache pathChildrenCache;
   private RemoteTaskRunner remoteTaskRunner;
-  private TaskMonitor taskMonitor;
+  private WorkerTaskMonitor workerTaskMonitor;
 
   private ScheduledExecutorService scheduledExec;
 
@@ -123,7 +123,7 @@ public class RemoteTaskRunnerTest
   {
     testingCluster.stop();
     remoteTaskRunner.stop();
-    taskMonitor.stop();
+    workerTaskMonitor.stop();
   }
 
   @Test
@@ -275,7 +275,7 @@ public class RemoteTaskRunnerTest
     );
     workerCuratorCoordinator.start();
 
-    taskMonitor = new TaskMonitor(
+    workerTaskMonitor = new WorkerTaskMonitor(
         new PathChildrenCache(cf, String.format("%s/worker1", tasksPath), true),
         cf,
         workerCuratorCoordinator,
@@ -304,12 +304,12 @@ public class RemoteTaskRunnerTest
               {
                 return null;
               }
-            }, null, null, null, null, null, jsonMapper
+            }, null, null, null, null, null, null, null, null, jsonMapper
         ),
         Executors.newSingleThreadExecutor()
     );
     jsonMapper.registerSubtypes(new NamedType(TestTask.class, "test"));
-    taskMonitor.start();
+    workerTaskMonitor.start();
   }
 
   private void makeRemoteTaskRunner() throws Exception
