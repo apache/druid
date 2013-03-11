@@ -82,6 +82,8 @@ public class RemoteTaskActionClient implements TaskActionClient
 
         return jsonMapper.convertValue(responseDict.get("result"), taskAction.getReturnTypeReference());
       } catch(IOException e) {
+        log.warn(e, "Exception submitting action for task: %s", task.getId());
+
         if (retryPolicy.hasExceededRetryThreshold()) {
           throw e;
         } else {
