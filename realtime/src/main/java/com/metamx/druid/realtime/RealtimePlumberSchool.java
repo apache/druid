@@ -41,6 +41,7 @@ import com.metamx.druid.Query;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerView;
+import com.metamx.druid.guava.ThreadRenamingCallable;
 import com.metamx.druid.guava.ThreadRenamingRunnable;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.QueryableIndexSegment;
@@ -58,11 +59,6 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.apache.commons.io.FileUtils;
-
-
-
-
-
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -75,7 +71,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -90,9 +86,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final File basePersistDirectory;
   private final IndexGranularity segmentGranularity;
 
-  private volatile Executor persistExecutor = null;
-  private volatile ScheduledExecutorService scheduledExecutor = null;
-
+  private volatile VersioningPolicy versioningPolicy = null;
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
   private volatile QueryRunnerFactoryConglomerate conglomerate = null;
   private volatile DataSegmentPusher dataSegmentPusher = null;
@@ -110,11 +104,18 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.windowPeriod = windowPeriod;
     this.basePersistDirectory = basePersistDirectory;
     this.segmentGranularity = segmentGranularity;
+    this.versioningPolicy = new IntervalStartVersioningPolicy();
     this.rejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
 
     Preconditions.checkNotNull(windowPeriod, "RealtimePlumberSchool requires a windowPeriod.");
     Preconditions.checkNotNull(basePersistDirectory, "RealtimePlumberSchool requires a basePersistDirectory.");
     Preconditions.checkNotNull(segmentGranularity, "RealtimePlumberSchool requires a segmentGranularity.");
+  }
+
+  @JsonProperty("versioningPolicy")
+  public void setVersioningPolicy(VersioningPolicy versioningPolicy)
+  {
+    this.versioningPolicy = versioningPolicy;
   }
 
   @JsonProperty("rejectionPolicy")
@@ -157,209 +158,28 @@ public class RealtimePlumberSchool implements PlumberSchool
   public Plumber findPlumber(final Schema schema, final FireDepartmentMetrics metrics)
   {
     verifyState();
-    initializeExecutors();
 
-    computeBaseDir(schema).mkdirs();
-
-    final Map<Long, Sink> sinks = Maps.newConcurrentMap();
-
-    for (File sinkDir : computeBaseDir(schema).listFiles()) {
-      Interval sinkInterval = new Interval(sinkDir.getName().replace("_", "/"));
-
-      final File[] sinkFiles = sinkDir.listFiles();
-      Arrays.sort(
-          sinkFiles,
-          new Comparator<File>()
-          {
-            @Override
-            public int compare(File o1, File o2)
-            {
-              try {
-                return Ints.compare(Integer.parseInt(o1.getName()), Integer.parseInt(o2.getName()));
-              }
-              catch (NumberFormatException e) {
-                log.error(e, "Couldn't compare as numbers? [%s][%s]", o1, o2);
-                return o1.compareTo(o2);
-              }
-            }
-          }
-      );
-
-      try {
-        List<FireHydrant> hydrants = Lists.newArrayList();
-        for (File segmentDir : sinkFiles) {
-          log.info("Loading previously persisted segment at [%s]", segmentDir);
-          hydrants.add(
-              new FireHydrant(
-                  new QueryableIndexSegment(null, IndexIO.loadIndex(segmentDir)),
-                  Integer.parseInt(segmentDir.getName())
-              )
-          );
-        }
-
-        Sink currSink = new Sink(sinkInterval, schema, hydrants);
-        sinks.put(sinkInterval.getStartMillis(), currSink);
-
-        metadataUpdater.announceSegment(currSink.getSegment());
-      }
-      catch (IOException e) {
-        log.makeAlert(e, "Problem loading sink[%s] from disk.", schema.getDataSource())
-           .addData("interval", sinkInterval)
-           .emit();
-      }
-    }
-
-    serverView.registerSegmentCallback(
-        persistExecutor,
-        new ServerView.BaseSegmentCallback()
-        {
-          @Override
-          public ServerView.CallbackAction segmentAdded(DruidServer server, DataSegment segment)
-          {
-            if ("realtime".equals(server.getType())) {
-              return ServerView.CallbackAction.CONTINUE;
-            }
-
-            log.debug("Checking segment[%s] on server[%s]", segment, server);
-            if (schema.getDataSource().equals(segment.getDataSource())) {
-              final Interval interval = segment.getInterval();
-              for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
-                final Long sinkKey = entry.getKey();
-                if (interval.contains(sinkKey)) {
-                  final Sink sink = entry.getValue();
-                  log.info("Segment matches sink[%s]", sink);
-
-                  if (segment.getVersion().compareTo(sink.getSegment().getVersion()) >= 0) {
-                    try {
-                      metadataUpdater.unannounceSegment(sink.getSegment());
-                      FileUtils.deleteDirectory(computePersistDir(schema, sink.getInterval()));
-                      sinks.remove(sinkKey);
-                    }
-                    catch (IOException e) {
-                      log.makeAlert(e, "Unable to delete old segment for dataSource[%s].", schema.getDataSource())
-                         .addData("interval", sink.getInterval())
-                         .emit();
-                    }
-                  }
-                }
-              }
-            }
-
-            return ServerView.CallbackAction.CONTINUE;
-          }
-        }
-    );
-
-    final long truncatedNow = segmentGranularity.truncate(new DateTime()).getMillis();
-    final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     final RejectionPolicy rejectionPolicy = rejectionPolicyFactory.create(windowPeriod);
     log.info("Creating plumber using rejectionPolicy[%s]", rejectionPolicy);
 
-    log.info(
-        "Expect to run at [%s]",
-        new DateTime().plus(
-            new Duration(System.currentTimeMillis(), segmentGranularity.increment(truncatedNow) + windowMillis)
-        )
-    );
-
-    ScheduledExecutors
-        .scheduleAtFixedRate(
-            scheduledExecutor,
-            new Duration(System.currentTimeMillis(), segmentGranularity.increment(truncatedNow) + windowMillis),
-            new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
-            new ThreadRenamingRunnable(String.format("%s-overseer", schema.getDataSource()))
-            {
-              @Override
-              public void doRun()
-              {
-                log.info("Starting merge and push.");
-
-                long minTimestamp = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime()).getMillis() - windowMillis;
-
-                List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
-                for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
-                  final Long intervalStart = entry.getKey();
-                  if (intervalStart < minTimestamp) {
-                    log.info("Adding entry[%s] for merge and push.", entry);
-                    sinksToPush.add(entry);
-                  }
-                }
-
-                for (final Map.Entry<Long, Sink> entry : sinksToPush) {
-                  final Sink sink = entry.getValue();
-
-                  final String threadName = String.format(
-                      "%s-%s-persist-n-merge", schema.getDataSource(), new DateTime(entry.getKey())
-                  );
-                  persistExecutor.execute(
-                      new ThreadRenamingRunnable(threadName)
-                      {
-                        @Override
-                        public void doRun()
-                        {
-                          final Interval interval = sink.getInterval();
-
-                          for (FireHydrant hydrant : sink) {
-                            if (!hydrant.hasSwapped()) {
-                              log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
-                              final int rowCount = persistHydrant(hydrant, schema, interval);
-                              metrics.incrementRowOutputCount(rowCount);
-                            }
-                          }
-
-                          File mergedFile = null;
-                          try {
-                            List<QueryableIndex> indexes = Lists.newArrayList();
-                            for (FireHydrant fireHydrant : sink) {
-                              Segment segment = fireHydrant.getSegment();
-                              final QueryableIndex queryableIndex = segment.asQueryableIndex();
-                              log.info("Adding hydrant[%s]", fireHydrant);
-                              indexes.add(queryableIndex);
-                            }
-
-                            mergedFile = IndexMerger.mergeQueryableIndex(
-                                indexes,
-                                schema.getAggregators(),
-                                new File(computePersistDir(schema, interval), "merged")
-                            );
-
-                            QueryableIndex index = IndexIO.loadIndex(mergedFile);
-
-                            DataSegment segment = dataSegmentPusher.push(
-                                mergedFile,
-                                sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
-                            );
-
-                            metadataUpdater.publishSegment(segment);
-                          }
-                          catch (IOException e) {
-                            log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
-                               .addData("interval", interval)
-                               .emit();
-                          }
-
-
-                          if (mergedFile != null) {
-                            try {
-                              if (mergedFile != null) {
-                                log.info("Deleting Index File[%s]", mergedFile);
-                                FileUtils.deleteDirectory(mergedFile);
-                              }
-                            }
-                            catch (IOException e) {
-                              log.warn(e, "Error deleting directory[%s]", mergedFile);
-                            }
-                          }
-                        }
-                      }
-                  );
-                }
-              }
-            }
-        );
-
     return new Plumber()
     {
+      private volatile boolean stopped = false;
+      private volatile ExecutorService persistExecutor = null;
+      private volatile ScheduledExecutorService scheduledExecutor = null;
+
+      private final Map<Long, Sink> sinks = Maps.newConcurrentMap();
+
+      @Override
+      public void startJob()
+      {
+        computeBaseDir(schema).mkdirs();
+        initializeExecutors();
+        bootstrapSinksFromDisk();
+        registerServerViewCallback();
+        startPersistThread();
+      }
+
       @Override
       public Sink getSink(long timestamp)
       {
@@ -372,14 +192,15 @@ public class RealtimePlumberSchool implements PlumberSchool
         Sink retVal = sinks.get(truncatedTime);
 
         if (retVal == null) {
-          retVal = new Sink(
-              new Interval(new DateTime(truncatedTime), segmentGranularity.increment(new DateTime(truncatedTime))),
-              schema
+          final Interval sinkInterval = new Interval(
+              new DateTime(truncatedTime),
+              segmentGranularity.increment(new DateTime(truncatedTime))
           );
+
+          retVal = new Sink(sinkInterval, schema, versioningPolicy.getVersion(sinkInterval));
 
           try {
             metadataUpdater.announceSegment(retVal.getSegment());
-
             sinks.put(truncatedTime, retVal);
           }
           catch (IOException e) {
@@ -407,7 +228,6 @@ public class RealtimePlumberSchool implements PlumberSchool
                 return toolchest.makeMetricBuilder(query);
               }
             };
-
 
         return factory.mergeRunners(
             EXEC,
@@ -473,83 +293,293 @@ public class RealtimePlumberSchool implements PlumberSchool
       @Override
       public void finishJob()
       {
-        throw new UnsupportedOperationException();
+        stopped = true;
+
+        for (final Sink sink : sinks.values()) {
+          try {
+            metadataUpdater.unannounceSegment(sink.getSegment());
+          }
+          catch (Exception e) {
+            log.makeAlert("Failed to unannounce segment on shutdown")
+               .addData("segment", sink.getSegment())
+               .emit();
+          }
+        }
+
+        // scheduledExecutor is shutdown here, but persistExecutor is shutdown when the
+        // ServerView sends it a new segment callback
+
+        if (scheduledExecutor != null) {
+          scheduledExecutor.shutdown();
+        }
+      }
+
+      private void initializeExecutors()
+      {
+        if (persistExecutor == null) {
+          persistExecutor = Executors.newFixedThreadPool(
+              1,
+              new ThreadFactoryBuilder()
+                  .setDaemon(true)
+                  .setNameFormat("plumber_persist_%d")
+                  .build()
+          );
+        }
+        if (scheduledExecutor == null) {
+          scheduledExecutor = Executors.newScheduledThreadPool(
+              1,
+              new ThreadFactoryBuilder()
+                  .setDaemon(true)
+                  .setNameFormat("plumber_scheduled_%d")
+                  .build()
+          );
+        }
+      }
+
+      private void bootstrapSinksFromDisk()
+      {
+        for (File sinkDir : computeBaseDir(schema).listFiles()) {
+          Interval sinkInterval = new Interval(sinkDir.getName().replace("_", "/"));
+
+          final File[] sinkFiles = sinkDir.listFiles();
+          Arrays.sort(
+              sinkFiles,
+              new Comparator<File>()
+              {
+                @Override
+                public int compare(File o1, File o2)
+                {
+                  try {
+                    return Ints.compare(Integer.parseInt(o1.getName()), Integer.parseInt(o2.getName()));
+                  }
+                  catch (NumberFormatException e) {
+                    log.error(e, "Couldn't compare as numbers? [%s][%s]", o1, o2);
+                    return o1.compareTo(o2);
+                  }
+                }
+              }
+          );
+
+          try {
+            List<FireHydrant> hydrants = Lists.newArrayList();
+            for (File segmentDir : sinkFiles) {
+              log.info("Loading previously persisted segment at [%s]", segmentDir);
+              hydrants.add(
+                  new FireHydrant(
+                      new QueryableIndexSegment(null, IndexIO.loadIndex(segmentDir)),
+                      Integer.parseInt(segmentDir.getName())
+                  )
+              );
+            }
+
+            Sink currSink = new Sink(sinkInterval, schema, versioningPolicy.getVersion(sinkInterval), hydrants);
+            sinks.put(sinkInterval.getStartMillis(), currSink);
+
+            metadataUpdater.announceSegment(currSink.getSegment());
+          }
+          catch (IOException e) {
+            log.makeAlert(e, "Problem loading sink[%s] from disk.", schema.getDataSource())
+               .addData("interval", sinkInterval)
+               .emit();
+          }
+        }
+      }
+
+      private void registerServerViewCallback()
+      {
+        serverView.registerSegmentCallback(
+            persistExecutor,
+            new ServerView.BaseSegmentCallback()
+            {
+              @Override
+              public ServerView.CallbackAction segmentAdded(DruidServer server, DataSegment segment)
+              {
+                if (stopped) {
+                  log.info("Unregistering ServerViewCallback");
+                  persistExecutor.shutdown();
+                  return ServerView.CallbackAction.UNREGISTER;
+                }
+
+                if ("realtime".equals(server.getType())) {
+                  return ServerView.CallbackAction.CONTINUE;
+                }
+
+                log.debug("Checking segment[%s] on server[%s]", segment, server);
+                if (schema.getDataSource().equals(segment.getDataSource())) {
+                  final Interval interval = segment.getInterval();
+                  for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
+                    final Long sinkKey = entry.getKey();
+                    if (interval.contains(sinkKey)) {
+                      final Sink sink = entry.getValue();
+                      log.info("Segment matches sink[%s]", sink);
+
+                      if (segment.getVersion().compareTo(sink.getSegment().getVersion()) >= 0) {
+                        try {
+                          metadataUpdater.unannounceSegment(sink.getSegment());
+                          FileUtils.deleteDirectory(computePersistDir(schema, sink.getInterval()));
+                          sinks.remove(sinkKey);
+                        }
+                        catch (IOException e) {
+                          log.makeAlert(e, "Unable to delete old segment for dataSource[%s].", schema.getDataSource())
+                             .addData("interval", sink.getInterval())
+                             .emit();
+                        }
+                      }
+                    }
+                  }
+                }
+
+                return ServerView.CallbackAction.CONTINUE;
+              }
+            }
+        );
+      }
+
+      private void startPersistThread()
+      {
+        final long truncatedNow = segmentGranularity.truncate(new DateTime()).getMillis();
+        final long windowMillis = windowPeriod.toStandardDuration().getMillis();
+
+        log.info(
+            "Expect to run at [%s]",
+            new DateTime().plus(
+                new Duration(System.currentTimeMillis(), segmentGranularity.increment(truncatedNow) + windowMillis)
+            )
+        );
+
+        ScheduledExecutors
+            .scheduleAtFixedRate(
+                scheduledExecutor,
+                new Duration(System.currentTimeMillis(), segmentGranularity.increment(truncatedNow) + windowMillis),
+                new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
+                new ThreadRenamingCallable<ScheduledExecutors.Signal>(
+                    String.format(
+                        "%s-overseer-%d",
+                        schema.getDataSource(),
+                        schema.getShardSpec().getPartitionNum()
+                    )
+                )
+                {
+                  @Override
+                  public ScheduledExecutors.Signal doCall()
+                  {
+                    if (stopped) {
+                      log.info("Stopping merge-n-push overseer thread");
+                      return ScheduledExecutors.Signal.STOP;
+                    }
+
+                    log.info("Starting merge and push.");
+
+                    long minTimestamp = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime()).getMillis()
+                                        - windowMillis;
+
+                    List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
+                    for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
+                      final Long intervalStart = entry.getKey();
+                      if (intervalStart < minTimestamp) {
+                        log.info("Adding entry[%s] for merge and push.", entry);
+                        sinksToPush.add(entry);
+                      }
+                    }
+
+                    for (final Map.Entry<Long, Sink> entry : sinksToPush) {
+                      final Sink sink = entry.getValue();
+
+                      final String threadName = String.format(
+                          "%s-%s-persist-n-merge", schema.getDataSource(), new DateTime(entry.getKey())
+                      );
+                      persistExecutor.execute(
+                          new ThreadRenamingRunnable(threadName)
+                          {
+                            @Override
+                            public void doRun()
+                            {
+                              final Interval interval = sink.getInterval();
+
+                              for (FireHydrant hydrant : sink) {
+                                if (!hydrant.hasSwapped()) {
+                                  log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
+                                  final int rowCount = persistHydrant(hydrant, schema, interval);
+                                  metrics.incrementRowOutputCount(rowCount);
+                                }
+                              }
+
+                              File mergedFile = null;
+                              try {
+                                List<QueryableIndex> indexes = Lists.newArrayList();
+                                for (FireHydrant fireHydrant : sink) {
+                                  Segment segment = fireHydrant.getSegment();
+                                  final QueryableIndex queryableIndex = segment.asQueryableIndex();
+                                  log.info("Adding hydrant[%s]", fireHydrant);
+                                  indexes.add(queryableIndex);
+                                }
+
+                                mergedFile = IndexMerger.mergeQueryableIndex(
+                                    indexes,
+                                    schema.getAggregators(),
+                                    new File(computePersistDir(schema, interval), "merged")
+                                );
+
+                                QueryableIndex index = IndexIO.loadIndex(mergedFile);
+
+                                DataSegment segment = dataSegmentPusher.push(
+                                    mergedFile,
+                                    sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
+                                );
+
+                                metadataUpdater.publishSegment(segment);
+                              }
+                              catch (IOException e) {
+                                log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
+                                   .addData("interval", interval)
+                                   .emit();
+                              }
+
+
+                              if (mergedFile != null) {
+                                try {
+                                  if (mergedFile != null) {
+                                    log.info("Deleting Index File[%s]", mergedFile);
+                                    FileUtils.deleteDirectory(mergedFile);
+                                  }
+                                }
+                                catch (IOException e) {
+                                  log.warn(e, "Error deleting directory[%s]", mergedFile);
+                                }
+                              }
+                            }
+                          }
+                      );
+                    }
+
+                    if (stopped) {
+                      log.info("Stopping merge-n-push overseer thread");
+                      return ScheduledExecutors.Signal.STOP;
+                    } else {
+                      return ScheduledExecutors.Signal.REPEAT;
+                    }
+                  }
+                }
+            );
       }
     };
   }
 
-  private File computeBaseDir(Schema schema)
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+  @JsonSubTypes(value = {
+      @JsonSubTypes.Type(name = "intervalStart", value = IntervalStartVersioningPolicy.class)
+  })
+  public static interface VersioningPolicy
   {
-    return new File(basePersistDirectory, schema.getDataSource());
+    public String getVersion(Interval interval);
   }
 
-  private File computePersistDir(Schema schema, Interval interval)
+  public static class IntervalStartVersioningPolicy implements VersioningPolicy
   {
-    return new File(computeBaseDir(schema), interval.toString().replace("/", "_"));
-  }
-
-  /**
-   * Persists the given hydrant and returns the number of rows persisted
-   *
-   * @param indexToPersist
-   * @param schema
-   * @param interval
-   *
-   * @return the number of rows persisted
-   */
-  private int persistHydrant(FireHydrant indexToPersist, Schema schema, Interval interval)
-  {
-    log.info("DataSource[%s], Interval[%s], persisting Hydrant[%s]", schema.getDataSource(), interval, indexToPersist);
-    try {
-      int numRows = indexToPersist.getIndex().size();
-
-      File persistedFile = IndexMerger.persist(
-          indexToPersist.getIndex(),
-          new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
-      );
-
-      indexToPersist.swapSegment(new QueryableIndexSegment(null, IndexIO.loadIndex(persistedFile)));
-
-      return numRows;
-    }
-    catch (IOException e) {
-      log.makeAlert("dataSource[%s] -- incremental persist failed", schema.getDataSource())
-         .addData("interval", interval)
-         .addData("count", indexToPersist.getCount())
-         .emit();
-
-      throw Throwables.propagate(e);
-    }
-  }
-
-  private void verifyState()
-  {
-    Preconditions.checkNotNull(conglomerate, "must specify a queryRunnerFactoryConglomerate to do this action.");
-    Preconditions.checkNotNull(dataSegmentPusher, "must specify a segmentPusher to do this action.");
-    Preconditions.checkNotNull(metadataUpdater, "must specify a metadataUpdater to do this action.");
-    Preconditions.checkNotNull(serverView, "must specify a serverView to do this action.");
-    Preconditions.checkNotNull(emitter, "must specify a serviceEmitter to do this action.");
-  }
-
-  private void initializeExecutors()
-  {
-    if (persistExecutor == null) {
-      persistExecutor = Executors.newFixedThreadPool(
-          1,
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("plumber_persist_%d")
-              .build()
-      );
-    }
-    if (scheduledExecutor == null) {
-      scheduledExecutor = Executors.newScheduledThreadPool(
-          1,
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("plumber_scheduled_%d")
-              .build()
-      );
+    @Override
+    public String getVersion(Interval interval)
+    {
+      return interval.getStart().toString();
     }
   }
 
@@ -631,5 +661,58 @@ public class RealtimePlumberSchool implements PlumberSchool
         }
       };
     }
+  }
+
+  private File computeBaseDir(Schema schema)
+  {
+    return new File(basePersistDirectory, schema.getDataSource());
+  }
+
+  private File computePersistDir(Schema schema, Interval interval)
+  {
+    return new File(computeBaseDir(schema), interval.toString().replace("/", "_"));
+  }
+
+  /**
+   * Persists the given hydrant and returns the number of rows persisted
+   *
+   * @param indexToPersist
+   * @param schema
+   * @param interval
+   *
+   * @return the number of rows persisted
+   */
+  private int persistHydrant(FireHydrant indexToPersist, Schema schema, Interval interval)
+  {
+    log.info("DataSource[%s], Interval[%s], persisting Hydrant[%s]", schema.getDataSource(), interval, indexToPersist);
+    try {
+      int numRows = indexToPersist.getIndex().size();
+
+      File persistedFile = IndexMerger.persist(
+          indexToPersist.getIndex(),
+          new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
+      );
+
+      indexToPersist.swapSegment(new QueryableIndexSegment(null, IndexIO.loadIndex(persistedFile)));
+
+      return numRows;
+    }
+    catch (IOException e) {
+      log.makeAlert("dataSource[%s] -- incremental persist failed", schema.getDataSource())
+         .addData("interval", interval)
+         .addData("count", indexToPersist.getCount())
+         .emit();
+
+      throw Throwables.propagate(e);
+    }
+  }
+
+  private void verifyState()
+  {
+    Preconditions.checkNotNull(conglomerate, "must specify a queryRunnerFactoryConglomerate to do this action.");
+    Preconditions.checkNotNull(dataSegmentPusher, "must specify a segmentPusher to do this action.");
+    Preconditions.checkNotNull(metadataUpdater, "must specify a metadataUpdater to do this action.");
+    Preconditions.checkNotNull(serverView, "must specify a serverView to do this action.");
+    Preconditions.checkNotNull(emitter, "must specify a serviceEmitter to do this action.");
   }
 }

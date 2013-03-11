@@ -256,13 +256,18 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
   protected void initializeMetadataUpdater()
   {
     if (metadataUpdater == null) {
-      metadataUpdater = new MetadataUpdater(
+      final MetadataUpdaterConfig metadataUpdaterConfig = getConfigFactory().build(MetadataUpdaterConfig.class);
+      final SegmentAnnouncer segmentAnnouncer = new ZkSegmentAnnouncer(metadataUpdaterConfig, getPhoneBook());
+      final SegmentPublisher segmentPublisher = new DbSegmentPublisher(
           getJsonMapper(),
-          getConfigFactory().build(MetadataUpdaterConfig.class),
-          getPhoneBook(),
+          metadataUpdaterConfig,
           new DbConnector(getConfigFactory().build(DbConnectorConfig.class)).getDBI()
       );
-      getLifecycle().addManagedInstance(metadataUpdater);
+
+      getLifecycle().addManagedInstance(segmentAnnouncer);
+      getLifecycle().addManagedInstance(segmentPublisher);
+
+      metadataUpdater = new MetadataUpdater(segmentAnnouncer, segmentPublisher);
     }
   }
 

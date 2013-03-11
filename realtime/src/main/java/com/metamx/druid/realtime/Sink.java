@@ -50,16 +50,19 @@ public class Sink implements Iterable<FireHydrant>
 
   private final Interval interval;
   private final Schema schema;
+  private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
 
 
   public Sink(
       Interval interval,
-      Schema schema
+      Schema schema,
+      String version
   )
   {
     this.schema = schema;
     this.interval = interval;
+    this.version = version;
 
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
@@ -67,11 +70,13 @@ public class Sink implements Iterable<FireHydrant>
   public Sink(
       Interval interval,
       Schema schema,
+      String version,
       List<FireHydrant> hydrants
   )
   {
     this.schema = schema;
     this.interval = interval;
+    this.version = version;
 
     for (int i = 0; i < hydrants.size(); ++i) {
       final FireHydrant hydrant = hydrants.get(i);
@@ -100,6 +105,13 @@ public class Sink implements Iterable<FireHydrant>
     }
   }
 
+  public boolean isEmpty()
+  {
+    synchronized (currIndex) {
+      return hydrants.size() == 1 && currIndex.getIndex().isEmpty();
+    }
+  }
+
   /**
    * If currIndex is A, creates a new index B, sets currIndex to B and returns A.
    *
@@ -122,7 +134,7 @@ public class Sink implements Iterable<FireHydrant>
     return new DataSegment(
         schema.getDataSource(),
         interval,
-        interval.getStart().toString(),
+        version,
         ImmutableMap.<String, Object>of(),
         Lists.<String>newArrayList(),
         Lists.transform(

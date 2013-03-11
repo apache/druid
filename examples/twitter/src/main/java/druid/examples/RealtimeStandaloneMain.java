@@ -1,21 +1,17 @@
 package druid.examples;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.ZKPhoneBook;
-import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.realtime.MetadataUpdater;
-import com.metamx.druid.realtime.MetadataUpdaterConfig;
 import com.metamx.druid.realtime.RealtimeNode;
-import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.phonebook.PhoneBook;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
-
 
 import java.io.File;
 import java.io.IOException;
@@ -47,13 +43,8 @@ public class RealtimeStandaloneMain
     };
 
     rn.setPhoneBook(dummyPhoneBook);
-    MetadataUpdater dummyMetadataUpdater =
-        new MetadataUpdater(
-            new DefaultObjectMapper(),
-            Config.createFactory(Initialization.loadProperties()).build(MetadataUpdaterConfig.class),
-            dummyPhoneBook,
-            null
-        ) {
+    final MetadataUpdater dummyMetadataUpdater =
+        new MetadataUpdater(null, null) {
           @Override
           public void publishSegment(DataSegment segment) throws IOException
           {

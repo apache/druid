@@ -154,6 +154,8 @@ public class RealtimeManager implements QuerySegmentWalker
       final Period intermediatePersistPeriod = config.getIntermediatePersistPeriod();
 
       try {
+        plumber.startJob();
+
         long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
         while (firehose.hasMore()) {
           final InputRow inputRow;
