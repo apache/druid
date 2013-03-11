@@ -105,17 +105,17 @@ public class TaskQueue
       }
 
       // Sort locks by version
-      final Ordering<TaskLock> byVersionOrdering = new Ordering<TaskLock>()
+      final Ordering<Map.Entry<TaskLock, Task>> byVersionOrdering = new Ordering<Map.Entry<TaskLock, Task>>()
       {
         @Override
-        public int compare(TaskLock left, TaskLock right)
+        public int compare(Map.Entry<TaskLock, Task> left, Map.Entry<TaskLock, Task> right)
         {
-          return left.getVersion().compareTo(right.getVersion());
+          return left.getKey().getVersion().compareTo(right.getKey().getVersion());
         }
       };
 
       // Acquire as many locks as possible, in version order
-      for(final Map.Entry<TaskLock, Task> taskAndLock : tasksByLock.entries()) {
+      for(final Map.Entry<TaskLock, Task> taskAndLock : byVersionOrdering.sortedCopy(tasksByLock.entries())) {
         final Task task = taskAndLock.getValue();
         final TaskLock savedTaskLock = taskAndLock.getKey();
 
