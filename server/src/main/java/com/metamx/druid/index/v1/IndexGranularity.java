@@ -204,7 +204,7 @@ public enum IndexGranularity
         @Override
         public long increment(long timeMillis)
         {
-          return timeMillis - MILLIS_IN;
+          return timeMillis + MILLIS_IN;
         }
 
         @Override
@@ -273,7 +273,7 @@ public enum IndexGranularity
         @Override
         public long increment(long timeMillis)
         {
-          return timeMillis - MILLIS_IN;
+          return timeMillis + MILLIS_IN;
         }
 
         @Override
