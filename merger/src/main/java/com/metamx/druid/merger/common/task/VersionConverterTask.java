@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -53,14 +54,37 @@ public class VersionConverterTask extends AbstractTask
   private static final Logger log = new Logger(VersionConverterTask.class);
   private final DataSegment segment;
 
-  public VersionConverterTask(
+  public static VersionConverterTask create(String dataSource, Interval interval)
+  {
+    final String id = makeId(dataSource, interval);
+    return new VersionConverterTask(id, id, dataSource, interval, null);
+  }
+
+  public static VersionConverterTask create(DataSegment segment)
+  {
+    final Interval interval = segment.getInterval();
+    final String dataSource = segment.getDataSource();
+    final String id = makeId(dataSource, interval);
+    return new VersionConverterTask(id, id, dataSource, interval, segment);
+  }
+
+  private static String makeId(String dataSource, Interval interval)
+  {
+    return joinId(TYPE, dataSource, interval.getStart(), interval.getEnd(), new DateTime());
+  }
+
+  @JsonCreator
+  private VersionConverterTask(
+      @JsonProperty("id") String id,
+      @JsonProperty("groupId") String groupId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("segment") DataSegment segment
   )
   {
     super(
-        joinId(TYPE, dataSource, interval.getStart(), interval.getEnd(), new DateTime()),
+        id,
+        groupId,
         dataSource,
         interval
     );
@@ -72,6 +96,12 @@ public class VersionConverterTask extends AbstractTask
   public String getType()
   {
     return TYPE;
+  }
+
+  @JsonProperty
+  public DataSegment getSegment()
+  {
+    return segment;
   }
 
   @Override
@@ -121,11 +151,31 @@ public class VersionConverterTask extends AbstractTask
     return TaskStatus.success(getId());
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    VersionConverterTask that = (VersionConverterTask) o;
+
+    if (segment != null ? !segment.equals(that.segment) : that.segment != null) {
+      return false;
+    }
+
+    return super.equals(o);
+  }
+
   public static class SubTask extends AbstractTask
   {
     private final DataSegment segment;
 
-    protected SubTask(
+    @JsonCreator
+    public SubTask(
         @JsonProperty("groupId") String groupId,
         @JsonProperty("segment") DataSegment segment
     )
@@ -143,6 +193,12 @@ public class VersionConverterTask extends AbstractTask
           segment.getInterval()
       );
       this.segment = segment;
+    }
+
+    @JsonProperty
+    public DataSegment getSegment()
+    {
+      return segment;
     }
 
     @Override

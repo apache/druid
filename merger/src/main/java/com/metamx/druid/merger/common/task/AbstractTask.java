@@ -111,4 +111,32 @@ public abstract class AbstractTask implements Task
   {
     return TaskStatus.success(getId());
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    AbstractTask that = (AbstractTask) o;
+
+    if (dataSource != null ? !dataSource.equals(that.dataSource) : that.dataSource != null) {
+      return false;
+    }
+    if (groupId != null ? !groupId.equals(that.groupId) : that.groupId != null) {
+      return false;
+    }
+    if (id != null ? !id.equals(that.id) : that.id != null) {
+      return false;
+    }
+    if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
+      return false;
+    }
+
+    return true;
+  }
 }
