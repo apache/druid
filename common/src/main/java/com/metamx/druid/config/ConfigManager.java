@@ -38,6 +38,7 @@ public class ConfigManager
   private final ScheduledExecutorService exec;
   private final ConcurrentMap<String, ConfigHolder> watchedConfigs;
   private final String selectStatement;
+  private final String insertStatement;
 
   private volatile ConfigManager.PollingCallable poller;
 
@@ -49,6 +50,10 @@ public class ConfigManager
     this.exec = ScheduledExecutors.fixed(1, "config-manager-%s");
     this.watchedConfigs = Maps.newConcurrentMap();
     this.selectStatement = String.format("SELECT payload FROM %s WHERE name = :name", config.getConfigTable());
+    insertStatement = String.format(
+        "INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload",
+        config.getConfigTable()
+    );
   }
 
   @LifecycleStart
@@ -192,9 +197,7 @@ public class ConfigManager
                     @Override
                     public Void withHandle(Handle handle) throws Exception
                     {
-                      handle.createStatement(
-                          "INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload"
-                      )
+                      handle.createStatement(insertStatement)
                             .bind("name", key)
                             .bind("payload", newBytes)
                             .execute();
