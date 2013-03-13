@@ -91,4 +91,17 @@ public class EC2NodeData
   {
     return keyName;
   }
+
+  @Override
+  public String toString()
+  {
+    return "EC2NodeData{" +
+           "amiId='" + amiId + '\'' +
+           ", instanceType='" + instanceType + '\'' +
+           ", minInstances=" + minInstances +
+           ", maxInstances=" + maxInstances +
+           ", securityGroupIds=" + securityGroupIds +
+           ", keyName='" + keyName + '\'' +
+           '}';
+  }
 }

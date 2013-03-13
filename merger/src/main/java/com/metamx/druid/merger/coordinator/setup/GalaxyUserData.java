@@ -60,4 +60,14 @@ public class GalaxyUserData
   {
     return type;
   }
+
+  @Override
+  public String toString()
+  {
+    return "GalaxyUserData{" +
+           "env='" + env + '\'' +
+           ", version='" + version + '\'' +
+           ", type='" + type + '\'' +
+           '}';
+  }
 }
