@@ -102,7 +102,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
         }
       }
     } else {
-      Duration durSinceLastProvision = new Duration(new DateTime(), lastProvisionTime);
+      Duration durSinceLastProvision = new Duration(lastProvisionTime, new DateTime());
       if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration())) {
         log.makeAlert("Worker node provisioning taking too long")
            .addData("millisSinceLastProvision", durSinceLastProvision.getMillis())
@@ -111,8 +111,9 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       }
 
       log.info(
-          "%s still provisioning. Wait for all provisioned nodes to complete before requesting new worker.",
-          currentlyProvisioning
+          "%s still provisioning. Wait for all provisioned nodes to complete before requesting new worker. Current wait time: %s",
+          currentlyProvisioning,
+          durSinceLastProvision
       );
     }
 
@@ -203,7 +204,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
         return true;
       }
     } else {
-      Duration durSinceLastTerminate = new Duration(new DateTime(), lastTerminateTime);
+      Duration durSinceLastTerminate = new Duration(lastTerminateTime, new DateTime());
       if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration())) {
         log.makeAlert("Worker node termination taking too long")
            .addData("millisSinceLastTerminate", durSinceLastTerminate.getMillis())
