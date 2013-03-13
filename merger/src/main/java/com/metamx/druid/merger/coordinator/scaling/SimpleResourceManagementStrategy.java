@@ -103,18 +103,21 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       }
     } else {
       Duration durSinceLastProvision = new Duration(lastProvisionTime, new DateTime());
-      if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration())) {
-        log.makeAlert("Worker node provisioning taking too long")
-           .addData("millisSinceLastProvision", durSinceLastProvision.getMillis())
-           .addData("provisioningCount", currentlyProvisioning.size())
-           .emit();
-      }
 
       log.info(
           "%s still provisioning. Wait for all provisioned nodes to complete before requesting new worker. Current wait time: %s",
           currentlyProvisioning,
           durSinceLastProvision
       );
+
+      if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration())) {
+        log.makeAlert("Worker node provisioning taking too long!")
+           .addData("millisSinceLastProvision", durSinceLastProvision.getMillis())
+           .addData("provisioningCount", currentlyProvisioning.size())
+           .emit();
+
+        currentlyProvisioning.clear();
+      }
     }
 
     return false;
@@ -205,17 +208,20 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       }
     } else {
       Duration durSinceLastTerminate = new Duration(lastTerminateTime, new DateTime());
-      if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration())) {
-        log.makeAlert("Worker node termination taking too long")
-           .addData("millisSinceLastTerminate", durSinceLastTerminate.getMillis())
-           .addData("terminatingCount", currentlyTerminating.size())
-           .emit();
-      }
 
       log.info(
           "%s still terminating. Wait for all nodes to terminate before trying again.",
           currentlyTerminating
       );
+
+      if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration())) {
+        log.makeAlert("Worker node termination taking too long!")
+           .addData("millisSinceLastTerminate", durSinceLastTerminate.getMillis())
+           .addData("terminatingCount", currentlyTerminating.size())
+           .emit();
+
+        currentlyTerminating.clear();
+      }
     }
 
     return false;

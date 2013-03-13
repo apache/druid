@@ -176,6 +176,9 @@ public class IndexerCoordinatorResource
     if (!configManager.set(WorkerSetupData.CONFIG_KEY, workerSetupData)) {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
+
+    log.info("Updating Worker Setup configs: %s", workerSetupData);
+
     return Response.ok().build();
   }
 
