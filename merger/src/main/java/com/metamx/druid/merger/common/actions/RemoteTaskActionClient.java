@@ -3,6 +3,7 @@ package com.metamx.druid.merger.common.actions;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.http.client.HttpClient;
@@ -62,6 +63,10 @@ public class RemoteTaskActionClient implements TaskActionClient
     final String host;
     final int port;
     final String path = "/mmx/merger/v1/action";
+
+    if (instance == null) {
+      throw new ISE("Cannot find instance of indexer to talk to!");
+    }
 
     host = instance.getAddress();
 
