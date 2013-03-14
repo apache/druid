@@ -34,6 +34,7 @@ class DimFilterCacheHelper
   static final byte EXTRACTION_CACHE_ID = 0x4;
   static final byte REGEX_CACHE_ID = 0x5;
   static final byte SEARCH_QUERY_TYPE_ID = 0x6;
+  static final byte JAVASCRIPT_CACHE_ID = 0x7;
 
   static byte[] computeCacheKey(byte cacheIdKey, List<DimFilter> filters)
   {
