@@ -236,7 +236,8 @@ public class VersionConverterTask extends AbstractTask
       DataSegment updatedSegment = segment.withVersion(String.format("%s_v%s", segment.getVersion(), outVersion));
       updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment);
 
-      toolbox.getTaskActionClient().submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));
+      toolbox.getTaskActionClient()
+             .submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)).withAllowOlderVersions(true));
     } else {
       log.info("Conversion failed.");
     }
