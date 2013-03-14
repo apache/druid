@@ -1,6 +1,7 @@
 package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
@@ -39,27 +40,29 @@ import java.io.IOException;
 
 public class RealtimeIndexTask extends AbstractTask
 {
-  @JsonProperty
+  @JsonIgnore
   final Schema schema;
 
-  @JsonProperty
+  @JsonIgnore
   final FirehoseFactory firehoseFactory;
 
-  @JsonProperty
+  @JsonIgnore
   final FireDepartmentConfig fireDepartmentConfig;
 
-  @JsonProperty
+  @JsonIgnore
   final Period windowPeriod;
 
-  @JsonProperty
+  @JsonIgnore
   final IndexGranularity segmentGranularity;
 
+  @JsonIgnore
   private volatile Plumber plumber = null;
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
 
   @JsonCreator
   public RealtimeIndexTask(
+      @JsonProperty("id") String id,
       @JsonProperty("schema") Schema schema,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig, // TODO rename?
@@ -68,7 +71,7 @@ public class RealtimeIndexTask extends AbstractTask
   )
   {
     super(
-        String.format(
+        id != null ? id : String.format(
             "index_realtime_%s_%d_%s",
             schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime()
         ),
@@ -255,6 +258,36 @@ public class RealtimeIndexTask extends AbstractTask
     }
 
     return TaskStatus.success(getId());
+  }
+
+  @JsonProperty
+  public Schema getSchema()
+  {
+    return schema;
+  }
+
+  @JsonProperty("firehose")
+  public FirehoseFactory getFirehoseFactory()
+  {
+    return firehoseFactory;
+  }
+
+  @JsonProperty
+  public FireDepartmentConfig getFireDepartmentConfig()
+  {
+    return fireDepartmentConfig;
+  }
+
+  @JsonProperty
+  public Period getWindowPeriod()
+  {
+    return windowPeriod;
+  }
+
+  @JsonProperty
+  public IndexGranularity getSegmentGranularity()
+  {
+    return segmentGranularity;
   }
 
   public static class TaskActionSegmentPublisher implements SegmentPublisher
