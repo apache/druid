@@ -22,7 +22,6 @@ import com.metamx.druid.realtime.FireDepartmentConfig;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
-import com.metamx.druid.realtime.MetadataUpdater;
 import com.metamx.druid.realtime.Plumber;
 import com.metamx.druid.realtime.RealtimePlumberSchool;
 import com.metamx.druid.realtime.Schema;
@@ -186,7 +185,8 @@ public class RealtimeIndexTask extends AbstractTask
     realtimePlumberSchool.setDataSegmentPusher(toolbox.getSegmentPusher());
     realtimePlumberSchool.setConglomerate(toolbox.getQueryRunnerFactoryConglomerate());
     realtimePlumberSchool.setVersioningPolicy(versioningPolicy);
-    realtimePlumberSchool.setMetadataUpdater(new MetadataUpdater(lockingSegmentAnnouncer, segmentPublisher));
+    realtimePlumberSchool.setSegmentAnnouncer(lockingSegmentAnnouncer);
+    realtimePlumberSchool.setSegmentPublisher(segmentPublisher);
     realtimePlumberSchool.setServerView(toolbox.getNewSegmentServerView());
     realtimePlumberSchool.setServiceEmitter(toolbox.getEmitter());
 

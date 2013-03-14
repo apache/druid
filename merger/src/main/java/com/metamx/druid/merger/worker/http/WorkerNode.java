@@ -59,9 +59,9 @@ import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.merger.worker.WorkerTaskMonitor;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import com.metamx.druid.realtime.MetadataUpdaterConfig;
 import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.druid.realtime.ZkSegmentAnnouncer;
+import com.metamx.druid.realtime.ZkSegmentAnnouncerConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -378,7 +378,7 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
     if (taskToolboxFactory == null) {
       final DataSegmentKiller dataSegmentKiller = new S3DataSegmentKiller(s3Service);
       final SegmentAnnouncer segmentAnnouncer = new ZkSegmentAnnouncer(
-          configFactory.build(MetadataUpdaterConfig.class),
+          configFactory.build(ZkSegmentAnnouncerConfig.class),
           getPhoneBook()
       );
       lifecycle.addManagedInstance(segmentAnnouncer);

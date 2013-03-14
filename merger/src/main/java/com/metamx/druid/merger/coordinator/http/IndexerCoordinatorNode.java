@@ -62,10 +62,12 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentKiller;
+import com.metamx.druid.merger.common.RetryPolicyFactory;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.merger.common.actions.TaskActionToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
+import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.DbTaskStorage;
@@ -73,7 +75,6 @@ import com.metamx.druid.merger.coordinator.HeapMemoryTaskStorage;
 import com.metamx.druid.merger.coordinator.LocalTaskRunner;
 import com.metamx.druid.merger.coordinator.MergerDBCoordinator;
 import com.metamx.druid.merger.coordinator.RemoteTaskRunner;
-import com.metamx.druid.merger.common.RetryPolicyFactory;
 import com.metamx.druid.merger.coordinator.TaskLockbox;
 import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskQueue;
@@ -85,7 +86,6 @@ import com.metamx.druid.merger.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
-import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.scaling.AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.EC2AutoScalingStrategy;
 import com.metamx.druid.merger.coordinator.scaling.NoopAutoScalingStrategy;
@@ -95,9 +95,9 @@ import com.metamx.druid.merger.coordinator.scaling.ResourceManagementSchedulerFa
 import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagementStrategy;
 import com.metamx.druid.merger.coordinator.scaling.SimpleResourceManagmentConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
-import com.metamx.druid.realtime.MetadataUpdaterConfig;
 import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.druid.realtime.ZkSegmentAnnouncer;
+import com.metamx.druid.realtime.ZkSegmentAnnouncerConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -529,7 +529,7 @@ public class IndexerCoordinatorNode extends BaseServerNode<IndexerCoordinatorNod
   {
     if (taskToolboxFactory == null) {
       final SegmentAnnouncer segmentAnnouncer = new ZkSegmentAnnouncer(
-          configFactory.build(MetadataUpdaterConfig.class),
+          configFactory.build(ZkSegmentAnnouncerConfig.class),
           getPhoneBook()
       );
       final DataSegmentKiller dataSegmentKiller = new S3DataSegmentKiller(s3Service);

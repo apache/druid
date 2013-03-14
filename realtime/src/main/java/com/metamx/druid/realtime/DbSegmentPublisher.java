@@ -17,12 +17,12 @@ public class DbSegmentPublisher implements SegmentPublisher
   private static final Logger log = new Logger(DbSegmentPublisher.class);
 
   private final ObjectMapper jsonMapper;
-  private final MetadataUpdaterConfig config;
+  private final DbSegmentPublisherConfig config;
   private final DBI dbi;
 
   public DbSegmentPublisher(
       ObjectMapper jsonMapper,
-      MetadataUpdaterConfig config,
+      DbSegmentPublisherConfig config,
       DBI dbi
   )
   {

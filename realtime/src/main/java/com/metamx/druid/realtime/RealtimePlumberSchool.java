@@ -90,7 +90,8 @@ public class RealtimePlumberSchool implements PlumberSchool
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
   private volatile QueryRunnerFactoryConglomerate conglomerate = null;
   private volatile DataSegmentPusher dataSegmentPusher = null;
-  private volatile MetadataUpdater metadataUpdater = null;
+  private volatile SegmentAnnouncer segmentAnnouncer = null;
+  private volatile SegmentPublisher segmentPublisher = null;
   private volatile ServerView serverView = null;
   private ServiceEmitter emitter;
 
@@ -136,10 +137,16 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.dataSegmentPusher = dataSegmentPusher;
   }
 
-  @JacksonInject("metadataUpdater")
-  public void setMetadataUpdater(MetadataUpdater metadataUpdater)
+  @JacksonInject("segmentAnnouncer")
+  public void setSegmentAnnouncer(SegmentAnnouncer segmentAnnouncer)
   {
-    this.metadataUpdater = metadataUpdater;
+    this.segmentAnnouncer = segmentAnnouncer;
+  }
+
+  @JacksonInject("segmentPublisher")
+  public void setSegmentPublisher(SegmentPublisher segmentPublisher)
+  {
+    this.segmentPublisher = segmentPublisher;
   }
 
   @JacksonInject("serverView")
@@ -200,7 +207,7 @@ public class RealtimePlumberSchool implements PlumberSchool
           retVal = new Sink(sinkInterval, schema, versioningPolicy.getVersion(sinkInterval));
 
           try {
-            metadataUpdater.announceSegment(retVal.getSegment());
+            segmentAnnouncer.announceSegment(retVal.getSegment());
             sinks.put(truncatedTime, retVal);
           }
           catch (IOException e) {
@@ -297,7 +304,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
         for (final Sink sink : sinks.values()) {
           try {
-            metadataUpdater.unannounceSegment(sink.getSegment());
+            segmentAnnouncer.unannounceSegment(sink.getSegment());
           }
           catch (Exception e) {
             log.makeAlert("Failed to unannounce segment on shutdown")
@@ -375,7 +382,7 @@ public class RealtimePlumberSchool implements PlumberSchool
             Sink currSink = new Sink(sinkInterval, schema, versioningPolicy.getVersion(sinkInterval), hydrants);
             sinks.put(sinkInterval.getStartMillis(), currSink);
 
-            metadataUpdater.announceSegment(currSink.getSegment());
+            segmentAnnouncer.announceSegment(currSink.getSegment());
           }
           catch (IOException e) {
             log.makeAlert(e, "Problem loading sink[%s] from disk.", schema.getDataSource())
@@ -415,7 +422,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
                       if (segment.getVersion().compareTo(sink.getSegment().getVersion()) >= 0) {
                         try {
-                          metadataUpdater.unannounceSegment(sink.getSegment());
+                          segmentAnnouncer.unannounceSegment(sink.getSegment());
                           FileUtils.deleteDirectory(computePersistDir(schema, sink.getInterval()));
                           sinks.remove(sinkKey);
                         }
@@ -527,7 +534,7 @@ public class RealtimePlumberSchool implements PlumberSchool
                                     sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
                                 );
 
-                                metadataUpdater.publishSegment(segment);
+                                segmentPublisher.publishSegment(segment);
                               }
                               catch (IOException e) {
                                 log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
@@ -711,7 +718,8 @@ public class RealtimePlumberSchool implements PlumberSchool
   {
     Preconditions.checkNotNull(conglomerate, "must specify a queryRunnerFactoryConglomerate to do this action.");
     Preconditions.checkNotNull(dataSegmentPusher, "must specify a segmentPusher to do this action.");
-    Preconditions.checkNotNull(metadataUpdater, "must specify a metadataUpdater to do this action.");
+    Preconditions.checkNotNull(segmentAnnouncer, "must specify a segmentAnnouncer to do this action.");
+    Preconditions.checkNotNull(segmentPublisher, "must specify a segmentPublisher to do this action.");
     Preconditions.checkNotNull(serverView, "must specify a serverView to do this action.");
     Preconditions.checkNotNull(emitter, "must specify a serviceEmitter to do this action.");
   }

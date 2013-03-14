@@ -18,14 +18,14 @@ public class ZkSegmentAnnouncer implements SegmentAnnouncer
 
   private final Object lock = new Object();
 
-  private final MetadataUpdaterConfig config;
+  private final ZkSegmentAnnouncerConfig config;
   private final PhoneBook yp;
   private final String servedSegmentsLocation;
 
   private volatile boolean started = false;
 
   public ZkSegmentAnnouncer(
-      MetadataUpdaterConfig config,
+      ZkSegmentAnnouncerConfig config,
       PhoneBook yp
   )
   {
@@ -83,7 +83,7 @@ public class ZkSegmentAnnouncer implements SegmentAnnouncer
         return;
       }
 
-      log.info("Stopping MetadataUpdater with config[%s]", config);
+      log.info("Stopping ZkSegmentAnnouncer with config[%s]", config);
       yp.unannounce(config.getAnnounceLocation(), config.getServerName());
 
       started = false;
