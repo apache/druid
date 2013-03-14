@@ -48,11 +48,12 @@ public class AppendTask extends MergeTaskBase
 {
   @JsonCreator
   public AppendTask(
+      @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments
   )
   {
-    super(dataSource, segments);
+    super(id, dataSource, segments);
   }
 
   @Override

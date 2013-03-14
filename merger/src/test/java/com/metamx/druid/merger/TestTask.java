@@ -35,7 +35,6 @@ import java.util.List;
 @JsonTypeName("test")
 public class TestTask extends MergeTask
 {
-  private final String id;
   private final TaskStatus status;
 
   @JsonCreator
@@ -47,17 +46,8 @@ public class TestTask extends MergeTask
       @JsonProperty("taskStatus") TaskStatus status
   )
   {
-    super(dataSource, segments, aggregators);
-
-    this.id = id;
+    super(id, dataSource, segments, aggregators);
     this.status = status;
-  }
-
-  @Override
-  @JsonProperty
-  public String getId()
-  {
-    return id;
   }
 
   @Override

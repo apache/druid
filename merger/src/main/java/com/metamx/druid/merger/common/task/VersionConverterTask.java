@@ -20,6 +20,7 @@
 package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -52,6 +53,8 @@ public class VersionConverterTask extends AbstractTask
   private static final Integer CURR_VERSION_INTEGER = new Integer(IndexIO.CURRENT_VERSION_ID);
 
   private static final Logger log = new Logger(VersionConverterTask.class);
+
+  @JsonIgnore
   private final DataSegment segment;
 
   public static VersionConverterTask create(String dataSource, Interval interval)
@@ -172,6 +175,7 @@ public class VersionConverterTask extends AbstractTask
 
   public static class SubTask extends AbstractTask
   {
+    @JsonIgnore
     private final DataSegment segment;
 
     @JsonCreator

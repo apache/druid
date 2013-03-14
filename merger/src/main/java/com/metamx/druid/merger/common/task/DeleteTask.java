@@ -50,12 +50,13 @@ public class DeleteTask extends AbstractTask
 
   @JsonCreator
   public DeleteTask(
+      @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval
   )
   {
     super(
-        String.format(
+        id != null ? id : String.format(
             "delete_%s_%s_%s_%s",
             dataSource,
             interval.getStart(),
