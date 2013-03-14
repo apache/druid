@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
@@ -58,15 +59,18 @@ import java.util.Set;
  */
 public abstract class MergeTaskBase extends AbstractTask
 {
+  @JsonIgnore
   private final List<DataSegment> segments;
 
   private static final EmittingLogger log = new EmittingLogger(MergeTaskBase.class);
 
-  protected MergeTaskBase(final String dataSource, final List<DataSegment> segments)
+  protected MergeTaskBase(final String id, final String dataSource, final List<DataSegment> segments)
   {
     super(
         // _not_ the version, just something uniqueish
-        String.format("merge_%s_%s", computeProcessingID(dataSource, segments), new DateTime().toString()),
+        id != null ? id : String.format(
+            "merge_%s_%s", computeProcessingID(dataSource, segments), new DateTime().toString()
+        ),
         dataSource,
         computeMergedInterval(segments)
     );

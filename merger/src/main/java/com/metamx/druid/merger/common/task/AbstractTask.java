@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.common.task;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
@@ -35,9 +36,16 @@ public abstract class AbstractTask implements Task
 {
   private static final Joiner ID_JOINER = Joiner.on("_");
 
+  @JsonIgnore
   private final String id;
+
+  @JsonIgnore
   private final String groupId;
+
+  @JsonIgnore
   private final String dataSource;
+
+  @JsonIgnore
   private final Optional<Interval> interval;
 
   protected AbstractTask(String id, String dataSource, Interval interval)
@@ -118,5 +126,33 @@ public abstract class AbstractTask implements Task
   public TaskStatus success()
   {
     return TaskStatus.success(getId());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    AbstractTask that = (AbstractTask) o;
+
+    if (dataSource != null ? !dataSource.equals(that.dataSource) : that.dataSource != null) {
+      return false;
+    }
+    if (groupId != null ? !groupId.equals(that.groupId) : that.groupId != null) {
+      return false;
+    }
+    if (id != null ? !id.equals(that.id) : that.id != null) {
+      return false;
+    }
+    if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
+      return false;
+    }
+
+    return true;
   }
 }

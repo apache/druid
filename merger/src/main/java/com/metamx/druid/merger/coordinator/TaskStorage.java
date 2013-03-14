@@ -20,9 +20,9 @@
 package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Optional;
+import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.actions.TaskAction;
-import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.task.Task;
 
 import java.util.List;
@@ -77,9 +77,9 @@ public interface TaskStorage
   public List<TaskAction> getAuditLogs(String taskid);
 
   /**
-   * Returns a list of currently-running tasks as stored in the storage facility, in no particular order.
+   * Returns a list of currently-running task IDs as stored in the storage facility, in no particular order.
    */
-  public List<Task> getRunningTasks();
+  public List<String> getRunningTaskIds();
 
   /**
    * Returns a list of locks for a particular task.

@@ -75,4 +75,15 @@ public class WorkerSetupData
   {
     return userData;
   }
+
+  @Override
+  public String toString()
+  {
+    return "WorkerSetupData{" +
+           "minVersion='" + minVersion + '\'' +
+           ", minNumWorkers=" + minNumWorkers +
+           ", nodeData=" + nodeData +
+           ", userData=" + userData +
+           '}';
+  }
 }

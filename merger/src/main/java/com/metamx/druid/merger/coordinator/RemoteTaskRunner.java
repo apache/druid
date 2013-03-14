@@ -571,4 +571,9 @@ public class RemoteTaskRunner implements TaskRunner
       throw Throwables.propagate(e);
     }
   }
+
+  public static void main(String[] args)
+  {
+    System.out.println("2013-03-11".compareTo("0"));
+  }
 }

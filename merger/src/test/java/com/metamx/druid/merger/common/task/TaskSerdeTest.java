@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.metamx.common.Granularity;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.aggregation.CountAggregatorFactory;
 import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
@@ -26,6 +27,7 @@ public class TaskSerdeTest
   public void testIndexTaskSerde() throws Exception
   {
     final Task task = new IndexTask(
+        null,
         "foo",
         new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P2D"))),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
@@ -54,6 +56,7 @@ public class TaskSerdeTest
   public void testIndexGeneratorTaskSerde() throws Exception
   {
     final Task task = new IndexGeneratorTask(
+        null,
         "foo",
         new Interval("2010-01-01/P1D"),
         null,
@@ -68,6 +71,8 @@ public class TaskSerdeTest
 
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
     final Task task2 = jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
@@ -80,17 +85,23 @@ public class TaskSerdeTest
   }
 
   @Test
-  public void testAppendTaskSerde() throws Exception
+  public void testMergeTaskSerde() throws Exception
   {
-    final Task task = new AppendTask(
+    final Task task = new MergeTask(
+        null,
         "foo",
         ImmutableList.<DataSegment>of(
             DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
+        ),
+        ImmutableList.<AggregatorFactory>of(
+            new CountAggregatorFactory("cnt")
         )
     );
 
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
     final Task task2 = jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
@@ -100,19 +111,130 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
+    Assert.assertEquals(((MergeTask) task).getSegments(), ((MergeTask) task2).getSegments());
+    Assert.assertEquals(
+        ((MergeTask) task).getAggregators().get(0).getName(),
+        ((MergeTask) task2).getAggregators().get(0).getName()
+    );
   }
 
   @Test
-  public void testDeleteTaskSerde() throws Exception
+  public void testKillTaskSerde() throws Exception
   {
-    final Task task = new DeleteTask(
+    final Task task = new KillTask(
+        null,
         "foo",
         new Interval("2010-01-01/P1D")
     );
 
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
     final Task task2 = jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getImplicitLockInterval());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
+  }
+
+  @Test
+  public void testVersionConverterTaskSerde() throws Exception
+  {
+    final Task task = VersionConverterTask.create(
+        DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
+    );
+
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final Task task2 = jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getImplicitLockInterval());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
+    Assert.assertEquals(((VersionConverterTask) task).getSegment(), ((VersionConverterTask) task).getSegment());
+  }
+
+  @Test
+  public void testVersionConverterSubTaskSerde() throws Exception
+  {
+    final Task task = new VersionConverterTask.SubTask(
+        "myGroupId",
+        DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
+    );
+
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final Task task2 = jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getImplicitLockInterval());
+    Assert.assertEquals("myGroupId", task.getGroupId());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
+    Assert.assertEquals(
+        ((VersionConverterTask.SubTask) task).getSegment(),
+        ((VersionConverterTask.SubTask) task).getSegment()
+    );
+  }
+
+  @Test
+  public void testDeleteTaskSerde() throws Exception
+  {
+    final Task task = new DeleteTask(
+        null,
+        "foo",
+        new Interval("2010-01-01/P1D")
+    );
+
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final Task task2 = jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getImplicitLockInterval());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
+    Assert.assertEquals(task.getImplicitLockInterval().get(), task2.getImplicitLockInterval().get());
+  }
+
+
+  @Test
+  public void testDeleteTaskFromJson() throws Exception
+  {
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final Task task = jsonMapper.readValue(
+        "{\"type\":\"delete\",\"dataSource\":\"foo\",\"interval\":\"2010-01-01/P1D\"}",
+        Task.class
+    );
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final Task task2 = jsonMapper.readValue(json, Task.class);
+
+    Assert.assertNotNull(task.getId());
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getImplicitLockInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
@@ -122,9 +244,38 @@ public class TaskSerdeTest
   }
 
   @Test
+  public void testAppendTaskSerde() throws Exception
+  {
+    final Task task = new AppendTask(
+        null,
+        "foo",
+        ImmutableList.of(
+            DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
+        )
+    );
+
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final Task task2 = jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(Optional.of(new Interval("2010-01-01/P1D")), task.getImplicitLockInterval());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
+    Assert.assertEquals(task.getImplicitLockInterval().get(), task2.getImplicitLockInterval().get());
+    Assert.assertEquals(((AppendTask) task).getSegments(), ((AppendTask) task2).getSegments());
+  }
+
+  @Test
   public void testHadoopIndexTaskSerde() throws Exception
   {
     final HadoopIndexTask task = new HadoopIndexTask(
+        null,
         new HadoopDruidIndexerConfig(
             null,
             "foo",

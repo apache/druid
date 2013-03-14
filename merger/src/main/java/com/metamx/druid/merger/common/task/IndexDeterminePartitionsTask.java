@@ -20,6 +20,7 @@
 package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -48,22 +49,23 @@ import java.util.Set;
 
 public class IndexDeterminePartitionsTask extends AbstractTask
 {
-  @JsonProperty
+  @JsonIgnore
   private final FirehoseFactory firehoseFactory;
 
-  @JsonProperty
+  @JsonIgnore
   private final Schema schema;
 
-  @JsonProperty
+  @JsonIgnore
   private final long targetPartitionSize;
 
-  @JsonProperty
+  @JsonIgnore
   private final int rowFlushBoundary;
 
   private static final Logger log = new Logger(IndexTask.class);
 
   @JsonCreator
   public IndexDeterminePartitionsTask(
+      @JsonProperty("id") String id,
       @JsonProperty("groupId") String groupId,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
@@ -73,7 +75,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
   )
   {
     super(
-        String.format(
+        id != null ? id : String.format(
             "%s_partitions_%s_%s",
             groupId,
             interval.getStart(),
@@ -243,6 +245,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
           public Task apply(ShardSpec shardSpec)
           {
             return new IndexGeneratorTask(
+                null,
                 getGroupId(),
                 getImplicitLockInterval().get(),
                 firehoseFactory,
@@ -261,5 +264,29 @@ public class IndexDeterminePartitionsTask extends AbstractTask
     toolbox.getTaskActionClient().submit(new SpawnTasksAction(nextTasks));
 
     return TaskStatus.success(getId());
+  }
+
+  @JsonProperty
+  public FirehoseFactory getFirehoseFactory()
+  {
+    return firehoseFactory;
+  }
+
+  @JsonProperty
+  public Schema getSchema()
+  {
+    return schema;
+  }
+
+  @JsonProperty
+  public long getTargetPartitionSize()
+  {
+    return targetPartitionSize;
+  }
+
+  @JsonProperty
+  public int getRowFlushBoundary()
+  {
+    return rowFlushBoundary;
   }
 }

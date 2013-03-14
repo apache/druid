@@ -186,6 +186,7 @@ public class TaskLifecycleTest
   public void testIndexTask() throws Exception
   {
     final Task indexTask = new IndexTask(
+        null,
         "foo",
         new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P2D"))),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
@@ -228,6 +229,7 @@ public class TaskLifecycleTest
   public void testIndexTaskFailure() throws Exception
   {
     final Task indexTask = new IndexTask(
+        null,
         "foo",
         new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P1D"))),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
@@ -251,7 +253,7 @@ public class TaskLifecycleTest
   {
     // This test doesn't actually do anything right now.  We should actually put things into the Mocked coordinator
     // Such that this test can test things...
-    final Task killTask = new KillTask("foo", new Interval("2010-01-02/P2D"));
+    final Task killTask = new KillTask(null, "foo", new Interval("2010-01-02/P2D"));
 
     final TaskStatus status = runTask(killTask);
     Assert.assertEquals("merged statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());

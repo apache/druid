@@ -30,6 +30,10 @@ import com.metamx.druid.merger.coordinator.TaskRunnerWorkItem;
 import com.metamx.druid.merger.coordinator.ZkWorker;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.worker.Worker;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.core.Event;
+import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.emitter.service.ServiceEventBuilder;
 import junit.framework.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -90,7 +94,7 @@ public class SimpleResourceManagementStrategyTest
           @Override
           public Duration getMaxScalingDuration()
           {
-            return null;
+            return new Duration(1000);
           }
 
           @Override
@@ -182,6 +186,62 @@ public class SimpleResourceManagementStrategyTest
     );
 
     EasyMock.verify(autoScalingStrategy);
+  }
+
+  @Test
+  public void testProvisionAlert() throws Exception
+  {
+    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
+    EmittingLogger.registerEmitter(emitter);
+    emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
+    EasyMock.expectLastCall();
+    EasyMock.replay(emitter);
+
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+            .andReturn(Lists.<String>newArrayList()).times(2);
+    EasyMock.expect(autoScalingStrategy.provision()).andReturn(
+        new AutoScalingData(Lists.<String>newArrayList("fake"), Lists.newArrayList("faker"))
+    );
+    EasyMock.replay(autoScalingStrategy);
+
+    boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
+        Arrays.<TaskRunnerWorkItem>asList(
+            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+        ),
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(testTask)
+        )
+    );
+
+    Assert.assertTrue(provisionedSomething);
+    Assert.assertTrue(simpleResourceManagementStrategy.getStats().toList().size() == 1);
+    DateTime createdTime = simpleResourceManagementStrategy.getStats().toList().get(0).getTimestamp();
+    Assert.assertTrue(
+        simpleResourceManagementStrategy.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
+    );
+
+    Thread.sleep(2000);
+
+    provisionedSomething = simpleResourceManagementStrategy.doProvision(
+        Arrays.<TaskRunnerWorkItem>asList(
+            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+        ),
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(testTask)
+        )
+    );
+
+    Assert.assertFalse(provisionedSomething);
+    Assert.assertTrue(
+        simpleResourceManagementStrategy.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
+    );
+    DateTime anotherCreatedTime = simpleResourceManagementStrategy.getStats().toList().get(0).getTimestamp();
+    Assert.assertTrue(
+        createdTime.equals(anotherCreatedTime)
+    );
+
+    EasyMock.verify(autoScalingStrategy);
+    EasyMock.verify(emitter);
   }
 
   @Test

@@ -20,6 +20,7 @@
 package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -40,28 +41,29 @@ import java.util.List;
 
 public class IndexTask extends AbstractTask
 {
-  @JsonProperty
+  @JsonIgnore
   private final GranularitySpec granularitySpec;
 
-  @JsonProperty
+  @JsonIgnore
   private final AggregatorFactory[] aggregators;
 
-  @JsonProperty
+  @JsonIgnore
   private final QueryGranularity indexGranularity;
 
-  @JsonProperty
+  @JsonIgnore
   private final long targetPartitionSize;
 
-  @JsonProperty
+  @JsonIgnore
   private final FirehoseFactory firehoseFactory;
 
-  @JsonProperty
+  @JsonIgnore
   private final int rowFlushBoundary;
 
   private static final Logger log = new Logger(IndexTask.class);
 
   @JsonCreator
   public IndexTask(
+      @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
       @JsonProperty("aggregators") AggregatorFactory[] aggregators,
@@ -73,7 +75,7 @@ public class IndexTask extends AbstractTask
   {
     super(
         // _not_ the version, just something uniqueish
-        String.format("index_%s_%s", dataSource, new DateTime().toString()),
+        id != null ? id : String.format("index_%s_%s", dataSource, new DateTime().toString()),
         dataSource,
         new Interval(
             granularitySpec.bucketIntervals().first().getStart(),
@@ -98,6 +100,7 @@ public class IndexTask extends AbstractTask
         // Need to do one pass over the data before indexing in order to determine good partitions
         retVal.add(
             new IndexDeterminePartitionsTask(
+                null,
                 getGroupId(),
                 interval,
                 firehoseFactory,
@@ -115,6 +118,7 @@ public class IndexTask extends AbstractTask
         // Jump straight into indexing
         retVal.add(
             new IndexGeneratorTask(
+                null,
                 getGroupId(),
                 interval,
                 firehoseFactory,
@@ -151,4 +155,41 @@ public class IndexTask extends AbstractTask
   {
     throw new IllegalStateException("IndexTasks should not be run!");
   }
+
+  @JsonProperty
+  public GranularitySpec getGranularitySpec()
+  {
+    return granularitySpec;
+  }
+
+  @JsonProperty
+  public AggregatorFactory[] getAggregators()
+  {
+    return aggregators;
+  }
+
+  @JsonProperty
+  public QueryGranularity getIndexGranularity()
+  {
+    return indexGranularity;
+  }
+
+  @JsonProperty
+  public long getTargetPartitionSize()
+  {
+    return targetPartitionSize;
+  }
+
+  @JsonProperty
+  public FirehoseFactory getFirehoseFactory()
+  {
+    return firehoseFactory;
+  }
+
+  @JsonProperty
+  public int getRowFlushBoundary()
+  {
+    return rowFlushBoundary;
+  }
+
 }

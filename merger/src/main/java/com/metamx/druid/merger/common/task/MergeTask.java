@@ -20,6 +20,7 @@
 package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
@@ -42,16 +43,18 @@ import java.util.Map;
  */
 public class MergeTask extends MergeTaskBase
 {
+  @JsonIgnore
   private final List<AggregatorFactory> aggregators;
 
   @JsonCreator
   public MergeTask(
+      @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregators
   )
   {
-    super(dataSource, segments);
+    super(id, dataSource, segments);
     this.aggregators = aggregators;
   }
 
@@ -85,5 +88,11 @@ public class MergeTask extends MergeTaskBase
   public String getType()
   {
     return "merge";
+  }
+
+  @JsonProperty("aggregations")
+  public List<AggregatorFactory> getAggregators()
+  {
+    return aggregators;
   }
 }

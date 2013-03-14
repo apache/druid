@@ -42,7 +42,6 @@ public class AutoScalingData<T>
     return nodeIds;
   }
 
-  @JsonProperty
   public List<T> getNodes()
   {
     return nodes;

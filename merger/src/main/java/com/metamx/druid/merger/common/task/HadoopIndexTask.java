@@ -20,6 +20,7 @@
 package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -41,7 +42,7 @@ import java.util.List;
 
 public class HadoopIndexTask extends AbstractTask
 {
-  @JsonProperty
+  @JsonIgnore
   private final HadoopDruidIndexerConfig config;
 
   private static final Logger log = new Logger(HadoopIndexTask.class);
@@ -58,11 +59,12 @@ public class HadoopIndexTask extends AbstractTask
 
   @JsonCreator
   public HadoopIndexTask(
+      @JsonProperty("id") String id,
       @JsonProperty("config") HadoopDruidIndexerConfig config
   )
   {
     super(
-        String.format("index_hadoop_%s_%s", config.getDataSource(), new DateTime()),
+        id != null ? id : String.format("index_hadoop_%s_%s", config.getDataSource(), new DateTime()),
         config.getDataSource(),
         JodaUtils.umbrellaInterval(config.getIntervals())
     );
@@ -132,5 +134,11 @@ public class HadoopIndexTask extends AbstractTask
       return TaskStatus.failure(getId());
     }
 
+  }
+
+  @JsonProperty
+  public HadoopDruidIndexerConfig getConfig()
+  {
+    return config;
   }
 }
