@@ -45,12 +45,13 @@ public class KillTask extends AbstractTask
 
   @JsonCreator
   public KillTask(
+      @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval
   )
   {
     super(
-        String.format(
+        id != null ? id : String.format(
             "kill_%s_%s_%s_%s",
             dataSource,
             interval.getStart(),

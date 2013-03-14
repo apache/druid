@@ -36,6 +36,8 @@ import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.druid.query.segment.SegmentDescriptor;
+import com.metamx.druid.realtime.plumber.Plumber;
+import com.metamx.druid.realtime.plumber.Sink;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -154,6 +156,8 @@ public class RealtimeManager implements QuerySegmentWalker
       final Period intermediatePersistPeriod = config.getIntermediatePersistPeriod();
 
       try {
+        plumber.startJob();
+
         long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
         while (firehose.hasMore()) {
           final InputRow inputRow;

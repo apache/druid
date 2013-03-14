@@ -20,6 +20,7 @@
 package com.metamx.druid.merger.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -38,9 +39,9 @@ import com.metamx.druid.merger.common.index.YeOldePlumberSchool;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
-import com.metamx.druid.realtime.Plumber;
+import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.realtime.Sink;
+import com.metamx.druid.realtime.plumber.Sink;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -52,19 +53,20 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class IndexGeneratorTask extends AbstractTask
 {
-  @JsonProperty
+  @JsonIgnore
   private final FirehoseFactory firehoseFactory;
 
-  @JsonProperty
+  @JsonIgnore
   private final Schema schema;
 
-  @JsonProperty
+  @JsonIgnore
   private final int rowFlushBoundary;
 
   private static final Logger log = new Logger(IndexTask.class);
 
   @JsonCreator
   public IndexGeneratorTask(
+      @JsonProperty("id") String id,
       @JsonProperty("groupId") String groupId,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
@@ -73,7 +75,7 @@ public class IndexGeneratorTask extends AbstractTask
   )
   {
     super(
-        String.format(
+        id != null ? id : String.format(
             "%s_generator_%s_%s_%s",
             groupId,
             interval.getStart(),
@@ -215,5 +217,23 @@ public class IndexGeneratorTask extends AbstractTask
     }
 
     return schema.getShardSpec().isInChunk(eventDimensions);
+  }
+
+  @JsonProperty
+  public FirehoseFactory getFirehoseFactory()
+  {
+    return firehoseFactory;
+  }
+
+  @JsonProperty
+  public Schema getSchema()
+  {
+    return schema;
+  }
+
+  @JsonProperty
+  public int getRowFlushBoundary()
+  {
+    return rowFlushBoundary;
   }
 }

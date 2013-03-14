@@ -36,6 +36,7 @@ import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
 
+import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -52,7 +53,7 @@ public class DbTaskStorage implements TaskStorage
   private final IndexerDbConnectorConfig dbConnectorConfig;
   private final DBI dbi;
 
-  private static final Logger log = new Logger(DbTaskStorage.class);
+  private static final EmittingLogger log = new EmittingLogger(DbTaskStorage.class);
 
   public DbTaskStorage(ObjectMapper jsonMapper, IndexerDbConnectorConfig dbConnectorConfig, DBI dbi)
   {
@@ -203,18 +204,18 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<Task> getRunningTasks()
+  public List<String> getRunningTaskIds()
   {
     return dbi.withHandle(
-        new HandleCallback<List<Task>>()
+        new HandleCallback<List<String>>()
         {
           @Override
-          public List<Task> withHandle(Handle handle) throws Exception
+          public List<String> withHandle(Handle handle) throws Exception
           {
             final List<Map<String, Object>> dbTasks =
                 handle.createQuery(
                     String.format(
-                        "SELECT payload FROM %s WHERE status_code = :status_code",
+                        "SELECT id FROM %s WHERE status_code = :status_code",
                         dbConnectorConfig.getTaskTable()
                     )
                 )
@@ -222,16 +223,12 @@ public class DbTaskStorage implements TaskStorage
                       .list();
 
             return Lists.transform(
-                dbTasks, new Function<Map<String, Object>, Task>()
+                dbTasks, new Function<Map<String, Object>, String>()
             {
               @Override
-              public Task apply(Map<String, Object> row)
+              public String apply(Map<String, Object> row)
               {
-                try {
-                  return jsonMapper.readValue(row.get("payload").toString(), Task.class);
-                } catch(Exception e) {
-                  throw Throwables.propagate(e);
-                }
+                return row.get("id").toString();
               }
             }
             );

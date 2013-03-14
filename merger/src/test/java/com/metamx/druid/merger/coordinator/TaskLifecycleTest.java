@@ -19,7 +19,6 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -153,6 +152,9 @@ public class TaskLifecycleTest
 
           }
         },
+        null, // segment announcer
+        null, // new segment server view
+        null, // query runner factory conglomerate corporation unionized collective
         new DefaultObjectMapper()
     );
 
@@ -184,6 +186,7 @@ public class TaskLifecycleTest
   public void testIndexTask() throws Exception
   {
     final Task indexTask = new IndexTask(
+        null,
         "foo",
         new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P2D"))),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
@@ -226,6 +229,7 @@ public class TaskLifecycleTest
   public void testIndexTaskFailure() throws Exception
   {
     final Task indexTask = new IndexTask(
+        null,
         "foo",
         new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P1D"))),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
@@ -249,7 +253,7 @@ public class TaskLifecycleTest
   {
     // This test doesn't actually do anything right now.  We should actually put things into the Mocked coordinator
     // Such that this test can test things...
-    final Task killTask = new KillTask("foo", new Interval("2010-01-02/P2D"));
+    final Task killTask = new KillTask(null, "foo", new Interval("2010-01-02/P2D"));
 
     final TaskStatus status = runTask(killTask);
     Assert.assertEquals("merged statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
@@ -282,22 +286,20 @@ public class TaskLifecycleTest
         // Sort of similar to what realtime tasks do:
 
         // Acquire lock for first interval
-        final Optional<TaskLock> lock1 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval1));
+        final TaskLock lock1 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval1));
         final List<TaskLock> locks1 = toolbox.getTaskActionClient().submit(new LockListAction());
 
         // (Confirm lock sanity)
-        Assert.assertTrue("lock1 present", lock1.isPresent());
-        Assert.assertEquals("lock1 interval", interval1, lock1.get().getInterval());
-        Assert.assertEquals("locks1", ImmutableList.of(lock1.get()), locks1);
+        Assert.assertEquals("lock1 interval", interval1, lock1.getInterval());
+        Assert.assertEquals("locks1", ImmutableList.of(lock1), locks1);
 
         // Acquire lock for second interval
-        final Optional<TaskLock> lock2 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval2));
+        final TaskLock lock2 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval2));
         final List<TaskLock> locks2 = toolbox.getTaskActionClient().submit(new LockListAction());
 
         // (Confirm lock sanity)
-        Assert.assertTrue("lock2 present", lock2.isPresent());
-        Assert.assertEquals("lock2 interval", interval2, lock2.get().getInterval());
-        Assert.assertEquals("locks2", ImmutableList.of(lock1.get(), lock2.get()), locks2);
+        Assert.assertEquals("lock2 interval", interval2, lock2.getInterval());
+        Assert.assertEquals("locks2", ImmutableList.of(lock1, lock2), locks2);
 
         // Push first segment
         toolbox.getTaskActionClient()
@@ -307,7 +309,7 @@ public class TaskLifecycleTest
                            DataSegment.builder()
                                       .dataSource("foo")
                                       .interval(interval1)
-                                      .version(lock1.get().getVersion())
+                                      .version(lock1.getVersion())
                                       .build()
                        )
                    )
@@ -318,7 +320,7 @@ public class TaskLifecycleTest
         final List<TaskLock> locks3 = toolbox.getTaskActionClient().submit(new LockListAction());
 
         // (Confirm lock sanity)
-        Assert.assertEquals("locks3", ImmutableList.of(lock2.get()), locks3);
+        Assert.assertEquals("locks3", ImmutableList.of(lock2), locks3);
 
         // Push second segment
         toolbox.getTaskActionClient()
@@ -328,7 +330,7 @@ public class TaskLifecycleTest
                            DataSegment.builder()
                                       .dataSource("foo")
                                       .interval(interval2)
-                                      .version(lock2.get().getVersion())
+                                      .version(lock2.getVersion())
                                       .build()
                        )
                    )
@@ -392,7 +394,7 @@ public class TaskLifecycleTest
   }
 
   @Test
-  public void testBadVersion() throws Exception
+  public void testBadInterval() throws Exception
   {
     final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
@@ -426,7 +428,7 @@ public class TaskLifecycleTest
   }
 
   @Test
-  public void testBadInterval() throws Exception
+  public void testBadVersion() throws Exception
   {
     final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
@@ -506,15 +508,22 @@ public class TaskLifecycleTest
     }
 
     @Override
-    public void announceHistoricalSegments(Set<DataSegment> segment)
+    public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
     {
-      published.addAll(segment);
+      Set<DataSegment> added = Sets.newHashSet();
+      for(final DataSegment segment : segments) {
+        if(published.add(segment)) {
+          added.add(segment);
+        }
+      }
+
+      return ImmutableSet.copyOf(added);
     }
 
     @Override
-    public void deleteSegments(Set<DataSegment> segment)
+    public void deleteSegments(Set<DataSegment> segments)
     {
-      nuked.addAll(segment);
+      nuked.addAll(segments);
     }
 
     public Set<DataSegment> getPublished()

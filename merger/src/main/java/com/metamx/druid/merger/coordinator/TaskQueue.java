@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -28,8 +29,8 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskLock;
+import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.emitter.EmittingLogger;
 
@@ -89,33 +90,47 @@ public class TaskQueue
       queue.clear();
       taskLockbox.clear();
 
-      // Add running tasks to the queue
-      final List<Task> runningTasks = taskStorage.getRunningTasks();
-
-      for(final Task task : runningTasks) {
-        queue.add(task);
-      }
-
-      // Get all locks, along with which tasks they belong to
+      // Get all running tasks and their locks
       final Multimap<TaskLock, Task> tasksByLock = ArrayListMultimap.create();
-      for(final Task runningTask : runningTasks) {
-        for(final TaskLock taskLock : taskStorage.getLocks(runningTask.getId())) {
-          tasksByLock.put(taskLock, runningTask);
+
+      for (final String taskId : taskStorage.getRunningTaskIds()) {
+        try {
+          // .get since TaskStorage semantics should mean this task is always found
+          final Task task = taskStorage.getTask(taskId).get();
+          final List<TaskLock> taskLocks = taskStorage.getLocks(task.getId());
+
+          queue.add(task);
+
+          for (final TaskLock taskLock : taskLocks) {
+            tasksByLock.put(taskLock, task);
+          }
+        }
+        catch (Exception e) {
+          log.makeAlert("Failed to bootstrap task").addData("task", taskId).emit();
+
+          // A bit goofy to special-case JsonProcessingException, but we don't want to suppress bootstrap problems on
+          // any old Exception or even IOException...
+          if (e instanceof JsonProcessingException || e.getCause() instanceof JsonProcessingException) {
+            // Mark this task a failure, and continue bootstrapping
+            taskStorage.setStatus(TaskStatus.failure(taskId));
+          } else {
+            throw Throwables.propagate(e);
+          }
         }
       }
 
       // Sort locks by version
-      final Ordering<TaskLock> byVersionOrdering = new Ordering<TaskLock>()
+      final Ordering<Map.Entry<TaskLock, Task>> byVersionOrdering = new Ordering<Map.Entry<TaskLock, Task>>()
       {
         @Override
-        public int compare(TaskLock left, TaskLock right)
+        public int compare(Map.Entry<TaskLock, Task> left, Map.Entry<TaskLock, Task> right)
         {
-          return left.getVersion().compareTo(right.getVersion());
+          return left.getKey().getVersion().compareTo(right.getKey().getVersion());
         }
       };
 
       // Acquire as many locks as possible, in version order
-      for(final Map.Entry<TaskLock, Task> taskAndLock : tasksByLock.entries()) {
+      for(final Map.Entry<TaskLock, Task> taskAndLock : byVersionOrdering.sortedCopy(tasksByLock.entries())) {
         final Task task = taskAndLock.getValue();
         final TaskLock savedTaskLock = taskAndLock.getKey();
 
@@ -150,7 +165,7 @@ public class TaskQueue
         }
       }
 
-      log.info("Bootstrapped %,d tasks. Ready to go!", runningTasks.size());
+      log.info("Bootstrapped %,d tasks with %,d locks. Ready to go!", queue.size(), tasksByLock.keySet().size());
     } finally {
       giant.unlock();
     }
@@ -214,7 +229,7 @@ public class TaskQueue
       // insert the task into our queue.
       try {
         taskStorage.insert(task, TaskStatus.running(task.getId()));
-      } catch(TaskExistsException e) {
+      } catch (TaskExistsException e) {
         log.warn("Attempt to add task twice: %s", task.getId());
         throw Throwables.propagate(e);
       }

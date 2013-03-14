@@ -17,23 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.merger.coordinator;
+package com.metamx.druid.realtime.plumber;
 
-import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.metamx.druid.realtime.FireDepartmentMetrics;
+import com.metamx.druid.realtime.Schema;
 
 /**
  */
-public class RetryPolicyFactory
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(
+    @JsonSubTypes.Type(name = "realtime", value = RealtimePlumberSchool.class)
+)
+public interface PlumberSchool
 {
-  private final RetryPolicyConfig config;
-
-  public RetryPolicyFactory(RetryPolicyConfig config)
-  {
-    this.config = config;
-  }
-
-  public RetryPolicy makeRetryPolicy()
-  {
-    return new RetryPolicy(config);
-  }
+  /**
+   * Creates a Plumber
+   *
+   * @return returns a plumber
+   */
+  public Plumber findPlumber(Schema schema, FireDepartmentMetrics metrics);
 }

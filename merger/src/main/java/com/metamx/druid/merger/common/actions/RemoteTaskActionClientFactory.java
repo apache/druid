@@ -21,6 +21,7 @@ package com.metamx.druid.merger.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.merger.common.RetryPolicyFactory;
 import com.metamx.http.client.HttpClient;
 import com.netflix.curator.x.discovery.ServiceProvider;
 
@@ -30,18 +31,25 @@ public class RemoteTaskActionClientFactory implements TaskActionClientFactory
 {
   private final HttpClient httpClient;
   private final ServiceProvider serviceProvider;
+  private final RetryPolicyFactory retryPolicyFactory;
   private final ObjectMapper jsonMapper;
 
-  public RemoteTaskActionClientFactory(HttpClient httpClient, ServiceProvider serviceProvider, ObjectMapper jsonMapper)
+  public RemoteTaskActionClientFactory(
+      HttpClient httpClient,
+      ServiceProvider serviceProvider,
+      RetryPolicyFactory retryPolicyFactory,
+      ObjectMapper jsonMapper
+  )
   {
     this.httpClient = httpClient;
     this.serviceProvider = serviceProvider;
+    this.retryPolicyFactory = retryPolicyFactory;
     this.jsonMapper = jsonMapper;
   }
 
   @Override
   public TaskActionClient create(Task task)
   {
-    return new RemoteTaskActionClient(task, httpClient, serviceProvider, jsonMapper);
+    return new RemoteTaskActionClient(task, httpClient, serviceProvider, retryPolicyFactory, jsonMapper);
   }
 }

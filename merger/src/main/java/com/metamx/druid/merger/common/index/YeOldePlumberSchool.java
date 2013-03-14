@@ -39,10 +39,10 @@ import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
-import com.metamx.druid.realtime.Plumber;
-import com.metamx.druid.realtime.PlumberSchool;
+import com.metamx.druid.realtime.plumber.Plumber;
+import com.metamx.druid.realtime.plumber.PlumberSchool;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.realtime.Sink;
+import com.metamx.druid.realtime.plumber.Sink;
 
 
 import org.apache.commons.io.FileUtils;
@@ -84,16 +84,22 @@ public class YeOldePlumberSchool implements PlumberSchool
   public Plumber findPlumber(final Schema schema, final FireDepartmentMetrics metrics)
   {
     // There can be only one.
-    final Sink theSink = new Sink(interval, schema);
+    final Sink theSink = new Sink(interval, schema, version);
 
     // Temporary directory to hold spilled segments.
-    final File persistDir = new File(tmpSegmentDir, theSink.getSegment().withVersion(version).getIdentifier());
+    final File persistDir = new File(tmpSegmentDir, theSink.getSegment().getIdentifier());
 
     // Set of spilled segments. Will be merged at the end.
     final Set<File> spilled = Sets.newHashSet();
 
     return new Plumber()
     {
+      @Override
+      public void startJob()
+      {
+
+      }
+
       @Override
       public Sink getSink(long timestamp)
       {
@@ -146,7 +152,6 @@ public class YeOldePlumberSchool implements PlumberSchool
 
           final DataSegment segmentToUpload = theSink.getSegment()
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
-                                                     .withVersion(version)
                                                      .withBinaryVersion(IndexIO.getVersionFromDir(fileToUpload));
 
           dataSegmentPusher.push(fileToUpload, segmentToUpload);

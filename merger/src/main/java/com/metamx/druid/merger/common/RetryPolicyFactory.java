@@ -17,31 +17,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.merger.common;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 
 /**
  */
-public abstract class MetadataUpdaterConfig
+public class RetryPolicyFactory
 {
-  @Config("druid.host")
-  public abstract String getServerName();
+  private final RetryPolicyConfig config;
 
-  @Config("druid.host")
-  public abstract String getHost();
+  public RetryPolicyFactory(RetryPolicyConfig config)
+  {
+    this.config = config;
+  }
 
-  @Config("druid.server.maxSize")
-  @Default("0")
-  public abstract long getMaxSize();
-
-  @Config("druid.database.segmentTable")
-  public abstract String getSegmentTable();
-
-  @Config("druid.zk.paths.announcementsPath")
-  public abstract String getAnnounceLocation();
-
-  @Config("druid.zk.paths.servedSegmentsPath")
-  public abstract String getServedSegmentsLocation();
+  public RetryPolicy makeRetryPolicy()
+  {
+    return new RetryPolicy(config);
+  }
 }

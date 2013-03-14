@@ -22,6 +22,7 @@ package com.metamx.druid.merger.common;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.client.MutableServerView;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
 import com.metamx.druid.loading.S3DataSegmentPuller;
@@ -33,6 +34,8 @@ import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
+import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
@@ -52,6 +55,9 @@ public class TaskToolbox
   private final RestS3Service s3Client;
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
+  private final SegmentAnnouncer segmentAnnouncer;
+  private final MutableServerView newSegmentServerView;
+  private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final ObjectMapper objectMapper;
 
   public TaskToolbox(
@@ -62,6 +68,9 @@ public class TaskToolbox
       RestS3Service s3Client,
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
+      SegmentAnnouncer segmentAnnouncer,
+      MutableServerView newSegmentServerView,
+      QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       ObjectMapper objectMapper
   )
   {
@@ -72,6 +81,9 @@ public class TaskToolbox
     this.s3Client = s3Client;
     this.segmentPusher = segmentPusher;
     this.dataSegmentKiller = dataSegmentKiller;
+    this.segmentAnnouncer = segmentAnnouncer;
+    this.newSegmentServerView = newSegmentServerView;
+    this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
     this.objectMapper = objectMapper;
   }
 
@@ -98,6 +110,21 @@ public class TaskToolbox
   public DataSegmentKiller getDataSegmentKiller()
   {
     return dataSegmentKiller;
+  }
+
+  public SegmentAnnouncer getSegmentAnnouncer()
+  {
+    return segmentAnnouncer;
+  }
+
+  public MutableServerView getNewSegmentServerView()
+  {
+    return newSegmentServerView;
+  }
+
+  public QueryRunnerFactoryConglomerate getQueryRunnerFactoryConglomerate()
+  {
+    return queryRunnerFactoryConglomerate;
   }
 
   public ObjectMapper getObjectMapper()

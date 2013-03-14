@@ -1,6 +1,7 @@
 package com.metamx.druid.merger.coordinator;
 
-import com.metamx.druid.merger.coordinator.config.RetryPolicyConfig;
+import com.metamx.druid.merger.common.RetryPolicy;
+import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import junit.framework.Assert;
 import org.joda.time.Duration;
 import org.junit.Test;
