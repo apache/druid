@@ -77,7 +77,8 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
 
   private final Map<String, Object> injectablesMap = Maps.newLinkedHashMap();
 
-  private MetadataUpdater metadataUpdater = null;
+  private SegmentAnnouncer segmentAnnouncer = null;
+  private SegmentPublisher segmentPublisher = null;
   private DataSegmentPusher dataSegmentPusher = null;
   private List<FireDepartment> fireDepartments = null;
   private ServerView view = null;
@@ -102,10 +103,17 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     return this;
   }
 
-  public RealtimeNode setMetadataUpdater(MetadataUpdater metadataUpdater)
+  public RealtimeNode setSegmentAnnouncer(SegmentAnnouncer segmentAnnouncer)
   {
-    Preconditions.checkState(this.metadataUpdater == null, "Cannot set metadataUpdater once it has already been set.");
-    this.metadataUpdater = metadataUpdater;
+    Preconditions.checkState(this.segmentAnnouncer == null, "Cannot set segmentAnnouncer once it has already been set.");
+    this.segmentAnnouncer = segmentAnnouncer;
+    return this;
+  }
+
+  public RealtimeNode setSegmentPublisher(SegmentPublisher segmentPublisher)
+  {
+    Preconditions.checkState(this.segmentPublisher == null, "Cannot set segmentPublisher once it has already been set.");
+    this.segmentPublisher = segmentPublisher;
     return this;
   }
 
@@ -130,10 +138,16 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     return this;
   }
 
-  public MetadataUpdater getMetadataUpdater()
+  public SegmentAnnouncer getSegmentAnnouncer()
   {
-    initializeMetadataUpdater();
-    return metadataUpdater;
+    initializeSegmentAnnouncer();
+    return segmentAnnouncer;
+  }
+
+  public SegmentPublisher getSegmentPublisher()
+  {
+    initializeSegmentPublisher();
+    return segmentPublisher;
   }
 
   public DataSegmentPusher getDataSegmentPusher()
@@ -157,7 +171,8 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
   protected void doInit() throws Exception
   {
     initializeView();
-    initializeMetadataUpdater();
+    initializeSegmentAnnouncer();
+    initializeSegmentPublisher();
     initializeSegmentPusher();
     initializeJacksonInjectables();
 
@@ -213,7 +228,8 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
 
     injectables.put("queryRunnerFactoryConglomerate", getConglomerate());
     injectables.put("segmentPusher", dataSegmentPusher);
-    injectables.put("metadataUpdater", metadataUpdater);
+    injectables.put("segmentAnnouncer", segmentAnnouncer);
+    injectables.put("segmentPublisher", segmentPublisher);
     injectables.put("serverView", view);
     injectables.put("serviceEmitter", getEmitter());
 
@@ -253,16 +269,25 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     }
   }
 
-  protected void initializeMetadataUpdater()
+  protected void initializeSegmentAnnouncer()
   {
-    if (metadataUpdater == null) {
-      metadataUpdater = new MetadataUpdater(
+    if (segmentAnnouncer == null) {
+      final ZkSegmentAnnouncerConfig zkSegmentAnnouncerConfig = getConfigFactory().build(ZkSegmentAnnouncerConfig.class);
+      segmentAnnouncer = new ZkSegmentAnnouncer(zkSegmentAnnouncerConfig, getPhoneBook());
+      getLifecycle().addManagedInstance(segmentAnnouncer);
+    }
+  }
+
+  protected void initializeSegmentPublisher()
+  {
+    if (segmentPublisher == null) {
+      final DbSegmentPublisherConfig dbSegmentPublisherConfig = getConfigFactory().build(DbSegmentPublisherConfig.class);
+      segmentPublisher = new DbSegmentPublisher(
           getJsonMapper(),
-          getConfigFactory().build(MetadataUpdaterConfig.class),
-          getPhoneBook(),
+          dbSegmentPublisherConfig,
           new DbConnector(getConfigFactory().build(DbConnectorConfig.class)).getDBI()
       );
-      getLifecycle().addManagedInstance(metadataUpdater);
+      getLifecycle().addManagedInstance(segmentPublisher);
     }
   }
 

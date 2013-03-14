@@ -45,6 +45,7 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -58,12 +59,34 @@ public class TaskLockbox
   private final Map<String, NavigableMap<Interval, TaskLockPosse>> running = Maps.newHashMap();
   private final TaskStorage taskStorage;
   private final ReentrantLock giant = new ReentrantLock();
+  private final Condition lockReleaseCondition = giant.newCondition();
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);
 
   public TaskLockbox(TaskStorage taskStorage)
   {
     this.taskStorage = taskStorage;
+  }
+
+  /**
+   * Locks a task without removing it from the queue. Blocks until the lock is acquired. Throws an exception
+   * if the lock cannot be acquired.
+   */
+  public TaskLock lock(final Task task, final Interval interval) throws InterruptedException
+  {
+    giant.lock();
+
+    try {
+      Optional<TaskLock> taskLock;
+
+      while (!(taskLock = tryLock(task, interval)).isPresent()) {
+        lockReleaseCondition.await();
+      }
+
+      return taskLock.get();
+    } finally {
+      giant.unlock();
+    }
   }
 
   /**
@@ -240,6 +263,9 @@ public class TaskLockbox
           if (running.get(dataSource).size() == 0) {
             running.remove(dataSource);
           }
+
+          // Wake up blocking-lock waiters
+          lockReleaseCondition.signalAll();
 
           // Best effort to remove lock from storage
           try {

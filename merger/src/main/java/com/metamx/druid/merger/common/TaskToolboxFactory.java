@@ -20,11 +20,14 @@
 package com.metamx.druid.merger.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.druid.client.MutableServerView;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
+import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
@@ -39,6 +42,9 @@ public class TaskToolboxFactory
   private final RestS3Service s3Client;
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
+  private final SegmentAnnouncer segmentAnnouncer;
+  private final MutableServerView newSegmentServerView;
+  private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final ObjectMapper objectMapper;
 
   public TaskToolboxFactory(
@@ -48,6 +54,9 @@ public class TaskToolboxFactory
       RestS3Service s3Client,
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
+      SegmentAnnouncer segmentAnnouncer,
+      MutableServerView newSegmentServerView,
+      QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       ObjectMapper objectMapper
   )
   {
@@ -57,6 +66,9 @@ public class TaskToolboxFactory
     this.s3Client = s3Client;
     this.segmentPusher = segmentPusher;
     this.dataSegmentKiller = dataSegmentKiller;
+    this.segmentAnnouncer = segmentAnnouncer;
+    this.newSegmentServerView = newSegmentServerView;
+    this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
     this.objectMapper = objectMapper;
   }
 
@@ -75,6 +87,9 @@ public class TaskToolboxFactory
         s3Client,
         segmentPusher,
         dataSegmentKiller,
+        segmentAnnouncer,
+        newSegmentServerView,
+        queryRunnerFactoryConglomerate,
         objectMapper
     );
   }

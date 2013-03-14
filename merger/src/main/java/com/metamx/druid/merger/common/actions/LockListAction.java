@@ -20,10 +20,12 @@ public class LockListAction implements TaskAction<List<TaskLock>>
   @Override
   public List<TaskLock> perform(Task task, TaskActionToolbox toolbox)
   {
-    try {
-      return toolbox.getTaskLockbox().findLocksForTask(task);
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+    return toolbox.getTaskLockbox().findLocksForTask(task);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LockListAction{}";
   }
 }

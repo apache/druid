@@ -50,8 +50,13 @@ public class KafkaFirehoseFactory implements FirehoseFactory
 {
   private static final Logger log = new Logger(KafkaFirehoseFactory.class);
 
+  @JsonProperty
   private final Properties consumerProps;
+
+  @JsonProperty
   private final String feed;
+
+  @JsonProperty
   private final StringInputRowParser parser;
 
   @JsonCreator

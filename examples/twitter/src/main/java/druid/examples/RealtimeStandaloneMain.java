@@ -1,21 +1,18 @@
 package druid.examples;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.ZKPhoneBook;
-import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.log.LogLevelAdjuster;
-import com.metamx.druid.realtime.MetadataUpdater;
-import com.metamx.druid.realtime.MetadataUpdaterConfig;
-import com.metamx.druid.realtime.RealtimeNode;
 import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.log.LogLevelAdjuster;
+import com.metamx.druid.realtime.RealtimeNode;
+import com.metamx.druid.realtime.SegmentAnnouncer;
+import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.phonebook.PhoneBook;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
-
 
 import java.io.File;
 import java.io.IOException;
@@ -47,35 +44,34 @@ public class RealtimeStandaloneMain
     };
 
     rn.setPhoneBook(dummyPhoneBook);
-    MetadataUpdater dummyMetadataUpdater =
-        new MetadataUpdater(
-            new DefaultObjectMapper(),
-            Config.createFactory(Initialization.loadProperties()).build(MetadataUpdaterConfig.class),
-            dummyPhoneBook,
-            null
-        ) {
+    final SegmentAnnouncer dummySegmentAnnouncer =
+      new SegmentAnnouncer()
+      {
+        @Override
+        public void announceSegment(DataSegment segment) throws IOException
+        {
+          // do nothing
+        }
+
+        @Override
+        public void unannounceSegment(DataSegment segment) throws IOException
+        {
+          // do nothing
+        }
+      };
+    SegmentPublisher dummySegmentPublisher =
+        new SegmentPublisher()
+        {
           @Override
           public void publishSegment(DataSegment segment) throws IOException
           {
             // do nothing
           }
-
-          @Override
-          public void unannounceSegment(DataSegment segment) throws IOException
-          {
-            // do nothing
-          }
-
-          @Override
-          public void announceSegment(DataSegment segment) throws IOException
-          {
-            // do nothing
-          }
         };
 
-    // dummyMetadataUpdater will not send updates to db because standalone demo has no db
-    rn.setMetadataUpdater(dummyMetadataUpdater);
-
+    // dummySegmentPublisher will not send updates to db because standalone demo has no db
+    rn.setSegmentAnnouncer(dummySegmentAnnouncer);
+    rn.setSegmentPublisher(dummySegmentPublisher);
     rn.setDataSegmentPusher(
         new DataSegmentPusher()
         {
