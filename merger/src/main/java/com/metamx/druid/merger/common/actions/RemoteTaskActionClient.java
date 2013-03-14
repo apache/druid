@@ -13,6 +13,7 @@ import com.metamx.http.client.response.ToStringResponseHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.curator.x.discovery.ServiceInstance;
 import com.netflix.curator.x.discovery.ServiceProvider;
+import org.joda.time.Duration;
 
 import java.io.IOException;
 import java.net.URI;
@@ -89,7 +90,9 @@ public class RemoteTaskActionClient implements TaskActionClient
           throw e;
         } else {
           try {
-            Thread.sleep(retryPolicy.getAndIncrementRetryDelay().getMillis());
+            final long sleepTime = retryPolicy.getAndIncrementRetryDelay().getMillis();
+            log.info("Will try again in %s.", new Duration(sleepTime).toString());
+            Thread.sleep(sleepTime);
           }
           catch (InterruptedException e2) {
             throw Throwables.propagate(e2);
