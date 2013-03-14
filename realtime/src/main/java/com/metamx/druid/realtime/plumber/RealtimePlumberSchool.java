@@ -17,13 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.realtime.plumber;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -55,6 +53,11 @@ import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
+import com.metamx.druid.realtime.FireDepartmentMetrics;
+import com.metamx.druid.realtime.FireHydrant;
+import com.metamx.druid.realtime.Schema;
+import com.metamx.druid.realtime.SegmentAnnouncer;
+import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -570,104 +573,6 @@ public class RealtimePlumberSchool implements PlumberSchool
             );
       }
     };
-  }
-
-  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-  @JsonSubTypes(value = {
-      @JsonSubTypes.Type(name = "intervalStart", value = IntervalStartVersioningPolicy.class)
-  })
-  public static interface VersioningPolicy
-  {
-    public String getVersion(Interval interval);
-  }
-
-  public static class IntervalStartVersioningPolicy implements VersioningPolicy
-  {
-    @Override
-    public String getVersion(Interval interval)
-    {
-      return interval.getStart().toString();
-    }
-  }
-
-  public interface RejectionPolicy
-  {
-    public DateTime getCurrMaxTime();
-    public boolean accept(long timestamp);
-  }
-
-  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-  @JsonSubTypes(value = {
-      @JsonSubTypes.Type(name = "serverTime", value = ServerTimeRejectionPolicyFactory.class),
-      @JsonSubTypes.Type(name = "messageTime", value = MessageTimeRejectionPolicyFactory.class)
-  })
-  public static interface RejectionPolicyFactory
-  {
-    public RejectionPolicy create(Period windowPeriod);
-  }
-
-  public static class ServerTimeRejectionPolicyFactory implements RejectionPolicyFactory
-  {
-    @Override
-    public RejectionPolicy create(final Period windowPeriod)
-    {
-      final long windowMillis = windowPeriod.toStandardDuration().getMillis();
-
-      return new RejectionPolicy()
-      {
-        @Override
-        public DateTime getCurrMaxTime()
-        {
-          return new DateTime();
-        }
-
-        @Override
-        public boolean accept(long timestamp)
-        {
-          return timestamp >= (System.currentTimeMillis() - windowMillis);
-        }
-
-        @Override
-        public String toString()
-        {
-          return String.format("serverTime-%s", windowPeriod);
-        }
-      };
-    }
-  }
-
-  public static class MessageTimeRejectionPolicyFactory implements RejectionPolicyFactory
-  {
-    @Override
-    public RejectionPolicy create(final Period windowPeriod)
-    {
-      final long windowMillis = windowPeriod.toStandardDuration().getMillis();
-
-      return new RejectionPolicy()
-      {
-        private volatile long maxTimestamp = Long.MIN_VALUE;
-
-        @Override
-        public DateTime getCurrMaxTime()
-        {
-          return new DateTime(maxTimestamp);
-        }
-
-        @Override
-        public boolean accept(long timestamp)
-        {
-          maxTimestamp = Math.max(maxTimestamp, timestamp);
-
-          return timestamp >= (maxTimestamp - windowMillis);
-        }
-
-        @Override
-        public String toString()
-        {
-          return String.format("messageTime-%s", windowPeriod);
-        }
-      };
-    }
   }
 
   private File computeBaseDir(Schema schema)

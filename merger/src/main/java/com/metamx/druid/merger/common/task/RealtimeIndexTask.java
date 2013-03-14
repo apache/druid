@@ -22,12 +22,13 @@ import com.metamx.druid.realtime.FireDepartmentConfig;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
-import com.metamx.druid.realtime.Plumber;
-import com.metamx.druid.realtime.RealtimePlumberSchool;
+import com.metamx.druid.realtime.plumber.Plumber;
+import com.metamx.druid.realtime.plumber.RealtimePlumberSchool;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.druid.realtime.SegmentPublisher;
-import com.metamx.druid.realtime.Sink;
+import com.metamx.druid.realtime.plumber.Sink;
+import com.metamx.druid.realtime.plumber.VersioningPolicy;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -164,7 +165,7 @@ public class RealtimeIndexTask extends AbstractTask
     // Shouldn't usually happen, since we don't expect people to submit tasks that intersect with the
     // realtime window, but if they do it can be problematic. If we decide to care, we can use more threads in
     // the plumber such that waiting for the coordinator doesn't block data processing.
-    final RealtimePlumberSchool.VersioningPolicy versioningPolicy = new RealtimePlumberSchool.VersioningPolicy()
+    final VersioningPolicy versioningPolicy = new VersioningPolicy()
     {
       @Override
       public String getVersion(final Interval interval)

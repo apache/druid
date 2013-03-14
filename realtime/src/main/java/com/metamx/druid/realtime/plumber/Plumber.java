@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.realtime.plumber;
 
 import com.metamx.druid.Query;
 import com.metamx.druid.query.QueryRunner;

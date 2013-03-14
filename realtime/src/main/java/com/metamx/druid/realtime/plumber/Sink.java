@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.realtime.plumber;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -32,6 +32,8 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.input.InputRow;
+import com.metamx.druid.realtime.FireHydrant;
+import com.metamx.druid.realtime.Schema;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

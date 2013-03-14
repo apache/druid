@@ -39,10 +39,10 @@ import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
-import com.metamx.druid.realtime.Plumber;
-import com.metamx.druid.realtime.PlumberSchool;
+import com.metamx.druid.realtime.plumber.Plumber;
+import com.metamx.druid.realtime.plumber.PlumberSchool;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.realtime.Sink;
+import com.metamx.druid.realtime.plumber.Sink;
 
 
 import org.apache.commons.io.FileUtils;
