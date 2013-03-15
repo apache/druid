@@ -22,8 +22,10 @@ package com.metamx.druid.merger.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
@@ -71,13 +73,11 @@ public class MergerDBCoordinator
   public List<DataSegment> getUsedSegmentsForInterval(final String dataSource, final Interval interval)
       throws IOException
   {
-    // XXX Could be reading from a cache if we can assume we're the only one editing the DB
-
     final VersionedIntervalTimeline<String, DataSegment> timeline = dbi.withHandle(
         new HandleCallback<VersionedIntervalTimeline<String, DataSegment>>()
         {
           @Override
-          public VersionedIntervalTimeline<String, DataSegment> withHandle(Handle handle) throws Exception
+          public VersionedIntervalTimeline<String, DataSegment> withHandle(Handle handle) throws IOException
           {
             final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<String, DataSegment>(
                 Ordering.natural()
@@ -129,31 +129,47 @@ public class MergerDBCoordinator
     return segments;
   }
 
-  public void announceHistoricalSegments(final Set<DataSegment> segments) throws Exception
+  /**
+   * Attempts to insert a set of segments to the database. Returns the set of segments actually added (segments
+   * with identifiers already in the database will not be added).
+   *
+   * @param segments set of segments to add
+   * @return set of segments actually added
+   */
+  public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
-    dbi.inTransaction(
-        new TransactionCallback<Void>()
+    return dbi.inTransaction(
+        new TransactionCallback<Set<DataSegment>>()
         {
           @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+          public Set<DataSegment> inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
           {
-            for(final DataSegment segment : segments) {
-              announceHistoricalSegment(handle, segment);
+            final Set<DataSegment> inserted = Sets.newHashSet();
+
+            for (final DataSegment segment : segments) {
+              if (announceHistoricalSegment(handle, segment)) {
+                inserted.add(segment);
+              }
             }
 
-            return null;
+            return ImmutableSet.copyOf(inserted);
           }
         }
     );
   }
 
-
-  private void announceHistoricalSegment(final Handle handle, final DataSegment segment) throws Exception
+  /**
+   * Attempts to insert a single segment to the database. If the segment already exists, will do nothing. Meant
+   * to be called from within a transaction.
+   *
+   * @return true if the segment was added, false otherwise
+   */
+  private boolean announceHistoricalSegment(final Handle handle, final DataSegment segment) throws IOException
   {
     try {
       final List<Map<String, Object>> exists = handle.createQuery(
           String.format(
-              "SELECT id FROM %s WHERE id = ':identifier'",
+              "SELECT id FROM %s WHERE id = :identifier",
               dbConnectorConfig.getSegmentTable()
           )
       ).bind(
@@ -163,7 +179,7 @@ public class MergerDBCoordinator
 
       if (!exists.isEmpty()) {
         log.info("Found [%s] in DB, not updating DB", segment.getIdentifier());
-        return;
+        return false;
       }
 
       handle.createStatement(
@@ -185,19 +201,21 @@ public class MergerDBCoordinator
 
       log.info("Published segment [%s] to DB", segment.getIdentifier());
     }
-    catch (Exception e) {
+    catch (IOException e) {
       log.error(e, "Exception inserting into DB");
       throw e;
     }
+
+    return true;
   }
 
-  public void deleteSegments(final Set<DataSegment> segments) throws Exception
+  public void deleteSegments(final Set<DataSegment> segments) throws IOException
   {
     dbi.inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
           {
             for(final DataSegment segment : segments) {
               deleteSegment(handle, segment);
@@ -223,7 +241,7 @@ public class MergerDBCoordinator
         new HandleCallback<List<DataSegment>>()
         {
           @Override
-          public List<DataSegment> withHandle(Handle handle) throws Exception
+          public List<DataSegment> withHandle(Handle handle) throws IOException
           {
             return handle.createQuery(
                 String.format(

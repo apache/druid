@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.IAE;
+import com.metamx.common.ISE;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.InputStreamResponseHandler;
@@ -106,6 +107,10 @@ public class IndexingServiceClient
   {
     try {
       final ServiceInstance instance = serviceProvider.getInstance();
+      if (instance == null) {
+        throw new ISE("Cannot find instance of indexingService");
+      }
+
       return String.format("http://%s:%s/mmx/merger/v1", instance.getAddress(), instance.getPort());
     }
     catch (Exception e) {

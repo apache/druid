@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.realtime.plumber;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -32,6 +32,8 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.input.InputRow;
+import com.metamx.druid.realtime.FireHydrant;
+import com.metamx.druid.realtime.Schema;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -50,16 +52,19 @@ public class Sink implements Iterable<FireHydrant>
 
   private final Interval interval;
   private final Schema schema;
+  private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
 
 
   public Sink(
       Interval interval,
-      Schema schema
+      Schema schema,
+      String version
   )
   {
     this.schema = schema;
     this.interval = interval;
+    this.version = version;
 
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
@@ -67,11 +72,13 @@ public class Sink implements Iterable<FireHydrant>
   public Sink(
       Interval interval,
       Schema schema,
+      String version,
       List<FireHydrant> hydrants
   )
   {
     this.schema = schema;
     this.interval = interval;
+    this.version = version;
 
     for (int i = 0; i < hydrants.size(); ++i) {
       final FireHydrant hydrant = hydrants.get(i);
@@ -100,6 +107,13 @@ public class Sink implements Iterable<FireHydrant>
     }
   }
 
+  public boolean isEmpty()
+  {
+    synchronized (currIndex) {
+      return hydrants.size() == 1 && currIndex.getIndex().isEmpty();
+    }
+  }
+
   /**
    * If currIndex is A, creates a new index B, sets currIndex to B and returns A.
    *
@@ -122,7 +136,7 @@ public class Sink implements Iterable<FireHydrant>
     return new DataSegment(
         schema.getDataSource(),
         interval,
-        interval.getStart().toString(),
+        version,
         ImmutableMap.<String, Object>of(),
         Lists.<String>newArrayList(),
         Lists.transform(

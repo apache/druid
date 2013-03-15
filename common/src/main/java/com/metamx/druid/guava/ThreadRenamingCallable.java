@@ -17,24 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.guava;
 
-
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import java.util.concurrent.Callable;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(
-    @JsonSubTypes.Type(name = "realtime", value = RealtimePlumberSchool.class)
-)
-public interface PlumberSchool
+public abstract class ThreadRenamingCallable<T> implements Callable<T>
 {
-  /**
-   * Creates a Plumber
-   *
-   * @return returns a plumber
-   */
-  public Plumber findPlumber(Schema schema, FireDepartmentMetrics metrics);
+  private final String name;
+
+  public ThreadRenamingCallable(
+      String name
+  )
+  {
+    this.name = name;
+  }
+
+  @Override
+  public final T call()
+  {
+    final Thread currThread = Thread.currentThread();
+    String currName = currThread.getName();
+    try {
+      currThread.setName(name);
+      return doCall();
+    }
+    finally {
+      currThread.setName(currName);
+    }
+  }
+
+  public abstract T doCall();
 }

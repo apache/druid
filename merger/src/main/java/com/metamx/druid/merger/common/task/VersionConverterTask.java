@@ -34,6 +34,7 @@ import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
+import com.metamx.druid.merger.common.actions.SegmentListUsedAction;
 import com.metamx.druid.merger.common.actions.SpawnTasksAction;
 import com.metamx.druid.merger.common.actions.TaskActionClient;
 import org.joda.time.DateTime;
@@ -77,7 +78,7 @@ public class VersionConverterTask extends AbstractTask
   }
 
   @JsonCreator
-  private VersionConverterTask(
+  private static VersionConverterTask createFromJson(
       @JsonProperty("id") String id,
       @JsonProperty("groupId") String groupId,
       @JsonProperty("dataSource") String dataSource,
@@ -85,12 +86,26 @@ public class VersionConverterTask extends AbstractTask
       @JsonProperty("segment") DataSegment segment
   )
   {
-    super(
-        id,
-        groupId,
-        dataSource,
-        interval
-    );
+    if (id == null) {
+      if (segment == null) {
+        return create(dataSource, interval);
+      }
+      else {
+        return create(segment);
+      }
+    }
+    return new VersionConverterTask(id, groupId, dataSource, interval, segment);
+  }
+
+  private VersionConverterTask(
+      String id,
+      String groupId,
+      String dataSource,
+      Interval interval,
+      DataSegment segment
+  )
+  {
+    super(id, groupId, dataSource, interval);
 
     this.segment = segment;
   }
@@ -224,6 +239,21 @@ public class VersionConverterTask extends AbstractTask
       throws SegmentLoadingException, IOException
   {
     log.info("Converting segment[%s]", segment);
+    final TaskActionClient actionClient = toolbox.getTaskActionClient();
+    final List<DataSegment> currentSegments = actionClient.submit(
+        new SegmentListUsedAction(segment.getDataSource(), segment.getInterval())
+    );
+
+    for (DataSegment currentSegment : currentSegments) {
+      final String version = currentSegment.getVersion();
+      final Integer binaryVersion = currentSegment.getBinaryVersion();
+
+      if (version.startsWith(segment.getVersion()) && CURR_VERSION_INTEGER.equals(binaryVersion)) {
+        log.info("Skipping already updated segment[%s].", segment);
+        return;
+      }
+    }
+
     final Map<DataSegment, File> localSegments = toolbox.getSegments(Arrays.asList(segment));
 
     final File location = localSegments.get(segment);
@@ -236,8 +266,7 @@ public class VersionConverterTask extends AbstractTask
       DataSegment updatedSegment = segment.withVersion(String.format("%s_v%s", segment.getVersion(), outVersion));
       updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment);
 
-      toolbox.getTaskActionClient()
-             .submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)).withAllowOlderVersions(true));
+      actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)).withAllowOlderVersions(true));
     } else {
       log.info("Conversion failed.");
     }

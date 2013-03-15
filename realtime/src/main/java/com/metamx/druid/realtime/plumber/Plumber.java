@@ -17,17 +17,33 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.realtime.plumber;
 
 import com.metamx.druid.Query;
 import com.metamx.druid.query.QueryRunner;
 
-/**
- */
 public interface Plumber
 {
+  /**
+   * Perform any initial setup. Should be called before using any other methods, and should be paired
+   * with a corresponding call to {@link #finishJob}.
+   */
+  public void startJob();
+
   public Sink getSink(long timestamp);
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
+
+  /**
+   * Persist any in-memory indexed data to durable storage. This may be only somewhat durable, e.g. the
+   * machine's local disk.
+   *
+   * @param commitRunnable code to run after persisting data
+   */
   void persist(Runnable commitRunnable);
+
+  /**
+   * Perform any final processing and clean up after ourselves. Should be called after all data has been
+   * fed into sinks and persisted.
+   */
   public void finishJob();
 }

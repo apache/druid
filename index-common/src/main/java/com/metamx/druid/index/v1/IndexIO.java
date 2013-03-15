@@ -204,10 +204,31 @@ public class IndexIO
     final int version = getVersionFromDir(toConvert);
 
     switch (version) {
+      case 1:
+      case 2:
+      case 3:
+        final String mappableDirName = "mappable";
+        if (toConvert.getName().equals(mappableDirName)) {
+          throw new ISE("Infinite recursion at play!  OMFG quit it, please, it hurts!");
+        }
+
+        File mappable = new File(toConvert, mappableDirName);
+        final Index index = readIndex(toConvert);
+        storeLatest(index, mappable);
+
+        return convertSegment(mappable, converted);
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+        log.info("Old version, re-persisting.");
+        IndexMerger.append(Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))), converted);
+        return true;
       case 8:
         DefaultIndexIOHandler.convertV8toV9(toConvert, converted);
         return true;
       default:
+        log.info("Version[%s], skipping.", version);
         return false;
     }
   }

@@ -1,19 +1,15 @@
 package com.metamx.druid.merger.common.actions;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.metamx.common.ISE;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.merger.common.TaskLock;
-import com.metamx.druid.merger.common.task.Task;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.ImmutableSet;
+import com.metamx.common.ISE;
+import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.merger.common.task.Task;
+import com.metamx.emitter.service.ServiceMetricEvent;
 
-import java.util.List;
+import java.io.IOException;
 import java.util.Set;
 
 public class SegmentNukeAction implements TaskAction<Void>
@@ -40,28 +36,32 @@ public class SegmentNukeAction implements TaskAction<Void>
   }
 
   @Override
-  public Void perform(Task task, TaskActionToolbox toolbox)
+  public Void perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
     if(!toolbox.taskLockCoversSegments(task, segments, true)) {
       throw new ISE("Segments not covered by locks for task: %s", task.getId());
     }
 
-    try {
-      toolbox.getMergerDBCoordinator().deleteSegments(segments);
+    toolbox.getMergerDBCoordinator().deleteSegments(segments);
 
-      // Emit metrics
-      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-          .setUser2(task.getDataSource())
-          .setUser4(task.getType());
+    // Emit metrics
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
+        .setUser2(task.getDataSource())
+        .setUser4(task.getType());
 
-      for (DataSegment segment : segments) {
-        metricBuilder.setUser5(segment.getInterval().toString());
-        toolbox.getEmitter().emit(metricBuilder.build("indexer/segmentNuked/bytes", segment.getSize()));
-      }
-
-      return null;
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
+    for (DataSegment segment : segments) {
+      metricBuilder.setUser5(segment.getInterval().toString());
+      toolbox.getEmitter().emit(metricBuilder.build("indexer/segmentNuked/bytes", segment.getSize()));
     }
+
+    return null;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SegmentNukeAction{" +
+           "segments=" + segments +
+           '}';
   }
 }

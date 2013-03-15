@@ -39,9 +39,9 @@ import com.metamx.druid.merger.common.index.YeOldePlumberSchool;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
-import com.metamx.druid.realtime.Plumber;
+import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.realtime.Sink;
+import com.metamx.druid.realtime.plumber.Sink;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

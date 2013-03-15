@@ -62,7 +62,7 @@ public class CompressionUtils
       zipOut = new ZipOutputStream(new FileOutputStream(outputZipFile));
       File[] files = directory.listFiles();
       for (File file : files) {
-        log.info("Adding file[%s] with size[%,d].  Total size[%,d]", file, file.length(), totalSize);
+        log.info("Adding file[%s] with size[%,d].  Total size so far[%,d]", file, file.length(), totalSize);
         if (file.length() >= Integer.MAX_VALUE) {
           zipOut.close();
           outputZipFile.delete();

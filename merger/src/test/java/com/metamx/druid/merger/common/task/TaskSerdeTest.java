@@ -8,17 +8,20 @@ import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.CountAggregatorFactory;
 import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
 import com.metamx.druid.indexer.data.JSONDataSpec;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.path.StaticPathSpec;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
 import junit.framework.Assert;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Test;
 
 public class TaskSerdeTest
@@ -190,6 +193,40 @@ public class TaskSerdeTest
     Assert.assertEquals(
         ((VersionConverterTask.SubTask) task).getSegment(),
         ((VersionConverterTask.SubTask) task).getSegment()
+    );
+  }
+
+  @Test
+  public void testRealtimeIndexTaskSerde() throws Exception
+  {
+    final Task task = new RealtimeIndexTask(
+        null,
+        new Schema("foo", new AggregatorFactory[0], QueryGranularity.NONE, new NoneShardSpec()),
+        null,
+        null,
+        new Period("PT10M"),
+        IndexGranularity.HOUR
+    );
+
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final Task task2 = jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(Optional.<Interval>absent(), task.getImplicitLockInterval());
+    Assert.assertEquals(new Period("PT10M"), ((RealtimeIndexTask) task).getWindowPeriod());
+    Assert.assertEquals(IndexGranularity.HOUR, ((RealtimeIndexTask) task).getSegmentGranularity());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
+    Assert.assertEquals(((RealtimeIndexTask) task).getWindowPeriod(), ((RealtimeIndexTask) task).getWindowPeriod());
+    Assert.assertEquals(
+        ((RealtimeIndexTask) task).getSegmentGranularity(),
+        ((RealtimeIndexTask) task).getSegmentGranularity()
     );
   }
 

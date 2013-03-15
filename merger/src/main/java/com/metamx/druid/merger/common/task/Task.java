@@ -22,8 +22,10 @@ package com.metamx.druid.merger.common.task;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
+import com.metamx.druid.Query;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.query.QueryRunner;
 import org.joda.time.Interval;
 
 /**
@@ -51,6 +53,7 @@ import org.joda.time.Interval;
     @JsonSubTypes.Type(name = "index_partitions", value = IndexDeterminePartitionsTask.class),
     @JsonSubTypes.Type(name = "index_generator", value = IndexGeneratorTask.class),
     @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
+    @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
     @JsonSubTypes.Type(name = "version_converter", value = VersionConverterTask.class),
     @JsonSubTypes.Type(name = "version_converter_sub", value = VersionConverterTask.SubTask.class)
 })
@@ -82,6 +85,12 @@ public interface Task
    * when started and must explicitly request them.
    */
   public Optional<Interval> getImplicitLockInterval();
+
+  /**
+   * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method
+   * should return null.
+   */
+  public <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
    * Execute preflight checks for a task. This typically runs on the coordinator, and will be run while
