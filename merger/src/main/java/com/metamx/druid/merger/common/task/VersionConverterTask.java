@@ -137,7 +137,6 @@ public class VersionConverterTask extends AbstractTask
   @Override
   public TaskStatus preflight(TaskToolbox toolbox) throws Exception
   {
-    log.info("HLKFJDSLKFJDSKLJFLKDSF -- Preflight for segment[%s]", segment);
     if (segment != null) {
       return super.preflight(toolbox);
     }
