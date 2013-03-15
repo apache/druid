@@ -18,7 +18,7 @@ function buildTable(data, el, dontDisplay, table, row) {
 
   // parse JSON
   for (var item in data) {
-    setTable(data[item], el, dontDisplay, table, row);
+    setTable(data[item], el, dontDisplay, table, row, "");
     row++;
   }
 
@@ -26,16 +26,16 @@ function buildTable(data, el, dontDisplay, table, row) {
   initDataTable(el);
 }
 
-function setTable(data, el, dontDisplay, table, row) {
+function setTable(data, el, dontDisplay, table, row, fieldNamespace) {
   for (var field in data) {
     if (_.contains(dontDisplay, field)) {
       // do nothing
     } else if (Array.isArray(data[field])) {
-      table.setCell(row, field, JSON.stringify(data[field]));
+      table.setCell(row, fieldNamespace + field, JSON.stringify(data[field]));
     } else if (!(data[field] instanceof Object)) {
-      table.setCell(row, field, data[field]);
+      table.setCell(row, fieldNamespace + field, data[field]);
     } else {
-      setTable(data[field], el, dontDisplay, table, row);
+      setTable(data[field], el, dontDisplay, table, row, fieldNamespace + field + " ");
     }
   }
 }
