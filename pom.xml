@@ -103,6 +103,11 @@
                 <version>1.1.1</version>
             </dependency>
             <dependency>
+                <groupId>commons-lang</groupId>
+                <artifactId>commons-lang</artifactId>
+                <version>2.6</version>
+            </dependency>
+            <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
                 <version>0.8.4</version>

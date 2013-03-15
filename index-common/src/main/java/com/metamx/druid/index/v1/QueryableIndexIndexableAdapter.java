@@ -19,12 +19,12 @@
 
 package com.metamx.druid.index.v1;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
 import com.metamx.common.ISE;
+import com.metamx.common.logger.Logger;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.column.BitmapIndex;
 import com.metamx.druid.index.column.Column;
@@ -44,6 +44,7 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -52,13 +53,35 @@ import java.util.Set;
 */
 public class QueryableIndexIndexableAdapter implements IndexableAdapter
 {
+  private static final Logger log = new Logger(QueryableIndexIndexableAdapter.class);
+
   private final int numRows;
   private final QueryableIndex input;
+
+  private final List<String> availableDimensions;
 
   public QueryableIndexIndexableAdapter(QueryableIndex input)
   {
     this.input = input;
     numRows = input.getNumRows();
+
+    // It appears possible that the dimensions have some columns listed which do not have a DictionaryEncodedColumn
+    // This breaks current logic, but should be fine going forward.  This is a work-around to make things work
+    // in the current state.  This code shouldn't be needed once github tracker issue #55 is finished.
+    this.availableDimensions = Lists.newArrayList();
+    for (String dim : input.getAvailableDimensions()) {
+      final Column col = input.getColumn(dim);
+
+      if (col == null) {
+        log.warn("Wtf!? column[%s] didn't exist!?!?!?", dim);
+      }
+      else if (col.getDictionaryEncoding() != null) {
+        availableDimensions.add(dim);
+      }
+      else {
+        log.info("No dictionary on dimension[%s]", dim);
+      }
+    }
   }
 
   @Override
@@ -76,7 +99,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return input.getAvailableDimensions();
+    return new ListIndexed<String>(availableDimensions, String.class);
   }
 
   @Override
@@ -161,7 +184,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
           {
             dimensions = Maps.newLinkedHashMap();
-            for (String dim : input.getAvailableDimensions()) {
+            for (String dim : getAvailableDimensions()) {
               dimensions.put(dim, input.getColumn(dim).getDictionaryEncoding());
             }
 
