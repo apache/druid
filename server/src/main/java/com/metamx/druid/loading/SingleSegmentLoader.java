@@ -84,12 +84,14 @@ public class SingleSegmentLoader implements SegmentLoader
         }
         final File parentDir = localStorageDir.getParentFile();
         if (!parentDir.exists()) {
-          log.info("Parent[%s] didn't exist, creating.");
-          parentDir.mkdirs();
+          log.info("Parent[%s] didn't exist, creating.", parentDir);
+          if (!parentDir.mkdirs()) {
+            log.warn("Unable to make parentDir[%s]", parentDir);
+          }
         }
 
         if (!legacyStorageDir.renameTo(localStorageDir)) {
-          log.info("Failed moving [%s] to [%s]", legacyStorageDir, localStorageDir);
+          log.warn("Failed moving [%s] to [%s]", legacyStorageDir, localStorageDir);
         }
       }
     }
