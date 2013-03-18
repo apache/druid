@@ -300,7 +300,9 @@ public class GroupByQueryEngine
     @Override
     public boolean hasNext()
     {
-      return delegate.hasNext() || !cursor.isDone();
+      boolean hasNext = delegate.hasNext() || !cursor.isDone();
+      if(!hasNext) for(BufferAggregator agg : aggregators) agg.close();
+      return hasNext;
     }
 
     @Override

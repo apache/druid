@@ -59,4 +59,10 @@ public class NoopAggregator implements Aggregator
   {
     return name;
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }

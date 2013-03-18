@@ -30,6 +30,8 @@ import com.metamx.druid.processing.MetricSelectorFactory;
 
 
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ContextAction;
+import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Script;
 import org.mozilla.javascript.ScriptableObject;
@@ -49,7 +51,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   private final List<String> fieldNames;
   private final String script;
 
-  private final JavaScriptAggregator.ScriptAggregator combiner;
+  private final JavaScriptAggregator.ScriptAggregator compiledScript;
 
   @JsonCreator
   public JavaScriptAggregatorFactory(
@@ -61,7 +63,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
     this.name = name;
     this.script = expression;
     this.fieldNames = fieldNames;
-    this.combiner = compileScript(script);
+    this.compiledScript = compileScript(script);
   }
 
   @Override
@@ -77,7 +79,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
               public FloatMetricSelector apply(@Nullable String s) { return metricFactory.makeFloatMetricSelector(s); }
             }
         ),
-        compileScript(script)
+        compiledScript
     );
   }
 
@@ -96,7 +98,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
               }
             }
         ),
-        compileScript(script)
+        compiledScript
     );
   }
 
@@ -109,7 +111,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return combiner.combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
+    return compiledScript.combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
   @Override
@@ -187,7 +189,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   @Override
   public Object getAggregatorStartValue()
   {
-    return combiner.reset();
+    return compiledScript.reset();
   }
 
   @Override
@@ -212,22 +214,29 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
 
   public static JavaScriptAggregator.ScriptAggregator compileScript(final String script)
   {
-    final Context cx = Context.enter();
-    cx.setOptimizationLevel(9);
-    final ScriptableObject scope = cx.initStandardObjects();
+    final ContextFactory contextFactory = ContextFactory.getGlobal();
+    Context context = contextFactory.enterContext();
+    context.setOptimizationLevel(9);
 
-    Script compiledScript = cx.compileString(script, "script", 1, null);
-    compiledScript.exec(cx, scope);
+    final ScriptableObject scope = context.initStandardObjects();
+
+    Script compiledScript = context.compileString(script, "script", 1, null);
+    compiledScript.exec(context, scope);
 
     final Function fnAggregate = getScriptFunction("aggregate", scope);
     final Function fnReset = getScriptFunction("reset", scope);
     final Function fnCombine = getScriptFunction("combine", scope);
+    Context.exit();
+
 
     return new JavaScriptAggregator.ScriptAggregator()
     {
       @Override
-      public double aggregate(double current, FloatMetricSelector[] selectorList)
+      public double aggregate(final double current, final FloatMetricSelector[] selectorList)
       {
+        Context cx = Context.getCurrentContext();
+        if(cx == null) cx = contextFactory.enterContext();
+
         final int size = selectorList.length;
         final Object[] args = new Object[size + 1];
 
@@ -237,29 +246,45 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
           args[i + 1] = selectorList[i++].get();
         }
 
-        Object res = fnAggregate.call(cx, scope, scope, args);
+        final Object res = fnAggregate.call(cx, scope, scope, args);
         return Context.toNumber(res);
       }
 
       @Override
-      public double combine(double a, double b)
+      public double combine(final double a, final double b)
       {
-        Object res = fnCombine.call(cx, scope, scope, new Object[]{a, b});
+        final Object res = contextFactory.call(
+            new ContextAction()
+            {
+              @Override
+              public Object run(final Context cx)
+              {
+                return fnCombine.call(cx, scope, scope, new Object[]{a, b});
+              }
+            }
+        );
         return Context.toNumber(res);
       }
 
       @Override
       public double reset()
       {
-        Object res = fnReset.call(cx, scope, scope, new Object[]{});
+        final Object res = contextFactory.call(
+            new ContextAction()
+            {
+              @Override
+              public Object run(final Context cx)
+              {
+                return fnReset.call(cx, scope, scope, new Object[]{});
+              }
+            }
+        );
         return Context.toNumber(res);
       }
 
       @Override
-      protected void finalize() throws Throwable
-      {
-        cx.exit();
-        super.finalize();
+      public void close() {
+        if(Context.getCurrentContext() != null) Context.exit();
       }
     };
   }

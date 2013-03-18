@@ -82,4 +82,10 @@ public class MinAggregator implements Aggregator
   {
     return new MinAggregator(name, selector);
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }
