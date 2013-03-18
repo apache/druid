@@ -82,8 +82,15 @@ public class SingleSegmentLoader implements SegmentLoader
             throw new SegmentLoadingException(e, "Error deleting localDir[%s]", localStorageDir);
           }
         }
+        final File parentDir = localStorageDir.getParentFile();
+        if (!parentDir.exists()) {
+          log.info("Parent[%s] didn't exist, creating.");
+          parentDir.mkdirs();
+        }
 
-        legacyStorageDir.renameTo(localStorageDir);
+        if (!legacyStorageDir.renameTo(localStorageDir)) {
+          log.info("Failed moving [%s] to [%s]", legacyStorageDir, localStorageDir);
+        }
       }
     }
 
