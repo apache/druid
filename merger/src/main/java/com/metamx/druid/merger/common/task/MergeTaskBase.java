@@ -36,6 +36,7 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.metamx.common.ISE;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
@@ -312,6 +313,7 @@ public abstract class MergeTaskBase extends AbstractTask
                       .dataSource(dataSource)
                       .interval(mergedInterval)
                       .version(version)
+                      .binaryVersion(IndexIO.CURRENT_VERSION_ID)
                       .shardSpec(new NoneShardSpec())
                       .dimensions(Lists.newArrayList(mergedDimensions))
                       .metrics(Lists.newArrayList(mergedMetrics))
