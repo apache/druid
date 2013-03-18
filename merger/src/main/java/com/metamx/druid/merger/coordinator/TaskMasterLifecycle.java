@@ -109,12 +109,16 @@ public class TaskMasterLifecycle
           try {
             leaderLifecycle.start();
 
-            while (leading) {
+            while (leading && !Thread.currentThread().isInterrupted()) {
               mayBeStopped.await();
             }
           }
+          catch (InterruptedException e) {
+            // Suppress so we can bow out gracefully
+          }
           finally {
             log.info("Bowing out!");
+            stopLeading();
             leaderLifecycle.stop();
           }
         }
