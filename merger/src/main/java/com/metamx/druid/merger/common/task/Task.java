@@ -119,4 +119,10 @@ public interface Task
    * @throws Exception
    */
   public TaskStatus run(TaskToolbox toolbox) throws Exception;
+
+  /**
+   * Best-effort task cancellation. May or may not do anything. Calling this multiple times may have
+   * a stronger effect.
+   */
+  public void shutdown();
 }

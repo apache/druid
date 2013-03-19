@@ -281,35 +281,38 @@ public class RemoteTaskRunnerTest
     workerCuratorCoordinator.start();
 
     workerTaskMonitor = new WorkerTaskMonitor(
+        jsonMapper,
         new PathChildrenCache(cf, String.format("%s/worker1", tasksPath), true),
         cf,
         workerCuratorCoordinator,
-        new TaskToolboxFactory(
-            new TaskConfig()
-            {
-              @Override
-              public File getBaseTaskDir()
-              {
-                try {
-                  return File.createTempFile("billy", "yay");
-                }
-                catch (Exception e) {
-                  throw Throwables.propagate(e);
-                }
-              }
+        new ExecutorServiceTaskRunner(
+            new TaskToolboxFactory(
+                new TaskConfig()
+                {
+                  @Override
+                  public File getBaseTaskDir()
+                  {
+                    try {
+                      return File.createTempFile("billy", "yay");
+                    }
+                    catch (Exception e) {
+                      throw Throwables.propagate(e);
+                    }
+                  }
 
-              @Override
-              public int getDefaultRowFlushBoundary()
-              {
-                return 0;
-              }
+                  @Override
+                  public int getDefaultRowFlushBoundary()
+                  {
+                    return 0;
+                  }
 
-              @Override
-              public String getHadoopWorkingPath()
-              {
-                return null;
-              }
-            }, null, null, null, null, null, null, null, null, jsonMapper
+                  @Override
+                  public String getHadoopWorkingPath()
+                  {
+                    return null;
+                  }
+                }, null, null, null, null, null, null, null, null, jsonMapper
+            ), Executors.newSingleThreadExecutor()
         ),
         Executors.newSingleThreadExecutor()
     );

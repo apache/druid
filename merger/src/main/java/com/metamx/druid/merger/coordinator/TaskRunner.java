@@ -39,6 +39,12 @@ public interface TaskRunner
    */
   public ListenableFuture<TaskStatus> run(Task task);
 
+  /**
+   * Best-effort task cancellation. May or may not do anything. Calling this multiple times may have
+   * a stronger effect.
+   */
+  public void shutdown(String taskid);
+
   public Collection<TaskRunnerWorkItem> getRunningTasks();
 
   public Collection<TaskRunnerWorkItem> getPendingTasks();

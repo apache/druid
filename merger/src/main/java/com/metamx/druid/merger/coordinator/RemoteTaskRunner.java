@@ -227,6 +227,12 @@ public class RemoteTaskRunner implements TaskRunner
     return taskRunnerWorkItem.getResult();
   }
 
+  @Override
+  public void shutdown(String taskid)
+  {
+    throw new UnsupportedOperationException();
+  }
+
   private void addPendingTask(final TaskRunnerWorkItem taskRunnerWorkItem)
   {
     log.info("Added pending task %s", taskRunnerWorkItem.getTask().getId());
