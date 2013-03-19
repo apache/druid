@@ -102,6 +102,11 @@ public abstract class AbstractTask implements Task
   }
 
   @Override
+  public void shutdown()
+  {
+  }
+
+  @Override
   public String toString()
   {
     return Objects.toStringHelper(this)

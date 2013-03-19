@@ -21,8 +21,8 @@ import com.metamx.druid.merger.common.actions.SegmentInsertAction;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.realtime.FireDepartmentConfig;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
-import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
+import com.metamx.druid.realtime.GracefulShutdownFirehose;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.RealtimePlumberSchool;
 import com.metamx.druid.realtime.Schema;
@@ -57,6 +57,9 @@ public class RealtimeIndexTask extends AbstractTask
 
   @JsonIgnore
   private volatile Plumber plumber = null;
+
+  @JsonIgnore
+  private volatile GracefulShutdownFirehose firehose = null;
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
 
@@ -123,7 +126,7 @@ public class RealtimeIndexTask extends AbstractTask
 
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
     final Period intermediatePersistPeriod = fireDepartmentConfig.getIntermediatePersistPeriod();
-    final Firehose firehose = firehoseFactory.connect();
+    firehose = new GracefulShutdownFirehose(firehoseFactory.connect(), segmentGranularity, windowPeriod);
 
     // TODO -- Take PlumberSchool in constructor (although that will need jackson injectables for stuff like
     // TODO -- the ServerView, which seems kind of odd?)
@@ -156,7 +159,8 @@ public class RealtimeIndexTask extends AbstractTask
       {
         try {
           toolbox.getSegmentAnnouncer().unannounceSegment(segment);
-        } finally {
+        }
+        finally {
           toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
         }
       }
@@ -179,7 +183,8 @@ public class RealtimeIndexTask extends AbstractTask
                                          .submit(new LockAcquireAction(interval));
 
           return myLock.getVersion();
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
           throw Throwables.propagate(e);
         }
       }
@@ -207,6 +212,9 @@ public class RealtimeIndexTask extends AbstractTask
         final InputRow inputRow;
         try {
           inputRow = firehose.nextRow();
+          if (inputRow == null) {
+            continue;
+          }
 
           final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
           if (sink == null) {
@@ -251,13 +259,25 @@ public class RealtimeIndexTask extends AbstractTask
         try {
           plumber.persist(firehose.commit());
           plumber.finishJob();
-        } catch(Exception e) {
+        }
+        catch (Exception e) {
           log.makeAlert(e, "Failed to finish realtime task").emit();
         }
       }
     }
 
     return TaskStatus.success(getId());
+  }
+
+  @Override
+  public void shutdown()
+  {
+    try {
+      firehose.shutdown();
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   @JsonProperty

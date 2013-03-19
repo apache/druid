@@ -44,4 +44,6 @@ public interface TaskRunner
   public Collection<TaskRunnerWorkItem> getPendingTasks();
 
   public Collection<ZkWorker> getWorkers();
+
+  public void shutdown(String taskId);
 }

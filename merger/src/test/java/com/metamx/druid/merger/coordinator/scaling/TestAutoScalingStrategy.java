@@ -32,13 +32,19 @@ public class TestAutoScalingStrategy<T> implements AutoScalingStrategy<T>
   }
 
   @Override
-  public AutoScalingData<T> terminate(List<String> ids)
+  public AutoScalingData<T> terminate(List<String> ips)
   {
     return null;
   }
 
   @Override
   public List<String> ipToIdLookup(List<String> ips)
+  {
+    return null;
+  }
+
+  @Override
+  public List<String> idToIpLookup(List<String> nodeIds)
   {
     return null;
   }

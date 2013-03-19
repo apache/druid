@@ -192,4 +192,9 @@ public class LocalTaskRunner implements TaskRunner
       );
     }
   }
+
+  @Override
+  public void shutdown(String taskId)
+  {
+  }
 }

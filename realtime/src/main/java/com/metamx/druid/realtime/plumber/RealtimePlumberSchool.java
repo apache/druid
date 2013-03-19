@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -230,7 +231,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         final Function<Query<T>, ServiceMetricEvent.Builder> builderFn =
             new Function<Query<T>, ServiceMetricEvent.Builder>()
             {
-              private final QueryToolChest<T,Query<T>> toolchest = factory.getToolchest();
+              private final QueryToolChest<T, Query<T>> toolchest = factory.getToolchest();
 
               @Override
               public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
@@ -303,7 +304,32 @@ public class RealtimePlumberSchool implements PlumberSchool
       @Override
       public void finishJob()
       {
-        stopped = true;
+        log.info("Shutting down....");
+
+        while (!sinks.isEmpty()) {
+          try {
+            log.info(
+                "Cannot shut down yet! Sinks for %s remain!",
+                Joiner.on(", ").join(
+                    Iterables.transform(
+                        sinks.values(),
+                        new Function<Sink, DataSegment>()
+                        {
+                          @Override
+                          public DataSegment apply(Sink input)
+                          {
+                            return input.getSegment();
+                          }
+                        }
+                    )
+                )
+            );
+            Thread.sleep(60000);
+          }
+          catch (InterruptedException e) {
+            throw Throwables.propagate(e);
+          }
+        }
 
         for (final Sink sink : sinks.values()) {
           try {
@@ -322,6 +348,8 @@ public class RealtimePlumberSchool implements PlumberSchool
         if (scheduledExecutor != null) {
           scheduledExecutor.shutdown();
         }
+
+        stopped = true;
       }
 
       private void initializeExecutors()

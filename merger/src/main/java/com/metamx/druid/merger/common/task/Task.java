@@ -118,4 +118,6 @@ public interface Task
    * @throws Exception
    */
   public TaskStatus run(TaskToolbox toolbox) throws Exception;
+
+  public void shutdown();
 }

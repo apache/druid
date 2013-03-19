@@ -196,11 +196,27 @@ public class IndexerCoordinatorResource
                                        .submit(holder.getAction());
       retMap = Maps.newHashMap();
       retMap.put("result", ret);
-    } catch(IOException e) {
+    }
+    catch (IOException e) {
       return Response.serverError().build();
     }
 
     return Response.ok().entity(retMap).build();
+  }
+
+  @POST
+  @Path("/shutdown")
+  @Produces("application/json")
+  public Response doShutdown(final String taskId)
+  {
+    try {
+      taskMasterLifecycle.getTaskRunner().shutdown(taskId);
+    }
+    catch (Exception e) {
+      return Response.serverError().build();
+    }
+
+    return Response.ok().build();
   }
 
   @GET

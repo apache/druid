@@ -28,12 +28,19 @@ public interface AutoScalingStrategy<T>
 {
   public AutoScalingData<T> provision();
 
-  public AutoScalingData<T> terminate(List<String> ids);
+  public AutoScalingData<T> terminate(List<String> ips);
 
   /**
    * Provides a lookup of ip addresses to node ids
-   * @param ips - nodes ips
+   * @param ips - nodes IPs
    * @return node ids
    */
   public List<String> ipToIdLookup(List<String> ips);
+
+  /**
+   * Provides a lookup of node ids to ip addresses
+   * @param nodeIds - nodes ids
+   * @return IPs associated with the node
+   */
+  public List<String> idToIpLookup(List<String> nodeIds);
 }

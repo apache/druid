@@ -116,6 +116,8 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
            .addData("provisioningCount", currentlyProvisioning.size())
            .emit();
 
+        List<String> nodeIps = autoScalingStrategy.idToIpLookup(Lists.newArrayList(currentlyProvisioning));
+        autoScalingStrategy.terminate(nodeIps);
         currentlyProvisioning.clear();
       }
     }

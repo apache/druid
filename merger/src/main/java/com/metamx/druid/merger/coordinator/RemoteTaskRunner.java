@@ -19,7 +19,9 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -31,6 +33,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.druid.merger.common.RetryPolicy;
 import com.metamx.druid.merger.common.RetryPolicyFactory;
 import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
@@ -39,6 +42,8 @@ import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
+import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.response.ToStringResponseHandler;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
@@ -46,7 +51,11 @@ import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
 import com.netflix.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -85,6 +94,7 @@ public class RemoteTaskRunner implements TaskRunner
   private final ScheduledExecutorService scheduledExec;
   private final RetryPolicyFactory retryPolicyFactory;
   private final AtomicReference<WorkerSetupData> workerSetupData;
+  private final HttpClient httpClient;
 
   // all workers that exist in ZK
   private final Map<String, ZkWorker> zkWorkers = new ConcurrentHashMap<String, ZkWorker>();
@@ -106,7 +116,8 @@ public class RemoteTaskRunner implements TaskRunner
       PathChildrenCache workerPathCache,
       ScheduledExecutorService scheduledExec,
       RetryPolicyFactory retryPolicyFactory,
-      AtomicReference<WorkerSetupData> workerSetupData
+      AtomicReference<WorkerSetupData> workerSetupData,
+      HttpClient httpClient
   )
   {
     this.jsonMapper = jsonMapper;
@@ -116,6 +127,7 @@ public class RemoteTaskRunner implements TaskRunner
     this.scheduledExec = scheduledExec;
     this.retryPolicyFactory = retryPolicyFactory;
     this.workerSetupData = workerSetupData;
+    this.httpClient = httpClient;
   }
 
   @LifecycleStart
@@ -232,6 +244,54 @@ public class RemoteTaskRunner implements TaskRunner
 
     pendingTasks.put(taskRunnerWorkItem.getTask().getId(), taskRunnerWorkItem);
     runPendingTasks();
+  }
+
+  @Override
+  public void shutdown(String taskId)
+  {
+    final ZkWorker zkWorker = findWorkerRunningTask(taskId);
+
+    if (zkWorker == null) {
+      log.info("Can't shutdown! No worker running task %s", taskId);
+      return;
+    }
+
+    final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
+    URL url;
+    try {
+      url = new URL(String.format("http://%s/mmx/v1/worker/shutdown", zkWorker.getWorker().getHost()));
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    while (!retryPolicy.hasExceededRetryThreshold()) {
+      try {
+        final String response = httpClient.post(url)
+                               .setContent("application/json", jsonMapper.writeValueAsBytes(taskId))
+                               .go(new ToStringResponseHandler(Charsets.UTF_8))
+                               .get();
+          log.info("Sent shutdown message to worker: %s, response: %s", zkWorker.getWorker().getHost(), response);
+
+          return;
+      }
+      catch (Exception e) {
+        log.error(e, "Exception shutting down taskId: %s", taskId);
+
+        if (retryPolicy.hasExceededRetryThreshold()) {
+          throw Throwables.propagate(e);
+        } else {
+          try {
+            final long sleepTime = retryPolicy.getAndIncrementRetryDelay().getMillis();
+            log.info("Will try again in %s.", new Duration(sleepTime).toString());
+            Thread.sleep(sleepTime);
+          }
+          catch (InterruptedException e2) {
+            throw Throwables.propagate(e2);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -570,10 +630,5 @@ public class RemoteTaskRunner implements TaskRunner
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
-  }
-
-  public static void main(String[] args)
-  {
-    System.out.println("2013-03-11".compareTo("0"));
   }
 }
