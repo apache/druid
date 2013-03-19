@@ -190,14 +190,13 @@ public class IndexerCoordinatorResource
   {
     final Map<String, Object> retMap;
 
+    // TODO make sure this worker is supposed to be running this task (attempt id? token?)
+
     try {
-      final T ret = taskMasterLifecycle.getTaskToolbox(holder.getTask())
-                                       .getTaskActionClient()
+      final T ret = taskMasterLifecycle.getTaskActionClient(holder.getTask())
                                        .submit(holder.getAction());
-      retMap = Maps.newHashMap();
-      retMap.put("result", ret);
-    }
-    catch (IOException e) {
+      retMap = ImmutableMap.<String, Object>of("result", ret);
+    } catch(IOException e) {
       return Response.serverError().build();
     }
 

@@ -31,6 +31,7 @@ import com.metamx.druid.indexer.granularity.GranularitySpec;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.SpawnTasksAction;
+import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
@@ -144,9 +145,9 @@ public class IndexTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus preflight(TaskToolbox toolbox) throws Exception
+  public TaskStatus preflight(TaskActionClient taskActionClient) throws Exception
   {
-    toolbox.getTaskActionClient().submit(new SpawnTasksAction(toSubtasks()));
+    taskActionClient.submit(new SpawnTasksAction(toSubtasks()));
     return TaskStatus.success(getId());
   }
 

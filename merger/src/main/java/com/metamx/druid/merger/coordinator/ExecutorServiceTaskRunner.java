@@ -21,28 +21,32 @@ package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.merger.common.RetryPolicy;
-import com.metamx.druid.merger.common.TaskCallback;
+import com.metamx.druid.Query;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.query.NoopQueryRunner;
+import com.metamx.druid.query.QueryRunner;
+import com.metamx.druid.query.segment.QuerySegmentWalker;
+import com.metamx.druid.query.segment.SegmentDescriptor;
+import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
-import org.mortbay.thread.ThreadPool;
+import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -50,36 +54,45 @@ import java.util.concurrent.ThreadPoolExecutor;
 /**
  * Runs tasks in a JVM thread using an ExecutorService.
  */
-public class LocalTaskRunner implements TaskRunner
+public class ExecutorServiceTaskRunner implements TaskRunner, QuerySegmentWalker
 {
   private final TaskToolboxFactory toolboxFactory;
-  private final ExecutorService exec;
-
+  private final ListeningExecutorService exec;
   private final Set<TaskRunnerWorkItem> runningItems = new ConcurrentSkipListSet<TaskRunnerWorkItem>();
 
-  private static final Logger log = new Logger(LocalTaskRunner.class);
+  private static final EmittingLogger log = new EmittingLogger(ExecutorServiceTaskRunner.class);
 
-  public LocalTaskRunner(
+  public ExecutorServiceTaskRunner(
       TaskToolboxFactory toolboxFactory,
       ExecutorService exec
   )
   {
     this.toolboxFactory = toolboxFactory;
-    this.exec = exec;
+    this.exec = MoreExecutors.listeningDecorator(exec);
   }
 
   @LifecycleStop
   public void stop()
   {
+    // TODO is this right
     exec.shutdownNow();
   }
 
   @Override
-  public void run(final Task task, final TaskCallback callback)
+  public ListenableFuture<TaskStatus> run(final Task task)
   {
     final TaskToolbox toolbox = toolboxFactory.build(task);
+    return exec.submit(new ExecutorServiceTaskRunnerCallable(task, toolbox));
+  }
 
-    exec.submit(new LocalTaskRunnerRunnable(task, toolbox, callback));
+  @Override
+  public void shutdown(final String taskid)
+  {
+    for (final TaskRunnerWorkItem runningItem : runningItems) {
+      if (runningItem.getTask().getId().equals(taskid)) {
+        runningItem.getTask().shutdown();
+      }
+    }
   }
 
   @Override
@@ -102,8 +115,8 @@ public class LocalTaskRunner implements TaskRunner
                                   @Override
                                   public TaskRunnerWorkItem apply(Runnable input)
                                   {
-                                    if (input instanceof LocalTaskRunnerRunnable) {
-                                      return ((LocalTaskRunnerRunnable) input).getTaskRunnerWorkItem();
+                                    if (input instanceof ExecutorServiceTaskRunnerCallable) {
+                                      return ((ExecutorServiceTaskRunnerCallable) input).getTaskRunnerWorkItem();
                                     }
                                     return null;
                                   }
@@ -121,27 +134,72 @@ public class LocalTaskRunner implements TaskRunner
     return Lists.newArrayList();
   }
 
-  private static class LocalTaskRunnerRunnable implements Runnable
+  @Override
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+  {
+    return getQueryRunnerImpl(query);
+  }
+
+  @Override
+  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+  {
+    return getQueryRunnerImpl(query);
+  }
+
+  private <T> QueryRunner<T> getQueryRunnerImpl(Query<T> query)
+  {
+    QueryRunner<T> queryRunner = null;
+
+    final List<Task> runningTasks = Lists.transform(
+        ImmutableList.copyOf(getRunningTasks()), new Function<TaskRunnerWorkItem, Task>()
+    {
+      @Override
+      public Task apply(TaskRunnerWorkItem o)
+      {
+        return o.getTask();
+      }
+    }
+    );
+
+    for (final Task task : runningTasks) {
+      if (task.getDataSource().equals(query.getDataSource())) {
+        final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
+
+        if (taskQueryRunner != null) {
+          if (queryRunner == null) {
+            queryRunner = taskQueryRunner;
+          } else {
+            log.makeAlert("Found too many query runners for datasource")
+               .addData("dataSource", query.getDataSource())
+               .emit();
+          }
+        }
+      }
+    }
+
+    return queryRunner == null ? new NoopQueryRunner<T>() : queryRunner;
+  }
+
+  private static class ExecutorServiceTaskRunnerCallable implements Callable<TaskStatus>
   {
     private final Task task;
     private final TaskToolbox toolbox;
-    private final TaskCallback callback;
 
     private final DateTime createdTime;
 
-    public LocalTaskRunnerRunnable(Task task, TaskToolbox toolbox, TaskCallback callback)
+    public ExecutorServiceTaskRunnerCallable(Task task, TaskToolbox toolbox)
     {
       this.task = task;
       this.toolbox = toolbox;
-      this.callback = callback;
 
       this.createdTime = new DateTime();
     }
 
     @Override
-    public void run()
+    public TaskStatus call()
     {
       final long startTime = System.currentTimeMillis();
+      final File taskDir = toolbox.getTaskDir();
 
       TaskStatus status;
 
@@ -163,20 +221,22 @@ public class LocalTaskRunner implements TaskRunner
       }
 
       try {
-        final File taskDir = toolbox.getTaskDir();
-
         if (taskDir.exists()) {
           log.info("Removing task directory: %s", taskDir);
           FileUtils.deleteDirectory(taskDir);
         }
       }
       catch (Exception e) {
-        log.error(e, "Failed to delete task directory: %s", task.getId());
+        log.makeAlert(e, "Failed to delete task directory")
+           .addData("taskDir", taskDir.toString())
+           .addData("task", task.getId())
+           .emit();
       }
 
       try {
-        callback.notify(status.withDuration(System.currentTimeMillis() - startTime));
-      } catch(Exception e) {
+        return status.withDuration(System.currentTimeMillis() - startTime);
+      }
+      catch (Exception e) {
         log.error(e, "Uncaught Exception during callback for task[%s]", task);
         throw Throwables.propagate(e);
       }
@@ -186,15 +246,10 @@ public class LocalTaskRunner implements TaskRunner
     {
       return new TaskRunnerWorkItem(
           task,
-          callback,
+          null,
           null,
           createdTime
       );
     }
-  }
-
-  @Override
-  public void shutdown(String taskId)
-  {
   }
 }

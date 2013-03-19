@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.metamx.druid.Query;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.query.QueryRunner;
 import org.joda.time.Interval;
 
@@ -37,8 +38,8 @@ import org.joda.time.Interval;
  *   <li>Tasks are each part of a "task group", which is a set of tasks that can share interval locks. These are
  *   useful for producing sharded segments.</li>
  *   <li>Tasks can optionally have an "implicit lock interval". Tasks with this property are guaranteed to have
- *   a lock on that interval during their {@link #preflight(com.metamx.druid.merger.common.TaskToolbox)} and
- *   {@link #run(com.metamx.druid.merger.common.TaskToolbox)} methods.</li>
+ *   a lock on that interval during their {@link #preflight(com.metamx.druid.merger.common.actions.TaskActionClient)}
+ *   and {@link #run(com.metamx.druid.merger.common.TaskToolbox)} methods.</li>
  *   <li>Tasks do not need to explicitly release locks; they are released upon task completion. Tasks may choose
  *   to release locks early if they desire.</li>
  * </ul>
@@ -97,14 +98,14 @@ public interface Task
    * holding a lock on our dataSource and implicit lock interval (if any). If this method throws an exception, the
    * task should be considered a failure.
    *
-   * @param toolbox Toolbox for this task
+   * @param taskActionClient action client for this task (not the full toolbox)
    *
    * @return Some kind of status (runnable means continue on to a worker, non-runnable means we completed without
    *         using a worker).
    *
    * @throws Exception
    */
-  public TaskStatus preflight(TaskToolbox toolbox) throws Exception;
+  public TaskStatus preflight(TaskActionClient taskActionClient) throws Exception;
 
   /**
    * Execute a task. This typically runs on a worker as determined by a TaskRunner, and will be run while
@@ -119,5 +120,9 @@ public interface Task
    */
   public TaskStatus run(TaskToolbox toolbox) throws Exception;
 
+  /**
+   * Best-effort task cancellation. May or may not do anything. Calling this multiple times may have
+   * a stronger effect.
+   */
   public void shutdown();
 }

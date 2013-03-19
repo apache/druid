@@ -81,6 +81,12 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
   }
 
   @Override
+  public boolean isAudited()
+  {
+    return true;
+  }
+
+  @Override
   public String toString()
   {
     return "SegmentInsertAction{" +

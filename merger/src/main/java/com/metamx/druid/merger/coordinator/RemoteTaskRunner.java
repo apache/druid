@@ -29,13 +29,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.merger.common.RetryPolicy;
 import com.metamx.druid.merger.common.RetryPolicyFactory;
-import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
@@ -223,27 +224,19 @@ public class RemoteTaskRunner implements TaskRunner
   /**
    * A task will be run only if there is no current knowledge in the RemoteTaskRunner of the task.
    *
-   * @param task     task to run
-   * @param callback callback to be called exactly once
+   * @param task task to run
    */
   @Override
-  public void run(Task task, TaskCallback callback)
+  public ListenableFuture<TaskStatus> run(final Task task)
   {
     if (runningTasks.containsKey(task.getId()) || pendingTasks.containsKey(task.getId())) {
       throw new ISE("Assigned a task[%s] that is already running or pending, WTF is happening?!", task.getId());
     }
     TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(
-        task, callback, retryPolicyFactory.makeRetryPolicy(), new DateTime()
+        task, SettableFuture.<TaskStatus>create(), retryPolicyFactory.makeRetryPolicy(), new DateTime()
     );
     addPendingTask(taskRunnerWorkItem);
-  }
-
-  private void addPendingTask(final TaskRunnerWorkItem taskRunnerWorkItem)
-  {
-    log.info("Added pending task %s", taskRunnerWorkItem.getTask().getId());
-
-    pendingTasks.put(taskRunnerWorkItem.getTask().getId(), taskRunnerWorkItem);
-    runPendingTasks();
+    return taskRunnerWorkItem.getResult();
   }
 
   @Override
@@ -268,12 +261,12 @@ public class RemoteTaskRunner implements TaskRunner
     while (!retryPolicy.hasExceededRetryThreshold()) {
       try {
         final String response = httpClient.post(url)
-                               .setContent("application/json", jsonMapper.writeValueAsBytes(taskId))
-                               .go(new ToStringResponseHandler(Charsets.UTF_8))
-                               .get();
-          log.info("Sent shutdown message to worker: %s, response: %s", zkWorker.getWorker().getHost(), response);
+                                          .setContent("application/json", jsonMapper.writeValueAsBytes(taskId))
+                                          .go(new ToStringResponseHandler(Charsets.UTF_8))
+                                          .get();
+        log.info("Sent shutdown message to worker: %s, response: %s", zkWorker.getWorker().getHost(), response);
 
-          return;
+        return;
       }
       catch (Exception e) {
         log.error(e, "Exception shutting down taskId: %s", taskId);
@@ -292,6 +285,14 @@ public class RemoteTaskRunner implements TaskRunner
         }
       }
     }
+  }
+
+  private void addPendingTask(final TaskRunnerWorkItem taskRunnerWorkItem)
+  {
+    log.info("Added pending task %s", taskRunnerWorkItem.getTask().getId());
+
+    pendingTasks.put(taskRunnerWorkItem.getTask().getId(), taskRunnerWorkItem);
+    runPendingTasks();
   }
 
   /**
@@ -507,9 +508,9 @@ public class RemoteTaskRunner implements TaskRunner
 
                     if (taskStatus.isComplete()) {
                       if (taskRunnerWorkItem != null) {
-                        final TaskCallback callback = taskRunnerWorkItem.getCallback();
-                        if (callback != null) {
-                          callback.notify(taskStatus);
+                        final SettableFuture<TaskStatus> result = taskRunnerWorkItem.getResult();
+                        if (result != null) {
+                          result.set(taskStatus);
                         }
                       }
 
