@@ -86,8 +86,9 @@ public class TaskConsumer implements Runnable
           task = queue.take();
         }
         catch (InterruptedException e) {
-          log.info(e, "Interrupted while waiting for new work");
-          throw e;
+          log.info("Interrupted while waiting for new work");
+          Thread.currentThread().interrupt();
+          break;
         }
 
         try {
