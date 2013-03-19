@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
@@ -207,6 +208,7 @@ public class WorkerNode extends RegisteringNode
 
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addEventListener(new GuiceServletConfig(injector));
+    root.addFilter(GuiceFilter.class, "/mmx/worker/v1/*", 0);
   }
 
   @LifecycleStart

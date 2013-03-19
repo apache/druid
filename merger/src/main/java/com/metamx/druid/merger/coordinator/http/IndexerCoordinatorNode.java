@@ -148,6 +148,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private IndexerZkConfig indexerZkConfig;
   private TaskRunnerFactory taskRunnerFactory = null;
   private ResourceManagementSchedulerFactory resourceManagementSchedulerFactory = null;
+  private HttpClient httpClient = null;
   private TaskActionClientFactory taskActionClientFactory = null;
   private TaskMasterLifecycle taskMasterLifecycle = null;
   private Server server = null;
@@ -217,6 +218,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
     return this;
   }
 
+  public IndexerCoordinatorNode setHttpClient(HttpClient httpClient)
+  {
+    this.httpClient = httpClient;
+    return this;
+  }
+
   public void doInit() throws Exception
   {
     scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
@@ -234,6 +241,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             ), getJsonMapper()
         );
 
+    initializeHttpClient();
     initializeEmitter();
     initializeMonitors();
     initializeIndexerCoordinatorConfig();
@@ -410,13 +418,18 @@ public class IndexerCoordinatorNode extends RegisteringNode
     getJsonMapper().registerSubtypes(StaticS3FirehoseFactory.class);
   }
 
+  private void initializeHttpClient()
+  {
+    if (httpClient == null) {
+      httpClient = HttpClientInit.createClient(
+          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
+      );
+    }
+  }
+
   private void initializeEmitter()
   {
     if (emitter == null) {
-      final HttpClient httpClient = HttpClientInit.createClient(
-          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
-      );
-
       emitter = new ServiceEmitter(
           PropUtils.getProperty(props, "druid.service"),
           PropUtils.getProperty(props, "druid.host"),
@@ -546,9 +559,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
                     )
                 ),
                 configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class),
-                HttpClientInit.createClient(
-                    HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
-                )
+                httpClient
             );
 
             return remoteTaskRunner;
