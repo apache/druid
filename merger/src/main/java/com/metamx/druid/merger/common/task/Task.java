@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.metamx.druid.Query;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
+import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.query.QueryRunner;
 import org.joda.time.Interval;
 
@@ -97,14 +98,14 @@ public interface Task
    * holding a lock on our dataSource and implicit lock interval (if any). If this method throws an exception, the
    * task should be considered a failure.
    *
-   * @param toolbox Toolbox for this task
+   * @param taskActionClient action client for this task (not the full toolbox)
    *
    * @return Some kind of status (runnable means continue on to a worker, non-runnable means we completed without
    *         using a worker).
    *
    * @throws Exception
    */
-  public TaskStatus preflight(TaskToolbox toolbox) throws Exception;
+  public TaskStatus preflight(TaskActionClient taskActionClient) throws Exception;
 
   /**
    * Execute a task. This typically runs on a worker as determined by a TaskRunner, and will be run while

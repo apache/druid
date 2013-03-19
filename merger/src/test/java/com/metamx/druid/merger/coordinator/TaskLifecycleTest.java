@@ -50,6 +50,7 @@ import com.metamx.druid.merger.common.actions.LockAcquireAction;
 import com.metamx.druid.merger.common.actions.LockListAction;
 import com.metamx.druid.merger.common.actions.LockReleaseAction;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
+import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.actions.TaskActionToolbox;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.AbstractTask;
@@ -87,6 +88,7 @@ public class TaskLifecycleTest
   private TaskQueue tq = null;
   private TaskRunner tr = null;
   private MockMergerDBCoordinator mdc = null;
+  private TaskActionClientFactory tac = null;
   private TaskToolboxFactory tb = null;
   private TaskConsumer tc = null;
   TaskStorageQueryAdapter tsqa = null;
@@ -111,6 +113,7 @@ public class TaskLifecycleTest
     tl = new TaskLockbox(ts);
     tq = new TaskQueue(ts, tl);
     mdc = newMockMDC();
+    tac = new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tq, tl, mdc, newMockEmitter()));
 
     tb = new TaskToolboxFactory(
         new TaskConfig()
@@ -133,7 +136,7 @@ public class TaskLifecycleTest
             return null;
           }
         },
-        new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tq, tl, mdc, newMockEmitter())),
+        tac,
         newMockEmitter(),
         null, // s3 client
         new DataSegmentPusher()
@@ -163,7 +166,7 @@ public class TaskLifecycleTest
         Executors.newSingleThreadExecutor()
     );
 
-    tc = new TaskConsumer(tq, tr, tb, newMockEmitter());
+    tc = new TaskConsumer(tq, tr, tac, newMockEmitter());
     tsqa = new TaskStorageQueryAdapter(ts);
 
     tq.start();

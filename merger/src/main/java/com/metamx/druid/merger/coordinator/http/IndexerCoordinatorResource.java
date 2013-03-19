@@ -191,8 +191,7 @@ public class IndexerCoordinatorResource
     final Map<String, Object> retMap;
 
     try {
-      final T ret = taskMasterLifecycle.getTaskToolbox(holder.getTask())
-                                       .getTaskActionClient()
+      final T ret = taskMasterLifecycle.getTaskActionClient(holder.getTask())
                                        .submit(holder.getAction());
       retMap = Maps.newHashMap();
       retMap.put("result", ret);

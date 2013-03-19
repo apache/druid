@@ -370,7 +370,10 @@ public class IndexerCoordinatorNode extends BaseServerNode<IndexerCoordinatorNod
       final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
       taskMasterLifecycle = new TaskMasterLifecycle(
           taskQueue,
-          taskToolboxFactory,
+          new LocalTaskActionClientFactory(
+              taskStorage,
+              new TaskActionToolbox(taskQueue, taskLockbox, mergerDBCoordinator, emitter)
+          ),
           config,
           serviceDiscoveryConfig,
           taskRunnerFactory,

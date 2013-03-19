@@ -42,6 +42,7 @@ import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.LockListAction;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
+import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -186,7 +187,7 @@ public abstract class MergeTaskBase extends AbstractTask
    * we are operating on every segment that overlaps the chosen interval.
    */
   @Override
-  public TaskStatus preflight(TaskToolbox toolbox)
+  public TaskStatus preflight(TaskActionClient taskActionClient)
   {
     try {
       final Function<DataSegment, String> toIdentifier = new Function<DataSegment, String>()
@@ -199,7 +200,7 @@ public abstract class MergeTaskBase extends AbstractTask
       };
 
       final Set<String> current = ImmutableSet.copyOf(
-          Iterables.transform(toolbox.getTaskActionClient().submit(defaultListUsedAction()), toIdentifier)
+          Iterables.transform(taskActionClient.submit(defaultListUsedAction()), toIdentifier)
       );
       final Set<String> requested = ImmutableSet.copyOf(Iterables.transform(segments, toIdentifier));
 

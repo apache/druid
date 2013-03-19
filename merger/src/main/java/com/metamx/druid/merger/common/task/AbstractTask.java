@@ -27,8 +27,8 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.metamx.druid.Query;
 import com.metamx.druid.merger.common.TaskStatus;
-import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.SegmentListUsedAction;
+import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.query.QueryRunner;
 import org.joda.time.Interval;
 
@@ -96,7 +96,7 @@ public abstract class AbstractTask implements Task
   }
 
   @Override
-  public TaskStatus preflight(TaskToolbox toolbox) throws Exception
+  public TaskStatus preflight(TaskActionClient taskActionClient) throws Exception
   {
     return TaskStatus.running(id);
   }
