@@ -3,7 +3,7 @@ package com.metamx.druid.merger.worker.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.merger.coordinator.TaskRunner;
+import com.metamx.druid.merger.coordinator.ForkingTaskRunner;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -19,12 +19,12 @@ public class WorkerResource
   private static final Logger log = new Logger(WorkerResource.class);
 
   private final ObjectMapper jsonMapper;
-  private final TaskRunner taskRunner;
+  private final ForkingTaskRunner taskRunner;
 
   @Inject
   public WorkerResource(
       ObjectMapper jsonMapper,
-      TaskRunner taskRunner
+      ForkingTaskRunner taskRunner
 
   ) throws Exception
   {

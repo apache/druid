@@ -33,7 +33,7 @@ public class WorkerServletModule extends JerseyServletModule
   @Override
   protected void configureServlets()
   {
-    bind(IndexerCoordinatorResource.class);
+    bind(WorkerResource.class);
     bind(ObjectMapper.class).toInstance(jsonMapper);
     bind(ServiceEmitter.class).toInstance(emitter);
     bind(ForkingTaskRunner.class).toInstance(forkingTaskRunner);
