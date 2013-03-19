@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.worker.executor;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.log.LogLevelAdjuster;
@@ -26,6 +27,9 @@ import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  */
@@ -54,6 +58,34 @@ public class ExecutorMain
       log.info(t, "Throwable caught at startup, committing seppuku");
       System.exit(2);
     }
+
+    // Spawn monitor thread to keep a watch on our parent process
+    // If stdin reaches eof, the parent is gone, and we should shut down
+    final ExecutorService parentMonitorExec = Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder()
+            .setNameFormat("parent-monitor-%d")
+            .setDaemon(true)
+            .build()
+    );
+
+    parentMonitorExec.submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            int b = -1;
+            try {
+              b = System.in.read();
+            } catch (Exception e) {
+              log.error(e, "Failed to read from stdin");
+            }
+
+            // TODO ugh this is gross
+            System.exit(2);
+          }
+        }
+    );
 
     try {
       final Task task = node.getJsonMapper().readValue(new File(args[0]), Task.class);
