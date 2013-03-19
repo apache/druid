@@ -38,8 +38,8 @@ import org.joda.time.Interval;
  *   <li>Tasks are each part of a "task group", which is a set of tasks that can share interval locks. These are
  *   useful for producing sharded segments.</li>
  *   <li>Tasks can optionally have an "implicit lock interval". Tasks with this property are guaranteed to have
- *   a lock on that interval during their {@link #preflight(com.metamx.druid.merger.common.TaskToolbox)} and
- *   {@link #run(com.metamx.druid.merger.common.TaskToolbox)} methods.</li>
+ *   a lock on that interval during their {@link #preflight(com.metamx.druid.merger.common.actions.TaskActionClient)}
+ *   and {@link #run(com.metamx.druid.merger.common.TaskToolbox)} methods.</li>
  *   <li>Tasks do not need to explicitly release locks; they are released upon task completion. Tasks may choose
  *   to release locks early if they desire.</li>
  * </ul>
