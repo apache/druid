@@ -19,7 +19,8 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import com.metamx.druid.merger.common.TaskCallback;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 
 import java.util.Collection;
@@ -31,13 +32,12 @@ import java.util.Collection;
 public interface TaskRunner
 {
   /**
-   * Run a task with a particular context and call a callback. The callback may be called multiple times with RUNNING
-   * status, but should be called exactly once with a non-RUNNING status (e.g. SUCCESS, FAILED, CONTINUED...).
+   * Run a task. The returned status should be some kind of completed status.
    *
    * @param task task to run
-   * @param callback callback to be called exactly once
+   * @return task status, eventually
    */
-  public void run(Task task, TaskCallback callback);
+  public ListenableFuture<TaskStatus> run(Task task);
 
   public Collection<TaskRunnerWorkItem> getRunningTasks();
 

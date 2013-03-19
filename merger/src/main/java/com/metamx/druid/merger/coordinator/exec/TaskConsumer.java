@@ -20,9 +20,11 @@
 package com.metamx.druid.merger.coordinator.exec;
 
 import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.task.Task;
@@ -138,15 +140,34 @@ public class TaskConsumer implements Runnable
     }
 
     // Hand off work to TaskRunner, with a callback
-    runner.run(
-        task, new TaskCallback()
+    final ListenableFuture<TaskStatus> status = runner.run(task);
+
+    Futures.addCallback(
+        status, new FutureCallback<TaskStatus>()
     {
       @Override
-      public void notify(final TaskStatus statusFromRunner)
+      public void onSuccess(final TaskStatus status)
+      {
+        log.info("Received %s status for task: %s", status.getStatusCode(), task);
+        handleStatus(status);
+      }
+
+      @Override
+      public void onFailure(Throwable t)
+      {
+        log.makeAlert(t, "Failed to run task")
+           .addData("task", task.getId())
+           .addData("type", task.getType())
+           .addData("dataSource", task.getDataSource())
+           .addData("interval", task.getImplicitLockInterval())
+           .emit();
+
+        handleStatus(TaskStatus.failure(task.getId()));
+      }
+
+      private void handleStatus(TaskStatus status)
       {
         try {
-          log.info("Received %s status for task: %s", statusFromRunner.getStatusCode(), task);
-
           // If we're not supposed to be running anymore, don't do anything. Somewhat racey if the flag gets set after
           // we check and before we commit the database transaction, but better than nothing.
           if (shutdown) {
@@ -154,34 +175,25 @@ public class TaskConsumer implements Runnable
             return;
           }
 
-          queue.notify(task, statusFromRunner);
+          queue.notify(task, status);
 
           // Emit event and log, if the task is done
-          if (statusFromRunner.isComplete()) {
-            metricBuilder.setUser3(statusFromRunner.getStatusCode().toString());
-            emitter.emit(metricBuilder.build("indexer/time/run/millis", statusFromRunner.getDuration()));
-
-            if (statusFromRunner.isFailure()) {
-              log.makeAlert("Failed to index")
-                 .addData("task", task.getId())
-                 .addData("type", task.getType())
-                 .addData("dataSource", task.getDataSource())
-                 .addData("interval", task.getImplicitLockInterval())
-                 .emit();
-            }
+          if (status.isComplete()) {
+            metricBuilder.setUser3(status.getStatusCode().toString());
+            emitter.emit(metricBuilder.build("indexer/time/run/millis", status.getDuration()));
 
             log.info(
                 "Task %s: %s (%d run duration)",
-                statusFromRunner.getStatusCode(),
+                status.getStatusCode(),
                 task,
-                statusFromRunner.getDuration()
+                status.getDuration()
             );
           }
         }
         catch (Exception e) {
-          log.makeAlert(e, "Failed to handle task callback")
+          log.makeAlert(e, "Failed to handle task status")
              .addData("task", task.getId())
-             .addData("statusCode", statusFromRunner.getStatusCode())
+             .addData("statusCode", status.getStatusCode())
              .emit();
         }
       }

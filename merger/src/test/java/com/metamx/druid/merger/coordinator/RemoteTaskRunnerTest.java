@@ -4,19 +4,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.merger.TestTask;
 import com.metamx.druid.merger.common.RetryPolicyFactory;
-import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
+import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
-import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
@@ -130,10 +131,7 @@ public class RemoteTaskRunnerTest
   @Test
   public void testRunNoExistingTask() throws Exception
   {
-    remoteTaskRunner.run(
-        task1,
-        null
-    );
+    remoteTaskRunner.run(task1);
   }
 
   @Test
@@ -146,11 +144,10 @@ public class RemoteTaskRunnerTest
             task1.getSegments(),
             Lists.<AggregatorFactory>newArrayList(),
             TaskStatus.running(task1.getId())
-        ),
-        null
+        )
     );
     try {
-      remoteTaskRunner.run(task1, null);
+      remoteTaskRunner.run(task1);
       fail("ISE expected");
     }
     catch (ISE expected) {
@@ -182,8 +179,7 @@ public class RemoteTaskRunnerTest
             ),
             Lists.<AggregatorFactory>newArrayList(),
             TaskStatus.success("foo")
-        ),
-        null
+        )
     );
     EasyMock.verify(emitter);
   }
@@ -192,22 +188,30 @@ public class RemoteTaskRunnerTest
   public void testRunWithCallback() throws Exception
   {
     final MutableBoolean callbackCalled = new MutableBoolean(false);
-    remoteTaskRunner.run(
-        new TestTask(
-            task1.getId(),
-            task1.getDataSource(),
-            task1.getSegments(),
-            Lists.<AggregatorFactory>newArrayList(),
-            TaskStatus.running(task1.getId())
-        ),
-        new TaskCallback()
-        {
-          @Override
-          public void notify(TaskStatus status)
-          {
-            callbackCalled.setValue(true);
-          }
-        }
+
+    Futures.addCallback(
+        remoteTaskRunner.run(
+            new TestTask(
+                task1.getId(),
+                task1.getDataSource(),
+                task1.getSegments(),
+                Lists.<AggregatorFactory>newArrayList(),
+                TaskStatus.running(task1.getId())
+            )
+        ), new FutureCallback<TaskStatus>()
+    {
+      @Override
+      public void onSuccess(TaskStatus taskStatus)
+      {
+        callbackCalled.setValue(true);
+      }
+
+      @Override
+      public void onFailure(Throwable throwable)
+      {
+        // neg
+      }
+    }
     );
 
     // Really don't like this way of waiting for the task to appear

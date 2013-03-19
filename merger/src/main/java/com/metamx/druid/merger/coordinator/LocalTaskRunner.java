@@ -21,28 +21,24 @@ package com.metamx.druid.merger.coordinator;
 
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.merger.common.RetryPolicy;
-import com.metamx.druid.merger.common.TaskCallback;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.task.Task;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
-import org.mortbay.thread.ThreadPool;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -53,7 +49,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class LocalTaskRunner implements TaskRunner
 {
   private final TaskToolboxFactory toolboxFactory;
-  private final ExecutorService exec;
+  private final ListeningExecutorService exec;
 
   private final Set<TaskRunnerWorkItem> runningItems = new ConcurrentSkipListSet<TaskRunnerWorkItem>();
 
@@ -65,7 +61,7 @@ public class LocalTaskRunner implements TaskRunner
   )
   {
     this.toolboxFactory = toolboxFactory;
-    this.exec = exec;
+    this.exec = MoreExecutors.listeningDecorator(exec);
   }
 
   @LifecycleStop
@@ -75,11 +71,10 @@ public class LocalTaskRunner implements TaskRunner
   }
 
   @Override
-  public void run(final Task task, final TaskCallback callback)
+  public ListenableFuture<TaskStatus> run(final Task task)
   {
     final TaskToolbox toolbox = toolboxFactory.build(task);
-
-    exec.submit(new LocalTaskRunnerRunnable(task, toolbox, callback));
+    return exec.submit(new LocalTaskRunnerCallable(task, toolbox));
   }
 
   @Override
@@ -102,8 +97,8 @@ public class LocalTaskRunner implements TaskRunner
                                   @Override
                                   public TaskRunnerWorkItem apply(Runnable input)
                                   {
-                                    if (input instanceof LocalTaskRunnerRunnable) {
-                                      return ((LocalTaskRunnerRunnable) input).getTaskRunnerWorkItem();
+                                    if (input instanceof LocalTaskRunnerCallable) {
+                                      return ((LocalTaskRunnerCallable) input).getTaskRunnerWorkItem();
                                     }
                                     return null;
                                   }
@@ -121,25 +116,23 @@ public class LocalTaskRunner implements TaskRunner
     return Lists.newArrayList();
   }
 
-  private static class LocalTaskRunnerRunnable implements Runnable
+  private static class LocalTaskRunnerCallable implements Callable<TaskStatus>
   {
     private final Task task;
     private final TaskToolbox toolbox;
-    private final TaskCallback callback;
 
     private final DateTime createdTime;
 
-    public LocalTaskRunnerRunnable(Task task, TaskToolbox toolbox, TaskCallback callback)
+    public LocalTaskRunnerCallable(Task task, TaskToolbox toolbox)
     {
       this.task = task;
       this.toolbox = toolbox;
-      this.callback = callback;
 
       this.createdTime = new DateTime();
     }
 
     @Override
-    public void run()
+    public TaskStatus call()
     {
       final long startTime = System.currentTimeMillis();
 
@@ -175,7 +168,7 @@ public class LocalTaskRunner implements TaskRunner
       }
 
       try {
-        callback.notify(status.withDuration(System.currentTimeMillis() - startTime));
+        return status.withDuration(System.currentTimeMillis() - startTime);
       } catch(Exception e) {
         log.error(e, "Uncaught Exception during callback for task[%s]", task);
         throw Throwables.propagate(e);
@@ -186,7 +179,7 @@ public class LocalTaskRunner implements TaskRunner
     {
       return new TaskRunnerWorkItem(
           task,
-          callback,
+          null,
           null,
           createdTime
       );
