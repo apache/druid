@@ -219,7 +219,7 @@ public class IndexGeneratorTask extends AbstractTask
     return schema.getShardSpec().isInChunk(eventDimensions);
   }
 
-  @JsonProperty
+  @JsonProperty("firehose")
   public FirehoseFactory getFirehoseFactory()
   {
     return firehoseFactory;
