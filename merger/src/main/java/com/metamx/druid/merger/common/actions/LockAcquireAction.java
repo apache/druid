@@ -1,6 +1,7 @@
 package com.metamx.druid.merger.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Throwables;
@@ -10,6 +11,7 @@ import org.joda.time.Interval;
 
 public class LockAcquireAction implements TaskAction<TaskLock>
 {
+  @JsonIgnore
   private final Interval interval;
 
   @JsonCreator
@@ -42,6 +44,12 @@ public class LockAcquireAction implements TaskAction<TaskLock>
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  @Override
+  public boolean isAudited()
+  {
+    return true;
   }
 
   @Override

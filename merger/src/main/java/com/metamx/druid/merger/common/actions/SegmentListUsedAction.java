@@ -1,6 +1,7 @@
 package com.metamx.druid.merger.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.metamx.druid.client.DataSegment;
@@ -12,7 +13,10 @@ import java.util.List;
 
 public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
 {
+  @JsonIgnore
   private final String dataSource;
+
+  @JsonIgnore
   private final Interval interval;
 
   @JsonCreator
@@ -46,6 +50,12 @@ public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
     return toolbox.getMergerDBCoordinator().getUsedSegmentsForInterval(dataSource, interval);
+  }
+
+  @Override
+  public boolean isAudited()
+  {
+    return false;
   }
 
   @Override
