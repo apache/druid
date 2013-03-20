@@ -265,8 +265,6 @@ public class RealtimeIndexTask extends AbstractTask
       throw Throwables.propagate(e);
     }
     finally {
-      Closeables.closeQuietly(firehose);
-
       if (normalExit) {
         try {
           plumber.persist(firehose.commit());
@@ -274,6 +272,9 @@ public class RealtimeIndexTask extends AbstractTask
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to finish realtime task").emit();
+        }
+        finally {
+          Closeables.closeQuietly(firehose);
         }
       }
     }
