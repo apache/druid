@@ -146,7 +146,7 @@ public class IndexerCoordinatorResource
       return Response.serverError().build();
     }
 
-    return Response.ok().build();
+    return Response.ok(ImmutableMap.of("task", taskid)).build();
   }
 
   // Legacy endpoint
