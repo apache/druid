@@ -83,8 +83,11 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
   @Override
   public int getDimensionCardinality(String dimension)
   {
-    Column column = null;
-    column = index.getColumn(dimension);
+    if (dimension == null) {
+      return 0;
+    }
+
+    Column column = index.getColumn(dimension.toLowerCase());
     if (column == null) {
       return 0;
     }
