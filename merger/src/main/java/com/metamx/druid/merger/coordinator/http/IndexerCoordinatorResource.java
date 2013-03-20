@@ -210,7 +210,8 @@ public class IndexerCoordinatorResource
     try {
       final T ret = taskMasterLifecycle.getTaskActionClient(holder.getTask())
                                        .submit(holder.getAction());
-      retMap = ImmutableMap.<String, Object>of("result", ret);
+      retMap = Maps.newHashMap();
+      retMap.put("result", ret);
     } catch(IOException e) {
       return Response.serverError().build();
     }
