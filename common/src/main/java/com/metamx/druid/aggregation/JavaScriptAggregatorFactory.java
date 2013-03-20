@@ -284,7 +284,9 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
 
       @Override
       public void close() {
-        if(Context.getCurrentContext() != null) Context.exit();
+        if(Context.getCurrentContext() != null) {
+          Context.exit();
+        }
       }
     };
   }
