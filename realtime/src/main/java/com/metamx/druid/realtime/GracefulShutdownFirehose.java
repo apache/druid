@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
@@ -31,7 +32,7 @@ public class GracefulShutdownFirehose implements Firehose
   private final ScheduledExecutorService scheduledExecutor;
   private final RejectionPolicy rejectionPolicy;
 
-  private final MutableBoolean hasMore = new MutableBoolean(true);
+  private final AtomicBoolean hasMore = new AtomicBoolean(true);
   private volatile boolean shutdown = false;
 
   public GracefulShutdownFirehose(
@@ -74,7 +75,7 @@ public class GracefulShutdownFirehose implements Firehose
           public ScheduledExecutors.Signal call() throws Exception
           {
             try {
-              hasMore.setValue(false);
+              hasMore.set(false);
             }
             catch (Exception e) {
               throw Throwables.propagate(e);
@@ -91,7 +92,7 @@ public class GracefulShutdownFirehose implements Firehose
   @Override
   public boolean hasMore()
   {
-    return hasMore.booleanValue() && firehose.hasMore();
+    return hasMore.get() && firehose.hasMore();
   }
 
   @Override
