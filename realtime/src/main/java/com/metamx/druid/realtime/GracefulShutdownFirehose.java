@@ -63,7 +63,7 @@ public class GracefulShutdownFirehose implements Firehose
     final long end = segmentGranularity.increment(truncatedNow) + windowMillis;
     final Duration timeUntilShutdown = new Duration(System.currentTimeMillis(), end);
 
-    log.info("Shutting down in %s", timeUntilShutdown);
+    log.info("Shutting down in %s. Time at shutdown: ~%s", timeUntilShutdown, new DateTime(end));
 
     ScheduledExecutors.scheduleWithFixedDelay(
         scheduledExecutor,

@@ -308,23 +308,25 @@ public class RealtimePlumberSchool implements PlumberSchool
 
         while (!sinks.isEmpty()) {
           try {
+            Duration retry = new Duration("PT60S");
             log.info(
-                "Cannot shut down yet! Sinks for %s remain!",
+                "Cannot shut down yet! Sinks for %s remain! Next retry in %s",
                 Joiner.on(", ").join(
                     Iterables.transform(
                         sinks.values(),
-                        new Function<Sink, DataSegment>()
+                        new Function<Sink, String>()
                         {
                           @Override
-                          public DataSegment apply(Sink input)
+                          public String apply(Sink input)
                           {
-                            return input.getSegment();
+                            return input.getSegment().getIdentifier();
                           }
                         }
                     )
-                )
+                ),
+                retry
             );
-            Thread.sleep(60000);
+            Thread.sleep(retry.getMillis());
           }
           catch (InterruptedException e) {
             throw Throwables.propagate(e);
@@ -455,6 +457,7 @@ public class RealtimePlumberSchool implements PlumberSchool
                         try {
                           segmentAnnouncer.unannounceSegment(sink.getSegment());
                           FileUtils.deleteDirectory(computePersistDir(schema, sink.getInterval()));
+                          log.info("Removing sinkKey %d for segment %s", sinkKey, sink.getSegment().getIdentifier());
                           sinks.remove(sinkKey);
                         }
                         catch (IOException e) {
