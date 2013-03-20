@@ -303,7 +303,9 @@ public class GroupByQueryEngine
       boolean hasNext = delegate.hasNext() || !cursor.isDone();
       if(!hasNext) {
         // cleanup
-        for(BufferAggregator agg : aggregators) agg.close();
+        for(BufferAggregator agg : aggregators) {
+          agg.close();
+        }
       }
       return hasNext;
     }

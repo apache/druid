@@ -83,7 +83,9 @@ public class TimeseriesQueryEngine
                     Result<TimeseriesResultValue> retVal = bob.build();
 
                     // cleanup
-                    for(Aggregator agg : aggregators) agg.close();
+                    for(Aggregator agg : aggregators) {
+                      agg.close();
+                    }
 
                     return retVal;
                   }
