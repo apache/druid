@@ -8,6 +8,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
@@ -205,11 +206,31 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
   @Override
   public void shutdown(final String taskid)
   {
-    // TODO shutdown harder after more shutdowns
     final Optional<ProcessHolder> processHolder = getProcessHolder(taskid);
     if(processHolder.isPresent()) {
-      processHolder.get().shutdowns.incrementAndGet();
-      processHolder.get().process.destroy();
+      final int shutdowns = processHolder.get().shutdowns.getAndIncrement();
+      if (shutdowns == 0) {
+        log.info("Attempting to gracefully shutdown task: %s", taskid);
+        try {
+          // TODO this is the WORST
+          final OutputStream out = processHolder.get().process.getOutputStream();
+          out.write(
+              jsonMapper.writeValueAsBytes(
+                  ImmutableMap.of(
+                      "shutdown",
+                      "now"
+                  )
+              )
+          );
+          out.write('\n');
+          out.flush();
+        } catch (IOException e) {
+          throw Throwables.propagate(e);
+        }
+      } else {
+        log.info("Killing process for task: %s", taskid);
+        processHolder.get().process.destroy();
+      }
     }
   }
 

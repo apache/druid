@@ -134,6 +134,21 @@ public class IndexerCoordinatorResource
     return Response.ok().entity(segments).build();
   }
 
+  @POST
+  @Path("/task/{taskid}/shutdown")
+  @Produces("application/json")
+  public Response doShutdown(@PathParam("taskid") String taskid)
+  {
+    try {
+      taskMasterLifecycle.getTaskRunner().shutdown(taskid);
+    }
+    catch (Exception e) {
+      return Response.serverError().build();
+    }
+
+    return Response.ok().build();
+  }
+
   // Legacy endpoint
   // TODO Remove
   @Deprecated
@@ -201,21 +216,6 @@ public class IndexerCoordinatorResource
     }
 
     return Response.ok().entity(retMap).build();
-  }
-
-  @POST
-  @Path("/shutdown")
-  @Produces("application/json")
-  public Response doShutdown(final String taskId)
-  {
-    try {
-      taskMasterLifecycle.getTaskRunner().shutdown(taskId);
-    }
-    catch (Exception e) {
-      return Response.serverError().build();
-    }
-
-    return Response.ok().build();
   }
 
   @GET

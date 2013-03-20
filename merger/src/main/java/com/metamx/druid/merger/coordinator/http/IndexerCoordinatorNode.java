@@ -144,7 +144,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private TaskQueue taskQueue = null;
   private TaskLockbox taskLockbox = null;
   private CuratorFramework curatorFramework = null;
-  private ScheduledExecutorFactory scheduledExecutorFactory = null;
   private IndexerZkConfig indexerZkConfig;
   private TaskRunnerFactory taskRunnerFactory = null;
   private ResourceManagementSchedulerFactory resourceManagementSchedulerFactory = null;
@@ -226,7 +225,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
 
   public void doInit() throws Exception
   {
-    scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
+    final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
     initializeDB();
 
     final ConfigManagerConfig managerConfig = configFactory.build(ConfigManagerConfig.class);

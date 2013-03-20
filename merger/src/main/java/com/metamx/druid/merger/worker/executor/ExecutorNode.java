@@ -243,7 +243,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     lifecycle.stop();
   }
 
-  public synchronized ListenableFuture<TaskStatus> run(Task task)
+  public ListenableFuture<TaskStatus> run(Task task)
   {
     return taskRunner.run(task);
   }

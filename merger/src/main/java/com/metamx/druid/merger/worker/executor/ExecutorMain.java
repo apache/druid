@@ -19,15 +19,21 @@
 
 package com.metamx.druid.merger.worker.executor;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -59,7 +65,15 @@ public class ExecutorMain
       System.exit(2);
     }
 
-    // Spawn monitor thread to keep a watch on our parent process
+    final Task task = node.getJsonMapper().readValue(new File(args[0]), Task.class);
+
+    log.info(
+        "Running with task: %s",
+        node.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(task)
+    );
+
+    // Spawn monitor thread to keep a watch on parent's stdin
+    // If a message comes over stdin, we want to handle it
     // If stdin reaches eof, the parent is gone, and we should shut down
     final ExecutorService parentMonitorExec = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder()
@@ -74,9 +88,25 @@ public class ExecutorMain
           @Override
           public void run()
           {
-            int b = -1;
             try {
-              b = System.in.read();
+              final BufferedReader stdinReader = new BufferedReader(new InputStreamReader(System.in));
+              String messageString;
+              while ((messageString = stdinReader.readLine()) != null) {
+                final Map<String, Object> message = node.getJsonMapper()
+                                                        .readValue(
+                                                            messageString,
+                                                            new TypeReference<Map<String, Object>>(){}
+                                                        );
+
+                if (message == null) {
+                  break;
+                } else if (message.get("shutdown") != null && message.get("shutdown").equals("now")) {
+                  log.info("Shutting down!");
+                  task.shutdown();
+                } else {
+                  throw new ISE("Unrecognized message from parent: %s", message);
+                }
+              }
             } catch (Exception e) {
               log.error(e, "Failed to read from stdin");
             }
@@ -88,13 +118,6 @@ public class ExecutorMain
     );
 
     try {
-      final Task task = node.getJsonMapper().readValue(new File(args[0]), Task.class);
-
-      log.info(
-          "Running with task: %s",
-          node.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(task)
-      );
-
       final TaskStatus status = node.run(task).get();
 
       log.info(
