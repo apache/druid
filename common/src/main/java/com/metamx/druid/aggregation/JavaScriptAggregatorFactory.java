@@ -48,7 +48,11 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
 
   private final String name;
   private final List<String> fieldNames;
-  private final String script;
+  private final String fnAggregate;
+  private final String fnReset;
+  private final String fnCombine;
+
+
 
   private final JavaScriptAggregator.ScriptAggregator compiledScript;
 
@@ -56,13 +60,19 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   public JavaScriptAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldNames") final List<String> fieldNames,
-      @JsonProperty("script") final String expression
+      @JsonProperty("fnAggregate") final String fnAggregate,
+      @JsonProperty("fnReset") final String fnReset,
+      @JsonProperty("fnCombine") final String fnCombine
   )
   {
     this.name = name;
-    this.script = expression;
     this.fieldNames = fieldNames;
-    this.compiledScript = compileScript(script);
+
+    this.fnAggregate = fnAggregate;
+    this.fnReset = fnReset;
+    this.fnCombine = fnCombine;
+
+    this.compiledScript = compileScript(fnAggregate, fnReset, fnCombine);
   }
 
   @Override
@@ -116,7 +126,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    throw new UnsupportedOperationException();
+    return new JavaScriptAggregatorFactory(name, Lists.newArrayList(name), fnCombine, fnReset, fnCombine);
   }
 
   @Override
@@ -144,8 +154,21 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @JsonProperty
-  public String getScript() {
-    return script;
+  public String getFnAggregate()
+  {
+    return fnAggregate;
+  }
+
+  @JsonProperty
+  public String getFnReset()
+  {
+    return fnReset;
+  }
+
+  @JsonProperty
+  public String getFnCombine()
+  {
+    return fnCombine;
   }
 
   @Override
@@ -160,7 +183,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-1");
       byte[] fieldNameBytes = Joiner.on(",").join(fieldNames).getBytes();
-      byte[] sha1 = md.digest(script.getBytes());
+      byte[] sha1 = md.digest((fnAggregate+fnReset+fnCombine).getBytes());
 
       return ByteBuffer.allocate(1 + fieldNameBytes.length + sha1.length)
                        .put(CACHE_TYPE_ID)
@@ -197,21 +220,13 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
     return "JavaScriptAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldNames=" + fieldNames +
-           ", script='" + script + '\'' +
+           ", fnAggregate='" + fnAggregate + '\'' +
+           ", fnReset='" + fnReset + '\'' +
+           ", fnCombine='" + fnCombine + '\'' +
            '}';
   }
 
-  protected static Function getScriptFunction(String name, ScriptableObject scope)
-  {
-    Object fun = scope.get(name, scope);
-    if (fun instanceof Function) {
-      return (Function) fun;
-    } else {
-      throw new IAE("Function [%s] not defined in script", name);
-    }
-  }
-
-  public static JavaScriptAggregator.ScriptAggregator compileScript(final String script)
+  public static JavaScriptAggregator.ScriptAggregator compileScript(final String aggregate, final String reset, final String combine)
   {
     final ContextFactory contextFactory = ContextFactory.getGlobal();
     Context context = contextFactory.enterContext();
@@ -219,12 +234,9 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
 
     final ScriptableObject scope = context.initStandardObjects();
 
-    Script compiledScript = context.compileString(script, "script", 1, null);
-    compiledScript.exec(context, scope);
-
-    final Function fnAggregate = getScriptFunction("aggregate", scope);
-    final Function fnReset = getScriptFunction("reset", scope);
-    final Function fnCombine = getScriptFunction("combine", scope);
+    final Function fnAggregate = context.compileFunction(scope, aggregate, "aggregate", 1, null);
+    final Function fnReset     = context.compileFunction(scope, reset,     "reset",     1, null);
+    final Function fnCombine   = context.compileFunction(scope, combine,   "combine",   1, null);
     Context.exit();
 
     return new JavaScriptAggregator.ScriptAggregator()
