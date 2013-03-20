@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.realtime;
 
 import com.google.common.base.Throwables;
@@ -8,7 +27,6 @@ import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.plumber.IntervalRejectionPolicyFactory;
 import com.metamx.druid.realtime.plumber.RejectionPolicy;
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -32,8 +50,11 @@ public class GracefulShutdownFirehose implements Firehose
   private final ScheduledExecutorService scheduledExecutor;
   private final RejectionPolicy rejectionPolicy;
 
-  private final AtomicBoolean hasMore = new AtomicBoolean(true);
-  private volatile boolean shutdown = false;
+  // when this is set to false, the firehose will have no more rows
+  private final AtomicBoolean valveOn = new AtomicBoolean(true);
+
+  // when this is set to true, the firehose will begin rejecting events
+  private volatile boolean beginRejectionPolicy = false;
 
   public GracefulShutdownFirehose(
       Firehose firehose,
@@ -64,7 +85,7 @@ public class GracefulShutdownFirehose implements Firehose
     final long end = segmentGranularity.increment(truncatedNow) + windowMillis;
     final Duration timeUntilShutdown = new Duration(System.currentTimeMillis(), end);
 
-    log.info("Shutting down in %s. Time at shutdown: ~%s", timeUntilShutdown, new DateTime(end));
+    log.info("Shutdown at approx. %s (in %s)", new DateTime(end), timeUntilShutdown);
 
     ScheduledExecutors.scheduleWithFixedDelay(
         scheduledExecutor,
@@ -75,7 +96,7 @@ public class GracefulShutdownFirehose implements Firehose
           public ScheduledExecutors.Signal call() throws Exception
           {
             try {
-              hasMore.set(false);
+              valveOn.set(false);
             }
             catch (Exception e) {
               throw Throwables.propagate(e);
@@ -86,13 +107,13 @@ public class GracefulShutdownFirehose implements Firehose
         }
     );
 
-    shutdown = true;
+    beginRejectionPolicy = true;
   }
 
   @Override
   public boolean hasMore()
   {
-    return hasMore.get() && firehose.hasMore();
+    return valveOn.get() && firehose.hasMore();
   }
 
   @Override
@@ -100,7 +121,7 @@ public class GracefulShutdownFirehose implements Firehose
   {
     InputRow next = firehose.nextRow();
 
-    if (!shutdown || rejectionPolicy.accept(next.getTimestampFromEpoch())) {
+    if (!beginRejectionPolicy || rejectionPolicy.accept(next.getTimestampFromEpoch())) {
       return next;
     }
 

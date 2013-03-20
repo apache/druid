@@ -91,6 +91,8 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final IndexGranularity segmentGranularity;
   private final Object handoffCondition = new Object();
 
+  private ServiceEmitter emitter;
+
   private volatile VersioningPolicy versioningPolicy = null;
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
   private volatile QueryRunnerFactoryConglomerate conglomerate = null;
@@ -98,7 +100,6 @@ public class RealtimePlumberSchool implements PlumberSchool
   private volatile SegmentAnnouncer segmentAnnouncer = null;
   private volatile SegmentPublisher segmentPublisher = null;
   private volatile ServerView serverView = null;
-  private ServiceEmitter emitter;
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -310,7 +311,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         while (!sinks.isEmpty()) {
           try {
             log.info(
-                "Cannot shut down yet! Sinks remain: %s",
+                "Cannot shut down yet! Sinks remaining: %s",
                 Joiner.on(", ").join(
                     Iterables.transform(
                         sinks.values(),
@@ -337,7 +338,6 @@ public class RealtimePlumberSchool implements PlumberSchool
 
         // scheduledExecutor is shutdown here, but persistExecutor is shutdown when the
         // ServerView sends it a new segment callback
-
         if (scheduledExecutor != null) {
           scheduledExecutor.shutdown();
         }

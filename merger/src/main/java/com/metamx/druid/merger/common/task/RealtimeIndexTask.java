@@ -40,6 +40,8 @@ import java.io.IOException;
 
 public class RealtimeIndexTask extends AbstractTask
 {
+  private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
+
   @JsonIgnore
   final Schema schema;
 
@@ -66,8 +68,6 @@ public class RealtimeIndexTask extends AbstractTask
 
   @JsonIgnore
   private volatile boolean shutdown = false;
-
-  private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
 
   @JsonCreator
   public RealtimeIndexTask(

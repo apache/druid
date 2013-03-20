@@ -19,7 +19,6 @@
 
 package com.metamx.druid.merger.coordinator;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -54,8 +53,7 @@ import org.apache.zookeeper.CreateMode;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
-import java.io.IOException;
-import java.net.URI;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Comparator;
@@ -82,10 +80,13 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p/>
  * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will automatically retry any tasks
  * that were associated with the node.
+ *
+ * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
 public class RemoteTaskRunner implements TaskRunner
 {
   private static final EmittingLogger log = new EmittingLogger(RemoteTaskRunner.class);
+  private static final ToStringResponseHandler responseHandler = new ToStringResponseHandler(Charsets.UTF_8);
   private static final Joiner JOINER = Joiner.on("/");
 
   private final ObjectMapper jsonMapper;
@@ -239,6 +240,10 @@ public class RemoteTaskRunner implements TaskRunner
     return taskRunnerWorkItem.getResult();
   }
 
+  /**
+   * Finds the worker running the task and forwards the shutdown signal to the worker.
+   * @param taskId
+   */
   @Override
   public void shutdown(String taskId)
   {
@@ -249,20 +254,19 @@ public class RemoteTaskRunner implements TaskRunner
       return;
     }
 
-    final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
+    final RetryPolicy shutdownRetryPolicy = retryPolicyFactory.makeRetryPolicy();
     URL url;
     try {
-      url = new URL(String.format("http://%s/mmx/v1/worker/shutdown", zkWorker.getWorker().getHost()));
+      url = new URL(String.format("http://%s/mmx/v1/worker/task/%s/shutdown", zkWorker.getWorker().getHost(), taskId));
     }
-    catch (Exception e) {
+    catch (MalformedURLException e) {
       throw Throwables.propagate(e);
     }
 
-    while (!retryPolicy.hasExceededRetryThreshold()) {
+    while (!shutdownRetryPolicy.hasExceededRetryThreshold()) {
       try {
         final String response = httpClient.post(url)
-                                          .setContent("application/json", jsonMapper.writeValueAsBytes(taskId))
-                                          .go(new ToStringResponseHandler(Charsets.UTF_8))
+                                          .go(responseHandler)
                                           .get();
         log.info("Sent shutdown message to worker: %s, response: %s", zkWorker.getWorker().getHost(), response);
 
@@ -271,11 +275,11 @@ public class RemoteTaskRunner implements TaskRunner
       catch (Exception e) {
         log.error(e, "Exception shutting down taskId: %s", taskId);
 
-        if (retryPolicy.hasExceededRetryThreshold()) {
+        if (shutdownRetryPolicy.hasExceededRetryThreshold()) {
           throw Throwables.propagate(e);
         } else {
           try {
-            final long sleepTime = retryPolicy.getAndIncrementRetryDelay().getMillis();
+            final long sleepTime = shutdownRetryPolicy.getAndIncrementRetryDelay().getMillis();
             log.info("Will try again in %s.", new Duration(sleepTime).toString());
             Thread.sleep(sleepTime);
           }
@@ -287,6 +291,10 @@ public class RemoteTaskRunner implements TaskRunner
     }
   }
 
+  /**
+   * Adds a task to the pending queue
+   * @param taskRunnerWorkItem
+   */
   private void addPendingTask(final TaskRunnerWorkItem taskRunnerWorkItem)
   {
     log.info("Added pending task %s", taskRunnerWorkItem.getTask().getId());
