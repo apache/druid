@@ -164,7 +164,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                                 timeStart, new String[][]{}
                             ),
                             new IncrementalIndex.TimeAndDims(
-                                Math.min(actualInterval.getEndMillis(), gran.next(timeStart)), new String[][]{}
+                                Math.min(actualInterval.getEndMillis(), gran.next(input)), new String[][]{}
                             )
                         );
                         time = gran.toDateTime(input);
