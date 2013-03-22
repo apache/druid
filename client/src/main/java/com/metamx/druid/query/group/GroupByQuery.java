@@ -19,9 +19,9 @@
 
 package com.metamx.druid.query.group;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import com.google.common.collect.*;
 import com.metamx.druid.BaseQuery;
 import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
@@ -31,13 +31,17 @@ import com.metamx.druid.input.Row;
 import com.metamx.druid.query.dimension.DefaultDimensionSpec;
 import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.filter.DimFilter;
+import com.metamx.druid.query.having.HavingSpec;
+import com.metamx.druid.query.order.OrderBySpec;
 import com.metamx.druid.query.segment.LegacySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -53,7 +57,9 @@ public class GroupByQuery extends BaseQuery<Row>
   private final List<DimensionSpec> dimensions;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
-
+  private final HavingSpec havingSpec;
+  private final OrderBySpec orderBySpec;
+  private final Integer limit;
   @JsonCreator
   public GroupByQuery(
       @JsonProperty("dataSource") String dataSource,
@@ -63,6 +69,9 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
+      @JsonProperty("having") HavingSpec havingSpec,
+      @JsonProperty("orderBy") OrderBySpec orderBySpec,
+      @JsonProperty("limit") Integer limit,
       @JsonProperty("context") Map<String, String> context
   )
   {
@@ -72,9 +81,72 @@ public class GroupByQuery extends BaseQuery<Row>
     this.dimensions = dimensions == null ? ImmutableList.<DimensionSpec>of() : dimensions;
     this.aggregatorSpecs = aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
+    this.havingSpec = havingSpec;
+    this.orderBySpec = orderBySpec;
+    this.limit = limit;
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
     Preconditions.checkNotNull(this.aggregatorSpecs, "Must specify at least one aggregator");
+    Preconditions.checkArgument(this.limit == null || this.limit.intValue() >= 0, "A given limit can't be negative");
+
+    validateOrderBySpecFields(aggregatorSpecs, postAggregatorSpecs, orderBySpec);
+  }
+
+  // Ensures that each aggregation field in the give orderBy spec is a valid name in either aggregator specs or in post aggregator specs.
+  private void validateOrderBySpecFields(List<AggregatorFactory> aggregatorSpecs, List<PostAggregator> postAggregatorSpecs, OrderBySpec orderBySpec)
+  {
+    Set<String> aggNameSet = getAggregationNames(aggregatorSpecs);
+
+    Set<String> postAggNames = getPostAggregationNames(postAggregatorSpecs);
+
+    if(orderBySpec != null) {
+      for(String name: orderBySpec.getAggregations()) {
+        Preconditions.checkArgument(aggNameSet.contains(name) || postAggNames.contains(name), String.format("The field '%s' for orderBy must be either an aggregation or a post-aggregation", name));
+      }
+    }
+  }
+
+  private Set<String> getPostAggregationNames(List<PostAggregator> postAggregatorSpecs)
+  {
+    if(postAggregatorSpecs == null){
+      return ImmutableSet.of();
+    }
+
+    return Sets.newHashSet(
+      Iterables.transform(
+        postAggregatorSpecs,
+        new Function<PostAggregator, String>()
+        {
+          @Override
+          public String apply(@Nullable PostAggregator postAgg)
+          {
+            return postAgg.getName();
+          }
+        }
+      )
+    );
+  }
+
+  private Set<String> getAggregationNames(List<AggregatorFactory> aggregatorSpecs)
+  {
+    if(aggregatorSpecs == null) {
+      return ImmutableSet.of();
+    }
+
+    return Sets.newHashSet(
+      Iterables.transform(
+        aggregatorSpecs,
+        new Function<AggregatorFactory, String>()
+        {
+
+          @Override
+          public String apply(@Nullable AggregatorFactory agg)
+          {
+            return agg.getName();
+          }
+        }
+      )
+    );
   }
 
   @JsonProperty("filter")
@@ -107,6 +179,24 @@ public class GroupByQuery extends BaseQuery<Row>
     return postAggregatorSpecs;
   }
 
+  @JsonProperty("having")
+  public HavingSpec getHavingSpec()
+  {
+    return havingSpec;
+  }
+
+  @JsonProperty("orderBy")
+  public OrderBySpec getOrderBy()
+  {
+    return orderBySpec;
+  }
+
+  @JsonProperty("limit")
+  public Integer getLimit()
+  {
+    return limit;
+  }
+
   @Override
   public boolean hasFilters()
   {
@@ -130,6 +220,9 @@ public class GroupByQuery extends BaseQuery<Row>
         dimensions,
         aggregatorSpecs,
         postAggregatorSpecs,
+        havingSpec,
+        orderBySpec,
+        limit,
         computeOverridenContext(contextOverride)
     );
   }
@@ -145,6 +238,9 @@ public class GroupByQuery extends BaseQuery<Row>
         dimensions,
         aggregatorSpecs,
         postAggregatorSpecs,
+        havingSpec,
+        orderBySpec,
+        limit,
         getContext()
     );
   }
@@ -158,6 +254,10 @@ public class GroupByQuery extends BaseQuery<Row>
     private List<DimensionSpec> dimensions;
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
+    private HavingSpec havingSpec;
+    private OrderBySpec orderBySpec;
+    private Integer limit;
+
     private Map<String, String> context;
 
     private Builder() {}
@@ -171,6 +271,10 @@ public class GroupByQuery extends BaseQuery<Row>
       dimensions = builder.dimensions;
       aggregatorSpecs = builder.aggregatorSpecs;
       postAggregatorSpecs = builder.postAggregatorSpecs;
+      havingSpec = builder.havingSpec;
+      orderBySpec = builder.orderBySpec;
+      limit = builder.limit;
+
       context = builder.context;
     }
 
@@ -267,6 +371,27 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
+    public Builder setHavingSpec(HavingSpec havingSpec)
+    {
+      this.havingSpec = havingSpec;
+
+      return this;
+    }
+
+    public Builder setOrderBySpec(OrderBySpec orderBySpec)
+    {
+      this.orderBySpec = orderBySpec;
+
+      return this;
+    }
+
+    public Builder setLimit(Integer limit)
+    {
+      this.limit = limit;
+
+      return this;
+    }
+
     public Builder copy()
     {
       return new Builder(this);
@@ -282,6 +407,9 @@ public class GroupByQuery extends BaseQuery<Row>
           dimensions,
           aggregatorSpecs,
           postAggregatorSpecs,
+          havingSpec,
+          orderBySpec,
+          limit,
           context
       );
     }

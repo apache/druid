@@ -22,7 +22,11 @@ package com.metamx.druid.query.group;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.ConcatSequence;
@@ -41,6 +45,8 @@ import com.metamx.druid.query.MetricManipulationFn;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.dimension.DimensionSpec;
+import com.metamx.druid.query.having.HavingSpec;
+import com.metamx.druid.query.order.TopNSorter;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.codehaus.jackson.type.TypeReference;
@@ -48,8 +54,7 @@ import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 /**
  */
@@ -122,9 +127,17 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
             }
         );
 
+        final Iterable<Row> filtered = filterByHavingSpec(
+          query.getHavingSpec(),
+          index.iterableWithPostAggregations(query.getPostAggregatorSpecs()));
+
+        final Iterable<Row> ordered = applyOrderByAndLimit(
+          query,
+          filtered);
+
         // convert millis back to timestamp according to granularity to preserve time zone information
         return Sequences.map(
-            Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
+            Sequences.simple(ordered),
             new Function<Row, Row>()
             {
               private final QueryGranularity granularity = query.getGranularity();
@@ -140,6 +153,48 @@ public class GroupByQueryQueryToolChest implements QueryToolChest<Row, GroupByQu
       }
     };
   }
+
+  private Iterable<Row> filterByHavingSpec(final HavingSpec havingSpec, final Iterable<Row> rows)
+  {
+    // If there's no having clause, we don't need to iterate over the whole iterable. Just a
+    // simple optimization.
+    if(havingSpec == null) {
+      return rows;
+    }
+
+    return Iterables.filter(
+      rows,
+      new Predicate<Row>()
+      {
+        @Override
+        public boolean apply(@Nullable final Row row)
+        {
+          return havingSpec.eval(row);
+        }
+      }
+    );
+  }
+
+
+  private Iterable<Row> applyOrderByAndLimit(GroupByQuery query, Iterable<Row> rows)
+  {
+    if(query.getOrderBy() == null && query.getLimit() == null) {
+      return rows;
+    }
+
+    if(query.getOrderBy() == null) {
+      return Iterables.limit(rows, query.getLimit().intValue());
+    }
+
+    TopNSorter sorter = new TopNSorter(query.getOrderBy().getRowOrdering());
+
+    if(query.getLimit() == null) {
+      return sorter.sortedCopy(rows);
+    }
+
+    return sorter.toTopN(rows, query.getLimit().intValue());
+  }
+
 
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
