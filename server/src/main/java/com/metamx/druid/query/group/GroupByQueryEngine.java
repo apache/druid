@@ -31,6 +31,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import com.metamx.common.parsers.CloseableIterator;
 import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.aggregation.AggregatorFactory;
@@ -87,65 +88,47 @@ public class GroupByQueryEngine
 
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
-    return new BaseSequence<Row, CloseableIterator<Row>>(
-        new BaseSequence.IteratorMaker<Row, CloseableIterator<Row>>()
+    return Sequences.concat(
+        new BaseSequence<Sequence<Row>, Iterator<Sequence<Row>>>(new BaseSequence.IteratorMaker<Sequence<Row>, Iterator<Sequence<Row>>>()
         {
           @Override
-          public CloseableIterator<Row> make()
+          public Iterator<Sequence<Row>> make()
           {
-            return new CloseableIterator<Row>()
-            {
-              final List<CloseableIterator> rowIterators = Lists.newLinkedList();
-              final Iterator<Row> delegate = FunctionalIterator
-                                        .create(cursors.iterator())
-                                        .transformCat(
-                                            new Function<Cursor, Iterator<Row>>()
-                                            {
-                                              @Override
-                                              public Iterator<Row> apply(@Nullable final Cursor cursor)
-                                              {
-                                                RowIterator it = new RowIterator(query, cursor, bufferHolder.get());
-                                                rowIterators.add(it);
-                                                return it;
-                                              }
-                                            }
-                                        );
-              @Override
-              public void close()
-              {
-                for(CloseableIterator it : rowIterators) {
-                  Closeables.closeQuietly(it);
-                }
-              }
+            return FunctionalIterator
+              .create(cursors.iterator())
+              .transform(new Function<Cursor, Sequence<Row>>()
+                        {
+                          @Override
+                          public Sequence<Row> apply(@Nullable final Cursor cursor)
+                          {
+                            return new BaseSequence<Row, CloseableIterator<Row>>(
+                                new BaseSequence.IteratorMaker<Row, CloseableIterator<Row>>()
+                                {
+                                  @Override
+                                  public  CloseableIterator<Row> make()
+                                  {
+                                    return new RowIterator(query, cursor, bufferHolder.get());
+                                  }
 
-              @Override
-              public boolean hasNext()
-              {
-                return delegate.hasNext();
-              }
-
-              @Override
-              public Row next()
-              {
-                return delegate.next();
-              }
-
-              @Override
-              public void remove()
-              {
-                delegate.remove();
-              }
-            };
+                                  @Override
+                                  public void cleanup(CloseableIterator iterFromMake)
+                                  {
+                                    Closeables.closeQuietly(iterFromMake);
+                                  }
+                                }
+                            );
+                          }
+              });
           }
 
           @Override
-          public void cleanup(CloseableIterator<Row> iterFromMake)
+          public void cleanup(Iterator<Sequence<Row>> iterFromMake)
           {
-            Closeables.closeQuietly(iterFromMake);
             Closeables.closeQuietly(bufferHolder);
           }
-        }
+        })
     );
+
   }
 
   private static class RowUpdater
