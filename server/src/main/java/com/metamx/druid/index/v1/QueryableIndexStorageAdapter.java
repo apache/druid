@@ -272,7 +272,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                   }
 
                   final Offset offset = new TimestampCheckingOffset(
-                      baseOffset, timestamps, Math.min(interval.getEndMillis(), gran.next(timeStart))
+                      baseOffset, timestamps, Math.min(interval.getEndMillis(), gran.next(input))
                   );
 
                   return new Cursor()
