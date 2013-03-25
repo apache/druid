@@ -21,6 +21,7 @@ package com.metamx.druid.aggregation;
 
 import com.google.common.collect.Lists;
 import com.metamx.druid.processing.FloatMetricSelector;
+import org.mozilla.javascript.Context;
 
 import java.util.List;
 
@@ -33,6 +34,8 @@ public class JavaScriptAggregator implements Aggregator
     public double combine(double a, double b);
 
     public double reset();
+
+    public void close();
   }
 
   private final String name;
@@ -78,5 +81,11 @@ public class JavaScriptAggregator implements Aggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public void close()
+  {
+    script.close();
   }
 }

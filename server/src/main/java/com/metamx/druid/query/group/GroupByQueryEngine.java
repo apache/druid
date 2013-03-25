@@ -31,6 +31,8 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
+import com.metamx.common.parsers.CloseableIterator;
 import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.BufferAggregator;
@@ -47,6 +49,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
@@ -85,33 +88,47 @@ public class GroupByQueryEngine
 
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
-    return new BaseSequence<Row, Iterator<Row>>(
-        new BaseSequence.IteratorMaker<Row, Iterator<Row>>()
+    return Sequences.concat(
+        new BaseSequence<Sequence<Row>, Iterator<Sequence<Row>>>(new BaseSequence.IteratorMaker<Sequence<Row>, Iterator<Sequence<Row>>>()
         {
           @Override
-          public Iterator<Row> make()
+          public Iterator<Sequence<Row>> make()
           {
             return FunctionalIterator
-                .create(cursors.iterator())
-                .transformCat(
-                    new Function<Cursor, Iterator<Row>>()
-                    {
-                      @Override
-                      public Iterator<Row> apply(@Nullable final Cursor cursor)
-                      {
-                        return new RowIterator(query, cursor, bufferHolder.get());
-                      }
-                    }
-                );
+              .create(cursors.iterator())
+              .transform(new Function<Cursor, Sequence<Row>>()
+                        {
+                          @Override
+                          public Sequence<Row> apply(@Nullable final Cursor cursor)
+                          {
+                            return new BaseSequence<Row, CloseableIterator<Row>>(
+                                new BaseSequence.IteratorMaker<Row, CloseableIterator<Row>>()
+                                {
+                                  @Override
+                                  public  CloseableIterator<Row> make()
+                                  {
+                                    return new RowIterator(query, cursor, bufferHolder.get());
+                                  }
+
+                                  @Override
+                                  public void cleanup(CloseableIterator iterFromMake)
+                                  {
+                                    Closeables.closeQuietly(iterFromMake);
+                                  }
+                                }
+                            );
+                          }
+              });
           }
 
           @Override
-          public void cleanup(Iterator<Row> iterFromMake)
+          public void cleanup(Iterator<Sequence<Row>> iterFromMake)
           {
             Closeables.closeQuietly(bufferHolder);
           }
-        }
+        })
     );
+
   }
 
   private static class RowUpdater
@@ -248,7 +265,7 @@ public class GroupByQueryEngine
     }
   }
 
-  private class RowIterator implements Iterator<Row>
+  private class RowIterator implements CloseableIterator<Row>
   {
     private final GroupByQuery query;
     private final Cursor cursor;
@@ -383,6 +400,13 @@ public class GroupByQueryEngine
     public void remove()
     {
       throw new UnsupportedOperationException();
+    }
+
+    public void close() {
+      // cleanup
+      for(BufferAggregator agg : aggregators) {
+        agg.close();
+      }
     }
   }
 }

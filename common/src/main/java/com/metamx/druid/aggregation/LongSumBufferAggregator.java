@@ -59,4 +59,10 @@ public class LongSumBufferAggregator implements BufferAggregator
   {
     return (float) buf.getLong(position);
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }

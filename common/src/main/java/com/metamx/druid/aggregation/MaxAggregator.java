@@ -82,4 +82,10 @@ public class MaxAggregator implements Aggregator
   {
     return new MaxAggregator(name, selector);
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }

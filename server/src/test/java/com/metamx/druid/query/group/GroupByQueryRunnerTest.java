@@ -30,6 +30,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.PeriodGranularity;
 import com.metamx.druid.Query;
+import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.TestHelper;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.LongSumAggregatorFactory;
@@ -232,6 +233,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery fullQuery = builder.build();
+    final GroupByQuery allGranQuery = builder.copy().setGranularity(QueryGranularity.ALL).build();
 
     QueryRunner mergedRunner = new GroupByQueryQueryToolChest().mergeResults(
         new QueryRunner<Row>()
@@ -265,6 +267,22 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(expectedResults, runner.run(fullQuery), "direct");
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery), "merged");
+
+    List<Row> allGranExpectedResults = Arrays.<Row>asList(
+        createExpectedRow("2011-04-02", "alias", "automotive", "rows", 2L, "idx", 269L),
+        createExpectedRow("2011-04-02", "alias", "business", "rows", 2L, "idx", 217L),
+        createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        createExpectedRow("2011-04-02", "alias", "health", "rows", 2L, "idx", 216L),
+        createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        createExpectedRow("2011-04-02", "alias", "news", "rows", 2L, "idx", 221L),
+        createExpectedRow("2011-04-02", "alias", "premium", "rows", 6L, "idx", 4416L),
+        createExpectedRow("2011-04-02", "alias", "technology", "rows", 2L, "idx", 177L),
+        createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
+    );
+
+    TestHelper.assertExpectedObjects(allGranExpectedResults, runner.run(allGranQuery), "direct");
+    TestHelper.assertExpectedObjects(allGranExpectedResults, mergedRunner.run(allGranQuery), "merged");
+
   }
 
   private MapBasedRow createExpectedRow(final String timestamp, Object... vals)
