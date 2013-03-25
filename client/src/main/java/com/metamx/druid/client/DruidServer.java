@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 
-
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,7 +39,7 @@ public class DruidServer implements Comparable
 
   private final String name;
   private final ConcurrentMap<String, DruidDataSource> dataSources;
-  private final Map<String, DataSegment> segments;
+  private final ConcurrentMap<String, DataSegment> segments;
 
   private final String host;
   private final long maxSize;
@@ -80,7 +78,7 @@ public class DruidServer implements Comparable
     this.tier = tier;
 
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
-    this.segments = new HashMap<String, DataSegment>();
+    this.segments = new ConcurrentHashMap<String, DataSegment>();
   }
 
   public String getName()
@@ -132,7 +130,7 @@ public class DruidServer implements Comparable
   @JsonProperty
   public Map<String, DataSegment> getSegments()
   {
-    return segments;
+    return ImmutableMap.copyOf(segments);
   }
 
   public DataSegment getSegment(String segmentName)
