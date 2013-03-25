@@ -49,4 +49,10 @@ public class CountBufferAggregator implements BufferAggregator
   {
     return buf.getLong(position);
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }

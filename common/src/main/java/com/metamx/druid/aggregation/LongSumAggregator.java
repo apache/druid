@@ -89,4 +89,10 @@ public class LongSumAggregator implements Aggregator
   {
     return new LongSumAggregator(name, selector);
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }

@@ -75,4 +75,10 @@ public class CountAggregator implements Aggregator
   {
     return new CountAggregator(name);
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }

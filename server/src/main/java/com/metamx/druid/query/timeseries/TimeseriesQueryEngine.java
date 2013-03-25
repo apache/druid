@@ -80,7 +80,14 @@ public class TimeseriesQueryEngine
                       bob.addMetric(postAgg);
                     }
 
-                    return bob.build();
+                    Result<TimeseriesResultValue> retVal = bob.build();
+
+                    // cleanup
+                    for(Aggregator agg : aggregators) {
+                      agg.close();
+                    }
+
+                    return retVal;
                   }
                 }
             ).iterator();

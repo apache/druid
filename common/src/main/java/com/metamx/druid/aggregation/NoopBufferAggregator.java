@@ -46,4 +46,10 @@ public class NoopBufferAggregator implements BufferAggregator
   {
     return 0;
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }
