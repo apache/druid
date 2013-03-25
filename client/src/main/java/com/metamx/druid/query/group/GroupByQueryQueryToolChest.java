@@ -37,7 +37,6 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.input.Rows;
-import com.metamx.druid.query.CacheStrategy;
 import com.metamx.druid.query.MetricManipulationFn;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChest;
@@ -78,7 +77,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       {
         final GroupByQuery query = (GroupByQuery) input;
 
-        List<Interval> condensed = query.getIntervals();
+        final QueryGranularity gran = query.getGranularity();
+        final long timeStart = query.getIntervals().get(0).getStartMillis();
+
+        // use gran.iterable instead of gran.truncate so that
+        // AllGranularity returns timeStart instead of Long.MIN_VALUE
+        final long granTimeStart = gran.iterable(timeStart, timeStart+1).iterator().next();
+
         final List<AggregatorFactory> aggs = Lists.transform(
             query.getAggregatorSpecs(),
             new Function<AggregatorFactory, AggregatorFactory>()
@@ -102,10 +107,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             }
         );
 
-        final QueryGranularity gran = query.getGranularity();
         final IncrementalIndex index = runner.run(query).accumulate(
             new IncrementalIndex(
-                gran.truncate(condensed.get(0).getStartMillis()),
+                // use granularity truncated min timestamp
+                // since incoming truncated timestamps may precede timeStart
+                granTimeStart,
                 gran,
                 aggs.toArray(new AggregatorFactory[aggs.size()])
             ),
@@ -128,13 +134,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
             new Function<Row, Row>()
             {
-              private final QueryGranularity granularity = query.getGranularity();
-
               @Override
               public Row apply(Row input)
               {
                 final MapBasedRow row = (MapBasedRow) input;
-                return new MapBasedRow(granularity.toDateTime(row.getTimestampFromEpoch()), row.getEvent());
+                return new MapBasedRow(gran.toDateTime(row.getTimestampFromEpoch()), row.getEvent());
               }
             }
         );
