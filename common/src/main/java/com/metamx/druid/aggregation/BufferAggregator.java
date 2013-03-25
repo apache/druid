@@ -88,4 +88,9 @@ public interface BufferAggregator
    * @return the float representation of the aggregate
    */
   float getFloat(ByteBuffer buf, int position);
+
+  /**
+   * Release any resources used by the aggregator
+   */
+  void close();
 }

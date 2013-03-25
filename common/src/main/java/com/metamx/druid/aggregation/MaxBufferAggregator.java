@@ -57,4 +57,10 @@ public class MaxBufferAggregator implements BufferAggregator
   {
     return (float) buf.getDouble(position);
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }
