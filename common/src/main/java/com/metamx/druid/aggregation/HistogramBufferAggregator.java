@@ -90,4 +90,10 @@ public class HistogramBufferAggregator implements BufferAggregator
   {
     throw new UnsupportedOperationException("HistogramBufferAggregator does not support getFloat()");
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }
