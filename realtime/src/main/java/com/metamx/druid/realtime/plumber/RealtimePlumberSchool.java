@@ -328,7 +328,9 @@ public class RealtimePlumberSchool implements PlumberSchool
             );
 
             synchronized (handoffCondition) {
-              handoffCondition.wait();
+              while (!sinks.isEmpty()) {
+                handoffCondition.wait();
+              }
             }
           }
           catch (InterruptedException e) {
