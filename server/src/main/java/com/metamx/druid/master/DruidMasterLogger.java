@@ -65,35 +65,75 @@ public class DruidMasterLogger implements DruidMasterHelper
       }
     }
 
-    emitter.emit(
-        new ServiceMetricEvent.Builder().build(
-            "master/cost/raw", stats.getGlobalStats().get("initialCost")
-        )
-    );
+    Map<String, AtomicLong> initialCosts = stats.getPerTierStats().get("initialCost");
+    if (initialCosts != null) {
+      for (Map.Entry<String, AtomicLong> entry : initialCosts.entrySet()) {
+        String tier = entry.getKey();
+        AtomicLong value = entry.getValue();
+        emitter.emit(
+            new ServiceMetricEvent.Builder()
+                .build(
+                String.format("master/%s/cost/raw", tier), value.get()
+            )
+        );
+      }
+    }
 
-    emitter.emit(
-        new ServiceMetricEvent.Builder().build(
-            "master/cost/normalization", stats.getGlobalStats().get("normalization")
-        )
-    );
+    Map<String, AtomicLong> normalization = stats.getPerTierStats().get("normalization");
+    if (initialCosts != null) {
+      for (Map.Entry<String, AtomicLong> entry : normalization.entrySet()) {
+        String tier = entry.getKey();
+        AtomicLong value = entry.getValue();
+        emitter.emit(
+            new ServiceMetricEvent.Builder()
+                .build(
+                    String.format("master/%s/cost/normalization", tier), value.get()
+                )
+        );
+      }
+    }
 
-    emitter.emit(
-        new ServiceMetricEvent.Builder().build(
-            "master/cost/normalized", stats.getGlobalStats().get("normalizedInitialCostTimesOneThousand").doubleValue() / 1000d
-        )
-    );
+    Map<String, AtomicLong> normalized = stats.getPerTierStats().get("normalizedInitialCostTimesOneThousand");
+    if (initialCosts != null) {
+      for (Map.Entry<String, AtomicLong> entry : normalized.entrySet()) {
+        String tier = entry.getKey();
+        AtomicLong value = entry.getValue();
+        emitter.emit(
+            new ServiceMetricEvent.Builder()
+                .build(
+                    String.format("master/%s/cost/normalized", tier), (double) value.get() / 1000d
+                )
+        );
+      }
+    }
 
-    emitter.emit(
-        new ServiceMetricEvent.Builder().build(
-            "master/moved/count", stats.getGlobalStats().get("movedCount")
-        )
-    );
+    Map<String, AtomicLong> movedCount = stats.getPerTierStats().get("movedCount");
+    if (initialCosts != null) {
+      for (Map.Entry<String, AtomicLong> entry : movedCount.entrySet()) {
+        String tier = entry.getKey();
+        AtomicLong value = entry.getValue();
+        emitter.emit(
+            new ServiceMetricEvent.Builder()
+                .build(
+                    String.format("master/%s/moved/count", tier), value.get()
+                )
+        );
+      }
+    }
 
-    emitter.emit(
-        new ServiceMetricEvent.Builder().build(
-            "master/deleted/count", stats.getGlobalStats().get("deletedCount")
-        )
-    );
+    Map<String, AtomicLong> deletedCount = stats.getPerTierStats().get("deletedCount");
+    if (initialCosts != null) {
+      for (Map.Entry<String, AtomicLong> entry : deletedCount.entrySet()) {
+        String tier = entry.getKey();
+        AtomicLong value = entry.getValue();
+        emitter.emit(
+            new ServiceMetricEvent.Builder()
+                .build(
+                    String.format("master/%s/deleted/count", tier), value.get()
+                )
+        );
+      }
+    }
 
     Map<String, AtomicLong> unneeded = stats.getPerTierStats().get("unneededCount");
     if (unneeded != null) {
