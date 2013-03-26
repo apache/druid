@@ -29,7 +29,6 @@ import com.metamx.druid.collect.CountingMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -40,16 +39,20 @@ public class DruidMasterLogger implements DruidMasterHelper
 {
   private static final Logger log = new Logger(DruidMasterLogger.class);
 
-  private <T extends Number> void emitTieredStats(final ServiceEmitter emitter, final String formatString, final Map<String, T> statMap)
+  private <T extends Number> void emitTieredStats(
+      final ServiceEmitter emitter,
+      final String formatString,
+      final Map<String, T> statMap
+  )
   {
-  if (statMap != null) {
+    if (statMap != null) {
       for (Map.Entry<String, T> entry : statMap.entrySet()) {
         String tier = entry.getKey();
         Number value = entry.getValue();
         emitter.emit(
             new ServiceMetricEvent.Builder().build(
-                    String.format(formatString, tier), value.doubleValue()
-                )
+                String.format(formatString, tier), value.doubleValue()
+            )
         );
       }
     }
@@ -82,30 +85,43 @@ public class DruidMasterLogger implements DruidMasterHelper
       }
     }
 
-    emitTieredStats(emitter, "master/%s/cost/raw",
-                    stats.getPerTierStats().get("initialCost"));
+    emitTieredStats(
+        emitter, "master/%s/cost/raw",
+        stats.getPerTierStats().get("initialCost")
+    );
 
-    emitTieredStats(emitter, "master/%s/cost/normalization",
-                    stats.getPerTierStats().get("normalization"));
+    emitTieredStats(
+        emitter, "master/%s/cost/normalization",
+        stats.getPerTierStats().get("normalization")
+    );
 
-    emitTieredStats(emitter, "master/%s/moved/count",
-                    stats.getPerTierStats().get("movedCount"));
+    emitTieredStats(
+        emitter, "master/%s/moved/count",
+        stats.getPerTierStats().get("movedCount")
+    );
 
-    emitTieredStats(emitter, "master/%s/deleted/count",
-                    stats.getPerTierStats().get("deletedCount"));
+    emitTieredStats(
+        emitter, "master/%s/deleted/count",
+        stats.getPerTierStats().get("deletedCount")
+    );
 
-    emitTieredStats(emitter, "master/%s/cost/normalized",
-                    Maps.transformEntries(stats.getPerTierStats().get("normalizedInitialCostTimesOneThousand"),
-                                          new Maps.EntryTransformer<String, AtomicLong, Number>()
-                                          {
-                                            @Override
-                                            public Number transformEntry(
-                                                @Nullable String key, @Nullable AtomicLong value
-                                            )
-                                            {
-                                              return value.doubleValue() / 1000d;
-                                            }
-                                          }));
+    Map<String, AtomicLong> normalized = stats.getPerTierStats().get("normalizedInitialCostTimesOneThousand");
+    if (normalized != null) {
+      emitTieredStats(
+          emitter, "master/%s/cost/normalized",
+          Maps.transformEntries(
+              normalized,
+              new Maps.EntryTransformer<String, AtomicLong, Number>()
+              {
+                @Override
+                public Number transformEntry(String key, AtomicLong value)
+                {
+                  return value.doubleValue() / 1000d;
+                }
+              }
+          )
+      );
+    }
 
     Map<String, AtomicLong> unneeded = stats.getPerTierStats().get("unneededCount");
     if (unneeded != null) {

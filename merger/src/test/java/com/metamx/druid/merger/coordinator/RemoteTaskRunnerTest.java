@@ -324,7 +324,7 @@ public class RemoteTaskRunnerTest
         pathChildrenCache,
         scheduledExec,
         new RetryPolicyFactory(new TestRetryPolicyConfig()),
-        new AtomicReference<WorkerSetupData>(new WorkerSetupData("0", 0, null, null))
+        new AtomicReference<WorkerSetupData>(new WorkerSetupData("0", 0, 1, null, null))
     );
 
     // Create a single worker and wait for things for be ready

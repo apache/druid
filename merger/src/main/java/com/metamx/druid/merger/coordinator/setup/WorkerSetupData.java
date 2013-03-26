@@ -20,8 +20,6 @@
 package com.metamx.druid.merger.coordinator.setup;
 
 
-
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -35,6 +33,7 @@ public class WorkerSetupData
 
   private final String minVersion;
   private final int minNumWorkers;
+  private final int maxNumWorkers;
   private final EC2NodeData nodeData;
   private final GalaxyUserData userData;
 
@@ -42,12 +41,14 @@ public class WorkerSetupData
   public WorkerSetupData(
       @JsonProperty("minVersion") String minVersion,
       @JsonProperty("minNumWorkers") int minNumWorkers,
+      @JsonProperty("maxNumWorkers") int maxNumWorkers,
       @JsonProperty("nodeData") EC2NodeData nodeData,
       @JsonProperty("userData") GalaxyUserData userData
   )
   {
     this.minVersion = minVersion;
     this.minNumWorkers = minNumWorkers;
+    this.maxNumWorkers = maxNumWorkers;
     this.nodeData = nodeData;
     this.userData = userData;
   }
@@ -62,6 +63,12 @@ public class WorkerSetupData
   public int getMinNumWorkers()
   {
     return minNumWorkers;
+  }
+
+  @JsonProperty
+  public int getMaxNumWorkers()
+  {
+    return maxNumWorkers;
   }
 
   @JsonProperty
@@ -82,6 +89,7 @@ public class WorkerSetupData
     return "WorkerSetupData{" +
            "minVersion='" + minVersion + '\'' +
            ", minNumWorkers=" + minNumWorkers +
+           ", maxNumWorkers=" + maxNumWorkers +
            ", nodeData=" + nodeData +
            ", userData=" + userData +
            '}';
