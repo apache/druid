@@ -70,6 +70,15 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   @Override
   public boolean doProvision(Collection<TaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
+    if (zkWorkers.size() >= workerSetupdDataRef.get().getMaxNumWorkers()) {
+      log.info(
+          "Cannot scale anymore. Num workers = %d, Max num workers = %d",
+          zkWorkers.size(),
+          workerSetupdDataRef.get().getMaxNumWorkers()
+      );
+      return false;
+    }
+
     List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
         Lists.newArrayList(
             Iterables.transform(
