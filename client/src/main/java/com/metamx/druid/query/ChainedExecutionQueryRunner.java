@@ -20,6 +20,7 @@
 package com.metamx.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -27,6 +28,7 @@ import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.common.logger.Logger;
 import com.metamx.druid.Query;
 
 import java.util.Arrays;
@@ -52,6 +54,8 @@ import java.util.concurrent.Future;
  */
 public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
 {
+  private static final Logger log = new Logger(ChainedExecutionQueryRunner.class);
+
   private final Iterable<QueryRunner<T>> queryables;
   private final ExecutorService exec;
   private final Ordering<T> ordering;
@@ -100,7 +104,13 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                               @Override
                               public List<T> call() throws Exception
                               {
-                                return Sequences.toList(input.run(query), Lists.<T>newArrayList());
+                                try {
+                                  return Sequences.toList(input.run(query), Lists.<T>newArrayList());
+                                }
+                                catch (Exception e) {
+                                  log.error(e, "Exception with one of the sequences!");
+                                  throw Throwables.propagate(e);
+                                }
                               }
                             }
                         );

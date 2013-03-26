@@ -175,7 +175,7 @@ public class WorkerTaskMonitor implements QuerySegmentWalker
   private boolean isTaskRunning(final Task task)
   {
     for (final Task runningTask : running) {
-      if (runningTask.equals(task.getId())) {
+      if (runningTask.getId().equals(task.getId())) {
         return true;
       }
     }

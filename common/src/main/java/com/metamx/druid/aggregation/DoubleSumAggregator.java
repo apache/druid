@@ -89,4 +89,10 @@ public class DoubleSumAggregator implements Aggregator
   {
     return new DoubleSumAggregator(name, selector);
   }
+
+  @Override
+  public void close()
+  {
+    // no resources to cleanup
+  }
 }
