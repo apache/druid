@@ -207,12 +207,11 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     theModules.addAll(extraModules);
 
     final Injector injector = Guice.createInjector(theModules);
-    final Context root = new Context(getServer(), "/druid/v2", Context.SESSIONS);
-
+    final Context root = new Context(getServer(), "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(
         new ServletHolder(new QueryServlet(getJsonMapper(), getSmileMapper(), texasRanger, getEmitter(), getRequestLogger())),
-        "/*"
+        "/druid/v2/*"
     );
 
     root.addEventListener(new GuiceServletConfig(injector));

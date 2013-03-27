@@ -190,13 +190,13 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
 
     startMonitoring(monitors);
 
-    final Context v2Druid = new Context(getServer(), "/druid/v2", Context.SESSIONS);
-    v2Druid.addServlet(new ServletHolder(new StatusServlet()), "/status");
-    v2Druid.addServlet(
+    final Context root = new Context(getServer(), "/", Context.SESSIONS);
+    root.addServlet(new ServletHolder(new StatusServlet()), "/status");
+    root.addServlet(
         new ServletHolder(
             new QueryServlet(getJsonMapper(), getSmileMapper(), realtimeManager, emitter, getRequestLogger())
         ),
-        "/*"
+        "/druid/v2/*"
     );
 
     initialized = true;

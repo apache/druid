@@ -6,10 +6,10 @@ $(document).ready(function() {
   var type = $('#select_type').attr('value') + '';
   var view = $('#select_view').attr('value') + '';
 
-  function handleTable()
+  function handleTable(dontDisplay)
   {
     $.get(basePath + type + '?full', function(data) {
-      buildTable(data, $('#result_table'));
+      buildTable(data, $('#result_table'), dontDisplay);
 
       $('.loading').hide();
       $('#table_wrapper').show();
@@ -75,14 +75,25 @@ $(document).ready(function() {
   }
 
   $('#view_button').click(function() {
-    type = $('#select_type').attr('value') + "";
-    view = $('#select_view').attr('value') + "";
+    type = $('#select_type').attr('value') + '';
+    view = $('#select_view').attr('value') + '';
 
     resetViews();
 
     switch (view) {
     case "table":
-      handleTable();
+      var dontDisplay;
+      switch (type) {
+        case "servers":
+        case "datasources":
+          dontDisplay = ["segments"];
+          break;
+        case "segments":
+          dontDisplay = ["shardSpec"];
+          break;
+      }
+
+      handleTable(dontDisplay);
       break;
     case "list":
       handleList(type.indexOf("segments") == -1);
