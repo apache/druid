@@ -54,6 +54,7 @@ import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
 import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
@@ -149,13 +150,12 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     startMonitoring(monitors);
 
     final Context root = new Context(getServer(), "/", Context.SESSIONS);
-
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(
         new ServletHolder(
             new QueryServlet(getJsonMapper(), getSmileMapper(), serverManager, emitter, getRequestLogger())
         ),
-        "/*"
+        "/druid/v2/*"
     );
   }
 
@@ -221,9 +221,12 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
         jsonMapper = new DefaultObjectMapper();
         smileMapper = new DefaultObjectMapper(new SmileFactory());
         smileMapper.getJsonFactory().setCodec(smileMapper);
-      }
-      else if (jsonMapper == null || smileMapper == null) {
-        throw new ISE("Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.", jsonMapper, smileMapper);
+      } else if (jsonMapper == null || smileMapper == null) {
+        throw new ISE(
+            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
+            jsonMapper,
+            smileMapper
+        );
       }
 
       if (lifecycle == null) {
