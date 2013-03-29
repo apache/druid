@@ -153,13 +153,13 @@ In many ways, Druid shares similarities with other interactive query systems
 stores such as BigTable \cite{chang2008bigtable}, Dynamo \cite{decandia2007dynamo}, and Cassandra \cite{lakshman2010cassandra}. Unlike
 most traditional data stores, Druid operates mainly on read-only data
 and has limited functionality for writes. The system is highly optimized
-for large-scale transactional data aggregation and arbitrarily deep data exploration. Druid is highly configurable
+for large-scale event data aggregation and arbitrarily deep data exploration. Druid is highly configurable
 and allows users to adjust levels of fault tolerance and
 performance.
 
 Druid builds on the ideas of other distributed data stores, real-time
 computation engines, and search engine indexing algorithms. In this
-paper, we make the following contributions to academia:
+paper, we make the following contributions.
 \begin{itemize}
 \item We outline Druid’s real-time ingestion and query capabilities
 and explain how we can explore events within milliseconds of their
@@ -204,9 +204,9 @@ a Druid segment, consider the data set shown in Table~\ref{tab:sample_data}.
 A segment is composed of multiple binary files, each representing a
 column of a data set. The data set in Table~\ref{tab:sample_data} consists of 8 distinct
 columns, one of which is the timestamp column. Druid always requires a
-timestamp column because it (currently) only operates with event-based
-data. Segments always represent some time interval and each column
-file contains the specific values for that column over the time
+timestamp column as a method of simplifying data distribution, data retention policies and 
+first-level query pruning.  Segments always represent some time interval and each column
+contains the specific values for that column over the time
 interval. Since segments always contain data for a time range, it is
 logical that Druid partitions data into smaller chunks based on the
 timestamp value. In other words, segments can be thought of as blocks
@@ -371,11 +371,11 @@ in Figure~\ref{fig:data-ingestion}.
 The purpose of the message bus in Figure~\ref{fig:data-ingestion} is to act as a buffer for
 incoming events. The message bus can maintain offsets indicating the
 position in an event stream that a real-time node has read up to and
-real-time nodes can update these offsets periodically. The message bus also acts as a backup storage for recent events.
+real-time nodes can update these offsets periodically. The message bus also acts as backup storage for recent events.
 Real-time nodes ingest data by reading events from the message bus. The time from event creation to message bus storage to
 event consumption is on the order of hundreds of milliseconds.
 
-Real-time nodes maintain an in-memory index for all incoming
+Real-time nodes maintain an in-memory index buffer for all incoming
 events. These indexes are incrementally populated as new events appear on the message bus. The indexes are also directly queryable.
 Real-time nodes persist their indexes to disk either periodically or after some maximum row limit is
 reached. After each persist, a real-time node updates the message bus
@@ -432,7 +432,7 @@ partitions across nodes. Each node announces the real-time segment it
 is serving and each real-time segment has a partition number.  Data
 from individual nodes will be merged at the Broker level.  To our
 knowledge, the largest production level real-time Druid cluster is
-consuming approximately 2 TB of raw data per hour.
+consuming approximately 500MB/s (150,000 events/s or 2 TB/hour of raw data).
 
 \subsection{Broker Nodes}
 Broker nodes act as query routers to other queryable nodes such as
