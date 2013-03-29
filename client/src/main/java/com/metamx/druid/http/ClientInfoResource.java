@@ -42,7 +42,7 @@ import java.util.Set;
 
 /**
  */
-@Path("/datasources")
+@Path("/druid/v2/datasources")
 public class ClientInfoResource
 {
   private static final int SEGMENT_HISTORY_MILLIS = 7 * 24 * 60 * 60 * 1000; // ONE WEEK
