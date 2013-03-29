@@ -215,7 +215,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     );
 
     root.addEventListener(new GuiceServletConfig(injector));
-    root.addFilter(GuiceFilter.class, "/*", 0);
+    root.addFilter(GuiceFilter.class, "/druid/v2/datasources/*", 0);
 
     for (String path : pathsForGuiceFilter) {
       root.addFilter(GuiceFilter.class, path, 0);
