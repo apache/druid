@@ -34,12 +34,12 @@
     <dependencies>
         <dependency>
             <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-realtime</artifactId>
+            <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-server</artifactId>
+            <artifactId>druid-realtime</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
 
