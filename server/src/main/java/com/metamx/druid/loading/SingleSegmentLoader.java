@@ -163,7 +163,7 @@ public class SingleSegmentLoader implements SegmentLoader
   @Override
   public void cleanup(DataSegment segment) throws SegmentLoadingException
   {
-    File cacheFile = getLocalStorageDir(segment).getParentFile();
+    File cacheFile = getLocalStorageDir(segment);
 
     try {
       log.info("Deleting directory[%s]", cacheFile);
