@@ -56,6 +56,21 @@ public class SingleSegmentLoader implements SegmentLoader
   }
 
   @Override
+  public boolean isSegmentLoaded(final DataSegment segment)
+  {
+    File localStorageDir = new File(config.getCacheDirectory(), DataSegmentPusherUtil.getStorageDir(segment));
+    if (localStorageDir.exists()) {
+      return true;
+    }
+
+    final File legacyStorageDir = new File(
+        config.getCacheDirectory(),
+        DataSegmentPusherUtil.getLegacyStorageDir(segment)
+    );
+    return legacyStorageDir.exists();
+  }
+
+  @Override
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException
   {
     File segmentFiles = getSegmentFiles(segment);

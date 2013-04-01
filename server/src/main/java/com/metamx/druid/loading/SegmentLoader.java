@@ -26,6 +26,7 @@ import com.metamx.druid.index.Segment;
  */
 public interface SegmentLoader
 {
+  public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException;
   public Segment getSegment(DataSegment loadSpec) throws SegmentLoadingException;
   public void cleanup(DataSegment loadSpec) throws SegmentLoadingException;
 }

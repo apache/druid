@@ -44,6 +44,12 @@ public class DelegatingSegmentLoader implements SegmentLoader
   }
 
   @Override
+  public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
+  {
+    return getLoader(segment.getLoadSpec()).isSegmentLoaded(segment);
+  }
+
+  @Override
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException
   {
     return getLoader(segment.getLoadSpec()).getSegment(segment);
