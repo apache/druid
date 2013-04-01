@@ -215,9 +215,12 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     for (File file : baseDir.listFiles()) {
       log.info("Loading segment cache file [%s]", file);
       try {
-        addSegment(jsonMapper.readValue(file, DataSegment.class));
+        DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
+        if (serverManager.isSegmentLoaded(segment)) {
+          addSegment(segment);
+        }
       }
-      catch (IOException e) {
+      catch (Exception e) {
         log.error(e, "Exception occurred reading file [%s]", file);
         emitter.emit(
             new AlertEvent.Builder().build(

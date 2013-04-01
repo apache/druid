@@ -30,6 +30,12 @@ import org.joda.time.Interval;
 public class NoopSegmentLoader implements SegmentLoader
 {
   @Override
+  public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
+  {
+    return false;
+  }
+
+  @Override
   public Segment getSegment(final DataSegment segment) throws SegmentLoadingException
   {
     return new Segment()

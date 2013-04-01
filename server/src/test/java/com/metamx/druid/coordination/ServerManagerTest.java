@@ -85,6 +85,12 @@ public class ServerManagerTest
         new SegmentLoader()
         {
           @Override
+          public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
+          {
+            return false;
+          }
+
+          @Override
           public Segment getSegment(final DataSegment segment)
           {
             return new SegmentForTesting(
