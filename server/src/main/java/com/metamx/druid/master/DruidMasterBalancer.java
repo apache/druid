@@ -28,7 +28,6 @@ import com.metamx.druid.client.DruidServer;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -116,7 +115,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
       int iter = 0;
       while (iter < maxSegmentsToMove) {
         iter++;
-        final BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList, numSegments);
+        final BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList);
         final ServerHolder holder = analyzer.findNewSegmentHomeBalance(segmentToMove.getSegment(), serverHolderList);
         if (holder == null) {
           continue;
