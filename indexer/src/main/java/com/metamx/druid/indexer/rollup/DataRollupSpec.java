@@ -24,7 +24,6 @@ import com.metamx.common.Granularity;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
 
-
 import java.util.List;
 
 /**

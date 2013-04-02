@@ -31,7 +31,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
-
 /**
  * The BalancerCostAnalyzer will compute the total initial cost of the cluster, with costs defined in
  * computeJointSegmentCosts.  It will then propose to move (pseudo-)randomly chosen segments from their
@@ -269,5 +268,3 @@ public class BalancerCostAnalyzer
   }
 
 }
-
-

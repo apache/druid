@@ -51,7 +51,6 @@ public class CompressedLongsSupplierSerializer
     return retVal;
   }
 
-
   private final int sizePer;
   private final FlattenedArrayWriter<ResourceHolder<LongBuffer>> flattener;
 

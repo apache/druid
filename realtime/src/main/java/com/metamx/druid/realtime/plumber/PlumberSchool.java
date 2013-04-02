@@ -19,7 +19,6 @@
 
 package com.metamx.druid.realtime.plumber;
 
-
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.druid.realtime.FireDepartmentMetrics;

@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
 import com.metamx.druid.processing.MetricSelectorFactory;
 
-
-
 import java.util.Comparator;
 import java.util.List;
 

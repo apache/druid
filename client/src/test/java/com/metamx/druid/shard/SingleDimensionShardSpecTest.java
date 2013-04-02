@@ -96,7 +96,6 @@ public class SingleDimensionShardSpecTest
         )
         .build();
 
-
     for (Map.Entry<SingleDimensionShardSpec, List<Pair<Boolean, Map<String, String>>>> entry : tests.entrySet()) {
       SingleDimensionShardSpec spec = entry.getKey();
       for (Pair<Boolean, Map<String, String>> pair : entry.getValue()) {

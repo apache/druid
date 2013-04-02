@@ -36,9 +36,6 @@ import com.metamx.druid.realtime.FirehoseFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 
-
-
-
 import org.jets3t.service.S3Service;
 import org.jets3t.service.model.S3Object;
 

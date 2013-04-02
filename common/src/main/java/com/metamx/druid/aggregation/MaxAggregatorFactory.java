@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Doubles;
 import com.metamx.druid.processing.MetricSelectorFactory;
 
-
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;

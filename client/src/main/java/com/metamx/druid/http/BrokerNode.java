@@ -56,7 +56,6 @@ import com.metamx.metrics.Monitor;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.x.discovery.ServiceDiscovery;
 
-
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
@@ -198,7 +197,6 @@ public class BrokerNode extends QueryableNode<BrokerNode>
 
     final CachingClusteredClient baseClient = new CachingClusteredClient(warehouse, view, cache, getSmileMapper());
     lifecycle.addManagedInstance(baseClient);
-
 
     final ClientQuerySegmentWalker texasRanger = new ClientQuerySegmentWalker(warehouse, getEmitter(), baseClient);
 

@@ -19,8 +19,6 @@
 
 package com.metamx.druid.query.segment;
 
-
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;

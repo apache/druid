@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.shard.ShardSpec;
 
-
-
 /**
  * ShardSpec + a shard ID that is unique across this run. The shard ID is used for grouping and partitioning.
  * There is one HadoopyShardSpec per Bucket, and our shardNum matches the Bucket shardNum.

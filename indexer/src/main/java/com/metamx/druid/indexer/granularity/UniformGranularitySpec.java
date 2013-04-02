@@ -29,7 +29,6 @@ import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Comparators;
 
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

@@ -37,7 +37,6 @@ import com.metamx.druid.index.v1.serde.ComplexMetrics;
 
 import java.util.Map;
 
-
 public class SegmentAnalyzer
 {
   private static final Logger log = new Logger(SegmentAnalyzer.class);

@@ -81,7 +81,6 @@ public class IndexMergerTest
         )
     );
 
-
     final File tempDir1 = Files.createTempDir();
     final File tempDir2 = Files.createTempDir();
     final File mergedDir = Files.createTempDir();

@@ -19,9 +19,6 @@
 
 package com.metamx.druid.aggregation.post;
 
-
-
-
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 

@@ -22,7 +22,6 @@ package com.metamx.druid.client;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
 
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;

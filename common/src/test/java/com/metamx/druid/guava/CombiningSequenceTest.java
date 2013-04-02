@@ -62,7 +62,6 @@ public class CombiningSequenceTest
         Pair.of(5, 1)
     );
 
-
     testCombining(pairs, expected);
   }
 
@@ -93,7 +92,6 @@ public class CombiningSequenceTest
         Pair.of(6, 1),
         Pair.of(5, 11)
     );
-
 
     testCombining(pairs, expected);
   }

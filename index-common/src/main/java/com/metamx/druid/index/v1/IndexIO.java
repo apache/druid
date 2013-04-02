@@ -108,7 +108,6 @@ public class IndexIO
   // This should really be provided by DI, should be changed once we switch around to using a DI framework
   private static final ObjectMapper mapper = new DefaultObjectMapper();
 
-
   private static volatile IndexIOHandler handler = null;
   public static final int CURRENT_VERSION_ID = V9_VERSION;
 

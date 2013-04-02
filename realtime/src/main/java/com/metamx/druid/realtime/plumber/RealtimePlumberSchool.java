@@ -548,7 +548,6 @@ public class RealtimePlumberSchool implements PlumberSchool
                                    .emit();
                               }
 
-
                               if (mergedFile != null) {
                                 try {
                                   if (mergedFile != null) {

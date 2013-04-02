@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ibm.icu.text.SimpleDateFormat;
 
-
-
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.util.Date;

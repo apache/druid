@@ -36,8 +36,6 @@ import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.segment.LegacySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 
-
-
 import java.util.List;
 import java.util.Map;
 

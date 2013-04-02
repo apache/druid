@@ -152,7 +152,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return 1 + 1 + 4 + buffer.remaining();
   }
 
-
   @Override
   public Iterator<Integer> iterator()
   {

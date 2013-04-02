@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 
-
 import java.util.Collections;
 import java.util.List;
 
