@@ -32,7 +32,6 @@ import com.metamx.druid.query.ChainedExecutionQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryToolChest;
-import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
 
@@ -80,7 +79,7 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
     public Sequence<Result<SearchResultValue>> run(final Query<Result<SearchResultValue>> input)
     {
       if (!(input instanceof SearchQuery)) {
-        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
+        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), SearchQuery.class);
       }
 
       final SearchQuery query = (SearchQuery) input;
