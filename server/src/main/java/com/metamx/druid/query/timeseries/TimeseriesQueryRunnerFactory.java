@@ -28,7 +28,6 @@ import com.metamx.druid.query.ChainedExecutionQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryToolChest;
-import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
 
@@ -77,7 +76,7 @@ public class TimeseriesQueryRunnerFactory
     public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> input)
     {
       if (!(input instanceof TimeseriesQuery)) {
-        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
+        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TimeseriesQuery.class);
       }
 
       return engine.process((TimeseriesQuery) input, adapter);
