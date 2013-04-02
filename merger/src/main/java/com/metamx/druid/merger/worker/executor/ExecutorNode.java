@@ -105,6 +105,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private final Lifecycle lifecycle;
   private final Properties props;
   private final ConfigurationObjectFactory configFactory;
+  private final ExecutorLifecycleFactory executorLifecycleFactory;
 
   private RestS3Service s3Service = null;
   private List<Monitor> monitors = null;
@@ -120,13 +121,15 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private MutableServerView newSegmentServerView = null;
   private Server server = null;
   private ExecutorServiceTaskRunner taskRunner = null;
+  private ExecutorLifecycle executorLifecycle = null;
 
   public ExecutorNode(
       Properties props,
       Lifecycle lifecycle,
       ObjectMapper jsonMapper,
       ObjectMapper smileMapper,
-      ConfigurationObjectFactory configFactory
+      ConfigurationObjectFactory configFactory,
+      ExecutorLifecycleFactory executorLifecycleFactory
   )
   {
     super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
@@ -134,6 +137,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     this.lifecycle = lifecycle;
     this.props = props;
     this.configFactory = configFactory;
+    this.executorLifecycleFactory = executorLifecycleFactory;
   }
 
   public ExecutorNode setHttpClient(HttpClient httpClient)
@@ -219,6 +223,9 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     );
     lifecycle.addManagedInstance(monitorScheduler);
 
+    executorLifecycle = executorLifecycleFactory.build(taskRunner, getJsonMapper());
+    lifecycle.addManagedInstance(executorLifecycle);
+
     final Context root = new Context(server, "/", Context.SESSIONS);
 
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
@@ -243,9 +250,14 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     lifecycle.stop();
   }
 
-  public ListenableFuture<TaskStatus> run(Task task)
+  public void join()
   {
-    return taskRunner.run(task);
+    executorLifecycle.join();
+  }
+
+  public ExecutorServiceTaskRunner getTaskRunner()
+  {
+    return taskRunner;
   }
 
   private void initializeServer()
@@ -440,16 +452,16 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   public void initializeTaskRunner()
   {
     if (taskRunner == null) {
-      final ExecutorServiceTaskRunner taskRunner = new ExecutorServiceTaskRunner(
-          taskToolboxFactory,
-          Executors.newSingleThreadExecutor(
-              new ThreadFactoryBuilder()
-                  .setNameFormat("task-runner-%d")
-                  .build()
+      this.taskRunner = lifecycle.addManagedInstance(
+          new ExecutorServiceTaskRunner(
+              taskToolboxFactory,
+              Executors.newSingleThreadExecutor(
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("task-runner-%d")
+                      .build()
+              )
           )
-      );
-
-      this.taskRunner = taskRunner;
+      );;
     }
   }
 
@@ -485,7 +497,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
       return this;
     }
 
-    public ExecutorNode build()
+    public ExecutorNode build(ExecutorLifecycleFactory executorLifecycleFactory)
     {
       if (jsonMapper == null && smileMapper == null) {
         jsonMapper = new DefaultObjectMapper();
@@ -508,7 +520,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
         configFactory = Config.createFactory(props);
       }
 
-      return new ExecutorNode(props, lifecycle, jsonMapper, smileMapper, configFactory);
+      return new ExecutorNode(props, lifecycle, jsonMapper, smileMapper, configFactory, executorLifecycleFactory);
     }
   }
 }

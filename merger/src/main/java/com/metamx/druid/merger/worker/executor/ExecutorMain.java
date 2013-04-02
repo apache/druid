@@ -19,23 +19,11 @@
 
 package com.metamx.druid.merger.worker.executor;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.log.LogLevelAdjuster;
-import com.metamx.druid.merger.common.TaskStatus;
-import com.metamx.druid.merger.common.task.Task;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  */
@@ -52,85 +40,27 @@ public class ExecutorMain
       System.exit(2);
     }
 
-    final ExecutorNode node = ExecutorNode.builder().build();
+    final ExecutorNode node = ExecutorNode.builder()
+                                          .build(
+                                              new ExecutorLifecycleFactory(
+                                                  new File(args[0]),
+                                                  new File(args[1]),
+                                                  System.in
+                                              )
+                                          );
+
     final Lifecycle lifecycle = new Lifecycle();
 
     lifecycle.addManagedInstance(node);
 
     try {
       lifecycle.start();
+      node.join();
+      lifecycle.stop();
     }
     catch (Throwable t) {
       log.info(t, "Throwable caught at startup, committing seppuku");
       System.exit(2);
     }
-
-    final Task task = node.getJsonMapper().readValue(new File(args[0]), Task.class);
-
-    log.info(
-        "Running with task: %s",
-        node.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(task)
-    );
-
-    // Spawn monitor thread to keep a watch on parent's stdin
-    // If a message comes over stdin, we want to handle it
-    // If stdin reaches eof, the parent is gone, and we should shut down
-    final ExecutorService parentMonitorExec = Executors.newSingleThreadExecutor(
-        new ThreadFactoryBuilder()
-            .setNameFormat("parent-monitor-%d")
-            .setDaemon(true)
-            .build()
-    );
-
-    parentMonitorExec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              final BufferedReader stdinReader = new BufferedReader(new InputStreamReader(System.in));
-              String messageString;
-              while ((messageString = stdinReader.readLine()) != null) {
-                final Map<String, Object> message = node.getJsonMapper()
-                                                        .readValue(
-                                                            messageString,
-                                                            new TypeReference<Map<String, Object>>(){}
-                                                        );
-
-                if (message == null) {
-                  break;
-                } else if (message.get("shutdown") != null && message.get("shutdown").equals("now")) {
-                  log.info("Shutting down!");
-                  task.shutdown();
-                } else {
-                  throw new ISE("Unrecognized message from parent: %s", message);
-                }
-              }
-            } catch (Exception e) {
-              log.error(e, "Failed to read from stdin");
-            }
-
-            // TODO ugh this is gross
-            System.exit(2);
-          }
-        }
-    );
-
-    try {
-      final TaskStatus status = node.run(task).get();
-
-      log.info(
-          "Task completed with status: %s",
-          node.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(status)
-      );
-
-      node.getJsonMapper().writeValue(new File(args[1]), status);
-    } finally {
-      lifecycle.stop();
-    }
-
-    // TODO maybe this shouldn't be needed?
-    System.exit(0);
   }
 }
