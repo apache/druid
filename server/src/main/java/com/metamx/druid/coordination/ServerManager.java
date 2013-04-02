@@ -104,7 +104,7 @@ public class ServerManager implements QuerySegmentWalker
     }
   }
 
-  public boolean isSegmentLoaded(final DataSegment segment) throws SegmentLoadingException
+  public boolean isSegmentCached(final DataSegment segment) throws SegmentLoadingException
   {
     return segmentLoader.isSegmentLoaded(segment);
   }

@@ -216,7 +216,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       log.info("Loading segment cache file [%s]", file);
       try {
         DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-        if (serverManager.isSegmentLoaded(segment)) {
+        if (serverManager.isSegmentCached(segment)) {
           addSegment(segment);
         }
       }
