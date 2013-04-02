@@ -19,20 +19,25 @@
 
 package com.metamx.druid.loading;
 
+import com.metamx.common.MapUtils;
 import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.Segment;
 import org.joda.time.Interval;
 
+import java.io.File;
+import java.util.Map;
+
 /**
 */
-public class NoopSegmentLoader implements SegmentLoader
+public class CacheTestSegmentLoader implements SegmentLoader
 {
   @Override
   public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
   {
-    return false;
+    Map<String, Object> loadSpec = segment.getLoadSpec();
+    return new File(MapUtils.getString(loadSpec, "cacheDir")).exists();
   }
 
   @Override
