@@ -21,6 +21,7 @@ package com.metamx.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import com.metamx.druid.query.search.SearchQuerySpec;
 
 
@@ -38,6 +39,9 @@ public class SearchQueryDimFilter implements DimFilter
       @JsonProperty("query") SearchQuerySpec query
   )
   {
+    Preconditions.checkArgument(dimension != null, "dimension must not be null");
+    Preconditions.checkArgument(query != null, "query must not be null");
+
     this.dimension = dimension;
     this.query = query;
   }
