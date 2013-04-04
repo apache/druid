@@ -21,6 +21,7 @@ package com.metamx.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.metamx.druid.query.extraction.DimExtractionFn;
 
 
@@ -42,6 +43,10 @@ public class ExtractionDimFilter implements DimFilter
       @JsonProperty("dimExtractionFn") DimExtractionFn dimExtractionFn
   )
   {
+    Preconditions.checkArgument(dimension != null, "dimension must not be null");
+    Preconditions.checkArgument(value != null, "value must not be null");
+    Preconditions.checkArgument(dimExtractionFn != null, "extraction function must not be null");
+
     this.dimension = dimension;
     this.value = value;
     this.dimExtractionFn = dimExtractionFn;

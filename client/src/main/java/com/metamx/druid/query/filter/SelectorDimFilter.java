@@ -24,6 +24,7 @@ package com.metamx.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 import java.nio.ByteBuffer;
 
@@ -40,6 +41,8 @@ public class SelectorDimFilter implements DimFilter
       @JsonProperty("value") String value
   )
   {
+    Preconditions.checkArgument(dimension != null, "dimension must not be null");
+    Preconditions.checkArgument(value != null, "value must not be null");
     this.dimension = dimension;
     this.value = value;
   }

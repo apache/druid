@@ -3,6 +3,7 @@ package com.metamx.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 
 import java.nio.ByteBuffer;
 
@@ -17,6 +18,8 @@ public class JavaScriptDimFilter implements DimFilter
       @JsonProperty("function") String function
   )
   {
+    Preconditions.checkArgument(dimension != null, "dimension must not be null");
+    Preconditions.checkArgument(function != null, "function must not be null");
     this.dimension = dimension;
     this.function = function;
   }
