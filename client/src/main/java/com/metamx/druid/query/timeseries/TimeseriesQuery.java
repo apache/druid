@@ -43,8 +43,6 @@ import java.util.Map;
 @JsonTypeName("timeseries")
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
-  public static final String TIMESERIES = "timeseries";
-
   private final DimFilter dimFilter;
   private final QueryGranularity granularity;
   private final List<AggregatorFactory> aggregatorSpecs;
@@ -79,7 +77,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public String getType()
   {
-    return TIMESERIES;
+    return Query.TIMESERIES;
   }
 
   @JsonProperty("filter")

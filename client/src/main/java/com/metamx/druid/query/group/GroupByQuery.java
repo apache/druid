@@ -116,7 +116,7 @@ public class GroupByQuery extends BaseQuery<Row>
   @Override
   public String getType()
   {
-    return "groupBy";
+    return Query.GROUP_BY;
   }
 
   @Override
