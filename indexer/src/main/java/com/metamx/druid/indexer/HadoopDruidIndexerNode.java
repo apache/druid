@@ -25,7 +25,6 @@ import com.google.common.collect.Lists;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.File;

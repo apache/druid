@@ -21,7 +21,6 @@ package com.metamx.druid.kv;
 
 import com.google.common.collect.ImmutableList;
 
-import java.util.Collections;
 import java.util.Iterator;
 
 /**

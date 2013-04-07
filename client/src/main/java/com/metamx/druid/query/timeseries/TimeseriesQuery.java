@@ -22,7 +22,6 @@ package com.metamx.druid.query.timeseries;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.metamx.druid.BaseQuery;
 import com.metamx.druid.Query;
@@ -129,7 +128,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         computeOverridenContext(contextOverrides)
     );
   }
-  
+
   @Override
   public String toString()
   {

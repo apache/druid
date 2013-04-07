@@ -51,7 +51,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 import org.joda.time.Period;
-import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;

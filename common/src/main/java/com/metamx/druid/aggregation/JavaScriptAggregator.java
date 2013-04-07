@@ -21,7 +21,6 @@ package com.metamx.druid.aggregation;
 
 import com.google.common.collect.Lists;
 import com.metamx.druid.processing.FloatMetricSelector;
-import org.mozilla.javascript.Context;
 
 import java.util.List;
 
