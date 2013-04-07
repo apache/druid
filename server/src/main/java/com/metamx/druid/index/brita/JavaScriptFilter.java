@@ -10,7 +10,6 @@ import org.mozilla.javascript.ScriptableObject;
 
 import javax.annotation.Nullable;
 
-
 public class JavaScriptFilter implements Filter
 {
   private final JavaScriptPredicate predicate;

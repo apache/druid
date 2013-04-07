@@ -27,8 +27,6 @@ import com.google.common.primitives.Longs;
 import com.metamx.druid.processing.MetricSelectorFactory;
 import org.apache.commons.codec.binary.Base64;
 
-
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;

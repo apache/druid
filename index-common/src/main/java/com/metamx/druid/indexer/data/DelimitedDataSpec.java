@@ -25,8 +25,6 @@ import com.google.common.base.Preconditions;
 import com.metamx.common.parsers.DelimitedParser;
 import com.metamx.common.parsers.Parser;
 
-
-
 import java.util.List;
 
 /**

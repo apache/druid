@@ -25,7 +25,6 @@ import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
 import org.joda.time.DateTime;
 
-
 /**
  */
 public class SearchResultBuilder

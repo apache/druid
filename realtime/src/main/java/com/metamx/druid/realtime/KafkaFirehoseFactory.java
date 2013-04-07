@@ -33,8 +33,6 @@ import kafka.consumer.KafkaMessageStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.Message;
 
-
-
 import java.io.IOException;
 import java.nio.CharBuffer;
 import java.nio.charset.CoderResult;
@@ -116,7 +114,6 @@ public class KafkaFirehoseFactory implements FirehoseFactory
                                            .onMalformedInput(CodingErrorAction.REPLACE)
                                            .onUnmappableCharacter(CodingErrorAction.REPLACE)
                                            .decode(message.payload(), chars, true);
-
 
         if (coderResult.isUnderflow()) {
           chars.flip();

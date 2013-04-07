@@ -19,7 +19,6 @@
 
 package com.metamx.druid.db;
 
-
 import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;

@@ -235,7 +235,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     }
   }
 
-
   @Override
   public void addSegment(DataSegment segment)
   {

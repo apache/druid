@@ -39,7 +39,6 @@ public class StringPartitionChunk<T> implements PartitionChunk<T>
     return new StringPartitionChunk<T>(start, end, chunkNumber, obj);
   }
 
-
   public StringPartitionChunk(
       String start,
       String end,

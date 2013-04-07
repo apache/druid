@@ -23,7 +23,6 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.partition.SingleElementPartitionChunk;
 
-
 import java.util.Map;
 
 /**

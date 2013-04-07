@@ -19,7 +19,6 @@
 
 package com.metamx.druid.result;
 
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 

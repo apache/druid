@@ -5,7 +5,6 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.partition.LinearPartitionChunk;
 import com.metamx.druid.partition.PartitionChunk;
 
-
 import java.util.Map;
 
 public class LinearShardSpec implements ShardSpec {
@@ -24,7 +23,6 @@ public class LinearShardSpec implements ShardSpec {
   public int getPartitionNum() {
     return partitionNum;
   }
-
 
   @Override
   public <T> PartitionChunk<T> createChunk(T obj) {

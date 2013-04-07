@@ -31,7 +31,6 @@ import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
 
-
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 

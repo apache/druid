@@ -110,7 +110,6 @@ public class SortableBytes
     job.setPartitionerClass(SortableBytesPartitioner.class);
   }
 
-
   public static class SortableBytesGroupingComparator extends WritableComparator
   {
 

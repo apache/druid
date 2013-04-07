@@ -30,7 +30,6 @@ import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChestWarehouse;
 import com.metamx.http.client.HttpClient;
 
-
 import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.Map;

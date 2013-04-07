@@ -61,7 +61,6 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
         3600 // 1 hour
     );
 
-
     randBytes = new byte[objectSize * 1024];
     new Random(0).nextBytes(randBytes);
   }

@@ -133,7 +133,6 @@ public class TsvToJson
       this.fieldName = fieldName;
     }
 
-
     @Override
     public String getFieldName()
     {
@@ -157,7 +156,6 @@ public class TsvToJson
     {
       this.fieldName = fieldName;
     }
-
 
     @Override
     public String getFieldName()

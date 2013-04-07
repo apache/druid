@@ -43,20 +43,6 @@ import com.metamx.common.Granularity;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import org.joda.time.DateTimeZone;
 import org.skife.jdbi.v2.sqlobject.customizers.Mapper;
 

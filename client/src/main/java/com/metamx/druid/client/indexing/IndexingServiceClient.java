@@ -31,7 +31,6 @@ import com.netflix.curator.x.discovery.ServiceInstance;
 import com.netflix.curator.x.discovery.ServiceProvider;
 import org.joda.time.Interval;
 
-
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Iterator;
@@ -101,7 +100,6 @@ public class IndexingServiceClient
       throw Throwables.propagate(e);
     }
   }
-
 
   private String baseUrl()
   {

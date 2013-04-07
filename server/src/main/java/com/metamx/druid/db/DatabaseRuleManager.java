@@ -32,7 +32,6 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.master.rules.PeriodLoadRule;
 import com.metamx.druid.master.rules.Rule;
 
-
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;

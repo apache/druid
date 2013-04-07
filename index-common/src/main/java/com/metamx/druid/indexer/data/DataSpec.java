@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.common.parsers.Parser;
 
-
-
 import java.util.List;
 
 /**

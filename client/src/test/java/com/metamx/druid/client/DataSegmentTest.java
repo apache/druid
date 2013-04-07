@@ -30,7 +30,6 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.SingleDimensionShardSpec;
 
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
