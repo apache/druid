@@ -22,8 +22,7 @@ package com.metamx.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
-
-
+import com.google.common.base.Preconditions;
 
 import java.nio.ByteBuffer;
 
@@ -40,6 +39,8 @@ public class RegexDimFilter implements DimFilter
       @JsonProperty("pattern") String pattern
   )
   {
+    Preconditions.checkArgument(dimension != null, "dimension must not be null");
+    Preconditions.checkArgument(pattern != null, "pattern must not be null");
     this.dimension = dimension;
     this.pattern = pattern;
   }

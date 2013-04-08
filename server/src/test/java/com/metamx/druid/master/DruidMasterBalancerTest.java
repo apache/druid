@@ -193,7 +193,7 @@ public class DruidMasterBalancerTest
                                 .build();
 
     params = new DruidMasterBalancerTester(master).run(params);
-    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() == 3);
+    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
   }
 
  @Test
@@ -271,6 +271,6 @@ public class DruidMasterBalancerTest
                                 .build();
 
     params = new DruidMasterBalancerTester(master).run(params);
-    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() == 4);
+    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
   }
 }

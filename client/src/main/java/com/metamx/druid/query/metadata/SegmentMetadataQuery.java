@@ -24,7 +24,6 @@ import com.metamx.druid.BaseQuery;
 import com.metamx.druid.Query;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 
-
 import java.util.Map;
 
 public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>

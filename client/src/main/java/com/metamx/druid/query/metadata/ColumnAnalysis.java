@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.druid.index.column.ValueType;
 
-
-
 /**
 */
 public class ColumnAnalysis

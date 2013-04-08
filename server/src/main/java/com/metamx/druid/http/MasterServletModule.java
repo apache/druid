@@ -31,8 +31,6 @@ import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
-
-
 import javax.inject.Singleton;
 
 /**

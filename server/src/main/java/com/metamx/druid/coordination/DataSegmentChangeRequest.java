@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.druid.client.DataSegment;
 
-
-
 /**
  */
 @JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="action")

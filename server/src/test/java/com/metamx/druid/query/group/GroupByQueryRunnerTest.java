@@ -90,7 +90,6 @@ public class GroupByQueryRunnerTest
                     )
                 );
 
-
     return Lists.newArrayList(
         Iterables.transform(
             QueryRunnerTestHelper.makeQueryRunners(factory), new Function<Object, Object>()
@@ -215,7 +214,6 @@ public class GroupByQueryRunnerTest
 
       TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
-
 
   @Test
   public void testMergeResults() {

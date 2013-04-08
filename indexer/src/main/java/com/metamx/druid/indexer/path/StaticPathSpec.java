@@ -25,7 +25,6 @@ import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 
-
 import java.io.IOException;
 
 /**

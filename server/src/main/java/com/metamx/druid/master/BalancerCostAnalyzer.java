@@ -31,7 +31,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
-
 /**
  * The BalancerCostAnalyzer will compute the total initial cost of the cluster, with costs defined in
  * computeJointSegmentCosts.  It will then propose to move (pseudo-)randomly chosen segments from their
@@ -144,46 +143,31 @@ public class BalancerCostAnalyzer
   }
 
   /**
-   * Sample from each server with probability proportional to the number of segments on that server.
+   * The balancing application requires us to pick a proposal segment uniformly at random from the set of
+   * all servers.  We use reservoir sampling to do this.
    *
    * @param serverHolders A list of ServerHolders for a particular tier.
-   * @param numSegments
-   *
-   * @return A ServerHolder sampled with probability proportional to the
-   *         number of segments on that server
-   */
-  private ServerHolder sampleServer(final List<ServerHolder> serverHolders, final int numSegments)
-  {
-    final int num = rand.nextInt(numSegments);
-    int cumulativeSegments = 0;
-    int numToStopAt = 0;
-
-    while (cumulativeSegments <= num) {
-      cumulativeSegments += serverHolders.get(numToStopAt).getServer().getSegments().size();
-      numToStopAt++;
-    }
-
-    return serverHolders.get(numToStopAt - 1);
-  }
-
-  /**
-   * The balancing application requires us to pick a proposal segment.
-   *
-   * @param serverHolders A list of ServerHolders for a particular tier.
-   * @param numSegments   The total number of segments on a particular tier.
    *
    * @return A BalancerSegmentHolder sampled uniformly at random.
    */
-  public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders, final int numSegments)
+  public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders)
   {
-    /** We want to sample from each server w.p. numSegmentsOnServer / totalSegments */
-    ServerHolder fromServerHolder = sampleServer(serverHolders, numSegments);
+    ServerHolder fromServerHolder = null;
+    DataSegment proposalSegment = null;
+    int numSoFar = 0;
 
-    /** and actually pick that segment uniformly at random w.p. 1 / numSegmentsOnServer
-     so that the probability of picking a segment is 1 / totalSegments. */
-    List<DataSegment> segments = Lists.newArrayList(fromServerHolder.getServer().getSegments().values());
+    for (ServerHolder server : serverHolders) {
+      for (DataSegment segment : server.getServer().getSegments().values()) {
+        int randNum = rand.nextInt(numSoFar + 1);
+        // w.p. 1 / (numSoFar + 1), swap out the server and segment
+        if (randNum == numSoFar) {
+          fromServerHolder = server;
+          proposalSegment = segment;
+          numSoFar++;
+        }
+      }
+    }
 
-    DataSegment proposalSegment = segments.get(rand.nextInt(segments.size()));
     return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
   }
 
@@ -214,7 +198,7 @@ public class BalancerCostAnalyzer
   }
 
   /**
-   * For assigment, we want to move to the lowest cost server that isn't already serving the segment.
+   * For assignment, we want to move to the lowest cost server that isn't already serving the segment.
    *
    * @param proposalSegment A DataSegment that we are proposing to move.
    * @param serverHolders   An iterable of ServerHolders for a particular tier.
@@ -284,5 +268,3 @@ public class BalancerCostAnalyzer
   }
 
 }
-
-

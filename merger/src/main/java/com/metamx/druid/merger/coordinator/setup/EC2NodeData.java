@@ -19,9 +19,6 @@
 
 package com.metamx.druid.merger.coordinator.setup;
 
-
-
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 

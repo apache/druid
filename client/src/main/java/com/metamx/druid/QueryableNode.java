@@ -50,8 +50,6 @@ import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import com.metamx.phonebook.PhoneBook;
 import org.I0Itec.zkclient.ZkClient;
-
-
 import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.skife.config.ConfigurationObjectFactory;

@@ -33,8 +33,6 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 
-
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

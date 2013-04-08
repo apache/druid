@@ -39,7 +39,6 @@ public class IndexedIntsIterator implements Iterator<Integer>
     size = baseInts.size();
   }
 
-
   @Override
   public boolean hasNext()
   {

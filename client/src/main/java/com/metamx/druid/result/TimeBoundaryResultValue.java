@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.metamx.common.IAE;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 
-
 import org.joda.time.DateTime;
 
 import java.util.Map;
@@ -66,7 +65,6 @@ public class TimeBoundaryResultValue
       throw new IAE("MinTime not supported!");
     }
   }
-
 
   @Override
   public boolean equals(Object o)

@@ -96,7 +96,6 @@ public class UnioningOffsetTest
     );
   }
 
-
   private static void assertExpected(int[] expectedValues, UnioningOffset offset)
   {
     final ArrayList<Offset> offsets = Lists.newArrayList();

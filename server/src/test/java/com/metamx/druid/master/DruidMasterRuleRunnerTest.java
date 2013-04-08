@@ -419,7 +419,6 @@ public class DruidMasterRuleRunnerTest
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
-
     ruleRunner.run(params);
 
     EasyMock.verify(emitter);

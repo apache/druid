@@ -80,7 +80,6 @@ public class IntersectingOffsetTest
     );
   }
 
-
   private static void assertExpected(int[] expectedValues, IntersectingOffset offset)
   {
     final LinkedList<Offset> offsets = Lists.newLinkedList();
