@@ -52,7 +52,7 @@ import com.metamx.phonebook.PhoneBook;
 import org.I0Itec.zkclient.ZkClient;
 
 
-
+import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.skife.config.ConfigurationObjectFactory;
 
@@ -333,7 +333,10 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   {
     if (emitter == null) {
       final HttpClient httpClient = HttpClientInit.createClient(
-          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
+          HttpClientConfig.builder()
+                          .withNumConnections(1)
+                          .withReadTimeout(new Duration(PropUtils.getProperty(props, "druid.emitter.timeOut")))
+                          .build(), lifecycle
       );
 
       setEmitter(
@@ -358,7 +361,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   @LifecycleStart
   public synchronized void start() throws Exception
   {
-    if (! initialized) {
+    if (!initialized) {
       init();
     }
 

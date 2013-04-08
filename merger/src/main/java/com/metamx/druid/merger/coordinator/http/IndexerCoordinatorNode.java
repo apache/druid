@@ -116,6 +116,7 @@ import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
+import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -314,10 +315,12 @@ public class IndexerCoordinatorNode extends BaseServerNode<IndexerCoordinatorNod
     final Context staticContext = new Context(server, "/static", Context.SESSIONS);
     staticContext.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
-    ResourceCollection resourceCollection = new ResourceCollection(new String[] {
-        IndexerCoordinatorNode.class.getClassLoader().getResource("static").toExternalForm(),
-        IndexerCoordinatorNode.class.getClassLoader().getResource("indexer_static").toExternalForm()
-    });
+    ResourceCollection resourceCollection = new ResourceCollection(
+        new String[]{
+            IndexerCoordinatorNode.class.getClassLoader().getResource("static").toExternalForm(),
+            IndexerCoordinatorNode.class.getClassLoader().getResource("indexer_static").toExternalForm()
+        }
+    );
     staticContext.setBaseResource(resourceCollection);
 
     // TODO -- Need a QueryServlet and some kind of QuerySegmentWalker if we want to support querying tasks
@@ -448,7 +451,14 @@ public class IndexerCoordinatorNode extends BaseServerNode<IndexerCoordinatorNod
   {
     if (emitter == null) {
       final HttpClient httpClient = HttpClientInit.createClient(
-          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
+          HttpClientConfig.builder().withNumConnections(1).withReadTimeout(
+              new Duration(
+                  PropUtils.getProperty(
+                      props,
+                      "druid.emitter.timeOut"
+                  )
+              )
+          ).build(), lifecycle
       );
 
       emitter = new ServiceEmitter(
@@ -602,7 +612,11 @@ public class IndexerCoordinatorNode extends BaseServerNode<IndexerCoordinatorNod
         taskStorage = new HeapMemoryTaskStorage();
       } else if (config.getStorageImpl().equals("db")) {
         final IndexerDbConnectorConfig dbConnectorConfig = configFactory.build(IndexerDbConnectorConfig.class);
-        taskStorage = new DbTaskStorage(getJsonMapper(), dbConnectorConfig, new DbConnector(dbConnectorConfig).getDBI());
+        taskStorage = new DbTaskStorage(
+            getJsonMapper(),
+            dbConnectorConfig,
+            new DbConnector(dbConnectorConfig).getDBI()
+        );
       } else {
         throw new ISE("Invalid storage implementation: %s", config.getStorageImpl());
       }
@@ -754,9 +768,12 @@ public class IndexerCoordinatorNode extends BaseServerNode<IndexerCoordinatorNod
         jsonMapper = new DefaultObjectMapper();
         smileMapper = new DefaultObjectMapper(new SmileFactory());
         smileMapper.getJsonFactory().setCodec(smileMapper);
-      }
-      else if (jsonMapper == null || smileMapper == null) {
-        throw new ISE("Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.", jsonMapper, smileMapper);
+      } else if (jsonMapper == null || smileMapper == null) {
+        throw new ISE(
+            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
+            jsonMapper,
+            smileMapper
+        );
       }
 
       if (lifecycle == null) {

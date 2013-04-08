@@ -81,6 +81,7 @@ import com.netflix.curator.x.discovery.ServiceProvider;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
+import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -317,7 +318,9 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
   {
     if (httpClient == null) {
       httpClient = HttpClientInit.createClient(
-          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
+          HttpClientConfig.builder().withNumConnections(1)
+                          .withReadTimeout(new Duration(PropUtils.getProperty(props, "druid.emitter.timeOut")))
+                          .build(), lifecycle
       );
     }
   }
@@ -336,7 +339,7 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
 
   private void initializeS3Service() throws S3ServiceException
   {
-    if(s3Service == null) {
+    if (s3Service == null) {
       s3Service = new RestS3Service(
           new AWSCredentials(
               PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
@@ -527,9 +530,12 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
         jsonMapper = new DefaultObjectMapper();
         smileMapper = new DefaultObjectMapper(new SmileFactory());
         smileMapper.getJsonFactory().setCodec(smileMapper);
-      }
-      else if (jsonMapper == null || smileMapper == null) {
-        throw new ISE("Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.", jsonMapper, smileMapper);
+      } else if (jsonMapper == null || smileMapper == null) {
+        throw new ISE(
+            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
+            jsonMapper,
+            smileMapper
+        );
       }
 
       if (lifecycle == null) {
