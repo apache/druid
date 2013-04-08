@@ -275,7 +275,6 @@ public class ServerManager implements QuerySegmentWalker
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-
     final VersionedIntervalTimeline<String, Segment> timeline = dataSources.get(query.getDataSource());
 
     if (timeline == null) {

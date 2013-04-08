@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.hadoop.mapreduce.Job;
 
-
-
 import java.io.IOException;
 
 /**

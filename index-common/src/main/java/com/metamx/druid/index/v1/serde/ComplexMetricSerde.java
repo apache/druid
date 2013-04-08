@@ -58,7 +58,6 @@ public abstract class ComplexMetricSerde
   @Deprecated
   public abstract ObjectStrategy getObjectStrategy();
 
-
   /**
    * Returns a function that can convert the Object provided by the ComplexColumn created through deserializeColumn
    * into a number of expected input bytes to produce that object.

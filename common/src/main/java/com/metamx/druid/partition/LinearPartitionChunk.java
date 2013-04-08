@@ -10,7 +10,6 @@ public class LinearPartitionChunk <T> implements PartitionChunk<T>
     return new LinearPartitionChunk<T>(chunkNumber, obj);
   }
 
-
   public LinearPartitionChunk(
       int chunkNumber,
       T object

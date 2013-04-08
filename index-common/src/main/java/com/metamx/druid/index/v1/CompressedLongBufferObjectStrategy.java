@@ -68,5 +68,4 @@ public class CompressedLongBufferObjectStrategy extends CompressedObjectStrategy
     );
   }
 
-
 }

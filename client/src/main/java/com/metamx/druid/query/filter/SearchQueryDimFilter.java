@@ -24,7 +24,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.metamx.druid.query.search.SearchQuerySpec;
 
-
 import java.nio.ByteBuffer;
 
 /**

@@ -28,8 +28,6 @@ import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
 
-
-
 import java.util.Arrays;
 
 /**

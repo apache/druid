@@ -130,7 +130,6 @@ public class DruidMasterTest
             return 0;
           }
 
-
           @Override
           public int getReplicantLifetime()
           {

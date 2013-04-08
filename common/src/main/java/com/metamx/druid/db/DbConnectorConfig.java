@@ -19,7 +19,6 @@
 
 package com.metamx.druid.db;
 
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.skife.config.Config;
 

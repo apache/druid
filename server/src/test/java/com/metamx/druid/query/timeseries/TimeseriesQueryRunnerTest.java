@@ -1349,7 +1349,6 @@ public class TimeseriesQueryRunnerTest
                                        )
                                        .build();
 
-
     Iterable<Result<TimeseriesResultValue>> expectedResults = Sequences.toList(
         runner.run(
             Druids.newTimeseriesQueryBuilder()

@@ -44,7 +44,6 @@ public class HistogramAggregator implements Aggregator
 
   private Histogram histogram;
 
-
   public HistogramAggregator(String name, FloatMetricSelector selector, float[] breaks) {
     this.name = name;
     this.selector = selector;

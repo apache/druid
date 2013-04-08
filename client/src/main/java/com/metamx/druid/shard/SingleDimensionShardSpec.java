@@ -24,8 +24,6 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.partition.StringPartitionChunk;
 
-
-
 import java.util.List;
 import java.util.Map;
 

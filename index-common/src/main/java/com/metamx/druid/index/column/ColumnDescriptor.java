@@ -26,8 +26,6 @@ import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.druid.index.serde.ColumnPartSerde;
 
-
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;

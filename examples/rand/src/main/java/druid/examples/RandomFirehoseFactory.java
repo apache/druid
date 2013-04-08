@@ -11,9 +11,6 @@ import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 
-
-
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -21,7 +18,6 @@ import java.util.Map;
 import java.util.Random;
 
 import static java.lang.Thread.sleep;
-
 
 /**
  * Random value sequence Firehost Factory named "rand".

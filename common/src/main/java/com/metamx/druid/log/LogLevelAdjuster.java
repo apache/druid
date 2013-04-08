@@ -29,7 +29,6 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 
-
 /**
  */
 public class LogLevelAdjuster implements LogLevelAdjusterMBean

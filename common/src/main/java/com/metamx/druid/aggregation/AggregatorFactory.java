@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.druid.processing.MetricSelectorFactory;
 
-
-
 import java.util.Comparator;
 import java.util.List;
 

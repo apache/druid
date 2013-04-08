@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import com.metamx.druid.query.search.SearchQuerySpec;
 
-
-
 import javax.annotation.Nullable;
 
 /**

@@ -48,7 +48,6 @@ public class FileRequestLogger implements RequestLogger
   private volatile DateTime currentDay;
   private volatile FileWriter fileWriter;
 
-
   public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir)
   {
     this.exec = exec;

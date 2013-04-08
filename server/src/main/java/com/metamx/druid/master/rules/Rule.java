@@ -26,7 +26,6 @@ import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
 import com.metamx.druid.master.MasterStats;
 
-
 import org.joda.time.DateTime;
 
 /**

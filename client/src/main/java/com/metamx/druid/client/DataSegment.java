@@ -36,9 +36,6 @@ import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
 
-
-
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

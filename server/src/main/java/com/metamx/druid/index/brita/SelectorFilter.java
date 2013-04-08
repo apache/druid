@@ -21,7 +21,6 @@ package com.metamx.druid.index.brita;
 
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
-
 /**
  */
 public class SelectorFilter implements Filter

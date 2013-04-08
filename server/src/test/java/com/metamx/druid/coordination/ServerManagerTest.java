@@ -206,7 +206,6 @@ public class ServerManagerTest
         )
     );
 
-
     assertQueryable(
         QueryGranularity.HOUR,
         "test", new Interval("2011-04-04/2011-04-04T03"),
