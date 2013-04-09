@@ -143,7 +143,7 @@ public class TaskToolbox
           @Override
           public File getCacheDirectory()
           {
-            return new File(getTaskDir(), "fetched_segments");
+            return new File(getTaskWorkDir(), "fetched_segments");
           }
         }
     );
@@ -156,8 +156,7 @@ public class TaskToolbox
     return retVal;
   }
 
-  public File getTaskDir() {
-    return new File(config.getBaseTaskDir(), task.getId());
+  public File getTaskWorkDir() {
+    return new File(new File(config.getBaseTaskDir(), task.getId()), "work");
   }
-
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
 import com.metamx.druid.config.JacksonConfigManager;
+import com.metamx.druid.merger.common.tasklogs.TaskLogProvider;
 import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
@@ -41,6 +42,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
   private final ServiceEmitter emitter;
   private final TaskMasterLifecycle taskMasterLifecycle;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
+  private final TaskLogProvider taskLogProvider;
   private final JacksonConfigManager configManager;
 
   public IndexerCoordinatorServletModule(
@@ -49,6 +51,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
       ServiceEmitter emitter,
       TaskMasterLifecycle taskMasterLifecycle,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
+      TaskLogProvider taskLogProvider,
       JacksonConfigManager configManager
   )
   {
@@ -57,6 +60,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
     this.emitter = emitter;
     this.taskMasterLifecycle = taskMasterLifecycle;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
+    this.taskLogProvider = taskLogProvider;
     this.configManager = configManager;
   }
 
@@ -69,6 +73,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
     bind(ServiceEmitter.class).toInstance(emitter);
     bind(TaskMasterLifecycle.class).toInstance(taskMasterLifecycle);
     bind(TaskStorageQueryAdapter.class).toInstance(taskStorageQueryAdapter);
+    bind(TaskLogProvider.class).toInstance(taskLogProvider);
     bind(JacksonConfigManager.class).toInstance(configManager);
 
     serve("/*").with(GuiceContainer.class);

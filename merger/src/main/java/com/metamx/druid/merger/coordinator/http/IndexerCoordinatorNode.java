@@ -23,10 +23,12 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -59,7 +61,13 @@ import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.actions.TaskActionToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.RetryPolicyConfig;
+import com.metamx.druid.merger.common.config.TaskLogConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
+import com.metamx.druid.merger.common.tasklogs.NoopTaskLogs;
+import com.metamx.druid.merger.common.tasklogs.S3TaskLogs;
+import com.metamx.druid.merger.common.tasklogs.SwitchingTaskLogProvider;
+import com.metamx.druid.merger.common.tasklogs.TaskLogProvider;
+import com.metamx.druid.merger.common.tasklogs.TaskLogs;
 import com.metamx.druid.merger.coordinator.DbTaskStorage;
 import com.metamx.druid.merger.coordinator.ForkingTaskRunner;
 import com.metamx.druid.merger.coordinator.HeapMemoryTaskStorage;
@@ -101,6 +109,9 @@ import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
+import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.security.AWSCredentials;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -110,6 +121,8 @@ import org.mortbay.resource.ResourceCollection;
 import org.skife.config.ConfigurationObjectFactory;
 import org.skife.jdbi.v2.DBI;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
 import java.util.Properties;
@@ -134,6 +147,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private final Properties props;
   private final ConfigurationObjectFactory configFactory;
 
+  private RestS3Service s3Service = null;
   private List<Monitor> monitors = null;
   private ServiceEmitter emitter = null;
   private DbConnectorConfig dbConnectorConfig = null;
@@ -150,6 +164,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private HttpClient httpClient = null;
   private TaskActionClientFactory taskActionClientFactory = null;
   private TaskMasterLifecycle taskMasterLifecycle = null;
+  private TaskLogs persistentTaskLogs = null;
+  private TaskLogProvider taskLogProvider = null;
   private Server server = null;
 
   private boolean initialized = false;
@@ -178,6 +194,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
   public IndexerCoordinatorNode setMergerDBCoordinator(MergerDBCoordinator mergerDBCoordinator)
   {
     this.mergerDBCoordinator = mergerDBCoordinator;
+    return this;
+  }
+
+  public IndexerCoordinatorNode setS3Service(RestS3Service s3Service)
+  {
+    this.s3Service = s3Service;
     return this;
   }
 
@@ -255,6 +277,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initializeTaskRunnerFactory(configManager);
     initializeResourceManagement(configManager);
     initializeTaskMasterLifecycle();
+    initializePersistentTaskLogs();
+    initializeTaskLogProvider();
     initializeServer();
 
     final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
@@ -273,6 +297,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             emitter,
             taskMasterLifecycle,
             new TaskStorageQueryAdapter(taskStorage),
+            taskLogProvider,
             configManager
         )
     );
@@ -365,6 +390,52 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
+  private void initializePersistentTaskLogs() throws S3ServiceException
+  {
+    if (persistentTaskLogs == null) {
+      final TaskLogConfig taskLogConfig = configFactory.build(TaskLogConfig.class);
+      if (taskLogConfig.getLogStorageBucket() != null) {
+        initializeS3Service();
+        persistentTaskLogs = new S3TaskLogs(
+            taskLogConfig.getLogStorageBucket(),
+            taskLogConfig.getLogStoragePrefix(),
+            s3Service
+        );
+      } else {
+        persistentTaskLogs = new NoopTaskLogs();
+      }
+    }
+  }
+
+  private void initializeTaskLogProvider()
+  {
+    if (taskLogProvider == null) {
+      final List<TaskLogProvider> providers = Lists.newArrayList();
+
+      // Use our TaskRunner if it is also a TaskLogProvider
+      providers.add(
+          new TaskLogProvider()
+          {
+            @Override
+            public Optional<InputSupplier<InputStream>> streamTaskLog(String taskid, long offset) throws IOException
+            {
+              final TaskRunner runner = taskMasterLifecycle.getTaskRunner().orNull();
+              if (runner instanceof TaskLogProvider) {
+                return ((TaskLogProvider) runner).streamTaskLog(taskid, offset);
+              } else {
+                return Optional.absent();
+              }
+            }
+          }
+      );
+
+      // Use our persistent log storage
+      providers.add(persistentTaskLogs);
+
+      taskLogProvider = new SwitchingTaskLogProvider(providers);
+    }
+  }
+
   @LifecycleStart
   public synchronized void start() throws Exception
   {
@@ -436,6 +507,18 @@ public class IndexerCoordinatorNode extends RegisteringNode
       );
     }
     EmittingLogger.registerEmitter(emitter);
+  }
+
+  private void initializeS3Service() throws S3ServiceException
+  {
+    if(s3Service == null) {
+      s3Service = new RestS3Service(
+          new AWSCredentials(
+              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+          )
+      );
+    }
   }
 
   private void initializeMonitors()
@@ -545,7 +628,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
                     .build()
             );
 
-            RemoteTaskRunner remoteTaskRunner = new RemoteTaskRunner(
+            return new RemoteTaskRunner(
                 getJsonMapper(),
                 configFactory.build(RemoteTaskRunnerConfig.class),
                 curatorFramework,
@@ -560,8 +643,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
                 configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class),
                 httpClient
             );
-
-            return remoteTaskRunner;
           }
         };
 
@@ -574,6 +655,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             final ExecutorService runnerExec = Executors.newFixedThreadPool(config.getNumLocalThreads());
             return new ForkingTaskRunner(
                 configFactory.build(ForkingTaskRunnerConfig.class),
+                persistentTaskLogs,
                 runnerExec,
                 getJsonMapper()
             );

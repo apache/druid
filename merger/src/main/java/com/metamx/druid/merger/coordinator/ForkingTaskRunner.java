@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
+import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -39,12 +40,13 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.merger.common.TaskStatus;
-import com.metamx.druid.merger.common.actions.TaskActionClient;
-import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
+import com.metamx.druid.merger.common.tasklogs.TaskLogProvider;
 import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.merger.common.tasklogs.TaskLogPusher;
 import com.metamx.druid.merger.coordinator.config.ForkingTaskRunnerConfig;
 import com.metamx.druid.merger.worker.executor.ExecutorMain;
 import com.metamx.emitter.EmittingLogger;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,6 +56,7 @@ import java.io.RandomAccessFile;
 import java.nio.channels.Channels;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,19 +69,22 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
   private static final EmittingLogger log = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
 
-  private final Object lock = new Object();
+  private final Object processLock = new Object();
   private final ForkingTaskRunnerConfig config;
+  private final TaskLogPusher taskLogPusher;
   private final ListeningExecutorService exec;
   private final ObjectMapper jsonMapper;
   private final List<ProcessHolder> processes = Lists.newArrayList();
 
   public ForkingTaskRunner(
       ForkingTaskRunnerConfig config,
+      TaskLogPusher taskLogPusher,
       ExecutorService exec,
       ObjectMapper jsonMapper
   )
   {
     this.config = config;
+    this.taskLogPusher = taskLogPusher;
     this.exec = MoreExecutors.listeningDecorator(exec);
     this.jsonMapper = jsonMapper;
   }
@@ -92,25 +98,29 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
           @Override
           public TaskStatus call()
           {
-            // TODO Keep around for some amount of time?
-            // TODO Directory per attempt? token? uuid?
-            final File tempDir = Files.createTempDir();
+            final String attemptUUID = UUID.randomUUID().toString();
+            final File taskDir = new File(config.getBaseTaskDir(), task.getId());
+            final File attemptDir = new File(taskDir, attemptUUID);
+
             ProcessHolder processHolder = null;
 
             try {
-              final File taskFile = new File(tempDir, "task.json");
-              final File statusFile = new File(tempDir, "status.json");
-              final File logFile = new File(tempDir, "log");
+              if (!attemptDir.mkdirs()) {
+                throw new IOException(String.format("Could not create directories: %s", attemptDir));
+              }
 
-              // locked so we can choose childHost/childPort based on processes.size
-              // and make sure we don't double up on ProcessHolders for a task
-              synchronized (lock) {
+              final File taskFile = new File(attemptDir, "task.json");
+              final File statusFile = new File(attemptDir, "status.json");
+              final File logFile = new File(attemptDir, "log");
+
+              // locked so we can safely assign port = findUnusedPort
+              synchronized (processLock) {
                 if (getProcessHolder(task.getId()).isPresent()) {
                   throw new ISE("Task already running: %s", task.getId());
                 }
 
                 final List<String> command = Lists.newArrayList();
-                final int childPort = config.getStartPort() + processes.size();
+                final int childPort = findUnusedPort();
                 final String childHost = String.format(config.getHostPattern(), childPort);
 
                 Iterables.addAll(
@@ -144,34 +154,50 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
                 command.add(String.format("-Ddruid.host=%s", childHost));
                 command.add(String.format("-Ddruid.port=%d", childPort));
 
-                // TODO configurable
-                command.add(ExecutorMain.class.getName());
+                command.add(config.getMainClass());
                 command.add(taskFile.toString());
                 command.add(statusFile.toString());
 
-                Files.write(jsonMapper.writeValueAsBytes(task), taskFile);
+                jsonMapper.writeValue(taskFile, task);
 
                 log.info("Running command: %s", Joiner.on(" ").join(command));
                 processHolder = new ProcessHolder(
                     task,
                     new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
-                    logFile
+                    logFile,
+                    childPort
                 );
 
                 processes.add(processHolder);
               }
 
               log.info("Logging task %s output to: %s", task.getId(), logFile);
-              final OutputStream toLogfile = Files.newOutputStreamSupplier(logFile).getOutput();
 
+              final OutputStream toLogfile = Files.newOutputStreamSupplier(logFile).getOutput();
               final InputStream fromProc = processHolder.process.getInputStream();
-              ByteStreams.copy(fromProc, toLogfile);
-              fromProc.close();
-              toLogfile.close();
+
+              boolean copyFailed = false;
+
+              try {
+                ByteStreams.copy(fromProc, toLogfile);
+              } catch (Exception e) {
+                log.warn(e, "Failed to read from process for task: %s", task.getId());
+                copyFailed = true;
+              } finally {
+                Closeables.closeQuietly(fromProc);
+                Closeables.closeQuietly(toLogfile);
+              }
 
               final int statusCode = processHolder.process.waitFor();
 
-              if (statusCode == 0) {
+              log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
+
+              // Upload task logs
+              // TODO: For very long-lived tasks, upload periodically? Truncated?
+              // TODO: Store task logs for each attempt separately?
+              taskLogPusher.pushTaskLog(task.getId(), logFile);
+
+              if (!copyFailed && statusCode == 0) {
                 // Process exited successfully
                 return jsonMapper.readValue(statusFile, TaskStatus.class);
               } else {
@@ -187,21 +213,18 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
               throw Throwables.propagate(e);
             }
             finally {
-              if (processHolder != null) {
-                synchronized (lock) {
-                  processes.remove(processHolder);
+              try {
+                if (processHolder != null) {
+                  synchronized (processLock) {
+                    processes.remove(processHolder);
+                  }
                 }
-              }
 
-              if (tempDir.exists()) {
-                log.info("Removing temporary directory: %s", tempDir);
-                // TODO may want to keep this around a bit longer
-//                try {
-//                  FileUtils.deleteDirectory(tempDir);
-//                }
-//                catch (IOException e) {
-//                  log.error(e, "Failed to delete temporary directory");
-//                }
+                log.info("Removing temporary directory: %s", attemptDir);
+                FileUtils.deleteDirectory(attemptDir);
+              }
+              catch (Exception e) {
+                log.error(e, "Failed to delete temporary directory");
               }
             }
           }
@@ -212,8 +235,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
   @LifecycleStop
   public void stop()
   {
-    synchronized (lock) {
-      exec.shutdownNow();
+    synchronized (processLock) {
+      exec.shutdown();
 
       for (ProcessHolder processHolder : processes) {
         log.info("Destroying process: %s", processHolder.process);
@@ -226,12 +249,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
   public void shutdown(final String taskid)
   {
     final Optional<ProcessHolder> processHolder = getProcessHolder(taskid);
-    if(processHolder.isPresent()) {
+    if (processHolder.isPresent()) {
       final int shutdowns = processHolder.get().shutdowns.getAndIncrement();
       if (shutdowns == 0) {
         log.info("Attempting to gracefully shutdown task: %s", taskid);
         try {
-          // TODO this is the WORST
+          // This is gross, but it may still be nicer than talking to the forked JVM via HTTP.
           final OutputStream out = processHolder.get().process.getOutputStream();
           out.write(
               jsonMapper.writeValueAsBytes(
@@ -243,10 +266,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
           );
           out.write('\n');
           out.flush();
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
           throw Throwables.propagate(e);
         }
       } else {
+        // Will trigger normal failure mechanisms due to process exit
         log.info("Killing process for task: %s", taskid);
         processHolder.get().process.destroy();
       }
@@ -272,7 +297,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
   }
 
   @Override
-  public Optional<InputSupplier<InputStream>> getLogs(final String taskid, final long offset)
+  public Optional<InputSupplier<InputStream>> streamTaskLog(final String taskid, final long offset)
   {
     final Optional<ProcessHolder> processHolder = getProcessHolder(taskid);
 
@@ -299,9 +324,29 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
     }
   }
 
+  private int findUnusedPort()
+  {
+    synchronized (processLock) {
+      int port = config.getStartPort();
+      int maxPortSoFar = -1;
+
+      for (ProcessHolder processHolder : processes) {
+        if (processHolder.port > maxPortSoFar) {
+          maxPortSoFar = processHolder.port;
+        }
+
+        if (processHolder.port == port) {
+          port = maxPortSoFar + 1;
+        }
+      }
+
+      return port;
+    }
+  }
+
   private Optional<ProcessHolder> getProcessHolder(final String taskid)
   {
-    synchronized (lock) {
+    synchronized (processLock) {
       return Iterables.tryFind(
           processes, new Predicate<ProcessHolder>()
       {
@@ -320,14 +365,16 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
     private final Task task;
     private final Process process;
     private final File logFile;
+    private final int port;
 
     private AtomicInteger shutdowns = new AtomicInteger(0);
 
-    private ProcessHolder(Task task, Process process, File logFile)
+    private ProcessHolder(Task task, Process process, File logFile, int port)
     {
       this.task = task;
       this.process = process;
       this.logFile = logFile;
+      this.port = port;
     }
   }
 }

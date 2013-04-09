@@ -20,16 +20,24 @@
 package com.metamx.druid.merger.worker.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.coordinator.ForkingTaskRunner;
 
+import javax.ws.rs.DefaultValue;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  */
@@ -64,5 +72,27 @@ public class WorkerResource
       return Response.serverError().build();
     }
     return Response.ok(ImmutableMap.of("task", taskid)).build();
+  }
+
+  @GET
+  @Path("/task/{taskid}/log")
+  @Produces("text/plain")
+  public Response doGetLog(
+      @PathParam("taskid") String taskid,
+      @QueryParam("offset") @DefaultValue("0") long offset
+  )
+  {
+    final Optional<InputSupplier<InputStream>> stream = taskRunner.streamTaskLog(taskid, offset);
+
+    if (stream.isPresent()) {
+      try {
+        return Response.ok(stream.get().getInput()).build();
+      } catch (Exception e) {
+        log.warn(e, "Failed to read log for task: %s", taskid);
+        return Response.serverError().build();
+      }
+    } else {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
   }
 }

@@ -40,8 +40,11 @@ import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
-import com.metamx.druid.merger.common.config.TaskConfig;
+import com.metamx.druid.merger.common.config.TaskLogConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
+import com.metamx.druid.merger.common.tasklogs.NoopTaskLogs;
+import com.metamx.druid.merger.common.tasklogs.S3TaskLogs;
+import com.metamx.druid.merger.common.tasklogs.TaskLogs;
 import com.metamx.druid.merger.coordinator.ForkingTaskRunner;
 import com.metamx.druid.merger.coordinator.config.ForkingTaskRunnerConfig;
 import com.metamx.druid.merger.worker.Worker;
@@ -64,8 +67,12 @@ import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.x.discovery.ServiceDiscovery;
 import com.netflix.curator.x.discovery.ServiceProvider;
+import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.security.AWSCredentials;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
@@ -92,16 +99,17 @@ public class WorkerNode extends RegisteringNode
   private final ObjectMapper jsonMapper;
   private final ConfigurationObjectFactory configFactory;
 
+  private RestS3Service s3Service = null;
   private List<Monitor> monitors = null;
   private HttpClient httpClient = null;
   private ServiceEmitter emitter = null;
-  private TaskConfig taskConfig = null;
   private WorkerConfig workerConfig = null;
   private CuratorFramework curatorFramework = null;
   private ServiceDiscovery serviceDiscovery = null;
   private ServiceProvider coordinatorServiceProvider = null;
   private WorkerCuratorCoordinator workerCuratorCoordinator = null;
   private WorkerTaskMonitor workerTaskMonitor = null;
+  private TaskLogs persistentTaskLogs = null;
   private ForkingTaskRunner forkingTaskRunner = null;
   private Server server = null;
 
@@ -181,6 +189,7 @@ public class WorkerNode extends RegisteringNode
     initializeCoordinatorServiceProvider();
     initializeJacksonSubtypes();
     initializeCuratorCoordinator();
+    initializePersistentTaskLogs();
     initializeTaskRunner();
     initializeWorkerTaskMonitor();
     initializeServer();
@@ -205,6 +214,7 @@ public class WorkerNode extends RegisteringNode
     final Context root = new Context(server, "/", Context.SESSIONS);
 
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
+    root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     root.addEventListener(new GuiceServletConfig(injector));
     root.addFilter(GuiceFilter.class, "/mmx/worker/v1/*", 0);
   }
@@ -287,6 +297,18 @@ public class WorkerNode extends RegisteringNode
     EmittingLogger.registerEmitter(emitter);
   }
 
+  private void initializeS3Service() throws S3ServiceException
+  {
+    if(s3Service == null) {
+      s3Service = new RestS3Service(
+          new AWSCredentials(
+              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+          )
+      );
+    }
+  }
+
   private void initializeMonitors()
   {
     if (monitors == null) {
@@ -298,10 +320,6 @@ public class WorkerNode extends RegisteringNode
 
   private void initializeMergerConfig()
   {
-    if (taskConfig == null) {
-      taskConfig = configFactory.build(TaskConfig.class);
-    }
-
     if (workerConfig == null) {
       workerConfig = configFactory.build(WorkerConfig.class);
     }
@@ -354,11 +372,29 @@ public class WorkerNode extends RegisteringNode
     }
   }
 
+  private void initializePersistentTaskLogs() throws S3ServiceException
+  {
+    if (persistentTaskLogs == null) {
+      final TaskLogConfig taskLogConfig = configFactory.build(TaskLogConfig.class);
+      if (taskLogConfig.getLogStorageBucket() != null) {
+        initializeS3Service();
+        persistentTaskLogs = new S3TaskLogs(
+            taskLogConfig.getLogStorageBucket(),
+            taskLogConfig.getLogStoragePrefix(),
+            s3Service
+        );
+      } else {
+        persistentTaskLogs = new NoopTaskLogs();
+      }
+    }
+  }
+
   public void initializeTaskRunner()
   {
     if (forkingTaskRunner == null) {
       forkingTaskRunner = new ForkingTaskRunner(
           configFactory.build(ForkingTaskRunnerConfig.class),
+          persistentTaskLogs,
           Executors.newFixedThreadPool(workerConfig.getCapacity()),
           getJsonMapper()
       );

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -104,10 +105,9 @@ public class TaskMasterLifecycle
           leaderLifecycle.addManagedInstance(taskConsumer);
           leaderLifecycle.addManagedInstance(resourceManagementScheduler);
 
-          leading = true;
-
           try {
             leaderLifecycle.start();
+            leading = true;
 
             while (leading && !Thread.currentThread().isInterrupted()) {
               mayBeStopped.await();
@@ -213,23 +213,39 @@ public class TaskMasterLifecycle
     }
   }
 
-  public TaskRunner getTaskRunner()
+  public Optional<TaskRunner> getTaskRunner()
   {
-    return taskRunner;
+    if (leading) {
+      return Optional.of(taskRunner);
+    } else {
+      return Optional.absent();
+    }
   }
 
-  public TaskQueue getTaskQueue()
+  public Optional<TaskQueue> getTaskQueue()
   {
-    return taskQueue;
+    if (leading) {
+      return Optional.of(taskQueue);
+    } else {
+      return Optional.absent();
+    }
   }
 
-  public TaskActionClient getTaskActionClient(Task task)
+  public Optional<TaskActionClient> getTaskActionClient(Task task)
   {
-    return taskActionClientFactory.create(task);
+    if (leading) {
+      return Optional.of(taskActionClientFactory.create(task));
+    } else {
+      return Optional.absent();
+    }
   }
 
-  public ResourceManagementScheduler getResourceManagementScheduler()
+  public Optional<ResourceManagementScheduler> getResourceManagementScheduler()
   {
-    return resourceManagementScheduler;
+    if (leading) {
+      return Optional.of(resourceManagementScheduler);
+    } else {
+      return Optional.absent();
+    }
   }
 }

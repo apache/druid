@@ -22,11 +22,14 @@ package com.metamx.druid.merger.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
+import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -37,12 +40,14 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.merger.common.RetryPolicy;
 import com.metamx.druid.merger.common.RetryPolicyFactory;
 import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.tasklogs.TaskLogProvider;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.ToStringResponseHandler;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
@@ -53,6 +58,8 @@ import org.apache.zookeeper.CreateMode;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
@@ -62,6 +69,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -80,13 +88,13 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p/>
  * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will automatically retry any tasks
  * that were associated with the node.
- *
+ * <p/>
  * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
-public class RemoteTaskRunner implements TaskRunner
+public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
 {
   private static final EmittingLogger log = new EmittingLogger(RemoteTaskRunner.class);
-  private static final ToStringResponseHandler responseHandler = new ToStringResponseHandler(Charsets.UTF_8);
+  private static final ToStringResponseHandler STRING_RESPONSE_HANDLER = new ToStringResponseHandler(Charsets.UTF_8);
   private static final Joiner JOINER = Joiner.on("/");
 
   private final ObjectMapper jsonMapper;
@@ -242,6 +250,7 @@ public class RemoteTaskRunner implements TaskRunner
 
   /**
    * Finds the worker running the task and forwards the shutdown signal to the worker.
+   *
    * @param taskId
    */
   @Override
@@ -250,23 +259,18 @@ public class RemoteTaskRunner implements TaskRunner
     final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
     if (zkWorker == null) {
+      // TODO Ability to shut down pending tasks
       log.info("Can't shutdown! No worker running task %s", taskId);
       return;
     }
 
     final RetryPolicy shutdownRetryPolicy = retryPolicyFactory.makeRetryPolicy();
-    URL url;
-    try {
-      url = new URL(String.format("http://%s/mmx/v1/worker/task/%s/shutdown", zkWorker.getWorker().getHost(), taskId));
-    }
-    catch (MalformedURLException e) {
-      throw Throwables.propagate(e);
-    }
+    final URL url = workerURL(zkWorker.getWorker(), String.format("/task/%s/shutdown", taskId));
 
     while (!shutdownRetryPolicy.hasExceededRetryThreshold()) {
       try {
         final String response = httpClient.post(url)
-                                          .go(responseHandler)
+                                          .go(STRING_RESPONSE_HANDLER)
                                           .get();
         log.info("Sent shutdown message to worker: %s, response: %s", zkWorker.getWorker().getHost(), response);
 
@@ -288,6 +292,54 @@ public class RemoteTaskRunner implements TaskRunner
           }
         }
       }
+    }
+  }
+
+  @Override
+  public Optional<InputSupplier<InputStream>> streamTaskLog(final String taskId, final long offset)
+  {
+    final ZkWorker zkWorker = findWorkerRunningTask(taskId);
+
+    if (zkWorker == null) {
+      // Worker is not running this task, it might be available in deep storage
+      return Optional.absent();
+    } else {
+      // Worker is still running this task
+      final URL url = workerURL(zkWorker.getWorker(), String.format("/task/%s/log?offset=%d", taskId, offset));
+      return Optional.<InputSupplier<InputStream>>of(
+          new InputSupplier<InputStream>()
+          {
+            @Override
+            public InputStream getInput() throws IOException
+            {
+              try {
+                return httpClient.get(url)
+                                 .go(new InputStreamResponseHandler())
+                                 .get();
+              }
+              catch (InterruptedException e) {
+                throw Throwables.propagate(e);
+              }
+              catch (ExecutionException e) {
+                // Unwrap if possible
+                Throwables.propagateIfPossible(e.getCause(), IOException.class);
+                throw Throwables.propagate(e);
+              }
+            }
+          }
+      );
+    }
+  }
+
+  private URL workerURL(Worker worker, String path)
+  {
+    Preconditions.checkArgument(path.startsWith("/"), "path must start with '/': %s", path);
+
+    try {
+      return new URL(String.format("http://%s/mmx/worker/v1%s", worker.getHost(), path));
+    }
+    catch (MalformedURLException e) {
+      throw Throwables.propagate(e);
     }
   }
 

@@ -199,7 +199,7 @@ public class ExecutorServiceTaskRunner implements TaskRunner, QuerySegmentWalker
     public TaskStatus call()
     {
       final long startTime = System.currentTimeMillis();
-      final File taskDir = toolbox.getTaskDir();
+      final File taskDir = toolbox.getTaskWorkDir();
 
       TaskStatus status;
 

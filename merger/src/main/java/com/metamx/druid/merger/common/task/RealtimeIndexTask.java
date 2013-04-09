@@ -144,7 +144,7 @@ public class RealtimeIndexTask extends AbstractTask
     // TODO -- the ServerView, which seems kind of odd?)
     final RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
         windowPeriod,
-        new File(toolbox.getTaskDir(), "persist"),
+        new File(toolbox.getTaskWorkDir(), "persist"),
         segmentGranularity
     );
 

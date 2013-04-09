@@ -122,7 +122,7 @@ public abstract class MergeTaskBase extends AbstractTask
     final ServiceEmitter emitter = toolbox.getEmitter();
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     final DataSegment mergedSegment = computeMergedSegment(getDataSource(), myLock.getVersion(), segments);
-    final File taskDir = toolbox.getTaskDir();
+    final File taskDir = toolbox.getTaskWorkDir();
 
     try {
 

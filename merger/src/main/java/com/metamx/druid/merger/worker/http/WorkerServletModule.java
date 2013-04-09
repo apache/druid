@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
 import com.metamx.druid.merger.coordinator.ForkingTaskRunner;
-import com.metamx.druid.merger.coordinator.http.IndexerCoordinatorResource;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
