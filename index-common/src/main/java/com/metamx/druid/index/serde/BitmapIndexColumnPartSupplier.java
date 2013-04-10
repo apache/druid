@@ -22,7 +22,6 @@ package com.metamx.druid.index.serde;
 import com.google.common.base.Supplier;
 import com.metamx.druid.index.column.BitmapIndex;
 import com.metamx.druid.kv.GenericIndexed;
-import com.metamx.druid.kv.Indexed;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**

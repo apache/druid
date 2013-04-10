@@ -19,7 +19,6 @@
 
 package com.metamx.druid.master;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
