@@ -27,7 +27,6 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.IndexedList;
 import com.metamx.druid.kv.IndexedLongs;
 import com.metamx.druid.kv.VSizeIndexed;

@@ -22,7 +22,6 @@ package com.metamx.druid.query.timeseries;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.metamx.druid.BaseQuery;
 import com.metamx.druid.Query;
@@ -43,8 +42,6 @@ import java.util.Map;
 @JsonTypeName("timeseries")
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
-  public static final String TIMESERIES = "timeseries";
-
   private final DimFilter dimFilter;
   private final QueryGranularity granularity;
   private final List<AggregatorFactory> aggregatorSpecs;
@@ -79,7 +76,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public String getType()
   {
-    return TIMESERIES;
+    return Query.TIMESERIES;
   }
 
   @JsonProperty("filter")
@@ -131,7 +128,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         computeOverridenContext(contextOverrides)
     );
   }
-  
+
   @Override
   public String toString()
   {

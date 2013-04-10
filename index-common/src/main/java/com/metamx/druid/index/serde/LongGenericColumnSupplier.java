@@ -24,8 +24,6 @@ import com.metamx.druid.index.column.GenericColumn;
 import com.metamx.druid.index.column.IndexedLongsGenericColumn;
 import com.metamx.druid.index.v1.CompressedLongsIndexedSupplier;
 
-import java.nio.ByteOrder;
-
 /**
 */
 public class LongGenericColumnSupplier implements Supplier<GenericColumn>

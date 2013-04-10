@@ -21,7 +21,6 @@ package com.metamx.druid.master.rules;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.common.Pair;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.master.BalancerCostAnalyzer;
 import com.metamx.druid.master.DruidMaster;

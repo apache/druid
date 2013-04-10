@@ -25,12 +25,10 @@ import com.google.common.io.Files;
 import com.metamx.common.ISE;
 import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;
-import sun.misc.IOUtils;
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;

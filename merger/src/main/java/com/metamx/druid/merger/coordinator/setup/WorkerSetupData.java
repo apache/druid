@@ -22,8 +22,6 @@ package com.metamx.druid.merger.coordinator.setup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
-
 /**
  */
 public class WorkerSetupData

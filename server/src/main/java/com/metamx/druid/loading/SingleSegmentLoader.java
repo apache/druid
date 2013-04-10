@@ -20,7 +20,6 @@
 package com.metamx.druid.loading;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;

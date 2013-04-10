@@ -28,7 +28,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import com.metamx.druid.jackson.CommaListJoinDeserializer;
 import com.metamx.druid.jackson.CommaListJoinSerializer;
