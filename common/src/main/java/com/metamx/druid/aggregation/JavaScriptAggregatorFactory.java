@@ -26,7 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.metamx.common.IAE;
 import com.metamx.druid.processing.FloatMetricSelector;
-import com.metamx.druid.processing.MetricSelectorFactory;
+import com.metamx.druid.processing.ColumnSelectorFactory;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
@@ -66,7 +66,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(final MetricSelectorFactory metricFactory)
+  public Aggregator factorize(final ColumnSelectorFactory metricFactory)
   {
     return new JavaScriptAggregator(
         name,
@@ -83,7 +83,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(final MetricSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
   {
     return new JavaScriptBufferAggregator(
         Lists.transform(

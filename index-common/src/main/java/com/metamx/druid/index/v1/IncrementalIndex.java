@@ -42,9 +42,9 @@ import com.metamx.druid.index.v1.serde.ComplexMetrics;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
+import com.metamx.druid.processing.ColumnSelectorFactory;
 import com.metamx.druid.processing.ComplexMetricSelector;
 import com.metamx.druid.processing.FloatMetricSelector;
-import com.metamx.druid.processing.MetricSelectorFactory;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -169,7 +169,7 @@ public class IncrementalIndex implements Iterable<Row>
       for (int i = 0; i < metrics.length; ++i) {
         final AggregatorFactory agg = metrics[i];
         aggs[i] = agg.factorize(
-            new MetricSelectorFactory()
+            new ColumnSelectorFactory()
             {
               @Override
               public FloatMetricSelector makeFloatMetricSelector(String metric)
