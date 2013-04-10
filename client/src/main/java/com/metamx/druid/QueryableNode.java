@@ -330,12 +330,15 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private void initializeEmitter()
   {
     if (emitter == null) {
-      final HttpClient httpClient = HttpClientInit.createClient(
-          HttpClientConfig.builder()
-                          .withNumConnections(1)
-                          .withReadTimeout(new Duration(PropUtils.getProperty(props, "druid.emitter.timeOut")))
-                          .build(), lifecycle
-      );
+      final HttpClientConfig.Builder configBuilder = HttpClientConfig.builder()
+                                                                     .withNumConnections(1);
+
+      final String emitterTimeoutDuration = props.getProperty("druid.emitter.timeOut");
+      if (emitterTimeoutDuration != null) {
+        configBuilder.withReadTimeout(new Duration(emitterTimeoutDuration));
+      }
+
+      final HttpClient httpClient = HttpClientInit.createClient(configBuilder.build(), lifecycle);
 
       setEmitter(
           new ServiceEmitter(

@@ -87,7 +87,8 @@ public class GroupByQueryRunnerTest
                               }
                             }
                         )
-                    )
+                    ),
+                    new GroupByQueryRunnerFactoryConfig(){}
                 );
 
     return Lists.newArrayList(
