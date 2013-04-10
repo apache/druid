@@ -31,10 +31,6 @@
         <version>0.3.35-SNAPSHOT</version>
     </parent>
 
-    <properties>
-        <scala.version>2.8.2</scala.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.metamx.druid</groupId>
@@ -116,23 +112,13 @@
         <dependency>
             <groupId>kafka</groupId>
             <artifactId>core-kafka</artifactId>
-            <version>0.6-mmx11</version>
+            <version>0.7.2-mmx1</version>
             <exclusions>
                 <exclusion>
                     <groupId>log4j</groupId>
                     <artifactId>log4j</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-compiler</artifactId>
-            <version>${scala.version}</version>
         </dependency>
         <dependency>
             <groupId>com.github.sgroschupf</groupId>
