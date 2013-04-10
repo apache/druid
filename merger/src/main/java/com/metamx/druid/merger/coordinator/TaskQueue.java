@@ -80,9 +80,10 @@ public class TaskQueue
    */
   public void bootstrap()
   {
-    // TODO: Periodically fixup the database to refer to what we think is happening so bootstraps don't resurrect
-    // TODO: bogus stuff caused by leader races or whatevs. Also so that bogus stuff is detect by clients in a
-    // TODO: timely manner.
+    // NOTE: Bootstraps can resurrect bogus stuff caused by leader races or whatevs.
+
+    // We may want to periodically fixup the database to refer to what we think is happening, to prevent
+    // this from occurring and also so that bogus stuff is detected by clients in a timely manner.
 
     giant.lock();
 

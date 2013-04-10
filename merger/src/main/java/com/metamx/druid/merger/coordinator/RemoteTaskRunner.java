@@ -259,7 +259,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
     if (zkWorker == null) {
-      // TODO Ability to shut down pending tasks
+      // Would be nice to have an ability to shut down pending tasks
       log.info("Can't shutdown! No worker running task %s", taskId);
       return;
     }

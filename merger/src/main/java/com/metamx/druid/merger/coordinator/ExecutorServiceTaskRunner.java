@@ -74,7 +74,6 @@ public class ExecutorServiceTaskRunner implements TaskRunner, QuerySegmentWalker
   @LifecycleStop
   public void stop()
   {
-    // TODO is this right
     exec.shutdownNow();
   }
 

@@ -655,6 +655,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
             final ExecutorService runnerExec = Executors.newFixedThreadPool(config.getNumLocalThreads());
             return new ForkingTaskRunner(
                 configFactory.build(ForkingTaskRunnerConfig.class),
+                props,
                 persistentTaskLogs,
                 runnerExec,
                 getJsonMapper()

@@ -69,6 +69,7 @@ public class WorkerResource
       taskRunner.shutdown(taskid);
     }
     catch (Exception e) {
+      log.error(e, "Failed to issue shutdown for task: %s", taskid);
       return Response.serverError().build();
     }
     return Response.ok(ImmutableMap.of("task", taskid)).build();

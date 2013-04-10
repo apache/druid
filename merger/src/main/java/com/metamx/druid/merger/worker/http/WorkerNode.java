@@ -394,6 +394,7 @@ public class WorkerNode extends RegisteringNode
     if (forkingTaskRunner == null) {
       forkingTaskRunner = new ForkingTaskRunner(
           configFactory.build(ForkingTaskRunnerConfig.class),
+          props,
           persistentTaskLogs,
           Executors.newFixedThreadPool(workerConfig.getCapacity()),
           getJsonMapper()
