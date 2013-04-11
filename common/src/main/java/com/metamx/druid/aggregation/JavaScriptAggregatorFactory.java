@@ -21,18 +21,16 @@ package com.metamx.druid.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
-import com.metamx.common.IAE;
-import com.metamx.druid.processing.FloatMetricSelector;
 import com.metamx.druid.processing.ColumnSelectorFactory;
-
+import com.metamx.druid.processing.ObjectColumnSelector;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Function;
-import org.mozilla.javascript.Script;
 import org.mozilla.javascript.ScriptableObject;
 
 import javax.annotation.Nullable;
@@ -76,16 +74,18 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(final ColumnSelectorFactory metricFactory)
+  public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
     return new JavaScriptAggregator(
         name,
         Lists.transform(
             fieldNames,
-            new com.google.common.base.Function<String, FloatMetricSelector>()
+            new com.google.common.base.Function<String, ObjectColumnSelector>()
             {
               @Override
-              public FloatMetricSelector apply(@Nullable String s) { return metricFactory.makeFloatMetricSelector(s); }
+              public ObjectColumnSelector apply(@Nullable String s) {
+                return columnFactory.makeObjectColumnSelector(s);
+              }
             }
         ),
         compiledScript
@@ -93,17 +93,16 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
     return new JavaScriptBufferAggregator(
         Lists.transform(
             fieldNames,
-            new com.google.common.base.Function<String, FloatMetricSelector>()
+            new com.google.common.base.Function<String, ObjectColumnSelector>()
             {
               @Override
-              public FloatMetricSelector apply(@Nullable String s)
-              {
-                return metricFactory.makeFloatMetricSelector(s);
+              public ObjectColumnSelector apply(@Nullable String s) {
+                return columnSelectorFactory.makeObjectColumnSelector(s);
               }
             }
         ),
@@ -182,8 +181,8 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   {
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-1");
-      byte[] fieldNameBytes = Joiner.on(",").join(fieldNames).getBytes();
-      byte[] sha1 = md.digest((fnAggregate+fnReset+fnCombine).getBytes());
+      byte[] fieldNameBytes = Joiner.on(",").join(fieldNames).getBytes(Charsets.UTF_8);
+      byte[] sha1 = md.digest((fnAggregate+fnReset+fnCombine).getBytes(Charsets.UTF_8));
 
       return ByteBuffer.allocate(1 + fieldNameBytes.length + sha1.length)
                        .put(CACHE_TYPE_ID)
@@ -242,7 +241,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
     return new JavaScriptAggregator.ScriptAggregator()
     {
       @Override
-      public double aggregate(final double current, final FloatMetricSelector[] selectorList)
+      public double aggregate(final double current, final ObjectColumnSelector[] selectorList)
       {
         Context cx = Context.getCurrentContext();
         if(cx == null) cx = contextFactory.enterContext();

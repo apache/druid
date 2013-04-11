@@ -21,7 +21,7 @@ package com.metamx.druid.aggregation;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.druid.processing.FloatMetricSelector;
+import com.metamx.druid.processing.ObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -77,7 +77,7 @@ public class JavaScriptAggregatorTest
 
     JavaScriptAggregator agg = new JavaScriptAggregator(
       "billy",
-      Arrays.<FloatMetricSelector>asList(selector1, selector2),
+      Arrays.<ObjectColumnSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
       JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
                                                 script.get("fnReset"),
                                                 script.get("fnCombine"))
@@ -113,7 +113,7 @@ public class JavaScriptAggregatorTest
 
     Map<String, String> script = sumLogATimesBPlusTen;
     JavaScriptBufferAggregator agg = new JavaScriptBufferAggregator(
-      Arrays.<FloatMetricSelector>asList(selector1, selector2),
+      Arrays.<ObjectColumnSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
       JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
                                                 script.get("fnReset"),
                                                 script.get("fnCombine"))
@@ -164,7 +164,7 @@ public class JavaScriptAggregatorTest
     Map<String, String> script = scriptDoubleSum;
     JavaScriptAggregator aggRhino = new JavaScriptAggregator(
       "billy",
-      Lists.asList(selector, new FloatMetricSelector[]{}),
+      Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectColumnSelector[]{}),
       JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
                                                 script.get("fnReset"),
                                                 script.get("fnCombine"))
