@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,12 +19,8 @@
 
 package com.metamx.druid.processing;
 
-/**
- * Factory class for MetricSelectors
- */
-public interface ColumnSelectorFactory
+public interface ObjectColumnSelector<T>
 {
-  public FloatMetricSelector makeFloatMetricSelector(String metricName);
-  public ComplexMetricSelector makeComplexMetricSelector(String metricName);
-  public ObjectColumnSelector makeObjectColumnSelector(String columnName);
+  public Class<T> classOfObject();
+  public T get();
 }

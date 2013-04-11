@@ -46,11 +46,13 @@ import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.ListIndexed;
 import com.metamx.druid.processing.ComplexMetricSelector;
 import com.metamx.druid.processing.FloatMetricSelector;
+import com.metamx.druid.processing.ObjectColumnSelector;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -148,7 +150,7 @@ public class IndexStorageAdapter extends BaseStorageAdapter
           );
         }
 
-        final Map<String, Object> metricHolderCache = Maps.newHashMap();
+        final Map<String, Object> columnHolderCache = Maps.newHashMap();
 
         // This after call is not perfect, if there is an exception during processing, it will never get called,
         // but it's better than nothing and doing this properly all the time requires a lot more fixerating
@@ -246,7 +248,7 @@ public class IndexStorageAdapter extends BaseStorageAdapter
                           public FloatMetricSelector makeFloatMetricSelector(String metric)
                           {
                             String metricName = metric.toLowerCase();
-                            IndexedFloats cachedFloats = (IndexedFloats) metricHolderCache.get(metric);
+                            IndexedFloats cachedFloats = (IndexedFloats) columnHolderCache.get(metric);
                             if (cachedFloats == null) {
                               MetricHolder holder = index.metricVals.get(metricName);
                               if (holder == null) {
@@ -261,7 +263,7 @@ public class IndexStorageAdapter extends BaseStorageAdapter
                               }
 
                               cachedFloats = holder.getFloatType();
-                              metricHolderCache.put(metricName, cachedFloats);
+                              columnHolderCache.put(metricName, cachedFloats);
                             }
 
                             final IndexedFloats metricVals = cachedFloats;
@@ -279,12 +281,13 @@ public class IndexStorageAdapter extends BaseStorageAdapter
                           public ComplexMetricSelector makeComplexMetricSelector(String metric)
                           {
                             final String metricName = metric.toLowerCase();
-                            Indexed cachedComplex = (Indexed) metricHolderCache.get(metricName);
+                            Indexed cachedComplex = (Indexed) columnHolderCache.get(metricName);
+
                             if (cachedComplex == null) {
                               MetricHolder holder = index.metricVals.get(metricName);
                               if (holder != null) {
                                 cachedComplex = holder.getComplexType();
-                                metricHolderCache.put(metricName, cachedComplex);
+                                columnHolderCache.put(metricName, cachedComplex);
                               }
                             }
 
@@ -308,6 +311,107 @@ public class IndexStorageAdapter extends BaseStorageAdapter
                               }
                             };
                           }
+
+                          @Override
+                          public ObjectColumnSelector makeObjectColumnSelector(String column)
+                          {
+
+                            final String columnName = column.toLowerCase();
+                            Object cachedColumn = (Indexed) columnHolderCache.get(columnName);
+
+                            if (cachedColumn == null) {
+                              MetricHolder holder = index.metricVals.get(columnName);
+                              final String[] nameLookup = index.reverseDimLookup.get(columnName);
+
+                              if(nameLookup != null) {
+                                cachedColumn = index.dimensionValues.get(columnName);
+                              }
+                              else if(holder != null) {
+                                final MetricHolder.MetricType type = holder.getType();
+
+                                if (type == MetricHolder.MetricType.COMPLEX) {
+                                  cachedColumn = holder.getComplexType();
+                                }
+                                else {
+                                  cachedColumn = holder.getFloatType();
+                                }
+                              }
+
+                              if(cachedColumn != null) {
+                                columnHolderCache.put(columnName, cachedColumn);
+                              }
+                            }
+
+                            if (cachedColumn == null) {
+                              return null;
+                            }
+
+                            if(cachedColumn instanceof IndexedFloats) {
+                              final IndexedFloats vals = (IndexedFloats)cachedColumn;
+                              return new ObjectColumnSelector<Float>()
+                              {
+                                @Override
+                                public Class classOfObject()
+                                {
+                                  return Float.TYPE;
+                                }
+
+                                @Override
+                                public Float get()
+                                {
+                                  return vals.get(cursorOffset.getOffset());
+                                }
+                              };
+                            }
+
+                            if(cachedColumn instanceof Indexed) {
+                              final Indexed vals = (Indexed)cachedColumn;
+                              return new ObjectColumnSelector()
+                              {
+                                @Override
+                                public Class classOfObject()
+                                {
+                                  return vals.getClazz();
+                                }
+
+                                @Override
+                                public Object get()
+                                {
+                                  return vals.get(cursorOffset.getOffset());
+                                }
+                              };
+                            }
+
+                            if(cachedColumn instanceof DimensionColumn) {
+                              final DimensionColumn vals = (DimensionColumn)cachedColumn;
+
+                              final String[] nameLookup = index.reverseDimLookup.get(columnName);
+                              final int[] dimensionRowValues = vals.getDimensionRowValues();
+                              final int[][] dimensionExpansions = vals.getDimensionExpansions();
+
+                              return new ObjectColumnSelector<String>()
+                              {
+                                @Override
+                                public Class classOfObject()
+                                {
+                                  return String.class;
+                                }
+
+                                @Override
+                                public String get()
+                                {
+                                  final int[] dimIds = dimensionExpansions[dimensionRowValues[cursorOffset.getOffset()]];
+                                  if(dimIds.length == 1) return nameLookup[dimIds[0]];
+                                  if(dimIds.length == 0) return null;
+                                  throw new UnsupportedOperationException(
+                                    "makeObjectColumnSelector does not support multivalued columns"
+                                  );
+                                }
+                              };
+                            }
+
+                            return null;
+                          }
                         };
                       }
                     }
@@ -317,7 +421,7 @@ public class IndexStorageAdapter extends BaseStorageAdapter
               @Override
               public void run()
               {
-                for (Object object : metricHolderCache.values()) {
+                for (Object object : columnHolderCache.values()) {
                   if (object instanceof Closeable) {
                     Closeables.closeQuietly((Closeable) object);
                   }
