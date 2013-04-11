@@ -256,6 +256,11 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   @Override
   public void shutdown(String taskId)
   {
+    if (pendingTasks.containsKey(taskId)) {
+      pendingTasks.remove(taskId);
+      return;
+    }
+
     final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
     if (zkWorker == null) {
