@@ -29,9 +29,10 @@ import com.metamx.druid.indexer.data.StringInputRowParser;
 import com.metamx.druid.input.InputRow;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
-import kafka.consumer.KafkaMessageStream;
+import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.Message;
+import kafka.message.MessageAndMetadata;
 
 import java.io.IOException;
 import java.nio.CharBuffer;
@@ -76,18 +77,18 @@ public class KafkaFirehoseFactory implements FirehoseFactory
   {
     final ConsumerConnector connector = Consumer.createJavaConsumerConnector(new ConsumerConfig(consumerProps));
 
-    final Map<String, List<KafkaMessageStream>> streams = connector.createMessageStreams(ImmutableMap.of(feed, 1));
+    final Map<String, List<KafkaStream<Message>>> streams = connector.createMessageStreams(ImmutableMap.of(feed, 1));
 
-    final List<KafkaMessageStream> streamList = streams.get(feed);
+    final List<KafkaStream<Message>> streamList = streams.get(feed);
     if (streamList == null || streamList.size() != 1) {
       return null;
     }
 
-    final KafkaMessageStream stream = streamList.get(0);
+    final KafkaStream<Message> stream = streamList.get(0);
 
     return new Firehose()
     {
-      Iterator<Message> iter = stream.iterator();
+      Iterator<MessageAndMetadata<Message>> iter = stream.iterator();
       private CharBuffer chars = null;
 
       @Override
@@ -99,7 +100,7 @@ public class KafkaFirehoseFactory implements FirehoseFactory
       @Override
       public InputRow nextRow() throws FormattedException
       {
-        final Message message = iter.next();
+        final Message message = iter.next().message();
 
         if (message == null) {
           return null;
