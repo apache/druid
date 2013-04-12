@@ -5,23 +5,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.guava.Runnables;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 
-
-
-
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 
 import static java.lang.Thread.sleep;
-
 
 /**
  * Random value sequence Firehost Factory named "rand".

@@ -19,7 +19,6 @@
 
 package com.metamx.druid.master;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
@@ -30,7 +29,6 @@ import org.joda.time.Interval;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
-
 
 /**
  * The BalancerCostAnalyzer will compute the total initial cost of the cluster, with costs defined in
@@ -269,5 +267,3 @@ public class BalancerCostAnalyzer
   }
 
 }
-
-

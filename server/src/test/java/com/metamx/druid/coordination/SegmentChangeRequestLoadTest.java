@@ -27,7 +27,6 @@ import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.shard.NoneShardSpec;
 
-
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;

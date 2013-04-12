@@ -144,7 +144,6 @@ public abstract class MergeTaskBase extends AbstractTask
           )
       );
 
-
       // download segments to merge
       final Map<DataSegment, File> gettedSegments = toolbox.getSegments(segments);
 

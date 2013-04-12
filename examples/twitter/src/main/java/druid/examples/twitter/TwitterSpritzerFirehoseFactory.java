@@ -10,8 +10,6 @@ import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 
-
-
 import twitter4j.ConnectionLifeCycleListener;
 import twitter4j.HashtagEntity;
 import twitter4j.Status;
@@ -32,7 +30,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Thread.sleep;
-
 
 /**
  * Twitter "spritzer" Firehost Factory named "twitzer".

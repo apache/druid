@@ -24,7 +24,6 @@ import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
 import com.metamx.druid.Query;
 
-
 /**
 */
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>

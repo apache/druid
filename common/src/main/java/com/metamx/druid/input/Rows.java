@@ -19,45 +19,29 @@
 
 package com.metamx.druid.input;
 
+import com.google.common.collect.Maps;
+import com.metamx.common.ISE;
+
 import java.util.List;
+import java.util.TreeMap;
 
 /**
  */
 public class Rows
 {
-  public static InputRow toInputRow(final Row row, final List<String> dimensions)
+  public static InputRow toCaseInsensitiveInputRow(final Row row, final List<String> dimensions)
   {
-    return new InputRow()
-    {
-      @Override
-      public List<String> getDimensions()
-      {
-        return dimensions;
-      }
+    if (row instanceof MapBasedRow) {
+      MapBasedRow mapBasedRow = (MapBasedRow) row;
 
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return row.getTimestampFromEpoch();
-      }
-
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return row.getDimension(dimension);
-      }
-
-      @Override
-      public float getFloatMetric(String metric)
-      {
-        return row.getFloatMetric(metric);
-      }
-
-      @Override
-      public String toString()
-      {
-        return row.toString();
-      }
-    };
+      TreeMap<String, Object> caseInsensitiveMap = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+      caseInsensitiveMap.putAll(mapBasedRow.getEvent());
+      return new MapBasedInputRow(
+          mapBasedRow.getTimestampFromEpoch(),
+          dimensions,
+          caseInsensitiveMap
+      );
+    }
+    throw new ISE("Can only convert MapBasedRow objects because we are ghetto like that.");
   }
 }

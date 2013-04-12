@@ -47,6 +47,7 @@ import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.query.group.GroupByQueryRunnerFactory;
+import com.metamx.druid.query.group.GroupByQueryRunnerFactoryConfig;
 import com.metamx.druid.query.metadata.SegmentMetadataQuery;
 import com.metamx.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import com.metamx.druid.query.search.SearchQuery;
@@ -147,7 +148,8 @@ public class ServerInit
             new GroupByQueryEngine(
                 configFactory.build(GroupByQueryEngineConfig.class),
                 computationBufferPool
-            )
+            ),
+            configFactory.build(GroupByQueryRunnerFactoryConfig.class)
         )
     );
     queryRunners.put(SearchQuery.class, new SearchQueryRunnerFactory());

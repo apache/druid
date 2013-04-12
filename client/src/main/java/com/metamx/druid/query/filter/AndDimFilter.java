@@ -22,9 +22,9 @@ package com.metamx.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 
-
-
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -40,6 +40,8 @@ public class AndDimFilter implements DimFilter
       @JsonProperty("fields") List<DimFilter> fields
   )
   {
+    fields.removeAll(Collections.singletonList(null));
+    Preconditions.checkArgument(fields.size() > 0, "AND operator requires at least one field");
     this.fields = fields;
   }
 

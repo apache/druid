@@ -19,8 +19,6 @@
 
 package com.metamx.druid;
 
-
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Chronology;
@@ -267,7 +265,6 @@ public class  PeriodGranularity extends BaseQueryGranularity
     return t;
   }
 
-
   private static boolean isCompoundPeriod(Period period)
   {
     int[] values = period.getValues();
@@ -321,7 +318,6 @@ public class  PeriodGranularity extends BaseQueryGranularity
       );
     }
   }
-
 
   @Override
   public byte[] cacheKey()

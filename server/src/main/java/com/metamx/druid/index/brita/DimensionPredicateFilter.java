@@ -22,6 +22,7 @@ package com.metamx.druid.index.brita;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.druid.kv.Indexed;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import javax.annotation.Nullable;
@@ -45,8 +46,13 @@ class DimensionPredicateFilter implements Filter
   @Override
   public ImmutableConciseSet goConcise(final BitmapIndexSelector selector)
   {
+    Indexed<String> dimValues = selector.getDimensionValues(dimension);
+    if (dimValues == null || dimValues.size() == 0 || predicate == null) {
+      return new ImmutableConciseSet();
+    }
+
     return ImmutableConciseSet.union(
-        FunctionalIterable.create(selector.getDimensionValues(dimension))
+        FunctionalIterable.create(dimValues)
                           .filter(predicate)
                           .transform(
                               new Function<String, ImmutableConciseSet>()

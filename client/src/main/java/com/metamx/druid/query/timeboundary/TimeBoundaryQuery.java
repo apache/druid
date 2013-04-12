@@ -31,7 +31,6 @@ import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
 
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

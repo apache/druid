@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.parsers.JSONParser;
 import com.metamx.common.parsers.Parser;
 
-
 import java.util.List;
 
 /**

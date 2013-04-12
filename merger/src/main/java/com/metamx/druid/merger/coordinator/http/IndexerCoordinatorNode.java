@@ -112,6 +112,7 @@ import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
+import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -492,7 +493,14 @@ public class IndexerCoordinatorNode extends RegisteringNode
   {
     if (httpClient == null) {
       httpClient = HttpClientInit.createClient(
-          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
+          HttpClientConfig.builder().withNumConnections(1).withReadTimeout(
+              new Duration(
+                  PropUtils.getProperty(
+                      props,
+                      "druid.emitter.timeOut"
+                  )
+              )
+          ).build(), lifecycle
       );
     }
   }

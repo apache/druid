@@ -37,7 +37,6 @@ import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.codec.binary.Base64;
 
-
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;

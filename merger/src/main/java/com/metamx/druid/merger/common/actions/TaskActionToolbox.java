@@ -2,7 +2,6 @@ package com.metamx.druid.merger.common.actions;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.metamx.common.ISE;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.task.Task;

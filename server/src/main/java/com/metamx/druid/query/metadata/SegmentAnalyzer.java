@@ -23,7 +23,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.index.QueryableIndex;
@@ -36,7 +35,6 @@ import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
 
 import java.util.Map;
-
 
 public class SegmentAnalyzer
 {

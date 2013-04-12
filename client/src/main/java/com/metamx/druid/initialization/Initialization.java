@@ -117,7 +117,6 @@ public class Initialization
     );
   }
 
-
   /**
    * Load properties.
    * Properties are layered, high to low precedence:  cmdLine -D, runtime.properties file, stored in zookeeper.

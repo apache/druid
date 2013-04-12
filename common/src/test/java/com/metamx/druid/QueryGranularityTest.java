@@ -119,7 +119,6 @@ public class QueryGranularityTest
     );
   }
 
-
   @Test
   public void testIterableHourSimple() throws Exception
   {
@@ -310,8 +309,6 @@ public class QueryGranularityTest
         )
     );
   }
-
-
 
   @Test
   public void testPeriodTruncateMinutes() throws Exception

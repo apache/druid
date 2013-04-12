@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.metamx.druid.query.search.SearchHit;
 
-
-
 import java.util.List;
 
 /**

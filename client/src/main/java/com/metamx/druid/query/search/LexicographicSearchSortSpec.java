@@ -19,12 +19,9 @@
 
 package com.metamx.druid.query.search;
 
-
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
 import java.util.Comparator;
-import java.util.Map;
 
 /**
  */

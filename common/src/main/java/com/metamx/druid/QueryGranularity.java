@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.common.IAE;
 
-
-
 import org.joda.time.DateTime;
 import org.joda.time.ReadableDuration;
 

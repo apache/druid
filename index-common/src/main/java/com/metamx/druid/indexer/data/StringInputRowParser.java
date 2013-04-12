@@ -30,7 +30,6 @@ import com.metamx.common.parsers.ToLowerCaseParser;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 
-
 import org.joda.time.DateTime;
 
 import java.util.List;

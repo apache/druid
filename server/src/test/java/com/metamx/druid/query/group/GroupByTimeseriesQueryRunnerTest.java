@@ -72,7 +72,10 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                   }
                 }
             )
-        )
+        ),
+        new GroupByQueryRunnerFactoryConfig()
+        {
+        }
     );
 
     final Collection<?> objects = QueryRunnerTestHelper.makeQueryRunners(factory);

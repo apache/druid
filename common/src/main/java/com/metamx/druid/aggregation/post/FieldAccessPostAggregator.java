@@ -22,9 +22,6 @@ package com.metamx.druid.aggregation.post;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
-
-
 
 import java.util.Comparator;
 import java.util.Map;

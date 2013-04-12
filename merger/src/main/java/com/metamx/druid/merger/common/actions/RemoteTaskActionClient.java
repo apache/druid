@@ -18,7 +18,6 @@ import org.joda.time.Duration;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 public class RemoteTaskActionClient implements TaskActionClient
 {

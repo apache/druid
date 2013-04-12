@@ -27,8 +27,6 @@ import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
-
-
 import javax.inject.Singleton;
 
 /**

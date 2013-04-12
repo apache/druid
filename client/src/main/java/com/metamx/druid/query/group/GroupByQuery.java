@@ -30,13 +30,12 @@ import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.input.Row;
+import com.metamx.druid.query.Queries;
 import com.metamx.druid.query.dimension.DefaultDimensionSpec;
 import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.segment.LegacySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
-
-
 
 import java.util.List;
 import java.util.Map;
@@ -77,6 +76,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
     Preconditions.checkNotNull(this.aggregatorSpecs, "Must specify at least one aggregator");
+    Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
 
   @JsonProperty("filter")
@@ -118,11 +118,11 @@ public class GroupByQuery extends BaseQuery<Row>
   @Override
   public String getType()
   {
-    return "groupBy";
+    return Query.GROUP_BY;
   }
 
   @Override
-  public Query withOverriddenContext(Map<String, String> contextOverride)
+  public GroupByQuery withOverriddenContext(Map<String, String> contextOverride)
   {
     return new GroupByQuery(
         getDataSource(),
@@ -137,7 +137,7 @@ public class GroupByQuery extends BaseQuery<Row>
   }
 
   @Override
-  public Query withQuerySegmentSpec(QuerySegmentSpec spec)
+  public GroupByQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     return new GroupByQuery(
         getDataSource(),

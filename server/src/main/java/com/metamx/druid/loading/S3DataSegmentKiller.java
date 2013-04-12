@@ -44,7 +44,6 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     this.s3Client = s3Client;
   }
 
-
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
   {

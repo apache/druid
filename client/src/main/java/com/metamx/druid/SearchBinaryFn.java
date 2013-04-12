@@ -26,7 +26,6 @@ import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchSortSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
-import org.joda.time.DateTime;
 
 import java.util.TreeSet;
 
