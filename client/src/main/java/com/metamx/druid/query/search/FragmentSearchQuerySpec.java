@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 
-
-
 import java.nio.ByteBuffer;
 import java.util.List;
 

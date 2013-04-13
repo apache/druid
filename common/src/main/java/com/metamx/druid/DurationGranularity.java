@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Longs;
 
-
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;

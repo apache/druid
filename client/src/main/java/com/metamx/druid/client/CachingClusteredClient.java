@@ -56,7 +56,6 @@ import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
 
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -214,7 +213,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
       descriptors.add(segment.rhs);
     }
-
 
     return new LazySequence<T>(
         new Supplier<Sequence<T>>()

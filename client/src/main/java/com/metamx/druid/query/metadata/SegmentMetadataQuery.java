@@ -19,11 +19,11 @@
 
 package com.metamx.druid.query.metadata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.BaseQuery;
 import com.metamx.druid.Query;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
-
 
 import java.util.Map;
 
@@ -33,6 +33,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   private final ColumnIncluderator toInclude;
   private final boolean merge;
 
+  @JsonCreator
   public SegmentMetadataQuery(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
@@ -68,7 +69,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public String getType()
   {
-    return "segmentMetadata";
+    return Query.SEGMENT_METADATA;
   }
 
   @Override

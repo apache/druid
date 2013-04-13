@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.druid.Query;
 import com.metamx.druid.query.QueryRunner;
 
-
 import org.joda.time.Interval;
 
 import java.util.List;

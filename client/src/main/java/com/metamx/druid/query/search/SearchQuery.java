@@ -32,8 +32,6 @@ import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
 
-
-
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;

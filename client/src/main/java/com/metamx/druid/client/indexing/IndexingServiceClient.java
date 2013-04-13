@@ -21,7 +21,6 @@ package com.metamx.druid.client.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.druid.client.DataSegment;
@@ -30,7 +29,6 @@ import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.netflix.curator.x.discovery.ServiceInstance;
 import com.netflix.curator.x.discovery.ServiceProvider;
 import org.joda.time.Interval;
-
 
 import java.io.InputStream;
 import java.net.URL;
@@ -101,7 +99,6 @@ public class IndexingServiceClient
       throw Throwables.propagate(e);
     }
   }
-
 
   private String baseUrl()
   {

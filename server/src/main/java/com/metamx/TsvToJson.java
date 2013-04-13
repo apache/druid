@@ -23,10 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.metamx.common.IAE;
-import com.metamx.common.ISE;
 
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -133,7 +131,6 @@ public class TsvToJson
       this.fieldName = fieldName;
     }
 
-
     @Override
     public String getFieldName()
     {
@@ -157,7 +154,6 @@ public class TsvToJson
     {
       this.fieldName = fieldName;
     }
-
 
     @Override
     public String getFieldName()

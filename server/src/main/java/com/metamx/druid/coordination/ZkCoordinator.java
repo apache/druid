@@ -218,6 +218,13 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
         if (serverManager.isSegmentCached(segment)) {
           addSegment(segment);
+        } else {
+          log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getIdentifier());
+
+          File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
+          if (!segmentInfoCacheFile.delete()) {
+            log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
+          }
         }
       }
       catch (Exception e) {
@@ -234,7 +241,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       }
     }
   }
-
 
   @Override
   public void addSegment(DataSegment segment)

@@ -255,7 +255,6 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getImplicitLockInterval().get(), task2.getImplicitLockInterval().get());
   }
 
-
   @Test
   public void testDeleteTaskFromJson() throws Exception
   {

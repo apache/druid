@@ -19,7 +19,6 @@
 
 package com.metamx.druid.aggregation;
 
-
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.metamx.druid.processing.FloatMetricSelector;
@@ -151,7 +150,6 @@ public class JavaScriptAggregatorTest
     }
     */
 
-
     JavaScriptAggregator aggRhino = new JavaScriptAggregator(
       "billy",
       Lists.asList(selector, new FloatMetricSelector[]{}),
@@ -172,7 +170,6 @@ public class JavaScriptAggregatorTest
       aggregate(selector, doubleAgg);
       ++i;
     }
-
 
     t = System.currentTimeMillis();
     i = 0;

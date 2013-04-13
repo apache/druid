@@ -28,7 +28,6 @@ import com.metamx.common.IAE;
 import com.metamx.druid.processing.FloatMetricSelector;
 import com.metamx.druid.processing.MetricSelectorFactory;
 
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
@@ -227,7 +226,6 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
     final Function fnReset = getScriptFunction("reset", scope);
     final Function fnCombine = getScriptFunction("combine", scope);
     Context.exit();
-
 
     return new JavaScriptAggregator.ScriptAggregator()
     {

@@ -87,9 +87,9 @@ public class GroupByQueryRunnerTest
                               }
                             }
                         )
-                    )
+                    ),
+                    new GroupByQueryRunnerFactoryConfig(){}
                 );
-
 
     return Lists.newArrayList(
         Iterables.transform(
@@ -215,7 +215,6 @@ public class GroupByQueryRunnerTest
 
       TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
-
 
   @Test
   public void testMergeResults() {

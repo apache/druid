@@ -34,7 +34,6 @@ import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
-
 import org.joda.time.DateTime;
 import org.mortbay.jetty.Request;
 

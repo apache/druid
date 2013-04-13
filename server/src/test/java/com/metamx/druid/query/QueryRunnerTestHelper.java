@@ -68,7 +68,6 @@ public class QueryRunnerTestHelper
       );
   public static final List<AggregatorFactory> commonAggregators = Arrays.asList(rowsCount, indexDoubleSum);
 
-
   public static final String[] expectedFullOnIndexValues = new String[]{
       "4500.0", "6077.949111938477", "4922.488838195801", "5726.140853881836", "4698.468170166016",
       "4651.030891418457", "4398.145851135254", "4596.068244934082", "4434.630561828613", "0.0",

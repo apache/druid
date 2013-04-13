@@ -28,22 +28,19 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.common.Pair;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.actions.TaskAction;
 import com.metamx.druid.merger.common.TaskLock;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerDbConnectorConfig;
-
 import com.metamx.emitter.EmittingLogger;
+
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.StatementException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 

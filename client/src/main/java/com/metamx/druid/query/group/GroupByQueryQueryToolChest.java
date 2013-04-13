@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Accumulator;
@@ -49,6 +50,7 @@ import org.joda.time.Minutes;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -57,6 +59,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 {
 
   private static final TypeReference<Row> TYPE_REFERENCE = new TypeReference<Row>(){};
+  private static final String GROUP_BY_MERGE_KEY = "groupByMerge";
+  private static final Map<String, String> NO_MERGE_CONTEXT = ImmutableMap.of(GROUP_BY_MERGE_KEY, "false");
 
   private static final int maxRows;
 
@@ -75,75 +79,83 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       @Override
       public Sequence<Row> run(Query<Row> input)
       {
-        final GroupByQuery query = (GroupByQuery) input;
-
-        final QueryGranularity gran = query.getGranularity();
-        final long timeStart = query.getIntervals().get(0).getStartMillis();
-
-        // use gran.iterable instead of gran.truncate so that
-        // AllGranularity returns timeStart instead of Long.MIN_VALUE
-        final long granTimeStart = gran.iterable(timeStart, timeStart+1).iterator().next();
-
-        final List<AggregatorFactory> aggs = Lists.transform(
-            query.getAggregatorSpecs(),
-            new Function<AggregatorFactory, AggregatorFactory>()
-            {
-              @Override
-              public AggregatorFactory apply(@Nullable AggregatorFactory input)
-              {
-                return input.getCombiningFactory();
-              }
-            }
-        );
-        final List<String> dimensions = Lists.transform(
-            query.getDimensions(),
-            new Function<DimensionSpec, String>()
-            {
-              @Override
-              public String apply(@Nullable DimensionSpec input)
-              {
-                return input.getOutputName();
-              }
-            }
-        );
-
-        final IncrementalIndex index = runner.run(query).accumulate(
-            new IncrementalIndex(
-                // use granularity truncated min timestamp
-                // since incoming truncated timestamps may precede timeStart
-                granTimeStart,
-                gran,
-                aggs.toArray(new AggregatorFactory[aggs.size()])
-            ),
-            new Accumulator<IncrementalIndex, Row>()
-            {
-              @Override
-              public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
-              {
-                if (accumulated.add(Rows.toInputRow(in, dimensions)) > maxRows) {
-                  throw new ISE("Computation exceeds maxRows limit[%s]", maxRows);
-                }
-
-                return accumulated;
-              }
-            }
-        );
-
-        // convert millis back to timestamp according to granularity to preserve time zone information
-        return Sequences.map(
-            Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
-            new Function<Row, Row>()
-            {
-              @Override
-              public Row apply(Row input)
-              {
-                final MapBasedRow row = (MapBasedRow) input;
-                return new MapBasedRow(gran.toDateTime(row.getTimestampFromEpoch()), row.getEvent());
-              }
-            }
-        );
+        if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
+          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner);
+        }
+        else {
+          return runner.run(input);
+        }
       }
     };
+  }
+
+  private Sequence<Row> mergeGroupByResults(GroupByQuery query, QueryRunner<Row> runner)
+  {
+    final QueryGranularity gran = query.getGranularity();
+    final long timeStart = query.getIntervals().get(0).getStartMillis();
+
+    // use gran.iterable instead of gran.truncate so that
+    // AllGranularity returns timeStart instead of Long.MIN_VALUE
+    final long granTimeStart = gran.iterable(timeStart, timeStart+1).iterator().next();
+
+    final List<AggregatorFactory> aggs = Lists.transform(
+        query.getAggregatorSpecs(),
+        new Function<AggregatorFactory, AggregatorFactory>()
+        {
+          @Override
+          public AggregatorFactory apply(@Nullable AggregatorFactory input)
+          {
+            return input.getCombiningFactory();
+          }
+        }
+    );
+    final List<String> dimensions = Lists.transform(
+        query.getDimensions(),
+        new Function<DimensionSpec, String>()
+        {
+          @Override
+          public String apply(@Nullable DimensionSpec input)
+          {
+            return input.getOutputName();
+          }
+        }
+    );
+
+    final IncrementalIndex index = runner.run(query).accumulate(
+        new IncrementalIndex(
+            // use granularity truncated min timestamp
+            // since incoming truncated timestamps may precede timeStart
+            granTimeStart,
+            gran,
+            aggs.toArray(new AggregatorFactory[aggs.size()])
+        ),
+        new Accumulator<IncrementalIndex, Row>()
+        {
+          @Override
+          public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
+          {
+            if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions)) > maxRows) {
+              throw new ISE("Computation exceeds maxRows limit[%s]", maxRows);
+            }
+
+            return accumulated;
+          }
+        }
+    );
+
+    // convert millis back to timestamp according to granularity to preserve time zone information
+    return Sequences.map(
+        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
+        new Function<Row, Row>()
+        {
+          @Override
+          public Row apply(Row input)
+          {
+            final MapBasedRow row = (MapBasedRow) input;
+            return new MapBasedRow(gran.toDateTime(row.getTimestampFromEpoch()), row.getEvent());
+          }
+        }
+    );
   }
 
   @Override

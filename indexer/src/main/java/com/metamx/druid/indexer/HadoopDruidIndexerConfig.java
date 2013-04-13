@@ -60,10 +60,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
 
-
-
-
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.ISODateTimeFormat;
@@ -611,7 +607,6 @@ public class HadoopDruidIndexerConfig
   {
     return shardSpecs.get(bucket.time).get(bucket.partitionNum);
   }
-
 
   /******************************************
    Path helper logic

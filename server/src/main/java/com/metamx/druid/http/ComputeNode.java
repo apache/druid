@@ -39,8 +39,8 @@ import com.metamx.druid.coordination.ZkCoordinatorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SegmentLoader;
+import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.metrics.ServerMonitor;
 import com.metamx.druid.query.MetricsEmittingExecutorService;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
@@ -48,13 +48,10 @@ import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.Monitor;
-
-
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
 import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 

@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.exception.FormattedException;
 
-
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;

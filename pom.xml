@@ -23,7 +23,7 @@
     <groupId>com.metamx</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.3.34-SNAPSHOT</version>
+    <version>0.3.35-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -64,7 +64,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>0.7.0</version>
+                <version>0.7.1</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>

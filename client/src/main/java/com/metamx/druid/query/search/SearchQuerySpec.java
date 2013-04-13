@@ -21,11 +21,6 @@ package com.metamx.druid.query.search;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Predicate;
-
-
-
-import java.util.List;
 
 /**
  */

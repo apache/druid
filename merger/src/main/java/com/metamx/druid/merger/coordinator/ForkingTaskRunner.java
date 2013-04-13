@@ -142,14 +142,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
                             final int childPort = findUnusedPort();
                             final String childHost = String.format(config.getHostPattern(), childPort);
 
-                            Iterables.addAll(
-                                command,
-                                ImmutableList.of(
-                                    config.getJavaCommand(),
-                                    "-cp",
-                                    config.getJavaClasspath()
-                                )
-                            );
+                            command.add(config.getJavaCommand());
+                            command.add("-cp");
+                            command.add(config.getJavaClasspath());
 
                             Iterables.addAll(
                                 command,
@@ -195,24 +190,26 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
                           final InputStream fromProc = processHolder.process.getInputStream();
                           final OutputStream toLogfile = Files.newOutputStreamSupplier(logFile).getOutput();
 
-                          boolean copyFailed = false;
+                          boolean runFailed = false;
 
                           try {
                             ByteStreams.copy(fromProc, toLogfile);
+                            final int statusCode = processHolder.process.waitFor();
+                            log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
+
+                            if (statusCode != 0) {
+                              runFailed = true;
+                            }
                           }
                           catch (Exception e) {
                             log.warn(e, "Failed to read from process for task: %s", task.getId());
-                            copyFailed = true;
+                            runFailed = true;
                           }
                           finally {
                             Closeables.closeQuietly(fromProc);
                             Closeables.closeQuietly(toLogfile);
+                            Closeables.closeQuietly(toProc);
                           }
-
-                          final int statusCode = processHolder.process.waitFor();
-
-                          log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
-                          Closeables.closeQuietly(toProc);
 
                           // Upload task logs
 
@@ -222,7 +219,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
 
                           taskLogPusher.pushTaskLog(task.getId(), logFile);
 
-                          if (!copyFailed && statusCode == 0) {
+                          if (!runFailed) {
                             // Process exited successfully
                             return jsonMapper.readValue(statusFile, TaskStatus.class);
                           } else {

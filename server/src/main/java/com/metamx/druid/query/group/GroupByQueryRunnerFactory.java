@@ -21,7 +21,8 @@ package com.metamx.druid.query.group;
 
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Ordering;
+import com.google.common.primitives.Longs;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
@@ -30,6 +31,7 @@ import com.metamx.druid.Query;
 import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.index.Segment;
 import com.metamx.druid.input.Row;
+import com.metamx.druid.query.ChainedExecutionQueryRunner;
 import com.metamx.druid.query.ConcatQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
@@ -44,21 +46,18 @@ import java.util.concurrent.Future;
  */
 public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupByQuery>
 {
-  private static final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(){
-    @Override
-    public QueryRunner<Row> mergeResults(QueryRunner<Row> runner)
-    {
-      return new ConcatQueryRunner<Row>(Sequences.simple(ImmutableList.of(runner)));
-    }
-  };
+  private static final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest();
 
   private final GroupByQueryEngine engine;
+  private final GroupByQueryRunnerFactoryConfig config;
 
   public GroupByQueryRunnerFactory(
-      GroupByQueryEngine engine
+      GroupByQueryEngine engine,
+      GroupByQueryRunnerFactoryConfig config
   )
   {
     this.engine = engine;
+    this.config = config;
   }
 
   @Override
@@ -70,48 +69,53 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   @Override
   public QueryRunner<Row> mergeRunners(final ExecutorService queryExecutor, Iterable<QueryRunner<Row>> queryRunners)
   {
-    return new ConcatQueryRunner<Row>(
-        Sequences.map(
-            Sequences.simple(queryRunners),
-            new Function<QueryRunner<Row>, QueryRunner<Row>>()
-            {
-              @Override
-              public QueryRunner<Row> apply(final QueryRunner<Row> input)
+    if (config.isSingleThreaded()) {
+      return new ConcatQueryRunner<Row>(
+          Sequences.map(
+              Sequences.simple(queryRunners),
+              new Function<QueryRunner<Row>, QueryRunner<Row>>()
               {
-                return new QueryRunner<Row>()
+                @Override
+                public QueryRunner<Row> apply(final QueryRunner<Row> input)
                 {
-                  @Override
-                  public Sequence<Row> run(final Query<Row> query)
+                  return new QueryRunner<Row>()
                   {
+                    @Override
+                    public Sequence<Row> run(final Query<Row> query)
+                    {
 
-                    Future<Sequence<Row>> future = queryExecutor.submit(
-                        new Callable<Sequence<Row>>()
-                        {
-                          @Override
-                          public Sequence<Row> call() throws Exception
+                      Future<Sequence<Row>> future = queryExecutor.submit(
+                          new Callable<Sequence<Row>>()
                           {
-                            return new ExecutorExecutingSequence<Row>(
-                                input.run(query),
-                                queryExecutor
-                            );
+                            @Override
+                            public Sequence<Row> call() throws Exception
+                            {
+                              return new ExecutorExecutingSequence<Row>(
+                                  input.run(query),
+                                  queryExecutor
+                              );
+                            }
                           }
-                        }
-                    );
-                    try {
-                      return future.get();
+                      );
+                      try {
+                        return future.get();
+                      }
+                      catch (InterruptedException e) {
+                        throw Throwables.propagate(e);
+                      }
+                      catch (ExecutionException e) {
+                        throw Throwables.propagate(e);
+                      }
                     }
-                    catch (InterruptedException e) {
-                      throw Throwables.propagate(e);
-                    }
-                    catch (ExecutionException e) {
-                      throw Throwables.propagate(e);
-                    }
-                  }
-                };
+                  };
+                }
               }
-            }
-        )
-    );
+          )
+      );
+    }
+    else {
+      return new ChainedExecutionQueryRunner<Row>(queryExecutor, new RowOrdering(), queryRunners);
+    }
   }
 
   @Override
@@ -139,6 +143,15 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
       }
 
       return engine.process((GroupByQuery) input, adapter);
+    }
+  }
+
+  private static class RowOrdering extends Ordering<Row>
+  {
+    @Override
+    public int compare(Row left, Row right)
+    {
+      return Longs.compare(left.getTimestampFromEpoch(), right.getTimestampFromEpoch());
     }
   }
 }

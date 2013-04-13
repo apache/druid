@@ -73,6 +73,7 @@ import com.netflix.curator.x.discovery.ServiceDiscovery;
 import com.netflix.curator.x.discovery.ServiceProvider;
 import org.I0Itec.zkclient.ZkClient;
 
+import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -102,7 +103,14 @@ public class MasterMain
     final Lifecycle lifecycle = new Lifecycle();
 
     final HttpClient httpClient = HttpClientInit.createClient(
-        HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
+        HttpClientConfig.builder().withNumConnections(1).withReadTimeout(
+            new Duration(
+                PropUtils.getProperty(
+                    props,
+                    "druid.emitter.timeOut"
+                )
+            )
+        ).build(), lifecycle
     );
 
     final ServiceEmitter emitter = new ServiceEmitter(

@@ -25,10 +25,6 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdScalarSerializer;
 import com.google.common.base.Joiner;
 
-
-
-
-
 import java.io.IOException;
 import java.util.List;
 

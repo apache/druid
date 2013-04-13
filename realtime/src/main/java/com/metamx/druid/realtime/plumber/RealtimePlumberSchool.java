@@ -444,9 +444,12 @@ public class RealtimePlumberSchool implements PlumberSchool
                     final Long sinkKey = entry.getKey();
                     if (interval.contains(sinkKey)) {
                       final Sink sink = entry.getValue();
-                      log.info("Segment matches sink[%s]", sink);
+                      log.info("Segment[%s] matches sink[%s] on server[%s]", segment, sink, server);
 
-                      if (segment.getVersion().compareTo(sink.getSegment().getVersion()) >= 0) {
+                      final String segmentVersion = segment.getVersion();
+                      final String sinkVersion = sink.getSegment().getVersion();
+                      if (segmentVersion.compareTo(sinkVersion) >= 0) {
+                        log.info("Segment version[%s] >= sink version[%s]", segmentVersion, sinkVersion);
                         try {
                           segmentAnnouncer.unannounceSegment(sink.getSegment());
                           FileUtils.deleteDirectory(computePersistDir(schema, sink.getInterval()));
@@ -572,7 +575,6 @@ public class RealtimePlumberSchool implements PlumberSchool
                                    .addData("interval", interval)
                                    .emit();
                               }
-
 
                               if (mergedFile != null) {
                                 try {

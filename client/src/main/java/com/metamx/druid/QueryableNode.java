@@ -50,9 +50,7 @@ import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import com.metamx.phonebook.PhoneBook;
 import org.I0Itec.zkclient.ZkClient;
-
-
-
+import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.skife.config.ConfigurationObjectFactory;
 
@@ -332,9 +330,15 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private void initializeEmitter()
   {
     if (emitter == null) {
-      final HttpClient httpClient = HttpClientInit.createClient(
-          HttpClientConfig.builder().withNumConnections(1).build(), lifecycle
-      );
+      final HttpClientConfig.Builder configBuilder = HttpClientConfig.builder()
+                                                                     .withNumConnections(1);
+
+      final String emitterTimeoutDuration = props.getProperty("druid.emitter.timeOut");
+      if (emitterTimeoutDuration != null) {
+        configBuilder.withReadTimeout(new Duration(emitterTimeoutDuration));
+      }
+
+      final HttpClient httpClient = HttpClientInit.createClient(configBuilder.build(), lifecycle);
 
       setEmitter(
           new ServiceEmitter(
@@ -358,7 +362,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   @LifecycleStart
   public synchronized void start() throws Exception
   {
-    if (! initialized) {
+    if (!initialized) {
       init();
     }
 

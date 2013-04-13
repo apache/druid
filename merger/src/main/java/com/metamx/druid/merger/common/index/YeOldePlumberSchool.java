@@ -44,7 +44,6 @@ import com.metamx.druid.realtime.plumber.PlumberSchool;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.plumber.Sink;
 
-
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 

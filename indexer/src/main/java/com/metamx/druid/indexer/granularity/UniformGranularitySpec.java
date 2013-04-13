@@ -25,17 +25,13 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
-import com.metamx.common.guava.Comparators;
-
 
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.SortedSet;
-import java.util.TreeSet;
 
 public class UniformGranularitySpec implements GranularitySpec
 {

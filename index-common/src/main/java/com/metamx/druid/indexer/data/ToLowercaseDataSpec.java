@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.metamx.common.parsers.Parser;
 import com.metamx.common.parsers.ToLowerCaseParser;
 
-
 import java.util.List;
 
 /**

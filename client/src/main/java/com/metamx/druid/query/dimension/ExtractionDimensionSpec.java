@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.query.extraction.DimExtractionFn;
 
-
-
 import java.nio.ByteBuffer;
 
 /**

@@ -19,7 +19,6 @@
 
 package com.metamx.druid.index.v1.serde;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**

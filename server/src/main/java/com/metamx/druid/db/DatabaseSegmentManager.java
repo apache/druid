@@ -252,7 +252,6 @@ public class DatabaseSegmentManager
     return true;
   }
 
-
   public boolean removeDatasource(final String ds)
   {
     try {

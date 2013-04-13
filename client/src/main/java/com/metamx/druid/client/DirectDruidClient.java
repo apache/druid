@@ -48,11 +48,6 @@ import com.metamx.http.client.io.AppendableByteArrayInputStream;
 import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 
-
-
-
-
-
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
