@@ -19,24 +19,22 @@
 
 package com.metamx.druid.merger.worker;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.Query;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.task.Task;
-import com.metamx.druid.query.NoopQueryRunner;
-import com.metamx.druid.query.QueryRunner;
+import com.metamx.druid.merger.coordinator.TaskRunner;
+import com.metamx.druid.merger.coordinator.TaskRunnerFactory;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
-import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.emitter.EmittingLogger;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.Interval;
 
 import java.io.File;
 import java.util.List;
@@ -50,29 +48,32 @@ import java.util.concurrent.ExecutorService;
  * The monitor implements {@link QuerySegmentWalker} so tasks can offer up queryable data. This is useful for
  * realtime index tasks.
  */
-public class WorkerTaskMonitor implements QuerySegmentWalker
+public class WorkerTaskMonitor
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskMonitor.class);
 
+  private final ObjectMapper jsonMapper;
   private final PathChildrenCache pathChildrenCache;
   private final CuratorFramework cf;
   private final WorkerCuratorCoordinator workerCuratorCoordinator;
-  private final TaskToolboxFactory toolboxFactory;
+  private final TaskRunner taskRunner;
   private final ExecutorService exec;
   private final List<Task> running = new CopyOnWriteArrayList<Task>();
 
   public WorkerTaskMonitor(
+      ObjectMapper jsonMapper,
       PathChildrenCache pathChildrenCache,
       CuratorFramework cf,
       WorkerCuratorCoordinator workerCuratorCoordinator,
-      TaskToolboxFactory toolboxFactory,
+      TaskRunner taskRunner,
       ExecutorService exec
   )
   {
+    this.jsonMapper = jsonMapper;
     this.pathChildrenCache = pathChildrenCache;
     this.cf = cf;
     this.workerCuratorCoordinator = workerCuratorCoordinator;
-    this.toolboxFactory = toolboxFactory;
+    this.taskRunner = taskRunner;
     this.exec = exec;
   }
 
@@ -94,11 +95,10 @@ public class WorkerTaskMonitor implements QuerySegmentWalker
                 throws Exception
             {
               if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
-                final Task task = toolboxFactory.getObjectMapper().readValue(
+                final Task task = jsonMapper.readValue(
                     cf.getData().forPath(pathChildrenCacheEvent.getData().getPath()),
                     Task.class
                 );
-                final TaskToolbox toolbox = toolboxFactory.build(task);
 
                 if (isTaskRunning(task)) {
                   log.warn("Got task %s that I am already running...", task.getId());
@@ -113,7 +113,6 @@ public class WorkerTaskMonitor implements QuerySegmentWalker
                       public void run()
                       {
                         final long startTime = System.currentTimeMillis();
-                        final File taskDir = toolbox.getTaskDir();
 
                         log.info("Running task [%s]", task.getId());
                         running.add(task);
@@ -122,7 +121,7 @@ public class WorkerTaskMonitor implements QuerySegmentWalker
                         try {
                           workerCuratorCoordinator.unannounceTask(task.getId());
                           workerCuratorCoordinator.announceStatus(TaskStatus.running(task.getId()));
-                          taskStatus = task.run(toolbox);
+                          taskStatus = taskRunner.run(task).get();
                         }
                         catch (Exception e) {
                           log.makeAlert(e, "Failed to run task")
@@ -141,19 +140,6 @@ public class WorkerTaskMonitor implements QuerySegmentWalker
                         }
                         catch (Exception e) {
                           log.makeAlert(e, "Failed to update task status")
-                             .addData("task", task.getId())
-                             .emit();
-                        }
-
-                        try {
-                          if (taskDir.exists()) {
-                            log.info("Removing task directory: %s", taskDir);
-                            FileUtils.deleteDirectory(taskDir);
-                          }
-                        }
-                        catch (Exception e) {
-                          log.makeAlert(e, "Failed to delete task directory")
-                             .addData("taskDir", taskDir.toString())
                              .addData("task", task.getId())
                              .emit();
                         }
@@ -195,39 +181,5 @@ public class WorkerTaskMonitor implements QuerySegmentWalker
          .addData("exception", e.toString())
          .emit();
     }
-  }
-
-  @Override
-  public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
-  {
-    return getQueryRunnerImpl(query);
-  }
-
-  @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
-  {
-    return getQueryRunnerImpl(query);
-  }
-
-  private <T> QueryRunner<T> getQueryRunnerImpl(Query<T> query) {
-    QueryRunner<T> queryRunner = null;
-
-    for (final Task task : running) {
-      if (task.getDataSource().equals(query.getDataSource())) {
-        final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
-
-        if (taskQueryRunner != null) {
-          if (queryRunner == null) {
-            queryRunner = taskQueryRunner;
-          } else {
-            log.makeAlert("Found too many query runners for datasource")
-               .addData("dataSource", query.getDataSource())
-               .emit();
-          }
-        }
-      }
-    }
-
-    return queryRunner == null ? new NoopQueryRunner<T>() : queryRunner;
   }
 }

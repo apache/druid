@@ -135,15 +135,13 @@ public class VersionConverterTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus preflight(TaskToolbox toolbox) throws Exception
+  public TaskStatus preflight(TaskActionClient taskActionClient) throws Exception
   {
     if (segment != null) {
-      return super.preflight(toolbox);
+      return super.preflight(taskActionClient);
     }
 
-    final TaskActionClient taskClient = toolbox.getTaskActionClient();
-
-    List<DataSegment> segments = taskClient.submit(defaultListUsedAction());
+    List<DataSegment> segments = taskActionClient.submit(defaultListUsedAction());
 
     final FunctionalIterable<Task> tasks = FunctionalIterable
         .create(segments)
@@ -164,7 +162,7 @@ public class VersionConverterTask extends AbstractTask
             }
         );
 
-    taskClient.submit(new SpawnTasksAction(Lists.newArrayList(tasks)));
+    taskActionClient.submit(new SpawnTasksAction(Lists.newArrayList(tasks)));
 
     return TaskStatus.success(getId());
   }
