@@ -92,7 +92,7 @@ public class DeleteTask extends AbstractTask
                    .shardSpec(new NoneShardSpec())
                    .build();
 
-    final File outDir = new File(toolbox.getTaskDir(), segment.getIdentifier());
+    final File outDir = new File(toolbox.getTaskWorkDir(), segment.getIdentifier());
     final File fileToUpload = IndexMerger.merge(Lists.newArrayList(emptyAdapter), new AggregatorFactory[0], outDir);
 
     // Upload the segment

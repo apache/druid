@@ -28,15 +28,17 @@ public class LocalTaskActionClient implements TaskActionClient
 
     final RetType ret = taskAction.perform(task, toolbox);
 
-    // Add audit log
-    try {
-      storage.addAuditLog(task, taskAction);
-    }
-    catch (Exception e) {
-      log.makeAlert(e, "Failed to record action in audit log")
-         .addData("task", task.getId())
-         .addData("actionClass", taskAction.getClass().getName())
-         .emit();
+    if (taskAction.isAudited()) {
+      // Add audit log
+      try {
+        storage.addAuditLog(task, taskAction);
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Failed to record action in audit log")
+           .addData("task", task.getId())
+           .addData("actionClass", taskAction.getClass().getName())
+           .emit();
+      }
     }
 
     return ret;

@@ -21,30 +21,40 @@ package com.metamx.druid.merger.coordinator.http;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.config.JacksonConfigManager;
+import com.metamx.druid.merger.common.tasklogs.TaskLogProvider;
 import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.merger.common.actions.TaskActionHolder;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskMasterLifecycle;
+import com.metamx.druid.merger.coordinator.TaskQueue;
+import com.metamx.druid.merger.coordinator.TaskRunner;
 import com.metamx.druid.merger.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
+import com.metamx.druid.merger.coordinator.scaling.ResourceManagementScheduler;
 import com.metamx.druid.merger.coordinator.setup.WorkerSetupData;
 import com.metamx.emitter.service.ServiceEmitter;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -60,6 +70,7 @@ public class IndexerCoordinatorResource
   private final ServiceEmitter emitter;
   private final TaskMasterLifecycle taskMasterLifecycle;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
+  private final TaskLogProvider taskLogProvider;
   private final JacksonConfigManager configManager;
   private final ObjectMapper jsonMapper;
 
@@ -71,6 +82,7 @@ public class IndexerCoordinatorResource
       ServiceEmitter emitter,
       TaskMasterLifecycle taskMasterLifecycle,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
+      TaskLogProvider taskLogProvider,
       JacksonConfigManager configManager,
       ObjectMapper jsonMapper
   ) throws Exception
@@ -79,6 +91,7 @@ public class IndexerCoordinatorResource
     this.emitter = emitter;
     this.taskMasterLifecycle = taskMasterLifecycle;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
+    this.taskLogProvider = taskLogProvider;
     this.configManager = configManager;
     this.jsonMapper = jsonMapper;
   }
@@ -108,8 +121,18 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response taskPost(final Task task)
   {
-    taskMasterLifecycle.getTaskQueue().add(task);
-    return Response.ok(ImmutableMap.of("task", task.getId())).build();
+    return asLeaderWith(
+        taskMasterLifecycle.getTaskQueue(),
+        new Function<TaskQueue, Response>()
+        {
+          @Override
+          public Response apply(TaskQueue taskQueue)
+          {
+            taskQueue.add(task);
+            return Response.ok(ImmutableMap.of("task", task.getId())).build();
+          }
+        }
+    );
   }
 
   @GET
@@ -132,6 +155,25 @@ public class IndexerCoordinatorResource
   {
     final Set<DataSegment> segments = taskStorageQueryAdapter.getSameGroupNewSegments(taskid);
     return Response.ok().entity(segments).build();
+  }
+
+  @POST
+  @Path("/task/{taskid}/shutdown")
+  @Produces("application/json")
+  public Response doShutdown(@PathParam("taskid") final String taskid)
+  {
+    return asLeaderWith(
+        taskMasterLifecycle.getTaskRunner(),
+        new Function<TaskRunner, Response>()
+        {
+          @Override
+          public Response apply(TaskRunner taskRunner)
+          {
+            taskRunner.shutdown(taskid);
+            return Response.ok(ImmutableMap.of("task", taskid)).build();
+          }
+        }
+    );
   }
 
   // Legacy endpoint
@@ -188,19 +230,30 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public <T> Response doAction(final TaskActionHolder<T> holder)
   {
-    final Map<String, Object> retMap;
+    return asLeaderWith(
+        taskMasterLifecycle.getTaskActionClient(holder.getTask()),
+        new Function<TaskActionClient, Response>()
+        {
+          @Override
+          public Response apply(TaskActionClient taskActionClient)
+          {
+            final Map<String, Object> retMap;
 
-    try {
-      final T ret = taskMasterLifecycle.getTaskToolbox(holder.getTask())
-                                       .getTaskActionClient()
-                                       .submit(holder.getAction());
-      retMap = Maps.newHashMap();
-      retMap.put("result", ret);
-    } catch(IOException e) {
-      return Response.serverError().build();
-    }
+            // TODO make sure this worker is supposed to be running this task (attempt id? token?)
 
-    return Response.ok().entity(retMap).build();
+            try {
+              final T ret = taskActionClient.submit(holder.getAction());
+              retMap = Maps.newHashMap();
+              retMap.put("result", ret);
+            }
+            catch (IOException e) {
+              return Response.serverError().build();
+            }
+
+            return Response.ok().entity(retMap).build();
+          }
+        }
+    );
   }
 
   @GET
@@ -208,10 +261,17 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response getPendingTasks()
   {
-    if (taskMasterLifecycle.getTaskRunner() == null) {
-      return Response.noContent().build();
-    }
-    return Response.ok(taskMasterLifecycle.getTaskRunner().getPendingTasks()).build();
+    return asLeaderWith(
+        taskMasterLifecycle.getTaskRunner(),
+        new Function<TaskRunner, Response>()
+        {
+          @Override
+          public Response apply(TaskRunner taskRunner)
+          {
+            return Response.ok(taskRunner.getPendingTasks()).build();
+          }
+        }
+    );
   }
 
   @GET
@@ -219,10 +279,17 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response getRunningTasks()
   {
-    if (taskMasterLifecycle.getTaskRunner() == null) {
-      return Response.noContent().build();
-    }
-    return Response.ok(taskMasterLifecycle.getTaskRunner().getRunningTasks()).build();
+    return asLeaderWith(
+        taskMasterLifecycle.getTaskRunner(),
+        new Function<TaskRunner, Response>()
+        {
+          @Override
+          public Response apply(TaskRunner taskRunner)
+          {
+            return Response.ok(taskRunner.getRunningTasks()).build();
+          }
+        }
+    );
   }
 
   @GET
@@ -230,10 +297,17 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response getWorkers()
   {
-    if (taskMasterLifecycle.getTaskRunner() == null) {
-      return Response.noContent().build();
-    }
-    return Response.ok(taskMasterLifecycle.getTaskRunner().getWorkers()).build();
+    return asLeaderWith(
+        taskMasterLifecycle.getTaskRunner(),
+        new Function<TaskRunner, Response>()
+        {
+          @Override
+          public Response apply(TaskRunner taskRunner)
+          {
+            return Response.ok(taskRunner.getWorkers()).build();
+          }
+        }
+    );
   }
 
   @GET
@@ -241,9 +315,47 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response getScalingState()
   {
-    if (taskMasterLifecycle.getResourceManagementScheduler() == null) {
-      return Response.noContent().build();
+    return asLeaderWith(
+        taskMasterLifecycle.getResourceManagementScheduler(),
+        new Function<ResourceManagementScheduler, Response>()
+        {
+          @Override
+          public Response apply(ResourceManagementScheduler resourceManagementScheduler)
+          {
+            return Response.ok(resourceManagementScheduler.getStats()).build();
+          }
+        }
+    );
+  }
+
+  @GET
+  @Path("/task/{taskid}/log")
+  @Produces("text/plain")
+  public Response doGetLog(
+      @PathParam("taskid") final String taskid,
+      @QueryParam("offset") @DefaultValue("0") final long offset
+  )
+  {
+    try {
+      final Optional<InputSupplier<InputStream>> stream = taskLogProvider.streamTaskLog(taskid, offset);
+      if (stream.isPresent()) {
+        return Response.ok(stream.get().getInput()).build();
+      } else {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      }
+    } catch (Exception e) {
+      log.warn(e, "Failed to stream log for task %s", taskid);
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }
-    return Response.ok(taskMasterLifecycle.getResourceManagementScheduler().getStats()).build();
+  }
+
+  public <T> Response asLeaderWith(Optional<T> x, Function<T, Response> f)
+  {
+    if (x.isPresent()) {
+      return f.apply(x.get());
+    } else {
+      // Encourage client to try again soon, when we'll likely have a redirect set up
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+    }
   }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -88,6 +89,9 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final Period windowPeriod;
   private final File basePersistDirectory;
   private final IndexGranularity segmentGranularity;
+  private final Object handoffCondition = new Object();
+
+  private ServiceEmitter emitter;
 
   private volatile VersioningPolicy versioningPolicy = null;
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
@@ -96,7 +100,6 @@ public class RealtimePlumberSchool implements PlumberSchool
   private volatile SegmentAnnouncer segmentAnnouncer = null;
   private volatile SegmentPublisher segmentPublisher = null;
   private volatile ServerView serverView = null;
-  private ServiceEmitter emitter;
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -230,7 +233,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         final Function<Query<T>, ServiceMetricEvent.Builder> builderFn =
             new Function<Query<T>, ServiceMetricEvent.Builder>()
             {
-              private final QueryToolChest<T,Query<T>> toolchest = factory.getToolchest();
+              private final QueryToolChest<T, Query<T>> toolchest = factory.getToolchest();
 
               @Override
               public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
@@ -303,25 +306,45 @@ public class RealtimePlumberSchool implements PlumberSchool
       @Override
       public void finishJob()
       {
-        stopped = true;
+        log.info("Shutting down...");
 
-        for (final Sink sink : sinks.values()) {
+        while (!sinks.isEmpty()) {
           try {
-            segmentAnnouncer.unannounceSegment(sink.getSegment());
+            log.info(
+                "Cannot shut down yet! Sinks remaining: %s",
+                Joiner.on(", ").join(
+                    Iterables.transform(
+                        sinks.values(),
+                        new Function<Sink, String>()
+                        {
+                          @Override
+                          public String apply(Sink input)
+                          {
+                            return input.getSegment().getIdentifier();
+                          }
+                        }
+                    )
+                )
+            );
+
+            synchronized (handoffCondition) {
+              while (!sinks.isEmpty()) {
+                handoffCondition.wait();
+              }
+            }
           }
-          catch (Exception e) {
-            log.makeAlert("Failed to unannounce segment on shutdown")
-               .addData("segment", sink.getSegment())
-               .emit();
+          catch (InterruptedException e) {
+            throw Throwables.propagate(e);
           }
         }
 
         // scheduledExecutor is shutdown here, but persistExecutor is shutdown when the
         // ServerView sends it a new segment callback
-
         if (scheduledExecutor != null) {
           scheduledExecutor.shutdown();
         }
+
+        stopped = true;
       }
 
       private void initializeExecutors()
@@ -430,7 +453,12 @@ public class RealtimePlumberSchool implements PlumberSchool
                         try {
                           segmentAnnouncer.unannounceSegment(sink.getSegment());
                           FileUtils.deleteDirectory(computePersistDir(schema, sink.getInterval()));
+                          log.info("Removing sinkKey %d for segment %s", sinkKey, sink.getSegment().getIdentifier());
                           sinks.remove(sinkKey);
+
+                          synchronized (handoffCondition) {
+                            handoffCondition.notifyAll();
+                          }
                         }
                         catch (IOException e) {
                           log.makeAlert(e, "Unable to delete old segment for dataSource[%s].", schema.getDataSource())

@@ -20,8 +20,9 @@
 package com.metamx.druid.merger.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.druid.merger.common.RetryPolicy;
-import com.metamx.druid.merger.common.TaskCallback;
+import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.task.Task;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
@@ -32,7 +33,7 @@ import org.joda.time.DateTimeComparator;
 public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 {
   private final Task task;
-  private final TaskCallback callback;
+  private final SettableFuture<TaskStatus> result;
   private final RetryPolicy retryPolicy;
   private final DateTime createdTime;
 
@@ -40,13 +41,13 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 
   public TaskRunnerWorkItem(
       Task task,
-      TaskCallback callback,
+      SettableFuture<TaskStatus> result,
       RetryPolicy retryPolicy,
       DateTime createdTime
   )
   {
     this.task = task;
-    this.callback = callback;
+    this.result = result;
     this.retryPolicy = retryPolicy;
     this.createdTime = createdTime;
   }
@@ -57,9 +58,9 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
     return task;
   }
 
-  public TaskCallback getCallback()
+  public SettableFuture<TaskStatus> getResult()
   {
-    return callback;
+    return result;
   }
 
   public RetryPolicy getRetryPolicy()
@@ -92,45 +93,11 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
   }
 
   @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    TaskRunnerWorkItem that = (TaskRunnerWorkItem) o;
-
-    if (callback != null ? !callback.equals(that.callback) : that.callback != null) {
-      return false;
-    }
-    if (retryPolicy != null ? !retryPolicy.equals(that.retryPolicy) : that.retryPolicy != null) {
-      return false;
-    }
-    if (task != null ? !task.equals(that.task) : that.task != null) {
-      return false;
-    }
-
-    return true;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = task != null ? task.hashCode() : 0;
-    result = 31 * result + (callback != null ? callback.hashCode() : 0);
-    result = 31 * result + (retryPolicy != null ? retryPolicy.hashCode() : 0);
-    return result;
-  }
-
-  @Override
   public String toString()
   {
     return "TaskRunnerWorkItem{" +
            "task=" + task +
-           ", callback=" + callback +
+           ", result=" + result +
            ", retryPolicy=" + retryPolicy +
            ", createdTime=" + createdTime +
            '}';

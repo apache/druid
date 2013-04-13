@@ -38,9 +38,9 @@ public class NoopAutoScalingStrategy implements AutoScalingStrategy<String>
   }
 
   @Override
-  public AutoScalingData<String> terminate(List<String> nodeIds)
+  public AutoScalingData<String> terminate(List<String> ips)
   {
-    log.info("If I were a real strategy I'd terminate %s now", nodeIds);
+    log.info("If I were a real strategy I'd terminate %s now", ips);
     return null;
   }
 
@@ -49,5 +49,12 @@ public class NoopAutoScalingStrategy implements AutoScalingStrategy<String>
   {
     log.info("I'm not a real strategy so I'm returning what I got %s", ips);
     return ips;
+  }
+
+  @Override
+  public List<String> idToIpLookup(List<String> nodeIds)
+  {
+    log.info("I'm not a real strategy so I'm returning what I got %s", nodeIds);
+    return nodeIds;
   }
 }
