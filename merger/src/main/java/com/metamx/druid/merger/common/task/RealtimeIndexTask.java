@@ -118,12 +118,6 @@ public class RealtimeIndexTask extends AbstractTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
-    synchronized (lock) {
-      if (shutdown) {
-        return TaskStatus.success(getId());
-      }
-    }
-
     if (this.plumber != null) {
       throw new IllegalStateException("WTF?!? run with non-null plumber??!");
     }
@@ -139,7 +133,12 @@ public class RealtimeIndexTask extends AbstractTask
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
     final Period intermediatePersistPeriod = fireDepartmentConfig.getIntermediatePersistPeriod();
 
-    firehose = new GracefulShutdownFirehose(firehoseFactory.connect(), segmentGranularity, windowPeriod);
+    synchronized (lock) {
+      if (shutdown) {
+        return TaskStatus.success(getId());
+      }
+      firehose = new GracefulShutdownFirehose(firehoseFactory.connect(), segmentGranularity, windowPeriod);
+    }
 
     // TODO -- Take PlumberSchool in constructor (although that will need jackson injectables for stuff like
     // TODO -- the ServerView, which seems kind of odd?)
