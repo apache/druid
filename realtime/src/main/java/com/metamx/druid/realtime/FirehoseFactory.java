@@ -28,7 +28,7 @@ import java.io.IOException;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-                  @JsonSubTypes.Type(name = "kafka-0.6.3", value = KafkaFirehoseFactory.class)
+                  @JsonSubTypes.Type(name = "kafka-0.7.2", value = KafkaFirehoseFactory.class)
               })
 public interface FirehoseFactory
 {
