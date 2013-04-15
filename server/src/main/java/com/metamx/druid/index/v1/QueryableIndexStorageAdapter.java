@@ -939,7 +939,9 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                           }
                         }
 
-                        if(cachedColumnVals != null) objectColumnCache.put(columnName, cachedColumnVals);
+                        if(cachedColumnVals != null) {
+                          objectColumnCache.put(columnName, cachedColumnVals);
+                        }
                       }
 
                       if (cachedColumnVals == null) {
