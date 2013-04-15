@@ -63,6 +63,12 @@ public abstract class DruidMasterConfig
     return true;
   }
 
+  @Config("druid.master.conversion.on")
+  public boolean isConvertSegments()
+  {
+    return true;
+  }
+
   @Config("druid.master.merger.service")
   public String getMergerServiceName()
   {

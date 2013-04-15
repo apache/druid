@@ -433,11 +433,17 @@ public class DruidMaster
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
 
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
-        if (config.isMergeSegments() && indexingServiceClient != null) {
-
+        if (indexingServiceClient != null) {
           masterRunnables.add(
               Pair.of(
-                  new MasterSegmentMergerRunnable(configManager.watch(MergerWhitelist.CONFIG_KEY, MergerWhitelist.class)),
+                  new MasterIndexingServiceRunnable(
+                      makeIndexingServiceHelpers(
+                          configManager.watch(
+                              MergerWhitelist.CONFIG_KEY,
+                              MergerWhitelist.class
+                          )
+                      )
+                  ),
                   config.getMasterSegmentMergerPeriod()
               )
           );
@@ -500,6 +506,41 @@ public class DruidMaster
         master = false;
       }
     }
+  }
+
+  private List<DruidMasterHelper> makeIndexingServiceHelpers(final AtomicReference<MergerWhitelist> whitelistRef)
+  {
+    List<DruidMasterHelper> helpers = Lists.newArrayList();
+
+    helpers.add(new DruidMasterSegmentInfoLoader(DruidMaster.this));
+
+    if (config.isConvertSegments()) {
+      helpers.add(new DruidMasterVersionConverter(indexingServiceClient, whitelistRef));
+    }
+    if (config.isMergeSegments()) {
+      helpers.add(new DruidMasterSegmentMerger(indexingServiceClient, whitelistRef));
+      helpers.add(
+          new DruidMasterHelper()
+          {
+            @Override
+            public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
+            {
+              MasterStats stats = params.getMasterStats();
+              log.info("Issued merge requests for %s segments", stats.getGlobalStats().get("mergedCount").get());
+
+              params.getEmitter().emit(
+                  new ServiceMetricEvent.Builder().build(
+                      "master/merge/count", stats.getGlobalStats().get("mergedCount")
+                  )
+              );
+
+              return params;
+            }
+          }
+      );
+    }
+
+    return ImmutableList.copyOf(helpers);
   }
 
   public static class DruidMasterVersionConverter implements DruidMasterHelper
@@ -728,34 +769,11 @@ public class DruidMaster
     }
   }
 
-  private class MasterSegmentMergerRunnable extends MasterRunnable
+  private class MasterIndexingServiceRunnable extends MasterRunnable
   {
-    private MasterSegmentMergerRunnable(final AtomicReference<MergerWhitelist> whitelistRef)
+    private MasterIndexingServiceRunnable(List<DruidMasterHelper> helpers)
     {
-      super(
-          ImmutableList.of(
-              new DruidMasterSegmentInfoLoader(DruidMaster.this),
-              new DruidMasterVersionConverter(indexingServiceClient, whitelistRef),
-              new DruidMasterSegmentMerger(indexingServiceClient, whitelistRef),
-              new DruidMasterHelper()
-              {
-                @Override
-                public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
-                {
-                  MasterStats stats = params.getMasterStats();
-                  log.info("Issued merge requests for %s segments", stats.getGlobalStats().get("mergedCount").get());
-
-                  params.getEmitter().emit(
-                      new ServiceMetricEvent.Builder().build(
-                          "master/merge/count", stats.getGlobalStats().get("mergedCount")
-                      )
-                  );
-
-                  return params;
-                }
-              }
-          )
-      );
+      super(helpers);
     }
   }
 }
