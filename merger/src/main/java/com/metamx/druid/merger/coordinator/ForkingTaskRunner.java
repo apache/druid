@@ -159,7 +159,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
                                     String.format(
                                         "-D%s=%s",
                                         propName.substring(CHILD_PROPERTY_PREFIX.length()),
-                                        System.getProperty(propName)
+                                        props.getProperty(propName)
                                     )
                                 );
                               }
