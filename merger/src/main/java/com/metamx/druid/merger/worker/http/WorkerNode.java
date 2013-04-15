@@ -19,49 +19,38 @@
 
 package com.metamx.druid.merger.worker.http;
 
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
-import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.BaseServerNode;
-import com.metamx.druid.client.ClientConfig;
-import com.metamx.druid.client.ClientInventoryManager;
-import com.metamx.druid.client.MutableServerView;
-import com.metamx.druid.client.OnlyNewSegmentWatcherServerView;
-import com.metamx.druid.http.QueryServlet;
+import com.metamx.druid.RegisteringNode;
+import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.loading.DataSegmentKiller;
-import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.loading.S3DataSegmentKiller;
-import com.metamx.druid.merger.common.RetryPolicyFactory;
-import com.metamx.druid.merger.common.TaskToolboxFactory;
-import com.metamx.druid.merger.common.actions.RemoteTaskActionClientFactory;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
-import com.metamx.druid.merger.common.config.RetryPolicyConfig;
-import com.metamx.druid.merger.common.config.TaskConfig;
+import com.metamx.druid.merger.common.config.TaskLogConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
+import com.metamx.druid.merger.common.tasklogs.NoopTaskLogs;
+import com.metamx.druid.merger.common.tasklogs.S3TaskLogs;
+import com.metamx.druid.merger.common.tasklogs.TaskLogs;
+import com.metamx.druid.merger.coordinator.ForkingTaskRunner;
+import com.metamx.druid.merger.coordinator.config.ForkingTaskRunnerConfig;
 import com.metamx.druid.merger.worker.Worker;
 import com.metamx.druid.merger.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.merger.worker.WorkerTaskMonitor;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import com.metamx.druid.realtime.SegmentAnnouncer;
-import com.metamx.druid.realtime.ZkSegmentAnnouncer;
-import com.metamx.druid.realtime.ZkSegmentAnnouncerConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -97,7 +86,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class WorkerNode extends BaseServerNode<WorkerNode>
+public class WorkerNode extends RegisteringNode
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerNode.class);
 
@@ -108,22 +97,21 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
 
   private final Lifecycle lifecycle;
   private final Properties props;
+  private final ObjectMapper jsonMapper;
   private final ConfigurationObjectFactory configFactory;
 
   private RestS3Service s3Service = null;
   private List<Monitor> monitors = null;
   private HttpClient httpClient = null;
   private ServiceEmitter emitter = null;
-  private TaskConfig taskConfig = null;
   private WorkerConfig workerConfig = null;
-  private DataSegmentPusher segmentPusher = null;
-  private TaskToolboxFactory taskToolboxFactory = null;
   private CuratorFramework curatorFramework = null;
   private ServiceDiscovery serviceDiscovery = null;
   private ServiceProvider coordinatorServiceProvider = null;
   private WorkerCuratorCoordinator workerCuratorCoordinator = null;
   private WorkerTaskMonitor workerTaskMonitor = null;
-  private MutableServerView newSegmentServerView = null;
+  private TaskLogs persistentTaskLogs = null;
+  private ForkingTaskRunner forkingTaskRunner = null;
   private Server server = null;
 
   private boolean initialized = false;
@@ -132,14 +120,14 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
       Properties props,
       Lifecycle lifecycle,
       ObjectMapper jsonMapper,
-      ObjectMapper smileMapper,
       ConfigurationObjectFactory configFactory
   )
   {
-    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
+    super(ImmutableList.of(jsonMapper));
 
     this.lifecycle = lifecycle;
     this.props = props;
+    this.jsonMapper = jsonMapper;
     this.configFactory = configFactory;
   }
 
@@ -152,24 +140,6 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
   public WorkerNode setEmitter(ServiceEmitter emitter)
   {
     this.emitter = emitter;
-    return this;
-  }
-
-  public WorkerNode setS3Service(RestS3Service s3Service)
-  {
-    this.s3Service = s3Service;
-    return this;
-  }
-
-  public WorkerNode setSegmentPusher(DataSegmentPusher segmentPusher)
-  {
-    this.segmentPusher = segmentPusher;
-    return this;
-  }
-
-  public WorkerNode setTaskToolboxFactory(TaskToolboxFactory taskToolboxFactory)
-  {
-    this.taskToolboxFactory = taskToolboxFactory;
     return this;
   }
 
@@ -197,9 +167,9 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
     return this;
   }
 
-  public WorkerNode setNewSegmentServerView(MutableServerView newSegmentServerView)
+  public WorkerNode setForkingTaskRunner(ForkingTaskRunner forkingTaskRunner)
   {
-    this.newSegmentServerView = newSegmentServerView;
+    this.forkingTaskRunner = forkingTaskRunner;
     return this;
   }
 
@@ -209,23 +179,19 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
     return this;
   }
 
-  @Override
   public void doInit() throws Exception
   {
     initializeHttpClient();
     initializeEmitter();
-    initializeS3Service();
     initializeMonitors();
     initializeMergerConfig();
     initializeCuratorFramework();
     initializeServiceDiscovery();
     initializeCoordinatorServiceProvider();
-    initializeNewSegmentServerView();
-    initializeDataSegmentPusher();
-    initializeTaskToolbox();
-    initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeCuratorCoordinator();
+    initializePersistentTaskLogs();
+    initializeTaskRunner();
     initializeWorkerTaskMonitor();
     initializeServer();
 
@@ -239,24 +205,26 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
     );
     lifecycle.addManagedInstance(monitorScheduler);
 
+    final Injector injector = Guice.createInjector(
+        new WorkerServletModule(
+            getJsonMapper(),
+            emitter,
+            forkingTaskRunner
+        )
+    );
     final Context root = new Context(server, "/", Context.SESSIONS);
 
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
-    root.addServlet(new ServletHolder(new DefaultServlet()), "/mmx/*");
-    root.addServlet(
-        new ServletHolder(
-            new QueryServlet(getJsonMapper(), getSmileMapper(), workerTaskMonitor, emitter, getRequestLogger())
-        ),
-        "/druid/v2/*"
-    );
-    root.addFilter(GuiceFilter.class, "/mmx/indexer/worker/v1/*", 0);
+    root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+    root.addEventListener(new GuiceServletConfig(injector));
+    root.addFilter(GuiceFilter.class, "/mmx/worker/v1/*", 0);
   }
 
   @LifecycleStart
   public synchronized void start() throws Exception
   {
     if (!initialized) {
-      init();
+      doInit();
     }
 
     lifecycle.start();
@@ -266,6 +234,11 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
   public synchronized void stop()
   {
     lifecycle.stop();
+  }
+
+  private ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
   }
 
   private void initializeServer()
@@ -297,16 +270,6 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
           }
       );
     }
-  }
-
-  private void initializeJacksonInjections()
-  {
-    InjectableValues.Std injectables = new InjectableValues.Std();
-
-    injectables.addValue("s3Client", s3Service)
-               .addValue("segmentPusher", segmentPusher);
-
-    getJsonMapper().setInjectableValues(injectables);
   }
 
   private void initializeJacksonSubtypes()
@@ -360,53 +323,8 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
 
   private void initializeMergerConfig()
   {
-    if (taskConfig == null) {
-      taskConfig = configFactory.build(TaskConfig.class);
-    }
-
     if (workerConfig == null) {
       workerConfig = configFactory.build(WorkerConfig.class);
-    }
-  }
-
-  public void initializeDataSegmentPusher()
-  {
-    if (segmentPusher == null) {
-      segmentPusher = ServerInit.getSegmentPusher(props, configFactory, getJsonMapper());
-    }
-  }
-
-  public void initializeTaskToolbox() throws S3ServiceException
-  {
-    if (taskToolboxFactory == null) {
-      final DataSegmentKiller dataSegmentKiller = new S3DataSegmentKiller(s3Service);
-      final SegmentAnnouncer segmentAnnouncer = new ZkSegmentAnnouncer(
-          configFactory.build(ZkSegmentAnnouncerConfig.class),
-          getPhoneBook()
-      );
-      lifecycle.addManagedInstance(segmentAnnouncer);
-      taskToolboxFactory = new TaskToolboxFactory(
-          taskConfig,
-          new RemoteTaskActionClientFactory(
-              httpClient,
-              coordinatorServiceProvider,
-              new RetryPolicyFactory(
-                  configFactory.buildWithReplacements(
-                      RetryPolicyConfig.class,
-                      ImmutableMap.of("base_path", "druid.worker.taskActionClient")
-                  )
-              ),
-              getJsonMapper()
-          ),
-          emitter,
-          s3Service,
-          segmentPusher,
-          dataSegmentKiller,
-          segmentAnnouncer,
-          newSegmentServerView,
-          getConglomerate(),
-          getJsonMapper()
-      );
     }
   }
 
@@ -457,18 +375,33 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
     }
   }
 
-  private void initializeNewSegmentServerView()
+  private void initializePersistentTaskLogs() throws S3ServiceException
   {
-    if (newSegmentServerView == null) {
-      final MutableServerView view = new OnlyNewSegmentWatcherServerView();
-      final ClientInventoryManager clientInventoryManager = new ClientInventoryManager(
-          getConfigFactory().build(ClientConfig.class),
-          getPhoneBook(),
-          view
-      );
-      lifecycle.addManagedInstance(clientInventoryManager);
+    if (persistentTaskLogs == null) {
+      final TaskLogConfig taskLogConfig = configFactory.build(TaskLogConfig.class);
+      if (taskLogConfig.getLogStorageBucket() != null) {
+        initializeS3Service();
+        persistentTaskLogs = new S3TaskLogs(
+            taskLogConfig.getLogStorageBucket(),
+            taskLogConfig.getLogStoragePrefix(),
+            s3Service
+        );
+      } else {
+        persistentTaskLogs = new NoopTaskLogs();
+      }
+    }
+  }
 
-      this.newSegmentServerView = view;
+  public void initializeTaskRunner()
+  {
+    if (forkingTaskRunner == null) {
+      forkingTaskRunner = new ForkingTaskRunner(
+          configFactory.build(ForkingTaskRunnerConfig.class),
+          props,
+          persistentTaskLogs,
+          Executors.newFixedThreadPool(workerConfig.getCapacity()),
+          getJsonMapper()
+      );
     }
   }
 
@@ -482,10 +415,11 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
           false
       );
       workerTaskMonitor = new WorkerTaskMonitor(
+          getJsonMapper(),
           pathChildrenCache,
           curatorFramework,
           workerCuratorCoordinator,
-          taskToolboxFactory,
+          forkingTaskRunner,
           workerExec
       );
       lifecycle.addManagedInstance(workerTaskMonitor);
@@ -495,7 +429,6 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
   public static class Builder
   {
     private ObjectMapper jsonMapper = null;
-    private ObjectMapper smileMapper = null;
     private Lifecycle lifecycle = null;
     private Properties props = null;
     private ConfigurationObjectFactory configFactory = null;
@@ -526,16 +459,8 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
 
     public WorkerNode build()
     {
-      if (jsonMapper == null && smileMapper == null) {
+      if (jsonMapper == null) {
         jsonMapper = new DefaultObjectMapper();
-        smileMapper = new DefaultObjectMapper(new SmileFactory());
-        smileMapper.getJsonFactory().setCodec(smileMapper);
-      } else if (jsonMapper == null || smileMapper == null) {
-        throw new ISE(
-            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
-            jsonMapper,
-            smileMapper
-        );
       }
 
       if (lifecycle == null) {
@@ -550,7 +475,7 @@ public class WorkerNode extends BaseServerNode<WorkerNode>
         configFactory = Config.createFactory(props);
       }
 
-      return new WorkerNode(props, lifecycle, jsonMapper, smileMapper, configFactory);
+      return new WorkerNode(props, lifecycle, jsonMapper, configFactory);
     }
   }
 }

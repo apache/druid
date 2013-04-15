@@ -1,6 +1,7 @@
 package com.metamx.druid.merger.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
@@ -10,6 +11,7 @@ import java.util.List;
 
 public class SpawnTasksAction implements TaskAction<Void>
 {
+  @JsonIgnore
   private final List<Task> newTasks;
 
   @JsonCreator
@@ -39,6 +41,12 @@ public class SpawnTasksAction implements TaskAction<Void>
     }
 
     return null;
+  }
+
+  @Override
+  public boolean isAudited()
+  {
+    return true;
   }
 
   @Override

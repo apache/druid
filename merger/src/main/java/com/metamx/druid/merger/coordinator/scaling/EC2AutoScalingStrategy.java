@@ -127,16 +127,16 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
   }
 
   @Override
-  public AutoScalingData<Instance> terminate(List<String> ids)
+  public AutoScalingData<Instance> terminate(List<String> ips)
   {
-    if (ids.isEmpty()) {
+    if (ips.isEmpty()) {
       return new AutoScalingData<Instance>(Lists.<String>newArrayList(), Lists.<Instance>newArrayList());
     }
 
     DescribeInstancesResult result = amazonEC2Client.describeInstances(
         new DescribeInstancesRequest()
             .withFilters(
-                new Filter("private-ip-address", ids)
+                new Filter("private-ip-address", ips)
             )
     );
 
@@ -165,7 +165,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
 
       return new AutoScalingData<Instance>(
           Lists.transform(
-              ids,
+              ips,
               new Function<String, String>()
               {
                 @Override
@@ -213,6 +213,38 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
     );
 
     log.info("Performing lookup: %s --> %s", ips, retVal);
+
+    return retVal;
+  }
+
+  @Override
+  public List<String> idToIpLookup(List<String> nodeIds)
+  {
+    DescribeInstancesResult result = amazonEC2Client.describeInstances(
+        new DescribeInstancesRequest()
+            .withFilters(
+                new Filter("instance-id", nodeIds)
+            )
+    );
+
+    List<Instance> instances = Lists.newArrayList();
+    for (Reservation reservation : result.getReservations()) {
+      instances.addAll(reservation.getInstances());
+    }
+
+    List<String> retVal = Lists.transform(
+        instances,
+        new Function<Instance, String>()
+        {
+          @Override
+          public String apply(Instance input)
+          {
+            return input.getPrivateIpAddress();
+          }
+        }
+    );
+
+    log.info("Performing lookup: %s --> %s", nodeIds, retVal);
 
     return retVal;
   }

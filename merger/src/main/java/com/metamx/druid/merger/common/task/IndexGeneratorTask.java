@@ -109,7 +109,7 @@ public class IndexGeneratorTask extends AbstractTask
 
     // Set up temporary directory for indexing
     final File tmpDir = new File(
-        toolbox.getTaskDir(),
+        toolbox.getTaskWorkDir(),
         String.format(
             "%s_%s_%s_%s_%s",
             this.getDataSource(),
@@ -219,7 +219,7 @@ public class IndexGeneratorTask extends AbstractTask
     return schema.getShardSpec().isInChunk(eventDimensions);
   }
 
-  @JsonProperty
+  @JsonProperty("firehose")
   public FirehoseFactory getFirehoseFactory()
   {
     return firehoseFactory;

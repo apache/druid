@@ -19,14 +19,15 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
-import com.metamx.druid.merger.common.TaskToolbox;
-import com.metamx.druid.merger.common.TaskToolboxFactory;
+import com.metamx.druid.merger.common.actions.TaskActionClient;
+import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.merger.coordinator.exec.TaskConsumer;
@@ -51,7 +52,7 @@ public class TaskMasterLifecycle
   private final ReentrantLock giant = new ReentrantLock();
   private final Condition mayBeStopped = giant.newCondition();
   private final TaskQueue taskQueue;
-  private final TaskToolboxFactory taskToolboxFactory;
+  private final TaskActionClientFactory taskActionClientFactory;
 
   private volatile boolean leading = false;
   private volatile TaskRunner taskRunner;
@@ -61,7 +62,7 @@ public class TaskMasterLifecycle
 
   public TaskMasterLifecycle(
       final TaskQueue taskQueue,
-      final TaskToolboxFactory taskToolboxFactory,
+      final TaskActionClientFactory taskActionClientFactory,
       final IndexerCoordinatorConfig indexerCoordinatorConfig,
       final ServiceDiscoveryConfig serviceDiscoveryConfig,
       final TaskRunnerFactory runnerFactory,
@@ -71,7 +72,7 @@ public class TaskMasterLifecycle
   )
   {
     this.taskQueue = taskQueue;
-    this.taskToolboxFactory = taskToolboxFactory;
+    this.taskActionClientFactory = taskActionClientFactory;
 
     this.leaderSelector = new LeaderSelector(
         curator, indexerCoordinatorConfig.getLeaderLatchPath(), new LeaderSelectorListener()
@@ -89,7 +90,7 @@ public class TaskMasterLifecycle
           final TaskConsumer taskConsumer = new TaskConsumer(
               taskQueue,
               taskRunner,
-              taskToolboxFactory,
+              taskActionClientFactory,
               emitter
           );
 
@@ -104,17 +105,20 @@ public class TaskMasterLifecycle
           leaderLifecycle.addManagedInstance(taskConsumer);
           leaderLifecycle.addManagedInstance(resourceManagementScheduler);
 
-          leading = true;
-
           try {
             leaderLifecycle.start();
+            leading = true;
 
-            while (leading) {
+            while (leading && !Thread.currentThread().isInterrupted()) {
               mayBeStopped.await();
             }
           }
+          catch (InterruptedException e) {
+            // Suppress so we can bow out gracefully
+          }
           finally {
             log.info("Bowing out!");
+            stopLeading();
             leaderLifecycle.stop();
           }
         }
@@ -209,23 +213,39 @@ public class TaskMasterLifecycle
     }
   }
 
-  public TaskRunner getTaskRunner()
+  public Optional<TaskRunner> getTaskRunner()
   {
-    return taskRunner;
+    if (leading) {
+      return Optional.of(taskRunner);
+    } else {
+      return Optional.absent();
+    }
   }
 
-  public TaskQueue getTaskQueue()
+  public Optional<TaskQueue> getTaskQueue()
   {
-    return taskQueue;
+    if (leading) {
+      return Optional.of(taskQueue);
+    } else {
+      return Optional.absent();
+    }
   }
 
-  public TaskToolbox getTaskToolbox(Task task)
+  public Optional<TaskActionClient> getTaskActionClient(Task task)
   {
-    return taskToolboxFactory.build(task);
+    if (leading) {
+      return Optional.of(taskActionClientFactory.create(task));
+    } else {
+      return Optional.absent();
+    }
   }
 
-  public ResourceManagementScheduler getResourceManagementScheduler()
+  public Optional<ResourceManagementScheduler> getResourceManagementScheduler()
   {
-    return resourceManagementScheduler;
+    if (leading) {
+      return Optional.of(resourceManagementScheduler);
+    } else {
+      return Optional.absent();
+    }
   }
 }
