@@ -227,20 +227,22 @@ public class IncrementalIndex implements Iterable<Row>
                 final String typeName = agg.getTypeName();
                 final String columnName = column.toLowerCase();
 
-                if(typeName.equals("float")) return new ObjectColumnSelector<Float>()
-                {
-                  @Override
-                  public Class classOfObject()
+                if(typeName.equals("float")) {
+                  return new ObjectColumnSelector<Float>()
                   {
-                    return Float.TYPE;
-                  }
+                    @Override
+                    public Class classOfObject()
+                    {
+                      return Float.TYPE;
+                    }
 
-                  @Override
-                  public Float get()
-                  {
-                    return in.getFloatMetric(columnName);
-                  }
-                };
+                    @Override
+                    public Float get()
+                    {
+                      return in.getFloatMetric(columnName);
+                    }
+                  };
+                }
 
                 final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
 

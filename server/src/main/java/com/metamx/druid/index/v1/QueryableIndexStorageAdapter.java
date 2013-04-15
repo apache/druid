@@ -35,6 +35,7 @@ import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.brita.BitmapIndexSelector;
 import com.metamx.druid.index.brita.Filter;
 import com.metamx.druid.index.column.Column;
+import com.metamx.druid.index.column.ColumnCapabilities;
 import com.metamx.druid.index.column.ColumnSelector;
 import com.metamx.druid.index.column.ComplexColumn;
 import com.metamx.druid.index.column.DictionaryEncodedColumn;
@@ -481,17 +482,18 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                         Column holder = index.getColumn(columnName);
 
                         if(holder != null) {
-                          if(holder.getCapabilities().hasMultipleValues()) {
+                          final ColumnCapabilities capabilities = holder.getCapabilities();
+
+                          if(capabilities.hasMultipleValues()) {
                             throw new UnsupportedOperationException(
                               "makeObjectColumnSelector does not support multivalued columns"
                             );
                           }
-                          final ValueType type = holder.getCapabilities().getType();
 
-                          if(holder.getCapabilities().isDictionaryEncoded()) {
+                          if(capabilities.isDictionaryEncoded()) {
                             cachedColumnVals = holder.getDictionaryEncoding();
                           }
-                          else if(type == ValueType.COMPLEX) {
+                          else if(capabilities.getType() == ValueType.COMPLEX) {
                             cachedColumnVals = holder.getComplexColumn();
                           }
                           else {
@@ -499,7 +501,9 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                           }
                         }
 
-                        if(cachedColumnVals != null) objectColumnCache.put(columnName, cachedColumnVals);
+                        if(cachedColumnVals != null) {
+                          objectColumnCache.put(columnName, cachedColumnVals);
+                        }
                       }
 
                       if (cachedColumnVals == null) {
@@ -616,7 +620,9 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                 Closeables.closeQuietly(complexColumn);
               }
               for (Object column : complexColumnCache.values()) {
-                if(column instanceof Closeable) Closeables.closeQuietly((Closeable)column);
+                if(column instanceof Closeable) {
+                  Closeables.closeQuietly((Closeable)column);
+                }
               }
             }
           }
