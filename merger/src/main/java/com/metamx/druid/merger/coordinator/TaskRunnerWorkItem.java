@@ -20,6 +20,9 @@
 package com.metamx.druid.merger.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.Ordering;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.druid.merger.common.RetryPolicy;
 import com.metamx.druid.merger.common.TaskStatus;
@@ -33,7 +36,7 @@ import org.joda.time.DateTimeComparator;
 public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 {
   private final Task task;
-  private final SettableFuture<TaskStatus> result;
+  private final ListenableFuture<TaskStatus> result;
   private final RetryPolicy retryPolicy;
   private final DateTime createdTime;
 
@@ -41,7 +44,7 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 
   public TaskRunnerWorkItem(
       Task task,
-      SettableFuture<TaskStatus> result,
+      ListenableFuture<TaskStatus> result,
       RetryPolicy retryPolicy,
       DateTime createdTime
   )
@@ -58,7 +61,7 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
     return task;
   }
 
-  public SettableFuture<TaskStatus> getResult()
+  public ListenableFuture<TaskStatus> getResult()
   {
     return result;
   }
@@ -89,7 +92,10 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
   @Override
   public int compareTo(TaskRunnerWorkItem taskRunnerWorkItem)
   {
-    return DateTimeComparator.getInstance().compare(createdTime, taskRunnerWorkItem.getCreatedTime());
+    return ComparisonChain.start()
+                          .compare(createdTime, taskRunnerWorkItem.getCreatedTime(), DateTimeComparator.getInstance())
+                          .compare(task.getId(), taskRunnerWorkItem.getTask().getId())
+                          .result();
   }
 
   @Override
