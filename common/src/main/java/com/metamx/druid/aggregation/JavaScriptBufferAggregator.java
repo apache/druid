@@ -20,22 +20,24 @@
 package com.metamx.druid.aggregation;
 
 import com.google.common.collect.Lists;
+import com.metamx.druid.processing.ComplexMetricSelector;
 import com.metamx.druid.processing.FloatMetricSelector;
+import com.metamx.druid.processing.ObjectColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
 public class JavaScriptBufferAggregator implements BufferAggregator
 {
-  private final FloatMetricSelector[] selectorList;
+  private final ObjectColumnSelector[] selectorList;
   private final JavaScriptAggregator.ScriptAggregator script;
 
   public JavaScriptBufferAggregator(
-      List<FloatMetricSelector> selectorList,
+      List<ObjectColumnSelector> selectorList,
       JavaScriptAggregator.ScriptAggregator script
   )
   {
-    this.selectorList = Lists.newArrayList(selectorList).toArray(new FloatMetricSelector[]{});
+    this.selectorList = Lists.newArrayList(selectorList).toArray(new ObjectColumnSelector[]{});
     this.script = script;
   }
 

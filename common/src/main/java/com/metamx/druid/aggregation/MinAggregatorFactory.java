@@ -22,7 +22,7 @@ package com.metamx.druid.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Doubles;
-import com.metamx.druid.processing.MetricSelectorFactory;
+import com.metamx.druid.processing.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -49,13 +49,13 @@ public class MinAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(MetricSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new MinAggregator(name, metricFactory.makeFloatMetricSelector(fieldName));
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(MetricSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new MinBufferAggregator(metricFactory.makeFloatMetricSelector(fieldName));
   }

@@ -43,6 +43,7 @@ import com.metamx.druid.index.v1.serde.ComplexMetrics;
 import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.processing.ComplexMetricSelector;
 import com.metamx.druid.processing.FloatMetricSelector;
+import com.metamx.druid.processing.ObjectColumnSelector;
 import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.query.search.SearchQuerySpec;
@@ -358,6 +359,61 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                             return currEntry.getValue()[metricIndex].get();
                           }
                         };
+                      }
+
+                      @Override
+                      public ObjectColumnSelector makeObjectColumnSelector(String column)
+                      {
+                        final String columnName = column.toLowerCase();
+                        final Integer metricIndexInt = index.getMetricIndex(columnName);
+
+                        if(metricIndexInt != null) {
+                          final int metricIndex = metricIndexInt;
+
+                          final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(columnName));
+
+                          return new ObjectColumnSelector()
+                          {
+                            @Override
+                            public Class classOfObject()
+                            {
+                              return serde.getObjectStrategy().getClazz();
+                            }
+
+                            @Override
+                            public Object get()
+                            {
+                              return currEntry.getValue()[metricIndex].get();
+                            }
+                          };
+                        }
+
+                        final Integer dimensionIndexInt = index.getDimensionIndex(columnName);
+
+                        if(dimensionIndexInt != null) {
+                          final int dimensionIndex = dimensionIndexInt;
+                          return new ObjectColumnSelector<String>()
+                          {
+                            @Override
+                            public Class classOfObject()
+                            {
+                              return String.class;
+                            }
+
+                            @Override
+                            public String get()
+                            {
+                              final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
+                              if(dimVals.length == 1) return dimVals[0];
+                              if(dimVals.length == 0) return null;
+                              throw new UnsupportedOperationException(
+                                "makeObjectColumnSelector does not support multivalued columns"
+                              );
+                            }
+                          };
+                        }
+
+                        return null;
                       }
                     };
                   }
