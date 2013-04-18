@@ -22,10 +22,12 @@ package com.metamx.druid.index.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.IAE;
+import com.metamx.common.spatial.rtree.ImmutableRTree;
 import com.metamx.druid.index.column.ColumnBuilder;
 import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
+import com.metamx.druid.kv.IndexedRTree;
 import com.metamx.druid.kv.VSizeIndexed;
 import com.metamx.druid.kv.VSizeIndexedInts;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
@@ -35,7 +37,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
-*/
+ */
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
   @JsonCreator
@@ -48,6 +50,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   private final VSizeIndexedInts singleValuedColumn;
   private final VSizeIndexed multiValuedColumn;
   private final GenericIndexed<ImmutableConciseSet> bitmaps;
+  private final GenericIndexed<ImmutableRTree> spatialIndex;
 
   private final int size;
 
@@ -55,25 +58,26 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       GenericIndexed<String> dictionary,
       VSizeIndexedInts singleValCol,
       VSizeIndexed multiValCol,
-      GenericIndexed<ImmutableConciseSet> bitmaps
+      GenericIndexed<ImmutableConciseSet> bitmaps,
+      GenericIndexed<ImmutableRTree> spatialIndex
   )
   {
     this.dictionary = dictionary;
     this.singleValuedColumn = singleValCol;
     this.multiValuedColumn = multiValCol;
     this.bitmaps = bitmaps;
+    this.spatialIndex = spatialIndex;
 
     int size = dictionary.getSerializedSize();
     if (singleValCol != null && multiValCol == null) {
       size += singleValCol.getSerializedSize();
-    }
-    else if (singleValCol == null && multiValCol != null) {
+    } else if (singleValCol == null && multiValCol != null) {
       size += multiValCol.getSerializedSize();
-    }
-    else {
+    } else {
       throw new IAE("Either singleValCol[%s] or multiValCol[%s] must be set", singleValCol, multiValCol);
     }
     size += bitmaps.getSerializedSize();
+    size += spatialIndex.getSerializedSize();
 
     this.size = size;
   }
@@ -84,6 +88,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     singleValuedColumn = null;
     multiValuedColumn = null;
     bitmaps = null;
+    spatialIndex = null;
     size = 0;
   }
 
@@ -106,11 +111,11 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     dictionary.writeToChannel(channel);
     if (isSingleValued()) {
       singleValuedColumn.writeToChannel(channel);
-    }
-    else {
+    } else {
       multiValuedColumn.writeToChannel(channel);
     }
     bitmaps.writeToChannel(channel);
+    spatialIndex.writeToChannel(channel);
   }
 
   @Override
@@ -128,8 +133,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       multiValuedColumn = null;
       builder.setHasMultipleValues(false)
              .setDictionaryEncodedColumn(new DictionaryEncodedColumnSupplier(dictionary, singleValuedColumn, null));
-    }
-    else {
+    } else {
       singleValuedColumn = null;
       multiValuedColumn = VSizeIndexed.readFromByteBuffer(buffer);
       builder.setHasMultipleValues(true)
@@ -140,8 +144,19 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         buffer, ConciseCompressedIndexedInts.objectStrategy
     );
 
-    builder.setBitmapIndex(new BitmapIndexColumnPartSupplier(bitmaps, dictionary));
+    GenericIndexed<ImmutableRTree> spatialIndex = GenericIndexed.read(
+        buffer, IndexedRTree.objectStrategy
+    );
 
-    return new DictionaryEncodedColumnPartSerde(dictionary, singleValuedColumn, multiValuedColumn, bitmaps);
+    builder.setBitmapIndex(new BitmapIndexColumnPartSupplier(bitmaps, dictionary));
+    builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(spatialIndex, dictionary));
+
+    return new DictionaryEncodedColumnPartSerde(
+        dictionary,
+        singleValuedColumn,
+        multiValuedColumn,
+        bitmaps,
+        spatialIndex
+    );
   }
 }

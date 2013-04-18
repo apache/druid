@@ -20,6 +20,7 @@
 package com.metamx.druid.index.v1;
 
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
@@ -64,6 +65,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class IncrementalIndex implements Iterable<Row>
 {
   private static final Logger log = new Logger(IncrementalIndex.class);
+  private static final Joiner JOINER = Joiner.on(",");
 
   private final long minTimestamp;
   private final QueryGranularity gran;
@@ -134,6 +136,12 @@ public class IncrementalIndex implements Iterable<Row>
     List<String[]> overflow = null;
     for (String dimension : rowDimensions) {
       dimension = dimension.toLowerCase();
+      List<String> dimensionValues = row.getDimension(dimension);
+
+      // FIXME: HACK!!! Rewrite this when this file is rewritten
+      if (dimension.endsWith(".geo")) {
+        dimensionValues = Arrays.asList(JOINER.join(dimensionValues));
+      }
 
       final Integer index = dimensionOrder.get(dimension);
       if (index == null) {
@@ -143,9 +151,9 @@ public class IncrementalIndex implements Iterable<Row>
         if (overflow == null) {
           overflow = Lists.newArrayList();
         }
-        overflow.add(getDimVals(dimValues.add(dimension), row.getDimension(dimension)));
+        overflow.add(getDimVals(dimValues.add(dimension), dimensionValues));
       } else {
-        dims[index] = getDimVals(dimValues.get(dimension), row.getDimension(dimension));
+        dims[index] = getDimVals(dimValues.get(dimension), dimensionValues);
       }
     }
 
@@ -409,8 +417,7 @@ public class IncrementalIndex implements Iterable<Row>
       if (holder == null) {
         holder = new DimDim();
         dimensions.put(dimension, holder);
-      }
-      else {
+      } else {
         throw new ISE("dimension[%s] already existed even though add() was called!?", dimension);
       }
       return holder;

@@ -28,6 +28,7 @@ import com.metamx.common.Pair;
 import com.metamx.common.collect.MoreIterators;
 import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.spatial.rtree.ImmutableRTree;
 import com.metamx.druid.BaseStorageAdapter;
 import com.metamx.druid.Capabilities;
 import com.metamx.druid.QueryGranularity;
@@ -350,6 +351,12 @@ public class IndexStorageAdapter extends BaseStorageAdapter
   }
 
   @Override
+  public ImmutableConciseSet getInvertedIndex(String dimension, int idx)
+  {
+    return index.getInvertedIndex(dimension.toLowerCase(), idx);
+  }
+
+  @Override
   public Offset getFilterOffset(Filter filter)
   {
     return new ConciseOffset(filter.goConcise(new IndexBasedBitmapIndexSelector(index)));
@@ -518,6 +525,18 @@ public class IndexStorageAdapter extends BaseStorageAdapter
     public ImmutableConciseSet getConciseInvertedIndex(String dimension, String value)
     {
       return index.getInvertedIndex(dimension.toLowerCase(), value);
+    }
+
+    @Override
+    public ImmutableConciseSet getConciseInvertedIndex(String dimension, int idx)
+    {
+      return index.getInvertedIndex(dimension.toLowerCase(), idx);
+    }
+
+    @Override
+    public ImmutableRTree getSpatialIndex(String dimension)
+    {
+      return index.getSpatialIndex(dimension.toLowerCase());
     }
   }
 }

@@ -16,35 +16,34 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
 package com.metamx.druid.index.serde;
 
 import com.google.common.base.Supplier;
-import com.metamx.druid.index.column.BitmapIndex;
+import com.metamx.common.spatial.rtree.ImmutableRTree;
+import com.metamx.druid.index.column.SpatialIndex;
 import com.metamx.druid.kv.GenericIndexed;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**
-*/
-public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
+ */
+public class SpatialIndexColumnPartSupplier implements Supplier<SpatialIndex>
 {
-  private static final ImmutableConciseSet EMPTY_SET = new ImmutableConciseSet();
+  private static final ImmutableRTree EMPTY_SET = new ImmutableRTree();
 
-  private final GenericIndexed<ImmutableConciseSet> bitmaps;
+  private final GenericIndexed<ImmutableRTree> indexedTree;
   private final GenericIndexed<String> dictionary;
 
-  public BitmapIndexColumnPartSupplier(
-      GenericIndexed<ImmutableConciseSet> bitmaps,
+  public SpatialIndexColumnPartSupplier(
+      GenericIndexed<ImmutableRTree> indexedTree,
       GenericIndexed<String> dictionary
   ) {
-    this.bitmaps = bitmaps;
+    this.indexedTree = indexedTree;
     this.dictionary = dictionary;
   }
 
   @Override
-  public BitmapIndex get()
+  public SpatialIndex get()
   {
-    return new BitmapIndex()
+    return new SpatialIndex()
     {
       @Override
       public int getCardinality()
@@ -59,22 +58,16 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
       }
 
       @Override
-      public ImmutableConciseSet getConciseSet(String value)
+      public ImmutableRTree getRTree(String value)
       {
         final int index = dictionary.indexOf(value);
 
-        return getConciseSet(index);
-      }
-
-      @Override
-      public ImmutableConciseSet getConciseSet(int idx)
-      {
-        if (idx < 0) {
+        if (index < 0) {
           return EMPTY_SET;
         }
 
-        final ImmutableConciseSet bitmap = bitmaps.get(idx);
-        return bitmap == null ? EMPTY_SET : bitmap;
+        final ImmutableRTree rTree = indexedTree.get(index);
+        return rTree == null ? EMPTY_SET : rTree;
       }
     };
   }

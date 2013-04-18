@@ -38,6 +38,7 @@ import com.metamx.common.io.smoosh.Smoosh;
 import com.metamx.common.io.smoosh.SmooshedFileMapper;
 import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.spatial.rtree.ImmutableRTree;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.SimpleQueryableIndex;
 import com.metamx.druid.index.column.Column;
@@ -53,11 +54,13 @@ import com.metamx.druid.index.serde.FloatGenericColumnPartSerde;
 import com.metamx.druid.index.serde.FloatGenericColumnSupplier;
 import com.metamx.druid.index.serde.LongGenericColumnPartSerde;
 import com.metamx.druid.index.serde.LongGenericColumnSupplier;
+import com.metamx.druid.index.serde.SpatialIndexColumnPartSupplier;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.kv.ArrayIndexed;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.IndexedIterable;
+import com.metamx.druid.kv.IndexedRTree;
 import com.metamx.druid.kv.VSizeIndexed;
 import com.metamx.druid.kv.VSizeIndexedInts;
 import com.metamx.druid.utils.SerializerUtils;
@@ -221,7 +224,10 @@ public class IndexIO
       case 6:
       case 7:
         log.info("Old version, re-persisting.");
-        IndexMerger.append(Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))), converted);
+        IndexMerger.append(
+            Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))),
+            converted
+        );
         return true;
       case 8:
         DefaultIndexIOHandler.convertV8toV9(toConvert, converted);
@@ -251,6 +257,7 @@ public class IndexIO
      * @return
      */
     public boolean canBeMapped(File inDir) throws IOException;
+
     public MMappedIndex mapDir(File inDir) throws IOException;
 
     /**
@@ -265,6 +272,7 @@ public class IndexIO
   public static class DefaultIndexIOHandler implements IndexIOHandler
   {
     private static final Logger log = new Logger(DefaultIndexIOHandler.class);
+
     @Override
     public Index readIndex(File inDir)
     {
@@ -325,6 +333,7 @@ public class IndexIO
       Map<String, GenericIndexed<String>> dimValueLookups = Maps.newHashMap();
       Map<String, VSizeIndexed> dimColumns = Maps.newHashMap();
       Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexed = Maps.newHashMap();
+      Map<String, GenericIndexed<ImmutableRTree>> spatialIndexed = Maps.newHashMap();
 
       for (String dimension : IndexedIterable.create(availableDimensions)) {
         ByteBuffer dimBuffer = smooshedFiles.mapFile(makeDimFile(inDir, dimension).getName());
@@ -348,6 +357,14 @@ public class IndexIO
         );
       }
 
+      ByteBuffer spatialBuffer = smooshedFiles.mapFile("spatial.drd");
+      for (String dimension : IndexedIterable.create(availableDimensions)) {
+        spatialIndexed.put(
+            serializerUtils.readString(spatialBuffer),
+            GenericIndexed.read(spatialBuffer, IndexedRTree.objectStrategy)
+        );
+      }
+
       final MMappedIndex retVal = new MMappedIndex(
           availableDimensions,
           availableMetrics,
@@ -356,7 +373,8 @@ public class IndexIO
           metrics,
           dimValueLookups,
           dimColumns,
-          invertedIndexed
+          invertedIndexed,
+          spatialIndexed
       );
 
       log.debug("Mapped v8 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
@@ -402,6 +420,15 @@ public class IndexIO
         );
       }
 
+      Map<String, GenericIndexed<ImmutableRTree>> spatialIndexes = Maps.newHashMap();
+      final ByteBuffer spatialBuffer = v8SmooshedFiles.mapFile("spatial.drd");
+      while (spatialBuffer.hasRemaining()) {
+        spatialIndexes.put(
+            serializerUtils.readString(spatialBuffer),
+            GenericIndexed.read(spatialBuffer, IndexedRTree.objectStrategy)
+        );
+      }
+
       final LinkedHashSet<String> skippedFiles = Sets.newLinkedHashSet();
       final Set<String> skippedDimensions = Sets.newLinkedHashSet();
       for (String filename : v8SmooshedFiles.getInternalFilenames()) {
@@ -435,6 +462,7 @@ public class IndexIO
           VSizeIndexedInts singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
           GenericIndexed<ImmutableConciseSet> bitmaps = bitmapIndexes.get(dimension);
+          GenericIndexed<ImmutableRTree> spatialIndex = spatialIndexes.get(dimension);
 
           boolean onlyOneValue = true;
           ConciseSet nullsSet = null;
@@ -476,8 +504,7 @@ public class IndexIO
                     Iterables.concat(Arrays.asList(theNullSet), bitmaps),
                     ConciseCompressedIndexedInts.objectStrategy
                 );
-              }
-              else {
+              } else {
                 bumpedDictionary = false;
                 bitmaps = GenericIndexed.fromIterable(
                     Iterables.concat(
@@ -487,8 +514,7 @@ public class IndexIO
                     ConciseCompressedIndexedInts.objectStrategy
                 );
               }
-            }
-            else {
+            } else {
               bumpedDictionary = false;
             }
 
@@ -517,7 +543,7 @@ public class IndexIO
           }
 
           builder.addSerde(
-              new DictionaryEncodedColumnPartSerde(dictionary, singleValCol, multiValCol, bitmaps)
+              new DictionaryEncodedColumnPartSerde(dictionary, singleValCol, multiValCol, bitmaps, spatialIndex)
           );
 
           final ColumnDescriptor serdeficator = builder.build();
@@ -673,8 +699,11 @@ public class IndexIO
                     new BitmapIndexColumnPartSupplier(
                         index.getInvertedIndexes().get(dimension), index.getDimValueLookup(dimension)
                     )
+                ).setSpatialIndex(
+                new SpatialIndexColumnPartSupplier(
+                    index.getSpatialIndexes().get(dimension), index.getDimValueLookup(dimension)
                 )
-                .build()
+            ).build()
         );
       }
 

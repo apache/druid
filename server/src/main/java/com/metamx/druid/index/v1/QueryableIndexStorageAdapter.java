@@ -28,6 +28,7 @@ import com.google.common.io.Closeables;
 import com.metamx.common.collect.MoreIterators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.FunctionalIterator;
+import com.metamx.common.spatial.rtree.ImmutableRTree;
 import com.metamx.druid.BaseStorageAdapter;
 import com.metamx.druid.Capabilities;
 import com.metamx.druid.QueryGranularity;
@@ -52,6 +53,7 @@ import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -222,6 +224,30 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
   }
 
   @Override
+  public ImmutableConciseSet getInvertedIndex(String dimension, int idx)
+  {
+    final Column column = index.getColumn(dimension.toLowerCase());
+    if (column == null) {
+      return new ImmutableConciseSet();
+    }
+    if (!column.getCapabilities().hasBitmapIndexes()) {
+      return new ImmutableConciseSet();
+    }
+
+    return column.getBitmapIndex().getConciseSet(idx);
+  }
+
+  public ImmutableRTree getRTreeSpatialIndex(String dimension)
+  {
+    final Column column = index.getColumn(dimension.toLowerCase());
+    if (column == null || !column.getCapabilities().hasSpatialIndexes()) {
+      return new ImmutableRTree();
+    }
+
+    return column.getSpatialIndex().getRTree(dimension);
+  }
+
+  @Override
   public Offset getFilterOffset(Filter filter)
   {
     return new ConciseOffset(filter.goConcise(new MMappedBitmapIndexSelector(index)));
@@ -344,8 +370,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                             return column.lookupId(name);
                           }
                         };
-                      }
-                      else {
+                      } else {
                         return new DimensionSelector()
                         {
                           @Override
@@ -404,8 +429,8 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(metricName);
                         if (holder != null && holder.getCapabilities().getType() == ValueType.FLOAT) {
-                            cachedMetricVals = holder.getGenericColumn();
-                            genericColumnCache.put(metricName, cachedMetricVals);
+                          cachedMetricVals = holder.getGenericColumn();
+                          genericColumnCache.put(metricName, cachedMetricVals);
                         }
                       }
 
@@ -648,8 +673,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                             return column.lookupId(name);
                           }
                         };
-                      }
-                      else {
+                      } else {
                         return new DimensionSelector()
                         {
                           @Override
@@ -708,8 +732,8 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(metricName);
                         if (holder != null && holder.getCapabilities().getType() == ValueType.FLOAT) {
-                            cachedMetricVals = holder.getGenericColumn();
-                            genericColumnCache.put(metricName, cachedMetricVals);
+                          cachedMetricVals = holder.getGenericColumn();
+                          genericColumnCache.put(metricName, cachedMetricVals);
                         }
                       }
 
@@ -862,6 +886,18 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
     public ImmutableConciseSet getConciseInvertedIndex(String dimension, String value)
     {
       return getInvertedIndex(dimension, value);
+    }
+
+    @Override
+    public ImmutableConciseSet getConciseInvertedIndex(String dimension, int idx)
+    {
+      return getInvertedIndex(dimension, idx);
+    }
+
+    @Override
+    public ImmutableRTree getSpatialIndex(String dimension)
+    {
+      return getRTreeSpatialIndex(dimension);
     }
   }
 }

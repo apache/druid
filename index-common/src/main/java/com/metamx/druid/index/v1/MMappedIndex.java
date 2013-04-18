@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.spatial.rtree.ImmutableRTree;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.Indexed;
@@ -54,6 +55,7 @@ public class MMappedIndex
   final Map<String, GenericIndexed<String>> dimValueLookups;
   final Map<String, VSizeIndexed> dimColumns;
   final Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexes;
+  final Map<String, GenericIndexed<ImmutableRTree>> spatialIndexes;
 
   private final Map<String, Integer> metricIndexes = Maps.newHashMap();
 
@@ -65,7 +67,8 @@ public class MMappedIndex
       Map<String, MetricHolder> metrics,
       Map<String, GenericIndexed<String>> dimValueLookups,
       Map<String, VSizeIndexed> dimColumns,
-      Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexes
+      Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexes,
+      Map<String, GenericIndexed<ImmutableRTree>> spatialIndexes
   )
   {
     this.availableDimensions = availableDimensions;
@@ -76,6 +79,7 @@ public class MMappedIndex
     this.dimValueLookups = dimValueLookups;
     this.dimColumns = dimColumns;
     this.invertedIndexes = invertedIndexes;
+    this.spatialIndexes = spatialIndexes;
 
     for (int i = 0; i < availableMetrics.size(); i++) {
       metricIndexes.put(availableMetrics.get(i), i);
@@ -143,6 +147,11 @@ public class MMappedIndex
     return invertedIndexes;
   }
 
+  public Map<String, GenericIndexed<ImmutableRTree>> getSpatialIndexes()
+  {
+    return spatialIndexes;
+  }
+
   public ImmutableConciseSet getInvertedIndex(String dimension, String value)
   {
     final GenericIndexed<String> lookup = dimValueLookups.get(dimension);
@@ -159,6 +168,7 @@ public class MMappedIndex
     return (retVal == null) ? emptySet : retVal;
   }
 
+/*
   public static MMappedIndex fromIndex(Index index)
   {
     log.info("Converting timestamps");
@@ -177,6 +187,8 @@ public class MMappedIndex
 
     Map<String, VSizeIndexed> dimColumns = Maps.newHashMap();
     Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexes = Maps.newLinkedHashMap();
+    Map<String, GenericIndexed<ImmutableRTree>> spatialIndexes = Maps.newLinkedHashMap();
+
     for (String dimension : Arrays.asList(index.dimensions)) {
       final String[] dimVals = index.reverseDimLookup.get(dimension);
       final DimensionColumn dimColumn = index.dimensionValues.get(dimension);
@@ -258,7 +270,9 @@ public class MMappedIndex
         index.metricVals,
         dimValueLookups,
         dimColumns,
-        invertedIndexes
+        invertedIndexes,
+        spatialIndexes
     );
   }
+*/
 }

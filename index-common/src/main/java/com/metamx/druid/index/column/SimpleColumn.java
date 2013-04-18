@@ -32,6 +32,7 @@ class SimpleColumn implements Column
   private final Supplier<GenericColumn> genericColumn;
   private final Supplier<ComplexColumn> complexColumn;
   private final Supplier<BitmapIndex> bitmapIndex;
+  private final Supplier<SpatialIndex> spatialIndex;
 
   SimpleColumn(
       ColumnCapabilities capabilities,
@@ -39,7 +40,8 @@ class SimpleColumn implements Column
       Supplier<RunLengthColumn> runLengthColumn,
       Supplier<GenericColumn> genericColumn,
       Supplier<ComplexColumn> complexColumn,
-      Supplier<BitmapIndex> bitmapIndex
+      Supplier<BitmapIndex> bitmapIndex,
+      Supplier<SpatialIndex> spatialIndex
   )
   {
     this.capabilities = capabilities;
@@ -48,6 +50,7 @@ class SimpleColumn implements Column
     this.genericColumn = genericColumn;
     this.complexColumn = complexColumn;
     this.bitmapIndex = bitmapIndex;
+    this.spatialIndex = spatialIndex;
   }
 
   @Override
@@ -97,5 +100,11 @@ class SimpleColumn implements Column
   public BitmapIndex getBitmapIndex()
   {
     return bitmapIndex == null ? null : bitmapIndex.get();
+  }
+
+  @Override
+  public SpatialIndex getSpatialIndex()
+  {
+    return spatialIndex == null ? null : spatialIndex.get();
   }
 }

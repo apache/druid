@@ -29,6 +29,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private boolean dictionaryEncoded = false;
   private boolean runLengthEncoded = false;
   private boolean hasInvertedIndexes = false;
+  private boolean hasSpatialIndexes = false;
   private boolean hasMultipleValues = false;
 
   @Override
@@ -80,6 +81,19 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public ColumnCapabilitiesImpl setHasBitmapIndexes(boolean hasInvertedIndexes)
   {
     this.hasInvertedIndexes = hasInvertedIndexes;
+    return this;
+  }
+
+  @Override
+  @JsonProperty("hasSpatialIndexes")
+  public boolean hasSpatialIndexes()
+  {
+    return hasSpatialIndexes;
+  }
+
+  public ColumnCapabilitiesImpl setHasSpatialIndexes(boolean hasSpatialIndexes)
+  {
+    this.hasSpatialIndexes = hasSpatialIndexes;
     return this;
   }
 

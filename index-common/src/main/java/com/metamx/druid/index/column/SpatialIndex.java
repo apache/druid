@@ -16,18 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
 package com.metamx.druid.index.column;
+
+import com.metamx.common.spatial.rtree.ImmutableRTree;
 
 /**
  */
-public interface ColumnCapabilities
+public interface SpatialIndex
 {
-  public ValueType getType();
-
-  public boolean isDictionaryEncoded();
-  public boolean isRunLengthEncoded();
-  public boolean hasBitmapIndexes();
-  public boolean hasSpatialIndexes();
-  public boolean hasMultipleValues();
+  public int getCardinality();
+  public String getValue(int index);
+  public ImmutableRTree getRTree(String value);
 }
