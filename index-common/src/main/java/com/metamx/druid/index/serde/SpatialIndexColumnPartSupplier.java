@@ -30,14 +30,12 @@ public class SpatialIndexColumnPartSupplier implements Supplier<SpatialIndex>
   private static final ImmutableRTree EMPTY_SET = new ImmutableRTree();
 
   private final GenericIndexed<ImmutableRTree> indexedTree;
-  private final GenericIndexed<String> dictionary;
 
   public SpatialIndexColumnPartSupplier(
-      GenericIndexed<ImmutableRTree> indexedTree,
-      GenericIndexed<String> dictionary
-  ) {
+      GenericIndexed<ImmutableRTree> indexedTree
+  )
+  {
     this.indexedTree = indexedTree;
-    this.dictionary = dictionary;
   }
 
   @Override
@@ -46,28 +44,10 @@ public class SpatialIndexColumnPartSupplier implements Supplier<SpatialIndex>
     return new SpatialIndex()
     {
       @Override
-      public int getCardinality()
+      public ImmutableRTree getRTree()
       {
-        return dictionary.size();
-      }
-
-      @Override
-      public String getValue(int index)
-      {
-        return dictionary.get(index);
-      }
-
-      @Override
-      public ImmutableRTree getRTree(String value)
-      {
-        final int index = dictionary.indexOf(value);
-
-        if (index < 0) {
-          return EMPTY_SET;
-        }
-
-        final ImmutableRTree rTree = indexedTree.get(index);
-        return rTree == null ? EMPTY_SET : rTree;
+        // There is only ever 1 RTree per dimension
+        return indexedTree.get(0);
       }
     };
   }

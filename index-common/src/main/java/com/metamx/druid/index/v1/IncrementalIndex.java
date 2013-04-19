@@ -138,7 +138,9 @@ public class IncrementalIndex implements Iterable<Row>
       dimension = dimension.toLowerCase();
       List<String> dimensionValues = row.getDimension(dimension);
 
-      // FIXME: HACK!!! Rewrite this when this file is rewritten
+      // FIXME: Must be a better way to do this
+      // Join all coordinate dimension values into a single string for bitmap indexing
+      // Split this string for spatial indexing
       if (dimension.endsWith(".geo")) {
         dimensionValues = Arrays.asList(JOINER.join(dimensionValues));
       }

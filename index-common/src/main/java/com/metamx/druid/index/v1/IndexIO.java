@@ -543,7 +543,13 @@ public class IndexIO
           }
 
           builder.addSerde(
-              new DictionaryEncodedColumnPartSerde(dictionary, singleValCol, multiValCol, bitmaps, spatialIndex)
+              new DictionaryEncodedColumnPartSerde(
+                  dictionary,
+                  singleValCol,
+                  multiValCol,
+                  bitmaps,
+                  spatialIndex
+              )
           );
 
           final ColumnDescriptor serdeficator = builder.build();
@@ -701,7 +707,7 @@ public class IndexIO
                     )
                 ).setSpatialIndex(
                 new SpatialIndexColumnPartSupplier(
-                    index.getSpatialIndexes().get(dimension), index.getDimValueLookup(dimension)
+                    index.getSpatialIndexes().get(dimension)
                 )
             ).build()
         );

@@ -24,7 +24,5 @@ import com.metamx.common.spatial.rtree.ImmutableRTree;
  */
 public interface SpatialIndex
 {
-  public int getCardinality();
-  public String getValue(int index);
-  public ImmutableRTree getRTree(String value);
+  public ImmutableRTree getRTree();
 }

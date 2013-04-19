@@ -149,7 +149,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     );
 
     builder.setBitmapIndex(new BitmapIndexColumnPartSupplier(bitmaps, dictionary));
-    builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(spatialIndex, dictionary));
+    builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(spatialIndex));
 
     return new DictionaryEncodedColumnPartSerde(
         dictionary,

@@ -244,7 +244,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
       return new ImmutableRTree();
     }
 
-    return column.getSpatialIndex().getRTree(dimension);
+    return column.getSpatialIndex().getRTree();
   }
 
   @Override
