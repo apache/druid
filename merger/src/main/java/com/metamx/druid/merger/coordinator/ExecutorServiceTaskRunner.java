@@ -23,6 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -81,7 +83,28 @@ public class ExecutorServiceTaskRunner implements TaskRunner, QuerySegmentWalker
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     final TaskToolbox toolbox = toolboxFactory.build(task);
-    return exec.submit(new ExecutorServiceTaskRunnerCallable(task, toolbox));
+    final ListenableFuture<TaskStatus> statusFuture = exec.submit(new ExecutorServiceTaskRunnerCallable(task, toolbox));
+
+    final TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(task, statusFuture, null, new DateTime());
+    runningItems.add(taskRunnerWorkItem);
+    Futures.addCallback(
+        statusFuture, new FutureCallback<TaskStatus>()
+    {
+      @Override
+      public void onSuccess(TaskStatus result)
+      {
+        runningItems.remove(taskRunnerWorkItem);
+      }
+
+      @Override
+      public void onFailure(Throwable t)
+      {
+        runningItems.remove(taskRunnerWorkItem);
+      }
+    }
+    );
+
+    return statusFuture;
   }
 
   @Override
@@ -97,34 +120,13 @@ public class ExecutorServiceTaskRunner implements TaskRunner, QuerySegmentWalker
   @Override
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
-    return runningItems;
+    return ImmutableList.copyOf(runningItems);
   }
 
   @Override
   public Collection<TaskRunnerWorkItem> getPendingTasks()
   {
-    if (exec instanceof ThreadPoolExecutor) {
-      ThreadPoolExecutor tpe = (ThreadPoolExecutor) exec;
-
-      return Lists.newArrayList(
-          FunctionalIterable.create(tpe.getQueue())
-                            .keep(
-                                new Function<Runnable, TaskRunnerWorkItem>()
-                                {
-                                  @Override
-                                  public TaskRunnerWorkItem apply(Runnable input)
-                                  {
-                                    if (input instanceof ExecutorServiceTaskRunnerCallable) {
-                                      return ((ExecutorServiceTaskRunnerCallable) input).getTaskRunnerWorkItem();
-                                    }
-                                    return null;
-                                  }
-                                }
-                            )
-      );
-    }
-
-    return Lists.newArrayList();
+    return ImmutableList.of();
   }
 
   @Override

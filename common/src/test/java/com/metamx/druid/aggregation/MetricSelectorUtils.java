@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,17 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.index.v1.processing;
+package com.metamx.druid.aggregation;
 
-import com.metamx.druid.processing.ColumnSelectorFactory;
-import org.joda.time.DateTime;
+import com.metamx.druid.processing.ComplexMetricSelector;
+import com.metamx.druid.processing.FloatMetricSelector;
+import com.metamx.druid.processing.ObjectColumnSelector;
 
-/**
- */
-public interface Cursor extends ColumnSelectorFactory, DimensionSelectorFactory
+public class MetricSelectorUtils
 {
-  public DateTime getTime();
-  public void advance();
-  public boolean isDone();
-  public void reset();
+  public static ObjectColumnSelector<Float> wrap(final FloatMetricSelector selector)
+  {
+    return new ObjectColumnSelector<Float>()
+    {
+      @Override
+      public Class<Float> classOfObject()
+      {
+        return Float.TYPE;
+      }
+
+      @Override
+      public Float get()
+      {
+        return selector.get();
+      }
+    };
+  }
 }

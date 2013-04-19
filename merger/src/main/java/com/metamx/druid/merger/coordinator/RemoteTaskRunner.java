@@ -573,9 +573,9 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
 
                     if (taskStatus.isComplete()) {
                       if (taskRunnerWorkItem != null) {
-                        final SettableFuture<TaskStatus> result = taskRunnerWorkItem.getResult();
+                        final ListenableFuture<TaskStatus> result = taskRunnerWorkItem.getResult();
                         if (result != null) {
-                          result.set(taskStatus);
+                          ((SettableFuture<TaskStatus>) result).set(taskStatus);
                         }
                       }
 

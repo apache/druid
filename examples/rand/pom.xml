@@ -9,7 +9,7 @@
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid-examples</artifactId>
-        <version>0.3.36-SNAPSHOT</version>
+        <version>0.4.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
