@@ -44,20 +44,9 @@ public class MinTimeFirehose implements Firehose
   @Override
   public InputRow nextRow()
   {
-    if (savedInputRow != null) {
-      final InputRow row = savedInputRow;
-      savedInputRow = null;
-      return row;
-    } else {
-      while (firehose.hasMore()) {
-        final InputRow row = firehose.nextRow();
-        if (acceptable(row)) {
-          return row;
-        }
-      }
-
-      throw new NoSuchElementException("No more rows!");
-    }
+    final InputRow row = savedInputRow;
+    savedInputRow = null;
+    return row;
   }
 
   @Override
