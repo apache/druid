@@ -81,9 +81,8 @@ public class DbConnector
             + "  `id` varchar(255) NOT NULL,\n"
             + "  `created_date` tinytext NOT NULL,\n"
             + "  `datasource` varchar(255) NOT NULL,\n"
-            + "  `payload` longtext NOT NULL,\n"
-            + "  `status_payload` longtext NOT NULL,\n"
-            + "  `version` tinytext,\n"
+            + "  `payload` longblob NOT NULL,\n"
+            + "  `status_payload` longblob NOT NULL,\n"
             + "  `active` tinyint(1) NOT NULL DEFAULT '0',\n"
             + "  PRIMARY KEY (`id`)\n"
             + ")",
@@ -101,7 +100,7 @@ public class DbConnector
             "CREATE TABLE `%s` (\n"
             + "  `id` bigint(20) NOT NULL AUTO_INCREMENT,\n"
             + "  `task_id` varchar(255) DEFAULT NULL,\n"
-            + "  `log_payload` longtext,\n"
+            + "  `log_payload` longblob,\n"
             + "  PRIMARY KEY (`id`),\n"
             + "  KEY `task_id` (`task_id`)\n"
             + ")",
@@ -119,7 +118,7 @@ public class DbConnector
             "CREATE TABLE `%s` (\n"
             + "  `id` bigint(20) NOT NULL AUTO_INCREMENT,\n"
             + "  `task_id` varchar(255) DEFAULT NULL,\n"
-            + "  `lock_payload` longtext,\n"
+            + "  `lock_payload` longblob,\n"
             + "  PRIMARY KEY (`id`),\n"
             + "  KEY `task_id` (`task_id`)\n"
             + ")",
@@ -183,7 +182,7 @@ public class DbConnector
     dataSource.setUrl(config.getDatabaseConnectURI());
 
     if (config.isValidationQuery()) {
-      dataSource.setValidationQuery("SELECT 1");
+      dataSource.setValidationQuery(config.getValidationQuery());
       dataSource.setTestOnBorrow(true);
     }
 
