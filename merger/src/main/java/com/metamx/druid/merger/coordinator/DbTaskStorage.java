@@ -89,9 +89,9 @@ public class DbTaskStorage implements TaskStorage
                     .bind("id", task.getId())
                     .bind("created_date", new DateTime().toString())
                     .bind("datasource", task.getDataSource())
-                    .bind("payload", jsonMapper.writeValueAsString(task))
+                    .bind("payload", jsonMapper.writeValueAsBytes(task))
                     .bind("active", status.isRunnable() ? 1 : 0)
-                    .bind("status_payload", jsonMapper.writeValueAsString(status))
+                    .bind("status_payload", jsonMapper.writeValueAsBytes(status))
                     .execute();
 
               return null;
@@ -129,7 +129,7 @@ public class DbTaskStorage implements TaskStorage
             )
                   .bind("id", status.getId())
                   .bind("active", status.isRunnable() ? 1 : 0)
-                  .bind("status_payload", jsonMapper.writeValueAsString(status))
+                  .bind("status_payload", jsonMapper.writeValueAsBytes(status))
                   .execute();
           }
         }
@@ -163,7 +163,7 @@ public class DbTaskStorage implements TaskStorage
               return Optional.absent();
             } else {
               final Map<String, Object> dbStatus = Iterables.getOnlyElement(dbTasks);
-              return Optional.of(jsonMapper.readValue(dbStatus.get("payload").toString(), Task.class));
+              return Optional.of(jsonMapper.readValue((byte[])dbStatus.get("payload"), Task.class));
             }
           }
         }
@@ -193,7 +193,7 @@ public class DbTaskStorage implements TaskStorage
               return Optional.absent();
             } else {
               final Map<String, Object> dbStatus = Iterables.getOnlyElement(dbStatuses);
-              return Optional.of(jsonMapper.readValue(dbStatus.get("status_payload").toString(), TaskStatus.class));
+              return Optional.of(jsonMapper.readValue((byte[])dbStatus.get("status_payload"), TaskStatus.class));
             }
           }
         }
@@ -223,8 +223,8 @@ public class DbTaskStorage implements TaskStorage
               final String id = row.get("id").toString();
 
               try {
-                final Task task = jsonMapper.readValue(row.get("payload").toString(), Task.class);
-                final TaskStatus status = jsonMapper.readValue(row.get("status_payload").toString(), TaskStatus.class);
+                final Task task = jsonMapper.readValue((byte[])row.get("payload"), Task.class);
+                final TaskStatus status = jsonMapper.readValue((byte[])row.get("status_payload"), TaskStatus.class);
 
                 if (status.isRunnable()) {
                   tasks.add(task);
@@ -266,7 +266,7 @@ public class DbTaskStorage implements TaskStorage
                 )
             )
                          .bind("task_id", taskid)
-                         .bind("lock_payload", jsonMapper.writeValueAsString(taskLock))
+                         .bind("lock_payload", jsonMapper.writeValueAsBytes(taskLock))
                          .execute();
           }
         }
@@ -346,7 +346,7 @@ public class DbTaskStorage implements TaskStorage
                 )
             )
                          .bind("task_id", task.getId())
-                         .bind("log_payload", jsonMapper.writeValueAsString(taskAction))
+                         .bind("log_payload", jsonMapper.writeValueAsBytes(taskAction))
                          .execute();
           }
         }
@@ -379,7 +379,7 @@ public class DbTaskStorage implements TaskStorage
               public TaskAction apply(Map<String, Object> row)
               {
                 try {
-                  return jsonMapper.readValue(row.get("log_payload").toString(), TaskAction.class);
+                  return jsonMapper.readValue((byte[])row.get("log_payload"), TaskAction.class);
                 } catch(Exception e) {
                   throw Throwables.propagate(e);
                 }
@@ -411,7 +411,7 @@ public class DbTaskStorage implements TaskStorage
 
             final Map<Long, TaskLock> retMap = Maps.newHashMap();
             for(final Map<String, Object> row : dbTaskLocks) {
-              retMap.put((Long)row.get("id"), jsonMapper.readValue(row.get("lock_payload").toString(), TaskLock.class));
+              retMap.put((Long)row.get("id"), jsonMapper.readValue((byte[])row.get("lock_payload"), TaskLock.class));
             }
             return retMap;
           }
