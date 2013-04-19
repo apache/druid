@@ -41,4 +41,10 @@ public abstract class DbConnectorConfig
   @JsonProperty("segmentTable")
   @Config("druid.database.segmentTable")
   public abstract String getSegmentTable();
+
+  @JsonProperty("validationQuery")
+  @Config("druid.database.validation")
+  public boolean isValidationQuery() {
+    return false;
+  }
 }

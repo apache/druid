@@ -125,6 +125,11 @@ public class DbConnector
     dataSource.setPassword(config.getDatabasePassword());
     dataSource.setUrl(config.getDatabaseConnectURI());
 
+    if (config.isValidationQuery()) {
+      dataSource.setValidationQuery("SELECT 1");
+      dataSource.setTestOnBorrow(true);
+    }
+
     return dataSource;
   }
 }
