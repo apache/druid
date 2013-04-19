@@ -366,6 +366,12 @@ public class RealtimeIndexTask extends AbstractTask
     return segmentGranularity;
   }
 
+  @JsonProperty
+  public DateTime getMinTime()
+  {
+    return minTime;
+  }
+
   public static class TaskActionSegmentPublisher implements SegmentPublisher
   {
     final Task task;
