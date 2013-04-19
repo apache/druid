@@ -28,6 +28,9 @@ public abstract class ServiceDiscoveryConfig extends CuratorConfig
   @Config("druid.service")
   public abstract String getServiceName();
 
+  @Config("druid.host")
+  public abstract String getHost();
+
   @Config("druid.port")
   public abstract int getPort();
 
