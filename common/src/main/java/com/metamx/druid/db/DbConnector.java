@@ -71,6 +71,63 @@ public class DbConnector
     );
   }
 
+  public static void createTaskTable(final DBI dbi, final String taskTableName)
+  {
+    createTable(
+        dbi,
+        taskTableName,
+        String.format(
+            "CREATE TABLE `%s` (\n"
+            + "  `id` varchar(255) NOT NULL,\n"
+            + "  `created_date` tinytext NOT NULL,\n"
+            + "  `datasource` varchar(255) NOT NULL,\n"
+            + "  `payload` longtext NOT NULL,\n"
+            + "  `status_payload` longtext NOT NULL,\n"
+            + "  `version` tinytext,\n"
+            + "  `active` tinyint(1) NOT NULL DEFAULT '0',\n"
+            + "  PRIMARY KEY (`id`)\n"
+            + ")",
+            taskTableName
+        )
+    );
+  }
+
+  public static void createTaskLogTable(final DBI dbi, final String taskLogsTableName)
+  {
+    createTable(
+        dbi,
+        taskLogsTableName,
+        String.format(
+            "CREATE TABLE `%s` (\n"
+            + "  `id` bigint(20) NOT NULL AUTO_INCREMENT,\n"
+            + "  `task_id` varchar(255) DEFAULT NULL,\n"
+            + "  `log_payload` longtext,\n"
+            + "  PRIMARY KEY (`id`),\n"
+            + "  KEY `task_id` (`task_id`)\n"
+            + ")",
+            taskLogsTableName
+        )
+    );
+  }
+
+  public static void createTaskLockTable(final DBI dbi, final String taskLocksTableName)
+  {
+    createTable(
+        dbi,
+        taskLocksTableName,
+        String.format(
+            "CREATE TABLE `%s` (\n"
+            + "  `id` bigint(20) NOT NULL AUTO_INCREMENT,\n"
+            + "  `task_id` varchar(255) DEFAULT NULL,\n"
+            + "  `lock_payload` longtext,\n"
+            + "  PRIMARY KEY (`id`),\n"
+            + "  KEY `task_id` (`task_id`)\n"
+            + ")",
+            taskLocksTableName
+        )
+    );
+  }
+
   public static void createTable(
       final DBI dbi,
       final String tableName,

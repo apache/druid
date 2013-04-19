@@ -82,14 +82,15 @@ public class DbTaskStorage implements TaskStorage
             {
               handle.createStatement(
                   String.format(
-                      "INSERT INTO %s (id, created_date, payload, status_code, status_payload) VALUES (:id, :created_date, :payload, :status_code, :status_payload)",
+                      "INSERT INTO %s (id, created_date, datasource, payload, active, status_payload) VALUES (:id, :created_date, :datasource, :payload, :active, :status_payload)",
                       dbConnectorConfig.getTaskTable()
                   )
               )
                     .bind("id", task.getId())
                     .bind("created_date", new DateTime().toString())
+                    .bind("datasource", task.getDataSource())
                     .bind("payload", jsonMapper.writeValueAsString(task))
-                    .bind("status_code", status.getStatusCode().toString())
+                    .bind("active", status.isRunnable() ? 1 : 0)
                     .bind("status_payload", jsonMapper.writeValueAsString(status))
                     .execute();
 
@@ -122,13 +123,12 @@ public class DbTaskStorage implements TaskStorage
           {
             return handle.createStatement(
                 String.format(
-                    "UPDATE %s SET status_code = :status_code, status_payload = :status_payload WHERE id = :id AND status_code = :old_status_code",
+                    "UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = 1",
                     dbConnectorConfig.getTaskTable()
                 )
             )
                   .bind("id", status.getId())
-                  .bind("status_code", status.getStatusCode().toString())
-                  .bind("old_status_code", TaskStatus.Status.RUNNING.toString())
+                  .bind("active", status.isRunnable() ? 1 : 0)
                   .bind("status_payload", jsonMapper.writeValueAsString(status))
                   .execute();
           }
@@ -136,7 +136,7 @@ public class DbTaskStorage implements TaskStorage
     );
 
     if(updated != 1) {
-      throw new IllegalStateException(String.format("Running task not found: %s", status.getId()));
+      throw new IllegalStateException(String.format("Active task not found: %s", status.getId()));
     }
   }
 
@@ -201,34 +201,40 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<String> getRunningTaskIds()
+  public List<Task> getRunningTasks()
   {
     return dbi.withHandle(
-        new HandleCallback<List<String>>()
+        new HandleCallback<List<Task>>()
         {
           @Override
-          public List<String> withHandle(Handle handle) throws Exception
+          public List<Task> withHandle(Handle handle) throws Exception
           {
             final List<Map<String, Object>> dbTasks =
                 handle.createQuery(
                     String.format(
-                        "SELECT id FROM %s WHERE status_code = :status_code",
+                        "SELECT id, payload, status_payload FROM %s WHERE active = 1",
                         dbConnectorConfig.getTaskTable()
                     )
                 )
-                      .bind("status_code", TaskStatus.Status.RUNNING.toString())
                       .list();
 
-            return Lists.transform(
-                dbTasks, new Function<Map<String, Object>, String>()
-            {
-              @Override
-              public String apply(Map<String, Object> row)
-              {
-                return row.get("id").toString();
+            final ImmutableList.Builder<Task> tasks = ImmutableList.builder();
+            for (final Map<String, Object> row : dbTasks) {
+              final String id = row.get("id").toString();
+
+              try {
+                final Task task = jsonMapper.readValue(row.get("payload").toString(), Task.class);
+                final TaskStatus status = jsonMapper.readValue(row.get("status_payload").toString(), TaskStatus.class);
+
+                if (status.isRunnable()) {
+                  tasks.add(task);
+                }
+              } catch (Exception e) {
+                log.makeAlert(e, "Failed to parse task payload").addData("task", id).emit();
               }
             }
-            );
+
+            return tasks.build();
           }
         }
     );
