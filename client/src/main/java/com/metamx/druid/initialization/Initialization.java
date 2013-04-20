@@ -278,6 +278,7 @@ public class Initialization
     final ServiceInstance serviceInstance =
         ServiceInstance.builder()
                        .name(config.getServiceName().replace('/', ':'))
+                       .address(addressFromHost(config.getHost()))
                        .port(config.getPort())
                        .build();
     final ServiceDiscovery serviceDiscovery =
@@ -359,6 +360,16 @@ public class Initialization
   public static String makePropPath(String basePath)
   {
     return String.format("%s/%s", basePath, PROP_SUBPATH);
+  }
+
+  public static String addressFromHost(final String host)
+  {
+    final int colon = host.indexOf(':');
+    if (colon < 0) {
+      return host;
+    } else {
+      return host.substring(0, colon);
+    }
   }
 
   /**

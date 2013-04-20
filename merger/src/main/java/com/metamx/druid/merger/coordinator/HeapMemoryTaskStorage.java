@@ -128,15 +128,15 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<String> getRunningTaskIds()
+  public List<Task> getRunningTasks()
   {
     giant.lock();
 
     try {
-      final ImmutableList.Builder<String> listBuilder = ImmutableList.builder();
+      final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
       for(final TaskStuff taskStuff : tasks.values()) {
         if(taskStuff.getStatus().isRunnable()) {
-          listBuilder.add(taskStuff.getTask().getId());
+          listBuilder.add(taskStuff.getTask());
         }
       }
 

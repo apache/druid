@@ -77,9 +77,9 @@ public interface TaskStorage
   public List<TaskAction> getAuditLogs(String taskid);
 
   /**
-   * Returns a list of currently-running task IDs as stored in the storage facility, in no particular order.
+   * Returns a list of currently-running tasks as stored in the storage facility, in no particular order.
    */
-  public List<String> getRunningTaskIds();
+  public List<Task> getRunningTasks();
 
   /**
    * Returns a list of locks for a particular task.

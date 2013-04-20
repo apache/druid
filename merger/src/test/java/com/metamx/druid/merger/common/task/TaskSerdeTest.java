@@ -205,7 +205,8 @@ public class TaskSerdeTest
         null,
         null,
         new Period("PT10M"),
-        IndexGranularity.HOUR
+        IndexGranularity.HOUR,
+        null
     );
 
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
