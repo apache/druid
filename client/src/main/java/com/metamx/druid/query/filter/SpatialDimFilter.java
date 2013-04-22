@@ -39,6 +39,7 @@ public class SpatialDimFilter implements DimFilter
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
+    //FIXME
     Preconditions.checkArgument(dimension.endsWith(".geo"), "must filter over geo dimension!");
     Preconditions.checkArgument(bound != null, "bound must not be null");
 
@@ -49,10 +50,12 @@ public class SpatialDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
+    byte[] dimBytes = dimension.getBytes();
     byte[] boundBytes = bound.getCacheKey();
 
-    return ByteBuffer.allocate(1 + boundBytes.length)
+    return ByteBuffer.allocate(1 + dimBytes.length + boundBytes.length)
                      .put(DimFilterCacheHelper.SPATIAL_CACHE_ID)
+                     .put(dimBytes)
                      .put(boundBytes)
                      .array();
   }
