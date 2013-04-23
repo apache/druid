@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
-import com.metamx.druid.processing.MetricSelectorFactory;
+import com.metamx.druid.processing.ColumnSelectorFactory;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
@@ -56,7 +56,7 @@ public class HistogramAggregatorFactory implements AggregatorFactory
     for(int i = 0; i < breaksList.size(); ++i) this.breaks[i] = breaksList.get(i);
   }
   @Override
-  public Aggregator factorize(MetricSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new HistogramAggregator(
         name,
@@ -66,7 +66,7 @@ public class HistogramAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(MetricSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new HistogramBufferAggregator(
         metricFactory.makeFloatMetricSelector(fieldName),

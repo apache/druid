@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,23 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.initialization;
+package com.metamx.druid.aggregation;
 
-import org.skife.config.Config;
+import com.metamx.druid.processing.ComplexMetricSelector;
+import com.metamx.druid.processing.FloatMetricSelector;
+import com.metamx.druid.processing.ObjectColumnSelector;
 
-/**
- */
-public abstract class ServiceDiscoveryConfig extends CuratorConfig
+public class MetricSelectorUtils
 {
-  @Config("druid.service")
-  public abstract String getServiceName();
+  public static ObjectColumnSelector<Float> wrap(final FloatMetricSelector selector)
+  {
+    return new ObjectColumnSelector<Float>()
+    {
+      @Override
+      public Class<Float> classOfObject()
+      {
+        return Float.TYPE;
+      }
 
-  @Config("druid.host")
-  public abstract String getHost();
-
-  @Config("druid.port")
-  public abstract int getPort();
-
-  @Config("druid.zk.paths.discoveryPath")
-  public abstract String getDiscoveryPath();
+      @Override
+      public Float get()
+      {
+        return selector.get();
+      }
+    };
+  }
 }

@@ -22,8 +22,9 @@ package com.metamx.druid.processing;
 /**
  * Factory class for MetricSelectors
  */
-public interface MetricSelectorFactory
+public interface ColumnSelectorFactory
 {
   public FloatMetricSelector makeFloatMetricSelector(String metricName);
   public ComplexMetricSelector makeComplexMetricSelector(String metricName);
+  public ObjectColumnSelector makeObjectColumnSelector(String columnName);
 }

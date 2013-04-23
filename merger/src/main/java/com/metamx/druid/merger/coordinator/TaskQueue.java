@@ -98,10 +98,8 @@ public class TaskQueue
       // Get all running tasks and their locks
       final Multimap<TaskLock, Task> tasksByLock = ArrayListMultimap.create();
 
-      for (final String taskId : taskStorage.getRunningTaskIds()) {
+      for (final Task task : taskStorage.getRunningTasks()) {
         try {
-          // .get since TaskStorage semantics should mean this task is always found
-          final Task task = taskStorage.getTask(taskId).get();
           final List<TaskLock> taskLocks = taskStorage.getLocks(task.getId());
 
           queue.add(task);
@@ -111,16 +109,8 @@ public class TaskQueue
           }
         }
         catch (Exception e) {
-          log.makeAlert("Failed to bootstrap task").addData("task", taskId).emit();
-
-          // A bit goofy to special-case JsonProcessingException, but we don't want to suppress bootstrap problems on
-          // any old Exception or even IOException...
-          if (e instanceof JsonProcessingException || e.getCause() instanceof JsonProcessingException) {
-            // Mark this task a failure, and continue bootstrapping
-            taskStorage.setStatus(TaskStatus.failure(taskId));
-          } else {
-            throw Throwables.propagate(e);
-          }
+          log.makeAlert("Failed to bootstrap task").addData("task", task.getId()).emit();
+          throw Throwables.propagate(e);
         }
       }
 

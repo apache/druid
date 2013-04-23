@@ -37,15 +37,21 @@ import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.Aggregator;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
+import com.metamx.druid.index.column.Column;
+import com.metamx.druid.index.column.ComplexColumn;
+import com.metamx.druid.index.column.DictionaryEncodedColumn;
+import com.metamx.druid.index.column.GenericColumn;
+import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.index.v1.serde.ComplexMetricExtractor;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
+import com.metamx.druid.processing.ColumnSelectorFactory;
 import com.metamx.druid.processing.ComplexMetricSelector;
 import com.metamx.druid.processing.FloatMetricSelector;
-import com.metamx.druid.processing.MetricSelectorFactory;
+import com.metamx.druid.processing.ObjectColumnSelector;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -179,7 +185,7 @@ public class IncrementalIndex implements Iterable<Row>
       for (int i = 0; i < metrics.length; ++i) {
         final AggregatorFactory agg = metrics[i];
         aggs[i] = agg.factorize(
-            new MetricSelectorFactory()
+            new ColumnSelectorFactory()
             {
               @Override
               public FloatMetricSelector makeFloatMetricSelector(String metric)
@@ -199,6 +205,7 @@ public class IncrementalIndex implements Iterable<Row>
               public ComplexMetricSelector makeComplexMetricSelector(final String metric)
               {
                 final String typeName = agg.getTypeName();
+
                 final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
 
                 if (serde == null) {
@@ -220,6 +227,53 @@ public class IncrementalIndex implements Iterable<Row>
                   public Object get()
                   {
                     return extractor.extractValue(in, metricName);
+                  }
+                };
+              }
+
+              @Override
+              public ObjectColumnSelector makeObjectColumnSelector(String column)
+              {
+                final String typeName = agg.getTypeName();
+                final String columnName = column.toLowerCase();
+
+                if(typeName.equals("float")) {
+                  return new ObjectColumnSelector<Float>()
+                  {
+                    @Override
+                    public Class classOfObject()
+                    {
+                      return Float.TYPE;
+                    }
+
+                    @Override
+                    public Float get()
+                    {
+                      return in.getFloatMetric(columnName);
+                    }
+                  };
+                }
+
+                final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+
+                if (serde == null) {
+                  throw new ISE("Don't know how to handle type[%s]", typeName);
+                }
+
+                final ComplexMetricExtractor extractor = serde.getExtractor();
+
+                return new ObjectColumnSelector()
+                {
+                  @Override
+                  public Class classOfObject()
+                  {
+                    return extractor.extractedClass();
+                  }
+
+                  @Override
+                  public Object get()
+                  {
+                    return extractor.extractValue(in, columnName);
                   }
                 };
               }

@@ -606,6 +606,10 @@ public class IndexerCoordinatorNode extends RegisteringNode
         taskStorage = new HeapMemoryTaskStorage();
       } else if (config.getStorageImpl().equals("db")) {
         final IndexerDbConnectorConfig dbConnectorConfig = configFactory.build(IndexerDbConnectorConfig.class);
+        DbConnector.createTaskTable(dbi, dbConnectorConfig.getTaskTable());
+        DbConnector.createTaskLogTable(dbi, dbConnectorConfig.getTaskLogTable());
+        DbConnector.createTaskLockTable(dbi, dbConnectorConfig.getTaskLockTable());
+
         taskStorage = new DbTaskStorage(
             getJsonMapper(),
             dbConnectorConfig,
