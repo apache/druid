@@ -376,10 +376,6 @@ public class InfoResource
       @QueryParam("interval") final String interval
   )
   {
-    // TODO: will likely be all rewritten once Guice introduced
-    if (indexingServiceClient == null) {
-      return Response.status(Response.Status.OK).entity(ImmutableMap.of("error", "no indexing service found")).build();
-    }
     if (kill != null && Boolean.valueOf(kill)) {
       indexingServiceClient.killSegments(dataSourceName, new Interval(interval));
     } else {

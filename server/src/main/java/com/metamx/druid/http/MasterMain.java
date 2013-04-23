@@ -178,15 +178,15 @@ public class MasterMain
         lifecycle
     );
 
-    IndexingServiceClient indexingServiceClient = null;
+    ServiceProvider serviceProvider = null;
     if (druidMasterConfig.getMergerServiceName() != null) {
-      ServiceProvider serviceProvider = Initialization.makeServiceProvider(
+      serviceProvider = Initialization.makeServiceProvider(
           druidMasterConfig.getMergerServiceName(),
           serviceDiscovery,
           lifecycle
       );
-      indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider);
     }
+    IndexingServiceClient indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider);
 
     final DruidClusterInfo druidClusterInfo = new DruidClusterInfo(
         configFactory.build(DruidClusterInfoConfig.class),
