@@ -56,7 +56,7 @@ public interface TaskStorage
    * Returns task as stored in the storage facility. If the task ID does not exist, this will return an
    * absentee Optional.
    *
-   * TODO -- This method probably wants to be combined with {@link #getStatus}.
+   * NOTE: This method really feels like it should be combined with {@link #getStatus}.  Expect that in the future.
    */
   public Optional<Task> getTask(String taskid);
 

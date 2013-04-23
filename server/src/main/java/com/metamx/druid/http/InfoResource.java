@@ -372,7 +372,8 @@ public class InfoResource
       @QueryParam("interval") final String interval
   )
   {
-    // TODO: will likely be all rewritten once Guice introduced
+    // This is weird enough to have warranted some sort of T0D0 comment at one point, but it will likely be all
+    // rewritten once Guice introduced, and that's the brunt of the information that was in the original T0D0 too.
     if (indexingServiceClient == null) {
       return Response.status(Response.Status.OK).entity(ImmutableMap.of("error", "no indexing service found")).build();
     }

@@ -297,8 +297,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     );
     staticContext.setBaseResource(resourceCollection);
 
-    // TODO -- Need a QueryServlet and some kind of QuerySegmentWalker if we want to support querying tasks
-    // TODO -- (e.g. for realtime) in local mode
+    // If we want to support querying tasks (e.g. for realtime in local mode), we need a QueryServlet here.
 
     final Context root = new Context(server, "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
