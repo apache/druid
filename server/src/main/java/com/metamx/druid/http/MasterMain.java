@@ -39,8 +39,6 @@ import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
-import com.metamx.druid.coordination.DruidClusterInfo;
-import com.metamx.druid.coordination.DruidClusterInfoConfig;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseRuleManagerConfig;
 import com.metamx.druid.db.DatabaseSegmentManager;
@@ -187,11 +185,6 @@ public class MasterMain
       indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider);
     }
 
-    final DruidClusterInfo druidClusterInfo = new DruidClusterInfo(
-        configFactory.build(DruidClusterInfoConfig.class),
-        null // TODO
-    );
-
     final ConfigManagerConfig configManagerConfig = configFactory.build(ConfigManagerConfig.class);
     DbConnector.createConfigTable(dbi, configManagerConfig.getConfigTable());
     JacksonConfigManager configManager = new JacksonConfigManager(
@@ -204,7 +197,6 @@ public class MasterMain
 
     final DruidMaster master = new DruidMaster(
         druidMasterConfig,
-        druidClusterInfo,
         configManager,
         databaseSegmentManager,
         serverInventoryThingie,
@@ -244,7 +236,6 @@ public class MasterMain
             serverInventoryThingie,
             databaseSegmentManager,
             databaseRuleManager,
-            druidClusterInfo,
             master,
             jsonMapper,
             indexingServiceClient
@@ -265,9 +256,18 @@ public class MasterMain
       public URL getRedirectURL(String queryString, String requestURI)
       {
         try {
-          return (queryString == null) ?
-                 new URL(String.format("http://%s%s", druidClusterInfo.getMasterHost(), requestURI)) :
-                 new URL(String.format("http://%s%s?%s", druidClusterInfo.getMasterHost(), requestURI, queryString));
+          final String currentMaster = master.getCurrentMaster();
+          if (currentMaster == null) {
+            return null;
+          }
+
+          String location = String.format("http://%s%s", currentMaster, requestURI);
+
+          if (queryString != null) {
+            location = String.format("%s?%s", location, queryString);
+          }
+
+          return new URL(location);
         }
         catch (Exception e) {
           throw Throwables.propagate(e);

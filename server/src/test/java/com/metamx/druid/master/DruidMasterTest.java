@@ -140,7 +140,6 @@ public class DruidMasterTest
           }
         },
         null,
-        null,
         databaseSegmentManager,
         serverInventoryThingie,
         null,

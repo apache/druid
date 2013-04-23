@@ -25,10 +25,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.shard.NoneShardSpec;
-import com.metamx.phonebook.PhoneBook;
-import com.netflix.curator.framework.CuratorFramework;
 import junit.framework.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -40,8 +37,6 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */

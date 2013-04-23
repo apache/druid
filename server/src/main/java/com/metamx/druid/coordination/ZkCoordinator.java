@@ -21,15 +21,11 @@ package com.metamx.druid.coordination;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.curator.announcement.Announcer;
@@ -37,25 +33,15 @@ import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.phonebook.PhoneBook;
-import com.metamx.phonebook.PhoneBookPeon;
-
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
 import com.netflix.curator.utils.ZKPaths;
-import org.apache.zookeeper.CreateMode;
-import org.joda.time.DateTime;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 /**
  */
@@ -72,7 +58,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private final CuratorFramework curator;
   private final ServerManager serverManager;
   private final ServiceEmitter emitter;
-  private final List<Pair<String, PhoneBookPeon<?>>> peons;
 
   private final String loadQueueLocation;
   private final String servedSegmentsLocation;
@@ -98,7 +83,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     this.serverManager = serverManager;
     this.emitter = emitter;
 
-    this.peons = new ArrayList<Pair<String, PhoneBookPeon<?>>>();
     this.loadQueueLocation = ZKPaths.makePath(config.getLoadQueueLocation(), me.getName());
     this.servedSegmentsLocation = ZKPaths.makePath(config.getServedSegmentsLocation(), me.getName());
   }

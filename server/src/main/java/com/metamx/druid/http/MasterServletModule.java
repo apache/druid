@@ -23,11 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
 import com.metamx.druid.client.ServerInventoryThingie;
-import com.metamx.druid.coordination.DruidClusterInfo;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.master.DruidMaster;
-import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
@@ -40,7 +39,6 @@ public class MasterServletModule extends JerseyServletModule
   private final ServerInventoryThingie serverInventoryThingie;
   private final DatabaseSegmentManager segmentInventoryManager;
   private final DatabaseRuleManager databaseRuleManager;
-  private final DruidClusterInfo druidClusterInfo;
   private final DruidMaster master;
   private final ObjectMapper jsonMapper;
   private final IndexingServiceClient indexingServiceClient;
@@ -49,7 +47,6 @@ public class MasterServletModule extends JerseyServletModule
       ServerInventoryThingie serverInventoryThingie,
       DatabaseSegmentManager segmentInventoryManager,
       DatabaseRuleManager databaseRuleManager,
-      DruidClusterInfo druidClusterInfo,
       DruidMaster master,
       ObjectMapper jsonMapper,
       IndexingServiceClient indexingServiceClient
@@ -58,7 +55,6 @@ public class MasterServletModule extends JerseyServletModule
     this.serverInventoryThingie = serverInventoryThingie;
     this.segmentInventoryManager = segmentInventoryManager;
     this.databaseRuleManager = databaseRuleManager;
-    this.druidClusterInfo = druidClusterInfo;
     this.master = master;
     this.jsonMapper = jsonMapper;
     this.indexingServiceClient = indexingServiceClient;
@@ -73,7 +69,6 @@ public class MasterServletModule extends JerseyServletModule
     bind(DatabaseSegmentManager.class).toInstance(segmentInventoryManager);
     bind(DatabaseRuleManager.class).toInstance(databaseRuleManager);
     bind(DruidMaster.class).toInstance(master);
-    bind(DruidClusterInfo.class).toInstance(druidClusterInfo);
     bind(IndexingServiceClient.class).toInstance(indexingServiceClient);
 
     serve("/*").with(GuiceContainer.class);

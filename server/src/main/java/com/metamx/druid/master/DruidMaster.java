@@ -42,7 +42,6 @@ import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.JacksonConfigManager;
-import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.index.v1.IndexIO;
@@ -79,7 +78,6 @@ public class DruidMaster
   private volatile boolean master = false;
 
   private final DruidMasterConfig config;
-  private final DruidClusterInfo clusterInfo;
   private final JacksonConfigManager configManager;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final ServerInventoryThingie serverInventoryThingie;
@@ -95,7 +93,6 @@ public class DruidMaster
 
   public DruidMaster(
       DruidMasterConfig config,
-      DruidClusterInfo clusterInfo,
       JacksonConfigManager configManager,
       DatabaseSegmentManager databaseSegmentManager,
       ServerInventoryThingie serverInventoryThingie,
@@ -108,7 +105,6 @@ public class DruidMaster
   )
   {
     this.config = config;
-    this.clusterInfo = clusterInfo;
     this.configManager = configManager;
 
     this.databaseSegmentManager = databaseSegmentManager;
@@ -199,6 +195,17 @@ public class DruidMaster
   public void enableDatasource(String ds)
   {
     databaseSegmentManager.enableDatasource(ds);
+  }
+
+  public String getCurrentMaster()
+  {
+    try {
+      final LeaderLatch latch = leaderLatch.get();
+      return latch == null ? null : latch.getLeader().getId();
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   public void moveSegment(String from, String to, String segmentName, final LoadPeonCallback callback)
@@ -618,9 +625,9 @@ public class DruidMaster
     {
       try {
         synchronized (lock) {
-          Map<String, String> currLeader = clusterInfo.lookupCurrentLeader();
-          if (currLeader == null || !config.getHost().equals(currLeader.get("host"))) {
-            log.info("I thought I was the master, but really [%s] is.  Phooey.", currLeader);
+          final LeaderLatch latch = leaderLatch.get();
+          if (latch == null || !latch.hasLeadership()) {
+            log.info("[%s] is master, not me.  Phooey.", latch == null ? null : latch.getLeader().getId());
             stopBeingMaster();
             return;
           }

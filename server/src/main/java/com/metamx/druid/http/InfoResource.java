@@ -30,11 +30,10 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryThingie;
-import com.metamx.druid.coordination.DruidClusterInfo;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.master.DruidMaster;
-import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.master.rules.Rule;
 import org.joda.time.Interval;
 
@@ -65,7 +64,6 @@ public class InfoResource
   private final ServerInventoryThingie serverInventoryThingie;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final DatabaseRuleManager databaseRuleManager;
-  private final DruidClusterInfo druidClusterInfo;
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
@@ -74,7 +72,6 @@ public class InfoResource
       ServerInventoryThingie serverInventoryThingie,
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
-      DruidClusterInfo druidClusterInfo,
       IndexingServiceClient indexingServiceClient
   )
   {
@@ -82,7 +79,6 @@ public class InfoResource
     this.serverInventoryThingie = serverInventoryThingie;
     this.databaseSegmentManager = databaseSegmentManager;
     this.databaseRuleManager = databaseRuleManager;
-    this.druidClusterInfo = druidClusterInfo;
     this.indexingServiceClient = indexingServiceClient;
   }
 
@@ -92,7 +88,7 @@ public class InfoResource
   public Response getMaster()
   {
     return Response.status(Response.Status.OK)
-                   .entity(druidClusterInfo.lookupCurrentLeader())
+                   .entity(master.getCurrentMaster())
                    .build();
   }
 
