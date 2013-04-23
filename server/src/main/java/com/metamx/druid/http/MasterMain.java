@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
@@ -31,8 +32,10 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.ServerInventoryManager;
-import com.metamx.druid.client.ServerInventoryManagerConfig;
+import com.metamx.druid.client.ServerInventoryThingie;
+import com.metamx.druid.client.ServerInventoryThingieConfig;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
+import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
@@ -47,13 +50,11 @@ import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
-import com.metamx.druid.initialization.ZkClientConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterConfig;
-import com.metamx.druid.client.indexing.IndexingServiceClient;
-import com.metamx.druid.master.LoadQueuePeon;
+import com.metamx.druid.master.LoadQueueTaskMaster;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -67,12 +68,9 @@ import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
-import com.metamx.phonebook.PhoneBook;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.x.discovery.ServiceDiscovery;
 import com.netflix.curator.x.discovery.ServiceProvider;
-import org.I0Itec.zkclient.ZkClient;
-
 import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
@@ -84,7 +82,8 @@ import org.skife.jdbi.v2.DBI;
 
 import java.net.URL;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -120,13 +119,21 @@ public class MasterMain
     );
     EmittingLogger.registerEmitter(emitter);
 
-    final ZkClient zkClient = Initialization.makeZkClient(configFactory.build(ZkClientConfig.class), lifecycle);
-
-    final PhoneBook masterYp = Initialization.createPhoneBook(jsonMapper, zkClient, "Master-ZKYP--%s", lifecycle);
     final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
 
-    final ServerInventoryManager serverInventoryManager =
-        new ServerInventoryManager(configFactory.build(ServerInventoryManagerConfig.class), masterYp);
+    final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
+    CuratorFramework curatorFramework = Initialization.makeCuratorFramework(
+        serviceDiscoveryConfig,
+        lifecycle
+    );
+
+    final ExecutorService exec = Executors.newFixedThreadPool(
+        1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryThingie-%s").build()
+    );
+    ServerInventoryThingie serverInventoryThingie = new ServerInventoryThingie(
+        configFactory.build(ServerInventoryThingieConfig.class), curatorFramework, exec, jsonMapper
+    );
+    lifecycle.addManagedInstance(serverInventoryThingie);
 
     final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
     final DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
@@ -166,12 +173,6 @@ public class MasterMain
 
     final DruidMasterConfig druidMasterConfig = configFactory.build(DruidMasterConfig.class);
 
-    final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
-    CuratorFramework curatorFramework = Initialization.makeCuratorFrameworkClient(
-        serviceDiscoveryConfig,
-        lifecycle
-    );
-
     final ServiceDiscovery serviceDiscovery = Initialization.makeServiceDiscoveryClient(
         curatorFramework,
         serviceDiscoveryConfig,
@@ -190,7 +191,7 @@ public class MasterMain
 
     final DruidClusterInfo druidClusterInfo = new DruidClusterInfo(
         configFactory.build(DruidClusterInfoConfig.class),
-        masterYp
+        null // TODO
     );
 
     final ConfigManagerConfig configManagerConfig = configFactory.build(ConfigManagerConfig.class);
@@ -199,18 +200,22 @@ public class MasterMain
         new ConfigManager(dbi, configManagerConfig), jsonMapper
     );
 
+    final LoadQueueTaskMaster taskMaster = new LoadQueueTaskMaster(
+        curatorFramework, jsonMapper, Execs.singleThreaded("Master-PeonExec--%d")
+    );
+
     final DruidMaster master = new DruidMaster(
         druidMasterConfig,
         druidClusterInfo,
         configManager,
         databaseSegmentManager,
-        serverInventoryManager,
+        serverInventoryThingie,
         databaseRuleManager,
-        masterYp,
+        curatorFramework,
         emitter,
         scheduledExecutorFactory,
-        new ConcurrentHashMap<String, LoadQueuePeon>(),
-        indexingServiceClient
+        indexingServiceClient,
+        taskMaster
     );
     lifecycle.addManagedInstance(master);
 
@@ -238,7 +243,7 @@ public class MasterMain
 
     final Injector injector = Guice.createInjector(
         new MasterServletModule(
-            serverInventoryManager,
+            serverInventoryThingie,
             databaseSegmentManager,
             databaseRuleManager,
             druidClusterInfo,

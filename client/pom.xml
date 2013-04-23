@@ -18,7 +18,8 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metamx.druid</groupId>
     <artifactId>druid-client</artifactId>
@@ -215,16 +216,16 @@
             </plugin>
 
             <plugin>
-              <groupId>org.antlr</groupId>
-              <artifactId>antlr4-maven-plugin</artifactId>
-              <executions>
-                <execution>
-                  <goals>
-                    <goal>antlr4</goal>
-                  </goals>
-                </execution>
-              </executions>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
-          </plugins>
+        </plugins>
     </build>
 </project>

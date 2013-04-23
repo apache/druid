@@ -17,19 +17,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client;
+package com.metamx.druid.curator.cache;
+
+import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 
 /**
  */
-public interface MutableServerView extends ServerView
+public interface PathChildrenCacheFactory
 {
-  public void clear();
-
-  public void addServer(DruidServer server);
-
-  public void removeServer(DruidServer server);
-
-  public void serverAddedSegment(DruidServer server, DataSegment segment);
-
-  public void serverRemovedSegment(DruidServer server, String segmentId);
+  public PathChildrenCache make(CuratorFramework curator, String path);
 }

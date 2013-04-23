@@ -17,24 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client;
+package com.metamx.druid.curator.cache;
 
-import org.skife.config.Config;
+import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
+
+import java.util.concurrent.ExecutorService;
 
 /**
  */
-public abstract class ClientConfig extends InventoryManagerConfig
+public class SimplePathChildrenCacheFactory implements PathChildrenCacheFactory
 {
-  public ClientConfig()
+  private final boolean cacheData;
+  private final boolean compressed;
+  private final ExecutorService exec;
+
+  public SimplePathChildrenCacheFactory(
+      boolean cacheData,
+      boolean compressed,
+      ExecutorService exec
+  )
   {
-    super(null, null);
+    this.cacheData = cacheData;
+    this.compressed = compressed;
+    this.exec = exec;
   }
 
   @Override
-  @Config("druid.zk.paths.announcementsPath")
-  public abstract String getInventoryIdPath();
-
-  @Override
-  @Config("druid.zk.paths.servedSegmentsPath")
-  public abstract String getInventoryPath();
+  public PathChildrenCache make(CuratorFramework curator, String path)
+  {
+    return new PathChildrenCache(curator, path, cacheData, compressed, exec);
+  }
 }

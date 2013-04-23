@@ -22,10 +22,10 @@ package com.metamx.druid.merger.coordinator.http;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.InputSupplier;
@@ -41,7 +41,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.RegisteringNode;
+import com.metamx.druid.QueryableNode;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
@@ -134,7 +134,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class IndexerCoordinatorNode extends RegisteringNode
+public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode>
 {
   private static final Logger log = new Logger(IndexerCoordinatorNode.class);
 
@@ -142,11 +142,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
   {
     return new Builder();
   }
-
-  private final Lifecycle lifecycle;
-  private final ObjectMapper jsonMapper;
-  private final Properties props;
-  private final ConfigurationObjectFactory configFactory;
 
   private RestS3Service s3Service = null;
   private List<Monitor> monitors = null;
@@ -158,7 +153,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private TaskStorage taskStorage = null;
   private TaskQueue taskQueue = null;
   private TaskLockbox taskLockbox = null;
-  private CuratorFramework curatorFramework = null;
   private IndexerZkConfig indexerZkConfig;
   private TaskRunnerFactory taskRunnerFactory = null;
   private ResourceManagementSchedulerFactory resourceManagementSchedulerFactory = null;
@@ -175,15 +169,11 @@ public class IndexerCoordinatorNode extends RegisteringNode
       Properties props,
       Lifecycle lifecycle,
       ObjectMapper jsonMapper,
+      ObjectMapper smileMapper,
       ConfigurationObjectFactory configFactory
   )
   {
-    super(ImmutableList.of(jsonMapper));
-
-    this.lifecycle = lifecycle;
-    this.props = props;
-    this.jsonMapper = jsonMapper;
-    this.configFactory = configFactory;
+    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
   public IndexerCoordinatorNode setEmitter(ServiceEmitter emitter)
@@ -222,12 +212,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
     return this;
   }
 
-  public IndexerCoordinatorNode setCuratorFramework(CuratorFramework curatorFramework)
-  {
-    this.curatorFramework = curatorFramework;
-    return this;
-  }
-
   public IndexerCoordinatorNode setTaskRunnerFactory(TaskRunnerFactory taskRunnerFactory)
   {
     this.taskRunnerFactory = taskRunnerFactory;
@@ -248,14 +232,14 @@ public class IndexerCoordinatorNode extends RegisteringNode
 
   public void doInit() throws Exception
   {
-    final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
+    final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(getLifecycle());
     initializeDB();
 
-    final ConfigManagerConfig managerConfig = configFactory.build(ConfigManagerConfig.class);
+    final ConfigManagerConfig managerConfig = getConfigFactory().build(ConfigManagerConfig.class);
     DbConnector.createConfigTable(dbi, managerConfig.getConfigTable());
     JacksonConfigManager configManager =
         new JacksonConfigManager(
-            lifecycle.addManagedInstance(
+            getLifecycle().addManagedInstance(
                 new ConfigManager(
                     dbi,
                     managerConfig
@@ -268,11 +252,10 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initializeMonitors();
     initializeIndexerCoordinatorConfig();
     initializeMergeDBCoordinator();
+    initializeJacksonSubtypes();
     initializeTaskStorage();
     initializeTaskLockbox();
     initializeTaskQueue();
-    initializeJacksonSubtypes();
-    initializeCurator();
     initializeIndexerZkConfig();
     initializeTaskActionClientFactory();
     initializeTaskRunnerFactory(configManager);
@@ -284,12 +267,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
 
     final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
     final MonitorScheduler monitorScheduler = new MonitorScheduler(
-        configFactory.build(MonitorSchedulerConfig.class),
+        getConfigFactory().build(MonitorSchedulerConfig.class),
         globalScheduledExec,
         emitter,
         monitors
     );
-    lifecycle.addManagedInstance(monitorScheduler);
+    getLifecycle().addManagedInstance(monitorScheduler);
 
     final Injector injector = Guice.createInjector(
         new IndexerCoordinatorServletModule(
@@ -358,11 +341,6 @@ public class IndexerCoordinatorNode extends RegisteringNode
     initialized = true;
   }
 
-  private ObjectMapper getJsonMapper()
-  {
-    return jsonMapper;
-  }
-
   private void initializeTaskActionClientFactory()
   {
     if (taskActionClientFactory == null) {
@@ -376,7 +354,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private void initializeTaskMasterLifecycle()
   {
     if (taskMasterLifecycle == null) {
-      final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
+      final ServiceDiscoveryConfig serviceDiscoveryConfig = getConfigFactory().build(ServiceDiscoveryConfig.class);
       taskMasterLifecycle = new TaskMasterLifecycle(
           taskQueue,
           taskActionClientFactory,
@@ -384,17 +362,17 @@ public class IndexerCoordinatorNode extends RegisteringNode
           serviceDiscoveryConfig,
           taskRunnerFactory,
           resourceManagementSchedulerFactory,
-          curatorFramework,
+          getCuratorFramework(),
           emitter
       );
-      lifecycle.addManagedInstance(taskMasterLifecycle);
+      getLifecycle().addManagedInstance(taskMasterLifecycle);
     }
   }
 
   private void initializePersistentTaskLogs() throws S3ServiceException
   {
     if (persistentTaskLogs == null) {
-      final TaskLogConfig taskLogConfig = configFactory.build(TaskLogConfig.class);
+      final TaskLogConfig taskLogConfig = getConfigFactory().build(TaskLogConfig.class);
       if (taskLogConfig.getLogStorageBucket() != null) {
         initializeS3Service();
         persistentTaskLogs = new S3TaskLogs(
@@ -444,21 +422,21 @@ public class IndexerCoordinatorNode extends RegisteringNode
       doInit();
     }
 
-    lifecycle.start();
+    getLifecycle().start();
   }
 
   @LifecycleStop
   public synchronized void stop()
   {
-    lifecycle.stop();
+    getLifecycle().stop();
   }
 
   private void initializeServer()
   {
     if (server == null) {
-      server = Initialization.makeJettyServer(configFactory.build(ServerConfig.class));
+      server = Initialization.makeJettyServer(getConfigFactory().build(ServerConfig.class));
 
-      lifecycle.addHandler(
+      getLifecycle().addHandler(
           new Lifecycle.Handler()
           {
             @Override
@@ -496,11 +474,11 @@ public class IndexerCoordinatorNode extends RegisteringNode
           HttpClientConfig.builder().withNumConnections(1).withReadTimeout(
               new Duration(
                   PropUtils.getProperty(
-                      props,
+                      getProps(),
                       "druid.emitter.timeOut"
                   )
               )
-          ).build(), lifecycle
+          ).build(), getLifecycle()
       );
     }
   }
@@ -509,24 +487,12 @@ public class IndexerCoordinatorNode extends RegisteringNode
   {
     if (emitter == null) {
       emitter = new ServiceEmitter(
-          PropUtils.getProperty(props, "druid.service"),
-          PropUtils.getProperty(props, "druid.host"),
-          Emitters.create(props, httpClient, getJsonMapper(), lifecycle)
+          PropUtils.getProperty(getProps(), "druid.service"),
+          PropUtils.getProperty(getProps(), "druid.host"),
+          Emitters.create(getProps(), httpClient, getJsonMapper(), getLifecycle())
       );
     }
     EmittingLogger.registerEmitter(emitter);
-  }
-
-  private void initializeS3Service() throws S3ServiceException
-  {
-    if(s3Service == null) {
-      s3Service = new RestS3Service(
-          new AWSCredentials(
-              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
-          )
-      );
-    }
   }
 
   private void initializeMonitors()
@@ -541,7 +507,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private void initializeDB()
   {
     if (dbConnectorConfig == null) {
-      dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
+      dbConnectorConfig = getConfigFactory().build(DbConnectorConfig.class);
     }
     if (dbi == null) {
       dbi = new DbConnector(dbConnectorConfig).getDBI();
@@ -551,8 +517,18 @@ public class IndexerCoordinatorNode extends RegisteringNode
   private void initializeIndexerCoordinatorConfig()
   {
     if (config == null) {
-      config = configFactory.build(IndexerCoordinatorConfig.class);
+      config = getConfigFactory().build(IndexerCoordinatorConfig.class);
     }
+  }
+
+  public void initializeS3Service() throws S3ServiceException
+  {
+    this.s3Service = new RestS3Service(
+        new AWSCredentials(
+            PropUtils.getProperty(getProps(), "com.metamx.aws.accessKey"),
+            PropUtils.getProperty(getProps(), "com.metamx.aws.secretKey")
+        )
+    );
   }
 
   public void initializeMergeDBCoordinator()
@@ -581,21 +557,10 @@ public class IndexerCoordinatorNode extends RegisteringNode
     }
   }
 
-  public void initializeCurator() throws Exception
-  {
-    if (curatorFramework == null) {
-      final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
-      curatorFramework = Initialization.makeCuratorFrameworkClient(
-          serviceDiscoveryConfig,
-          lifecycle
-      );
-    }
-  }
-
   public void initializeIndexerZkConfig()
   {
     if (indexerZkConfig == null) {
-      indexerZkConfig = configFactory.build(IndexerZkConfig.class);
+      indexerZkConfig = getConfigFactory().build(IndexerZkConfig.class);
     }
   }
 
@@ -640,14 +605,15 @@ public class IndexerCoordinatorNode extends RegisteringNode
                     .build()
             );
 
+            final CuratorFramework curator = getCuratorFramework();
             return new RemoteTaskRunner(
                 getJsonMapper(),
-                configFactory.build(RemoteTaskRunnerConfig.class),
-                curatorFramework,
-                new PathChildrenCache(curatorFramework, indexerZkConfig.getAnnouncementPath(), true),
+                getConfigFactory().build(RemoteTaskRunnerConfig.class),
+                curator,
+                new PathChildrenCache(curator, indexerZkConfig.getAnnouncementPath(), true),
                 retryScheduledExec,
                 new RetryPolicyFactory(
-                    configFactory.buildWithReplacements(
+                    getConfigFactory().buildWithReplacements(
                         RetryPolicyConfig.class,
                         ImmutableMap.of("base_path", "druid.indexing")
                     )
@@ -666,8 +632,8 @@ public class IndexerCoordinatorNode extends RegisteringNode
           {
             final ExecutorService runnerExec = Executors.newFixedThreadPool(config.getNumLocalThreads());
             return new ForkingTaskRunner(
-                configFactory.build(ForkingTaskRunnerConfig.class),
-                props,
+                getConfigFactory().build(ForkingTaskRunnerConfig.class),
+                getProps(),
                 persistentTaskLogs,
                 runnerExec,
                 getJsonMapper()
@@ -705,11 +671,11 @@ public class IndexerCoordinatorNode extends RegisteringNode
                 getJsonMapper(),
                 new AmazonEC2Client(
                     new BasicAWSCredentials(
-                        PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-                        PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+                        PropUtils.getProperty(getProps(), "com.metamx.aws.accessKey"),
+                        PropUtils.getProperty(getProps(), "com.metamx.aws.secretKey")
                     )
                 ),
-                configFactory.build(EC2AutoScalingStrategyConfig.class),
+                getConfigFactory().build(EC2AutoScalingStrategyConfig.class),
                 workerSetupData
             );
           } else if (config.getStrategyImpl().equalsIgnoreCase("noop")) {
@@ -722,10 +688,10 @@ public class IndexerCoordinatorNode extends RegisteringNode
               runner,
               new SimpleResourceManagementStrategy(
                   strategy,
-                  configFactory.build(SimpleResourceManagmentConfig.class),
+                  getConfigFactory().build(SimpleResourceManagmentConfig.class),
                   workerSetupData
               ),
-              configFactory.build(ResourceManagementSchedulerConfig.class),
+              getConfigFactory().build(ResourceManagementSchedulerConfig.class),
               scalingScheduledExec
           );
         }
@@ -767,8 +733,16 @@ public class IndexerCoordinatorNode extends RegisteringNode
 
     public IndexerCoordinatorNode build()
     {
-      if (jsonMapper == null) {
+      if (jsonMapper == null && smileMapper == null) {
         jsonMapper = new DefaultObjectMapper();
+        smileMapper = new DefaultObjectMapper(new SmileFactory());
+        smileMapper.getJsonFactory().setCodec(smileMapper);
+      } else if (jsonMapper == null || smileMapper == null) {
+        throw new ISE(
+            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
+            jsonMapper,
+            smileMapper
+        );
       }
 
       if (lifecycle == null) {
@@ -783,7 +757,7 @@ public class IndexerCoordinatorNode extends RegisteringNode
         configFactory = Config.createFactory(props);
       }
 
-      return new IndexerCoordinatorNode(props, lifecycle, jsonMapper, configFactory);
+      return new IndexerCoordinatorNode(props, lifecycle, jsonMapper, smileMapper, configFactory);
     }
   }
 }

@@ -22,11 +22,11 @@ package com.metamx.druid.merger.common;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.MutableServerView;
+import com.metamx.druid.client.ServerView;
+import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
 import com.metamx.druid.loading.S3DataSegmentPuller;
-import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.loading.SingleSegmentLoader;
@@ -56,7 +56,7 @@ public class TaskToolbox
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
   private final SegmentAnnouncer segmentAnnouncer;
-  private final MutableServerView newSegmentServerView;
+  private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final ObjectMapper objectMapper;
 
@@ -69,7 +69,7 @@ public class TaskToolbox
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
       SegmentAnnouncer segmentAnnouncer,
-      MutableServerView newSegmentServerView,
+      ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       ObjectMapper objectMapper
   )
@@ -117,7 +117,7 @@ public class TaskToolbox
     return segmentAnnouncer;
   }
 
-  public MutableServerView getNewSegmentServerView()
+  public ServerView getNewSegmentServerView()
   {
     return newSegmentServerView;
   }

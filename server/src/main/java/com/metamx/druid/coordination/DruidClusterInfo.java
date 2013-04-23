@@ -21,6 +21,7 @@ package com.metamx.druid.coordination;
 
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.phonebook.PhoneBook;
+import com.netflix.curator.framework.recipes.leader.LeaderLatch;
 
 import java.util.Arrays;
 import java.util.Map;

@@ -19,43 +19,13 @@
 
 package com.metamx.druid.coordination;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.metamx.druid.client.DataSegment;
-
 /**
  */
-public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
+public class SegmentChangeRequestNoop implements DataSegmentChangeRequest
 {
-  private final DataSegment segment;
-
-  @JsonCreator
-  public SegmentChangeRequestDrop(
-      @JsonUnwrapped DataSegment segment
-  )
-  {
-    this.segment = segment;
-  }
-
-  @JsonProperty
-  @JsonUnwrapped
-  public DataSegment getSegment()
-  {
-    return segment;
-  }
-
   @Override
   public void go(DataSegmentChangeHandler handler)
   {
-    handler.removeSegment(segment);
-  }
 
-  @Override
-  public String toString()
-  {
-    return "SegmentChangeRequestDrop{" +
-           "segment=" + segment +
-           '}';
   }
 }

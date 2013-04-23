@@ -35,11 +35,9 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.BaseServerNode;
-import com.metamx.druid.client.ClientConfig;
-import com.metamx.druid.client.ClientInventoryManager;
-import com.metamx.druid.client.MutableServerView;
-import com.metamx.druid.client.OnlyNewSegmentWatcherServerView;
 import com.metamx.druid.client.ServerView;
+import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.QueryServlet;
@@ -52,7 +50,6 @@ import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.Monitor;
-
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
@@ -80,7 +77,6 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
   private SegmentPublisher segmentPublisher = null;
   private DataSegmentPusher dataSegmentPusher = null;
   private List<FireDepartment> fireDepartments = null;
-  private ServerView view = null;
 
   private boolean initialized = false;
 
@@ -93,13 +89,6 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
   )
   {
     super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
-  }
-
-  public RealtimeNode setView(ServerView view)
-  {
-    Preconditions.checkState(this.view == null, "Cannot set view once it has already been set.");
-    this.view = view;
-    return this;
   }
 
   public RealtimeNode setSegmentAnnouncer(SegmentAnnouncer segmentAnnouncer)
@@ -161,15 +150,8 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     return fireDepartments;
   }
 
-  public ServerView getView()
-  {
-    initializeView();
-    return view;
-  }
-
   protected void doInit() throws Exception
   {
-    initializeView();
     initializeSegmentAnnouncer();
     initializeSegmentPublisher();
     initializeSegmentPusher();
@@ -229,7 +211,7 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     injectables.put("segmentPusher", dataSegmentPusher);
     injectables.put("segmentAnnouncer", segmentAnnouncer);
     injectables.put("segmentPublisher", segmentPublisher);
-    injectables.put("serverView", view);
+    injectables.put("serverView", getServerInventoryThingie());
     injectables.put("serviceEmitter", getEmitter());
 
     getJsonMapper().setInjectableValues(
@@ -271,8 +253,12 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
   protected void initializeSegmentAnnouncer()
   {
     if (segmentAnnouncer == null) {
-      final ZkSegmentAnnouncerConfig zkSegmentAnnouncerConfig = getConfigFactory().build(ZkSegmentAnnouncerConfig.class);
-      segmentAnnouncer = new ZkSegmentAnnouncer(zkSegmentAnnouncerConfig, getPhoneBook());
+      final ZkSegmentAnnouncerConfig zkSegmentAnnouncerConfig = getConfigFactory().build(RealtimeZkSegmentAnnouncerConfig.class);
+      segmentAnnouncer = new CuratorSegmentAnnouncer(
+          zkSegmentAnnouncerConfig,
+          getAnnouncer(),
+          getJsonMapper()
+      );
       getLifecycle().addManagedInstance(segmentAnnouncer);
     }
   }
@@ -287,21 +273,6 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
           new DbConnector(getConfigFactory().build(DbConnectorConfig.class)).getDBI()
       );
       getLifecycle().addManagedInstance(segmentPublisher);
-    }
-  }
-
-  private void initializeView()
-  {
-    if (view == null) {
-      final MutableServerView view = new OnlyNewSegmentWatcherServerView();
-      final ClientInventoryManager clientInventoryManager = new ClientInventoryManager(
-          getConfigFactory().build(ClientConfig.class),
-          getPhoneBook(),
-          view
-      );
-      getLifecycle().addManagedInstance(clientInventoryManager);
-
-      this.view = view;
     }
   }
 

@@ -19,43 +19,48 @@
 
 package com.metamx.druid.master;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Comparators;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.coordination.DataSegmentChangeRequest;
 import com.metamx.druid.coordination.SegmentChangeRequestDrop;
 import com.metamx.druid.coordination.SegmentChangeRequestLoad;
-import com.metamx.phonebook.PhoneBook;
-import com.metamx.phonebook.PhoneBookPeon;
+import com.metamx.druid.coordination.SegmentChangeRequestNoop;
+import com.metamx.emitter.EmittingLogger;
+import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.api.CuratorWatcher;
+import com.netflix.curator.utils.ZKPaths;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.data.Stat;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
-public class LoadQueuePeon implements PhoneBookPeon<Map>
+public class LoadQueuePeon
 {
-  private static final Logger log = new Logger(LoadQueuePeon.class);
+  private static final EmittingLogger log = new EmittingLogger(LoadQueuePeon.class);
   private static final int DROP = 0;
   private static final int LOAD = 1;
 
   private final Object lock = new Object();
 
-  private final PhoneBook yp;
+  private final CuratorFramework curator;
   private final String basePath;
-  private final ScheduledExecutorService zkWritingExecutor;
+  private final ObjectMapper jsonMapper;
+  private final ExecutorService zkWritingExecutor;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
 
@@ -80,70 +85,16 @@ public class LoadQueuePeon implements PhoneBookPeon<Map>
   private volatile SegmentHolder currentlyLoading = null;
 
   LoadQueuePeon(
-      PhoneBook yp,
+      CuratorFramework curator,
       String basePath,
-      ScheduledExecutorService zkWritingExecutor
+      ObjectMapper jsonMapper,
+      ExecutorService zkWritingExecutor
   )
   {
-    this.yp = yp;
+    this.curator = curator;
     this.basePath = basePath;
+    this.jsonMapper = jsonMapper;
     this.zkWritingExecutor = zkWritingExecutor;
-  }
-
-  @Override
-  public Class<Map> getObjectClazz()
-  {
-    return Map.class;
-  }
-
-  @Override
-  public void newEntry(String name, Map properties)
-  {
-    synchronized (lock) {
-      if (currentlyLoading == null) {
-        log.warn(
-            "Server[%s] a new entry[%s] appeared, even though nothing is currently loading[%s]",
-            basePath,
-            name,
-            currentlyLoading
-        );
-      } else {
-        if (!name.equals(currentlyLoading.getSegmentIdentifier())) {
-          log.warn(
-              "Server[%s] a new entry[%s] appeared that is not the currently loading entry[%s]",
-              basePath,
-              name,
-              currentlyLoading
-          );
-        } else {
-          log.info("Server[%s]'s currently loading entry[%s] appeared.", basePath, name);
-        }
-      }
-    }
-  }
-
-  @Override
-  public void entryRemoved(String name)
-  {
-    synchronized (lock) {
-      if (currentlyLoading == null) {
-        log.warn("Server[%s] an entry[%s] was removed even though it wasn't loading!?", basePath, name);
-        return;
-      }
-      if (!name.equals(currentlyLoading.getSegmentIdentifier())) {
-        log.warn(
-            "Server[%s] entry [%s] was removed even though it's not what is currently loading[%s]",
-            basePath,
-            name,
-            currentlyLoading
-        );
-        return;
-      }
-      actionCompleted();
-      log.info("Server[%s] done processing [%s]", basePath, name);
-    }
-
-    doNext();
   }
 
   public Set<DataSegment> getSegmentsToLoad()
@@ -262,81 +213,64 @@ public class LoadQueuePeon implements PhoneBookPeon<Map>
           return;
         }
 
-        submitExecutable();
+        zkWritingExecutor.execute(
+            new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                synchronized (lock) {
+                  try {
+                    if (currentlyLoading == null) {
+                      log.makeAlert("Crazy race condition! server[%s]", basePath)
+                         .emit();
+                      actionCompleted();
+                      doNext();
+                      return;
+                    }
+                    log.info("Server[%s] adding segment[%s]", basePath, currentlyLoading.getSegmentIdentifier());
+                    final String path = ZKPaths.makePath(basePath, currentlyLoading.getSegmentIdentifier());
+                    final byte[] payload = jsonMapper.writeValueAsBytes(currentlyLoading.getChangeRequest());
+                    curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
+
+                    final Stat stat = curator.checkExists().usingWatcher(
+                        new CuratorWatcher()
+                        {
+                          @Override
+                          public void process(WatchedEvent watchedEvent) throws Exception
+                          {
+                            switch (watchedEvent.getType()) {
+                              case NodeDeleted:
+                                entryRemoved(watchedEvent.getPath());
+                            }
+                          }
+                        }
+                    ).forPath(path);
+
+                    if (stat == null) {
+                      final byte[] noopPayload = jsonMapper.writeValueAsBytes(new SegmentChangeRequestNoop());
+                      // Create a node and then delete it to remove the registered watcher
+                      curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, noopPayload);
+
+                      entryRemoved(path);
+                    }
+                  }
+                  catch (Exception e) {
+                    log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, currentlyLoading);
+                    // Act like it was completed so that the master gives it to someone else
+                    actionCompleted();
+                    doNext();
+                  }
+                }
+              }
+            }
+        );
       } else {
         log.info(
             "Server[%s] skipping doNext() because something is currently loading[%s].", basePath, currentlyLoading
         );
       }
     }
-  }
-
-  private void submitExecutable()
-  {
-    final SegmentHolder currentlyLoadingRef = currentlyLoading;
-    final AtomicBoolean postedEphemeral = new AtomicBoolean(false);
-    zkWritingExecutor.execute(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            synchronized (lock) {
-              try {
-                if (currentlyLoading == null) {
-                  log.error("Crazy race condition! server[%s]", basePath);
-                  postedEphemeral.set(true);
-                  actionCompleted();
-                  doNext();
-                  return;
-                }
-                log.info("Server[%s] adding segment[%s]", basePath, currentlyLoading.getSegmentIdentifier());
-                yp.postEphemeral(
-                    basePath,
-                    currentlyLoading.getSegmentIdentifier(),
-                    currentlyLoading.getChangeRequest()
-                );
-                postedEphemeral.set(true);
-              }
-              catch (Throwable e) {
-                log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, currentlyLoading);
-                // Act like it was completed so that the master gives it to someone else
-                postedEphemeral.set(true);
-                actionCompleted();
-                doNext();
-              }
-            }
-          }
-        }
-    );
-    zkWritingExecutor.schedule(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            synchronized (lock) {
-              String path = yp.combineParts(Arrays.asList(basePath, currentlyLoadingRef.getSegmentIdentifier()));
-
-              if (!postedEphemeral.get()) {
-                log.info("Ephemeral hasn't been posted yet for [%s], rescheduling.", path);
-                zkWritingExecutor.schedule(this, 60, TimeUnit.SECONDS);
-              }
-              if (currentlyLoadingRef == currentlyLoading) {
-                if (yp.lookup(path, Object.class) == null) {
-                  log.info("Looks like [%s] was created and deleted without the watchers finding out.", path);
-                  entryRemoved(currentlyLoadingRef.getSegmentIdentifier());
-                } else {
-                  log.info("Path[%s] still out on ZK, rescheduling.", path);
-                  zkWritingExecutor.schedule(this, 60, TimeUnit.SECONDS);
-                }
-              }
-            }
-          }
-        },
-        60,
-        TimeUnit.SECONDS
-    );
   }
 
   private void actionCompleted()
@@ -382,6 +316,27 @@ public class LoadQueuePeon implements PhoneBookPeon<Map>
 
       queuedSize.set(0L);
     }
+  }
+
+  private void entryRemoved(String path)
+  {
+    synchronized (lock) {
+      if (currentlyLoading == null) {
+        log.warn("Server[%s] an entry[%s] was removed even though it wasn't loading!?", basePath, path);
+        return;
+      }
+      if (!ZKPaths.getNodeFromPath(path).equals(currentlyLoading.getSegmentIdentifier())) {
+        log.warn(
+            "Server[%s] entry [%s] was removed even though it's not what is currently loading[%s]",
+            basePath, path, currentlyLoading
+        );
+        return;
+      }
+      actionCompleted();
+      log.info("Server[%s] done processing [%s]", basePath, path);
+    }
+
+    doNext();
   }
 
   private class SegmentHolder

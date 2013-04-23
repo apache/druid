@@ -29,7 +29,7 @@ import com.google.common.collect.Sets;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.ServerInventoryManager;
+import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
@@ -62,7 +62,7 @@ import java.util.TreeSet;
 public class InfoResource
 {
   private final DruidMaster master;
-  private final ServerInventoryManager serverInventoryManager;
+  private final ServerInventoryThingie serverInventoryThingie;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final DatabaseRuleManager databaseRuleManager;
   private final DruidClusterInfo druidClusterInfo;
@@ -71,7 +71,7 @@ public class InfoResource
   @Inject
   public InfoResource(
       DruidMaster master,
-      ServerInventoryManager serverInventoryManager,
+      ServerInventoryThingie serverInventoryThingie,
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
       DruidClusterInfo druidClusterInfo,
@@ -79,7 +79,7 @@ public class InfoResource
   )
   {
     this.master = master;
-    this.serverInventoryManager = serverInventoryManager;
+    this.serverInventoryThingie = serverInventoryThingie;
     this.databaseSegmentManager = databaseSegmentManager;
     this.databaseRuleManager = databaseRuleManager;
     this.druidClusterInfo = druidClusterInfo;
@@ -102,7 +102,7 @@ public class InfoResource
   public Response getClusterInfo()
   {
     return Response.status(Response.Status.OK)
-                   .entity(serverInventoryManager.getInventory())
+                   .entity(serverInventoryThingie.getInventory())
                    .build();
   }
 
@@ -115,12 +115,12 @@ public class InfoResource
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (full != null) {
-      return builder.entity(serverInventoryManager.getInventory()).build();
+      return builder.entity(serverInventoryThingie.getInventory()).build();
     }
 
     return builder.entity(
         Iterables.transform(
-            serverInventoryManager.getInventory(),
+            serverInventoryThingie.getInventory(),
             new Function<DruidServer, String>()
             {
               @Override
@@ -141,7 +141,7 @@ public class InfoResource
   )
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    DruidServer server = serverInventoryManager.getInventoryValue(serverName);
+    DruidServer server = serverInventoryThingie.getInventoryValue(serverName);
     if (server == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -160,7 +160,7 @@ public class InfoResource
   )
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    DruidServer server = serverInventoryManager.getInventoryValue(serverName);
+    DruidServer server = serverInventoryThingie.getInventoryValue(serverName);
     if (server == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -192,7 +192,7 @@ public class InfoResource
       @PathParam("segmentId") String segmentId
   )
   {
-    DruidServer server = serverInventoryManager.getInventoryValue(serverName);
+    DruidServer server = serverInventoryThingie.getInventoryValue(serverName);
     if (server == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -217,7 +217,7 @@ public class InfoResource
       return builder.entity(
           Iterables.concat(
               Iterables.transform(
-                  serverInventoryManager.getInventory(),
+                  serverInventoryThingie.getInventory(),
                   new Function<DruidServer, Iterable<DataSegment>>()
                   {
                     @Override
@@ -234,7 +234,7 @@ public class InfoResource
     return builder.entity(
         Iterables.concat(
             Iterables.transform(
-                serverInventoryManager.getInventory(),
+                serverInventoryThingie.getInventory(),
                 new Function<DruidServer, Iterable<String>>()
                 {
                   @Override
@@ -265,7 +265,7 @@ public class InfoResource
       @PathParam("segmentId") String segmentId
   )
   {
-    for (DruidServer server : serverInventoryManager.getInventory()) {
+    for (DruidServer server : serverInventoryThingie.getInventory()) {
       if (server.getSegments().containsKey(segmentId)) {
         return Response.status(Response.Status.OK)
                        .entity(server.getSegments().get(segmentId))
@@ -282,7 +282,7 @@ public class InfoResource
   public Response getTiers()
   {
     Set<String> tiers = Sets.newHashSet();
-    for (DruidServer server : serverInventoryManager.getInventory()) {
+    for (DruidServer server : serverInventoryThingie.getInventory()) {
       tiers.add(server.getTier());
     }
     return Response.status(Response.Status.OK)
@@ -493,7 +493,7 @@ public class InfoResource
     Iterable<DruidDataSource> dataSources =
         Iterables.concat(
             Iterables.transform(
-                serverInventoryManager.getInventory(),
+                serverInventoryThingie.getInventory(),
                 new Function<DruidServer, DruidDataSource>()
                 {
                   @Override
@@ -547,7 +547,7 @@ public class InfoResource
         Lists.newArrayList(
             Iterables.concat(
                 Iterables.transform(
-                    serverInventoryManager.getInventory(),
+                    serverInventoryThingie.getInventory(),
                     new Function<DruidServer, Iterable<DruidDataSource>>()
                     {
                       @Override

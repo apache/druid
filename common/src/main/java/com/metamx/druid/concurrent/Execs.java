@@ -17,45 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.coordination;
+package com.metamx.druid.concurrent;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.metamx.druid.client.DataSegment;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  */
-public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
+public class Execs
 {
-  private final DataSegment segment;
-
-  @JsonCreator
-  public SegmentChangeRequestDrop(
-      @JsonUnwrapped DataSegment segment
-  )
+  public static ExecutorService singleThreaded(String nameFormat)
   {
-    this.segment = segment;
-  }
-
-  @JsonProperty
-  @JsonUnwrapped
-  public DataSegment getSegment()
-  {
-    return segment;
-  }
-
-  @Override
-  public void go(DataSegmentChangeHandler handler)
-  {
-    handler.removeSegment(segment);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "SegmentChangeRequestDrop{" +
-           "segment=" + segment +
-           '}';
+    return Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setDaemon(true).setNameFormat(nameFormat).build()
+    );
   }
 }

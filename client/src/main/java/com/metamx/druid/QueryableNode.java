@@ -25,6 +25,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -32,10 +33,14 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.ServerInventoryThingieConfig;
+import com.metamx.druid.client.ServerInventoryThingie;
+import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.RequestLogger;
+import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ZkClientConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -49,7 +54,7 @@ import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import com.metamx.phonebook.PhoneBook;
-import org.I0Itec.zkclient.ZkClient;
+import com.netflix.curator.framework.CuratorFramework;
 import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.skife.config.ConfigurationObjectFactory;
@@ -59,6 +64,8 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -73,13 +80,14 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private final Properties props;
   private final ConfigurationObjectFactory configFactory;
 
-  private PhoneBook phoneBook = null;
   private ServiceEmitter emitter = null;
   private List<Monitor> monitors = null;
   private Server server = null;
-  private ZkClient zkClient;
-  private ScheduledExecutorFactory scheduledExecutorFactory;
-  private RequestLogger requestLogger;
+  private CuratorFramework curator = null;
+  private Announcer announcer = null;
+  private ScheduledExecutorFactory scheduledExecutorFactory = null;
+  private RequestLogger requestLogger = null;
+  private ServerInventoryThingie serverInventoryThingie = null;
 
   private boolean initialized = false;
 
@@ -111,19 +119,19 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   }
 
   @SuppressWarnings("unchecked")
-  public T setZkClient(ZkClient zkClient)
+  public T setCuratorFramework(CuratorFramework curator)
   {
-    checkFieldNotSetAndSet("zkClient", zkClient);
+    checkFieldNotSetAndSet("curator", curator);
     return (T) this;
   }
 
   @SuppressWarnings("unchecked")
-  public T setPhoneBook(PhoneBook phoneBook)
+  public T setAnnouncer(Announcer announcer)
   {
-    checkFieldNotSetAndSet("phoneBook", phoneBook);
+    checkFieldNotSetAndSet("announcer", announcer);
     return (T) this;
   }
-
+  
   @SuppressWarnings("unchecked")
   public T setEmitter(ServiceEmitter emitter)
   {
@@ -156,6 +164,13 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   public T setRequestLogger(RequestLogger requestLogger)
   {
     checkFieldNotSetAndSet("requestLogger", requestLogger);
+    return (T) this;
+  }
+
+  @SuppressWarnings("unchecked")
+  public T setServerInventoryThingie(ServerInventoryThingie serverInventoryThingie)
+  {
+    checkFieldNotSetAndSet("serverInventoryThingie", serverInventoryThingie);
     return (T) this;
   }
 
@@ -200,16 +215,16 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     return configFactory;
   }
 
-  public ZkClient getZkClient()
+  public CuratorFramework getCuratorFramework()
   {
-    initializeZkClient();
-    return zkClient;
+    initializeCuratorFramework();
+    return curator;
   }
 
-  public PhoneBook getPhoneBook()
+  public Announcer getAnnouncer()
   {
-    initializePhoneBook();
-    return phoneBook;
+    initializeAnnouncer();
+    return announcer;
   }
 
   public ServiceEmitter getEmitter()
@@ -240,6 +255,30 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   {
     initializeRequestLogger();
     return requestLogger;
+  }
+
+  public ServerInventoryThingie getServerInventoryThingie()
+  {
+    initializeServerInventoryThingie();
+    return serverInventoryThingie;
+  }
+
+  private void initializeServerInventoryThingie()
+  {
+    if (serverInventoryThingie == null) {
+      final ExecutorService exec = Executors.newFixedThreadPool(
+          1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryThingie-%s").build()
+      );
+      setServerInventoryThingie(
+          new ServerInventoryThingie(
+              getConfigFactory().build(ServerInventoryThingieConfig.class),
+              getCuratorFramework(),
+              exec,
+              getJsonMapper()
+          )
+      );
+      lifecycle.addManagedInstance(serverInventoryThingie);
+    }
   }
 
   private void initializeRequestLogger()
@@ -275,24 +314,22 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     }
   }
 
-  private void initializeZkClient()
+  private void initializeCuratorFramework()
   {
-    if (zkClient == null) {
-      setZkClient(Initialization.makeZkClient(configFactory.build(ZkClientConfig.class), lifecycle));
+    if (curator == null) {
+      try {
+        setCuratorFramework(Initialization.makeCuratorFramework(configFactory.build(CuratorConfig.class), lifecycle));
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
     }
   }
 
-  private void initializePhoneBook()
+  private void initializeAnnouncer()
   {
-    if (phoneBook == null) {
-      setPhoneBook(
-          Initialization.createPhoneBook(
-              jsonMapper,
-              getZkClient(),
-              "PhoneBook--%s",
-              lifecycle
-          )
-      );
+    if (announcer == null) {
+      setAnnouncer(new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s")));
     }
   }
 

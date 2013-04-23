@@ -17,45 +17,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.coordination;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.metamx.druid.client.DataSegment;
+package com.metamx.druid.realtime;
 
 /**
  */
-public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
+public abstract class RealtimeZkSegmentAnnouncerConfig extends ZkSegmentAnnouncerConfig
 {
-  private final DataSegment segment;
-
-  @JsonCreator
-  public SegmentChangeRequestDrop(
-      @JsonUnwrapped DataSegment segment
-  )
-  {
-    this.segment = segment;
-  }
-
-  @JsonProperty
-  @JsonUnwrapped
-  public DataSegment getSegment()
-  {
-    return segment;
-  }
-
   @Override
-  public void go(DataSegmentChangeHandler handler)
+  public final String getServerType()
   {
-    handler.removeSegment(segment);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "SegmentChangeRequestDrop{" +
-           "segment=" + segment +
-           '}';
+    return "realtime";
   }
 }

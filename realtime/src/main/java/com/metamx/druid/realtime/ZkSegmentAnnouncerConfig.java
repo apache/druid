@@ -15,9 +15,12 @@ public abstract class ZkSegmentAnnouncerConfig
   @Default("0")
   public abstract long getMaxSize();
 
+  public abstract String getServerType();
+
   @Config("druid.zk.paths.announcementsPath")
-  public abstract String getAnnounceLocation();
+  public abstract String getAnnouncementsPath();
 
   @Config("druid.zk.paths.servedSegmentsPath")
-  public abstract String getServedSegmentsLocation();
+  public abstract String getServedSegmentsPath();
+
 }

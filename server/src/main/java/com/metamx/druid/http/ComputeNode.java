@@ -33,9 +33,11 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.BaseServerNode;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.DruidServerConfig;
+import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.druid.coordination.ZkCoordinator;
 import com.metamx.druid.coordination.ZkCoordinatorConfig;
+import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -106,15 +108,12 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
 
   public SegmentLoader getSegmentLoader()
   {
-    initializeAdapterLoader();
+    initializeSegmentLoader();
     return segmentLoader;
   }
 
   protected void doInit() throws Exception
   {
-    initializeDruidServer();
-    initializeAdapterLoader();
-
     final Lifecycle lifecycle = getLifecycle();
     final ServiceEmitter emitter = getEmitter();
     final List<Monitor> monitors = getMonitors();
@@ -131,13 +130,14 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
         new ServiceMetricEvent.Builder()
     );
 
-    final ServerManager serverManager = new ServerManager(segmentLoader, conglomerate, emitter, executorService);
+    final ServerManager serverManager = new ServerManager(getSegmentLoader(), conglomerate, emitter, executorService);
 
     final ZkCoordinator coordinator = new ZkCoordinator(
         getJsonMapper(),
         getConfigFactory().build(ZkCoordinatorConfig.class),
-        druidServer,
-        getPhoneBook(),
+        getDruidServer(),
+        getAnnouncer(),
+        getCuratorFramework(),
         serverManager,
         emitter
     );
@@ -156,7 +156,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     );
   }
 
-  private void initializeAdapterLoader()
+  private void initializeSegmentLoader()
   {
     if (segmentLoader == null) {
       final Properties props = getProps();

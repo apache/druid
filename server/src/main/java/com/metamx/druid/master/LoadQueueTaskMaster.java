@@ -17,45 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.coordination;
+package com.metamx.druid.master;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.metamx.druid.client.DataSegment;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.netflix.curator.framework.CuratorFramework;
+
+import java.util.concurrent.ExecutorService;
 
 /**
+ * Provides LoadQueuePeons
  */
-public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
+public class LoadQueueTaskMaster
 {
-  private final DataSegment segment;
+  private final CuratorFramework curator;
+  private final ObjectMapper jsonMapper;
+  private final ExecutorService peonExec;
 
-  @JsonCreator
-  public SegmentChangeRequestDrop(
-      @JsonUnwrapped DataSegment segment
+  public LoadQueueTaskMaster(
+      CuratorFramework curator,
+      ObjectMapper jsonMapper,
+      ExecutorService peonExec
   )
   {
-    this.segment = segment;
+    this.curator = curator;
+    this.jsonMapper = jsonMapper;
+    this.peonExec = peonExec;
   }
 
-  @JsonProperty
-  @JsonUnwrapped
-  public DataSegment getSegment()
+  public LoadQueuePeon giveMePeon(String basePath)
   {
-    return segment;
-  }
-
-  @Override
-  public void go(DataSegmentChangeHandler handler)
-  {
-    handler.removeSegment(segment);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "SegmentChangeRequestDrop{" +
-           "segment=" + segment +
-           '}';
+    return new LoadQueuePeon(curator, basePath, jsonMapper, peonExec);
   }
 }

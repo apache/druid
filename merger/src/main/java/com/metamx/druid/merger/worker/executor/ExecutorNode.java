@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
@@ -34,13 +33,10 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.BaseServerNode;
-import com.metamx.druid.client.ClientConfig;
-import com.metamx.druid.client.ClientInventoryManager;
-import com.metamx.druid.client.MutableServerView;
-import com.metamx.druid.client.OnlyNewSegmentWatcherServerView;
+import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusServlet;
-import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServerInit;
@@ -50,18 +46,16 @@ import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentKiller;
 import com.metamx.druid.merger.common.RetryPolicyFactory;
-import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.actions.RemoteTaskActionClientFactory;
 import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
-import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.ExecutorServiceTaskRunner;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
+import com.metamx.druid.realtime.CuratorSegmentAnnouncer;
+import com.metamx.druid.realtime.RealtimeZkSegmentAnnouncerConfig;
 import com.metamx.druid.realtime.SegmentAnnouncer;
-import com.metamx.druid.realtime.ZkSegmentAnnouncer;
-import com.metamx.druid.realtime.ZkSegmentAnnouncerConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -74,7 +68,6 @@ import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
-import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.x.discovery.ServiceDiscovery;
 import com.netflix.curator.x.discovery.ServiceProvider;
 import org.jets3t.service.S3ServiceException;
@@ -85,7 +78,6 @@ import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -115,10 +107,8 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private WorkerConfig workerConfig = null;
   private DataSegmentPusher segmentPusher = null;
   private TaskToolboxFactory taskToolboxFactory = null;
-  private CuratorFramework curatorFramework = null;
   private ServiceDiscovery serviceDiscovery = null;
   private ServiceProvider coordinatorServiceProvider = null;
-  private MutableServerView newSegmentServerView = null;
   private Server server = null;
   private ExecutorServiceTaskRunner taskRunner = null;
   private ExecutorLifecycle executorLifecycle = null;
@@ -170,12 +160,6 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     return this;
   }
 
-  public ExecutorNode setCuratorFramework(CuratorFramework curatorFramework)
-  {
-    this.curatorFramework = curatorFramework;
-    return this;
-  }
-
   public ExecutorNode setCoordinatorServiceProvider(ServiceProvider coordinatorServiceProvider)
   {
     this.coordinatorServiceProvider = coordinatorServiceProvider;
@@ -188,12 +172,6 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     return this;
   }
 
-  public ExecutorNode setNewSegmentServerView(MutableServerView newSegmentServerView)
-  {
-    this.newSegmentServerView = newSegmentServerView;
-    return this;
-  }
-
   @Override
   public void doInit() throws Exception
   {
@@ -202,10 +180,8 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     initializeS3Service();
     initializeMonitors();
     initializeMergerConfig();
-    initializeCuratorFramework();
     initializeServiceDiscovery();
     initializeCoordinatorServiceProvider();
-    initializeNewSegmentServerView();
     initializeDataSegmentPusher();
     initializeTaskToolbox();
     initializeTaskRunner();
@@ -370,9 +346,10 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   {
     if (taskToolboxFactory == null) {
       final DataSegmentKiller dataSegmentKiller = new S3DataSegmentKiller(s3Service);
-      final SegmentAnnouncer segmentAnnouncer = new ZkSegmentAnnouncer(
-          configFactory.build(ZkSegmentAnnouncerConfig.class),
-          getPhoneBook()
+      final SegmentAnnouncer segmentAnnouncer = new CuratorSegmentAnnouncer(
+          configFactory.build(RealtimeZkSegmentAnnouncerConfig.class),
+          getAnnouncer(),
+          getJsonMapper()
       );
       lifecycle.addManagedInstance(segmentAnnouncer);
       taskToolboxFactory = new TaskToolboxFactory(
@@ -393,20 +370,9 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
           segmentPusher,
           dataSegmentKiller,
           segmentAnnouncer,
-          newSegmentServerView,
+          getServerInventoryThingie(),
           getConglomerate(),
           getJsonMapper()
-      );
-    }
-  }
-
-  public void initializeCuratorFramework() throws IOException
-  {
-    if (curatorFramework == null) {
-      final CuratorConfig curatorConfig = configFactory.build(CuratorConfig.class);
-      curatorFramework = Initialization.makeCuratorFrameworkClient(
-          curatorConfig,
-          lifecycle
       );
     }
   }
@@ -416,9 +382,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     if (serviceDiscovery == null) {
       final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-          curatorFramework,
-          config,
-          lifecycle
+          getCuratorFramework(), config, lifecycle
       );
     }
   }
@@ -431,21 +395,6 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
           serviceDiscovery,
           lifecycle
       );
-    }
-  }
-
-  private void initializeNewSegmentServerView()
-  {
-    if (newSegmentServerView == null) {
-      final MutableServerView view = new OnlyNewSegmentWatcherServerView();
-      final ClientInventoryManager clientInventoryManager = new ClientInventoryManager(
-          getConfigFactory().build(ClientConfig.class),
-          getPhoneBook(),
-          view
-      );
-      lifecycle.addManagedInstance(clientInventoryManager);
-
-      this.newSegmentServerView = view;
     }
   }
 

@@ -17,21 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.coordination;
-
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.druid.client.DataSegment;
+package com.metamx.druid.curator.inventory;
 
 /**
  */
-@JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="action")
-@JsonSubTypes(value={
-    @JsonSubTypes.Type(name="load", value=SegmentChangeRequestLoad.class),
-    @JsonSubTypes.Type(name="drop", value=SegmentChangeRequestDrop.class),
-    @JsonSubTypes.Type(name="noop", value=SegmentChangeRequestNoop.class)
-})
-public interface DataSegmentChangeRequest
+public interface CuratorInventoryManagerStrategy<ContainerClass, InventoryClass>
 {
-  public void go(DataSegmentChangeHandler handler);
+  public ContainerClass deserializeContainer(byte[] bytes);
+  public byte[] serializeContainer(ContainerClass container);
+
+  public InventoryClass deserializeInventory(byte[] bytes);
+  public byte[] serializeInventory(InventoryClass inventory);
+
+  public void newContainer(ContainerClass newContainer);
+  public void deadContainer(ContainerClass deadContainer);
+  public ContainerClass updateContainer(ContainerClass oldContainer, ContainerClass newContainer);
+  public ContainerClass addInventory(ContainerClass container, String inventoryKey, InventoryClass inventory);
+  public ContainerClass removeInventory(ContainerClass container, String inventoryKey);
 }

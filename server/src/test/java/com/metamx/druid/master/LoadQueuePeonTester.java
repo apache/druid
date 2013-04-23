@@ -1,22 +1,16 @@
 package com.metamx.druid.master;
 
 import com.metamx.druid.client.DataSegment;
-import com.metamx.phonebook.PhoneBook;
 
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.ScheduledExecutorService;
 
 public class LoadQueuePeonTester extends LoadQueuePeon
 {
-  private ConcurrentSkipListSet<DataSegment> segmentsToLoad;
+  private final ConcurrentSkipListSet<DataSegment> segmentsToLoad = new ConcurrentSkipListSet<DataSegment>();
 
-  public LoadQueuePeonTester(
-      PhoneBook yp,
-      String basePath,
-      ScheduledExecutorService zkWritingExecutor
-  )
+  public LoadQueuePeonTester()
   {
-    super(yp, basePath, zkWritingExecutor);
+    super(null, null, null, null);
   }
 
   @Override
@@ -25,13 +19,11 @@ public class LoadQueuePeonTester extends LoadQueuePeon
       LoadPeonCallback callback
   )
   {
-    if(segmentsToLoad == null) segmentsToLoad = new ConcurrentSkipListSet<DataSegment>();
     segmentsToLoad.add(segment);
   }
 
   public ConcurrentSkipListSet<DataSegment> getSegmentsToLoad()
   {
-    if(segmentsToLoad == null) segmentsToLoad = new ConcurrentSkipListSet<DataSegment>();
-      return segmentsToLoad;
+    return segmentsToLoad;
   }
 }

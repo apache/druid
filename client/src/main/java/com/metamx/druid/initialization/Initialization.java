@@ -22,21 +22,17 @@ package com.metamx.druid.initialization;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.ZKPhoneBook;
-import com.metamx.druid.http.EmittingRequestLogger;
+import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
 import com.metamx.druid.http.FileRequestLogger;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.druid.zk.PropertiesZkSerializer;
-import com.metamx.druid.zk.StringZkSerializer;
-import com.metamx.emitter.core.Emitter;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
-import com.netflix.curator.retry.ExponentialBackoffRetry;
+import com.netflix.curator.retry.BoundedExponentialBackoffRetry;
 import com.netflix.curator.x.discovery.ServiceDiscovery;
 import com.netflix.curator.x.discovery.ServiceDiscoveryBuilder;
 import com.netflix.curator.x.discovery.ServiceInstance;
@@ -52,7 +48,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
-import java.util.concurrent.Executors;
 
 /**
  */
@@ -72,52 +67,6 @@ public class Initialization
       "druid.zk.paths.masterPath"
   };
   public static final String DEFAULT_ZPATH = "/druid";
-
-  public static ZkClient makeZkClient(ZkClientConfig config, Lifecycle lifecycle)
-  {
-    final ZkClient retVal = new ZkClient(
-        new ZkConnection(config.getZkHosts()),
-        config.getConnectionTimeout(),
-        new StringZkSerializer()
-    );
-
-    lifecycle.addHandler(
-        new Lifecycle.Handler()
-        {
-          @Override
-          public void start() throws Exception
-          {
-            retVal.waitUntilConnected();
-          }
-
-          @Override
-          public void stop()
-          {
-            retVal.close();
-          }
-        }
-    );
-
-    return retVal;
-  }
-
-  public static ZKPhoneBook createPhoneBook(
-      ObjectMapper jsonMapper, ZkClient zkClient, String threadNameFormat, Lifecycle lifecycle
-  )
-  {
-    return lifecycle.addManagedInstance(
-        new ZKPhoneBook(
-            jsonMapper,
-            zkClient,
-            Executors.newSingleThreadExecutor(
-                new ThreadFactoryBuilder()
-                    .setDaemon(true)
-                    .setNameFormat(threadNameFormat)
-                    .build()
-            )
-        )
-    );
-  }
 
   /**
    * Load properties.
@@ -179,7 +128,7 @@ public class Initialization
           }
         };
 
-        zkPropLoadingClient = new ZkClient(
+        zkPropLoadingClient = new ZkClient( // TODO
             new ZkConnection(clientConfig.getZkHosts()),
             clientConfig.getConnectionTimeout(),
             new PropertiesZkSerializer()
@@ -234,7 +183,7 @@ public class Initialization
     return server;
   }
 
-  public static CuratorFramework makeCuratorFrameworkClient(
+  public static CuratorFramework makeCuratorFramework(
       CuratorConfig curatorConfig,
       Lifecycle lifecycle
   ) throws IOException
@@ -242,12 +191,9 @@ public class Initialization
     final CuratorFramework framework =
         CuratorFrameworkFactory.builder()
                                .connectString(curatorConfig.getZkHosts())
-                               .retryPolicy(
-                                   new ExponentialBackoffRetry(
-                                       1000,
-                                       30
-                                   )
-                               )
+                               .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
+                               // Don't compress stuff written just yet, need to get code deployed first.
+                               .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
                                .build();
 
     lifecycle.addHandler(

@@ -17,45 +17,39 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.coordination;
+package com.metamx.druid.curator;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.metamx.druid.client.DataSegment;
+import com.netflix.curator.framework.api.CompressionProvider;
+import com.netflix.curator.framework.imps.GzipCompressionProvider;
+
+import java.util.zip.ZipException;
 
 /**
  */
-public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
+public class PotentiallyGzippedCompressionProvider implements CompressionProvider
 {
-  private final DataSegment segment;
+  private final boolean compressOutput;
+  GzipCompressionProvider base = new GzipCompressionProvider();
 
-  @JsonCreator
-  public SegmentChangeRequestDrop(
-      @JsonUnwrapped DataSegment segment
-  )
+  public PotentiallyGzippedCompressionProvider(boolean compressOutput)
   {
-    this.segment = segment;
-  }
-
-  @JsonProperty
-  @JsonUnwrapped
-  public DataSegment getSegment()
-  {
-    return segment;
+    this.compressOutput = compressOutput;
   }
 
   @Override
-  public void go(DataSegmentChangeHandler handler)
+  public byte[] compress(String path, byte[] data) throws Exception
   {
-    handler.removeSegment(segment);
+    return compressOutput ? base.compress(path, data) : data;
   }
 
   @Override
-  public String toString()
+  public byte[] decompress(String path, byte[] data) throws Exception
   {
-    return "SegmentChangeRequestDrop{" +
-           "segment=" + segment +
-           '}';
+    try {
+      return base.decompress(path, data);
+    }
+    catch (ZipException e) {
+      return data;
+    }
   }
 }

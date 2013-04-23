@@ -22,7 +22,7 @@ package com.metamx.druid.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
-import com.metamx.druid.client.ServerInventoryManager;
+import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
@@ -37,7 +37,7 @@ import javax.inject.Singleton;
  */
 public class MasterServletModule extends JerseyServletModule
 {
-  private final ServerInventoryManager serverInventoryManager;
+  private final ServerInventoryThingie serverInventoryThingie;
   private final DatabaseSegmentManager segmentInventoryManager;
   private final DatabaseRuleManager databaseRuleManager;
   private final DruidClusterInfo druidClusterInfo;
@@ -46,7 +46,7 @@ public class MasterServletModule extends JerseyServletModule
   private final IndexingServiceClient indexingServiceClient;
 
   public MasterServletModule(
-      ServerInventoryManager serverInventoryManager,
+      ServerInventoryThingie serverInventoryThingie,
       DatabaseSegmentManager segmentInventoryManager,
       DatabaseRuleManager databaseRuleManager,
       DruidClusterInfo druidClusterInfo,
@@ -55,7 +55,7 @@ public class MasterServletModule extends JerseyServletModule
       IndexingServiceClient indexingServiceClient
   )
   {
-    this.serverInventoryManager = serverInventoryManager;
+    this.serverInventoryThingie = serverInventoryThingie;
     this.segmentInventoryManager = segmentInventoryManager;
     this.databaseRuleManager = databaseRuleManager;
     this.druidClusterInfo = druidClusterInfo;
@@ -69,7 +69,7 @@ public class MasterServletModule extends JerseyServletModule
   {
     bind(InfoResource.class);
     bind(MasterResource.class);
-    bind(ServerInventoryManager.class).toInstance(serverInventoryManager);
+    bind(ServerInventoryThingie.class).toInstance(serverInventoryThingie);
     bind(DatabaseSegmentManager.class).toInstance(segmentInventoryManager);
     bind(DatabaseRuleManager.class).toInstance(databaseRuleManager);
     bind(DruidMaster.class).toInstance(master);

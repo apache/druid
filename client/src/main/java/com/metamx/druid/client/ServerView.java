@@ -19,19 +19,12 @@
 
 package com.metamx.druid.client;
 
-import com.metamx.druid.VersionedIntervalTimeline;
-import com.metamx.druid.client.selector.ServerSelector;
-import com.metamx.druid.query.QueryRunner;
-
 import java.util.concurrent.Executor;
 
 /**
  */
 public interface ServerView
 {
-  public VersionedIntervalTimeline<String, ServerSelector> getTimeline(String dataSource);
-  public <T> QueryRunner<T> getQueryRunner(DruidServer server);
-
   public void registerServerCallback(Executor exec, ServerCallback callback);
   public void registerSegmentCallback(Executor exec, SegmentCallback callback);
 

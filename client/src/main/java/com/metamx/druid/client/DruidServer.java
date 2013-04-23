@@ -159,6 +159,16 @@ public class DruidServer implements Comparable
     return this;
   }
 
+  public DruidServer addDataSegments(DruidServer server)
+  {
+    synchronized (lock) {
+      for (Map.Entry<String, DataSegment> entry : server.segments.entrySet()) {
+        addDataSegment(entry.getKey(), entry.getValue());
+      }
+    }
+    return this;
+  }
+
   public DruidServer removeDataSegment(String segmentName)
   {
     synchronized (lock) {

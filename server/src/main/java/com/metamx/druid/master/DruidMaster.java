@@ -21,13 +21,13 @@ package com.metamx.druid.master;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
+import com.google.common.io.Closeables;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -38,8 +38,9 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.ServerInventoryManager;
+import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
+import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.coordination.DruidClusterInfo;
 import com.metamx.druid.db.DatabaseRuleManager;
@@ -48,10 +49,10 @@ import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.phonebook.PhoneBook;
-import com.metamx.phonebook.PhoneBookPeon;
-import org.I0Itec.zkclient.exception.ZkNodeExistsException;
-
+import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.recipes.leader.LeaderLatch;
+import com.netflix.curator.framework.recipes.leader.LeaderLatchListener;
+import com.netflix.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -81,28 +82,29 @@ public class DruidMaster
   private final DruidClusterInfo clusterInfo;
   private final JacksonConfigManager configManager;
   private final DatabaseSegmentManager databaseSegmentManager;
-  private final ServerInventoryManager serverInventoryManager;
+  private final ServerInventoryThingie serverInventoryThingie;
   private final DatabaseRuleManager databaseRuleManager;
-  private final PhoneBook yp;
+  private final CuratorFramework curator;
   private final ServiceEmitter emitter;
   private final IndexingServiceClient indexingServiceClient;
   private final ScheduledExecutorService exec;
-  private final ScheduledExecutorService peonExec;
-  private final PhoneBookPeon masterPeon;
+  private final LoadQueueTaskMaster taskMaster;
+
   private final Map<String, LoadQueuePeon> loadManagementPeons;
+  private final AtomicReference<LeaderLatch> leaderLatch;
 
   public DruidMaster(
       DruidMasterConfig config,
       DruidClusterInfo clusterInfo,
       JacksonConfigManager configManager,
       DatabaseSegmentManager databaseSegmentManager,
-      ServerInventoryManager serverInventoryManager,
+      ServerInventoryThingie serverInventoryThingie,
       DatabaseRuleManager databaseRuleManager,
-      PhoneBook zkPhoneBook,
+      CuratorFramework curator,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
-      Map<String, LoadQueuePeon> loadManagementPeons,
-      IndexingServiceClient indexingServiceClient
+      IndexingServiceClient indexingServiceClient,
+      LoadQueueTaskMaster taskMaster
   )
   {
     this.config = config;
@@ -110,17 +112,17 @@ public class DruidMaster
     this.configManager = configManager;
 
     this.databaseSegmentManager = databaseSegmentManager;
-    this.serverInventoryManager = serverInventoryManager;
+    this.serverInventoryThingie = serverInventoryThingie;
     this.databaseRuleManager = databaseRuleManager;
-    this.yp = zkPhoneBook;
+    this.curator = curator;
     this.emitter = emitter;
     this.indexingServiceClient = indexingServiceClient;
+    this.taskMaster = taskMaster;
 
-    this.masterPeon = new MasterListeningPeon();
     this.exec = scheduledExecutorFactory.create(1, "Master-Exec--%d");
-    this.peonExec = scheduledExecutorFactory.create(1, "Master-PeonExec--%d");
 
-    this.loadManagementPeons = loadManagementPeons;
+    this.leaderLatch = new AtomicReference<LeaderLatch>(null);
+    this.loadManagementPeons = Maps.newConcurrentMap();
   }
 
   public boolean isClusterMaster()
@@ -143,7 +145,7 @@ public class DruidMaster
 
     // find segments currently loaded
     Map<String, Set<DataSegment>> segmentsInCluster = Maps.newHashMap();
-    for (DruidServer druidServer : serverInventoryManager.getInventory()) {
+    for (DruidServer druidServer : serverInventoryThingie.getInventory()) {
       for (DruidDataSource druidDataSource : druidServer.getDataSources()) {
         Set<DataSegment> segments = segmentsInCluster.get(druidDataSource.getName());
         if (segments == null) {
@@ -175,12 +177,12 @@ public class DruidMaster
 
   public int lookupSegmentLifetime(DataSegment segment)
   {
-    return serverInventoryManager.lookupSegmentLifetime(segment);
+    return serverInventoryThingie.lookupSegmentLifetime(segment);
   }
 
   public void decrementRemovedSegmentsLifetime()
   {
-    serverInventoryManager.decrementRemovedSegmentsLifetime();
+    serverInventoryThingie.decrementRemovedSegmentsLifetime();
   }
 
   public void removeSegment(DataSegment segment)
@@ -201,12 +203,12 @@ public class DruidMaster
 
   public void moveSegment(String from, String to, String segmentName, final LoadPeonCallback callback)
   {
-    final DruidServer fromServer = serverInventoryManager.getInventoryValue(from);
+    final DruidServer fromServer = serverInventoryThingie.getInventoryValue(from);
     if (fromServer == null) {
       throw new IllegalArgumentException(String.format("Unable to find server [%s]", from));
     }
 
-    final DruidServer toServer = serverInventoryManager.getInventoryValue(to);
+    final DruidServer toServer = serverInventoryThingie.getInventoryValue(to);
     if (toServer == null) {
       throw new IllegalArgumentException(String.format("Unable to find server [%s]", to));
     }
@@ -247,8 +249,10 @@ public class DruidMaster
       );
     }
 
-    final String toLoadQueueSegPath = yp.combineParts(Arrays.asList(config.getLoadQueuePath(), to, segmentName));
-    final String toServedSegPath = yp.combineParts(Arrays.asList(config.getServedSegmentsLocation(), to, segmentName));
+    final String toLoadQueueSegPath = ZKPaths.makePath(ZKPaths.makePath(config.getLoadQueuePath(), to), segmentName);
+    final String toServedSegPath = ZKPaths.makePath(
+        ZKPaths.makePath(config.getServedSegmentsLocation(), to), segmentName
+    );
 
     loadPeon.loadSegment(
         segment,
@@ -257,12 +261,17 @@ public class DruidMaster
           @Override
           protected void execute()
           {
-            if ((yp.lookup(toServedSegPath, Object.class) != null) &&
-                yp.lookup(toLoadQueueSegPath, Object.class) == null &&
-                !dropPeon.getSegmentsToDrop().contains(segment)) {
-              dropPeon.dropSegment(segment, callback);
-            } else if (callback != null) {
-              callback.execute();
+            try {
+              if (curator.checkExists().forPath(toServedSegPath) != null &&
+                  curator.checkExists().forPath(toLoadQueueSegPath) == null &&
+                  !dropPeon.getSegmentsToDrop().contains(segment)) {
+                dropPeon.dropSegment(segment, callback);
+              } else if (callback != null) {
+                callback.execute();
+              }
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
             }
           }
         }
@@ -271,12 +280,12 @@ public class DruidMaster
 
   public void cloneSegment(String from, String to, String segmentName, LoadPeonCallback callback)
   {
-    final DruidServer fromServer = serverInventoryManager.getInventoryValue(from);
+    final DruidServer fromServer = serverInventoryThingie.getInventoryValue(from);
     if (fromServer == null) {
       throw new IllegalArgumentException(String.format("Unable to find server [%s]", from));
     }
 
-    final DruidServer toServer = serverInventoryManager.getInventoryValue(to);
+    final DruidServer toServer = serverInventoryThingie.getInventoryValue(to);
     if (toServer == null) {
       throw new IllegalArgumentException(String.format("Unable to find server [%s]", to));
     }
@@ -313,7 +322,7 @@ public class DruidMaster
 
   public void dropSegment(String from, String segmentName, final LoadPeonCallback callback)
   {
-    final DruidServer fromServer = serverInventoryManager.getInventoryValue(from);
+    final DruidServer fromServer = serverInventoryThingie.getInventoryValue(from);
     if (fromServer == null) {
       throw new IllegalArgumentException(String.format("Unable to find server [%s]", from));
     }
@@ -374,13 +383,41 @@ public class DruidMaster
       }
       started = true;
 
-      if (!yp.isStarted()) {
-        throw new ISE("Master cannot perform without his yellow pages.");
+      createNewLeaderLatch();
+      try {
+        leaderLatch.get().start();
       }
-
-      becomeMaster();
-      yp.registerListener(config.getBasePath(), masterPeon);
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
     }
+  }
+
+  private LeaderLatch createNewLeaderLatch()
+  {
+    final LeaderLatch newLeaderLatch = new LeaderLatch(
+        curator, ZKPaths.makePath(config.getBasePath(), MASTER_OWNER_NODE), config.getHost()
+    );
+
+    newLeaderLatch.attachListener(
+        new LeaderLatchListener()
+        {
+          @Override
+          public void becomeMaster()
+          {
+            DruidMaster.this.becomeMaster();
+          }
+
+          @Override
+          public void stopBeingMaster()
+          {
+            DruidMaster.this.stopBeingMaster();
+          }
+        },
+        Execs.singleThreaded("MasterLeader-%s")
+    );
+
+    return leaderLatch.getAndSet(newLeaderLatch);
   }
 
   @LifecycleStop
@@ -391,13 +428,12 @@ public class DruidMaster
         return;
       }
 
+      Closeables.closeQuietly(leaderLatch.get());
       stopBeingMaster();
-      yp.unregisterListener(config.getBasePath(), masterPeon);
 
       started = false;
 
       exec.shutdownNow();
-      peonExec.shutdownNow();
     }
   }
 
@@ -408,41 +444,22 @@ public class DruidMaster
         return;
       }
 
-      boolean becameMaster = true;
+      log.info("I am the master, all must bow!");
       try {
-        yp.announce(
-            config.getBasePath(),
-            MASTER_OWNER_NODE,
-            ImmutableMap.of(
-                "host", config.getHost()
-            )
-        );
-      }
-      catch (ZkNodeExistsException e) {
-        log.info("Got ZkNodeExistsException, not becoming master.");
-        becameMaster = false;
-      }
-
-      if (becameMaster) {
-        log.info("I am the master, all must bow!");
         master = true;
         databaseSegmentManager.start();
         databaseRuleManager.start();
-        serverInventoryManager.start();
+        serverInventoryThingie.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
 
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
         if (indexingServiceClient != null) {
+
           masterRunnables.add(
               Pair.of(
                   new MasterIndexingServiceRunnable(
-                      makeIndexingServiceHelpers(
-                          configManager.watch(
-                              MergerWhitelist.CONFIG_KEY,
-                              MergerWhitelist.class
-                          )
-                      )
+                      makeIndexingServiceHelpers(configManager.watch(MergerWhitelist.CONFIG_KEY, MergerWhitelist.class))
                   ),
                   config.getMasterSegmentMergerPeriod()
               )
@@ -473,11 +490,22 @@ public class DruidMaster
               }
           );
         }
-      } else {
-        log.info(
-            "FAILED to become master!!11!12  Wtfpwned by [%s]",
-            clusterInfo.lookupCurrentLeader()
-        );
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Unable to become master")
+            .emit();
+        final LeaderLatch oldLatch = createNewLeaderLatch();
+        Closeables.closeQuietly(oldLatch);
+        try {
+          leaderLatch.get().start();
+        }
+        catch (Exception e1) {
+          // If an exception gets thrown out here, then the master will zombie out 'cause it won't be looking for
+          // the latch anymore.  I don't believe it's actually possible for an Exception to throw out here, but
+          // Curator likes to have "throws Exception" on methods so it might happen...
+          log.makeAlert(e1, "I am a zombie")
+             .emit();
+        }
       }
     }
   }
@@ -485,25 +513,23 @@ public class DruidMaster
   private void stopBeingMaster()
   {
     synchronized (lock) {
-      log.debug("I am %s the master", master ? "DEFINITELY" : "NOT");
-      if (master) {
+      try {
         log.info("I am no longer the master...");
+
+        leaderLatch.get().close();
 
         for (String server : loadManagementPeons.keySet()) {
           LoadQueuePeon peon = loadManagementPeons.remove(server);
           peon.stop();
-          yp.unregisterListener(
-              yp.combineParts(Arrays.asList(config.getLoadQueuePath(), server)),
-              peon
-          );
         }
         loadManagementPeons.clear();
 
-        yp.unannounce(config.getBasePath(), MASTER_OWNER_NODE);
-
         databaseSegmentManager.stop();
-        serverInventoryManager.stop();
+        serverInventoryThingie.stop();
         master = false;
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Unable to stopBeingMaster").emit();
       }
     }
   }
@@ -577,35 +603,6 @@ public class DruidMaster
     }
   }
 
-  private class MasterListeningPeon implements PhoneBookPeon<Map>
-  {
-    @Override
-    public Class<Map> getObjectClazz()
-    {
-      return Map.class;
-    }
-
-    @Override
-    public void newEntry(String name, Map properties)
-    {
-      if (MASTER_OWNER_NODE.equals(name)) {
-        if (config.getHost().equals(properties.get("host"))) {
-          log.info("I really am the master!");
-        } else {
-          log.info("[%s] is the real master...", properties);
-        }
-      }
-    }
-
-    @Override
-    public void entryRemoved(String name)
-    {
-      if (MASTER_OWNER_NODE.equals(name)) {
-        becomeMaster();
-      }
-    }
-  }
-
   public abstract class MasterRunnable implements Runnable
   {
     private final long startTime = System.currentTimeMillis();
@@ -631,7 +628,7 @@ public class DruidMaster
 
         List<Boolean> allStarted = Arrays.asList(
             databaseSegmentManager.isStarted(),
-            serverInventoryManager.isStarted()
+            serverInventoryThingie.isStarted()
         );
         for (Boolean aBoolean : allStarted) {
           if (!aBoolean) {
@@ -678,7 +675,7 @@ public class DruidMaster
                 {
                   // Display info about all historical servers
                   Iterable<DruidServer> servers = FunctionalIterable
-                      .create(serverInventoryManager.getInventory())
+                      .create(serverInventoryThingie.getInventory())
                       .filter(
                           new Predicate<DruidServer>()
                           {
@@ -691,6 +688,7 @@ public class DruidMaster
                             }
                           }
                       );
+
                   if (log.isDebugEnabled()) {
                     log.debug("Servers");
                     for (DruidServer druidServer : servers) {
@@ -706,15 +704,11 @@ public class DruidMaster
                   final DruidCluster cluster = new DruidCluster();
                   for (DruidServer server : servers) {
                     if (!loadManagementPeons.containsKey(server.getName())) {
-                      String basePath = yp.combineParts(Arrays.asList(config.getLoadQueuePath(), server.getName()));
-                      LoadQueuePeon loadQueuePeon = new LoadQueuePeon(yp, basePath, peonExec);
+                      String basePath = ZKPaths.makePath(config.getLoadQueuePath(), server.getName());
+                      LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(basePath);
                       log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
 
-                      loadManagementPeons.put(
-                          server.getName(),
-                          loadQueuePeon
-                      );
-                      yp.registerListener(basePath, loadQueuePeon);
+                      loadManagementPeons.put(server.getName(), loadQueuePeon);
                     }
 
                     cluster.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
@@ -741,8 +735,6 @@ public class DruidMaster
                     log.info("Removing listener for server[%s] which is no longer there.", name);
                     LoadQueuePeon peon = loadManagementPeons.remove(name);
                     peon.stop();
-
-                    yp.unregisterListener(yp.combineParts(Arrays.asList(config.getLoadQueuePath(), name)), peon);
                   }
 
                   decrementRemovedSegmentsLifetime();

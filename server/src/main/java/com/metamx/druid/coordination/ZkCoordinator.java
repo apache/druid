@@ -19,22 +19,34 @@
 
 package com.metamx.druid.coordination;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
+import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.loading.SegmentLoadingException;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.phonebook.PhoneBook;
 import com.metamx.phonebook.PhoneBookPeon;
 
+import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.recipes.cache.ChildData;
+import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
+import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
+import com.netflix.curator.utils.ZKPaths;
+import org.apache.zookeeper.CreateMode;
 import org.joda.time.DateTime;
 
 import java.io.File;
@@ -43,19 +55,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  */
 public class ZkCoordinator implements DataSegmentChangeHandler
 {
-  private static final Logger log = new Logger(ZkCoordinator.class);
+  private static final EmittingLogger log = new EmittingLogger(ZkCoordinator.class);
 
   private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
   private final ZkCoordinatorConfig config;
   private final DruidServer me;
-  private final PhoneBook yp;
+  private final Announcer announcer;
+  private final CuratorFramework curator;
   private final ServerManager serverManager;
   private final ServiceEmitter emitter;
   private final List<Pair<String, PhoneBookPeon<?>>> peons;
@@ -63,13 +77,15 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private final String loadQueueLocation;
   private final String servedSegmentsLocation;
 
+  private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started;
 
   public ZkCoordinator(
       ObjectMapper jsonMapper,
       ZkCoordinatorConfig config,
       DruidServer me,
-      PhoneBook yp,
+      Announcer announcer,
+      CuratorFramework curator,
       ServerManager serverManager,
       ServiceEmitter emitter
   )
@@ -77,19 +93,14 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.me = me;
-    this.yp = yp;
+    this.announcer = announcer;
+    this.curator = curator;
     this.serverManager = serverManager;
     this.emitter = emitter;
 
     this.peons = new ArrayList<Pair<String, PhoneBookPeon<?>>>();
-    this.loadQueueLocation = yp.combineParts(Arrays.asList(config.getLoadQueueLocation(), me.getName()));
-    this.servedSegmentsLocation = yp.combineParts(
-        Arrays.asList(
-            config.getServedSegmentsLocation(), me.getName()
-        )
-    );
-
-    this.config.getSegmentInfoCacheDirectory().mkdirs();
+    this.loadQueueLocation = ZKPaths.makePath(config.getLoadQueueLocation(), me.getName());
+    this.servedSegmentsLocation = ZKPaths.makePath(config.getServedSegmentsLocation(), me.getName());
   }
 
   @LifecycleStart
@@ -101,84 +112,77 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         return;
       }
 
-      if (yp.lookup(loadQueueLocation, Object.class) == null) {
-        yp.post(
-            config.getLoadQueueLocation(),
-            me.getName(),
-            ImmutableMap.of("created", new DateTime().toString())
-        );
-      }
-      if (yp.lookup(servedSegmentsLocation, Object.class) == null) {
-        yp.post(
-            config.getServedSegmentsLocation(),
-            me.getName(),
-            ImmutableMap.of("created", new DateTime().toString())
-        );
-      }
-
-      loadCache();
-
-      yp.announce(
-          config.getAnnounceLocation(),
-          me.getName(),
-          me.getStringProps()
+      loadQueueCache = new PathChildrenCache(
+          curator,
+          loadQueueLocation,
+          true,
+          true,
+          new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ZkCoordinator-%s").build()
       );
 
-      peons.add(
-          new Pair<String, PhoneBookPeon<?>>(
-              loadQueueLocation,
-              new PhoneBookPeon<DataSegmentChangeRequest>()
+      try {
+        this.config.getSegmentInfoCacheDirectory().mkdirs();
+
+        curator.newNamespaceAwareEnsurePath(loadQueueLocation).ensure(curator.getZookeeperClient());
+        curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
+
+        loadCache();
+
+        announcer.announce(
+            ZKPaths.makePath(config.getAnnounceLocation(), me.getName()),
+            jsonMapper.writeValueAsBytes(me.getStringProps())
+        );
+
+        loadQueueCache.getListenable().addListener(
+            new PathChildrenCacheListener()
+            {
+              @Override
+              public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
               {
-                @Override
-                public Class<DataSegmentChangeRequest> getObjectClazz()
-                {
-                  return DataSegmentChangeRequest.class;
-                }
-
-                @Override
-                public void newEntry(String nodeName, DataSegmentChangeRequest segment)
-                {
-                  log.info("New node[%s] with segmentClass[%s]", nodeName, segment.getClass());
-
-                  try {
-                    segment.go(ZkCoordinator.this);
-                    yp.unpost(loadQueueLocation, nodeName);
-
-                    log.info("Completed processing for node[%s]", nodeName);
-                  }
-                  catch (Throwable t) {
-                    yp.unpost(loadQueueLocation, nodeName);
-
-                    log.error(
-                        t, "Uncaught throwable made it through loading.  Node[%s/%s]", loadQueueLocation, nodeName
-                    );
-                    Map<String, Object> exceptionMap = Maps.newHashMap();
-                    exceptionMap.put("node", loadQueueLocation);
-                    exceptionMap.put("nodeName", nodeName);
-                    exceptionMap.put("nodeProperties", segment.toString());
-                    exceptionMap.put("exception", t.getMessage());
-                    emitter.emit(
-                        new AlertEvent.Builder().build(
-                            "Uncaught exception related to segment load/unload",
-                            exceptionMap
-                        )
+                final ChildData child = event.getData();
+                switch (event.getType()) {
+                  case CHILD_ADDED:
+                    final String path = child.getPath();
+                    final DataSegmentChangeRequest segment = jsonMapper.readValue(
+                        child.getData(), DataSegmentChangeRequest.class
                     );
 
-                    throw Throwables.propagate(t);
-                  }
-                }
+                    log.info("New node[%s] with segmentClass[%s]", path, segment.getClass());
 
-                @Override
-                public void entryRemoved(String name)
-                {
-                  log.info("%s was removed", name);
+                    try {
+                      segment.go(ZkCoordinator.this);
+                      curator.delete().guaranteed().forPath(path);
+
+                      log.info("Completed processing for node[%s]", path);
+                    }
+                    catch (Exception e) {
+                      try {
+                        curator.delete().guaranteed().forPath(path);
+                      }
+                      catch (Exception e1) {
+                        log.info(e1, "Failed to delete node[%s], but ignoring exception.", path);
+                      }
+
+                      log.makeAlert(e, "Segment load/unload: uncaught exception.")
+                          .addData("node", path)
+                          .addData("nodeProperties", segment)
+                          .emit();
+                    }
+
+                    break;
+                  case CHILD_REMOVED:
+                    log.info("%s was removed", event.getData().getPath());
+                    break;
+                  default:
+                    log.info("Ignoring event[%s]", event);
                 }
               }
-          )
-      );
-
-      for (Pair<String, PhoneBookPeon<?>> peon : peons) {
-        yp.registerListener(peon.lhs, peon.rhs);
+            }
+        );
+      }
+      catch (Exception e) {
+        Throwables.propagateIfPossible(e, IOException.class);
+        throw Throwables.propagate(e);
       }
 
       started = true;
@@ -194,14 +198,19 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         return;
       }
 
-      for (Pair<String, PhoneBookPeon<?>> peon : peons) {
-        yp.unregisterListener(peon.lhs, peon.rhs);
+
+      try {
+        loadQueueCache.close();
+
+        curator.delete().guaranteed().forPath(ZKPaths.makePath(config.getAnnounceLocation(), me.getName()));
       }
-      peons.clear();
-
-      yp.unannounce(config.getAnnounceLocation(), me.getName());
-
-      started = false;
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+      finally {
+        loadQueueCache = null;
+        started = false;
+      }
     }
   }
 
@@ -259,19 +268,17 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         );
       }
 
-      yp.announce(servedSegmentsLocation, segment.getIdentifier(), segment);
+      announcer.announce(makeSegmentPath(segment), jsonMapper.writeValueAsBytes(segment));
     }
     catch (SegmentLoadingException e) {
-      log.error(e, "Failed to load segment[%s]", segment);
-      emitter.emit(
-          new AlertEvent.Builder().build(
-              "Failed to load segment",
-              ImmutableMap.<String, Object>builder()
-                          .put("segment", segment.toString())
-                          .put("exception", e.toString())
-                          .build()
-          )
-      );
+      log.makeAlert(e, "Failed to load segment for dataSource")
+          .addData("segment", segment)
+          .emit();
+    }
+    catch (JsonProcessingException e) {
+      log.makeAlert(e, "WTF, exception writing into byte[]???")
+         .addData("segment", segment)
+         .emit();
     }
   }
 
@@ -279,26 +286,24 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   public void removeSegment(DataSegment segment)
   {
     try {
+      announcer.unannounce(makeSegmentPath(segment));
+
       serverManager.dropSegment(segment);
 
       File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
       if (!segmentInfoCacheFile.delete()) {
         log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
       }
-
-      yp.unannounce(servedSegmentsLocation, segment.getIdentifier());
     }
     catch (Exception e) {
-      log.error(e, "Exception thrown when dropping segment[%s]", segment);
-      emitter.emit(
-          new AlertEvent.Builder().build(
-              "Failed to remove segment",
-              ImmutableMap.<String, Object>builder()
-                          .put("segment", segment.toString())
-                          .put("exception", e.toString())
-                          .build()
-          )
-      );
+      log.makeAlert("Failed to remove segment")
+          .addData("segment", segment)
+          .emit();
     }
+  }
+
+  private String makeSegmentPath(DataSegment segment)
+  {
+    return ZKPaths.makePath(servedSegmentsLocation, segment.getIdentifier());
   }
 }

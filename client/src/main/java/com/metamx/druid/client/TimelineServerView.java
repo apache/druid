@@ -19,20 +19,14 @@
 
 package com.metamx.druid.client;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.metamx.druid.VersionedIntervalTimeline;
+import com.metamx.druid.client.selector.ServerSelector;
+import com.metamx.druid.query.QueryRunner;
 
 /**
  */
-public abstract class ServerInventoryManagerConfig
+public interface TimelineServerView extends ServerView
 {
-  @Config("druid.zk.paths.announcementsPath")
-  public abstract String getServerIdPath();
-
-  @Config("druid.zk.paths.servedSegmentsPath")
-  public abstract String getServerInventoryPath();
-
-  @Config("druid.master.removedSegmentLifetime")
-  @Default("1")
-  public abstract int getRemovedSegmentLifetime();
+  VersionedIntervalTimeline<String, ServerSelector> getTimeline(String dataSource);
+  <T> QueryRunner<T> getQueryRunner(DruidServer server);
 }

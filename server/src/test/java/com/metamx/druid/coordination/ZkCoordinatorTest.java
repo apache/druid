@@ -27,15 +27,14 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.DruidServerConfig;
-import com.metamx.druid.client.ZKPhoneBook;
+import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.CacheTestSegmentLoader;
 import com.metamx.druid.metrics.NoopServiceEmitter;
 import com.metamx.druid.query.NoopQueryRunnerFactoryConglomerate;
 import com.metamx.druid.shard.NoneShardSpec;
-
-import org.easymock.EasyMock;
+import com.netflix.curator.framework.CuratorFramework;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -53,7 +52,8 @@ public class ZkCoordinatorTest
 {
   private ZkCoordinator zkCoordinator;
   private ServerManager serverManager;
-  private ZKPhoneBook yp;
+  private Announcer announcer;
+  private CuratorFramework curator;
   private File cacheDir;
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final Logger log = new Logger(ZkCoordinatorTest.class);
@@ -79,9 +79,6 @@ public class ZkCoordinatorTest
         new NoopServiceEmitter(),
         MoreExecutors.sameThreadExecutor()
     );
-
-    yp = EasyMock.createNiceMock(ZKPhoneBook.class);
-    EasyMock.replay(yp);
 
     zkCoordinator = new ZkCoordinator(
         jsonMapper,
@@ -140,19 +137,16 @@ public class ZkCoordinatorTest
             },
             "dummyType"
         ),
-        yp,
+        announcer,
+        curator,
         serverManager,
         new NoopServiceEmitter()
     );
-
-    EasyMock.reset(yp);
   }
 
   @Test
   public void testLoadCache() throws Exception
   {
-    EasyMock.replay(yp);
-
     List<DataSegment> segments = Lists.newArrayList(
         makeSegment("test", "1", new Interval("P1d/2011-04-01")),
         makeSegment("test", "1", new Interval("P1d/2011-04-02")),

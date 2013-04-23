@@ -17,45 +17,25 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.coordination;
+package com.metamx.druid.client;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.curator.inventory.InventoryManagerConfig;
+import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
-public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
+public abstract class ServerInventoryThingieConfig implements InventoryManagerConfig
 {
-  private final DataSegment segment;
-
-  @JsonCreator
-  public SegmentChangeRequestDrop(
-      @JsonUnwrapped DataSegment segment
-  )
-  {
-    this.segment = segment;
-  }
-
-  @JsonProperty
-  @JsonUnwrapped
-  public DataSegment getSegment()
-  {
-    return segment;
-  }
-
+  @Config("druid.zk.paths.announcementsPath")
   @Override
-  public void go(DataSegmentChangeHandler handler)
-  {
-    handler.removeSegment(segment);
-  }
+  public abstract String getContainerPath();
 
+  @Config("druid.zk.paths.servedSegmentsPath")
   @Override
-  public String toString()
-  {
-    return "SegmentChangeRequestDrop{" +
-           "segment=" + segment +
-           '}';
-  }
+  public abstract String getInventoryPath();
+
+  @Config("druid.master.removedSegmentLifetime")
+  @Default("1")
+  public abstract int getRemovedSegmentLifetime();
 }
