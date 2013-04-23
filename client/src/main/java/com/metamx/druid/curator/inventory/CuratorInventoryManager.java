@@ -27,6 +27,8 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.ShutdownNowIgnoringExecutorService;
+import com.metamx.druid.curator.cache.PathChildrenCacheFactory;
+import com.metamx.druid.curator.cache.SimplePathChildrenCacheFactory;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
@@ -54,12 +56,12 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
   private final Object lock = new Object();
 
-  private final InventoryManagerConfig config;
   private final CuratorFramework curatorFramework;
-  private final ExecutorService exec;
+  private final InventoryManagerConfig config;
   private final CuratorInventoryManagerStrategy<ContainerClass, InventoryClass> strategy;
 
   private final ConcurrentMap<String, ContainerHolder> containers;
+  private final PathChildrenCacheFactory cacheFactory;
 
   private volatile PathChildrenCache childrenCache;
 
@@ -72,10 +74,11 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
   {
     this.curatorFramework = curatorFramework;
     this.config = config;
-    this.exec = exec;
     this.strategy = strategy;
 
     this.containers = new MapMaker().makeMap();
+
+    this.cacheFactory = new SimplePathChildrenCacheFactory(true, true, new ShutdownNowIgnoringExecutorService(exec));
   }
 
   @LifecycleStart
@@ -86,13 +89,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
         return;
       }
 
-      childrenCache = new PathChildrenCache(
-          curatorFramework,
-          config.getContainerPath(),
-          true,
-          true,
-          new ShutdownNowIgnoringExecutorService(exec)
-      );
+      childrenCache = cacheFactory.make(curatorFramework, config.getContainerPath());
     }
 
     childrenCache.getListenable().addListener(new ContainerCacheListener());
@@ -212,9 +209,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           }
 
           final String inventoryPath = String.format("%s/%s", config.getContainerPath(), containerKey);
-          PathChildrenCache containerCache = new PathChildrenCache(
-              curatorFramework, inventoryPath, true, true, new ShutdownNowIgnoringExecutorService(exec)
-          );
+          PathChildrenCache containerCache = cacheFactory.make(curatorFramework, inventoryPath);
           containerCache.getListenable().addListener(new InventoryCacheListener(containerKey, inventoryPath));
 
           containers.put(containerKey, new ContainerHolder(container, containerCache));
