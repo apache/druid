@@ -115,10 +115,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public Iterable<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran)
   {
     Interval actualIntervalTmp = interval;
-    Interval dataInterval = getInterval();
-    if (!actualIntervalTmp.overlaps(dataInterval)) {
+    final Interval indexInterval = getInterval();
+
+    if (!actualIntervalTmp.overlaps(indexInterval)) {
       return ImmutableList.of();
     }
+
+    final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
 
     if (actualIntervalTmp.getStart().isBefore(dataInterval.getStart())) {
       actualIntervalTmp = actualIntervalTmp.withStart(dataInterval.getStart());
@@ -367,7 +370,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         final String columnName = column.toLowerCase();
                         final Integer metricIndexInt = index.getMetricIndex(columnName);
 
-                        if(metricIndexInt != null) {
+                        if (metricIndexInt != null) {
                           final int metricIndex = metricIndexInt;
 
                           final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(columnName));
@@ -390,7 +393,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                         final Integer dimensionIndexInt = index.getDimensionIndex(columnName);
 
-                        if(dimensionIndexInt != null) {
+                        if (dimensionIndexInt != null) {
                           final int dimensionIndex = dimensionIndexInt;
                           return new ObjectColumnSelector<String>()
                           {
@@ -404,10 +407,14 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                             public String get()
                             {
                               final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
-                              if(dimVals.length == 1) return dimVals[0];
-                              if(dimVals.length == 0) return null;
+                              if (dimVals.length == 1) {
+                                return dimVals[0];
+                              }
+                              if (dimVals.length == 0) {
+                                return null;
+                              }
                               throw new UnsupportedOperationException(
-                                "makeObjectColumnSelector does not support multivalued columns"
+                                  "makeObjectColumnSelector does not support multivalued columns"
                               );
                             }
                           };
