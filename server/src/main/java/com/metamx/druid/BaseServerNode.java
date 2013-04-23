@@ -47,6 +47,7 @@ public abstract class BaseServerNode<T extends QueryableNode> extends QueryableN
   private StupidPool<ByteBuffer> computeScratchPool = null;
 
   public BaseServerNode(
+      String nodeType,
       Logger log,
       Properties props,
       Lifecycle lifecycle,
@@ -55,7 +56,7 @@ public abstract class BaseServerNode<T extends QueryableNode> extends QueryableN
       ConfigurationObjectFactory configFactory
   )
   {
-    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
+    super(nodeType, log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
   public QueryRunnerFactoryConglomerate getConglomerate()

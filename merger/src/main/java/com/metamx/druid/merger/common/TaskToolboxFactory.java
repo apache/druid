@@ -21,13 +21,13 @@ package com.metamx.druid.merger.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.druid.client.ServerView;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
-import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
@@ -42,7 +42,7 @@ public class TaskToolboxFactory
   private final RestS3Service s3Client;
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
-  private final SegmentAnnouncer segmentAnnouncer;
+  private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final ObjectMapper objectMapper;
@@ -54,7 +54,7 @@ public class TaskToolboxFactory
       RestS3Service s3Client,
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
-      SegmentAnnouncer segmentAnnouncer,
+      DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       ObjectMapper objectMapper
@@ -70,11 +70,6 @@ public class TaskToolboxFactory
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
     this.objectMapper = objectMapper;
-  }
-
-  public ObjectMapper getObjectMapper()
-  {
-    return objectMapper;
   }
 
   public TaskToolbox build(Task task)

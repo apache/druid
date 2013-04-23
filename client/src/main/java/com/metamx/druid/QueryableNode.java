@@ -33,14 +33,19 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DruidServer;
+import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.client.ServerInventoryThingieConfig;
 import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -78,12 +83,15 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private final ObjectMapper smileMapper;
   private final Properties props;
   private final ConfigurationObjectFactory configFactory;
+  private final String nodeType;
 
+  private DruidServer druidServer = null;
   private ServiceEmitter emitter = null;
   private List<Monitor> monitors = null;
   private Server server = null;
   private CuratorFramework curator = null;
-  private Announcer announcer = null;
+  private DataSegmentAnnouncer announcer = null;
+  private ZkPathsConfig zkPaths = null;
   private ScheduledExecutorFactory scheduledExecutorFactory = null;
   private RequestLogger requestLogger = null;
   private ServerInventoryThingie serverInventoryThingie = null;
@@ -91,6 +99,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private boolean initialized = false;
 
   public QueryableNode(
+      String nodeType,
       Logger log,
       Properties props,
       Lifecycle lifecycle,
@@ -115,6 +124,13 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     Preconditions.checkNotNull(configFactory, "configFactory");
 
     Preconditions.checkState(smileMapper.getJsonFactory() instanceof SmileFactory, "smileMapper should use smile.");
+    this.nodeType = nodeType;
+  }
+
+  public T setDruidServer(DruidServer druidServer)
+  {
+    checkFieldNotSetAndSet("druidServer", druidServer);
+    return (T) this;
   }
 
   @SuppressWarnings("unchecked")
@@ -125,7 +141,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   }
 
   @SuppressWarnings("unchecked")
-  public T setAnnouncer(Announcer announcer)
+  public T setAnnouncer(DataSegmentAnnouncer announcer)
   {
     checkFieldNotSetAndSet("announcer", announcer);
     return (T) this;
@@ -149,6 +165,13 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   public T setServer(Server server)
   {
     checkFieldNotSetAndSet("server", server);
+    return (T) this;
+  }
+
+  @SuppressWarnings("unchecked")
+  public T setZkPaths(ZkPathsConfig zkPaths)
+  {
+    checkFieldNotSetAndSet("zkPaths", zkPaths);
     return (T) this;
   }
 
@@ -214,13 +237,19 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     return configFactory;
   }
 
+  public DruidServer getDruidServer()
+  {
+    initializeDruidServer();
+    return druidServer;
+  }
+
   public CuratorFramework getCuratorFramework()
   {
     initializeCuratorFramework();
     return curator;
   }
 
-  public Announcer getAnnouncer()
+  public DataSegmentAnnouncer getAnnouncer()
   {
     initializeAnnouncer();
     return announcer;
@@ -244,6 +273,12 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     return server;
   }
 
+  public ZkPathsConfig getZkPaths()
+  {
+    initializeZkPaths();
+    return zkPaths;
+  }
+
   public ScheduledExecutorFactory getScheduledExecutorFactory()
   {
     initializeScheduledExecutorFactory();
@@ -260,6 +295,13 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   {
     initializeServerInventoryThingie();
     return serverInventoryThingie;
+  }
+
+  private void initializeDruidServer()
+  {
+    if (druidServer == null) {
+      setDruidServer(new DruidServer(getConfigFactory().build(DruidServerConfig.class), nodeType));
+    }
   }
 
   private void initializeServerInventoryThingie()
@@ -306,6 +348,13 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     }
   }
 
+  private void initializeZkPaths()
+  {
+    if (zkPaths == null) {
+      setZkPaths(getConfigFactory().build(ZkPathsConfig.class));
+    }
+  }
+
   private void initializeScheduledExecutorFactory()
   {
     if (scheduledExecutorFactory == null) {
@@ -328,7 +377,15 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private void initializeAnnouncer()
   {
     if (announcer == null) {
-      setAnnouncer(new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s")));
+      setAnnouncer(
+          new CuratorDataSegmentAnnouncer(
+              getDruidServer(),
+              getZkPaths(),
+              new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s")),
+              getJsonMapper()
+          )
+      );
+      lifecycle.addManagedInstance(getAnnouncer());
     }
   }
 

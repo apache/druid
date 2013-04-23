@@ -47,7 +47,7 @@ import com.metamx.druid.realtime.MinTimeFirehose;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.RealtimePlumberSchool;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.realtime.SegmentAnnouncer;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.druid.realtime.plumber.Sink;
 import com.metamx.druid.realtime.plumber.VersioningPolicy;
@@ -132,6 +132,12 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
+  public String getNodeType()
+  {
+    return "realtime";
+  }
+
+  @Override
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
     if (plumber != null) {
@@ -192,8 +198,8 @@ public class RealtimeIndexTask extends AbstractTask
     // with the coordinator.  Right now, we'll block/throw in whatever thread triggered the coordinator behavior,
     // which will typically be either the main data processing loop or the persist thread.
 
-    // Wrap default SegmentAnnouncer such that we unlock intervals as we unannounce segments
-    final SegmentAnnouncer lockingSegmentAnnouncer = new SegmentAnnouncer()
+    // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
+    final DataSegmentAnnouncer lockingSegmentAnnouncer = new DataSegmentAnnouncer()
     {
       @Override
       public void announceSegment(final DataSegment segment) throws IOException

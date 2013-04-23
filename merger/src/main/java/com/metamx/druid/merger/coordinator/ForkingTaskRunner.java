@@ -170,6 +170,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
                             command.add(String.format("-Ddruid.port=%d", childPort));
 
                             command.add(config.getMainClass());
+                            command.add(defaultNodeType(task));
                             command.add(taskFile.toString());
                             command.add(statusFile.toString());
 
@@ -257,6 +258,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
 
       return tasks.get(task.getId()).statusFuture;
     }
+  }
+
+  private String defaultNodeType(Task task)
+  {
+    final String nodeType = task.getNodeType();
+    return nodeType == null ? "indexer-executor" : nodeType;
   }
 
   @LifecycleStop

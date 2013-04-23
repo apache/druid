@@ -72,7 +72,6 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     return new Builder();
   }
 
-  private DruidServer druidServer;
   private SegmentLoader segmentLoader;
 
   public ComputeNode(
@@ -83,7 +82,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
       ConfigurationObjectFactory configFactory
   )
   {
-    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
+    super("historical", log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
   public ComputeNode setSegmentLoader(SegmentLoader segmentLoader)
@@ -91,19 +90,6 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     Preconditions.checkState(this.segmentLoader == null, "Cannot set segmentLoader once it has already been set.");
     this.segmentLoader = segmentLoader;
     return this;
-  }
-
-  public ComputeNode setDruidServer(DruidServer druidServer)
-  {
-    Preconditions.checkState(this.druidServer == null, "Cannot set druidServer once it has already been set.");
-    this.druidServer = druidServer;
-    return this;
-  }
-
-  public DruidServer getDruidServer()
-  {
-    initializeDruidServer();
-    return druidServer;
   }
 
   public SegmentLoader getSegmentLoader()
@@ -175,13 +161,6 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
       catch (S3ServiceException e) {
         throw Throwables.propagate(e);
       }
-    }
-  }
-
-  private void initializeDruidServer()
-  {
-    if (druidServer == null) {
-      setDruidServer(new DruidServer(getConfigFactory().build(DruidServerConfig.class), "historical"));
     }
   }
 

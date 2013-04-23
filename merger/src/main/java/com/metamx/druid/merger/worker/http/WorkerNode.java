@@ -117,7 +117,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
       ConfigurationObjectFactory configFactory
   )
   {
-    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
+    super("indexer-worker", log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
   public WorkerNode setHttpClient(HttpClient httpClient)

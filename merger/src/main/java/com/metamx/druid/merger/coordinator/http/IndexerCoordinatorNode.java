@@ -173,7 +173,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
       ConfigurationObjectFactory configFactory
   )
   {
-    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
+    super("index-coordinator", log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
   public IndexerCoordinatorNode setEmitter(ServiceEmitter emitter)

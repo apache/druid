@@ -52,7 +52,7 @@ public class ZkCoordinatorTest
 {
   private ZkCoordinator zkCoordinator;
   private ServerManager serverManager;
-  private Announcer announcer;
+  private DataSegmentAnnouncer announcer;
   private CuratorFramework curator;
   private File cacheDir;
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();

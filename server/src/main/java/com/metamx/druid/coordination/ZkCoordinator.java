@@ -54,7 +54,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private final ObjectMapper jsonMapper;
   private final ZkCoordinatorConfig config;
   private final DruidServer me;
-  private final Announcer announcer;
+  private final DataSegmentAnnouncer announcer;
   private final CuratorFramework curator;
   private final ServerManager serverManager;
   private final ServiceEmitter emitter;
@@ -69,7 +69,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       ObjectMapper jsonMapper,
       ZkCoordinatorConfig config,
       DruidServer me,
-      Announcer announcer,
+      DataSegmentAnnouncer announcer,
       CuratorFramework curator,
       ServerManager serverManager,
       ServiceEmitter emitter
@@ -111,11 +111,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
 
         loadCache();
-
-        announcer.announce(
-            ZKPaths.makePath(config.getAnnounceLocation(), me.getName()),
-            jsonMapper.writeValueAsBytes(me.getStringProps())
-        );
 
         loadQueueCache.getListenable().addListener(
             new PathChildrenCacheListener()
@@ -185,8 +180,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
       try {
         loadQueueCache.close();
-
-        curator.delete().guaranteed().forPath(ZKPaths.makePath(config.getAnnounceLocation(), me.getName()));
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -248,21 +241,22 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       catch (IOException e) {
         removeSegment(segment);
         throw new SegmentLoadingException(
-            "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
+            e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
         );
       }
 
-      announcer.announce(makeSegmentPath(segment), jsonMapper.writeValueAsBytes(segment));
+      try {
+        announcer.announceSegment(segment);
+      }
+      catch (IOException e) {
+        removeSegment(segment);
+        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
+      }
     }
     catch (SegmentLoadingException e) {
       log.makeAlert(e, "Failed to load segment for dataSource")
           .addData("segment", segment)
           .emit();
-    }
-    catch (JsonProcessingException e) {
-      log.makeAlert(e, "WTF, exception writing into byte[]???")
-         .addData("segment", segment)
-         .emit();
     }
   }
 
@@ -270,24 +264,19 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   public void removeSegment(DataSegment segment)
   {
     try {
-      announcer.unannounce(makeSegmentPath(segment));
-
       serverManager.dropSegment(segment);
 
       File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
       if (!segmentInfoCacheFile.delete()) {
         log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
       }
+
+      announcer.unannounceSegment(segment);
     }
     catch (Exception e) {
       log.makeAlert("Failed to remove segment")
           .addData("segment", segment)
           .emit();
     }
-  }
-
-  private String makeSegmentPath(DataSegment segment)
-  {
-    return ZKPaths.makePath(servedSegmentsLocation, segment.getIdentifier());
   }
 }

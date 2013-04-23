@@ -35,9 +35,9 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.BaseServerNode;
-import com.metamx.druid.client.ServerView;
-import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.curator.announcement.Announcer;
+import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
+import com.metamx.druid.coordination.CuratorDataSegmentAnnouncerConfig;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.QueryServlet;
@@ -73,7 +73,6 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
 
   private final Map<String, Object> injectablesMap = Maps.newLinkedHashMap();
 
-  private SegmentAnnouncer segmentAnnouncer = null;
   private SegmentPublisher segmentPublisher = null;
   private DataSegmentPusher dataSegmentPusher = null;
   private List<FireDepartment> fireDepartments = null;
@@ -88,34 +87,24 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
       ConfigurationObjectFactory configFactory
   )
   {
-    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
-  }
-
-  public RealtimeNode setSegmentAnnouncer(SegmentAnnouncer segmentAnnouncer)
-  {
-    Preconditions.checkState(this.segmentAnnouncer == null, "Cannot set segmentAnnouncer once it has already been set.");
-    this.segmentAnnouncer = segmentAnnouncer;
-    return this;
+    super("realtime", log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
   public RealtimeNode setSegmentPublisher(SegmentPublisher segmentPublisher)
   {
-    Preconditions.checkState(this.segmentPublisher == null, "Cannot set segmentPublisher once it has already been set.");
-    this.segmentPublisher = segmentPublisher;
+    checkFieldNotSetAndSet("segmentPublisher", segmentPublisher);
     return this;
   }
 
   public RealtimeNode setDataSegmentPusher(DataSegmentPusher dataSegmentPusher)
   {
-    Preconditions.checkState(this.dataSegmentPusher == null, "Cannot set segmentPusher once it has already been set.");
-    this.dataSegmentPusher = dataSegmentPusher;
+    checkFieldNotSetAndSet("dataSegmentPusher", dataSegmentPusher);
     return this;
   }
 
   public RealtimeNode setFireDepartments(List<FireDepartment> fireDepartments)
   {
-    Preconditions.checkState(this.fireDepartments == null, "Cannot set fireDepartments once it has already been set.");
-    this.fireDepartments = fireDepartments;
+    checkFieldNotSetAndSet("fireDepartments", fireDepartments);
     return this;
   }
 
@@ -124,12 +113,6 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     Preconditions.checkState(injectablesMap.containsKey(name), "Already registered jackson object[%s]", name);
     injectablesMap.put(name, object);
     return this;
-  }
-
-  public SegmentAnnouncer getSegmentAnnouncer()
-  {
-    initializeSegmentAnnouncer();
-    return segmentAnnouncer;
   }
 
   public SegmentPublisher getSegmentPublisher()
@@ -152,21 +135,17 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
 
   protected void doInit() throws Exception
   {
-    initializeSegmentAnnouncer();
-    initializeSegmentPublisher();
-    initializeSegmentPusher();
     initializeJacksonInjectables();
-
-    initializeFireDepartments();
 
     final Lifecycle lifecycle = getLifecycle();
     final ServiceEmitter emitter = getEmitter();
     final QueryRunnerFactoryConglomerate conglomerate = getConglomerate();
     final List<Monitor> monitors = getMonitors();
+    final List<FireDepartment> departments = getFireDepartments();
 
-    monitors.add(new RealtimeMetricsMonitor(fireDepartments));
+    monitors.add(new RealtimeMetricsMonitor(departments));
 
-    final RealtimeManager realtimeManager = new RealtimeManager(fireDepartments, conglomerate);
+    final RealtimeManager realtimeManager = new RealtimeManager(departments, conglomerate);
     lifecycle.addManagedInstance(realtimeManager);
 
     startMonitoring(monitors);
@@ -208,9 +187,9 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     }
 
     injectables.put("queryRunnerFactoryConglomerate", getConglomerate());
-    injectables.put("segmentPusher", dataSegmentPusher);
-    injectables.put("segmentAnnouncer", segmentAnnouncer);
-    injectables.put("segmentPublisher", segmentPublisher);
+    injectables.put("segmentPusher", getDataSegmentPusher());
+    injectables.put("segmentAnnouncer", getAnnouncer());
+    injectables.put("segmentPublisher", getSegmentPublisher());
     injectables.put("serverView", getServerInventoryThingie());
     injectables.put("serviceEmitter", getEmitter());
 
@@ -232,9 +211,11 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
   {
     if (fireDepartments == null) {
       try {
-        fireDepartments = getJsonMapper().readValue(
-            new File(PropUtils.getProperty(getProps(), "druid.realtime.specFile")),
-            new TypeReference<List<FireDepartment>>(){}
+        setFireDepartments(
+            getJsonMapper().<List<FireDepartment>>readValue(
+                new File(PropUtils.getProperty(getProps(), "druid.realtime.specFile")),
+                new TypeReference<List<FireDepartment>>(){}
+            )
         );
       }
       catch (IOException e) {
@@ -247,19 +228,6 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
   {
     if (dataSegmentPusher == null) {
       dataSegmentPusher = ServerInit.getSegmentPusher(getProps(), getConfigFactory(), getJsonMapper());
-    }
-  }
-
-  protected void initializeSegmentAnnouncer()
-  {
-    if (segmentAnnouncer == null) {
-      final ZkSegmentAnnouncerConfig zkSegmentAnnouncerConfig = getConfigFactory().build(RealtimeZkSegmentAnnouncerConfig.class);
-      segmentAnnouncer = new CuratorSegmentAnnouncer(
-          zkSegmentAnnouncerConfig,
-          getAnnouncer(),
-          getJsonMapper()
-      );
-      getLifecycle().addManagedInstance(segmentAnnouncer);
     }
   }
 

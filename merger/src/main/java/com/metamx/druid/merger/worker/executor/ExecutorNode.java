@@ -33,8 +33,6 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.BaseServerNode;
-import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
@@ -53,9 +51,9 @@ import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.ExecutorServiceTaskRunner;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import com.metamx.druid.realtime.CuratorSegmentAnnouncer;
-import com.metamx.druid.realtime.RealtimeZkSegmentAnnouncerConfig;
-import com.metamx.druid.realtime.SegmentAnnouncer;
+import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
+import com.metamx.druid.realtime.RealtimeCuratorDataSegmentAnnouncerConfig;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -114,6 +112,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private ExecutorLifecycle executorLifecycle = null;
 
   public ExecutorNode(
+      String nodeType,
       Properties props,
       Lifecycle lifecycle,
       ObjectMapper jsonMapper,
@@ -122,7 +121,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
       ExecutorLifecycleFactory executorLifecycleFactory
   )
   {
-    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
+    super(nodeType, log, props, lifecycle, jsonMapper, smileMapper, configFactory);
 
     this.lifecycle = lifecycle;
     this.props = props;
@@ -192,10 +191,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
     final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
     final MonitorScheduler monitorScheduler = new MonitorScheduler(
-        configFactory.build(MonitorSchedulerConfig.class),
-        globalScheduledExec,
-        emitter,
-        monitors
+        configFactory.build(MonitorSchedulerConfig.class), globalScheduledExec, emitter, monitors
     );
     lifecycle.addManagedInstance(monitorScheduler);
 
@@ -346,12 +342,6 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   {
     if (taskToolboxFactory == null) {
       final DataSegmentKiller dataSegmentKiller = new S3DataSegmentKiller(s3Service);
-      final SegmentAnnouncer segmentAnnouncer = new CuratorSegmentAnnouncer(
-          configFactory.build(RealtimeZkSegmentAnnouncerConfig.class),
-          getAnnouncer(),
-          getJsonMapper()
-      );
-      lifecycle.addManagedInstance(segmentAnnouncer);
       taskToolboxFactory = new TaskToolboxFactory(
           taskConfig,
           new RemoteTaskActionClientFactory(
@@ -369,7 +359,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
           s3Service,
           segmentPusher,
           dataSegmentKiller,
-          segmentAnnouncer,
+          getAnnouncer(),
           getServerInventoryThingie(),
           getConglomerate(),
           getJsonMapper()
@@ -410,7 +400,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
                       .build()
               )
           )
-      );;
+      );
     }
   }
 
@@ -446,7 +436,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
       return this;
     }
 
-    public ExecutorNode build(ExecutorLifecycleFactory executorLifecycleFactory)
+    public ExecutorNode build(String nodeType, ExecutorLifecycleFactory executorLifecycleFactory)
     {
       if (jsonMapper == null && smileMapper == null) {
         jsonMapper = new DefaultObjectMapper();
@@ -469,7 +459,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
         configFactory = Config.createFactory(props);
       }
 
-      return new ExecutorNode(props, lifecycle, jsonMapper, smileMapper, configFactory, executorLifecycleFactory);
+      return new ExecutorNode(nodeType, props, lifecycle, jsonMapper, smileMapper, configFactory, executorLifecycleFactory);
     }
   }
 }

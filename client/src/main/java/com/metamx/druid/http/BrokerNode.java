@@ -96,7 +96,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
       ConfigurationObjectFactory configFactory
   )
   {
-    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
+    super("broker", log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
   public QueryToolChestWarehouse getWarehouse()
