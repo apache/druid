@@ -136,27 +136,25 @@ public class MasterMain
     lifecycle.addManagedInstance(serverInventoryThingie);
 
     final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
+    final DatabaseRuleManagerConfig databaseRuleManagerConfig = configFactory.build(DatabaseRuleManagerConfig.class);
     final DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
     DbConnector.createSegmentTable(dbi, PropUtils.getProperty(props, "druid.database.segmentTable"));
     DbConnector.createRuleTable(dbi, PropUtils.getProperty(props, "druid.database.ruleTable"));
+    DatabaseRuleManager.createDefaultRule(
+        dbi, databaseRuleManagerConfig.getRuleTable(), databaseRuleManagerConfig.getDefaultDatasource(), jsonMapper
+    );
+
     final DatabaseSegmentManager databaseSegmentManager = new DatabaseSegmentManager(
         jsonMapper,
         scheduledExecutorFactory.create(1, "DatabaseSegmentManager-Exec--%d"),
         configFactory.build(DatabaseSegmentManagerConfig.class),
         dbi
     );
-    final DatabaseRuleManagerConfig databaseRuleManagerConfig = configFactory.build(DatabaseRuleManagerConfig.class);
     final DatabaseRuleManager databaseRuleManager = new DatabaseRuleManager(
         jsonMapper,
         scheduledExecutorFactory.create(1, "DatabaseRuleManager-Exec--%d"),
         databaseRuleManagerConfig,
         dbi
-    );
-    DatabaseRuleManager.createDefaultRule(
-        dbi,
-        databaseRuleManagerConfig.getRuleTable(),
-        databaseRuleManagerConfig.getDefaultDatasource(),
-        jsonMapper
     );
 
     final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");

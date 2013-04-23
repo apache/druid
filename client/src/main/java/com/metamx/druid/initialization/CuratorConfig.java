@@ -30,6 +30,6 @@ public abstract class CuratorConfig
   public abstract String getZkHosts();
 
   @Config("druid.zk.service.sessionTimeoutMs")
-  @Default("15000")
+  @Default("30000")
   public abstract int getZkSessionTimeoutMs();
 }

@@ -19,19 +19,28 @@
 
 package com.metamx.druid.utils;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.db.DatabaseRuleManager;
-import com.metamx.druid.db.DbConnector;
-import com.metamx.druid.db.DbConnectorConfig;
-import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.zk.PropertiesZkSerializer;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.ZkConnection;
+import com.metamx.common.config.Config;
+import com.metamx.druid.initialization.ZkPathsConfig;
+import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.CuratorFrameworkFactory;
+import com.netflix.curator.retry.RetryOneTime;
+import org.skife.config.ConfigurationObjectFactory;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Set up the shared Druid ensemble space.
@@ -78,37 +87,36 @@ import java.util.Properties;
  */
 public class DruidSetup
 {
-  private static final Logger log = new Logger(DruidSetup.class);
+  private final static String MODIFIED_PROP = "__MODIFIED";
+  private final static Set<String> IGNORED_PROPS = Sets.newHashSet(MODIFIED_PROP);
 
   public static void main(final String[] args)
   {
-    ZkClient zkClient = null;
+    CuratorFramework curator = null;
 
-    if (args.length < 2 || args.length > 3) {
-      printUsage();
-      System.exit(1);
+    try {
+      if (args.length < 2 || args.length > 3) {
+        printUsage();
+        System.exit(1);
+      }
+      String cmd = args[0];
+      if ("dump".equals(cmd) && args.length == 3) {
+        final String zkConnect = args[1];
+        curator = connectToZK(zkConnect);
+        String zpathBase = args[2];
+        dumpFromZk(curator, zkConnect, zpathBase, System.out);
+      } else if ("put".equals(cmd) && args.length == 3) {
+        final String zkConnect = args[1];
+        curator = connectToZK(zkConnect);
+        final String pfile = args[2];
+        putToZk(curator, pfile);
+      } else {
+        printUsage();
+        System.exit(1);
+      }
     }
-    String cmd = args[0];
-    if ("dump".equals(cmd) && args.length == 3) {
-      final String zkConnect = args[1];
-      zkClient = connectToZK(zkConnect);
-      String zpathBase = args[2];
-      dumpFromZk(zkClient, zpathBase, zkConnect, System.out);
-    } else if ("put".equals(cmd) && args.length == 3) {
-      final String zkConnect = args[1];
-      zkClient = connectToZK(zkConnect);
-      final String pfile = args[2];
-      putToZk(zkClient, pfile);
-    } else if ("dbprep".equals(cmd) && args.length == 2) {
-      final String pfile = args[1];
-      prepDB(pfile);
-    } else {
-      printUsage();
-      System.exit(1);
-    }
-
-    if (zkClient != null) {
-      zkClient.close();
+    finally {
+      Closeables.closeQuietly(curator);
     }
   }
 
@@ -118,12 +126,8 @@ public class DruidSetup
    * This can only be used for setup, not service run time because of some assembly here.
    *
    * @param pfile path to runtime.properties file to be read.
-   * @param props Properties object to fill, props like druid.zk.paths.*Path will always be set after
-   *              this method either because the input file has them set (overrides) or because prop
-   *              druid.zk.paths.base was used as a prefix to construct the default zpaths;
-   *              druid.zk.paths.base will be set iff there is a single base for all zpaths
    */
-  private static void loadProperties(String pfile, Properties props)
+  private static Properties loadProperties(String pfile)
   {
     InputStream is = null;
     try {
@@ -134,272 +138,195 @@ public class DruidSetup
       System.err.println("No changes made.");
       System.exit(4);
     }
-    catch (IOException ioe) {
-      reportErrorAndExit(pfile, ioe);
-    }
+
     try {
-      props.load(is);
+      Properties props = new Properties();
+      props.load(new InputStreamReader(is, Charsets.UTF_8));
+      return props;
     }
     catch (IOException e) {
-      reportErrorAndExit(pfile, e);
+      throw reportErrorAndExit(pfile, e);
     }
     finally {
       Closeables.closeQuietly(is);
     }
-
-    if (!Initialization.validateResolveProps(props)) { // bail, errors have been emitted
-      System.exit(9);
-    }
-
-    //  emit effective zpaths to be used
-    System.out.println("Effective zpath properties:");
-    for (String pname : Initialization.SUB_PATH_PROPS) {
-      System.out.println("  " + pname + "=" + props.getProperty(pname));
-    }
-    System.out.println(
-        "  " + "druid.zk.paths.propertiesPath" + "=" +
-        props.getProperty("druid.zk.paths.propertiesPath")
-    );
-
   }
 
   /**
-   * @param zkClient  zookeeper client.
-   * @param zpathBase znode base path.
+   * @param curator  zookeeper client.
+   * @param zPathBase znode base path.
    * @param zkConnect ZK coordinates in the form host1:port1[,host2:port2[, ...]]
    * @param out
    */
-  private static void dumpFromZk(ZkClient zkClient, String zpathBase, String zkConnect, PrintStream out)
+  private static void dumpFromZk(CuratorFramework curator, String zkConnect, final String zPathBase, PrintStream out)
   {
-    final String propPath = Initialization.makePropPath(zpathBase);
-    if (zkClient.exists(propPath)) {
-      Properties currProps = zkClient.readData(propPath, true);
-      if (currProps != null) {
-        out.println("# Begin Properties Listing for zkConnect=" + zkConnect + " zpath=" + propPath);
-        try {
-          currProps.store(out, "Druid");
+    ZkPathsConfig config = new ZkPathsConfig()
+    {
+      @Override
+      protected String getZkBasePath()
+      {
+        return zPathBase;
+      }
+    };
+
+    try {
+      if (curator.checkExists().forPath(config.getPropertiesPath()) != null) {
+        byte[] data = curator.getData().forPath(config.getPropertiesPath());
+        Properties currProps = new Properties();
+        currProps.load(new InputStreamReader(new ByteArrayInputStream(data), Charsets.UTF_8));
+
+        if (! currProps.isEmpty()) {
+          out.printf("# Begin Properties Listing for zpath[%s]%n", config.getPropertiesPath());
+          try {
+            currProps.store(new OutputStreamWriter(out, Charsets.UTF_8), "Druid");
+          }
+          catch (IOException ignored) {
+          }
+          out.printf("# End Properties for zkConnect[%s] zpath[%s]%n", zkConnect, config.getPropertiesPath());
         }
-        catch (IOException ignored) {
+        else {
+          out.printf("# Properties at zpath[%s] empty.%n", config.getPropertiesPath());
         }
-        out.println("# End Properties Listing for zkConnect=" + zkConnect + " zpath=" + propPath);
-        out.println("# NOTE:  properties like druid.zk.paths.*Path are always stored in zookeeper in absolute form.");
-        out.println();
       }
     }
-    //out.println("Zookeeper znodes and zpaths for " + zkConnect + " (showing all zpaths)");
-    // list all znodes
-    //   (not ideal since recursive listing starts at / instead of at baseZkPath)
-    //zkClient.showFolders(out);
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 
-  /**
-   * @param zkClient zookeeper client.
-   * @param pfile
-   */
-  private static void putToZk(ZkClient zkClient, String pfile)
+  private static void putToZk(CuratorFramework curator, String pfile)
   {
-    Properties props = new Properties();
-    loadProperties(pfile, props);
-    String zpathBase = props.getProperty("druid.zk.paths.base");
+    final Properties props = loadProperties(pfile);
+    ConfigurationObjectFactory configFactory = Config.createFactory(props);
+    final ZkPathsConfig zkPaths = configFactory.build(ZkPathsConfig.class);
 
-    // create znodes first
-    //
-    createZNodes(zkClient, zpathBase, System.out);
-
-    // put props
-    //
-    updatePropertiesZK(zkClient, zpathBase, props, System.out);
+    createZNodes(curator, zkPaths, System.out);
+    updatePropertiesZK(curator, zkPaths, props, System.out);
   }
 
   /**
-   * @param zkClient  zookeeper client.
-   * @param zpathBase znode base path.
+   * @param curator  zookeeper client.
+   * @param zkPaths znode base path.
    * @param props     the properties to store.
    * @param out       the PrintStream for human readable update summary (usually System.out).
    */
-  private static void updatePropertiesZK(ZkClient zkClient, String zpathBase, Properties props, PrintStream out)
+  private static void updatePropertiesZK(CuratorFramework curator, ZkPathsConfig zkPaths, Properties props, PrintStream out)
   {
-    final String propPathOverride = props.getProperty("druid.zk.paths.propertiesPath");
-    final String propPathConstructed = Initialization.makePropPath(zpathBase);
-    final String propPath = (propPathOverride != null) ? propPathOverride : propPathConstructed;
-    Properties currProps = null;
-    if (zkClient.exists(propPath)) {
-      currProps = zkClient.readData(propPath, true);
-    }
-    boolean propsDiffer = false;
-    if (currProps == null) {
-      out.println("No properties currently stored in zk");
-      propsDiffer = true;
-    } else { // determine whether anything is different
-      int countNew = 0;
-      int countDiffer = 0;
-      int countRemoved = 0;
-      int countNoChange = 0;
-      String currMetaPropVal = "";
-      StringBuilder changes = new StringBuilder(1024);
-      for (String pname : props.stringPropertyNames()) {
-        if (pname.equals(PropertiesZkSerializer.META_PROP)) {
-          continue; // ignore meta prop datestamp, if any
-        }
-        final String pvalue = props.getProperty(pname);
-        final String pvalueCurr = currProps.getProperty(pname);
-        if (pvalueCurr == null) {
-          countNew++;
-        } else {
-          if (pvalueCurr.equals(pvalue)) {
-            countNoChange++;
+    Properties currProps = new Properties();
+    try {
+      if (curator.checkExists().forPath(zkPaths.getPropertiesPath()) != null) {
+        final byte[] data = curator.getData().forPath(zkPaths.getPropertiesPath());
+        currProps.load(new InputStreamReader(new ByteArrayInputStream(data), Charsets.UTF_8));
+      }
+      boolean propsDiffer = false;
+      if (currProps.isEmpty()) {
+        out.println("No properties currently stored in zk");
+        propsDiffer = true;
+      } else { // determine whether anything is different
+        int countNew = 0;
+        int countDiffer = 0;
+        int countRemoved = 0;
+        int countNoChange = 0;
+        StringBuilder changes = new StringBuilder(1024);
+        for (String pname : props.stringPropertyNames()) {
+          if (IGNORED_PROPS.contains(pname)) {
+            continue; // ignore meta props, if any
+          }
+          final String pvalue = props.getProperty(pname);
+          final String pvalueCurr = currProps.getProperty(pname);
+          if (pvalueCurr == null) {
+            countNew++;
           } else {
-            countDiffer++;
-            changes.append("CHANGED: ").append(pname).append("=  PREV=").append(pvalueCurr)
-                   .append("   NOW=").append(pvalue).append("\n");
+            if (pvalueCurr.equals(pvalue)) {
+              countNoChange++;
+            } else {
+              countDiffer++;
+              changes.append(String.format("CHANGED[%s]: PREV=%s --- NOW=%s%n", pname, pvalueCurr, pvalue));
+            }
           }
         }
-      }
-      for (String pname : currProps.stringPropertyNames()) {
-        if (pname.equals(PropertiesZkSerializer.META_PROP)) {
-          currMetaPropVal = currProps.getProperty(pname);
-          continue; // ignore meta prop datestamp
+        for (String pname : currProps.stringPropertyNames()) {
+          if (IGNORED_PROPS.contains(pname)) {
+            continue; // ignore meta props, if any
+          }
+          if (props.getProperty(pname) == null) {
+            countRemoved++;
+            changes.append(String.format("REMOVED: %s=%s%n", pname, currProps.getProperty(pname)));
+          }
         }
-        if (props.getProperty(pname) == null) {
-          countRemoved++;
-          changes.append("REMOVED: ").append(pname).append("=").append(currProps.getProperty(pname)).append("\n");
+        if (countNew + countRemoved + countDiffer > 0) {
+          out.printf(
+              "Properties differ: %,d new,  %,d changed, %,d removed, %,d unchanged, previously updated %s%n",
+              countNew, countDiffer, countRemoved, countNoChange, currProps.getProperty(MODIFIED_PROP)
+          );
+          out.println(changes);
+          propsDiffer = true;
+        } else {
+          out.printf("Current properties identical to file given, %,d total properties set.%n", countNoChange);
         }
       }
-      if (countNew + countRemoved + countDiffer > 0) {
-        out.println(
-            "Current properties differ: "
-            + countNew + " new,  "
-            + countDiffer + " different values, "
-            + countRemoved + " removed, "
-            + countNoChange + " unchanged, "
-            + currMetaPropVal + " previously updated"
-        );
-        out.println(changes);
-        propsDiffer = true;
-      } else {
-        out.println("Current properties identical to file given, entry count=" + countNoChange);
+      if (propsDiffer) {
+        ByteArrayOutputStream propsBytes = new ByteArrayOutputStream();
+        props.store(new OutputStreamWriter(propsBytes, Charsets.UTF_8), "Common Druid properties");
+
+        if (currProps.isEmpty()) {
+          curator.setData().forPath(zkPaths.getPropertiesPath(), propsBytes.toByteArray());
+        }
+        else {
+          curator.create().forPath(zkPaths.getPropertiesPath(), propsBytes.toByteArray());
+        }
+        out.printf("Properties updated, %,d total properties set.%n", props.size());
       }
     }
-    if (propsDiffer) {
-      if (currProps != null) {
-        zkClient.delete(propPath);
-      }
-      // update zookeeper
-      zkClient.createPersistent(propPath, props);
-      out.println("Properties updated, entry count=" + props.size());
+    catch (Exception e) {
+      throw Throwables.propagate(e);
     }
   }
 
   /**
-   * @param zkClient  zookeeper client.
-   * @param zpathBase znode base path.
+   * @param curator  zookeeper client.
+   * @param zkPaths znode base path.
    * @param out       the PrintStream for human readable update summary.
    */
-  private static void createZNodes(ZkClient zkClient, String zpathBase, PrintStream out)
+  private static void createZNodes(CuratorFramework curator, ZkPathsConfig zkPaths, PrintStream out)
   {
-    zkClient.createPersistent(zpathBase, true);
-    for (String subPath : Initialization.SUB_PATHS) {
-      final String thePath = String.format("%s/%s", zpathBase, subPath);
-      if (zkClient.exists(thePath)) {
+    createPath(curator, zkPaths.getAnnouncementsPath(), out);
+    createPath(curator, zkPaths.getMasterPath(), out);
+    createPath(curator, zkPaths.getLoadQueuePath(), out);
+    createPath(curator, zkPaths.getServedSegmentsPath(), out);
+  }
+
+  private static void createPath(CuratorFramework curator, String thePath, PrintStream out)
+  {
+    try {
+      if (curator.checkExists().forPath(thePath) != null) {
         out.printf("Path[%s] exists already%n", thePath);
       } else {
         out.printf("Creating ZK path[%s]%n", thePath);
-        zkClient.createPersistent(thePath, true);
+        curator.create().creatingParentsIfNeeded().forPath(thePath);
       }
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
     }
   }
 
-  private static void reportErrorAndExit(String pfile, IOException ioe)
+  private static RuntimeException reportErrorAndExit(String pfile, IOException ioe)
   {
     System.err.println("Could not read file: " + pfile);
     System.err.println("  because of: " + ioe);
     System.err.println("No changes made.");
     System.exit(4);
+
+    return new RuntimeException();
   }
 
-  private static ZkClient connectToZK(String zkConnect)
+  private static CuratorFramework connectToZK(String zkConnect)
   {
-    return new ZkClient(
-        new ZkConnection(zkConnect),
-        Integer.MAX_VALUE,
-        new PropertiesZkSerializer()
-    );
-  }
-
-  /**
-   * Connect to db and create table, if it does not exist.
-   * NOTE: Connection failure only shows up in log output.
-   *
-   * @param pfile path to properties file to use.
-   */
-  private static void prepDB(final String pfile)
-  {
-    Properties tmp_props = new Properties();
-    loadProperties(pfile, tmp_props);
-    final String tableName = tmp_props.getProperty("druid.database.segmentTable", "prod_segments");
-    final String ruleTableName = tmp_props.getProperty("druid.database.ruleTable", "prod_rules");
-
-    final String dbConnectionUrl = tmp_props.getProperty("druid.database.connectURI");
-    final String username = tmp_props.getProperty("druid.database.user");
-    final String password = tmp_props.getProperty("druid.database.password");
-    final String defaultDatasource = tmp_props.getProperty("druid.database.defaultDatasource", "_default");
-
-    //
-    //   validation
-    //
-    if (tableName.length() == 0 || !Character.isLetter(tableName.charAt(0))) {
-      throw new RuntimeException("poorly formed property druid.database.segmentTable=" + tableName);
-    }
-    if (ruleTableName.length() == 0 || !Character.isLetter(ruleTableName.charAt(0))) {
-      throw new RuntimeException("poorly formed property druid.database.ruleTable=" + ruleTableName);
-    }
-    if (username == null || username.length() == 0) {
-      throw new RuntimeException("poorly formed property druid.database.user=" + username);
-    }
-    if (password == null || password.length() == 0) {
-      throw new RuntimeException("poorly formed property druid.database.password=" + password);
-    }
-    if (dbConnectionUrl == null || dbConnectionUrl.length() == 0) {
-      throw new RuntimeException("poorly formed property druid.database.connectURI=" + dbConnectionUrl);
-    }
-
-    final DbConnectorConfig config = new DbConnectorConfig()
-    {
-      @Override
-      public String getDatabaseConnectURI()
-      {
-        return dbConnectionUrl;
-      }
-
-      @Override
-      public String getDatabaseUser()
-      {
-        return username;
-      }
-
-      @Override
-      public String getDatabasePassword()
-      {
-        return password;
-      }
-
-      @Override
-      public String getSegmentTable()
-      {
-        return tableName;
-      }
-    };
-
-    DbConnector dbConnector = new DbConnector(config);
-
-    DbConnector.createSegmentTable(dbConnector.getDBI(), tableName);
-    DbConnector.createRuleTable(dbConnector.getDBI(), ruleTableName);
-    DatabaseRuleManager.createDefaultRule(
-        dbConnector.getDBI(),
-        ruleTableName,
-        defaultDatasource,
-        new DefaultObjectMapper()
-    );
+    return CuratorFrameworkFactory.builder()
+                                  .connectString(zkConnect)
+                                  .retryPolicy(new RetryOneTime(5000))
+                                  .build();
   }
 
   /**
@@ -412,7 +339,6 @@ public class DruidSetup
         + "  Where CMD is a particular command:\n"
         + "  CMD choices:\n"
         + "    dump zkConnect baseZkPath    # dump info from zk at given coordinates\n"
-        + "    dbprep propfile              # create metadata table in db\n"
         + "    put zkConnect  propfile      # store paths and propfile into zk at given coordinates\n"
         + "  args:\n"
         + "    zkConnect:  ZK coordinates in the form host1:port1[,host2:port2[, ...]]\n"

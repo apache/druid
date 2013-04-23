@@ -23,14 +23,45 @@ import org.skife.config.Config;
 
 /**
  */
-public abstract class ZkClientConfig
+public abstract class ZkPathsConfig
 {
-  @Config("druid.zk.service.host")
-  public abstract String getZkHosts();
-
-  @Config("druid.zk.service.connectionTimeout")
-  public int getConnectionTimeout()
+  @Config("druid.zk.paths.base")
+  protected String getZkBasePath()
   {
-    return Integer.MAX_VALUE;
+    return "/druid";
+  }
+
+  @Config("druid.zk.paths.propertiesPath")
+  public String getPropertiesPath()
+  {
+    return defaultPath("properties");
+  }
+
+  @Config("druid.zk.paths.announcementsPath")
+  public String getAnnouncementsPath()
+  {
+    return defaultPath("announcements");
+  }
+
+  @Config("druid.zk.paths.servedSegmentsPath")
+  public String getServedSegmentsPath()
+  {
+    return defaultPath("servedSegments");
+  }
+
+  @Config("druid.zk.paths.loadQueuePath")
+  public String getLoadQueuePath()
+  {
+    return defaultPath("loadQueue");
+  }
+
+  @Config("druid.zk.paths.masterPath")
+  public String getMasterPath()
+  {
+    return defaultPath("master");
+  }
+
+  private String defaultPath(final String subPath) {
+    return String.format("%s/%s", getZkBasePath(), subPath);
   }
 }
