@@ -246,7 +246,20 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   {
     if (requestLogger == null) {
       try {
-        setRequestLogger(Initialization.makeRequestLogger(getJsonMapper(), getScheduledExecutorFactory(), getProps()));
+        final String loggingType = props.getProperty("druid.request.logging.type");
+        if(loggingType.equals("emitter")) {
+          setRequestLogger(Initialization.makeEmittingRequestLogger(
+            getProps(),
+            getEmitter()
+          ));
+        }
+        else {
+          setRequestLogger(Initialization.makeFileRequestLogger(
+            getJsonMapper(),
+            getScheduledExecutorFactory(),
+            getProps()
+          ));
+        }
       }
       catch (IOException e) {
         throw Throwables.propagate(e);
