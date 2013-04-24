@@ -75,6 +75,6 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   @Override
   public ColumnPartSerde read(ByteBuffer buffer, ColumnBuilder builder)
   {
-    return serde.deserializeColumn(buffer, builder);
+    return serde == null ? this : serde.deserializeColumn(buffer, builder);
   }
 }

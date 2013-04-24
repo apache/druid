@@ -19,6 +19,7 @@
 
 package com.metamx.druid.curator.inventory;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -30,10 +31,13 @@ import com.metamx.druid.curator.ShutdownNowIgnoringExecutorService;
 import com.metamx.druid.curator.cache.PathChildrenCacheFactory;
 import com.metamx.druid.curator.cache.SimplePathChildrenCacheFactory;
 import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.CuratorFrameworkFactory;
 import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
+import com.netflix.curator.retry.RetryOneTime;
+import com.netflix.curator.utils.ZKPaths;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
@@ -189,39 +193,36 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
   private class ContainerCacheListener implements PathChildrenCacheListener
   {
     @Override
-    public void childEvent(
-        CuratorFramework client, PathChildrenCacheEvent event
-    ) throws Exception
+    public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
     {
-      final ChildData containerChild = event.getData();
-      final String containerKey = containerChild.getPath().substring(config.getInventoryPath().length());
+      final ChildData child = event.getData();
+      final String containerKey = ZKPaths.getNodeFromPath(child.getPath());
       final ContainerClass container;
 
       switch (event.getType()) {
         case CHILD_ADDED:
-          container = strategy.deserializeContainer(containerChild.getData());
+          container = strategy.deserializeContainer(child.getData());
 
           // This would normally be a race condition, but the only thing that should be mutating the containers
           // map is this listener, which should never run concurrently.  If the same container is going to disappear
           // and come back, we expect a removed event in between.
           if (containers.containsKey(containerKey)) {
-            log.error("New node[%s] but there was already one.  That's not good, ignoring new one.", containerChild.getPath());
+            log.error("New node[%s] but there was already one.  That's not good, ignoring new one.", child.getPath());
           }
 
-          final String inventoryPath = String.format("%s/%s", config.getContainerPath(), containerKey);
-          log.info("Creating listener on inventory[%s]", inventoryPath);
-          PathChildrenCache containerCache = cacheFactory.make(curatorFramework, inventoryPath);
-          containerCache.getListenable().addListener(new InventoryCacheListener(containerKey, inventoryPath));
+          final String inventoryPath = String.format("%s/%s", config.getInventoryPath(), containerKey);
+          PathChildrenCache inventoryCache = cacheFactory.make(curatorFramework, inventoryPath);
+          inventoryCache.getListenable().addListener(new InventoryCacheListener(containerKey, inventoryPath));
 
-          containers.put(containerKey, new ContainerHolder(container, containerCache));
+          containers.put(containerKey, new ContainerHolder(container, inventoryCache));
 
-          containerCache.start();
+          inventoryCache.start();
 
           break;
         case CHILD_REMOVED:
           final ContainerHolder removed = containers.remove(containerKey);
           if (removed == null) {
-            log.warn("Container[%s] removed that wasn't a container!?", containerChild.getPath());
+            log.warn("Container[%s] removed that wasn't a container!?", child.getPath());
             break;
           }
 
@@ -232,11 +233,11 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
           break;
         case CHILD_UPDATED:
-          container = strategy.deserializeContainer(containerChild.getData());
+          container = strategy.deserializeContainer(child.getData());
 
           ContainerHolder oldContainer = containers.get(containerKey);
           if (oldContainer == null) {
-            log.warn("Container update[%s], but the old container didn't exist!?  Ignoring.", containerChild.getPath());
+            log.warn("Container update[%s], but the old container didn't exist!?  Ignoring.", child.getPath());
           }
           else {
             synchronized (oldContainer) {
@@ -245,8 +246,6 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           }
 
           break;
-        default:
-          log.info("Got event[%s] at containerPath[%s]", config.getInventoryPath());
       }
     }
 
@@ -262,24 +261,22 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
       }
 
       @Override
-      public void childEvent(
-          CuratorFramework client, PathChildrenCacheEvent event
-      ) throws Exception
+      public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
       {
-        final ChildData inventoryChild = event.getData();
+        final ChildData child = event.getData();
         final ContainerHolder holder = containers.get(containerKey);
 
         if (holder == null) {
-          log.error("Inventory[%s] change for non-existent container[%s]!?", inventoryChild.getPath());
+          log.error("Inventory[%s] change for non-existent container[%s]!?", child.getPath());
           return;
         }
 
-        final String inventoryKey = inventoryChild.getPath().substring(inventoryPath.length());
+        final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
 
         switch (event.getType()) {
           case CHILD_ADDED:
           case CHILD_UPDATED:
-            final InventoryClass inventory = strategy.deserializeInventory(inventoryChild.getData());
+            final InventoryClass inventory = strategy.deserializeInventory(child.getData());
 
             synchronized (holder) {
               holder.setContainer(strategy.addInventory(holder.getContainer(), inventoryKey, inventory));

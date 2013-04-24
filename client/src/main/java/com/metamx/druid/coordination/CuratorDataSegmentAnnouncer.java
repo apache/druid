@@ -22,18 +22,15 @@ package com.metamx.druid.coordination;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.netflix.curator.utils.ZKPaths;
 
 import java.io.IOException;
-import java.util.Map;
 
 public class CuratorDataSegmentAnnouncer implements DataSegmentAnnouncer
 {
@@ -100,14 +97,16 @@ public class CuratorDataSegmentAnnouncer implements DataSegmentAnnouncer
 
   public void announceSegment(DataSegment segment) throws IOException
   {
-    log.info("Announcing realtime segment %s", segment.getIdentifier());
-    announcer.announce(makeServedSegmentPath(segment), jsonMapper.writeValueAsBytes(segment));
+    final String path = makeServedSegmentPath(segment);
+    log.info("Announcing segment[%s] to path[%s]", segment.getIdentifier(), path);
+    announcer.announce(path, jsonMapper.writeValueAsBytes(segment));
   }
 
   public void unannounceSegment(DataSegment segment) throws IOException
   {
-    log.info("Unannouncing realtime segment %s", segment.getIdentifier());
-    announcer.unannounce(makeServedSegmentPath(segment));
+    final String path = makeServedSegmentPath(segment);
+    log.info("Unannouncing segment[%s] at path[%s]", segment.getIdentifier(), path);
+    announcer.unannounce(path);
   }
 
   private String makeAnnouncementPath() {

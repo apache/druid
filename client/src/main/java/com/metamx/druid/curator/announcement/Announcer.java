@@ -190,6 +190,7 @@ public class Announcer
    */
   public void unannounce(String path)
   {
+    log.info("unannouncing [%s]", path);
     final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
     final String parentPath = pathAndNode.getPath();
 
@@ -201,6 +202,13 @@ public class Announcer
 
     if (subPaths.remove(pathAndNode.getNode()) == null) {
       throw new IAE("Path[%s] not announced, cannot unannounce.", path);
+    }
+
+    try {
+      curator.delete().guaranteed().forPath(path);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
     }
   }
 }
