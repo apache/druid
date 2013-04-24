@@ -28,6 +28,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.curator.inventory.CuratorInventoryManager;
 import com.metamx.druid.curator.inventory.CuratorInventoryManagerStrategy;
+import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.io.IOException;
@@ -42,6 +43,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class ServerInventoryThingie implements ServerView
 {
+  private static final EmittingLogger log = new EmittingLogger(ServerInventoryThingie.class);
+
   private final CuratorInventoryManager<DruidServer, DataSegment> inventoryManager;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
@@ -108,14 +111,15 @@ public class ServerInventoryThingie implements ServerView
           }
 
           @Override
-          public void newContainer(DruidServer newContainer)
+          public void newContainer(DruidServer container)
           {
-            // Do nothing.
+            log.info("New Server[%s]", container);
           }
 
           @Override
           public void deadContainer(DruidServer deadContainer)
           {
+            log.info("Server Disdappeared[%s]", deadContainer);
             runServerCallbacks(deadContainer);
           }
 
@@ -128,6 +132,9 @@ public class ServerInventoryThingie implements ServerView
           @Override
           public DruidServer addInventory(final DruidServer container, String inventoryKey, final DataSegment inventory)
           {
+            log.info("Server[%s] added segment[%s]", container.getName(), inventory);
+            final DruidServer retVal = container.addDataSegment(inventoryKey, inventory);
+
             runSegmentCallbacks(
                 new Function<SegmentCallback, CallbackAction>()
                 {
@@ -138,13 +145,17 @@ public class ServerInventoryThingie implements ServerView
                   }
                 }
             );
-            return container.addDataSegment(inventoryKey, inventory);
+
+            return retVal;
           }
 
           @Override
           public DruidServer removeInventory(final DruidServer container, String inventoryKey)
           {
+            log.info("Server[%s] removed segment[%s]", container.getName(), inventoryKey);
             final DataSegment segment = container.getSegment(inventoryKey);
+            final DruidServer retVal = container.removeDataSegment(inventoryKey);
+
             runSegmentCallbacks(
                 new Function<SegmentCallback, CallbackAction>()
                 {
@@ -155,8 +166,9 @@ public class ServerInventoryThingie implements ServerView
                   }
                 }
             );
+
             removedSegments.put(inventoryKey, config.getRemovedSegmentLifetime());
-            return container.removeDataSegment(inventoryKey);
+            return retVal;
           }
         }
     );

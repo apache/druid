@@ -389,7 +389,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       lifecycle.addManagedInstance(announcer);
 
       setAnnouncer(new CuratorDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper()));
-      lifecycle.addManagedInstance(getAnnouncer());
+      lifecycle.addManagedInstance(getAnnouncer(), Lifecycle.Stage.LAST);
     }
   }
 
