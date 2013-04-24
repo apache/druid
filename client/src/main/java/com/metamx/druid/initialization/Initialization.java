@@ -27,11 +27,13 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.ZKPhoneBook;
+import com.metamx.druid.http.EmittingRequestLogger;
 import com.metamx.druid.http.FileRequestLogger;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.druid.zk.PropertiesZkSerializer;
 import com.metamx.druid.zk.StringZkSerializer;
+import com.metamx.emitter.core.Emitter;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
 import com.netflix.curator.retry.ExponentialBackoffRetry;
@@ -348,12 +350,26 @@ public class Initialization
     return serviceProvider;
   }
 
-  public static RequestLogger makeRequestLogger(ObjectMapper objectMapper, ScheduledExecutorFactory factory, Properties props) throws IOException
+  public static RequestLogger makeFileRequestLogger(
+    ObjectMapper objectMapper,
+    ScheduledExecutorFactory factory,
+    Properties props
+  ) throws IOException
   {
     return new FileRequestLogger(
         objectMapper,
         factory.create(1, "RequestLogger-%s"),
         new File(PropUtils.getProperty(props, "druid.request.logging.dir"))
+    );
+  }
+
+  public static RequestLogger makeEmittingRequestLogger(Properties props, Emitter emitter)
+  {
+    return new EmittingRequestLogger(
+        PropUtils.getProperty(props, "druid.service"),
+        PropUtils.getProperty(props, "druid.host"),
+        emitter,
+        PropUtils.getProperty(props, "druid.request.logging.feed")
     );
   }
 
