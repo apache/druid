@@ -21,8 +21,6 @@ package com.metamx.druid.initialization;
 
 import org.skife.config.Config;
 
-/**
- */
 public abstract class ZkPathsConfig
 {
   @Config("druid.zk.paths.base")

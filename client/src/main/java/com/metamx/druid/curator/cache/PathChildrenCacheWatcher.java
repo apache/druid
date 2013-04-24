@@ -21,9 +21,9 @@ package com.metamx.druid.curator.cache;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 
 import java.util.Map;
 

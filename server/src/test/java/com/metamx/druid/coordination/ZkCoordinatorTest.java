@@ -31,7 +31,7 @@ import com.metamx.druid.loading.CacheTestSegmentLoader;
 import com.metamx.druid.metrics.NoopServiceEmitter;
 import com.metamx.druid.query.NoopQueryRunnerFactoryConglomerate;
 import com.metamx.druid.shard.NoneShardSpec;
-import com.netflix.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFramework;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;

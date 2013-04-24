@@ -11,8 +11,8 @@ import com.metamx.druid.merger.common.task.Task;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.ToStringResponseHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.netflix.curator.x.discovery.ServiceInstance;
-import com.netflix.curator.x.discovery.ServiceProvider;
+import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.ServiceProvider;
 import org.joda.time.Duration;
 
 import java.io.IOException;

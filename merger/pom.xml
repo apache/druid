@@ -93,11 +93,11 @@
             <artifactId>config-magic</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.netflix.curator</groupId>
+            <groupId>org.apache.curator</groupId>
             <artifactId>curator-framework</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.netflix.curator</groupId>
+            <groupId>org.apache.curator</groupId>
             <artifactId>curator-recipes</artifactId>
         </dependency>
         <dependency>
@@ -169,7 +169,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.netflix.curator</groupId>
+            <groupId>org.apache.curator</groupId>
             <artifactId>curator-test</artifactId>
             <scope>test</scope>
         </dependency>

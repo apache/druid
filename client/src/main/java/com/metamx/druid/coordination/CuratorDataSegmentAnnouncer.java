@@ -28,7 +28,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.initialization.ZkPathsConfig;
-import com.netflix.curator.utils.ZKPaths;
+import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
 

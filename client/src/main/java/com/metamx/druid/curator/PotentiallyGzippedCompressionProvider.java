@@ -19,8 +19,8 @@
 
 package com.metamx.druid.curator;
 
-import com.netflix.curator.framework.api.CompressionProvider;
-import com.netflix.curator.framework.imps.GzipCompressionProvider;
+import org.apache.curator.framework.api.CompressionProvider;
+import org.apache.curator.framework.imps.GzipCompressionProvider;
 
 import java.io.IOException;
 import java.util.zip.ZipException;

@@ -58,7 +58,7 @@ import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
-import com.netflix.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFramework;
 import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.skife.config.ConfigurationObjectFactory;

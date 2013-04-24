@@ -39,7 +39,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.21.0</metamx.java-util.version>
-        <netflix.curator.version>1.3.5-SNAPSHOT</netflix.curator.version>
+        <netflix.curator.version>2.0.1-21-22-SNAPSHOT</netflix.curator.version>
     </properties>
 
     <modules>
@@ -119,22 +119,22 @@
                 <version>0.9</version>
             </dependency>
             <dependency>
-                <groupId>com.netflix.curator</groupId>
+                <groupId>org.apache.curator</groupId>
                 <artifactId>curator-client</artifactId>
                 <version>${netflix.curator.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.netflix.curator</groupId>
+                <groupId>org.apache.curator</groupId>
                 <artifactId>curator-framework</artifactId>
                 <version>${netflix.curator.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.netflix.curator</groupId>
+                <groupId>org.apache.curator</groupId>
                 <artifactId>curator-recipes</artifactId>
                 <version>${netflix.curator.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.netflix.curator</groupId>
+                <groupId>org.apache.curator</groupId>
                 <artifactId>curator-x-discovery</artifactId>
                 <version>${netflix.curator.version}</version>
             </dependency>
@@ -327,7 +327,7 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>com.netflix.curator</groupId>
+                <groupId>org.apache.curator</groupId>
                 <artifactId>curator-test</artifactId>
                 <version>${netflix.curator.version}</version>
                 <scope>test</scope>

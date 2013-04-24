@@ -28,7 +28,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.curator.inventory.CuratorInventoryManager;
 import com.metamx.druid.curator.inventory.CuratorInventoryManagerStrategy;
-import com.netflix.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFramework;
 
 import java.io.IOException;
 import java.util.Iterator;

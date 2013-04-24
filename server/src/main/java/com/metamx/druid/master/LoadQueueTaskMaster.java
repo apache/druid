@@ -20,7 +20,7 @@
 package com.metamx.druid.master;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.netflix.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFramework;
 
 import java.util.concurrent.ExecutorService;
 

@@ -48,10 +48,10 @@ import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.recipes.leader.LeaderLatch;
-import com.netflix.curator.framework.recipes.leader.LeaderLatchListener;
-import com.netflix.curator.utils.ZKPaths;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.leader.LeaderLatch;
+import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
+import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 

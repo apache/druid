@@ -19,8 +19,8 @@
 
 package com.metamx.druid.curator.cache;
 
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 
 import java.util.concurrent.ExecutorService;
 

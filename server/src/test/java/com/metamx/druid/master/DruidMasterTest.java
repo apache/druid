@@ -25,7 +25,7 @@ import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.metrics.NoopServiceEmitter;
-import com.netflix.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFramework;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.junit.After;

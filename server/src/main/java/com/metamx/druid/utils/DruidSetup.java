@@ -25,9 +25,9 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
 import com.metamx.common.config.Config;
 import com.metamx.druid.initialization.ZkPathsConfig;
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.CuratorFrameworkFactory;
-import com.netflix.curator.retry.RetryOneTime;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.RetryOneTime;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.io.ByteArrayInputStream;
