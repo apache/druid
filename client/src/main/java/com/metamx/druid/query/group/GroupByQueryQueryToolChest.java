@@ -25,6 +25,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.ConcatSequence;
@@ -33,8 +34,10 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.input.Rows;
@@ -42,6 +45,8 @@ import com.metamx.druid.query.MetricManipulationFn;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.dimension.DimensionSpec;
+import com.metamx.druid.result.Result;
+import com.metamx.druid.result.TimeseriesResultValue;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
@@ -57,7 +62,6 @@ import java.util.Properties;
  */
 public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery>
 {
-
   private static final TypeReference<Row> TYPE_REFERENCE = new TypeReference<Row>(){};
   private static final String GROUP_BY_MERGE_KEY = "groupByMerge";
   private static final Map<String, String> NO_MERGE_CONTEXT = ImmutableMap.of(GROUP_BY_MERGE_KEY, "false");
@@ -183,9 +187,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   }
 
   @Override
-  public Function<Row, Row> makeMetricManipulatorFn(GroupByQuery query, MetricManipulationFn fn)
+  public Function<Row, Row> makeMetricManipulatorFn(final GroupByQuery query, final MetricManipulationFn fn)
   {
-    return Functions.identity();
+    return new Function<Row, Row>()
+    {
+      @Override
+      public Row apply(Row input)
+      {
+        if (input instanceof MapBasedRow) {
+          final MapBasedRow inputRow = (MapBasedRow) input;
+          final Map<String, Object> values = Maps.newHashMap(((MapBasedRow) input).getEvent());
+          for (AggregatorFactory agg : query.getAggregatorSpecs()) {
+            values.put(agg.getName(), fn.manipulate(agg, inputRow.getEvent().get(agg.getName())));
+          }
+          return new MapBasedRow(inputRow.getTimestamp(), values);
+        }
+        return input;
+      }
+    };
   }
 
   @Override

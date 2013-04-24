@@ -358,11 +358,13 @@ public class IndexIO
       }
 
       ByteBuffer spatialBuffer = smooshedFiles.mapFile("spatial.drd");
-      for (String dimension : IndexedIterable.create(availableDimensions)) {
-        spatialIndexed.put(
-            serializerUtils.readString(spatialBuffer),
-            GenericIndexed.read(spatialBuffer, IndexedRTree.objectStrategy)
-        );
+      if (spatialBuffer != null) {
+        for (String dimension : IndexedIterable.create(availableDimensions)) {
+          spatialIndexed.put(
+              serializerUtils.readString(spatialBuffer),
+              GenericIndexed.read(spatialBuffer, IndexedRTree.objectStrategy)
+          );
+        }
       }
 
       final MMappedIndex retVal = new MMappedIndex(
@@ -422,7 +424,7 @@ public class IndexIO
 
       Map<String, GenericIndexed<ImmutableRTree>> spatialIndexes = Maps.newHashMap();
       final ByteBuffer spatialBuffer = v8SmooshedFiles.mapFile("spatial.drd");
-      while (spatialBuffer.hasRemaining()) {
+      while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
         spatialIndexes.put(
             serializerUtils.readString(spatialBuffer),
             GenericIndexed.read(spatialBuffer, IndexedRTree.objectStrategy)

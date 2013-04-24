@@ -19,15 +19,26 @@
 
 package com.metamx.druid.index.v1;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Ints;
 import com.metamx.common.logger.Logger;
 import com.metamx.common.spatial.rtree.ImmutableRTree;
+import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
+import com.metamx.druid.kv.Indexed;
+import com.metamx.druid.kv.IndexedList;
 import com.metamx.druid.kv.IndexedLongs;
+import com.metamx.druid.kv.IndexedRTree;
 import com.metamx.druid.kv.VSizeIndexed;
+import com.metamx.druid.kv.VSizeIndexedInts;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.Interval;
 
+import java.nio.ByteOrder;
+import java.nio.LongBuffer;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -158,7 +169,6 @@ public class MMappedIndex
     return (retVal == null) ? emptySet : retVal;
   }
 
-/*
   public static MMappedIndex fromIndex(Index index)
   {
     log.info("Converting timestamps");
@@ -249,6 +259,11 @@ public class MMappedIndex
               ConciseCompressedIndexedInts.objectStrategy
           )
       );
+
+      spatialIndexes.put(
+          dimension,
+          GenericIndexed.fromIterable(Arrays.asList(index.getSpatialIndex(dimension)), IndexedRTree.objectStrategy)
+      );
     }
 
     log.info("Making MMappedIndex");
@@ -264,5 +279,4 @@ public class MMappedIndex
         spatialIndexes
     );
   }
-*/
 }
