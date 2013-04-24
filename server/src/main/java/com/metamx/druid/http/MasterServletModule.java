@@ -22,6 +22,7 @@ package com.metamx.druid.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
+import com.google.inject.util.Providers;
 import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.db.DatabaseRuleManager;
@@ -69,7 +70,12 @@ public class MasterServletModule extends JerseyServletModule
     bind(DatabaseSegmentManager.class).toInstance(segmentInventoryManager);
     bind(DatabaseRuleManager.class).toInstance(databaseRuleManager);
     bind(DruidMaster.class).toInstance(master);
-    bind(IndexingServiceClient.class).toInstance(indexingServiceClient);
+    if (indexingServiceClient == null) {
+      bind(IndexingServiceClient.class).toProvider(Providers.<IndexingServiceClient>of(null));
+    }
+    else {
+      bind(IndexingServiceClient.class).toInstance(indexingServiceClient);
+    }
 
     serve("/*").with(GuiceContainer.class);
   }

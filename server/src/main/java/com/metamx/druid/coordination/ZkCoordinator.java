@@ -53,7 +53,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
   private final ObjectMapper jsonMapper;
   private final ZkCoordinatorConfig config;
-  private final DruidServer me;
+  private final DruidServerMetadata me;
   private final DataSegmentAnnouncer announcer;
   private final CuratorFramework curator;
   private final ServerManager serverManager;
@@ -68,7 +68,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   public ZkCoordinator(
       ObjectMapper jsonMapper,
       ZkCoordinatorConfig config,
-      DruidServer me,
+      DruidServerMetadata me,
       DataSegmentAnnouncer announcer,
       CuratorFramework curator,
       ServerManager serverManager,

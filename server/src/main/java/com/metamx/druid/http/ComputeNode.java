@@ -31,13 +31,9 @@ import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.BaseServerNode;
-import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.DruidServerConfig;
-import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.druid.coordination.ZkCoordinator;
 import com.metamx.druid.coordination.ZkCoordinatorConfig;
-import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -121,7 +117,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     final ZkCoordinator coordinator = new ZkCoordinator(
         getJsonMapper(),
         getConfigFactory().build(ZkCoordinatorConfig.class),
-        getDruidServer(),
+        getDruidServerMetadata(),
         getAnnouncer(),
         getCuratorFramework(),
         serverManager,
@@ -129,7 +125,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     );
     lifecycle.addManagedInstance(coordinator);
 
-    monitors.add(new ServerMonitor(getDruidServer(), serverManager));
+    monitors.add(new ServerMonitor(getDruidServerMetadata(), serverManager));
     startMonitoring(monitors);
 
     final Context root = new Context(getServer(), "/", Context.SESSIONS);

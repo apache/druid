@@ -99,16 +99,13 @@ public class MasterMain
     final ConfigurationObjectFactory configFactory = Config.createFactory(props);
     final Lifecycle lifecycle = new Lifecycle();
 
-    final HttpClient httpClient = HttpClientInit.createClient(
-        HttpClientConfig.builder().withNumConnections(1).withReadTimeout(
-            new Duration(
-                PropUtils.getProperty(
-                    props,
-                    "druid.emitter.timeOut"
-                )
-            )
-        ).build(), lifecycle
-    );
+    final HttpClientConfig.Builder httpClientConfigBuilder = HttpClientConfig.builder().withNumConnections(1);
+
+    final String emitterTimeout = props.getProperty("druid.emitter.timeOut");
+    if (emitterTimeout != null) {
+      httpClientConfigBuilder.withReadTimeout(new Duration(emitterTimeout));
+    }
+    final HttpClient httpClient = HttpClientInit.createClient(httpClientConfigBuilder.build(), lifecycle);
 
     final ServiceEmitter emitter = new ServiceEmitter(
         PropUtils.getProperty(props, "druid.service"),

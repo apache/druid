@@ -209,6 +209,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           }
 
           final String inventoryPath = String.format("%s/%s", config.getContainerPath(), containerKey);
+          log.info("Creating listener on inventory[%s]", inventoryPath);
           PathChildrenCache containerCache = cacheFactory.make(curatorFramework, inventoryPath);
           containerCache.getListenable().addListener(new InventoryCacheListener(containerKey, inventoryPath));
 

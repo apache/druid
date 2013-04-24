@@ -33,13 +33,13 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.client.ServerInventoryThingieConfig;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
+import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.initialization.CuratorConfig;
@@ -85,7 +85,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private final ConfigurationObjectFactory configFactory;
   private final String nodeType;
 
-  private DruidServer druidServer = null;
+  private DruidServerMetadata druidServerMetadata = null;
   private ServiceEmitter emitter = null;
   private List<Monitor> monitors = null;
   private Server server = null;
@@ -127,9 +127,9 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     this.nodeType = nodeType;
   }
 
-  public T setDruidServer(DruidServer druidServer)
+  public T setDruidServerMetadata(DruidServerMetadata druidServerMetadata)
   {
-    checkFieldNotSetAndSet("druidServer", druidServer);
+    checkFieldNotSetAndSet("druidServerMetadata", druidServerMetadata);
     return (T) this;
   }
 
@@ -146,7 +146,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     checkFieldNotSetAndSet("announcer", announcer);
     return (T) this;
   }
-  
+
   @SuppressWarnings("unchecked")
   public T setEmitter(ServiceEmitter emitter)
   {
@@ -237,10 +237,10 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     return configFactory;
   }
 
-  public DruidServer getDruidServer()
+  public DruidServerMetadata getDruidServerMetadata()
   {
-    initializeDruidServer();
-    return druidServer;
+    initializeDruidServerMetadata();
+    return druidServerMetadata;
   }
 
   public CuratorFramework getCuratorFramework()
@@ -297,10 +297,18 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     return serverInventoryThingie;
   }
 
-  private void initializeDruidServer()
+  private void initializeDruidServerMetadata()
   {
-    if (druidServer == null) {
-      setDruidServer(new DruidServer(getConfigFactory().build(DruidServerConfig.class), nodeType));
+    if (druidServerMetadata == null) {
+      final DruidServerConfig serverConfig = getConfigFactory().build(DruidServerConfig.class);
+      setDruidServerMetadata(
+          new DruidServerMetadata(
+              serverConfig.getServerName(),
+              serverConfig.getHost(),
+              serverConfig.getMaxSize(),
+              nodeType, serverConfig.getTier()
+          )
+      );
     }
   }
 
@@ -377,14 +385,10 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private void initializeAnnouncer()
   {
     if (announcer == null) {
-      setAnnouncer(
-          new CuratorDataSegmentAnnouncer(
-              getDruidServer(),
-              getZkPaths(),
-              new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s")),
-              getJsonMapper()
-          )
-      );
+      final Announcer announcer = new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s"));
+      lifecycle.addManagedInstance(announcer);
+
+      setAnnouncer(new CuratorDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper()));
       lifecycle.addManagedInstance(getAnnouncer());
     }
   }
@@ -436,8 +440,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private void initializeEmitter()
   {
     if (emitter == null) {
-      final HttpClientConfig.Builder configBuilder = HttpClientConfig.builder()
-                                                                     .withNumConnections(1);
+      final HttpClientConfig.Builder configBuilder = HttpClientConfig.builder().withNumConnections(1);
 
       final String emitterTimeoutDuration = props.getProperty("druid.emitter.timeOut");
       if (emitterTimeoutDuration != null) {

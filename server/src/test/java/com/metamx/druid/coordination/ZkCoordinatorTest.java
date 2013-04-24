@@ -25,9 +25,6 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.DruidServerConfig;
-import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.CacheTestSegmentLoader;
@@ -108,35 +105,7 @@ public class ZkCoordinatorTest
             return cacheDir;
           }
         },
-        new DruidServer(
-            new DruidServerConfig()
-            {
-              @Override
-              public String getServerName()
-              {
-                return "dummyServer";
-              }
-
-              @Override
-              public String getHost()
-              {
-                return "dummyHost";
-              }
-
-              @Override
-              public long getMaxSize()
-              {
-                return 0;
-              }
-
-              @Override
-              public String getTier()
-              {
-                return "normal";
-              }
-            },
-            "dummyType"
-        ),
+        new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal"),
         announcer,
         curator,
         serverManager,

@@ -41,7 +41,7 @@ public class CuratorDataSegmentAnnouncer implements DataSegmentAnnouncer
 
   private final Object lock = new Object();
 
-  private final DruidServer server;
+  private final DruidServerMetadata server;
   private final ZkPathsConfig config;
   private final Announcer announcer;
   private final ObjectMapper jsonMapper;
@@ -50,7 +50,7 @@ public class CuratorDataSegmentAnnouncer implements DataSegmentAnnouncer
   private volatile boolean started = false;
 
   public CuratorDataSegmentAnnouncer(
-      DruidServer server,
+      DruidServerMetadata server,
       ZkPathsConfig config,
       Announcer announcer,
       ObjectMapper jsonMapper

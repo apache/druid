@@ -22,6 +22,7 @@ package com.metamx.druid.curator;
 import com.netflix.curator.framework.api.CompressionProvider;
 import com.netflix.curator.framework.imps.GzipCompressionProvider;
 
+import java.io.IOException;
 import java.util.zip.ZipException;
 
 /**
@@ -48,7 +49,7 @@ public class PotentiallyGzippedCompressionProvider implements CompressionProvide
     try {
       return base.decompress(path, data);
     }
-    catch (ZipException e) {
+    catch (IOException e) {
       return data;
     }
   }
