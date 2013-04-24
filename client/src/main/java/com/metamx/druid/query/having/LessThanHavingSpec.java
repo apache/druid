@@ -4,7 +4,8 @@ import com.metamx.druid.input.Row;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
- * User: dyuan
+ * The "<" operator in a "having" clause. This is similar to SQL's "having aggregation < value",
+ * except that an aggregation in SQL is an expression instead of an aggregation name as in Druid.
  */
 public class LessThanHavingSpec implements HavingSpec
 {

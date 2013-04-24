@@ -8,16 +8,12 @@ import com.metamx.druid.input.Rows;
 import java.util.Iterator;
 
 /**
- * Created with IntelliJ IDEA.
- * User: dyuan
- * Date: 3/18/13
- * Time: 10:42 AM
- * To change this template use File | Settings | File Templates.
+ * Utility class that supports iterating a priority queue in sorted order.
  */
-public class OrderedQueueItems<T> implements Iterable<T>
+class OrderedPriorityQueueItems<T> implements Iterable<T>
 {
   private MinMaxPriorityQueue<T> rows;
-  public OrderedQueueItems(MinMaxPriorityQueue<T> rows)
+  public OrderedPriorityQueueItems(MinMaxPriorityQueue<T> rows)
   {
     this.rows = rows;
   }

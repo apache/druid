@@ -10,9 +10,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.*;
 
-/**
- * User: dyuan
- */
+
 @RunWith(Parameterized.class)
 public class TopNSorterTest
 {

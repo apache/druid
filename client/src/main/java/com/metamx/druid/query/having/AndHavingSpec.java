@@ -9,7 +9,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 import java.util.List;
 
 /**
- * User: dyuan
+ * The logical "and" operator for the "having" clause.
  */
 public class AndHavingSpec implements HavingSpec
 {

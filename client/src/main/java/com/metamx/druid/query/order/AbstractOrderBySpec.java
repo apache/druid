@@ -13,11 +13,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
- * User: dyuan
- * Date: 2/11/13
- * Time: 6:46 PM
- * To change this template use File | Settings | File Templates.
+ * The base implementation of all the "order by" spec.
  */
 public abstract class AbstractOrderBySpec implements OrderBySpec
 {
@@ -34,7 +30,7 @@ public abstract class AbstractOrderBySpec implements OrderBySpec
   @Override
   public List<String> getAggregations()
   {
-    return aggregations;  //To change body of implemented methods use File | Settings | File Templates.
+    return aggregations;
   }
 
   public Ordering<Row> getAscendingRowOrdering()

@@ -6,7 +6,8 @@ import org.codehaus.jackson.annotate.JsonSubTypes;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 
 /**
- * User: dyuan
+ * A "having" clause that filters aggregated value. This is similar to SQL's "having"
+ * clause.
  */
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, property="type")
 @JsonSubTypes(value={
@@ -18,10 +19,22 @@ import org.codehaus.jackson.annotate.JsonTypeInfo;
   @JsonSubTypes.Type(name="equalTo", value=EqualToHavingSpec.class)
 })
 public interface HavingSpec {
+  /**
+   * Evaluates if a given row satisfies the having spec.
+   *
+   * @param row A Row of data that may contain aggregated values
+   *
+   * @return true if the given row satisfies the having spec. False otherwise.
+   *
+   * @see Row
+   */
   public boolean eval(Row row);
 
   // Atoms for easy combination, but for now they are mostly useful
   // for testing.
+  /**
+   * A "having" spec that always evaluates to false
+   */
   public static final HavingSpec NEVER = new HavingSpec()
   {
     @Override
@@ -31,6 +44,9 @@ public interface HavingSpec {
     }
   };
 
+  /**
+   * A "having" spec that always evaluates to true
+   */
   public static final HavingSpec ALWAYS = new HavingSpec(){
     @Override
     public boolean eval(Row row)

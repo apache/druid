@@ -8,11 +8,8 @@ import org.codehaus.jackson.annotate.JsonTypeInfo;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
- * User: dyuan
- * Date: 2/11/13
- * Time: 6:22 PM
- * To change this template use File | Settings | File Templates.
+ * This spec is similar to "order by" clause in SQL. It sorts the result of a "group by" query in either
+ * ascending or descending order. It supports ordering by multiple aggregations too.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = AscendingOrderBySpec.class)
 @JsonSubTypes(value = {
@@ -21,6 +18,16 @@ import java.util.List;
 })
 public interface OrderBySpec
 {
-  public List<String> getAggregations();
+  /**
+   * @return the list of aggregation names. Query results will be sorted by
+   * each aggregation in this list.
+   *
+   */
+  public List <String> getAggregations();
+
+  /**
+   * @return the ordering based on the given list of aggregations
+   * @see Ordering
+   */
   public Ordering<Row> getRowOrdering();
 }

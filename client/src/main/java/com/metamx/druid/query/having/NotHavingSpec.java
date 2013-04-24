@@ -5,7 +5,7 @@ import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
- * User: dyuan
+ * The logical "not" operator for the "having" clause.
  */
 public class NotHavingSpec implements HavingSpec
 {

@@ -8,11 +8,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
- * User: dyuan
- * Date: 2/11/13
- * Time: 6:44 PM
- * To change this template use File | Settings | File Templates.
+ * This "order by" spec creates an ascending sorting order for the given aggregations.
  */
 public class AscendingOrderBySpec extends AbstractOrderBySpec implements OrderBySpec
 {
