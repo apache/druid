@@ -11,6 +11,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.merger.common.TaskStatus;
+import com.metamx.druid.merger.common.index.EventReceiverProvider;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.TaskRunner;
 import com.metamx.emitter.EmittingLogger;

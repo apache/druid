@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.worker.http;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -41,6 +42,7 @@ import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskLogConfig;
+import com.metamx.druid.merger.common.index.EventReceiverFirehoseFactory;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.common.tasklogs.NoopTaskLogs;
 import com.metamx.druid.merger.common.tasklogs.S3TaskLogs;
@@ -188,6 +190,7 @@ public class WorkerNode extends RegisteringNode
     initializeCuratorFramework();
     initializeServiceDiscovery();
     initializeCoordinatorServiceProvider();
+    initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeCuratorCoordinator();
     initializePersistentTaskLogs();
@@ -272,9 +275,21 @@ public class WorkerNode extends RegisteringNode
     }
   }
 
+  private void initializeJacksonInjections()
+  {
+    InjectableValues.Std injectables = new InjectableValues.Std();
+
+    injectables.addValue("s3Client", null)
+               .addValue("segmentPusher", null)
+               .addValue("eventReceiverProvider", null);
+
+    getJsonMapper().setInjectableValues(injectables);
+  }
+
   private void initializeJacksonSubtypes()
   {
     getJsonMapper().registerSubtypes(StaticS3FirehoseFactory.class);
+    getJsonMapper().registerSubtypes(EventReceiverFirehoseFactory.class);
   }
 
   private void initializeHttpClient()

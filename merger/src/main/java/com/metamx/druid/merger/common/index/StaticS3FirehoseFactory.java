@@ -31,8 +31,8 @@ import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.indexer.data.StringInputRowParser;
 import com.metamx.druid.input.InputRow;
-import com.metamx.druid.realtime.Firehose;
-import com.metamx.druid.realtime.FirehoseFactory;
+import com.metamx.druid.realtime.firehose.Firehose;
+import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 

@@ -22,6 +22,7 @@ package com.metamx.druid.merger.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
@@ -40,10 +41,10 @@ import com.metamx.druid.merger.common.actions.SegmentInsertAction;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.realtime.FireDepartmentConfig;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
-import com.metamx.druid.realtime.Firehose;
-import com.metamx.druid.realtime.FirehoseFactory;
-import com.metamx.druid.realtime.GracefulShutdownFirehose;
-import com.metamx.druid.realtime.MinTimeFirehose;
+import com.metamx.druid.realtime.firehose.Firehose;
+import com.metamx.druid.realtime.firehose.FirehoseFactory;
+import com.metamx.druid.realtime.firehose.GracefulShutdownFirehose;
+import com.metamx.druid.realtime.firehose.PredicateFirehose;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.RealtimePlumberSchool;
 import com.metamx.druid.realtime.Schema;
@@ -56,6 +57,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 
@@ -79,9 +81,6 @@ public class RealtimeIndexTask extends AbstractTask
   private final IndexGranularity segmentGranularity;
 
   @JsonIgnore
-  private final DateTime minTime;
-
-  @JsonIgnore
   private volatile Plumber plumber = null;
 
   @JsonIgnore
@@ -100,8 +99,7 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig, // TODO rename?
       @JsonProperty("windowPeriod") Period windowPeriod,
-      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
-      @JsonProperty("minTime") DateTime minTime
+      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity
   )
   {
     super(
@@ -122,7 +120,6 @@ public class RealtimeIndexTask extends AbstractTask
     this.fireDepartmentConfig = fireDepartmentConfig;
     this.windowPeriod = windowPeriod;
     this.segmentGranularity = segmentGranularity;
-    this.minTime = minTime;
   }
 
   @Override
@@ -164,18 +161,12 @@ public class RealtimeIndexTask extends AbstractTask
         return TaskStatus.success(getId());
       }
 
-      Firehose wrappedFirehose = firehoseFactory.connect();
-      if (minTime != null) {
-        log.info("Wrapping firehose in MinTimeFirehose with minTime[%s]", minTime);
-        wrappedFirehose = new MinTimeFirehose(wrappedFirehose, minTime);
-      }
-
       log.info(
           "Wrapping firehose in GracefulShutdownFirehose with segmentGranularity[%s] and windowPeriod[%s]",
           segmentGranularity,
           windowPeriod
       );
-      firehose = new GracefulShutdownFirehose(wrappedFirehose, segmentGranularity, windowPeriod);
+      firehose = new GracefulShutdownFirehose(firehoseFactory.connect(), segmentGranularity, windowPeriod);
     }
 
     // TODO -- Take PlumberSchool in constructor (although that will need jackson injectables for stuff like
@@ -364,12 +355,6 @@ public class RealtimeIndexTask extends AbstractTask
   public IndexGranularity getSegmentGranularity()
   {
     return segmentGranularity;
-  }
-
-  @JsonProperty
-  public DateTime getMinTime()
-  {
-    return minTime;
   }
 
   public static class TaskActionSegmentPublisher implements SegmentPublisher

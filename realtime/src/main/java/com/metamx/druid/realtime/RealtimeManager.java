@@ -36,6 +36,7 @@ import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.druid.query.segment.SegmentDescriptor;
+import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.Sink;
 import com.metamx.emitter.EmittingLogger;

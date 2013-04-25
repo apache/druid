@@ -24,8 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -38,6 +40,7 @@ import com.metamx.druid.client.ClientConfig;
 import com.metamx.druid.client.ClientInventoryManager;
 import com.metamx.druid.client.MutableServerView;
 import com.metamx.druid.client.OnlyNewSegmentWatcherServerView;
+import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.CuratorConfig;
@@ -50,13 +53,13 @@ import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentKiller;
 import com.metamx.druid.merger.common.RetryPolicyFactory;
-import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.actions.RemoteTaskActionClientFactory;
 import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
+import com.metamx.druid.merger.common.index.EventReceiverFirehoseFactory;
+import com.metamx.druid.merger.common.index.EventReceiverProvider;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
-import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.ExecutorServiceTaskRunner;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
 import com.metamx.druid.realtime.SegmentAnnouncer;
@@ -82,6 +85,7 @@ import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
@@ -122,6 +126,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private Server server = null;
   private ExecutorServiceTaskRunner taskRunner = null;
   private ExecutorLifecycle executorLifecycle = null;
+  private EventReceiverProvider eventReceiverProvider = null;
 
   public ExecutorNode(
       Properties props,
@@ -209,6 +214,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     initializeDataSegmentPusher();
     initializeTaskToolbox();
     initializeTaskRunner();
+    initializeEventReceiverProvider();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeServer();
@@ -226,9 +232,18 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     executorLifecycle = executorLifecycleFactory.build(taskRunner, getJsonMapper());
     lifecycle.addManagedInstance(executorLifecycle);
 
+    final Injector injector = Guice.createInjector(
+        new ExecutorServletModule(
+            getJsonMapper(),
+            eventReceiverProvider
+        )
+    );
     final Context root = new Context(server, "/", Context.SESSIONS);
 
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
+    root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+    root.addEventListener(new GuiceServletConfig(injector));
+    root.addFilter(GuiceFilter.class, "/mmx/worker/v1/*", 0);
     root.addServlet(
         new ServletHolder(
             new QueryServlet(getJsonMapper(), getSmileMapper(), taskRunner, emitter, getRequestLogger())
@@ -296,7 +311,8 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     InjectableValues.Std injectables = new InjectableValues.Std();
 
     injectables.addValue("s3Client", s3Service)
-               .addValue("segmentPusher", segmentPusher);
+               .addValue("segmentPusher", segmentPusher)
+               .addValue("eventReceiverProvider", eventReceiverProvider);
 
     getJsonMapper().setInjectableValues(injectables);
   }
@@ -304,6 +320,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private void initializeJacksonSubtypes()
   {
     getJsonMapper().registerSubtypes(StaticS3FirehoseFactory.class);
+    getJsonMapper().registerSubtypes(EventReceiverFirehoseFactory.class);
   }
 
   private void initializeHttpClient()
@@ -461,7 +478,14 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
                       .build()
               )
           )
-      );;
+      );
+    }
+  }
+
+  public void initializeEventReceiverProvider()
+  {
+    if (eventReceiverProvider == null) {
+      this.eventReceiverProvider = new EventReceiverProvider();
     }
   }
 
