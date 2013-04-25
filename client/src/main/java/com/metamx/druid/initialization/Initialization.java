@@ -277,12 +277,11 @@ public class Initialization
   )
       throws Exception
   {
-    final ServiceInstance serviceInstance =
-        ServiceInstance.builder()
-                       .name(config.getServiceName().replace('/', ':'))
-                       .address(addressFromHost(config.getHost()))
-                       .port(config.getPort())
-                       .build();
+    final ServiceInstance serviceInstance = serviceInstance(
+        config.getServiceName(),
+        config.getHost(),
+        config.getPort()
+    );
     final ServiceDiscovery serviceDiscovery =
         ServiceDiscoveryBuilder.builder(Void.class)
                                .basePath(config.getDiscoveryPath())
@@ -378,13 +377,24 @@ public class Initialization
     return String.format("%s/%s", basePath, PROP_SUBPATH);
   }
 
-  public static String addressFromHost(final String host)
+  public static ServiceInstance serviceInstance(final String service, final String host, final int port)
   {
+    final String address;
     final int colon = host.indexOf(':');
     if (colon < 0) {
-      return host;
+      address = host;
     } else {
-      return host.substring(0, colon);
+      address = host.substring(0, colon);
+    }
+
+    try {
+      return ServiceInstance.builder()
+                            .name(service.replace('/', ':'))
+                            .address(address)
+                            .port(port)
+                            .build();
+    } catch (Exception e) {
+      throw Throwables.propagate(e);
     }
   }
 

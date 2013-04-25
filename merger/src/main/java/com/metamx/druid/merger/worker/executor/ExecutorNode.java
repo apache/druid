@@ -61,6 +61,7 @@ import com.metamx.druid.merger.common.index.EventReceiverFirehoseFactory;
 import com.metamx.druid.merger.common.index.EventReceiverProvider;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.ExecutorServiceTaskRunner;
+import com.metamx.druid.merger.worker.config.EventReceiverProviderConfig;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
 import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.druid.realtime.ZkSegmentAnnouncer;
@@ -485,7 +486,10 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   public void initializeEventReceiverProvider()
   {
     if (eventReceiverProvider == null) {
-      this.eventReceiverProvider = new EventReceiverProvider();
+      this.eventReceiverProvider = new EventReceiverProvider(
+          configFactory.build(EventReceiverProviderConfig.class),
+          serviceDiscovery
+      );
     }
   }
 

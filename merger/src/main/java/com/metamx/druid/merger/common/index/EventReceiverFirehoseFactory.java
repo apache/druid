@@ -170,7 +170,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
       closed = true;
 
       if (eventReceiverProvider.isPresent()) {
-        eventReceiverProvider.get().unregister(firehoseId, this);
+        eventReceiverProvider.get().unregister(firehoseId);
       }
     }
   }
