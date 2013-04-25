@@ -19,7 +19,6 @@
 
 package com.metamx.druid.curator.inventory;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -31,12 +30,10 @@ import com.metamx.druid.curator.ShutdownNowIgnoringExecutorService;
 import com.metamx.druid.curator.cache.PathChildrenCacheFactory;
 import com.metamx.druid.curator.cache.SimplePathChildrenCacheFactory;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.retry.RetryOneTime;
 import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
@@ -217,6 +214,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           containers.put(containerKey, new ContainerHolder(container, inventoryCache));
 
           inventoryCache.start();
+          strategy.newContainer(container);
 
           break;
         case CHILD_REMOVED:

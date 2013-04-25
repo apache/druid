@@ -163,7 +163,7 @@ public class DruidSetup
     ZkPathsConfig config = new ZkPathsConfig()
     {
       @Override
-      protected String getZkBasePath()
+      public String getZkBasePath()
       {
         return zPathBase;
       }

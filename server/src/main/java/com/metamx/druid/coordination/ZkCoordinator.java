@@ -29,6 +29,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.curator.announcement.Announcer;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.AlertEvent;
@@ -68,6 +69,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   public ZkCoordinator(
       ObjectMapper jsonMapper,
       ZkCoordinatorConfig config,
+      ZkPathsConfig zkPaths,
       DruidServerMetadata me,
       DataSegmentAnnouncer announcer,
       CuratorFramework curator,
@@ -83,14 +85,14 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     this.serverManager = serverManager;
     this.emitter = emitter;
 
-    this.loadQueueLocation = ZKPaths.makePath(config.getLoadQueueLocation(), me.getName());
-    this.servedSegmentsLocation = ZKPaths.makePath(config.getServedSegmentsLocation(), me.getName());
+    this.loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
+    this.servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
   }
 
   @LifecycleStart
   public void start() throws IOException
   {
-    log.info("Starting zkCoordinator for server[%s] with config[%s]", me, config);
+    log.info("Starting zkCoordinator for server[%s]", me);
     synchronized (lock) {
       if (started) {
         return;
@@ -105,7 +107,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       );
 
       try {
-        this.config.getSegmentInfoCacheDirectory().mkdirs();
+        config.getSegmentInfoCacheDirectory().mkdirs();
 
         curator.newNamespaceAwareEnsurePath(loadQueueLocation).ensure(curator.getZookeeperClient());
         curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
@@ -158,6 +160,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
               }
             }
         );
+        loadQueueCache.start();
       }
       catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
@@ -214,16 +217,9 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         }
       }
       catch (Exception e) {
-        log.error(e, "Exception occurred reading file [%s]", file);
-        emitter.emit(
-            new AlertEvent.Builder().build(
-                "Failed to read segment info file",
-                ImmutableMap.<String, Object>builder()
-                            .put("file", file)
-                            .put("exception", e.toString())
-                            .build()
-            )
-        );
+        log.makeAlert(e, "Failed to load segment from segmentInfo file")
+           .addData("file", file)
+           .emit();
       }
     }
   }

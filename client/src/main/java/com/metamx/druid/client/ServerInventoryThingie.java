@@ -28,6 +28,8 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.curator.inventory.CuratorInventoryManager;
 import com.metamx.druid.curator.inventory.CuratorInventoryManagerStrategy;
+import com.metamx.druid.curator.inventory.InventoryManagerConfig;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -55,6 +57,7 @@ public class ServerInventoryThingie implements ServerView
 
   public ServerInventoryThingie(
       final ServerInventoryThingieConfig config,
+      final ZkPathsConfig zkPaths,
       final CuratorFramework curator,
       final ExecutorService exec,
       final ObjectMapper jsonMapper
@@ -62,7 +65,20 @@ public class ServerInventoryThingie implements ServerView
   {
     inventoryManager = new CuratorInventoryManager<DruidServer, DataSegment>(
         curator,
-        config,
+        new InventoryManagerConfig()
+        {
+          @Override
+          public String getContainerPath()
+          {
+            return zkPaths.getAnnouncementsPath();
+          }
+
+          @Override
+          public String getInventoryPath()
+          {
+            return zkPaths.getServedSegmentsPath();
+          }
+        },
         exec,
         new CuratorInventoryManagerStrategy<DruidServer, DataSegment>()
         {

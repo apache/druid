@@ -117,6 +117,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     final ZkCoordinator coordinator = new ZkCoordinator(
         getJsonMapper(),
         getConfigFactory().build(ZkCoordinatorConfig.class),
+        getZkPaths(),
         getDruidServerMetadata(),
         getAnnouncer(),
         getCuratorFramework(),

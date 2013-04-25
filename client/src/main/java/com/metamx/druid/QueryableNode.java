@@ -321,6 +321,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       setServerInventoryThingie(
           new ServerInventoryThingie(
               getConfigFactory().build(ServerInventoryThingieConfig.class),
+              getZkPaths(),
               getCuratorFramework(),
               exec,
               getJsonMapper()

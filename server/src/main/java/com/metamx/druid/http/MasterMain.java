@@ -48,6 +48,7 @@ import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.master.DruidMaster;
@@ -122,11 +123,13 @@ public class MasterMain
         lifecycle
     );
 
+    final ZkPathsConfig zkPaths = configFactory.build(ZkPathsConfig.class);
+
     final ExecutorService exec = Executors.newFixedThreadPool(
         1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryThingie-%s").build()
     );
     ServerInventoryThingie serverInventoryThingie = new ServerInventoryThingie(
-        configFactory.build(ServerInventoryThingieConfig.class), curatorFramework, exec, jsonMapper
+        configFactory.build(ServerInventoryThingieConfig.class), zkPaths, curatorFramework, exec, jsonMapper
     );
     lifecycle.addManagedInstance(serverInventoryThingie);
 
@@ -194,6 +197,7 @@ public class MasterMain
 
     final DruidMaster master = new DruidMaster(
         druidMasterConfig,
+        zkPaths,
         configManager,
         databaseSegmentManager,
         serverInventoryThingie,

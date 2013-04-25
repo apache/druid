@@ -45,6 +45,7 @@ import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.index.v1.IndexIO;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -78,6 +79,7 @@ public class DruidMaster
   private volatile boolean master = false;
 
   private final DruidMasterConfig config;
+  private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final ServerInventoryThingie serverInventoryThingie;
@@ -93,6 +95,7 @@ public class DruidMaster
 
   public DruidMaster(
       DruidMasterConfig config,
+      ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
       DatabaseSegmentManager databaseSegmentManager,
       ServerInventoryThingie serverInventoryThingie,
@@ -105,6 +108,7 @@ public class DruidMaster
   )
   {
     this.config = config;
+    this.zkPaths = zkPaths;
     this.configManager = configManager;
 
     this.databaseSegmentManager = databaseSegmentManager;
@@ -256,9 +260,9 @@ public class DruidMaster
       );
     }
 
-    final String toLoadQueueSegPath = ZKPaths.makePath(ZKPaths.makePath(config.getLoadQueuePath(), to), segmentName);
+    final String toLoadQueueSegPath = ZKPaths.makePath(ZKPaths.makePath(zkPaths.getLoadQueuePath(), to), segmentName);
     final String toServedSegPath = ZKPaths.makePath(
-        ZKPaths.makePath(config.getServedSegmentsLocation(), to), segmentName
+        ZKPaths.makePath(zkPaths.getServedSegmentsPath(), to), segmentName
     );
 
     loadPeon.loadSegment(
@@ -403,7 +407,7 @@ public class DruidMaster
   private LeaderLatch createNewLeaderLatch()
   {
     final LeaderLatch newLeaderLatch = new LeaderLatch(
-        curator, ZKPaths.makePath(config.getBasePath(), MASTER_OWNER_NODE), config.getHost()
+        curator, ZKPaths.makePath(zkPaths.getMasterPath(), MASTER_OWNER_NODE), config.getHost()
     );
 
     newLeaderLatch.attachListener(
@@ -711,7 +715,7 @@ public class DruidMaster
                   final DruidCluster cluster = new DruidCluster();
                   for (DruidServer server : servers) {
                     if (!loadManagementPeons.containsKey(server.getName())) {
-                      String basePath = ZKPaths.makePath(config.getLoadQueuePath(), server.getName());
+                      String basePath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName());
                       LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(basePath);
                       log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
 

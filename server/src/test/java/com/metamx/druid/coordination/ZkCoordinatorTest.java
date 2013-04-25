@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IndexIO;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.CacheTestSegmentLoader;
 import com.metamx.druid.metrics.NoopServiceEmitter;
@@ -82,29 +83,12 @@ public class ZkCoordinatorTest
         new ZkCoordinatorConfig()
         {
           @Override
-          public String getAnnounceLocation()
-          {
-            return null;
-          }
-
-          @Override
-          public String getServedSegmentsLocation()
-          {
-            return null;
-          }
-
-          @Override
-          public String getLoadQueueLocation()
-          {
-            return null;
-          }
-
-          @Override
           public File getSegmentInfoCacheDirectory()
           {
             return cacheDir;
           }
         },
+        new ZkPathsConfig(){},
         new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal"),
         announcer,
         curator,

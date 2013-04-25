@@ -68,9 +68,10 @@ public class CuratorDataSegmentAnnouncer implements DataSegmentAnnouncer
         return;
       }
 
-      log.info("Starting CuratorDataSegmentAnnouncer for server[%s] with config[%s]", server.getName(), config);
       try {
-        announcer.announce(makeAnnouncementPath(), jsonMapper.writeValueAsBytes(server));
+        final String path = makeAnnouncementPath();
+        log.info("Announcing self[%s] at [%s]", server, path);
+        announcer.announce(path, jsonMapper.writeValueAsBytes(server));
       }
       catch (JsonProcessingException e) {
         throw Throwables.propagate(e);

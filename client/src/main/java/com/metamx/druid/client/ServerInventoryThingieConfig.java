@@ -19,22 +19,13 @@
 
 package com.metamx.druid.client;
 
-import com.metamx.druid.curator.inventory.InventoryManagerConfig;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
 /**
  */
-public abstract class ServerInventoryThingieConfig implements InventoryManagerConfig
+public abstract class ServerInventoryThingieConfig
 {
-  @Config("druid.zk.paths.announcementsPath")
-  @Override
-  public abstract String getContainerPath();
-
-  @Config("druid.zk.paths.servedSegmentsPath")
-  @Override
-  public abstract String getInventoryPath();
-
   @Config("druid.master.removedSegmentLifetime")
   @Default("1")
   public abstract int getRemovedSegmentLifetime();

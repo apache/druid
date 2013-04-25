@@ -24,6 +24,7 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.metrics.NoopServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
 import org.easymock.EasyMock;
@@ -69,24 +70,6 @@ public class DruidMasterTest
         {
           @Override
           public String getHost()
-          {
-            return null;
-          }
-
-          @Override
-          public String getBasePath()
-          {
-            return null;
-          }
-
-          @Override
-          public String getLoadQueuePath()
-          {
-            return null;
-          }
-
-          @Override
-          public String getServedSegmentsLocation()
           {
             return null;
           }
@@ -139,6 +122,7 @@ public class DruidMasterTest
             return 0;
           }
         },
+        new ZkPathsConfig(){},
         null,
         databaseSegmentManager,
         serverInventoryThingie,
