@@ -151,7 +151,7 @@ public class BrokerServerView implements TimelineServerView
   {
     String segmentId = segment.getIdentifier();
     synchronized (lock) {
-      log.info("Adding segment[%s] for server[%s]", segment, server);
+      log.debug("Adding segment[%s] for server[%s]", segment, server);
 
       ServerSelector selector = selectors.get(segmentId);
       if (selector == null) {
@@ -180,7 +180,7 @@ public class BrokerServerView implements TimelineServerView
     final ServerSelector selector;
 
     synchronized (lock) {
-      log.info("Removing segment[%s] from server[%s].", segmentId, server);
+      log.debug("Removing segment[%s] from server[%s].", segmentId, server);
 
       selector = selectors.get(segmentId);
       if (selector == null) {

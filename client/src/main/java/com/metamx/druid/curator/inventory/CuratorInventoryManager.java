@@ -220,7 +220,6 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
         case CHILD_REMOVED:
           final ContainerHolder removed = containers.remove(containerKey);
           if (removed == null) {
-            log.warn("Container[%s] removed that wasn't a container!?", child.getPath());
             break;
           }
 
