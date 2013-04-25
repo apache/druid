@@ -92,8 +92,7 @@ public class ZkCoordinatorTest
         new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal"),
         announcer,
         curator,
-        serverManager,
-        new NoopServiceEmitter()
+        serverManager
     );
   }
 

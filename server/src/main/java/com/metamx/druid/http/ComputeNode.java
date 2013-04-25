@@ -121,8 +121,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
         getDruidServerMetadata(),
         getAnnouncer(),
         getCuratorFramework(),
-        serverManager,
-        emitter
+        serverManager
     );
     lifecycle.addManagedInstance(coordinator);
 
