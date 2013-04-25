@@ -220,6 +220,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
         case CHILD_REMOVED:
           final ContainerHolder removed = containers.remove(containerKey);
           if (removed == null) {
+            log.warn("Container[%s] removed that wasn't a container!?", child.getPath());
             break;
           }
 
@@ -264,7 +265,6 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
         final ContainerHolder holder = containers.get(containerKey);
 
         if (holder == null) {
-          log.error("Inventory[%s] change for non-existent container[%s]!?", child.getPath());
           return;
         }
 
@@ -286,8 +286,6 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             }
 
             break;
-          default:
-            log.info("Got event[%s] at inventoryPath[%s], ignoring.", event.getType(), inventoryPath);
         }
       }
     }

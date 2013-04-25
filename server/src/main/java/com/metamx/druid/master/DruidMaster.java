@@ -439,7 +439,6 @@ public class DruidMaster
         return;
       }
 
-      Closeables.closeQuietly(leaderLatch.get());
       stopBeingMaster();
 
       started = false;
