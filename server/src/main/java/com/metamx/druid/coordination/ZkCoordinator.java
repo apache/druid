@@ -28,7 +28,6 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -53,7 +52,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private final DataSegmentAnnouncer announcer;
   private final CuratorFramework curator;
   private final ServerManager serverManager;
-  private final ServiceEmitter emitter;
 
   private final String loadQueueLocation;
   private final String servedSegmentsLocation;
@@ -68,8 +66,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       DruidServerMetadata me,
       DataSegmentAnnouncer announcer,
       CuratorFramework curator,
-      ServerManager serverManager,
-      ServiceEmitter emitter
+      ServerManager serverManager
   )
   {
     this.jsonMapper = jsonMapper;
@@ -78,7 +75,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     this.announcer = announcer;
     this.curator = curator;
     this.serverManager = serverManager;
-    this.emitter = emitter;
 
     this.loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
     this.servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
