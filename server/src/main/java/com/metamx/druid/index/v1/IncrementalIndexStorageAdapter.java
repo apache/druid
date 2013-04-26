@@ -21,6 +21,7 @@ package com.metamx.druid.index.v1;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -28,6 +29,7 @@ import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.FunctionalIterator;
+import com.metamx.common.spatial.rtree.search.Bound;
 import com.metamx.druid.Capabilities;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.StorageAdapter;
@@ -62,6 +64,8 @@ import java.util.concurrent.ConcurrentNavigableMap;
  */
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
+  private static final Splitter SPLITTER = Splitter.on(",");
+
   private final IncrementalIndex index;
 
   public IncrementalIndexStorageAdapter(
@@ -512,6 +516,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       }
     }
 
+
     return new FunctionalIterable<SearchHit>(retVal).limit(query.getLimit());
   }
 
@@ -533,6 +538,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     public void set(Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]> currEntry)
     {
+      this.currEntry = currEntry;
       this.currEntry = currEntry;
     }
 
@@ -620,7 +626,44 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           return false;
         }
       };
+    }
 
+    @Override
+    public ValueMatcher makeValueMatcher(final String dimension, final Bound bound)
+    {
+      if (!dimension.endsWith(".geo")) {
+        return new BooleanValueMatcher(false);
+      }
+
+      Integer dimIndexObject = index.getDimensionIndex(dimension.toLowerCase());
+      if (dimIndexObject == null) {
+        return new BooleanValueMatcher(false);
+      }
+      final int dimIndex = dimIndexObject;
+
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          String[][] dims = holder.getKey().getDims();
+          if (dimIndex >= dims.length || dims[dimIndex] == null) {
+            return false;
+          }
+
+          for (String dimVal : dims[dimIndex]) {
+            List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
+            float[] coords = new float[stringCoords.size()];
+            for (int j = 0; j < coords.length; j++) {
+              coords[j] = Float.valueOf(stringCoords.get(j));
+            }
+            if (bound.contains(coords)) {
+              return true;
+            }
+          }
+          return false;
+        }
+      };
     }
   }
 }

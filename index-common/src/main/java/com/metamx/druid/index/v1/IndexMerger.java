@@ -787,6 +787,7 @@ public class IndexMerger
           count++;
         }
       }
+
       writer.write(ImmutableRTree.newImmutableFromMutable(tree));
       writer.close();
 

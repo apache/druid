@@ -21,6 +21,7 @@ package com.metamx.druid.index.brita;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.metamx.common.spatial.rtree.ImmutableRTree;
 import com.metamx.common.spatial.rtree.search.Bound;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
@@ -43,6 +44,8 @@ public class SpatialFilter implements Filter
   @Override
   public ImmutableConciseSet goConcise(final BitmapIndexSelector selector)
   {
+    //ImmutableRTree foo = selector.getSpatialIndex(dimension);
+    //ImmutableRTree.print(foo);
     Iterable<Integer> indexes = selector.getSpatialIndex(dimension).search(bound);
     return ImmutableConciseSet.union(
         Iterables.transform(
@@ -64,14 +67,7 @@ public class SpatialFilter implements Filter
   {
     return factory.makeValueMatcher(
         dimension,
-        new Predicate<String>()
-        {
-          @Override
-          public boolean apply(String input)
-          {
-            return true;
-          }
-        }
+        bound
     );
   }
 }
