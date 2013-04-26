@@ -193,6 +193,10 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
     {
       final ChildData child = event.getData();
+      if (child == null) {
+        return;
+      }
+
       final String containerKey = ZKPaths.getNodeFromPath(child.getPath());
       final ContainerClass container;
 
@@ -262,6 +266,11 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
       public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
       {
         final ChildData child = event.getData();
+
+        if (child == null) {
+          return;
+        }
+
         final ContainerHolder holder = containers.get(containerKey);
 
         if (holder == null) {

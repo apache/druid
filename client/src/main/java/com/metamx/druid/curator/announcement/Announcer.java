@@ -228,7 +228,7 @@ public class Announcer
 
   private String createAnnouncement(final String path, byte[] value) throws Exception
   {
-    return curator.create().withMode(CreateMode.EPHEMERAL).inBackground().forPath(path, value);
+    return curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground().forPath(path, value);
   }
 
   /**

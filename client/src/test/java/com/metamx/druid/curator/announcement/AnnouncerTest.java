@@ -20,17 +20,14 @@
 package com.metamx.druid.curator.announcement;
 
 import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
 import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.curator.CuratorTestBase;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
 import org.apache.curator.framework.api.CuratorListener;
-import org.apache.curator.retry.RetryOneTime;
 import org.apache.curator.test.KillSession;
-import org.apache.curator.test.TestingServer;
-import org.apache.curator.test.Timing;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,79 +38,81 @@ import java.util.concurrent.ExecutorService;
 
 /**
  */
-public class AnnouncerTest
+public class AnnouncerTest extends CuratorTestBase
 {
 
-  private TestingServer server;
+  private ExecutorService exec;
 
   @Before
   public void setUp() throws Exception
   {
-    server = new TestingServer();
+    setupServerAndCurator();
+    exec = Execs.singleThreaded("test-announcer-sanity-%s");
+  }
+
+  @After
+  public void tearDown()
+  {
+    tearDownServerAndCurator();
   }
 
   @Test
   public void testSanity() throws Exception
   {
-    Timing timing = new Timing();
-    CuratorFramework curator = CuratorFrameworkFactory.newClient(server.getConnectString(), timing.session(), timing.connection(), new RetryOneTime(1));
-    final ExecutorService exec = Execs.singleThreaded("test-announcer-sanity-%s");
-
     curator.start();
-    try {
-      curator.create().forPath("/somewhere");
-      Announcer announcer = new Announcer(curator, exec);
+    curator.create().forPath("/somewhere");
+    Announcer announcer = new Announcer(curator, exec);
 
-      final byte[] billy = "billy".getBytes();
-      final String testPath1 = "/test1";
-      final String testPath2 = "/somewhere/test2";
-      announcer.announce(testPath1, billy);
+    final byte[] billy = "billy".getBytes();
+    final String testPath1 = "/test1";
+    final String testPath2 = "/somewhere/test2";
+    announcer.announce(testPath1, billy);
 
-      Assert.assertNull(curator.checkExists().forPath(testPath1));
-      Assert.assertNull(curator.checkExists().forPath(testPath2));
+    Assert.assertNull(curator.checkExists().forPath(testPath1));
+    Assert.assertNull(curator.checkExists().forPath(testPath2));
 
-      announcer.start();
+    announcer.start();
 
-      Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
-      Assert.assertNull(curator.checkExists().forPath(testPath2));
+    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
+    Assert.assertNull(curator.checkExists().forPath(testPath2));
 
-      announcer.announce(testPath2, billy);
+    announcer.announce(testPath2, billy);
 
-      Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
-      Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
+    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
+    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
 
-      curator.delete().forPath(testPath1);
-      Thread.sleep(20); // Give the announcer time to notice
+    final CountDownLatch latch = new CountDownLatch(1);
+    curator.getCuratorListenable().addListener(
+        new CuratorListener()
+        {
+          @Override
+          public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception
+          {
+            if (event.getType() == CuratorEventType.DELETE && event.getPath().equals(testPath1)) {
+              latch.countDown();
+            }
+          }
+        }
+    );
+    curator.delete().forPath(testPath1);
+    timing.awaitLatch(latch);
 
-      Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
-      Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
+    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
+    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
 
-      announcer.unannounce(testPath1);
-      Assert.assertNull(curator.checkExists().forPath(testPath1));
-      Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
+    announcer.unannounce(testPath1);
+    Assert.assertNull(curator.checkExists().forPath(testPath1));
+    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
 
-      announcer.stop();
+    announcer.stop();
 
-      Assert.assertNull(curator.checkExists().forPath(testPath1));
-      Assert.assertNull(curator.checkExists().forPath(testPath2));
-    }
-    finally {
-      Closeables.closeQuietly(curator);
-    }
+    Assert.assertNull(curator.checkExists().forPath(testPath1));
+    Assert.assertNull(curator.checkExists().forPath(testPath2));
   }
 
   @Test
   public void testSessionKilled() throws Exception
   {
-    Timing timing = new Timing();
-    CuratorFramework curator = CuratorFrameworkFactory
-        .builder()
-        .connectString(server.getConnectString())
-        .sessionTimeoutMs(timing.session())
-        .connectionTimeoutMs(timing.connection())
-        .retryPolicy(new RetryOneTime(1))
-        .build();
-
     final ExecutorService exec = Execs.singleThreaded("test-announcer-sanity-%s");
 
     curator.start();
@@ -162,7 +161,6 @@ public class AnnouncerTest
     }
     finally {
       announcer.stop();
-      Closeables.closeQuietly(curator);
     }
   }
 }
