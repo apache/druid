@@ -24,10 +24,7 @@ import org.skife.config.Config;
 public abstract class ZkPathsConfig
 {
   @Config("druid.zk.paths.base")
-  public String getZkBasePath()
-  {
-    return "/druid";
-  }
+  public abstract String getZkBasePath();
 
   @Config("druid.zk.paths.propertiesPath")
   public String getPropertiesPath()
