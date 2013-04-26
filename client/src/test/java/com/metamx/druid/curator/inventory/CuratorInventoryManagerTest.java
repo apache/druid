@@ -52,7 +52,7 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
     strategy.setNewContainerLatch(containerLatch);
     curator.create().withMode(CreateMode.EPHEMERAL).forPath("/container/billy", new byte[]{});
 
-    timing.awaitLatch(containerLatch);
+    Assert.assertTrue(timing.awaitLatch(containerLatch));
     strategy.setNewContainerLatch(null);
 
     final Iterable<Map<String, Integer>> inventory = manager.getInventory();
@@ -63,7 +63,7 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
     curator.create().withMode(CreateMode.EPHEMERAL).forPath("/inventory/billy/1", Ints.toByteArray(100));
     curator.create().withMode(CreateMode.EPHEMERAL).forPath("/inventory/billy/bob", Ints.toByteArray(2287));
 
-    timing.awaitLatch(inventoryLatch);
+    Assert.assertTrue(timing.awaitLatch(inventoryLatch));
     strategy.setNewInventoryLatch(null);
 
     verifyInventory(manager);
@@ -72,7 +72,7 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
     strategy.setDeadInventoryLatch(deleteLatch);
     curator.delete().forPath("/inventory/billy/1");
 
-    timing.awaitLatch(deleteLatch);
+    Assert.assertTrue(timing.awaitLatch(deleteLatch));
     strategy.setDeadInventoryLatch(null);
 
     Assert.assertEquals(1, manager.getInventoryValue("billy").size());
@@ -82,7 +82,7 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
     strategy.setNewInventoryLatch(inventoryLatch);
     curator.create().withMode(CreateMode.EPHEMERAL).forPath("/inventory/billy/1", Ints.toByteArray(100));
 
-    timing.awaitLatch(inventoryLatch);
+    Assert.assertTrue(timing.awaitLatch(inventoryLatch));
     strategy.setNewInventoryLatch(null);
 
     verifyInventory(manager);
@@ -104,7 +104,7 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
     );
 
     server.stop();
-    timing.awaitLatch(latch);
+    Assert.assertTrue(timing.awaitLatch(latch));
 
     verifyInventory(manager);
 

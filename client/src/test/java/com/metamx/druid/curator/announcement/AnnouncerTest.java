@@ -73,13 +73,13 @@ public class AnnouncerTest extends CuratorTestBase
 
     announcer.start();
 
-    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
     Assert.assertNull(curator.checkExists().forPath(testPath2));
 
     announcer.announce(testPath2, billy);
 
-    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
-    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
 
     final CountDownLatch latch = new CountDownLatch(1);
     curator.getCuratorListenable().addListener(
@@ -88,21 +88,21 @@ public class AnnouncerTest extends CuratorTestBase
           @Override
           public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception
           {
-            if (event.getType() == CuratorEventType.DELETE && event.getPath().equals(testPath1)) {
+            if (event.getType() == CuratorEventType.CREATE && event.getPath().equals(testPath1)) {
               latch.countDown();
             }
           }
         }
     );
     curator.delete().forPath(testPath1);
-    timing.awaitLatch(latch);
+    Assert.assertTrue(timing.awaitLatch(latch));
 
-    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
-    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
 
     announcer.unannounce(testPath1);
     Assert.assertNull(curator.checkExists().forPath(testPath1));
-    Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
 
     announcer.stop();
 
@@ -128,8 +128,8 @@ public class AnnouncerTest extends CuratorTestBase
       announcer.announce(testPath1, billy);
       announcer.announce(testPath2, billy);
 
-      Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
-      Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
+      Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
+      Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
 
       final CountDownLatch latch = new CountDownLatch(1);
       curator.getCuratorListenable().addListener(
@@ -149,10 +149,10 @@ public class AnnouncerTest extends CuratorTestBase
       );
       KillSession.kill(curator.getZookeeperClient().getZooKeeper(), server.getConnectString());
 
-      timing.awaitLatch(latch);
+      Assert.assertTrue(timing.awaitLatch(latch));
 
-      Assert.assertArrayEquals(billy, curator.getData().forPath(testPath1));
-      Assert.assertArrayEquals(billy, curator.getData().forPath(testPath2));
+      Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
+      Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
 
       announcer.stop();
 
