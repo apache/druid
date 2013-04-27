@@ -569,7 +569,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
       if (config.getStorageImpl().equals("local")) {
         taskStorage = new HeapMemoryTaskStorage();
       } else if (config.getStorageImpl().equals("db")) {
-        final IndexerDbConnectorConfig dbConnectorConfig = configFactory.build(IndexerDbConnectorConfig.class);
+        final IndexerDbConnectorConfig dbConnectorConfig = getConfigFactory().build(IndexerDbConnectorConfig.class);
         DbConnector.createTaskTable(dbi, dbConnectorConfig.getTaskTable());
         DbConnector.createTaskLogTable(dbi, dbConnectorConfig.getTaskLogTable());
         DbConnector.createTaskLockTable(dbi, dbConnectorConfig.getTaskLockTable());

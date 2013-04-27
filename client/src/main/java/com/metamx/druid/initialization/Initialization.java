@@ -28,9 +28,11 @@ import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
+import com.metamx.druid.http.EmittingRequestLogger;
 import com.metamx.druid.http.FileRequestLogger;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.utils.PropUtils;
+import com.metamx.emitter.core.Emitter;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
@@ -296,5 +298,25 @@ public class Initialization
         factory.create(1, "RequestLogger-%s"),
         new File(PropUtils.getProperty(props, "druid.request.logging.dir"))
     );
+  }
+
+  public static RequestLogger makeEmittingRequestLogger(Properties props, Emitter emitter)
+  {
+    return new EmittingRequestLogger(
+        PropUtils.getProperty(props, "druid.service"),
+        PropUtils.getProperty(props, "druid.host"),
+        emitter,
+        PropUtils.getProperty(props, "druid.request.logging.feed")
+    );
+  }
+
+  public static String addressFromHost(final String host)
+  {
+    final int colon = host.indexOf(':');
+    if (colon < 0) {
+      return host;
+    } else {
+      return host.substring(0, colon);
+    }
   }
 }
