@@ -209,7 +209,7 @@ public class HadoopDruidIndexerConfig
   )
   {
     this.dataSource = dataSource;
-    this.timestampColumnName = timestampColumnName.toLowerCase();
+    this.timestampColumnName = (timestampColumnName == null) ? null : timestampColumnName.toLowerCase();
     this.timestampFormat = timestampFormat;
     this.dataSpec = dataSpec;
     this.granularitySpec = granularitySpec;

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -62,7 +63,9 @@ import java.util.Properties;
  */
 public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery>
 {
-  private static final TypeReference<Row> TYPE_REFERENCE = new TypeReference<Row>(){};
+  private static final TypeReference<Row> TYPE_REFERENCE = new TypeReference<Row>()
+  {
+  };
   private static final String GROUP_BY_MERGE_KEY = "groupByMerge";
   private static final Map<String, String> NO_MERGE_CONTEXT = ImmutableMap.of(GROUP_BY_MERGE_KEY, "false");
 
@@ -85,22 +88,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       {
         if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
           return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner);
-        }
-        else {
+        } else {
           return runner.run(input);
         }
       }
     };
   }
 
-  private Sequence<Row> mergeGroupByResults(GroupByQuery query, QueryRunner<Row> runner)
+  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
   {
     final QueryGranularity gran = query.getGranularity();
     final long timeStart = query.getIntervals().get(0).getStartMillis();
 
     // use gran.iterable instead of gran.truncate so that
     // AllGranularity returns timeStart instead of Long.MIN_VALUE
-    final long granTimeStart = gran.iterable(timeStart, timeStart+1).iterator().next();
+    final long granTimeStart = gran.iterable(timeStart, timeStart + 1).iterator().next();
 
     final List<AggregatorFactory> aggs = Lists.transform(
         query.getAggregatorSpecs(),
@@ -148,15 +150,31 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     );
 
     // convert millis back to timestamp according to granularity to preserve time zone information
-    return Sequences.map(
-        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
-        new Function<Row, Row>()
+    return Sequences.filter(
+        Sequences.map(
+            Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
+            new Function<Row, Row>()
+            {
+              @Override
+              public Row apply(Row input)
+              {
+                final MapBasedRow row = (MapBasedRow) input;
+                return new MapBasedRow(gran.toDateTime(row.getTimestampFromEpoch()), row.getEvent());
+              }
+            }
+        ),
+        new Predicate<Row>()
         {
+          private volatile int numRows = 0;
+
           @Override
-          public Row apply(Row input)
+          public boolean apply(@Nullable Row input)
           {
-            final MapBasedRow row = (MapBasedRow) input;
-            return new MapBasedRow(gran.toDateTime(row.getTimestampFromEpoch()), row.getEvent());
+            if (query.getThreshold() > 0) {
+              return (numRows++ < query.getThreshold());
+            } else {
+              return true;
+            }
           }
         }
     );

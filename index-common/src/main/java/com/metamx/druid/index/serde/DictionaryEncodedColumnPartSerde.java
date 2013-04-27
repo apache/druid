@@ -77,7 +77,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       throw new IAE("Either singleValCol[%s] or multiValCol[%s] must be set", singleValCol, multiValCol);
     }
     size += bitmaps.getSerializedSize();
-    size += spatialIndex.getSerializedSize();
+    if (spatialIndex != null) {
+      size += spatialIndex.getSerializedSize();
+    }
 
     this.size = size;
   }
@@ -144,9 +146,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         buffer, ConciseCompressedIndexedInts.objectStrategy
     );
 
-    GenericIndexed<ImmutableRTree> spatialIndex = GenericIndexed.read(
-        buffer, IndexedRTree.objectStrategy
-    );
+    GenericIndexed<ImmutableRTree> spatialIndex = null;
+    if (buffer.hasRemaining()) {
+      spatialIndex = GenericIndexed.read(
+          buffer, IndexedRTree.objectStrategy
+      );
+    }
 
     builder.setBitmapIndex(new BitmapIndexColumnPartSupplier(bitmaps, dictionary));
     builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(spatialIndex));
