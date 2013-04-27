@@ -19,6 +19,7 @@
 
 package com.metamx.druid.http;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
@@ -51,5 +52,23 @@ public class RequestLogLine
             objectMapper.writeValueAsString(query)
         )
     );
+  }
+
+  @JsonProperty("timestamp")
+  public DateTime getTimestamp()
+  {
+    return timestamp;
+  }
+
+  @JsonProperty("query")
+  public Query getQuery()
+  {
+    return query;
+  }
+
+  @JsonProperty("remoteAddr")
+  public String getRemoteAddr()
+  {
+    return remoteAddr;
   }
 }
