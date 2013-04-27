@@ -19,6 +19,7 @@
 
 package com.metamx.druid.master;
 
+import com.google.common.collect.MapMaker;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
@@ -33,7 +34,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  */
@@ -47,7 +48,7 @@ public class DruidMasterTest
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
   private DataSegment segment;
-  private Map<String, LoadQueuePeon> loadManagementPeons;
+  private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
   private LoadQueuePeon loadQueuePeon;
 
   @Before
@@ -56,7 +57,7 @@ public class DruidMasterTest
     druidServer = EasyMock.createMock(DruidServer.class);
     segment = EasyMock.createNiceMock(DataSegment.class);
     loadQueuePeon = EasyMock.createNiceMock(LoadQueuePeon.class);
-    loadManagementPeons = EasyMock.createMock(Map.class);
+    loadManagementPeons = new MapMaker().makeMap();
     serverInventoryThingie = EasyMock.createMock(ServerInventoryThingie.class);
 
     databaseSegmentManager = EasyMock.createNiceMock(DatabaseSegmentManager.class);
@@ -122,7 +123,14 @@ public class DruidMasterTest
             return 0;
           }
         },
-        new ZkPathsConfig(){},
+        new ZkPathsConfig(){
+
+          @Override
+          public String getZkBasePath()
+          {
+            return "";
+          }
+        },
         null,
         databaseSegmentManager,
         serverInventoryThingie,
@@ -131,7 +139,8 @@ public class DruidMasterTest
         new NoopServiceEmitter(),
         scheduledExecutorFactory,
         null,
-        taskMaster
+        taskMaster,
+        loadManagementPeons
     );
   }
 
@@ -139,7 +148,6 @@ public class DruidMasterTest
   public void tearDown() throws Exception
   {
     EasyMock.verify(druidServer);
-    EasyMock.verify(loadManagementPeons);
     EasyMock.verify(loadQueuePeon);
     EasyMock.verify(serverInventoryThingie);
   }
@@ -153,9 +161,8 @@ public class DruidMasterTest
     EasyMock.expect(druidServer.getName()).andReturn("blah");
     EasyMock.replay(druidServer);
 
-    EasyMock.expect(loadManagementPeons.get("to")).andReturn(loadQueuePeon);
-    EasyMock.expect(loadManagementPeons.get("from")).andReturn(loadQueuePeon);
-    EasyMock.replay(loadManagementPeons);
+    loadManagementPeons.put("to", loadQueuePeon);
+    loadManagementPeons.put("from", loadQueuePeon);
 
     EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
     EasyMock.replay(loadQueuePeon);

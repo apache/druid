@@ -25,6 +25,9 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.curator.CuratorTestBase;
+import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -32,8 +35,8 @@ import com.metamx.druid.loading.CacheTestSegmentLoader;
 import com.metamx.druid.metrics.NoopServiceEmitter;
 import com.metamx.druid.query.NoopQueryRunnerFactoryConglomerate;
 import com.metamx.druid.shard.NoneShardSpec;
-import org.apache.curator.framework.CuratorFramework;
 import org.joda.time.Interval;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,12 +49,11 @@ import java.util.List;
 
 /**
  */
-public class ZkCoordinatorTest
+public class ZkCoordinatorTest extends CuratorTestBase
 {
   private ZkCoordinator zkCoordinator;
   private ServerManager serverManager;
   private DataSegmentAnnouncer announcer;
-  private CuratorFramework curator;
   private File cacheDir;
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final Logger log = new Logger(ZkCoordinatorTest.class);
@@ -59,6 +61,8 @@ public class ZkCoordinatorTest
   @Before
   public void setUp() throws Exception
   {
+    setupServerAndCurator();
+    curator.start();
     try {
       cacheDir = new File(File.createTempFile("blah", "blah2").getParent(), "ZkCoordinatorTest");
       cacheDir.mkdirs();
@@ -78,6 +82,21 @@ public class ZkCoordinatorTest
         MoreExecutors.sameThreadExecutor()
     );
 
+    final DruidServerMetadata me = new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal");
+
+    final ZkPathsConfig zkPaths = new ZkPathsConfig()
+    {
+      @Override
+      public String getZkBasePath()
+      {
+        return "/druid";
+      }
+    };
+
+    announcer = new CuratorDataSegmentAnnouncer(
+        me, zkPaths, new Announcer(curator, Execs.singleThreaded("blah")), jsonMapper
+    );
+
     zkCoordinator = new ZkCoordinator(
         jsonMapper,
         new ZkCoordinatorConfig()
@@ -88,12 +107,18 @@ public class ZkCoordinatorTest
             return cacheDir;
           }
         },
-        new ZkPathsConfig(){},
-        new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal"),
+        zkPaths,
+        me,
         announcer,
         curator,
         serverManager
     );
+  }
+
+  @After
+  public void tearDown() throws Exception
+  {
+    tearDownServerAndCurator();
   }
 
   @Test

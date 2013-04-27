@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -107,6 +108,37 @@ public class DruidMaster
       LoadQueueTaskMaster taskMaster
   )
   {
+    this(
+        config,
+        zkPaths,
+        configManager,
+        databaseSegmentManager,
+        serverInventoryThingie,
+        databaseRuleManager,
+        curator,
+        emitter,
+        scheduledExecutorFactory,
+        indexingServiceClient,
+        taskMaster,
+        Maps.<String, LoadQueuePeon>newConcurrentMap()
+    );
+  }
+
+  DruidMaster(
+      DruidMasterConfig config,
+      ZkPathsConfig zkPaths,
+      JacksonConfigManager configManager,
+      DatabaseSegmentManager databaseSegmentManager,
+      ServerInventoryThingie serverInventoryThingie,
+      DatabaseRuleManager databaseRuleManager,
+      CuratorFramework curator,
+      ServiceEmitter emitter,
+      ScheduledExecutorFactory scheduledExecutorFactory,
+      IndexingServiceClient indexingServiceClient,
+      LoadQueueTaskMaster taskMaster,
+      ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap
+  )
+  {
     this.config = config;
     this.zkPaths = zkPaths;
     this.configManager = configManager;
@@ -122,7 +154,7 @@ public class DruidMaster
     this.exec = scheduledExecutorFactory.create(1, "Master-Exec--%d");
 
     this.leaderLatch = new AtomicReference<LeaderLatch>(null);
-    this.loadManagementPeons = Maps.newConcurrentMap();
+    this.loadManagementPeons = loadQueuePeonMap;
   }
 
   public boolean isClusterMaster()

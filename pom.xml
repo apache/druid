@@ -299,6 +299,9 @@
                 <artifactId>commons-cli</artifactId>
                 <version>1.2</version>
             </dependency>
+
+
+
             <!-- Test Scope -->
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -307,7 +310,6 @@
                 <scope>test</scope>
                 <version>${metamx.java-util.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
