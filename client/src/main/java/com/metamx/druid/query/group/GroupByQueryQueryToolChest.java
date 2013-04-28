@@ -150,7 +150,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     );
 
     // convert millis back to timestamp according to granularity to preserve time zone information
-    return Sequences.filter(
+    return Sequences.limit(
         Sequences.map(
             Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
             new Function<Row, Row>()
@@ -163,20 +163,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
               }
             }
         ),
-        new Predicate<Row>()
-        {
-          private volatile int numRows = 0;
-
-          @Override
-          public boolean apply(@Nullable Row input)
-          {
-            if (query.getThreshold() > 0) {
-              return (numRows++ < query.getThreshold());
-            } else {
-              return true;
-            }
-          }
-        }
+        (query.getThreshold() > 0) ? query.getThreshold() : maxRows
     );
   }
 
