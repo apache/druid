@@ -248,6 +248,7 @@ public class LoadQueuePeon
 
                     if (stat == null) {
                       final byte[] noopPayload = jsonMapper.writeValueAsBytes(new SegmentChangeRequestNoop());
+
                       // Create a node and then delete it to remove the registered watcher.  This is a work-around for
                       // a zookeeper race condition.  Specifically, when you set a watcher, it fires on the next event
                       // that happens for that node.  If no events happen, the watcher stays registered foreverz.
