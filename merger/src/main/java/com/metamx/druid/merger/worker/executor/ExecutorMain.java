@@ -38,18 +38,17 @@ public class ExecutorMain
     LogLevelAdjuster.register();
 
     if (args.length != 3) {
-      log.info("Usage: ExecutorMain <nodeType> <task.json> <status.json>");
+      log.info("Usage: ExecutorMain <task.json> <status.json>");
       System.exit(2);
     }
 
     Iterator<String> arguments = Arrays.asList(args).iterator();
-    final String nodeType = arguments.next();
     final String taskJsonFile = arguments.next();
     final String statusJsonFile = arguments.next();
 
     final ExecutorNode node = ExecutorNode.builder()
                                           .build(
-                                              nodeType,
+                                              System.getProperty("druid.executor.nodeType", "indexer-executor"),
                                               new ExecutorLifecycleFactory(
                                                   new File(taskJsonFile),
                                                   new File(statusJsonFile),

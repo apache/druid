@@ -306,7 +306,8 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
               serverConfig.getServerName(),
               serverConfig.getHost(),
               serverConfig.getMaxSize(),
-              nodeType, serverConfig.getTier()
+              nodeType,
+              serverConfig.getTier()
           )
       );
     }
