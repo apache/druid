@@ -32,8 +32,8 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.client.ServerInventoryThingieConfig;
+import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.ConfigManager;
@@ -126,12 +126,12 @@ public class MasterMain
     final ZkPathsConfig zkPaths = configFactory.build(ZkPathsConfig.class);
 
     final ExecutorService exec = Executors.newFixedThreadPool(
-        1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryThingie-%s").build()
+        1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryView-%s").build()
     );
-    ServerInventoryThingie serverInventoryThingie = new ServerInventoryThingie(
+    ServerInventoryView serverInventoryView = new ServerInventoryView(
         configFactory.build(ServerInventoryThingieConfig.class), zkPaths, curatorFramework, exec, jsonMapper
     );
-    lifecycle.addManagedInstance(serverInventoryThingie);
+    lifecycle.addManagedInstance(serverInventoryView);
 
     final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
     final DatabaseRuleManagerConfig databaseRuleManagerConfig = configFactory.build(DatabaseRuleManagerConfig.class);
@@ -200,7 +200,7 @@ public class MasterMain
         zkPaths,
         configManager,
         databaseSegmentManager,
-        serverInventoryThingie,
+        serverInventoryView,
         databaseRuleManager,
         curatorFramework,
         emitter,
@@ -234,7 +234,7 @@ public class MasterMain
 
     final Injector injector = Guice.createInjector(
         new MasterServletModule(
-            serverInventoryThingie,
+            serverInventoryView,
             databaseSegmentManager,
             databaseRuleManager,
             master,

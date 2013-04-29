@@ -34,8 +34,8 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DruidServerConfig;
-import com.metamx.druid.client.ServerInventoryThingie;
 import com.metamx.druid.client.ServerInventoryThingieConfig;
+import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
@@ -94,7 +94,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private ZkPathsConfig zkPaths = null;
   private ScheduledExecutorFactory scheduledExecutorFactory = null;
   private RequestLogger requestLogger = null;
-  private ServerInventoryThingie serverInventoryThingie = null;
+  private ServerInventoryView serverInventoryView = null;
 
   private boolean initialized = false;
 
@@ -190,9 +190,9 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   }
 
   @SuppressWarnings("unchecked")
-  public T setServerInventoryThingie(ServerInventoryThingie serverInventoryThingie)
+  public T setServerInventoryView(ServerInventoryView serverInventoryView)
   {
-    checkFieldNotSetAndSet("serverInventoryThingie", serverInventoryThingie);
+    checkFieldNotSetAndSet("serverInventoryView", serverInventoryView);
     return (T) this;
   }
 
@@ -291,10 +291,10 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     return requestLogger;
   }
 
-  public ServerInventoryThingie getServerInventoryThingie()
+  public ServerInventoryView getServerInventoryView()
   {
     initializeServerInventoryThingie();
-    return serverInventoryThingie;
+    return serverInventoryView;
   }
 
   private void initializeDruidServerMetadata()
@@ -314,12 +314,12 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
 
   private void initializeServerInventoryThingie()
   {
-    if (serverInventoryThingie == null) {
+    if (serverInventoryView == null) {
       final ExecutorService exec = Executors.newFixedThreadPool(
-          1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryThingie-%s").build()
+          1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryView-%s").build()
       );
-      setServerInventoryThingie(
-          new ServerInventoryThingie(
+      setServerInventoryView(
+          new ServerInventoryView(
               getConfigFactory().build(ServerInventoryThingieConfig.class),
               getZkPaths(),
               getCuratorFramework(),
@@ -327,7 +327,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
               getJsonMapper()
           )
       );
-      lifecycle.addManagedInstance(serverInventoryThingie);
+      lifecycle.addManagedInstance(serverInventoryView);
     }
   }
 

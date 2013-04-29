@@ -23,7 +23,7 @@ import com.google.common.collect.MapMaker;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.ServerInventoryThingie;
+import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.metrics.NoopServiceEmitter;
@@ -44,7 +44,7 @@ public class DruidMasterTest
   private CuratorFramework curator;
   private LoadQueueTaskMaster taskMaster;
   private DatabaseSegmentManager databaseSegmentManager;
-  private ServerInventoryThingie serverInventoryThingie;
+  private ServerInventoryView serverInventoryView;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
   private DataSegment segment;
@@ -58,7 +58,7 @@ public class DruidMasterTest
     segment = EasyMock.createNiceMock(DataSegment.class);
     loadQueuePeon = EasyMock.createNiceMock(LoadQueuePeon.class);
     loadManagementPeons = new MapMaker().makeMap();
-    serverInventoryThingie = EasyMock.createMock(ServerInventoryThingie.class);
+    serverInventoryView = EasyMock.createMock(ServerInventoryView.class);
 
     databaseSegmentManager = EasyMock.createNiceMock(DatabaseSegmentManager.class);
     EasyMock.replay(databaseSegmentManager);
@@ -133,7 +133,7 @@ public class DruidMasterTest
         },
         null,
         databaseSegmentManager,
-        serverInventoryThingie,
+        serverInventoryView,
         null,
         curator,
         new NoopServiceEmitter(),
@@ -149,7 +149,7 @@ public class DruidMasterTest
   {
     EasyMock.verify(druidServer);
     EasyMock.verify(loadQueuePeon);
-    EasyMock.verify(serverInventoryThingie);
+    EasyMock.verify(serverInventoryView);
   }
 
   @Test
@@ -167,9 +167,9 @@ public class DruidMasterTest
     EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
     EasyMock.replay(loadQueuePeon);
 
-    EasyMock.expect(serverInventoryThingie.getInventoryValue("from")).andReturn(druidServer);
-    EasyMock.expect(serverInventoryThingie.getInventoryValue("to")).andReturn(druidServer);
-    EasyMock.replay(serverInventoryThingie);
+    EasyMock.expect(serverInventoryView.getInventoryValue("from")).andReturn(druidServer);
+    EasyMock.expect(serverInventoryView.getInventoryValue("to")).andReturn(druidServer);
+    EasyMock.replay(serverInventoryView);
 
     master.moveSegment("from", "to", "dummySegment", null);
   }

@@ -38,7 +38,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.ServerInventoryThingie;
+import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.JacksonConfigManager;
@@ -83,7 +83,7 @@ public class DruidMaster
   private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
   private final DatabaseSegmentManager databaseSegmentManager;
-  private final ServerInventoryThingie serverInventoryThingie;
+  private final ServerInventoryView serverInventoryView;
   private final DatabaseRuleManager databaseRuleManager;
   private final CuratorFramework curator;
   private final ServiceEmitter emitter;
@@ -99,7 +99,7 @@ public class DruidMaster
       ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
       DatabaseSegmentManager databaseSegmentManager,
-      ServerInventoryThingie serverInventoryThingie,
+      ServerInventoryView serverInventoryView,
       DatabaseRuleManager databaseRuleManager,
       CuratorFramework curator,
       ServiceEmitter emitter,
@@ -113,7 +113,7 @@ public class DruidMaster
         zkPaths,
         configManager,
         databaseSegmentManager,
-        serverInventoryThingie,
+        serverInventoryView,
         databaseRuleManager,
         curator,
         emitter,
@@ -129,7 +129,7 @@ public class DruidMaster
       ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
       DatabaseSegmentManager databaseSegmentManager,
-      ServerInventoryThingie serverInventoryThingie,
+      ServerInventoryView serverInventoryView,
       DatabaseRuleManager databaseRuleManager,
       CuratorFramework curator,
       ServiceEmitter emitter,
@@ -144,7 +144,7 @@ public class DruidMaster
     this.configManager = configManager;
 
     this.databaseSegmentManager = databaseSegmentManager;
-    this.serverInventoryThingie = serverInventoryThingie;
+    this.serverInventoryView = serverInventoryView;
     this.databaseRuleManager = databaseRuleManager;
     this.curator = curator;
     this.emitter = emitter;
@@ -177,7 +177,7 @@ public class DruidMaster
 
     // find segments currently loaded
     Map<String, Set<DataSegment>> segmentsInCluster = Maps.newHashMap();
-    for (DruidServer druidServer : serverInventoryThingie.getInventory()) {
+    for (DruidServer druidServer : serverInventoryView.getInventory()) {
       for (DruidDataSource druidDataSource : druidServer.getDataSources()) {
         Set<DataSegment> segments = segmentsInCluster.get(druidDataSource.getName());
         if (segments == null) {
@@ -209,12 +209,12 @@ public class DruidMaster
 
   public int lookupSegmentLifetime(DataSegment segment)
   {
-    return serverInventoryThingie.lookupSegmentLifetime(segment);
+    return serverInventoryView.lookupSegmentLifetime(segment);
   }
 
   public void decrementRemovedSegmentsLifetime()
   {
-    serverInventoryThingie.decrementRemovedSegmentsLifetime();
+    serverInventoryView.decrementRemovedSegmentsLifetime();
   }
 
   public void removeSegment(DataSegment segment)
@@ -246,12 +246,12 @@ public class DruidMaster
 
   public void moveSegment(String from, String to, String segmentName, final LoadPeonCallback callback)
   {
-    final DruidServer fromServer = serverInventoryThingie.getInventoryValue(from);
+    final DruidServer fromServer = serverInventoryView.getInventoryValue(from);
     if (fromServer == null) {
       throw new IllegalArgumentException(String.format("Unable to find server [%s]", from));
     }
 
-    final DruidServer toServer = serverInventoryThingie.getInventoryValue(to);
+    final DruidServer toServer = serverInventoryView.getInventoryValue(to);
     if (toServer == null) {
       throw new IllegalArgumentException(String.format("Unable to find server [%s]", to));
     }
@@ -323,12 +323,12 @@ public class DruidMaster
 
   public void cloneSegment(String from, String to, String segmentName, LoadPeonCallback callback)
   {
-    final DruidServer fromServer = serverInventoryThingie.getInventoryValue(from);
+    final DruidServer fromServer = serverInventoryView.getInventoryValue(from);
     if (fromServer == null) {
       throw new IllegalArgumentException(String.format("Unable to find server [%s]", from));
     }
 
-    final DruidServer toServer = serverInventoryThingie.getInventoryValue(to);
+    final DruidServer toServer = serverInventoryView.getInventoryValue(to);
     if (toServer == null) {
       throw new IllegalArgumentException(String.format("Unable to find server [%s]", to));
     }
@@ -365,7 +365,7 @@ public class DruidMaster
 
   public void dropSegment(String from, String segmentName, final LoadPeonCallback callback)
   {
-    final DruidServer fromServer = serverInventoryThingie.getInventoryValue(from);
+    final DruidServer fromServer = serverInventoryView.getInventoryValue(from);
     if (fromServer == null) {
       throw new IllegalArgumentException(String.format("Unable to find server [%s]", from));
     }
@@ -491,7 +491,7 @@ public class DruidMaster
         master = true;
         databaseSegmentManager.start();
         databaseRuleManager.start();
-        serverInventoryThingie.start();
+        serverInventoryView.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
 
@@ -567,7 +567,7 @@ public class DruidMaster
         loadManagementPeons.clear();
 
         databaseSegmentManager.stop();
-        serverInventoryThingie.stop();
+        serverInventoryView.stop();
         master = false;
       }
       catch (Exception e) {
@@ -670,7 +670,7 @@ public class DruidMaster
 
         List<Boolean> allStarted = Arrays.asList(
             databaseSegmentManager.isStarted(),
-            serverInventoryThingie.isStarted()
+            serverInventoryView.isStarted()
         );
         for (Boolean aBoolean : allStarted) {
           if (!aBoolean) {
@@ -717,7 +717,7 @@ public class DruidMaster
                 {
                   // Display info about all historical servers
                   Iterable<DruidServer> servers = FunctionalIterable
-                      .create(serverInventoryThingie.getInventory())
+                      .create(serverInventoryView.getInventory())
                       .filter(
                           new Predicate<DruidServer>()
                           {

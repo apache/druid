@@ -187,7 +187,7 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
     injectables.put("segmentPusher", getDataSegmentPusher());
     injectables.put("segmentAnnouncer", getAnnouncer());
     injectables.put("segmentPublisher", getSegmentPublisher());
-    injectables.put("serverView", getServerInventoryThingie());
+    injectables.put("serverView", getServerInventoryView());
     injectables.put("serviceEmitter", getEmitter());
 
     getJsonMapper().setInjectableValues(

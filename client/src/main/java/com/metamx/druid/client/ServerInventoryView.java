@@ -43,9 +43,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
-public class ServerInventoryThingie implements ServerView
+public class ServerInventoryView implements ServerView
 {
-  private static final EmittingLogger log = new EmittingLogger(ServerInventoryThingie.class);
+  private static final EmittingLogger log = new EmittingLogger(ServerInventoryView.class);
 
   private final CuratorInventoryManager<DruidServer, DataSegment> inventoryManager;
   private final AtomicBoolean started = new AtomicBoolean(false);
@@ -55,7 +55,7 @@ public class ServerInventoryThingie implements ServerView
 
   private static final Map<String, Integer> removedSegments = new MapMaker().makeMap();
 
-  public ServerInventoryThingie(
+  public ServerInventoryView(
       final ServerInventoryThingieConfig config,
       final ZkPathsConfig zkPaths,
       final CuratorFramework curator,

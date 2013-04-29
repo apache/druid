@@ -51,9 +51,6 @@ import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.ExecutorServiceTaskRunner;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
-import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
-import com.metamx.druid.realtime.RealtimeCuratorDataSegmentAnnouncerConfig;
-import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -360,7 +357,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
           segmentPusher,
           dataSegmentKiller,
           getAnnouncer(),
-          getServerInventoryThingie(),
+          getServerInventoryView(),
           getConglomerate(),
           getJsonMapper()
       );

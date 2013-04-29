@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
 import com.google.inject.util.Providers;
-import com.metamx.druid.client.ServerInventoryThingie;
+import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
@@ -37,7 +37,7 @@ import javax.inject.Singleton;
  */
 public class MasterServletModule extends JerseyServletModule
 {
-  private final ServerInventoryThingie serverInventoryThingie;
+  private final ServerInventoryView serverInventoryView;
   private final DatabaseSegmentManager segmentInventoryManager;
   private final DatabaseRuleManager databaseRuleManager;
   private final DruidMaster master;
@@ -45,7 +45,7 @@ public class MasterServletModule extends JerseyServletModule
   private final IndexingServiceClient indexingServiceClient;
 
   public MasterServletModule(
-      ServerInventoryThingie serverInventoryThingie,
+      ServerInventoryView serverInventoryView,
       DatabaseSegmentManager segmentInventoryManager,
       DatabaseRuleManager databaseRuleManager,
       DruidMaster master,
@@ -53,7 +53,7 @@ public class MasterServletModule extends JerseyServletModule
       IndexingServiceClient indexingServiceClient
   )
   {
-    this.serverInventoryThingie = serverInventoryThingie;
+    this.serverInventoryView = serverInventoryView;
     this.segmentInventoryManager = segmentInventoryManager;
     this.databaseRuleManager = databaseRuleManager;
     this.master = master;
@@ -66,7 +66,7 @@ public class MasterServletModule extends JerseyServletModule
   {
     bind(InfoResource.class);
     bind(MasterResource.class);
-    bind(ServerInventoryThingie.class).toInstance(serverInventoryThingie);
+    bind(ServerInventoryView.class).toInstance(serverInventoryView);
     bind(DatabaseSegmentManager.class).toInstance(segmentInventoryManager);
     bind(DatabaseRuleManager.class).toInstance(databaseRuleManager);
     bind(DruidMaster.class).toInstance(master);
