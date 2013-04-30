@@ -76,13 +76,13 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   private static final Logger log = new Logger(CachingClusteredClient.class);
 
   private final QueryToolChestWarehouse warehouse;
-  private final ServerView serverView;
+  private final TimelineServerView serverView;
   private final Cache cache;
   private final ObjectMapper objectMapper;
 
   public CachingClusteredClient(
       QueryToolChestWarehouse warehouse,
-      ServerView serverView,
+      TimelineServerView serverView,
       Cache cache,
       ObjectMapper objectMapper
   )

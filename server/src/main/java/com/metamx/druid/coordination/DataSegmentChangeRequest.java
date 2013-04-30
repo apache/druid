@@ -28,10 +28,10 @@ import com.metamx.druid.client.DataSegment;
 @JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="action")
 @JsonSubTypes(value={
     @JsonSubTypes.Type(name="load", value=SegmentChangeRequestLoad.class),
-    @JsonSubTypes.Type(name="drop", value=SegmentChangeRequestDrop.class)
+    @JsonSubTypes.Type(name="drop", value=SegmentChangeRequestDrop.class),
+    @JsonSubTypes.Type(name="noop", value=SegmentChangeRequestNoop.class)
 })
 public interface DataSegmentChangeRequest
 {
   public void go(DataSegmentChangeHandler handler);
-  public DataSegment getSegment();
 }

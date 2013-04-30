@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.common.RetryPolicyFactory;
 import com.metamx.http.client.HttpClient;
-import com.netflix.curator.x.discovery.ServiceProvider;
+import org.apache.curator.x.discovery.ServiceProvider;
 
 /**
  */

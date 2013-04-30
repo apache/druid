@@ -31,8 +31,6 @@ import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.BaseServerNode;
-import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.druid.coordination.ZkCoordinator;
 import com.metamx.druid.coordination.ZkCoordinatorConfig;
@@ -70,7 +68,6 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     return new Builder();
   }
 
-  private DruidServer druidServer;
   private SegmentLoader segmentLoader;
 
   public ComputeNode(
@@ -81,7 +78,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
       ConfigurationObjectFactory configFactory
   )
   {
-    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
+    super("historical", log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
   public ComputeNode setSegmentLoader(SegmentLoader segmentLoader)
@@ -91,30 +88,14 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     return this;
   }
 
-  public ComputeNode setDruidServer(DruidServer druidServer)
-  {
-    Preconditions.checkState(this.druidServer == null, "Cannot set druidServer once it has already been set.");
-    this.druidServer = druidServer;
-    return this;
-  }
-
-  public DruidServer getDruidServer()
-  {
-    initializeDruidServer();
-    return druidServer;
-  }
-
   public SegmentLoader getSegmentLoader()
   {
-    initializeAdapterLoader();
+    initializeSegmentLoader();
     return segmentLoader;
   }
 
   protected void doInit() throws Exception
   {
-    initializeDruidServer();
-    initializeAdapterLoader();
-
     final Lifecycle lifecycle = getLifecycle();
     final ServiceEmitter emitter = getEmitter();
     final List<Monitor> monitors = getMonitors();
@@ -131,19 +112,20 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
         new ServiceMetricEvent.Builder()
     );
 
-    final ServerManager serverManager = new ServerManager(segmentLoader, conglomerate, emitter, executorService);
+    final ServerManager serverManager = new ServerManager(getSegmentLoader(), conglomerate, emitter, executorService);
 
     final ZkCoordinator coordinator = new ZkCoordinator(
         getJsonMapper(),
         getConfigFactory().build(ZkCoordinatorConfig.class),
-        druidServer,
-        getPhoneBook(),
-        serverManager,
-        emitter
+        getZkPaths(),
+        getDruidServerMetadata(),
+        getAnnouncer(),
+        getCuratorFramework(),
+        serverManager
     );
     lifecycle.addManagedInstance(coordinator);
 
-    monitors.add(new ServerMonitor(getDruidServer(), serverManager));
+    monitors.add(new ServerMonitor(getDruidServerMetadata(), serverManager));
     startMonitoring(monitors);
 
     final Context root = new Context(getServer(), "/", Context.SESSIONS);
@@ -156,7 +138,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     );
   }
 
-  private void initializeAdapterLoader()
+  private void initializeSegmentLoader()
   {
     if (segmentLoader == null) {
       final Properties props = getProps();
@@ -175,13 +157,6 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
       catch (S3ServiceException e) {
         throw Throwables.propagate(e);
       }
-    }
-  }
-
-  private void initializeDruidServer()
-  {
-    if (druidServer == null) {
-      setDruidServer(new DruidServer(getConfigFactory().build(DruidServerConfig.class), "historical"));
     }
   }
 

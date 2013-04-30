@@ -26,7 +26,6 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.shard.NoneShardSpec;
-import com.metamx.phonebook.PhoneBook;
 import junit.framework.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -38,7 +37,6 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -167,8 +165,8 @@ public class DruidMasterBalancerTest
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(master);
 
-    LoadQueuePeonTester fromPeon = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "from", EasyMock.createMock(ScheduledExecutorService.class));
-    LoadQueuePeonTester toPeon = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "to", EasyMock.createMock(ScheduledExecutorService.class));
+    LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
+    LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
 
     DruidMasterRuntimeParams params =
         DruidMasterRuntimeParams.newBuilder()
@@ -241,10 +239,10 @@ public class DruidMasterBalancerTest
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(master);
 
-    LoadQueuePeonTester peon1 = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "1", EasyMock.createMock(ScheduledExecutorService.class));
-    LoadQueuePeonTester peon2 = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "2", EasyMock.createMock(ScheduledExecutorService.class));
-    LoadQueuePeonTester peon3 = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "3", EasyMock.createMock(ScheduledExecutorService.class));
-    LoadQueuePeonTester peon4 = new LoadQueuePeonTester(EasyMock.createMock(PhoneBook.class), "4", EasyMock.createMock(ScheduledExecutorService.class));
+    LoadQueuePeonTester peon1 = new LoadQueuePeonTester();
+    LoadQueuePeonTester peon2 = new LoadQueuePeonTester();
+    LoadQueuePeonTester peon3 = new LoadQueuePeonTester();
+    LoadQueuePeonTester peon4 = new LoadQueuePeonTester();
 
     DruidMasterRuntimeParams params =
         DruidMasterRuntimeParams.newBuilder()

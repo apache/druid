@@ -121,9 +121,8 @@ public class DatabaseSegmentManager
         return;
       }
 
-      dataSources.set(new ConcurrentHashMap<String, DruidDataSource>());
-
       started = false;
+      dataSources.set(new ConcurrentHashMap<String, DruidDataSource>());
     }
   }
 
@@ -386,8 +385,11 @@ public class DatabaseSegmentManager
   public void poll()
   {
     try {
-      ConcurrentHashMap<String, DruidDataSource> newDataSources
-          = new ConcurrentHashMap<String, DruidDataSource>();
+      if (!started) {
+        return;
+      }
+
+      ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<String, DruidDataSource>();
 
       List<Map<String, Object>> segmentRows = dbi.withHandle(
           new HandleCallback<List<Map<String, Object>>>()
@@ -439,10 +441,14 @@ public class DatabaseSegmentManager
         }
       }
 
-      dataSources.set(newDataSources);
+      synchronized (lock) {
+        if (started) {
+          dataSources.set(newDataSources);
+        }
+      }
     }
     catch (Exception e) {
-      log.error(e, e.toString());
+      log.error(e, "Problem polling DB.");
     }
   }
 }

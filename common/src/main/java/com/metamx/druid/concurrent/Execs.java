@@ -17,16 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.phonebook;
+package com.metamx.druid.concurrent;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * A PhoneBookPeon is a Dilbert-like character who sits in his cubicle all day just waiting to hear about newEntry()s
- * and removed entries.  He acts as the go between, someone that the PhoneBook knows how to talk to and can then
- * translate said message into whatever his employer wants.
  */
-public interface PhoneBookPeon<T>
+public class Execs
 {
-  public Class<T> getObjectClazz();
-  public void newEntry(String name, T properties);
-  public void entryRemoved(String name);
+  public static ExecutorService singleThreaded(String nameFormat)
+  {
+    return Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setDaemon(true).setNameFormat(nameFormat).build()
+    );
+  }
 }

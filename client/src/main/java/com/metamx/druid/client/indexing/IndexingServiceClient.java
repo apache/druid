@@ -26,8 +26,8 @@ import com.metamx.common.ISE;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.InputStreamResponseHandler;
-import com.netflix.curator.x.discovery.ServiceInstance;
-import com.netflix.curator.x.discovery.ServiceProvider;
+import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.ServiceProvider;
 import org.joda.time.Interval;
 
 import java.io.InputStream;

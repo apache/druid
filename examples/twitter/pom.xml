@@ -137,10 +137,6 @@
             <artifactId>twitter4j-stream</artifactId>
             <version>2.2.6</version>
         </dependency>
-        <dependency>
-            <groupId>com.github.sgroschupf</groupId>
-            <artifactId>zkclient</artifactId>
-        </dependency>
 
         <!-- Tests -->
         <dependency>

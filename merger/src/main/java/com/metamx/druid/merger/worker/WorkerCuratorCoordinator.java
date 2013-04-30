@@ -29,9 +29,9 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.state.ConnectionState;
-import com.netflix.curator.framework.state.ConnectionStateListener;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
 
 import org.joda.time.DateTime;

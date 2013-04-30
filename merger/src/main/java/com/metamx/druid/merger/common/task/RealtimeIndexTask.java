@@ -47,7 +47,7 @@ import com.metamx.druid.realtime.MinTimeFirehose;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.RealtimePlumberSchool;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.realtime.SegmentAnnouncer;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.druid.realtime.plumber.Sink;
 import com.metamx.druid.realtime.plumber.VersioningPolicy;
@@ -98,7 +98,7 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("id") String id,
       @JsonProperty("schema") Schema schema,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig, // TODO rename?
+      @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
       @JsonProperty("minTime") DateTime minTime
@@ -129,6 +129,12 @@ public class RealtimeIndexTask extends AbstractTask
   public String getType()
   {
     return "index_realtime";
+  }
+
+  @Override
+  public String getNodeType()
+  {
+    return "realtime";
   }
 
   @Override
@@ -178,8 +184,8 @@ public class RealtimeIndexTask extends AbstractTask
       firehose = new GracefulShutdownFirehose(wrappedFirehose, segmentGranularity, windowPeriod);
     }
 
-    // TODO -- Take PlumberSchool in constructor (although that will need jackson injectables for stuff like
-    // TODO -- the ServerView, which seems kind of odd?)
+    // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
+    // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
     final RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
         windowPeriod,
         new File(toolbox.getTaskWorkDir(), "persist"),
@@ -188,13 +194,12 @@ public class RealtimeIndexTask extends AbstractTask
 
     final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
 
-    // TODO -- We're adding stuff to talk to the coordinator in various places in the plumber, and may
-    // TODO -- want to be more robust to coordinator downtime (currently we'll block/throw in whatever
-    // TODO -- thread triggered the coordinator behavior, which will typically be either the main
-    // TODO -- data processing loop or the persist thread)
+    // NOTE: We talk to the coordinator in various places in the plumber and we could be more robust to issues
+    // with the coordinator.  Right now, we'll block/throw in whatever thread triggered the coordinator behavior,
+    // which will typically be either the main data processing loop or the persist thread.
 
-    // Wrap default SegmentAnnouncer such that we unlock intervals as we unannounce segments
-    final SegmentAnnouncer lockingSegmentAnnouncer = new SegmentAnnouncer()
+    // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
+    final DataSegmentAnnouncer lockingSegmentAnnouncer = new DataSegmentAnnouncer()
     {
       @Override
       public void announceSegment(final DataSegment segment) throws IOException
