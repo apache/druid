@@ -19,17 +19,14 @@
 
 package com.metamx.druid.client;
 
+import org.skife.config.Config;
+import org.skife.config.Default;
+
 /**
  */
-public interface MutableServerView extends ServerView
+public abstract class ServerInventoryThingieConfig
 {
-  public void clear();
-
-  public void addServer(DruidServer server);
-
-  public void removeServer(DruidServer server);
-
-  public void serverAddedSegment(DruidServer server, DataSegment segment);
-
-  public void serverRemovedSegment(DruidServer server, String segmentId);
+  @Config("druid.master.removedSegmentLifetime")
+  @Default("1")
+  public abstract int getRemovedSegmentLifetime();
 }

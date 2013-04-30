@@ -17,32 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.zk;
-
-import com.metamx.common.IAE;
-import org.I0Itec.zkclient.exception.ZkMarshallingError;
-import org.I0Itec.zkclient.serialize.ZkSerializer;
-
-import java.nio.charset.Charset;
+package com.metamx.druid.curator.inventory;
 
 /**
-*/
-public class StringZkSerializer implements ZkSerializer
+ */
+public interface CuratorInventoryManagerStrategy<ContainerClass, InventoryClass>
 {
-  private static final Charset UTF8 = Charset.forName("UTF8");
+  public ContainerClass deserializeContainer(byte[] bytes);
+  public byte[] serializeContainer(ContainerClass container);
 
-  @Override
-  public byte[] serialize(Object data) throws ZkMarshallingError
-  {
-    if (data instanceof String) {
-      return ((String) data).getBytes(UTF8);
-    }
-    throw new IAE("Can only serialize strings into ZK");
-  }
+  public InventoryClass deserializeInventory(byte[] bytes);
+  public byte[] serializeInventory(InventoryClass inventory);
 
-  @Override
-  public Object deserialize(byte[] bytes) throws ZkMarshallingError
-  {
-    return new String(bytes, UTF8);
-  }
+  public void newContainer(ContainerClass newContainer);
+  public void deadContainer(ContainerClass deadContainer);
+  public ContainerClass updateContainer(ContainerClass oldContainer, ContainerClass newContainer);
+  public ContainerClass addInventory(ContainerClass container, String inventoryKey, InventoryClass inventory);
+  public ContainerClass removeInventory(ContainerClass container, String inventoryKey);
 }

@@ -24,6 +24,8 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.log.LogLevelAdjuster;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Iterator;
 
 /**
  */
@@ -35,16 +37,21 @@ public class ExecutorMain
   {
     LogLevelAdjuster.register();
 
-    if (args.length != 2) {
+    if (args.length != 3) {
       log.info("Usage: ExecutorMain <task.json> <status.json>");
       System.exit(2);
     }
 
+    Iterator<String> arguments = Arrays.asList(args).iterator();
+    final String taskJsonFile = arguments.next();
+    final String statusJsonFile = arguments.next();
+
     final ExecutorNode node = ExecutorNode.builder()
                                           .build(
+                                              System.getProperty("druid.executor.nodeType", "indexer-executor"),
                                               new ExecutorLifecycleFactory(
-                                                  new File(args[0]),
-                                                  new File(args[1]),
+                                                  new File(taskJsonFile),
+                                                  new File(statusJsonFile),
                                                   System.in
                                               )
                                           );

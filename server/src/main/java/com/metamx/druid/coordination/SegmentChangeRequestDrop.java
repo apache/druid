@@ -40,7 +40,6 @@ public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
 
   @JsonProperty
   @JsonUnwrapped
-  @Override
   public DataSegment getSegment()
   {
     return segment;

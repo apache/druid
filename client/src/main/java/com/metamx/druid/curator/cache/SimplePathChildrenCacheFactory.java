@@ -17,14 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.coordination;
+package com.metamx.druid.curator.cache;
 
-import org.skife.config.Config;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+
+import java.util.concurrent.ExecutorService;
 
 /**
  */
-public abstract class DruidClusterInfoConfig
+public class SimplePathChildrenCacheFactory implements PathChildrenCacheFactory
 {
-  @Config("druid.zk.paths.masterPath")
-  public abstract String getMasterPath();
+  private final boolean cacheData;
+  private final boolean compressed;
+  private final ExecutorService exec;
+
+  public SimplePathChildrenCacheFactory(
+      boolean cacheData,
+      boolean compressed,
+      ExecutorService exec
+  )
+  {
+    this.cacheData = cacheData;
+    this.compressed = compressed;
+    this.exec = exec;
+  }
+
+  @Override
+  public PathChildrenCache make(CuratorFramework curator, String path)
+  {
+    return new PathChildrenCache(curator, path, cacheData, compressed, exec);
+  }
 }

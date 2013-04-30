@@ -17,20 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.initialization;
-
-import org.skife.config.Config;
+package com.metamx.druid.realtime;
 
 /**
  */
-public abstract class ZkClientConfig
+public abstract class RealtimeCuratorDataSegmentAnnouncerConfig
 {
-  @Config("druid.zk.service.host")
-  public abstract String getZkHosts();
-
-  @Config("druid.zk.service.connectionTimeout")
-  public int getConnectionTimeout()
-  {
-    return Integer.MAX_VALUE;
-  }
 }

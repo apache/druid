@@ -17,22 +17,46 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client;
+package com.metamx.druid.initialization;
 
 import org.skife.config.Config;
-import org.skife.config.Default;
 
-/**
- */
-public abstract class ServerInventoryManagerConfig
+public abstract class ZkPathsConfig
 {
+  @Config("druid.zk.paths.base")
+  public abstract String getZkBasePath();
+
+  @Config("druid.zk.paths.propertiesPath")
+  public String getPropertiesPath()
+  {
+    return defaultPath("properties");
+  }
+
   @Config("druid.zk.paths.announcementsPath")
-  public abstract String getServerIdPath();
+  public String getAnnouncementsPath()
+  {
+    return defaultPath("announcements");
+  }
 
   @Config("druid.zk.paths.servedSegmentsPath")
-  public abstract String getServerInventoryPath();
+  public String getServedSegmentsPath()
+  {
+    return defaultPath("servedSegments");
+  }
 
-  @Config("druid.master.removedSegmentLifetime")
-  @Default("1")
-  public abstract int getRemovedSegmentLifetime();
+  @Config("druid.zk.paths.loadQueuePath")
+  public String getLoadQueuePath()
+  {
+    return defaultPath("loadQueue");
+  }
+
+  @Config("druid.zk.paths.masterPath")
+  public String getMasterPath()
+  {
+    return defaultPath("master");
+  }
+
+  private String defaultPath(final String subPath) {
+    return String.format("%s/%s", getZkBasePath(), subPath);
+  }
 }
