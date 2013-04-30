@@ -27,8 +27,13 @@ import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.DruidProcessingConfig;
+import com.metamx.druid.Query;
+import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.DelegatingSegmentLoader;
+import com.metamx.druid.loading.HdfsDataSegmentPuller;
+import com.metamx.druid.loading.HdfsDataSegmentPusher;
+import com.metamx.druid.loading.HdfsDataSegmentPusherConfig;
 import com.metamx.druid.loading.LocalDataSegmentPuller;
 import com.metamx.druid.loading.LocalDataSegmentPusher;
 import com.metamx.druid.loading.LocalDataSegmentPusherConfig;
@@ -37,15 +42,13 @@ import com.metamx.druid.loading.QueryableIndexFactory;
 import com.metamx.druid.loading.S3DataSegmentPuller;
 import com.metamx.druid.loading.S3DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentPusherConfig;
+import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SingleSegmentLoader;
-import com.metamx.druid.query.group.GroupByQueryEngine;
-import com.metamx.druid.query.group.GroupByQueryEngineConfig;
-import com.metamx.druid.Query;
-import com.metamx.druid.collect.StupidPool;
-import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
+import com.metamx.druid.query.group.GroupByQueryEngine;
+import com.metamx.druid.query.group.GroupByQueryEngineConfig;
 import com.metamx.druid.query.group.GroupByQueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQueryRunnerFactoryConfig;
 import com.metamx.druid.query.metadata.SegmentMetadataQuery;
@@ -57,6 +60,7 @@ import com.metamx.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import com.metamx.druid.utils.PropUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
@@ -85,13 +89,13 @@ public class ServerInit
     final QueryableIndexFactory factory = new MMappedQueryableIndexFactory();
 
     SingleSegmentLoader s3segmentLoader = new SingleSegmentLoader(segmentGetter, factory, config);
-    SingleSegmentLoader localSegmentLoader = new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config);
 
     delegateLoader.setLoaderTypes(
         ImmutableMap.<String, SegmentLoader>builder()
                     .put("s3", s3segmentLoader)
                     .put("s3_zip", s3segmentLoader)
-                    .put("local", localSegmentLoader)
+                    .put("local", new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config))
+                    .put("hdfs", new SingleSegmentLoader(new HdfsDataSegmentPuller(new Configuration()), factory, config))
                     .build()
     );
 
@@ -166,6 +170,11 @@ public class ServerInit
   {
     if (Boolean.parseBoolean(props.getProperty("druid.pusher.local", "false"))) {
       return new LocalDataSegmentPusher(configFactory.build(LocalDataSegmentPusherConfig.class), jsonMapper);
+    }
+    else if (Boolean.parseBoolean(props.getProperty("druid.pusher.hdfs", "false"))) {
+      final HdfsDataSegmentPusherConfig config = configFactory.build(HdfsDataSegmentPusherConfig.class);
+
+      return new HdfsDataSegmentPusher(config, new Configuration(), jsonMapper);
     }
     else {
 

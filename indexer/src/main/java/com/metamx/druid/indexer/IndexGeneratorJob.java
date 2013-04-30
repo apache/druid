@@ -19,6 +19,7 @@
 
 package com.metamx.druid.indexer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -47,6 +48,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.InvalidJobConfException;
@@ -58,7 +60,6 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -415,6 +416,11 @@ public class IndexGeneratorJob implements Jobby
       } else if (outputFS instanceof LocalFileSystem) {
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "local",
+            "path", indexOutURI.getPath()
+        );
+      } else if (outputFS instanceof DistributedFileSystem) {
+        loadSpec = ImmutableMap.<String, Object>of(
+            "type", "hdfs",
             "path", indexOutURI.getPath()
         );
       } else {
