@@ -20,7 +20,7 @@ PID=$!
 
 trap "kill $PID ; exit 1" 1 2 3 15
 sleep 4
-grep druid.examples.RandomFirehoseFactory RealtimeNode.out | awk '{ print $7,$8,$9,$10,$11,$12,$13,$14,$15 }'
+grep druid.examples.rand.RandomFirehoseFactory RealtimeNode.out | awk '{ print $7,$8,$9,$10,$11,$12,$13,$14,$15 }'
 wait $PID
 echo "RealtimeStandaloneMain finished"
 

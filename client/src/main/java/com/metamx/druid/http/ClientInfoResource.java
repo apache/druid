@@ -27,7 +27,7 @@ import com.google.inject.Inject;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.ServerInventoryView;
+import com.metamx.druid.client.InventoryView;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -47,11 +47,11 @@ public class ClientInfoResource
 {
   private static final int SEGMENT_HISTORY_MILLIS = 7 * 24 * 60 * 60 * 1000; // ONE WEEK
 
-  private ServerInventoryView serverInventoryView;
+  private InventoryView serverInventoryView;
 
   @Inject
   public ClientInfoResource(
-      ServerInventoryView serverInventoryView
+      InventoryView serverInventoryView
   )
   {
     this.serverInventoryView = serverInventoryView;

@@ -32,8 +32,8 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.ServerInventoryThingieConfig;
 import com.metamx.druid.client.ServerInventoryView;
+import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.ConfigManager;
@@ -129,7 +129,7 @@ public class MasterMain
         1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryView-%s").build()
     );
     ServerInventoryView serverInventoryView = new ServerInventoryView(
-        configFactory.build(ServerInventoryThingieConfig.class), zkPaths, curatorFramework, exec, jsonMapper
+        configFactory.build(ServerInventoryViewConfig.class), zkPaths, curatorFramework, exec, jsonMapper
     );
     lifecycle.addManagedInstance(serverInventoryView);
 

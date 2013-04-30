@@ -34,8 +34,10 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DruidServerConfig;
-import com.metamx.druid.client.ServerInventoryThingieConfig;
+import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.ServerInventoryView;
+import com.metamx.druid.client.ServerInventoryViewConfig;
+import com.metamx.druid.client.ServerView;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
@@ -95,6 +97,8 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private ScheduledExecutorFactory scheduledExecutorFactory = null;
   private RequestLogger requestLogger = null;
   private ServerInventoryView serverInventoryView = null;
+  private ServerView serverView = null;
+  private InventoryView inventoryView = null;
 
   private boolean initialized = false;
 
@@ -190,9 +194,16 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   }
 
   @SuppressWarnings("unchecked")
-  public T setServerInventoryView(ServerInventoryView serverInventoryView)
+  public T setInventoryView(InventoryView inventoryView)
   {
-    checkFieldNotSetAndSet("serverInventoryView", serverInventoryView);
+    checkFieldNotSetAndSet("inventoryView", inventoryView);
+    return (T) this;
+  }
+
+  @SuppressWarnings("unchecked")
+  public T setServerView(ServerView serverView)
+  {
+    checkFieldNotSetAndSet("serverView", serverView);
     return (T) this;
   }
 
@@ -291,10 +302,16 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     return requestLogger;
   }
 
-  public ServerInventoryView getServerInventoryView()
+  public ServerView getServerView()
   {
-    initializeServerInventoryThingie();
-    return serverInventoryView;
+    initializeServerView();
+    return serverView;
+  }
+
+  public InventoryView getInventoryView()
+  {
+    initializeInventoryView();
+    return inventoryView;
   }
 
   private void initializeDruidServerMetadata()
@@ -313,20 +330,34 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     }
   }
 
-  private void initializeServerInventoryThingie()
+  private void initializeServerView()
+  {
+    if (serverView == null) {
+      initializeServerInventoryView();
+      serverView = serverInventoryView;
+    }
+  }
+
+  private void initializeInventoryView()
+  {
+    if (inventoryView == null) {
+      initializeServerInventoryView();
+      inventoryView = serverInventoryView;
+    }
+  }
+
+  private void initializeServerInventoryView()
   {
     if (serverInventoryView == null) {
       final ExecutorService exec = Executors.newFixedThreadPool(
           1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryView-%s").build()
       );
-      setServerInventoryView(
-          new ServerInventoryView(
-              getConfigFactory().build(ServerInventoryThingieConfig.class),
-              getZkPaths(),
-              getCuratorFramework(),
-              exec,
-              getJsonMapper()
-          )
+      serverInventoryView = new ServerInventoryView(
+          getConfigFactory().build(ServerInventoryViewConfig.class),
+          getZkPaths(),
+          getCuratorFramework(),
+          exec,
+          getJsonMapper()
       );
       lifecycle.addManagedInstance(serverInventoryView);
     }
@@ -337,7 +368,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     if (requestLogger == null) {
       try {
         final String loggingType = props.getProperty("druid.request.logging.type");
-        if(loggingType.equals("emitter")) {
+        if("emitter".equals(loggingType)) {
           setRequestLogger(Initialization.makeEmittingRequestLogger(
             getProps(),
             getEmitter()

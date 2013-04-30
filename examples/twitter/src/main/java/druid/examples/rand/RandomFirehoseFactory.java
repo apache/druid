@@ -1,4 +1,4 @@
-package druid.examples;
+package druid.examples.rand;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -1,6 +1,5 @@
 package druid.examples;
 
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
@@ -69,7 +68,6 @@ public class RealtimeStandaloneMain
         }
     );
 
-    rn.registerJacksonSubtype(new NamedType(RandomFirehoseFactory.class, "rand"));
 
     try {
       lifecycle.start();

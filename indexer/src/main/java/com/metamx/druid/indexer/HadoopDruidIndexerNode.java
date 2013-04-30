@@ -97,10 +97,10 @@ public class HadoopDruidIndexerNode
       final Path s3nPath = new Path(String.format("s3n://%s", argumentSpec.substring("s3://".length())));
       final FileSystem fs = s3nPath.getFileSystem(new Configuration());
 
-      String configString = CharStreams.toString(new InputSupplier<Readable>()
+      String configString = CharStreams.toString(new InputSupplier<InputStreamReader>()
       {
         @Override
-        public Readable getInput() throws IOException
+        public InputStreamReader getInput() throws IOException
         {
           return new InputStreamReader(fs.open(s3nPath));
         }

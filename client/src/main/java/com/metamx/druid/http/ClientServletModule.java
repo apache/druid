@@ -22,7 +22,7 @@ package com.metamx.druid.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
-import com.metamx.druid.client.ServerInventoryView;
+import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -34,12 +34,12 @@ import javax.inject.Singleton;
 public class ClientServletModule extends JerseyServletModule
 {
   private final QuerySegmentWalker texasRanger;
-  private final ServerInventoryView serverInventoryView;
+  private final InventoryView serverInventoryView;
   private final ObjectMapper jsonMapper;
 
   public ClientServletModule(
       QuerySegmentWalker texasRanger,
-      ServerInventoryView serverInventoryView,
+      InventoryView serverInventoryView,
       ObjectMapper jsonMapper
   )
   {
@@ -53,7 +53,7 @@ public class ClientServletModule extends JerseyServletModule
   {
     bind(ClientInfoResource.class);
     bind(QuerySegmentWalker.class).toInstance(texasRanger);
-    bind(ServerInventoryView.class).toInstance(serverInventoryView);
+    bind(InventoryView.class).toInstance(serverInventoryView);
 
     serve("/*").with(GuiceContainer.class);
   }
