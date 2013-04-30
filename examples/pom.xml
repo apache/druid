@@ -32,7 +32,6 @@
     </parent>
 
     <modules>
-        <module>rand</module>
         <module>twitter</module>
     </modules>
 </project>
