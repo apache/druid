@@ -185,7 +185,7 @@ public class RealtimeManager implements QuerySegmentWalker
             }
           }
           catch (FormattedException e) {
-            log.info(e, "unparseable line");
+            log.info(e, "unparseable line: %s", e.getDetails());
             metrics.incrementUnparseable();
             continue;
           }
