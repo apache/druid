@@ -230,10 +230,11 @@ public class RealtimePlumberSchool implements PlumberSchool
       public <T> QueryRunner<T> getQueryRunner(final Query<T> query)
       {
         final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
+        final QueryToolChest<T, Query<T>> toolchest = factory.getToolchest();
+
         final Function<Query<T>, ServiceMetricEvent.Builder> builderFn =
             new Function<Query<T>, ServiceMetricEvent.Builder>()
             {
-              private final QueryToolChest<T, Query<T>> toolchest = factory.getToolchest();
 
               @Override
               public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
@@ -242,37 +243,39 @@ public class RealtimePlumberSchool implements PlumberSchool
               }
             };
 
-        return factory.mergeRunners(
-            EXEC,
-            FunctionalIterable
-                .create(sinks.values())
-                .transform(
-                    new Function<Sink, QueryRunner<T>>()
-                    {
-                      @Override
-                      public QueryRunner<T> apply(@Nullable Sink input)
-                      {
-                        return new MetricsEmittingQueryRunner<T>(
-                            emitter,
-                            builderFn,
-                            factory.mergeRunners(
-                                EXEC,
-                                Iterables.transform(
-                                    input,
-                                    new Function<FireHydrant, QueryRunner<T>>()
-                                    {
-                                      @Override
-                                      public QueryRunner<T> apply(@Nullable FireHydrant input)
-                                      {
-                                        return factory.createRunner(input.getSegment());
-                                      }
-                                    }
+        return toolchest.mergeResults(
+            factory.mergeRunners(
+                EXEC,
+                FunctionalIterable
+                    .create(sinks.values())
+                    .transform(
+                        new Function<Sink, QueryRunner<T>>()
+                        {
+                          @Override
+                          public QueryRunner<T> apply(@Nullable Sink input)
+                          {
+                            return new MetricsEmittingQueryRunner<T>(
+                                emitter,
+                                builderFn,
+                                factory.mergeRunners(
+                                    EXEC,
+                                    Iterables.transform(
+                                        input,
+                                        new Function<FireHydrant, QueryRunner<T>>()
+                                        {
+                                          @Override
+                                          public QueryRunner<T> apply(@Nullable FireHydrant input)
+                                          {
+                                            return factory.createRunner(input.getSegment());
+                                          }
+                                        }
+                                    )
                                 )
-                            )
-                        );
-                      }
-                    }
-                )
+                            );
+                          }
+                        }
+                    )
+            )
         );
       }
 
