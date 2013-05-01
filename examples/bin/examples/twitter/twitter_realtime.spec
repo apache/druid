@@ -39,6 +39,6 @@
         "type": "realtime",
         "windowPeriod": "PT3m",
         "segmentGranularity": "hour",
-        "basePersistDirectory": "/tmp/twitter_realtime/basePersist"
+        "basePersistDirectory": "/tmp/example/twitter_realtime/basePersist"
     }
 }]

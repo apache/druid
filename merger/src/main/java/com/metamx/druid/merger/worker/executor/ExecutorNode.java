@@ -357,7 +357,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
           segmentPusher,
           dataSegmentKiller,
           getAnnouncer(),
-          getServerInventoryView(),
+          getServerView(),
           getConglomerate(),
           getJsonMapper()
       );

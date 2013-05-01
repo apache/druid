@@ -193,7 +193,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
         1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("BrokerServerView-%s").build()
     );
     final BrokerServerView view = new BrokerServerView(
-        warehouse, getSmileMapper(), brokerHttpClient, getServerInventoryView(), viewExec
+        warehouse, getSmileMapper(), brokerHttpClient, getServerView(), viewExec
     );
 
     final CachingClusteredClient baseClient = new CachingClusteredClient(warehouse, view, cache, getSmileMapper());
@@ -202,7 +202,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     final ClientQuerySegmentWalker texasRanger = new ClientQuerySegmentWalker(warehouse, getEmitter(), baseClient);
 
     List<Module> theModules = Lists.newArrayList();
-    theModules.add(new ClientServletModule(texasRanger, getServerInventoryView(), getJsonMapper()));
+    theModules.add(new ClientServletModule(texasRanger, getInventoryView(), getJsonMapper()));
     theModules.addAll(extraModules);
 
     final Injector injector = Guice.createInjector(theModules);

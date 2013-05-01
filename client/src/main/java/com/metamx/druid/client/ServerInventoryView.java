@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
-public class ServerInventoryView implements ServerView
+public class ServerInventoryView implements ServerView, InventoryView
 {
   private static final EmittingLogger log = new EmittingLogger(ServerInventoryView.class);
 
@@ -56,7 +56,7 @@ public class ServerInventoryView implements ServerView
   private static final Map<String, Integer> removedSegments = new MapMaker().makeMap();
 
   public ServerInventoryView(
-      final ServerInventoryThingieConfig config,
+      final ServerInventoryViewConfig config,
       final ZkPathsConfig zkPaths,
       final CuratorFramework curator,
       final ExecutorService exec,
@@ -236,11 +236,13 @@ public class ServerInventoryView implements ServerView
     return started.get();
   }
 
+  @Override
   public DruidServer getInventoryValue(String containerKey)
   {
     return inventoryManager.getInventoryValue(containerKey);
   }
 
+  @Override
   public Iterable<DruidServer> getInventory()
   {
     return inventoryManager.getInventory();

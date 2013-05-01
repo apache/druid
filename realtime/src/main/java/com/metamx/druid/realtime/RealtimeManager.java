@@ -185,7 +185,7 @@ public class RealtimeManager implements QuerySegmentWalker
             }
           }
           catch (FormattedException e) {
-            log.info(e, "unparseable line");
+            log.info(e, "unparseable line: %s", e.getDetails());
             metrics.incrementUnparseable();
             continue;
           }
@@ -225,7 +225,7 @@ public class RealtimeManager implements QuerySegmentWalker
       QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
       QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-      return new FinalizeResultsQueryRunner<T>(toolChest.mergeResults(plumber.getQueryRunner(query)), toolChest);
+      return new FinalizeResultsQueryRunner<T>(plumber.getQueryRunner(query), toolChest);
     }
 
     public void close() throws IOException

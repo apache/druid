@@ -19,7 +19,7 @@
         "sleepUsec": 100000,
         "maxGeneratedRows": 5000000,
         "seed": 0,
-        "nTokens": 19,
+        "nTokens": 255,
         "nPerSleep": 3
     },
 
@@ -27,6 +27,6 @@
         "type": "realtime",
         "windowPeriod": "PT5m",
         "segmentGranularity": "hour",
-        "basePersistDirectory": "/tmp/rand_realtime/basePersist"
+        "basePersistDirectory": "/tmp/example/rand_realtime/basePersist"
     }
 }]

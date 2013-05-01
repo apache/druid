@@ -24,7 +24,7 @@ import org.skife.config.Default;
 
 /**
  */
-public abstract class ServerInventoryThingieConfig
+public abstract class ServerInventoryViewConfig
 {
   @Config("druid.master.removedSegmentLifetime")
   @Default("1")

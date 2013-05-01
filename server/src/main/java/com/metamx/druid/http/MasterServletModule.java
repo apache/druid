@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
 import com.google.inject.util.Providers;
-import com.metamx.druid.client.ServerInventoryView;
+import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
@@ -37,7 +37,7 @@ import javax.inject.Singleton;
  */
 public class MasterServletModule extends JerseyServletModule
 {
-  private final ServerInventoryView serverInventoryView;
+  private final InventoryView serverInventoryView;
   private final DatabaseSegmentManager segmentInventoryManager;
   private final DatabaseRuleManager databaseRuleManager;
   private final DruidMaster master;
@@ -45,7 +45,7 @@ public class MasterServletModule extends JerseyServletModule
   private final IndexingServiceClient indexingServiceClient;
 
   public MasterServletModule(
-      ServerInventoryView serverInventoryView,
+      InventoryView serverInventoryView,
       DatabaseSegmentManager segmentInventoryManager,
       DatabaseRuleManager databaseRuleManager,
       DruidMaster master,
@@ -66,7 +66,7 @@ public class MasterServletModule extends JerseyServletModule
   {
     bind(InfoResource.class);
     bind(MasterResource.class);
-    bind(ServerInventoryView.class).toInstance(serverInventoryView);
+    bind(InventoryView.class).toInstance(serverInventoryView);
     bind(DatabaseSegmentManager.class).toInstance(segmentInventoryManager);
     bind(DatabaseRuleManager.class).toInstance(databaseRuleManager);
     bind(DruidMaster.class).toInstance(master);

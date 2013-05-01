@@ -9,7 +9,6 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
-
 import twitter4j.ConnectionLifeCycleListener;
 import twitter4j.HashtagEntity;
 import twitter4j.Status;
@@ -177,7 +176,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
       {
         ex.printStackTrace();
       }
-    }; // new StatusListener()
+    };
 
     twitterStream.addListener(statusListener);
     twitterStream.sample(); // creates a generic StatusStream
@@ -242,8 +241,10 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
             // allow this event through, and the next hasMore() call will be false
           }
         }
-        rowCount++;
-        if (rowCount % 100 == 0) log.info("nextRow() has returned " + rowCount + " InputRows");
+        if (++rowCount % 1000 == 0) {
+          log.info("nextRow() has returned %,d InputRows", rowCount);
+        }
+
         Status status;
         try {
           status = queue.take();

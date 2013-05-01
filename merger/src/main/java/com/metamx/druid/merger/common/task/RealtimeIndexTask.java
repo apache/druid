@@ -28,6 +28,7 @@ import com.google.common.io.Closeables;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.druid.Query;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.merger.common.TaskLock;
@@ -37,18 +38,20 @@ import com.metamx.druid.merger.common.actions.LockAcquireAction;
 import com.metamx.druid.merger.common.actions.LockListAction;
 import com.metamx.druid.merger.common.actions.LockReleaseAction;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
+import com.metamx.druid.query.FinalizeResultsQueryRunner;
 import com.metamx.druid.query.QueryRunner;
+import com.metamx.druid.query.QueryRunnerFactory;
+import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.realtime.FireDepartmentConfig;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Firehose;
 import com.metamx.druid.realtime.FirehoseFactory;
 import com.metamx.druid.realtime.GracefulShutdownFirehose;
 import com.metamx.druid.realtime.MinTimeFirehose;
+import com.metamx.druid.realtime.Schema;
+import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.RealtimePlumberSchool;
-import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.coordination.DataSegmentAnnouncer;
-import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.druid.realtime.plumber.Sink;
 import com.metamx.druid.realtime.plumber.VersioningPolicy;
 import com.metamx.emitter.EmittingLogger;
@@ -83,6 +86,9 @@ public class RealtimeIndexTask extends AbstractTask
 
   @JsonIgnore
   private volatile Plumber plumber = null;
+
+  @JsonIgnore
+  private volatile TaskToolbox toolbox = null;
 
   @JsonIgnore
   private volatile GracefulShutdownFirehose firehose = null;
@@ -141,7 +147,10 @@ public class RealtimeIndexTask extends AbstractTask
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
     if (plumber != null) {
-      return plumber.getQueryRunner(query);
+      QueryRunnerFactory<T, Query<T>> factory = toolbox.getQueryRunnerFactoryConglomerate().findFactory(query);
+      QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
+
+      return new FinalizeResultsQueryRunner<T>(plumber.getQueryRunner(query), toolChest);
     } else {
       return null;
     }
@@ -257,6 +266,7 @@ public class RealtimeIndexTask extends AbstractTask
     realtimePlumberSchool.setServerView(toolbox.getNewSegmentServerView());
     realtimePlumberSchool.setServiceEmitter(toolbox.getEmitter());
 
+    this.toolbox = toolbox;
     this.plumber = realtimePlumberSchool.findPlumber(schema, metrics);
 
     try {

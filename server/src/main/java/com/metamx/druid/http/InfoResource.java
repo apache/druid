@@ -29,7 +29,7 @@ import com.google.common.collect.Sets;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.ServerInventoryView;
+import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
@@ -61,7 +61,7 @@ import java.util.TreeSet;
 public class InfoResource
 {
   private final DruidMaster master;
-  private final ServerInventoryView serverInventoryView;
+  private final InventoryView serverInventoryView;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final DatabaseRuleManager databaseRuleManager;
   private final IndexingServiceClient indexingServiceClient;
@@ -69,7 +69,7 @@ public class InfoResource
   @Inject
   public InfoResource(
       DruidMaster master,
-      ServerInventoryView serverInventoryView,
+      InventoryView serverInventoryView,
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
       IndexingServiceClient indexingServiceClient

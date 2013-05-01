@@ -1,4 +1,4 @@
-package druid.examples;
+package druid.examples.rand;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -197,7 +197,9 @@ public class RandomFirehoseFactory implements FirehoseFactory
             throw new RuntimeException("InterruptedException");
           }
         }
-        rowCount++;
+        if (++rowCount % 1000 == 0) {
+          log.info("%,d events created.", rowCount);
+        }
 
         final Map<String, Object> theMap = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
         theMap.put("inColumn", anotherRand((int)nth));

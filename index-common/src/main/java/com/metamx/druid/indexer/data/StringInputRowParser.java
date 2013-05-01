@@ -21,7 +21,6 @@ package com.metamx.druid.indexer.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.exception.FormattedException;
@@ -29,7 +28,6 @@ import com.metamx.common.parsers.Parser;
 import com.metamx.common.parsers.ToLowerCaseParser;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
-
 import org.joda.time.DateTime;
 
 import java.util.List;
@@ -58,18 +56,9 @@ public class StringInputRowParser
 
     this.dimensionExclusions = Sets.newHashSet();
     if (dimensionExclusions != null) {
-      this.dimensionExclusions.addAll(
-          Lists.transform(
-              dimensionExclusions, new Function<String, String>()
-          {
-            @Override
-            public String apply(String s)
-            {
-              return s.toLowerCase();
-            }
-          }
-          )
-      );
+      for (String dimensionExclusion : dimensionExclusions) {
+        this.dimensionExclusions.add(dimensionExclusion.toLowerCase());
+      }
     }
     this.dimensionExclusions.add(timestampSpec.getTimestampColumn());
 
