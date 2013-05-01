@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -205,6 +206,9 @@ public class TaskLifecycleTest
         ),
         -1
     );
+
+    final Optional<TaskStatus> preRunTaskStatus = tsqa.getSameGroupMergedStatus(indexTask.getId());
+    Assert.assertTrue("pre run task status not present", !preRunTaskStatus.isPresent());
 
     final TaskStatus mergedStatus = runTask(indexTask);
     final TaskStatus status = ts.getStatus(indexTask.getId()).get();
