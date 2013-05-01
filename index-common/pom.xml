@@ -75,7 +75,12 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
         </dependency>
-
+		<dependency>
+			<groupId>com.datastax.cassandra</groupId>
+			<artifactId>cassandra-driver-core</artifactId>
+			<version>1.0.0-beta2</version>
+		</dependency>
+            
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>
