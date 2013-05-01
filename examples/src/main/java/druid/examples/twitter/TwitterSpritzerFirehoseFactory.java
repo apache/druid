@@ -176,7 +176,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
       {
         ex.printStackTrace();
       }
-    }; // new StatusListener()
+    };
 
     twitterStream.addListener(statusListener);
     twitterStream.sample(); // creates a generic StatusStream

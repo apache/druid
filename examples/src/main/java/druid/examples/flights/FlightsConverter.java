@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package druid.examples;
+package druid.examples.flights;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Closeables;

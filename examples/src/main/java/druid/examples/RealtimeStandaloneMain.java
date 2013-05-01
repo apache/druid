@@ -13,6 +13,7 @@ import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.realtime.RealtimeNode;
 import com.metamx.druid.realtime.SegmentPublisher;
+import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
 
@@ -35,12 +36,13 @@ public class RealtimeStandaloneMain
 
     RealtimeNode rn = RealtimeNode.builder().build();
     lifecycle.addManagedInstance(rn);
-    // register the Firehose
+
+    // register the Firehoses
     rn.registerJacksonSubtype(
         new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
-        new NamedType(FlightsFirehoseFactory.class, "flights")
+        new NamedType(FlightsFirehoseFactory.class, "flights"),
+        new NamedType(RandomFirehoseFactory.class, "rand")
     );
-    rn.registerJacksonSubtype(new NamedType(RandomFirehoseFactory.class, "rand"));
 
     // Create dummy objects for the various interfaces that interact with the DB, ZK and deep storage
     rn.setSegmentPublisher(new NoopSegmentPublisher());
