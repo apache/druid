@@ -20,6 +20,7 @@
 package com.metamx.druid.metrics;
 
 import com.metamx.druid.client.DruidServer;
+import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -29,11 +30,11 @@ import java.util.Map;
 
 public class ServerMonitor extends AbstractMonitor
 {
-  private final DruidServer druidServer;
+  private final DruidServerMetadata druidServer;
   private final ServerManager serverManager;
 
   public ServerMonitor(
-      DruidServer druidServer,
+      DruidServerMetadata druidServer,
       ServerManager serverManager
   )
   {

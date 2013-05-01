@@ -17,30 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid;
+package com.metamx.druid.master;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
+import org.apache.curator.framework.CuratorFramework;
 
-import org.skife.config.ConfigurationObjectFactory;
-
-import java.util.Properties;
+import java.util.concurrent.ExecutorService;
 
 /**
+ * Provides LoadQueuePeons
  */
-@Deprecated
-public abstract class BaseNode<T extends BaseNode> extends QueryableNode
+public class LoadQueueTaskMaster
 {
-  protected BaseNode(
-      Logger log,
-      Properties props,
-      Lifecycle lifecycle,
+  private final CuratorFramework curator;
+  private final ObjectMapper jsonMapper;
+  private final ExecutorService peonExec;
+
+  public LoadQueueTaskMaster(
+      CuratorFramework curator,
       ObjectMapper jsonMapper,
-      ObjectMapper smileMapper,
-      ConfigurationObjectFactory configFactory
+      ExecutorService peonExec
   )
   {
-    super(log, props, lifecycle, jsonMapper, smileMapper, configFactory);
+    this.curator = curator;
+    this.jsonMapper = jsonMapper;
+    this.peonExec = peonExec;
+  }
+
+  public LoadQueuePeon giveMePeon(String basePath)
+  {
+    return new LoadQueuePeon(curator, basePath, jsonMapper, peonExec);
   }
 }

@@ -40,6 +40,7 @@ import com.metamx.druid.Query;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerView;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.guava.ThreadRenamingCallable;
 import com.metamx.druid.guava.ThreadRenamingRunnable;
 import com.metamx.druid.index.QueryableIndex;
@@ -57,7 +58,6 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -97,7 +97,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
   private volatile QueryRunnerFactoryConglomerate conglomerate = null;
   private volatile DataSegmentPusher dataSegmentPusher = null;
-  private volatile SegmentAnnouncer segmentAnnouncer = null;
+  private volatile DataSegmentAnnouncer segmentAnnouncer = null;
   private volatile SegmentPublisher segmentPublisher = null;
   private volatile ServerView serverView = null;
 
@@ -144,7 +144,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   }
 
   @JacksonInject("segmentAnnouncer")
-  public void setSegmentAnnouncer(SegmentAnnouncer segmentAnnouncer)
+  public void setSegmentAnnouncer(DataSegmentAnnouncer segmentAnnouncer)
   {
     this.segmentAnnouncer = segmentAnnouncer;
   }

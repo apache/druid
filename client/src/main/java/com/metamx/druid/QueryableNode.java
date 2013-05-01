@@ -25,6 +25,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -32,10 +33,19 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.DruidServerConfig;
+import com.metamx.druid.client.ServerInventoryThingieConfig;
+import com.metamx.druid.client.ServerInventoryView;
+import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
+import com.metamx.druid.coordination.DruidServerMetadata;
+import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.RequestLogger;
+import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ZkClientConfig;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -48,8 +58,7 @@ import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
-import com.metamx.phonebook.PhoneBook;
-import org.I0Itec.zkclient.ZkClient;
+import org.apache.curator.framework.CuratorFramework;
 import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.skife.config.ConfigurationObjectFactory;
@@ -59,6 +68,8 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -72,18 +83,23 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private final ObjectMapper smileMapper;
   private final Properties props;
   private final ConfigurationObjectFactory configFactory;
+  private final String nodeType;
 
-  private PhoneBook phoneBook = null;
+  private DruidServerMetadata druidServerMetadata = null;
   private ServiceEmitter emitter = null;
   private List<Monitor> monitors = null;
   private Server server = null;
-  private ZkClient zkClient;
-  private ScheduledExecutorFactory scheduledExecutorFactory;
-  private RequestLogger requestLogger;
+  private CuratorFramework curator = null;
+  private DataSegmentAnnouncer announcer = null;
+  private ZkPathsConfig zkPaths = null;
+  private ScheduledExecutorFactory scheduledExecutorFactory = null;
+  private RequestLogger requestLogger = null;
+  private ServerInventoryView serverInventoryView = null;
 
   private boolean initialized = false;
 
   public QueryableNode(
+      String nodeType,
       Logger log,
       Properties props,
       Lifecycle lifecycle,
@@ -108,19 +124,26 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     Preconditions.checkNotNull(configFactory, "configFactory");
 
     Preconditions.checkState(smileMapper.getJsonFactory() instanceof SmileFactory, "smileMapper should use smile.");
+    this.nodeType = nodeType;
   }
 
-  @SuppressWarnings("unchecked")
-  public T setZkClient(ZkClient zkClient)
+  public T setDruidServerMetadata(DruidServerMetadata druidServerMetadata)
   {
-    checkFieldNotSetAndSet("zkClient", zkClient);
+    checkFieldNotSetAndSet("druidServerMetadata", druidServerMetadata);
     return (T) this;
   }
 
   @SuppressWarnings("unchecked")
-  public T setPhoneBook(PhoneBook phoneBook)
+  public T setCuratorFramework(CuratorFramework curator)
   {
-    checkFieldNotSetAndSet("phoneBook", phoneBook);
+    checkFieldNotSetAndSet("curator", curator);
+    return (T) this;
+  }
+
+  @SuppressWarnings("unchecked")
+  public T setAnnouncer(DataSegmentAnnouncer announcer)
+  {
+    checkFieldNotSetAndSet("announcer", announcer);
     return (T) this;
   }
 
@@ -146,6 +169,13 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   }
 
   @SuppressWarnings("unchecked")
+  public T setZkPaths(ZkPathsConfig zkPaths)
+  {
+    checkFieldNotSetAndSet("zkPaths", zkPaths);
+    return (T) this;
+  }
+
+  @SuppressWarnings("unchecked")
   public T setScheduledExecutorFactory(ScheduledExecutorFactory factory)
   {
     checkFieldNotSetAndSet("scheduledExecutorFactory", factory);
@@ -156,6 +186,13 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   public T setRequestLogger(RequestLogger requestLogger)
   {
     checkFieldNotSetAndSet("requestLogger", requestLogger);
+    return (T) this;
+  }
+
+  @SuppressWarnings("unchecked")
+  public T setServerInventoryView(ServerInventoryView serverInventoryView)
+  {
+    checkFieldNotSetAndSet("serverInventoryView", serverInventoryView);
     return (T) this;
   }
 
@@ -200,16 +237,22 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     return configFactory;
   }
 
-  public ZkClient getZkClient()
+  public DruidServerMetadata getDruidServerMetadata()
   {
-    initializeZkClient();
-    return zkClient;
+    initializeDruidServerMetadata();
+    return druidServerMetadata;
   }
 
-  public PhoneBook getPhoneBook()
+  public CuratorFramework getCuratorFramework()
   {
-    initializePhoneBook();
-    return phoneBook;
+    initializeCuratorFramework();
+    return curator;
+  }
+
+  public DataSegmentAnnouncer getAnnouncer()
+  {
+    initializeAnnouncer();
+    return announcer;
   }
 
   public ServiceEmitter getEmitter()
@@ -230,6 +273,12 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     return server;
   }
 
+  public ZkPathsConfig getZkPaths()
+  {
+    initializeZkPaths();
+    return zkPaths;
+  }
+
   public ScheduledExecutorFactory getScheduledExecutorFactory()
   {
     initializeScheduledExecutorFactory();
@@ -240,6 +289,47 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   {
     initializeRequestLogger();
     return requestLogger;
+  }
+
+  public ServerInventoryView getServerInventoryView()
+  {
+    initializeServerInventoryThingie();
+    return serverInventoryView;
+  }
+
+  private void initializeDruidServerMetadata()
+  {
+    if (druidServerMetadata == null) {
+      final DruidServerConfig serverConfig = getConfigFactory().build(DruidServerConfig.class);
+      setDruidServerMetadata(
+          new DruidServerMetadata(
+              serverConfig.getServerName(),
+              serverConfig.getHost(),
+              serverConfig.getMaxSize(),
+              nodeType,
+              serverConfig.getTier()
+          )
+      );
+    }
+  }
+
+  private void initializeServerInventoryThingie()
+  {
+    if (serverInventoryView == null) {
+      final ExecutorService exec = Executors.newFixedThreadPool(
+          1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryView-%s").build()
+      );
+      setServerInventoryView(
+          new ServerInventoryView(
+              getConfigFactory().build(ServerInventoryThingieConfig.class),
+              getZkPaths(),
+              getCuratorFramework(),
+              exec,
+              getJsonMapper()
+          )
+      );
+      lifecycle.addManagedInstance(serverInventoryView);
+    }
   }
 
   private void initializeRequestLogger()
@@ -268,6 +358,13 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     }
   }
 
+  private void initializeZkPaths()
+  {
+    if (zkPaths == null) {
+      setZkPaths(getConfigFactory().build(ZkPathsConfig.class));
+    }
+  }
+
   private void initializeScheduledExecutorFactory()
   {
     if (scheduledExecutorFactory == null) {
@@ -275,24 +372,26 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     }
   }
 
-  private void initializeZkClient()
+  private void initializeCuratorFramework()
   {
-    if (zkClient == null) {
-      setZkClient(Initialization.makeZkClient(configFactory.build(ZkClientConfig.class), lifecycle));
+    if (curator == null) {
+      try {
+        setCuratorFramework(Initialization.makeCuratorFramework(configFactory.build(CuratorConfig.class), lifecycle));
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
     }
   }
 
-  private void initializePhoneBook()
+  private void initializeAnnouncer()
   {
-    if (phoneBook == null) {
-      setPhoneBook(
-          Initialization.createPhoneBook(
-              jsonMapper,
-              getZkClient(),
-              "PhoneBook--%s",
-              lifecycle
-          )
-      );
+    if (announcer == null) {
+      final Announcer announcer = new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s"));
+      lifecycle.addManagedInstance(announcer);
+
+      setAnnouncer(new CuratorDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper()));
+      lifecycle.addManagedInstance(getAnnouncer(), Lifecycle.Stage.LAST);
     }
   }
 
@@ -343,8 +442,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private void initializeEmitter()
   {
     if (emitter == null) {
-      final HttpClientConfig.Builder configBuilder = HttpClientConfig.builder()
-                                                                     .withNumConnections(1);
+      final HttpClientConfig.Builder configBuilder = HttpClientConfig.builder().withNumConnections(1);
 
       final String emitterTimeoutDuration = props.getProperty("druid.emitter.timeOut");
       if (emitterTimeoutDuration != null) {

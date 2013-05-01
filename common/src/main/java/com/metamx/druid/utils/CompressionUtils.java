@@ -46,32 +46,49 @@ public class CompressionUtils
 
   public static long zip(File directory, File outputZipFile) throws IOException
   {
-    if (!directory.isDirectory()) {
-      throw new IOException(String.format("directory[%s] is not a directory", directory));
-    }
-
     if (!outputZipFile.getName().endsWith(".zip")) {
       log.warn("No .zip suffix[%s], putting files from [%s] into it anyway.", outputZipFile, directory);
+    }
+
+    final FileOutputStream out = new FileOutputStream(outputZipFile);
+    try {
+      final long retVal = zip(directory, out);
+
+      out.close();
+
+      return retVal;
+    }
+    finally {
+      Closeables.closeQuietly(out);
+    }
+  }
+
+  public static long zip(File directory, OutputStream out) throws IOException
+  {
+    if (!directory.isDirectory()) {
+      throw new IOException(String.format("directory[%s] is not a directory", directory));
     }
 
     long totalSize = 0;
     ZipOutputStream zipOut = null;
     try {
-      zipOut = new ZipOutputStream(new FileOutputStream(outputZipFile));
+      zipOut = new ZipOutputStream(out);
       File[] files = directory.listFiles();
       for (File file : files) {
         log.info("Adding file[%s] with size[%,d].  Total size so far[%,d]", file, file.length(), totalSize);
         if (file.length() >= Integer.MAX_VALUE) {
-          zipOut.close();
-          outputZipFile.delete();
+          zipOut.finish();
           throw new IOException(String.format("file[%s] too large [%,d]", file, file.length()));
         }
         zipOut.putNextEntry(new ZipEntry(file.getName()));
         totalSize += ByteStreams.copy(Files.newInputStreamSupplier(file), zipOut);
       }
+      zipOut.closeEntry();
     }
     finally {
-      Closeables.closeQuietly(zipOut);
+      if (zipOut != null) {
+        zipOut.finish();
+      }
     }
 
     return totalSize;
@@ -100,11 +117,12 @@ public class CompressionUtils
 
     ZipEntry entry;
     while ((entry = zipIn.getNextEntry()) != null) {
-      OutputStream out = null;
+      FileOutputStream out = null;
       try {
         out = new FileOutputStream(new File(outDir, entry.getName()));
         ByteStreams.copy(zipIn, out);
         zipIn.closeEntry();
+        out.close();
       }
       finally {
         Closeables.closeQuietly(out);

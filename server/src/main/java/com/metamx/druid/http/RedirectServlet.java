@@ -63,11 +63,16 @@ public class RedirectServlet extends DefaultServlet
     if (redirectInfo.doLocal()) {
       super.service(request, response);
     } else {
-      URL url = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());
-      log.info("Forwarding request to [%s]", url);
+      final URL redirectURL = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());
+      if (redirectURL == null) {
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+      }
+      else {
+        log.info("Forwarding request to [%s]", redirectURL);
 
-      response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
-      response.setHeader("Location", url.toString());
+        response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
+        response.setHeader("Location", redirectURL.toString());
+      }
     }
   }
 }

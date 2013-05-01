@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.coordination.DruidServerMetadata;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,14 +37,10 @@ public class DruidServer implements Comparable
 
   private final Object lock = new Object();
 
-  private final String name;
   private final ConcurrentMap<String, DruidDataSource> dataSources;
   private final ConcurrentMap<String, DataSegment> segments;
 
-  private final String host;
-  private final long maxSize;
-  private final String type;
-  private final String tier;
+  private final DruidServerMetadata metadata;
 
   private volatile long currSize;
 
@@ -70,11 +67,7 @@ public class DruidServer implements Comparable
       @JsonProperty("tier") String tier
   )
   {
-    this.name = name;
-    this.host = host;
-    this.maxSize = maxSize;
-    this.type = type;
-    this.tier = tier;
+    this.metadata = new DruidServerMetadata(name, host, maxSize, type, tier);
 
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
     this.segments = new ConcurrentHashMap<String, DataSegment>();
@@ -82,24 +75,18 @@ public class DruidServer implements Comparable
 
   public String getName()
   {
-    return name;
+    return metadata.getName();
   }
 
-  public Map<String, String> getStringProps()
+  public DruidServerMetadata getMetadata()
   {
-    return ImmutableMap.of(
-        "name", name,
-        "host", host,
-        "maxSize", String.valueOf(maxSize),
-        "type", type,
-        "tier", tier
-    );
+    return metadata;
   }
 
   @JsonProperty
   public String getHost()
   {
-    return host;
+    return metadata.getHost();
   }
 
   @JsonProperty
@@ -111,19 +98,19 @@ public class DruidServer implements Comparable
   @JsonProperty
   public long getMaxSize()
   {
-    return maxSize;
+    return metadata.getMaxSize();
   }
 
   @JsonProperty
   public String getType()
   {
-    return type;
+    return metadata.getType();
   }
 
   @JsonProperty
   public String getTier()
   {
-    return tier;
+    return metadata.getTier();
   }
 
   @JsonProperty
@@ -159,13 +146,23 @@ public class DruidServer implements Comparable
     return this;
   }
 
+  public DruidServer addDataSegments(DruidServer server)
+  {
+    synchronized (lock) {
+      for (Map.Entry<String, DataSegment> entry : server.segments.entrySet()) {
+        addDataSegment(entry.getKey(), entry.getValue());
+      }
+    }
+    return this;
+  }
+
   public DruidServer removeDataSegment(String segmentName)
   {
     synchronized (lock) {
       DataSegment segment = segments.get(segmentName);
 
       if (segment == null) {
-        log.warn("Asked to remove data segment that doesn't exist!? server[%s], segment[%s]", name, segmentName);
+        log.warn("Asked to remove data segment that doesn't exist!? server[%s], segment[%s]", getName(), segmentName);
         return this;
       }
 
@@ -176,7 +173,7 @@ public class DruidServer implements Comparable
             "Asked to remove data segment from dataSource[%s] that doesn't exist, but the segment[%s] exists!?!?!?! wtf?  server[%s]",
             segment.getDataSource(),
             segmentName,
-            name
+            getName()
         );
         return this;
       }
@@ -214,7 +211,7 @@ public class DruidServer implements Comparable
 
     DruidServer that = (DruidServer) o;
 
-    if (name != null ? !name.equals(that.name) : that.name != null) {
+    if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
       return false;
     }
 
@@ -224,19 +221,13 @@ public class DruidServer implements Comparable
   @Override
   public int hashCode()
   {
-    return name != null ? name.hashCode() : 0;
+    return getName() != null ? getName().hashCode() : 0;
   }
 
   @Override
   public String toString()
   {
-    return "DruidServer{" +
-           "name='" + name + '\'' +
-           ", host='" + host + '\'' +
-           ", maxSize=" + maxSize +
-           ", type=" + type +
-           ", tier=" + tier +
-           '}';
+    return metadata.toString();
   }
 
   @Override
@@ -249,6 +240,6 @@ public class DruidServer implements Comparable
       return 1;
     }
 
-    return name.compareTo(((DruidServer) o).name);
+    return getName().compareTo(((DruidServer) o).getName());
   }
 }

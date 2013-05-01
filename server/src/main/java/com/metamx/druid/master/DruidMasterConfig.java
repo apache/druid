@@ -30,15 +30,6 @@ public abstract class DruidMasterConfig
   @Config("druid.host")
   public abstract String getHost();
 
-  @Config("druid.zk.paths.masterPath")
-  public abstract String getBasePath();
-
-  @Config("druid.zk.paths.loadQueuePath")
-  public abstract String getLoadQueuePath();
-
-  @Config("druid.zk.paths.servedSegmentsPath")
-  public abstract String getServedSegmentsLocation();
-
   @Config("druid.master.startDelay")
   @Default("PT600s")
   public abstract Duration getMasterStartDelay();

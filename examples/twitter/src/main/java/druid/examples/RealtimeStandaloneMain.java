@@ -4,14 +4,11 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.ZKPhoneBook;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.realtime.RealtimeNode;
-import com.metamx.druid.realtime.SegmentAnnouncer;
 import com.metamx.druid.realtime.SegmentPublisher;
-import com.metamx.phonebook.PhoneBook;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
 
 import java.io.File;
@@ -35,17 +32,8 @@ public class RealtimeStandaloneMain
     // register the Firehose
     rn.registerJacksonSubtype(new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"));
 
-    // force standalone demo behavior (no zk, no db, no master, no broker)
-    //
-    // dummyPhoneBook will not be start()ed so it will not hang connecting to a nonexistent zk
-    PhoneBook dummyPhoneBook = new ZKPhoneBook(new DefaultObjectMapper(), null, null) {
-      @Override
-      public boolean isStarted() { return true;}
-    };
-
-    rn.setPhoneBook(dummyPhoneBook);
-    final SegmentAnnouncer dummySegmentAnnouncer =
-      new SegmentAnnouncer()
+    final DataSegmentAnnouncer dummySegmentAnnouncer =
+      new DataSegmentAnnouncer()
       {
         @Override
         public void announceSegment(DataSegment segment) throws IOException
@@ -70,8 +58,8 @@ public class RealtimeStandaloneMain
         };
 
     // dummySegmentPublisher will not send updates to db because standalone demo has no db
-    rn.setSegmentAnnouncer(dummySegmentAnnouncer);
     rn.setSegmentPublisher(dummySegmentPublisher);
+    rn.setAnnouncer(dummySegmentAnnouncer);
     rn.setDataSegmentPusher(
         new DataSegmentPusher()
         {

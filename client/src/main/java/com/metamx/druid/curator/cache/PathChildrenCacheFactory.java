@@ -17,16 +17,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.phonebook;
+package com.metamx.druid.curator.cache;
 
-import java.util.Map;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 
 /**
- * A ServiceLookup is an object that, when given a key, will return a metadata map for that key.  This was created
- * for use in doing things like consistent hashing, where the lookupKey represents the partition key and the
- * metadata map has stuff like host and port in it (basically, the information required to be able to contact the server)
  */
-public interface ServiceLookup
+public interface PathChildrenCacheFactory
 {
-  public Map<String, String> get(String lookupKey);
+  public PathChildrenCache make(CuratorFramework curator, String path);
 }

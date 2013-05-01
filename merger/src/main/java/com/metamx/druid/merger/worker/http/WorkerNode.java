@@ -20,21 +20,21 @@
 package com.metamx.druid.merger.worker.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.Lists;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.RegisteringNode;
+import com.metamx.druid.QueryableNode;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.StatusServlet;
-import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
@@ -63,10 +63,10 @@ import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
-import com.netflix.curator.x.discovery.ServiceDiscovery;
-import com.netflix.curator.x.discovery.ServiceProvider;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.x.discovery.ServiceDiscovery;
+import org.apache.curator.x.discovery.ServiceProvider;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
@@ -77,7 +77,6 @@ import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -86,7 +85,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class WorkerNode extends RegisteringNode
+public class WorkerNode extends QueryableNode<WorkerNode>
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerNode.class);
 
@@ -95,17 +94,11 @@ public class WorkerNode extends RegisteringNode
     return new Builder();
   }
 
-  private final Lifecycle lifecycle;
-  private final Properties props;
-  private final ObjectMapper jsonMapper;
-  private final ConfigurationObjectFactory configFactory;
-
   private RestS3Service s3Service = null;
   private List<Monitor> monitors = null;
   private HttpClient httpClient = null;
   private ServiceEmitter emitter = null;
   private WorkerConfig workerConfig = null;
-  private CuratorFramework curatorFramework = null;
   private ServiceDiscovery serviceDiscovery = null;
   private ServiceProvider coordinatorServiceProvider = null;
   private WorkerCuratorCoordinator workerCuratorCoordinator = null;
@@ -120,15 +113,11 @@ public class WorkerNode extends RegisteringNode
       Properties props,
       Lifecycle lifecycle,
       ObjectMapper jsonMapper,
+      ObjectMapper smileMapper,
       ConfigurationObjectFactory configFactory
   )
   {
-    super(ImmutableList.of(jsonMapper));
-
-    this.lifecycle = lifecycle;
-    this.props = props;
-    this.jsonMapper = jsonMapper;
-    this.configFactory = configFactory;
+    super("indexer-worker", log, props, lifecycle, jsonMapper, smileMapper, configFactory);
   }
 
   public WorkerNode setHttpClient(HttpClient httpClient)
@@ -143,9 +132,9 @@ public class WorkerNode extends RegisteringNode
     return this;
   }
 
-  public WorkerNode setCuratorFramework(CuratorFramework curatorFramework)
+  public WorkerNode setS3Service(RestS3Service s3Service)
   {
-    this.curatorFramework = curatorFramework;
+    this.s3Service = s3Service;
     return this;
   }
 
@@ -185,7 +174,6 @@ public class WorkerNode extends RegisteringNode
     initializeEmitter();
     initializeMonitors();
     initializeMergerConfig();
-    initializeCuratorFramework();
     initializeServiceDiscovery();
     initializeCoordinatorServiceProvider();
     initializeJacksonSubtypes();
@@ -195,15 +183,15 @@ public class WorkerNode extends RegisteringNode
     initializeWorkerTaskMonitor();
     initializeServer();
 
-    final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
+    final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(getLifecycle());
     final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
     final MonitorScheduler monitorScheduler = new MonitorScheduler(
-        configFactory.build(MonitorSchedulerConfig.class),
+        getConfigFactory().build(MonitorSchedulerConfig.class),
         globalScheduledExec,
         emitter,
         monitors
     );
-    lifecycle.addManagedInstance(monitorScheduler);
+    getLifecycle().addManagedInstance(monitorScheduler);
 
     final Injector injector = Guice.createInjector(
         new WorkerServletModule(
@@ -227,26 +215,21 @@ public class WorkerNode extends RegisteringNode
       doInit();
     }
 
-    lifecycle.start();
+    getLifecycle().start();
   }
 
   @LifecycleStop
   public synchronized void stop()
   {
-    lifecycle.stop();
-  }
-
-  private ObjectMapper getJsonMapper()
-  {
-    return jsonMapper;
+    getLifecycle().stop();
   }
 
   private void initializeServer()
   {
     if (server == null) {
-      server = Initialization.makeJettyServer(configFactory.build(ServerConfig.class));
+      server = Initialization.makeJettyServer(getConfigFactory().build(ServerConfig.class));
 
-      lifecycle.addHandler(
+      getLifecycle().addHandler(
           new Lifecycle.Handler()
           {
             @Override
@@ -282,8 +265,8 @@ public class WorkerNode extends RegisteringNode
     if (httpClient == null) {
       httpClient = HttpClientInit.createClient(
           HttpClientConfig.builder().withNumConnections(1)
-                          .withReadTimeout(new Duration(PropUtils.getProperty(props, "druid.emitter.timeOut")))
-                          .build(), lifecycle
+                          .withReadTimeout(new Duration(PropUtils.getProperty(getProps(), "druid.emitter.timeOut")))
+                          .build(), getLifecycle()
       );
     }
   }
@@ -292,9 +275,9 @@ public class WorkerNode extends RegisteringNode
   {
     if (emitter == null) {
       emitter = new ServiceEmitter(
-          PropUtils.getProperty(props, "druid.service"),
-          PropUtils.getProperty(props, "druid.host"),
-          Emitters.create(props, httpClient, getJsonMapper(), lifecycle)
+          PropUtils.getProperty(getProps(), "druid.service"),
+          PropUtils.getProperty(getProps(), "druid.host"),
+          Emitters.create(getProps(), httpClient, getJsonMapper(), getLifecycle())
       );
     }
     EmittingLogger.registerEmitter(emitter);
@@ -305,8 +288,8 @@ public class WorkerNode extends RegisteringNode
     if (s3Service == null) {
       s3Service = new RestS3Service(
           new AWSCredentials(
-              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+              PropUtils.getProperty(getProps(), "com.metamx.aws.accessKey"),
+              PropUtils.getProperty(getProps(), "com.metamx.aws.secretKey")
           )
       );
     }
@@ -324,29 +307,18 @@ public class WorkerNode extends RegisteringNode
   private void initializeMergerConfig()
   {
     if (workerConfig == null) {
-      workerConfig = configFactory.build(WorkerConfig.class);
-    }
-  }
-
-  public void initializeCuratorFramework() throws IOException
-  {
-    if (curatorFramework == null) {
-      final CuratorConfig curatorConfig = configFactory.build(CuratorConfig.class);
-      curatorFramework = Initialization.makeCuratorFrameworkClient(
-          curatorConfig,
-          lifecycle
-      );
+      workerConfig = getConfigFactory().build(WorkerConfig.class);
     }
   }
 
   public void initializeServiceDiscovery() throws Exception
   {
     if (serviceDiscovery == null) {
-      final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
+      final ServiceDiscoveryConfig config = getConfigFactory().build(ServiceDiscoveryConfig.class);
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-          curatorFramework,
+          getCuratorFramework(),
           config,
-          lifecycle
+          getLifecycle()
       );
     }
   }
@@ -357,7 +329,7 @@ public class WorkerNode extends RegisteringNode
       this.coordinatorServiceProvider = Initialization.makeServiceProvider(
           workerConfig.getMasterService(),
           serviceDiscovery,
-          lifecycle
+          getLifecycle()
       );
     }
   }
@@ -367,18 +339,18 @@ public class WorkerNode extends RegisteringNode
     if (workerCuratorCoordinator == null) {
       workerCuratorCoordinator = new WorkerCuratorCoordinator(
           getJsonMapper(),
-          configFactory.build(IndexerZkConfig.class),
-          curatorFramework,
+          getConfigFactory().build(IndexerZkConfig.class),
+          getCuratorFramework(),
           new Worker(workerConfig)
       );
-      lifecycle.addManagedInstance(workerCuratorCoordinator);
+      getLifecycle().addManagedInstance(workerCuratorCoordinator);
     }
   }
 
   private void initializePersistentTaskLogs() throws S3ServiceException
   {
     if (persistentTaskLogs == null) {
-      final TaskLogConfig taskLogConfig = configFactory.build(TaskLogConfig.class);
+      final TaskLogConfig taskLogConfig = getConfigFactory().build(TaskLogConfig.class);
       if (taskLogConfig.getLogStorageBucket() != null) {
         initializeS3Service();
         persistentTaskLogs = new S3TaskLogs(
@@ -396,8 +368,8 @@ public class WorkerNode extends RegisteringNode
   {
     if (forkingTaskRunner == null) {
       forkingTaskRunner = new ForkingTaskRunner(
-          configFactory.build(ForkingTaskRunnerConfig.class),
-          props,
+          getConfigFactory().build(ForkingTaskRunnerConfig.class),
+          getProps(),
           persistentTaskLogs,
           Executors.newFixedThreadPool(workerConfig.getCapacity()),
           getJsonMapper()
@@ -409,6 +381,8 @@ public class WorkerNode extends RegisteringNode
   {
     if (workerTaskMonitor == null) {
       final ExecutorService workerExec = Executors.newFixedThreadPool(workerConfig.getNumThreads());
+      final CuratorFramework curatorFramework = getCuratorFramework();
+
       final PathChildrenCache pathChildrenCache = new PathChildrenCache(
           curatorFramework,
           workerCuratorCoordinator.getTaskPathForWorker(),
@@ -422,13 +396,14 @@ public class WorkerNode extends RegisteringNode
           forkingTaskRunner,
           workerExec
       );
-      lifecycle.addManagedInstance(workerTaskMonitor);
+      getLifecycle().addManagedInstance(workerTaskMonitor);
     }
   }
 
   public static class Builder
   {
     private ObjectMapper jsonMapper = null;
+    private ObjectMapper smileMapper = null;
     private Lifecycle lifecycle = null;
     private Properties props = null;
     private ConfigurationObjectFactory configFactory = null;
@@ -459,8 +434,16 @@ public class WorkerNode extends RegisteringNode
 
     public WorkerNode build()
     {
-      if (jsonMapper == null) {
+      if (jsonMapper == null && smileMapper == null) {
         jsonMapper = new DefaultObjectMapper();
+        smileMapper = new DefaultObjectMapper(new SmileFactory());
+        smileMapper.getJsonFactory().setCodec(smileMapper);
+      } else if (jsonMapper == null || smileMapper == null) {
+        throw new ISE(
+            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
+            jsonMapper,
+            smileMapper
+        );
       }
 
       if (lifecycle == null) {
@@ -475,7 +458,7 @@ public class WorkerNode extends RegisteringNode
         configFactory = Config.createFactory(props);
       }
 
-      return new WorkerNode(props, lifecycle, jsonMapper, configFactory);
+      return new WorkerNode(props, lifecycle, jsonMapper, smileMapper, configFactory);
     }
   }
 }

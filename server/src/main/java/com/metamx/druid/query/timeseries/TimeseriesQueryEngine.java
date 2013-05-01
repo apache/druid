@@ -96,7 +96,7 @@ public class TimeseriesQueryEngine
           @Override
           public void cleanup(Iterator<Result<TimeseriesResultValue>> toClean)
           {
-            // TODO: Let's fix this to actually use Sequences for the closing of stuff
+            // https://github.com/metamx/druid/issues/128
             while (toClean.hasNext()) {
               toClean.next();
             }

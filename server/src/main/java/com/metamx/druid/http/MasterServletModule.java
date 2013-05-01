@@ -22,12 +22,12 @@ package com.metamx.druid.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
-import com.metamx.druid.client.ServerInventoryManager;
-import com.metamx.druid.coordination.DruidClusterInfo;
+import com.google.inject.util.Providers;
+import com.metamx.druid.client.ServerInventoryView;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.master.DruidMaster;
-import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
@@ -37,28 +37,25 @@ import javax.inject.Singleton;
  */
 public class MasterServletModule extends JerseyServletModule
 {
-  private final ServerInventoryManager serverInventoryManager;
+  private final ServerInventoryView serverInventoryView;
   private final DatabaseSegmentManager segmentInventoryManager;
   private final DatabaseRuleManager databaseRuleManager;
-  private final DruidClusterInfo druidClusterInfo;
   private final DruidMaster master;
   private final ObjectMapper jsonMapper;
   private final IndexingServiceClient indexingServiceClient;
 
   public MasterServletModule(
-      ServerInventoryManager serverInventoryManager,
+      ServerInventoryView serverInventoryView,
       DatabaseSegmentManager segmentInventoryManager,
       DatabaseRuleManager databaseRuleManager,
-      DruidClusterInfo druidClusterInfo,
       DruidMaster master,
       ObjectMapper jsonMapper,
       IndexingServiceClient indexingServiceClient
   )
   {
-    this.serverInventoryManager = serverInventoryManager;
+    this.serverInventoryView = serverInventoryView;
     this.segmentInventoryManager = segmentInventoryManager;
     this.databaseRuleManager = databaseRuleManager;
-    this.druidClusterInfo = druidClusterInfo;
     this.master = master;
     this.jsonMapper = jsonMapper;
     this.indexingServiceClient = indexingServiceClient;
@@ -69,12 +66,16 @@ public class MasterServletModule extends JerseyServletModule
   {
     bind(InfoResource.class);
     bind(MasterResource.class);
-    bind(ServerInventoryManager.class).toInstance(serverInventoryManager);
+    bind(ServerInventoryView.class).toInstance(serverInventoryView);
     bind(DatabaseSegmentManager.class).toInstance(segmentInventoryManager);
     bind(DatabaseRuleManager.class).toInstance(databaseRuleManager);
     bind(DruidMaster.class).toInstance(master);
-    bind(DruidClusterInfo.class).toInstance(druidClusterInfo);
-    bind(IndexingServiceClient.class).toInstance(indexingServiceClient);
+    if (indexingServiceClient == null) {
+      bind(IndexingServiceClient.class).toProvider(Providers.<IndexingServiceClient>of(null));
+    }
+    else {
+      bind(IndexingServiceClient.class).toInstance(indexingServiceClient);
+    }
 
     serve("/*").with(GuiceContainer.class);
   }

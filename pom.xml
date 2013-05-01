@@ -38,7 +38,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.21.1-SNAPSHOT</metamx.java-util.version>
+        <metamx.java-util.version>0.22.0</metamx.java-util.version>
+        <netflix.curator.version>2.0.1-21-22</netflix.curator.version>
     </properties>
 
     <modules>
@@ -118,29 +119,35 @@
                 <version>0.9</version>
             </dependency>
             <dependency>
-                <groupId>com.netflix.curator</groupId>
+                <groupId>org.apache.curator</groupId>
                 <artifactId>curator-client</artifactId>
-                <version>1.3.2</version>
+                <version>${netflix.curator.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.netflix.curator</groupId>
+                <groupId>org.apache.curator</groupId>
                 <artifactId>curator-framework</artifactId>
-                <version>1.3.2</version>
+                <version>${netflix.curator.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.netflix.curator</groupId>
+                <groupId>org.apache.curator</groupId>
                 <artifactId>curator-recipes</artifactId>
-                <version>1.3.2</version>
+                <version>${netflix.curator.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.netflix.curator</groupId>
+                <groupId>org.apache.curator</groupId>
                 <artifactId>curator-x-discovery</artifactId>
-                <version>1.3.2</version>
+                <version>${netflix.curator.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.netflix.curator</groupId>
-                <artifactId>curator-test</artifactId>
-                <version>1.2.2</version>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-core</artifactId>
+                <version>0.20.2</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>servlet-api-2.5</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>it.uniroma3.mat</groupId>
@@ -284,11 +291,6 @@
                 <version>1.6.2</version>
             </dependency>
             <dependency>
-                <groupId>com.github.sgroschupf</groupId>
-                <artifactId>zkclient</artifactId>
-                <version>0.1</version>
-            </dependency>
-            <dependency>
                 <groupId>com.google.code.simple-spring-memcached</groupId>
                 <artifactId>spymemcached</artifactId>
                 <version>2.8.4</version>
@@ -308,6 +310,9 @@
                 <artifactId>commons-cli</artifactId>
                 <version>1.2</version>
             </dependency>
+
+
+
             <!-- Test Scope -->
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -316,7 +321,6 @@
                 <scope>test</scope>
                 <version>${metamx.java-util.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
@@ -333,6 +337,12 @@
                 <groupId>com.google.caliper</groupId>
                 <artifactId>caliper</artifactId>
                 <version>0.5-rc1</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-test</artifactId>
+                <version>${netflix.curator.version}</version>
                 <scope>test</scope>
             </dependency>
 

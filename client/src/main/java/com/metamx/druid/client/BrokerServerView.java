@@ -20,25 +20,25 @@
 package com.metamx.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.selector.ServerSelector;
+import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChestWarehouse;
 import com.metamx.http.client.HttpClient;
 
-import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 /**
  */
-public class BrokerServerView implements MutableServerView
+public class BrokerServerView implements TimelineServerView
 {
   private static final Logger log = new Logger(BrokerServerView.class);
 
@@ -47,38 +47,69 @@ public class BrokerServerView implements MutableServerView
   private final ConcurrentMap<DruidServer, DirectDruidClient> clients;
   private final Map<String, ServerSelector> selectors;
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines;
-  private final ConcurrentMap<ServerCallback, Executor> serverCallbacks;
-  private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks;
+
   private final QueryToolChestWarehouse warehose;
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
+  private final ServerView baseView;
 
   public BrokerServerView(
       QueryToolChestWarehouse warehose,
       ObjectMapper smileMapper,
-      HttpClient httpClient
+      HttpClient httpClient,
+      ServerView baseView,
+      ExecutorService exec
   )
   {
     this.warehose = warehose;
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
+    this.baseView = baseView;
 
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
     this.timelines = Maps.newHashMap();
-    this.serverCallbacks = Maps.newConcurrentMap();
-    this.segmentCallbacks = Maps.newConcurrentMap();
+
+    baseView.registerSegmentCallback(
+        exec,
+        new ServerView.SegmentCallback()
+        {
+          @Override
+          public ServerView.CallbackAction segmentAdded(DruidServer server, DataSegment segment)
+          {
+            serverAddedSegment(server, segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentRemoved(final DruidServer server, DataSegment segment)
+          {
+            serverRemovedSegment(server, segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
+    );
+
+    baseView.registerServerCallback(
+        exec,
+        new ServerView.ServerCallback()
+        {
+          @Override
+          public ServerView.CallbackAction serverRemoved(DruidServer server)
+          {
+            removeServer(server);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
+    );
   }
 
-  @Override
   public void clear()
   {
     synchronized (lock) {
       final Iterator<DruidServer> clientsIter = clients.keySet().iterator();
       while (clientsIter.hasNext()) {
-        DruidServer server = clientsIter.next();
         clientsIter.remove();
-        runServerCallbacks(server);
       }
 
       timelines.clear();
@@ -89,47 +120,38 @@ public class BrokerServerView implements MutableServerView
         selectorsIter.remove();
         while (!selector.isEmpty()) {
           final DruidServer pick = selector.pick();
-          runSegmentCallbacks(
-              new Function<SegmentCallback, CallbackAction>()
-              {
-                @Override
-                public CallbackAction apply(@Nullable SegmentCallback input)
-                {
-                  return input.segmentRemoved(pick, selector.getSegment());
-                }
-              }
-          );
           selector.removeServer(pick);
         }
       }
     }
   }
 
-  @Override
-  public void addServer(DruidServer server)
+  private void addServer(DruidServer server)
   {
-    QueryRunner exists = clients.put(server, new DirectDruidClient(warehose, smileMapper, httpClient, server.getHost()));
+    QueryRunner exists = clients.put(server, makeDirectClient(server));
     if (exists != null) {
       log.warn("QueryRunner for server[%s] already existed!?", server);
     }
   }
 
-  @Override
-  public void removeServer(DruidServer server)
+  private DirectDruidClient makeDirectClient(DruidServer server)
+  {
+    return new DirectDruidClient(warehose, smileMapper, httpClient, server.getHost());
+  }
+
+  private void removeServer(DruidServer server)
   {
     clients.remove(server);
     for (DataSegment segment : server.getSegments().values()) {
-      serverRemovedSegment(server, segment.getIdentifier());
+      serverRemovedSegment(server, segment);
     }
-    runServerCallbacks(server);
   }
 
-  @Override
-  public void serverAddedSegment(final DruidServer server, final DataSegment segment)
+  private void serverAddedSegment(final DruidServer server, final DataSegment segment)
   {
     String segmentId = segment.getIdentifier();
     synchronized (lock) {
-      log.info("Adding segment[%s] for server[%s]", segment, server);
+      log.debug("Adding segment[%s] for server[%s]", segment, server);
 
       ServerSelector selector = selectors.get(segmentId);
       if (selector == null) {
@@ -145,28 +167,20 @@ public class BrokerServerView implements MutableServerView
         selectors.put(segmentId, selector);
       }
 
+      if (!clients.containsKey(server)) {
+        addServer(server);
+      }
       selector.addServer(server);
-
-      runSegmentCallbacks(
-          new Function<SegmentCallback, CallbackAction>()
-          {
-            @Override
-            public CallbackAction apply(@Nullable SegmentCallback input)
-            {
-              return input.segmentAdded(server, segment);
-            }
-          }
-      );
     }
   }
 
-  @Override
-  public void serverRemovedSegment(final DruidServer server, final String segmentId)
+  private void serverRemovedSegment(DruidServer server, DataSegment segment)
   {
+    String segmentId = segment.getIdentifier();
     final ServerSelector selector;
 
     synchronized (lock) {
-      log.info("Removing segment[%s] from server[%s].", segmentId, server);
+      log.debug("Removing segment[%s] from server[%s].", segmentId, server);
 
       selector = selectors.get(segmentId);
       if (selector == null) {
@@ -183,34 +197,24 @@ public class BrokerServerView implements MutableServerView
       }
 
       if (selector.isEmpty()) {
-        DataSegment segment = selector.getSegment();
         VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
         selectors.remove(segmentId);
 
-        if (timeline.remove(
-            segment.getInterval(),
-            segment.getVersion(),
-            segment.getShardSpec().createChunk(selector)
-        ) == null) {
+        final PartitionChunk<ServerSelector> removedPartition = timeline.remove(
+            segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)
+        );
+
+        if (removedPartition == null) {
           log.warn(
               "Asked to remove timeline entry[interval: %s, version: %s] that doesn't exist",
               segment.getInterval(),
               segment.getVersion()
           );
         }
-        runSegmentCallbacks(
-            new Function<SegmentCallback, CallbackAction>()
-            {
-              @Override
-              public CallbackAction apply(@Nullable SegmentCallback input)
-              {
-                return input.segmentRemoved(server, selector.getSegment());
-              }
-            }
-        );
       }
     }
   }
+
 
   @Override
   public VersionedIntervalTimeline<String, ServerSelector> getTimeline(String dataSource)
@@ -231,50 +235,12 @@ public class BrokerServerView implements MutableServerView
   @Override
   public void registerServerCallback(Executor exec, ServerCallback callback)
   {
-    serverCallbacks.put(callback, exec);
+    baseView.registerServerCallback(exec, callback);
   }
 
   @Override
   public void registerSegmentCallback(Executor exec, SegmentCallback callback)
   {
-    segmentCallbacks.put(callback, exec);
-  }
-
-  private void runSegmentCallbacks(
-      final Function<SegmentCallback, CallbackAction> fn
-  )
-  {
-    for (final Map.Entry<SegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
-      entry.getValue().execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              if (CallbackAction.UNREGISTER == fn.apply(entry.getKey())) {
-                segmentCallbacks.remove(entry.getKey());
-              }
-            }
-          }
-      );
-    }
-  }
-
-  private void runServerCallbacks(final DruidServer server)
-  {
-    for (final Map.Entry<ServerCallback, Executor> entry : serverCallbacks.entrySet()) {
-      entry.getValue().execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              if (CallbackAction.UNREGISTER == entry.getKey().serverRemoved(server)) {
-                serverCallbacks.remove(entry.getKey());
-              }
-            }
-          }
-      );
-    }
+    baseView.registerSegmentCallback(exec, callback);
   }
 }
