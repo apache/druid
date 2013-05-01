@@ -51,7 +51,7 @@
         <module>merger</module>
         <module>realtime</module>
         <module>examples</module>
-        <module>druid-services</module>
+        <module>services</module>
     </modules>
 
     <dependencyManagement>
