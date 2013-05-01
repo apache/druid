@@ -42,7 +42,6 @@
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-
     </dependencies>
     <build>
         <plugins>
@@ -60,6 +59,23 @@
                             <outputFile>
                                 ${project.build.directory}/${project.artifactId}-${project.version}-selfcontained.jar
                             </outputFile>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>distro-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/assembly.xml</descriptor>
+                            </descriptors>
                         </configuration>
                     </execution>
                 </executions>
