@@ -14,23 +14,18 @@
             </includes>
             <fileMode>0644</fileMode>
         </fileSet>
-    </fileSets>
-    <moduleSets>
-        <moduleSet>
-
-            <!-- Enable access to all projects in the current multimodule build! -->
-            <useAllReactorProjects>true</useAllReactorProjects>
-
-            <!-- Now, select which projects to include in this module-set. -->
+        <fileSet>
+            <directory>/</directory>
             <includes>
-                <include>com.metamx.druid:druid-server</include>
-                <include>com.metamx.druid:druid-indexer</include>
-                <include>com.metamx.druid:druid-realtime</include>
+                <include>LICENSE</include>
             </includes>
-            <binaries>
-                <outputDirectory>modules/${artifactId}</outputDirectory>
-                <unpack>false</unpack>
-            </binaries>
-        </moduleSet>
-    </moduleSets>
+        </fileSet>
+    </fileSets>
+    <dependencySets>
+        <dependencySet>
+            <useProjectArtifact>true</useProjectArtifact>
+            <useTransitiveDependencies>true</useTransitiveDependencies>
+            <outputDirectory>lib/</outputDirectory>
+        </dependencySet>
+    </dependencySets>
 </assembly>
