@@ -42,7 +42,7 @@ public abstract class DbConnectorConfig
   @Config("druid.database.segmentTable")
   public abstract String getSegmentTable();
 
-  @JsonProperty("validationQuery")
+  @JsonProperty("useValidationQuery")
   @Config("druid.database.validation")
   public boolean isValidationQuery() {
     return false;
