@@ -6,8 +6,8 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.merger.worker.config.EventReceiverProviderConfig;
-import com.netflix.curator.x.discovery.ServiceDiscovery;
-import com.netflix.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.ServiceDiscovery;
+import org.apache.curator.x.discovery.ServiceInstance;
 
 import java.util.concurrent.ConcurrentMap;
 

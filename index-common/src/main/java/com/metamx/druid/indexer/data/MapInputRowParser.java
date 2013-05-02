@@ -2,8 +2,6 @@ package com.metamx.druid.indexer.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.druid.input.InputRow;
@@ -30,20 +28,11 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     this.timestampSpec = timestampSpec;
     this.dataSpec = dataSpec;
     this.dimensionExclusions = Sets.newHashSet();
-    Iterables.addAll(
-        this.dimensionExclusions,
-        Iterables.transform(
-            dimensionExclusions == null ? Sets.<String>newHashSet() : Sets.newHashSet(dimensionExclusions),
-            new Function<String, String>()
-            {
-              @Override
-              public String apply(String s)
-              {
-                return s.toLowerCase();
-              }
-            }
-        )
-    );
+    if (dimensionExclusions != null) {
+      for (String dimensionExclusion : dimensionExclusions) {
+        this.dimensionExclusions.add(dimensionExclusion.toLowerCase());
+      }
+    }
     this.dimensionExclusions.add(timestampSpec.getTimestampColumn().toLowerCase());
   }
 

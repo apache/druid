@@ -77,6 +77,14 @@ public interface Task
   public String getType();
 
   /**
+   * Get the nodeType for if/when this task publishes on zookeeper.
+   *
+   * @return the nodeType to use when publishing the server to zookeeper. null if the task doesn't expect to
+   *         publish to zookeeper.
+   */
+  public String getNodeType();
+
+  /**
    * Returns the datasource this task operates on. Each task can operate on only one datasource.
    */
   public String getDataSource();

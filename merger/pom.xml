@@ -93,11 +93,11 @@
             <artifactId>config-magic</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.netflix.curator</groupId>
+            <groupId>org.apache.curator</groupId>
             <artifactId>curator-framework</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.netflix.curator</groupId>
+            <groupId>org.apache.curator</groupId>
             <artifactId>curator-recipes</artifactId>
         </dependency>
         <dependency>
@@ -156,10 +156,6 @@
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.github.sgroschupf</groupId>
-            <artifactId>zkclient</artifactId>
-        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -173,8 +169,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.netflix.curator</groupId>
+            <groupId>org.apache.curator</groupId>
             <artifactId>curator-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

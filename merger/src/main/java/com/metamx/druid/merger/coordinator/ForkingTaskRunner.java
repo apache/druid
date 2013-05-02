@@ -166,6 +166,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
                               }
                             }
 
+                            String nodeType = task.getNodeType();
+                            if (nodeType != null) {
+                              command.add(String.format("-Ddruid.executor.nodeType=%s", nodeType));
+                            }
+
                             command.add(String.format("-Ddruid.host=%s", childHost));
                             command.add(String.format("-Ddruid.port=%d", childPort));
 

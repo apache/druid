@@ -30,10 +30,10 @@ import com.metamx.druid.merger.coordinator.TaskRunner;
 import com.metamx.druid.merger.coordinator.TaskRunnerFactory;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.emitter.EmittingLogger;
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

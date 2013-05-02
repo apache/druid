@@ -21,7 +21,6 @@ package com.metamx.druid.index.v1;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.metamx.druid.QueryGranularity;
-
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.Hours;
@@ -30,6 +29,7 @@ import org.joda.time.Months;
 import org.joda.time.MutableDateTime;
 import org.joda.time.ReadableInterval;
 import org.joda.time.Weeks;
+import org.joda.time.Years;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -384,6 +384,76 @@ public enum IndexGranularity
         public int numIn(ReadableInterval interval)
         {
           return Months.monthsIn(interval).getMonths();
+        }
+      },
+  YEAR
+      {
+        DateTimeFormatter format = DateTimeFormat.forPattern("'y'=yyyy");
+
+        @Override
+        public String toPath(DateTime time)
+        {
+          return format.print(time);
+        }
+
+        @Override
+        public DateTime increment(DateTime time)
+        {
+          return time.plus(Years.ONE);
+        }
+
+        @Override
+        public DateTime increment(DateTime time, int count)
+        {
+          return time.plus(Years.years(count));
+        }
+
+        @Override
+        public long increment(long timeMillis)
+        {
+          return new DateTime(timeMillis).plus(Years.ONE).getMillis();
+        }
+
+        @Override
+        public DateTime decrement(DateTime time)
+        {
+          return time.minus(Years.ONE);
+        }
+
+        @Override
+        public DateTime decrement(DateTime time, int count)
+        {
+          return time.minus(Years.years(count));
+        }
+
+        @Override
+        public long decrement(long timeMillis)
+        {
+          return new DateTime(timeMillis).minus(Years.ONE).getMillis();
+        }
+
+        @Override
+        public long truncate(long timeMillis)
+        {
+          return truncate(new DateTime(timeMillis)).getMillis();
+        }
+
+        @Override
+        public DateTime truncate(DateTime time)
+        {
+          final MutableDateTime mutableDateTime = time.toMutableDateTime();
+
+          mutableDateTime.setMillisOfDay(0);
+          mutableDateTime.setDayOfMonth(1);
+          mutableDateTime.setMonthOfYear(1);
+
+          return mutableDateTime.toDateTime();
+        }
+
+        @Override
+        public int numIn(ReadableInterval interval)
+        {
+          return Years.yearsIn(interval).getYears();
         }
       },
   LATEST

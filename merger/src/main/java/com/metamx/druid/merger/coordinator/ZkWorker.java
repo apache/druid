@@ -27,8 +27,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.worker.Worker;
-import com.netflix.curator.framework.recipes.cache.ChildData;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.ChildData;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 
 import org.joda.time.DateTime;
 

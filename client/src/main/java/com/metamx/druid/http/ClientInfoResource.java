@@ -24,10 +24,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.druid.client.ClientInventoryManager;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
+import com.metamx.druid.client.InventoryView;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -47,20 +47,20 @@ public class ClientInfoResource
 {
   private static final int SEGMENT_HISTORY_MILLIS = 7 * 24 * 60 * 60 * 1000; // ONE WEEK
 
-  private ClientInventoryManager clientInventoryManager;
+  private InventoryView serverInventoryView;
 
   @Inject
   public ClientInfoResource(
-      ClientInventoryManager clientInventoryManager
+      InventoryView serverInventoryView
   )
   {
-    this.clientInventoryManager = clientInventoryManager;
+    this.serverInventoryView = serverInventoryView;
   }
 
   private Map<String, List<DataSegment>> getSegmentsForDatasources()
   {
     final Map<String, List<DataSegment>> dataSourceMap = Maps.newHashMap();
-    for (DruidServer server : clientInventoryManager.getInventory()) {
+    for (DruidServer server : serverInventoryView.getInventory()) {
       for (DruidDataSource dataSource : server.getDataSources()) {
         if (!dataSourceMap.containsKey(dataSource.getName())) {
           dataSourceMap.put(dataSource.getName(), Lists.<DataSegment>newArrayList());

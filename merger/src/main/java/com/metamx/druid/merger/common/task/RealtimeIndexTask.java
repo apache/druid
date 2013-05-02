@@ -22,13 +22,13 @@ package com.metamx.druid.merger.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.druid.Query;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.merger.common.TaskLock;
@@ -38,18 +38,18 @@ import com.metamx.druid.merger.common.actions.LockAcquireAction;
 import com.metamx.druid.merger.common.actions.LockListAction;
 import com.metamx.druid.merger.common.actions.LockReleaseAction;
 import com.metamx.druid.merger.common.actions.SegmentInsertAction;
+import com.metamx.druid.query.FinalizeResultsQueryRunner;
 import com.metamx.druid.query.QueryRunner;
+import com.metamx.druid.query.QueryRunnerFactory;
+import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.realtime.FireDepartmentConfig;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
-import com.metamx.druid.realtime.firehose.Firehose;
+import com.metamx.druid.realtime.Schema;
+import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.druid.realtime.firehose.GracefulShutdownFirehose;
-import com.metamx.druid.realtime.firehose.PredicateFirehose;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.RealtimePlumberSchool;
-import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.realtime.SegmentAnnouncer;
-import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.druid.realtime.plumber.Sink;
 import com.metamx.druid.realtime.plumber.VersioningPolicy;
 import com.metamx.emitter.EmittingLogger;
@@ -57,7 +57,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 
@@ -84,6 +83,9 @@ public class RealtimeIndexTask extends AbstractTask
   private volatile Plumber plumber = null;
 
   @JsonIgnore
+  private volatile TaskToolbox toolbox = null;
+
+  @JsonIgnore
   private volatile GracefulShutdownFirehose firehose = null;
 
   @JsonIgnore
@@ -97,7 +99,7 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("id") String id,
       @JsonProperty("schema") Schema schema,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig, // TODO rename?
+      @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity
   )
@@ -129,10 +131,19 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
+  public String getNodeType()
+  {
+    return "realtime";
+  }
+
+  @Override
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
     if (plumber != null) {
-      return plumber.getQueryRunner(query);
+      QueryRunnerFactory<T, Query<T>> factory = toolbox.getQueryRunnerFactoryConglomerate().findFactory(query);
+      QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
+
+      return new FinalizeResultsQueryRunner<T>(plumber.getQueryRunner(query), toolChest);
     } else {
       return null;
     }
@@ -169,8 +180,8 @@ public class RealtimeIndexTask extends AbstractTask
       firehose = new GracefulShutdownFirehose(firehoseFactory.connect(), segmentGranularity, windowPeriod);
     }
 
-    // TODO -- Take PlumberSchool in constructor (although that will need jackson injectables for stuff like
-    // TODO -- the ServerView, which seems kind of odd?)
+    // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
+    // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
     final RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
         windowPeriod,
         new File(toolbox.getTaskWorkDir(), "persist"),
@@ -179,13 +190,12 @@ public class RealtimeIndexTask extends AbstractTask
 
     final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
 
-    // TODO -- We're adding stuff to talk to the coordinator in various places in the plumber, and may
-    // TODO -- want to be more robust to coordinator downtime (currently we'll block/throw in whatever
-    // TODO -- thread triggered the coordinator behavior, which will typically be either the main
-    // TODO -- data processing loop or the persist thread)
+    // NOTE: We talk to the coordinator in various places in the plumber and we could be more robust to issues
+    // with the coordinator.  Right now, we'll block/throw in whatever thread triggered the coordinator behavior,
+    // which will typically be either the main data processing loop or the persist thread.
 
-    // Wrap default SegmentAnnouncer such that we unlock intervals as we unannounce segments
-    final SegmentAnnouncer lockingSegmentAnnouncer = new SegmentAnnouncer()
+    // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
+    final DataSegmentAnnouncer lockingSegmentAnnouncer = new DataSegmentAnnouncer()
     {
       @Override
       public void announceSegment(final DataSegment segment) throws IOException
@@ -243,6 +253,7 @@ public class RealtimeIndexTask extends AbstractTask
     realtimePlumberSchool.setServerView(toolbox.getNewSegmentServerView());
     realtimePlumberSchool.setServiceEmitter(toolbox.getEmitter());
 
+    this.toolbox = toolbox;
     this.plumber = realtimePlumberSchool.findPlumber(schema, metrics);
 
     try {

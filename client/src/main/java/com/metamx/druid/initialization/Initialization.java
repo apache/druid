@@ -20,39 +20,39 @@
 package com.metamx.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
+import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.ZKPhoneBook;
+import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
 import com.metamx.druid.http.EmittingRequestLogger;
 import com.metamx.druid.http.FileRequestLogger;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.utils.PropUtils;
-import com.metamx.druid.zk.PropertiesZkSerializer;
-import com.metamx.druid.zk.StringZkSerializer;
 import com.metamx.emitter.core.Emitter;
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.CuratorFrameworkFactory;
-import com.netflix.curator.retry.ExponentialBackoffRetry;
-import com.netflix.curator.x.discovery.ServiceDiscovery;
-import com.netflix.curator.x.discovery.ServiceDiscoveryBuilder;
-import com.netflix.curator.x.discovery.ServiceInstance;
-import com.netflix.curator.x.discovery.ServiceProvider;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.ZkConnection;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.BoundedExponentialBackoffRetry;
+import org.apache.curator.x.discovery.ServiceDiscovery;
+import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
+import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.ServiceProvider;
+import org.apache.zookeeper.data.Stat;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.thread.QueuedThreadPool;
+import org.skife.config.ConfigurationObjectFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Properties;
-import java.util.concurrent.Executors;
 
 /**
  */
@@ -60,70 +60,23 @@ public class Initialization
 {
   private static final Logger log = new Logger(Initialization.class);
 
+  private static final String PROPERTIES_FILE = "runtime.properties";
   private static final Properties zkProps = new Properties();
   private static final Properties fileProps = new Properties(zkProps);
   private static Properties props = null;
-  public final static String PROP_SUBPATH = "properties";
-  public final static String[] SUB_PATHS = {"announcements", "servedSegments", "loadQueue", "master"};
-  public final static String[] SUB_PATH_PROPS = {
-      "druid.zk.paths.announcementsPath",
-      "druid.zk.paths.servedSegmentsPath",
-      "druid.zk.paths.loadQueuePath",
-      "druid.zk.paths.masterPath"
-  };
-  public static final String DEFAULT_ZPATH = "/druid";
-
-  public static ZkClient makeZkClient(ZkClientConfig config, Lifecycle lifecycle)
-  {
-    final ZkClient retVal = new ZkClient(
-        new ZkConnection(config.getZkHosts()),
-        config.getConnectionTimeout(),
-        new StringZkSerializer()
-    );
-
-    lifecycle.addHandler(
-        new Lifecycle.Handler()
-        {
-          @Override
-          public void start() throws Exception
-          {
-            retVal.waitUntilConnected();
-          }
-
-          @Override
-          public void stop()
-          {
-            retVal.close();
-          }
-        }
-    );
-
-    return retVal;
-  }
-
-  public static ZKPhoneBook createPhoneBook(
-      ObjectMapper jsonMapper, ZkClient zkClient, String threadNameFormat, Lifecycle lifecycle
-  )
-  {
-    return lifecycle.addManagedInstance(
-        new ZKPhoneBook(
-            jsonMapper,
-            zkClient,
-            Executors.newSingleThreadExecutor(
-                new ThreadFactoryBuilder()
-                    .setDaemon(true)
-                    .setNameFormat(threadNameFormat)
-                    .build()
-            )
-        )
-    );
-  }
 
   /**
    * Load properties.
-   * Properties are layered, high to low precedence:  cmdLine -D, runtime.properties file, stored in zookeeper.
+   * Properties are layered:
+   *
+   * # stored in zookeeper
+   * # runtime.properties file,
+   * # cmdLine -D
+   *
+   * command line overrides runtime.properties which overrides zookeeper
+   *
    * Idempotent. Thread-safe.  Properties are only loaded once.
-   * If property druid.zk.service.host=none then do not load properties from zookeeper.
+   * If property druid.zk.service.host is not set then do not load properties from zookeeper.
    *
    * @return Properties ready to use.
    */
@@ -139,13 +92,11 @@ public class Initialization
     Properties tmp_props = new Properties(fileProps); // the head of the 3 level Properties chain
     tmp_props.putAll(sp);
 
-    final InputStream stream = ClassLoader.getSystemResourceAsStream("runtime.properties");
+    final InputStream stream = ClassLoader.getSystemResourceAsStream(PROPERTIES_FILE);
     if (stream == null) {
-      log.info(
-          "runtime.properties not found as a resource in classpath, relying only on system properties, and zookeeper now."
-      );
+      log.info("%s not found on classpath, relying only on system properties and zookeeper.", PROPERTIES_FILE);
     } else {
-      log.info("Loading properties from runtime.properties");
+      log.info("Loading properties from %s", PROPERTIES_FILE);
       try {
         try {
           fileProps.load(stream);
@@ -159,58 +110,46 @@ public class Initialization
       }
     }
 
-    // log properties from file; note stringPropertyNames() will follow Properties.defaults but
-    //    next level is empty at this point.
+    // log properties from file; stringPropertyNames() would normally cascade down into the sub Properties objects, but
+    //    zkProps (the parent level) is empty at this point so it will only log properties from runtime.properties
     for (String prop : fileProps.stringPropertyNames()) {
       log.info("Loaded(runtime.properties) Property[%s] as [%s]", prop, fileProps.getProperty(prop));
     }
 
-    final String zk_hosts = tmp_props.getProperty("druid.zk.service.host");
+    final String zkHostsProperty = "druid.zk.service.host";
 
-    if (zk_hosts != null) {
-      if (!zk_hosts.equals("none")) { //  get props from zk
-        final ZkClient zkPropLoadingClient;
-        final ZkClientConfig clientConfig = new ZkClientConfig()
-        {
-          @Override
-          public String getZkHosts()
-          {
-            return zk_hosts;
-          }
-        };
+    if (tmp_props.getProperty(zkHostsProperty) != null) {
+      final ConfigurationObjectFactory factory = Config.createFactory(tmp_props);
 
-        zkPropLoadingClient = new ZkClient(
-            new ZkConnection(clientConfig.getZkHosts()),
-            clientConfig.getConnectionTimeout(),
-            new PropertiesZkSerializer()
-        );
-        zkPropLoadingClient.waitUntilConnected();
-        String propertiesZNodePath = tmp_props.getProperty("druid.zk.paths.propertiesPath");
-        if (propertiesZNodePath == null) {
-          String zpathBase = tmp_props.getProperty("druid.zk.paths.base", DEFAULT_ZPATH);
-          propertiesZNodePath = makePropPath(zpathBase);
+      Lifecycle lifecycle = new Lifecycle();
+      try {
+        final ZkPathsConfig config = factory.build(ZkPathsConfig.class);
+        CuratorFramework curator = makeCuratorFramework(factory.build(CuratorConfig.class), lifecycle);
+
+        lifecycle.start();
+
+        final Stat stat = curator.checkExists().forPath(config.getPropertiesPath());
+        if (stat != null) {
+          final byte[] data = curator.getData().forPath(config.getPropertiesPath());
+          zkProps.load(new InputStreamReader(new ByteArrayInputStream(data), Charsets.UTF_8));
         }
-        // get properties stored by zookeeper (lowest precedence)
-        if (zkPropLoadingClient.exists(propertiesZNodePath)) {
-          Properties p = zkPropLoadingClient.readData(propertiesZNodePath, true);
-          if (p != null) {
-            zkProps.putAll(p);
-          }
-        }
+
         // log properties from zk
         for (String prop : zkProps.stringPropertyNames()) {
-          log.info("Loaded(properties stored in zk) Property[%s] as [%s]", prop, zkProps.getProperty(prop));
+          log.info("Loaded(zk) Property[%s] as [%s]", prop, zkProps.getProperty(prop));
         }
-      } // get props from zk
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+      finally {
+        lifecycle.stop();
+      }
     } else {
-      log.warn("property druid.zk.service.host is not set, so no way to contact zookeeper for coordination.");
+      log.warn("property[%s] not set, skipping ZK-specified properties.", zkHostsProperty);
     }
-    // validate properties now that all levels of precedence are loaded
-    if (!validateResolveProps(tmp_props)) {
-      log.error("Properties failed to validate, cannot continue");
-      throw new RuntimeException("Properties failed to validate");
-    }
-    props = tmp_props; // publish
+
+    props = tmp_props;
 
     return props;
   }
@@ -234,7 +173,7 @@ public class Initialization
     return server;
   }
 
-  public static CuratorFramework makeCuratorFrameworkClient(
+  public static CuratorFramework makeCuratorFramework(
       CuratorConfig curatorConfig,
       Lifecycle lifecycle
   ) throws IOException
@@ -242,12 +181,10 @@ public class Initialization
     final CuratorFramework framework =
         CuratorFrameworkFactory.builder()
                                .connectString(curatorConfig.getZkHosts())
-                               .retryPolicy(
-                                   new ExponentialBackoffRetry(
-                                       1000,
-                                       30
-                                   )
-                               )
+                               .sessionTimeoutMs(curatorConfig.getZkSessionTimeoutMs())
+                               .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
+                               // Don't compress stuff written just yet, need to get code deployed first.
+                               .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
                                .build();
 
     lifecycle.addHandler(
@@ -372,11 +309,6 @@ public class Initialization
     );
   }
 
-  public static String makePropPath(String basePath)
-  {
-    return String.format("%s/%s", basePath, PROP_SUBPATH);
-  }
-
   public static ServiceInstance serviceInstance(final String service, final String host, final int port)
   {
     final String address;
@@ -396,105 +328,5 @@ public class Initialization
     } catch (Exception e) {
       throw Throwables.propagate(e);
     }
-  }
-
-  /**
-   * Validate and Resolve Properties.
-   * Resolve zpaths with props like druid.zk.paths.*Path using druid.zk.paths.base value.
-   * Check validity so that if druid.zk.paths.*Path props are set, all are set,
-   * if none set, then construct defaults relative to druid.zk.paths.base and add these
-   * to the properties chain.
-   *
-   * @param props
-   *
-   * @return true if valid zpath properties.
-   */
-  public static boolean validateResolveProps(Properties props)
-  {
-    boolean zpathValidateFailed;//  validate druid.zk.paths.base
-    String propertyZpath = props.getProperty("druid.zk.paths.base");
-    zpathValidateFailed = zpathBaseCheck(propertyZpath, "property druid.zk.paths.base");
-
-    String zpathEffective = DEFAULT_ZPATH;
-    if (propertyZpath != null) {
-      zpathEffective = propertyZpath;
-    }
-
-    final String propertiesZpathOverride = props.getProperty("druid.zk.paths.propertiesPath");
-
-    if (!zpathValidateFailed) {
-      System.out.println("Effective zpath prefix=" + zpathEffective);
-    }
-
-    //    validate druid.zk.paths.*Path properties
-    //
-    // if any zpath overrides are set in properties, they must start with /
-    int zpathOverrideCount = 0;
-    StringBuilder sbErrors = new StringBuilder(100);
-    for (int i = 0; i < SUB_PATH_PROPS.length; i++) {
-      String val = props.getProperty(SUB_PATH_PROPS[i]);
-      if (val != null) {
-        zpathOverrideCount++;
-        if (!val.startsWith("/")) {
-          sbErrors.append(SUB_PATH_PROPS[i]).append("=").append(val).append("\n");
-          zpathValidateFailed = true;
-        }
-      }
-    }
-    // separately check druid.zk.paths.propertiesPath (not in SUB_PATH_PROPS since it is not a "dir")
-    if (propertiesZpathOverride != null) {
-      zpathOverrideCount++;
-      if (!propertiesZpathOverride.startsWith("/")) {
-        sbErrors.append("druid.zk.paths.propertiesPath").append("=").append(propertiesZpathOverride).append("\n");
-        zpathValidateFailed = true;
-      }
-    }
-    if (zpathOverrideCount == 0) {
-      if (propertyZpath == null) { // if default base is used, store it as documentation
-        props.setProperty("druid.zk.paths.base", zpathEffective);
-      }
-      //
-      //   Resolve default zpaths using zpathEffective as base
-      //
-      for (int i = 0; i < SUB_PATH_PROPS.length; i++) {
-        props.setProperty(SUB_PATH_PROPS[i], zpathEffective + "/" + SUB_PATHS[i]);
-      }
-      props.setProperty("druid.zk.paths.propertiesPath", zpathEffective + "/properties");
-    }
-
-    if (zpathValidateFailed) {
-      System.err.println(
-          "When overriding zk zpaths, with properties like druid.zk.paths.*Path " +
-          "the znode path must start with '/' (slash) ; problem overrides:"
-      );
-      System.err.print(sbErrors.toString());
-    }
-
-    return !zpathValidateFailed;
-  }
-
-  /**
-   * Check znode zpath base for proper slash, no trailing slash.
-   *
-   * @param zpathBase      znode base path, if null then this method does nothing.
-   * @param errorMsgPrefix error context to use if errors are emitted, should indicate
-   *                       where the zpathBase value came from.
-   *
-   * @return true if validate failed.
-   */
-  public static boolean zpathBaseCheck(String zpathBase, String errorMsgPrefix)
-  {
-    boolean zpathValidateFailed = false;
-    if (zpathBase != null) {
-      if (!zpathBase.startsWith("/")) {
-        zpathValidateFailed = true;
-        System.err.println(errorMsgPrefix + " must start with '/' (slash); found=" + zpathBase);
-      }
-      if (zpathBase.endsWith("/")) {
-        zpathValidateFailed = true;
-        System.err.println(errorMsgPrefix + " must NOT end with '/' (slash); found=" + zpathBase);
-      }
-    }
-    return zpathValidateFailed;
   }
 }

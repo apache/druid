@@ -19,7 +19,6 @@
 
 package com.metamx.druid.db;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
@@ -33,9 +32,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -51,7 +48,7 @@ public class DatabaseSegmentManagerTest
     dbi = EasyMock.createMock(DBI.class);
     manager = new DatabaseSegmentManager(
         new DefaultObjectMapper(),
-        Executors.newScheduledThreadPool(1),
+        EasyMock.createMock(ScheduledExecutorService.class),
         new DatabaseSegmentManagerConfig()
         {
           @Override
@@ -129,6 +126,7 @@ public class DatabaseSegmentManagerTest
     EasyMock.expect(dbi.withHandle(EasyMock.<HandleCallback>anyObject())).andReturn(testRows);
     EasyMock.replay(dbi);
 
+    manager.start();
     manager.poll();
   }
 }

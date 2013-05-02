@@ -172,7 +172,7 @@ public class IndexerCoordinatorResource
   }
 
   // Legacy endpoint
-  // TODO Remove
+  // TODO remove
   @Deprecated
   @GET
   @Path("/status/{taskid}")
@@ -234,7 +234,9 @@ public class IndexerCoordinatorResource
           {
             final Map<String, Object> retMap;
 
-            // TODO make sure this worker is supposed to be running this task (attempt id? token?)
+            // It would be great to verify that this worker is actually supposed to be running the task before
+            // actually doing the task.  Some ideas for how that could be done would be using some sort of attempt_id
+            // or token that gets passed around.
 
             try {
               final T ret = taskActionClient.submit(holder.getAction());

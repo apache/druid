@@ -75,6 +75,12 @@ public abstract class AbstractTask implements Task
     return groupId;
   }
 
+  @Override
+  public String getNodeType()
+  {
+    return null;
+  }
+
   @JsonProperty
   @Override
   public String getDataSource()
