@@ -77,7 +77,7 @@ public class TaskMasterLifecycle
     this.taskActionClientFactory = taskActionClientFactory;
 
     this.leaderSelector = new LeaderSelector(
-        curator, indexerCoordinatorConfig.getLeaderLatchPath(), new LeaderSelectorListener()
+        curator, indexerCoordinatorConfig.getIndexerLeaderLatchPath(), new LeaderSelectorListener()
     {
       @Override
       public void takeLeadership(CuratorFramework client) throws Exception

@@ -646,7 +646,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
                 getJsonMapper(),
                 getConfigFactory().build(RemoteTaskRunnerConfig.class),
                 curator,
-                new PathChildrenCache(curator, indexerZkConfig.getAnnouncementPath(), true),
+                new PathChildrenCache(curator, indexerZkConfig.getIndexerAnnouncementPath(), true),
                 retryScheduledExec,
                 new RetryPolicyFactory(
                     getConfigFactory().buildWithReplacements(
