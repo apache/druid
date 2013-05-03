@@ -23,8 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.logger.Logger;
-import com.metamx.common.spatial.rtree.ImmutableRTree;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.Indexed;
@@ -56,7 +56,7 @@ public class MMappedIndex
   final Map<String, GenericIndexed<String>> dimValueLookups;
   final Map<String, VSizeIndexed> dimColumns;
   final Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexes;
-  final Map<String, GenericIndexed<ImmutableRTree>> spatialIndexes;
+  final Map<String, ImmutableRTree> spatialIndexes;
 
   private final Map<String, Integer> metricIndexes = Maps.newHashMap();
 
@@ -69,7 +69,7 @@ public class MMappedIndex
       Map<String, GenericIndexed<String>> dimValueLookups,
       Map<String, VSizeIndexed> dimColumns,
       Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexes,
-      Map<String, GenericIndexed<ImmutableRTree>> spatialIndexes
+      Map<String, ImmutableRTree> spatialIndexes
   )
   {
     this.availableDimensions = availableDimensions;
@@ -148,7 +148,7 @@ public class MMappedIndex
     return invertedIndexes;
   }
 
-  public Map<String, GenericIndexed<ImmutableRTree>> getSpatialIndexes()
+  public Map<String, ImmutableRTree> getSpatialIndexes()
   {
     return spatialIndexes;
   }
@@ -187,7 +187,7 @@ public class MMappedIndex
 
     Map<String, VSizeIndexed> dimColumns = Maps.newHashMap();
     Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexes = Maps.newLinkedHashMap();
-    Map<String, GenericIndexed<ImmutableRTree>> spatialIndexes = Maps.newLinkedHashMap();
+    Map<String, ImmutableRTree> spatialIndexes = Maps.newLinkedHashMap();
 
     for (String dimension : Arrays.asList(index.dimensions)) {
       final String[] dimVals = index.reverseDimLookup.get(dimension);
@@ -260,10 +260,7 @@ public class MMappedIndex
           )
       );
 
-      spatialIndexes.put(
-          dimension,
-          GenericIndexed.fromIterable(Arrays.asList(index.getSpatialIndex(dimension)), IndexedRTree.objectStrategy)
-      );
+      spatialIndexes.put(dimension, index.getSpatialIndex(dimension));
     }
 
     log.info("Making MMappedIndex");

@@ -19,12 +19,11 @@
 
 package com.metamx.druid.index.v1;
 
+import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.logger.Logger;
-import com.metamx.common.spatial.rtree.ImmutableRTree;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.Interval;
 
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 

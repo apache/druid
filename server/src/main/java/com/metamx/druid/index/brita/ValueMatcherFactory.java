@@ -20,7 +20,7 @@
 package com.metamx.druid.index.brita;
 
 import com.google.common.base.Predicate;
-import com.metamx.common.spatial.rtree.search.Bound;
+import com.metamx.collections.spatial.search.Bound;
 
 /**
  */

@@ -21,7 +21,7 @@ package com.metamx.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.metamx.common.spatial.rtree.search.Bound;
+import com.metamx.collections.spatial.search.Bound;
 
 import java.nio.ByteBuffer;
 

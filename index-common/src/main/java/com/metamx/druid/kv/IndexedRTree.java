@@ -1,7 +1,7 @@
 package com.metamx.druid.kv;
 
 import com.google.common.collect.Ordering;
-import com.metamx.common.spatial.rtree.ImmutableRTree;
+import com.metamx.collections.spatial.ImmutableRTree;
 
 import java.nio.ByteBuffer;
 

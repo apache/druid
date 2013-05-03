@@ -25,6 +25,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -57,6 +58,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -82,6 +84,7 @@ public class IncrementalIndex implements Iterable<Row>
   private final ImmutableList<String> metricNames;
   private final LinkedHashMap<String, Integer> dimensionOrder;
   private final CopyOnWriteArrayList<String> dimensions;
+  private final SpatialDimensionRowFormatter spatialDimensionRowFormatter;
   private final DimensionHolder dimValues;
   private final ConcurrentSkipListMap<TimeAndDims, Aggregator[]> facts;
 
@@ -90,15 +93,11 @@ public class IncrementalIndex implements Iterable<Row>
   // This is modified on add() by a (hopefully) single thread.
   private InputRow in;
 
-  public IncrementalIndex(
-      long minTimestamp,
-      QueryGranularity gran,
-      final AggregatorFactory[] metrics
-  )
+  public IncrementalIndex(IncrementalIndexSchema incrementalIndexSchema)
   {
-    this.minTimestamp = minTimestamp;
-    this.gran = gran;
-    this.metrics = metrics;
+    this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
+    this.gran = incrementalIndexSchema.getGran();
+    this.metrics = incrementalIndexSchema.getMetrics();
 
     final ImmutableList.Builder<String> metricNamesBuilder = ImmutableList.builder();
     final ImmutableMap.Builder<String, Integer> metricIndexesBuilder = ImmutableMap.builder();
@@ -115,9 +114,29 @@ public class IncrementalIndex implements Iterable<Row>
 
     this.dimensionOrder = Maps.newLinkedHashMap();
     this.dimensions = new CopyOnWriteArrayList<String>();
-    this.dimValues = new DimensionHolder();
+    int index = 0;
+    for (String dim : incrementalIndexSchema.getDimensions()) {
+      dimensionOrder.put(dim, index++);
+      dimensions.add(dim);
+    }
+    this.spatialDimensionRowFormatter = new SpatialDimensionRowFormatter(incrementalIndexSchema.getSpatialDimensions());
 
+    this.dimValues = new DimensionHolder();
     this.facts = new ConcurrentSkipListMap<TimeAndDims, Aggregator[]>();
+  }
+
+  public IncrementalIndex(
+      long minTimestamp,
+      QueryGranularity gran,
+      final AggregatorFactory[] metrics
+  )
+  {
+    this(
+        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
+                                            .withQueryGranularity(gran)
+                                            .withMetrics(metrics)
+                                            .build()
+    );
   }
 
   /**
@@ -132,6 +151,8 @@ public class IncrementalIndex implements Iterable<Row>
    */
   public int add(InputRow row)
   {
+    row = spatialDimensionRowFormatter.formatRow(row);
+
     if (row.getTimestampFromEpoch() < minTimestamp) {
       throw new IAE("Cannot add row[%s] because it is below the minTimestamp[%s]", row, new DateTime(minTimestamp));
     }
@@ -143,13 +164,6 @@ public class IncrementalIndex implements Iterable<Row>
     for (String dimension : rowDimensions) {
       dimension = dimension.toLowerCase();
       List<String> dimensionValues = row.getDimension(dimension);
-
-      // FIXME: Must be a better way to do this
-      // Join all coordinate dimension values into a single string for bitmap indexing
-      // Split this string for spatial indexing
-      if (dimension.endsWith(".geo")) {
-        dimensionValues = Arrays.asList(JOINER.join(dimensionValues));
-      }
 
       final Integer index = dimensionOrder.get(dimension);
       if (index == null) {
@@ -237,7 +251,7 @@ public class IncrementalIndex implements Iterable<Row>
                 final String typeName = agg.getTypeName();
                 final String columnName = column.toLowerCase();
 
-                if(typeName.equals("float")) {
+                if (typeName.equals("float")) {
                   return new ObjectColumnSelector<Float>()
                   {
                     @Override

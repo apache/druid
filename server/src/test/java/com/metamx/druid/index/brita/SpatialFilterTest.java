@@ -3,8 +3,8 @@ package com.metamx.druid.index.brita;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.common.spatial.rtree.search.RadiusBound;
-import com.metamx.common.spatial.rtree.search.RectangularBound;
+import com.metamx.collections.spatial.search.RadiusBound;
+import com.metamx.collections.spatial.search.RectangularBound;
 import com.metamx.druid.Druids;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.TestHelper;
@@ -16,9 +16,10 @@ import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.QueryableIndexSegment;
 import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.v1.IncrementalIndex;
+import com.metamx.druid.index.v1.IncrementalIndexSchema;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.index.v1.TestIndex;
+import com.metamx.druid.index.v1.SpatialDimensionSchema;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.query.FinalizeResultsQueryRunner;
 import com.metamx.druid.query.QueryRunner;
@@ -52,7 +53,7 @@ public class SpatialFilterTest
       new LongSumAggregatorFactory("val", "val")
   };
 
-  private static List<String> DIMS = Lists.newArrayList("dim", "dim.geo");
+  private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long");
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
@@ -78,9 +79,17 @@ public class SpatialFilterTest
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
     IncrementalIndex theIndex = new IncrementalIndex(
-        DATA_INTERVAL.getStartMillis(),
-        QueryGranularity.DAY,
-        METRIC_AGGS
+        new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                                            .withQueryGranularity(QueryGranularity.DAY)
+                                            .withMetrics(METRIC_AGGS)
+                                            .withSpatialDimensions(
+                                                Arrays.asList(
+                                                    new SpatialDimensionSchema(
+                                                        "dim.geo",
+                                                        Arrays.asList("lat", "long")
+                                                    )
+                                                )
+                                            ).build()
     );
     theIndex.add(
         new MapBasedInputRow(
@@ -89,7 +98,8 @@ public class SpatialFilterTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-01").toString(),
                 "dim", "foo",
-                "dim.geo", Arrays.asList(0.0f, 0.0f),
+                "lat", 0.0f,
+                "long", 0.0f,
                 "val", 17l
             )
         )
@@ -101,7 +111,8 @@ public class SpatialFilterTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-02").toString(),
                 "dim", "foo",
-                "dim.geo", Arrays.asList(1.0f, 3.0f),
+                "lat", 1.0f,
+                "long", 3.0f,
                 "val", 29l
             )
         )
@@ -113,7 +124,8 @@ public class SpatialFilterTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-03").toString(),
                 "dim", "foo",
-                "dim.geo", Arrays.asList(4.0f, 2.0f),
+                "lat", 4.0f,
+                "long", 2.0f,
                 "val", 13l
             )
         )
@@ -125,7 +137,8 @@ public class SpatialFilterTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-04").toString(),
                 "dim", "foo",
-                "dim.geo", Arrays.asList(7.0f, 3.0f),
+                "lat", 7.0f,
+                "long", 3.0f,
                 "val", 91l
             )
         )
@@ -137,7 +150,8 @@ public class SpatialFilterTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-05").toString(),
                 "dim", "foo",
-                "dim.geo", Arrays.asList(8.0f, 6.0f),
+                "lat", 8.0f,
+                "long", 6.0f,
                 "val", 47l
             )
         )
@@ -151,14 +165,11 @@ public class SpatialFilterTest
               new DateTime("2013-01-01").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp",
-                  new DateTime("2013-01-01").toString(),
-                  "dim",
-                  "boo",
-                  "dim.geo",
-                  Arrays.asList((float) (rand.nextFloat() * 10 + 10.0), (float) (rand.nextFloat() * 10 + 10.0)),
-                  "val",
-                  i
+                  "timestamp", new DateTime("2013-01-01").toString(),
+                  "dim", "boo",
+                  "lat", (float) (rand.nextFloat() * 10 + 10.0),
+                  "long", (float) (rand.nextFloat() * 10 + 10.0),
+                  "val", i
               )
           )
       );
@@ -183,19 +194,43 @@ public class SpatialFilterTest
   {
     try {
       IncrementalIndex first = new IncrementalIndex(
-          DATA_INTERVAL.getStartMillis(),
-          QueryGranularity.DAY,
-          METRIC_AGGS
+          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                                              .withQueryGranularity(QueryGranularity.DAY)
+                                              .withMetrics(METRIC_AGGS)
+                                              .withSpatialDimensions(
+                                                  Arrays.asList(
+                                                      new SpatialDimensionSchema(
+                                                          "dim.geo",
+                                                          Arrays.asList("lat", "long")
+                                                      )
+                                                  )
+                                              ).build()
       );
       IncrementalIndex second = new IncrementalIndex(
-          DATA_INTERVAL.getStartMillis(),
-          QueryGranularity.DAY,
-          METRIC_AGGS
+          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                                              .withQueryGranularity(QueryGranularity.DAY)
+                                              .withMetrics(METRIC_AGGS)
+                                              .withSpatialDimensions(
+                                                  Arrays.asList(
+                                                      new SpatialDimensionSchema(
+                                                          "dim.geo",
+                                                          Arrays.asList("lat", "long")
+                                                      )
+                                                  )
+                                              ).build()
       );
       IncrementalIndex third = new IncrementalIndex(
-          DATA_INTERVAL.getStartMillis(),
-          QueryGranularity.DAY,
-          METRIC_AGGS
+          new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
+                                              .withQueryGranularity(QueryGranularity.DAY)
+                                              .withMetrics(METRIC_AGGS)
+                                              .withSpatialDimensions(
+                                                  Arrays.asList(
+                                                      new SpatialDimensionSchema(
+                                                          "dim.geo",
+                                                          Arrays.asList("lat", "long")
+                                                      )
+                                                  )
+                                              ).build()
       );
 
 

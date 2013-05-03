@@ -34,6 +34,10 @@ import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
+import com.metamx.collections.spatial.ImmutableRTree;
+import com.metamx.collections.spatial.RTree;
+import com.metamx.collections.spatial.search.RadiusBound;
+import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
@@ -41,9 +45,6 @@ import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.common.io.smoosh.Smoosh;
 import com.metamx.common.logger.Logger;
-import com.metamx.common.spatial.rtree.ImmutableRTree;
-import com.metamx.common.spatial.rtree.RTree;
-import com.metamx.common.spatial.rtree.split.LinearGutmanSplitStrategy;
 import com.metamx.druid.CombiningIterable;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.ToLowerCaseAggregatorFactory;
@@ -52,8 +53,9 @@ import com.metamx.druid.guava.GuavaUtils;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
+import com.metamx.druid.kv.ByteBufferWriter;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
-import com.metamx.druid.kv.FlattenedArrayWriter;
+import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.IOPeon;
 import com.metamx.druid.kv.Indexed;
@@ -453,7 +455,7 @@ public class IndexMerger
     }
 
     for (String dimension : mergedDimensions) {
-      final FlattenedArrayWriter<String> writer = new FlattenedArrayWriter<String>(
+      final GenericIndexedWriter<String> writer = new GenericIndexedWriter<String>(
           ioPeon, dimension, GenericIndexed.stringStrategy
       );
       writer.open();
@@ -708,7 +710,7 @@ public class IndexMerger
       Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.stringStrategy);
       log.info("Starting dimension[%s] with cardinality[%,d]", dimension, dimVals.size());
 
-      FlattenedArrayWriter<ImmutableConciseSet> writer = new FlattenedArrayWriter<ImmutableConciseSet>(
+      GenericIndexedWriter<ImmutableConciseSet> writer = new GenericIndexedWriter<ImmutableConciseSet>(
           ioPeon, dimension, ConciseCompressedIndexedInts.objectStrategy
       );
       writer.open();
@@ -757,6 +759,10 @@ public class IndexMerger
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       String dimension = mergedDimensions.get(i);
 
+      if (!dimension.endsWith(".geo")) {
+        continue;
+      }
+
       File dimOutFile = dimOuts.get(i).getFile();
       final MappedByteBuffer dimValsMapped = Files.map(dimOutFile);
 
@@ -766,26 +772,24 @@ public class IndexMerger
       Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.stringStrategy);
       log.info("Indexing geo dimension[%s] with cardinality[%,d]", dimension, dimVals.size());
 
-      FlattenedArrayWriter<ImmutableRTree> writer = new FlattenedArrayWriter<ImmutableRTree>(
+      ByteBufferWriter<ImmutableRTree> writer = new ByteBufferWriter<ImmutableRTree>(
           ioPeon, dimension, IndexedRTree.objectStrategy
       );
       writer.open();
 
       RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50));
 
-      if (dimension.endsWith(".geo")) {
-        int count = 0;
-        for (String dimVal : IndexedIterable.create(dimVals)) {
-          progress.progress();
+      int count = 0;
+      for (String dimVal : IndexedIterable.create(dimVals)) {
+        progress.progress();
 
-          List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
-          float[] coords = new float[stringCoords.size()];
-          for (int j = 0; j < coords.length; j++) {
-            coords[j] = Float.valueOf(stringCoords.get(j));
-          }
-          tree.insert(coords, count);
-          count++;
+        List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
+        float[] coords = new float[stringCoords.size()];
+        for (int j = 0; j < coords.length; j++) {
+          coords[j] = Float.valueOf(stringCoords.get(j));
         }
+        tree.insert(coords, count);
+        count++;
       }
 
       writer.write(ImmutableRTree.newImmutableFromMutable(tree));

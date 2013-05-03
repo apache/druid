@@ -21,10 +21,12 @@ package com.metamx.druid.index.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.primitives.Ints;
+import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
-import com.metamx.common.spatial.rtree.ImmutableRTree;
 import com.metamx.druid.index.column.ColumnBuilder;
 import com.metamx.druid.index.column.ValueType;
+import com.metamx.druid.kv.ByteBufferSerializer;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.IndexedRTree;
@@ -50,7 +52,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   private final VSizeIndexedInts singleValuedColumn;
   private final VSizeIndexed multiValuedColumn;
   private final GenericIndexed<ImmutableConciseSet> bitmaps;
-  private final GenericIndexed<ImmutableRTree> spatialIndex;
+  private final ImmutableRTree spatialIndex;
 
   private final int size;
 
@@ -59,7 +61,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       VSizeIndexedInts singleValCol,
       VSizeIndexed multiValCol,
       GenericIndexed<ImmutableConciseSet> bitmaps,
-      GenericIndexed<ImmutableRTree> spatialIndex
+      ImmutableRTree spatialIndex
   )
   {
     this.dictionary = dictionary;
@@ -78,7 +80,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     }
     size += bitmaps.getSerializedSize();
     if (spatialIndex != null) {
-      size += spatialIndex.getSerializedSize();
+      size += spatialIndex.size() + Ints.BYTES;
     }
 
     this.size = size;
@@ -117,7 +119,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       multiValuedColumn.writeToChannel(channel);
     }
     bitmaps.writeToChannel(channel);
-    spatialIndex.writeToChannel(channel);
+    if (spatialIndex != null) {
+      ByteBufferSerializer.writeToChannel(spatialIndex, IndexedRTree.objectStrategy, channel);
+    }
   }
 
   @Override
@@ -146,9 +150,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         buffer, ConciseCompressedIndexedInts.objectStrategy
     );
 
-    GenericIndexed<ImmutableRTree> spatialIndex = null;
+    ImmutableRTree spatialIndex = null;
     if (buffer.hasRemaining()) {
-      spatialIndex = GenericIndexed.read(
+      spatialIndex = ByteBufferSerializer.read(
           buffer, IndexedRTree.objectStrategy
       );
     }

@@ -25,7 +25,7 @@ import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.collect.StupidResourceHolder;
-import com.metamx.druid.kv.FlattenedArrayWriter;
+import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.IOPeon;
 
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class CompressedFloatsSupplierSerializer
   {
     final CompressedFloatsSupplierSerializer retVal = new CompressedFloatsSupplierSerializer(
         sizePer,
-        new FlattenedArrayWriter<ResourceHolder<FloatBuffer>>(
+        new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
             ioPeon, filenameBase, CompressedFloatBufferObjectStrategy.getBufferForOrder(order)
         )
     );
@@ -58,7 +58,7 @@ public class CompressedFloatsSupplierSerializer
   }
 
   private final int sizePer;
-  private final FlattenedArrayWriter<ResourceHolder<FloatBuffer>> flattener;
+  private final GenericIndexedWriter<ResourceHolder<FloatBuffer>> flattener;
 
   private int numInserted = 0;
 
@@ -66,7 +66,7 @@ public class CompressedFloatsSupplierSerializer
 
   public CompressedFloatsSupplierSerializer(
       int sizePer,
-      FlattenedArrayWriter<ResourceHolder<FloatBuffer>> flattener
+      GenericIndexedWriter<ResourceHolder<FloatBuffer>> flattener
   )
   {
     this.sizePer = sizePer;

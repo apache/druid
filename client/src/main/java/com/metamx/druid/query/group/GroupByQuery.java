@@ -49,7 +49,7 @@ public class GroupByQuery extends BaseQuery<Row>
     return new Builder();
   }
 
-  private final int threshold;
+  private final LimitSpec limitSpec;
   private final DimFilter dimFilter;
   private final QueryGranularity granularity;
   private final List<DimensionSpec> dimensions;
@@ -60,7 +60,7 @@ public class GroupByQuery extends BaseQuery<Row>
   public GroupByQuery(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
-      @JsonProperty("threshold") int threshold,
+      @JsonProperty("limitSpec") LimitSpec limitSpec,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
@@ -70,7 +70,7 @@ public class GroupByQuery extends BaseQuery<Row>
   )
   {
     super(dataSource, querySegmentSpec, context);
-    this.threshold = threshold;
+    this.limitSpec = (limitSpec == null) ? new DefaultLimitSpec() : limitSpec;
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions == null ? ImmutableList.<DimensionSpec>of() : dimensions;
@@ -82,10 +82,10 @@ public class GroupByQuery extends BaseQuery<Row>
     Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
 
-  @JsonProperty("threshold")
-  public int getThreshold()
+  @JsonProperty
+  public LimitSpec getLimitSpec()
   {
-    return threshold;
+    return limitSpec;
   }
 
   @JsonProperty("filter")
@@ -136,7 +136,7 @@ public class GroupByQuery extends BaseQuery<Row>
     return new GroupByQuery(
         getDataSource(),
         getQuerySegmentSpec(),
-        threshold,
+        limitSpec,
         dimFilter,
         granularity,
         dimensions,
@@ -152,7 +152,7 @@ public class GroupByQuery extends BaseQuery<Row>
     return new GroupByQuery(
         getDataSource(),
         spec,
-        threshold,
+        limitSpec,
         dimFilter,
         granularity,
         dimensions,
@@ -166,7 +166,7 @@ public class GroupByQuery extends BaseQuery<Row>
   {
     private String dataSource;
     private QuerySegmentSpec querySegmentSpec;
-    private int threshold;
+    private LimitSpec limitSpec;
     private DimFilter dimFilter;
     private QueryGranularity granularity;
     private List<DimensionSpec> dimensions;
@@ -180,7 +180,7 @@ public class GroupByQuery extends BaseQuery<Row>
     {
       dataSource = builder.dataSource;
       querySegmentSpec = builder.querySegmentSpec;
-      threshold = builder.threshold;
+      limitSpec = builder.limitSpec;
       dimFilter = builder.dimFilter;
       granularity = builder.granularity;
       dimensions = builder.dimensions;
@@ -200,9 +200,9 @@ public class GroupByQuery extends BaseQuery<Row>
       return setQuerySegmentSpec(new LegacySegmentSpec(interval));
     }
 
-    public Builder setThreshold(int threshold)
+    public Builder setLimitSpec(LimitSpec limitSpec)
     {
-      this.threshold = threshold;
+      this.limitSpec = limitSpec;
       return this;
     }
 
@@ -298,7 +298,7 @@ public class GroupByQuery extends BaseQuery<Row>
       return new GroupByQuery(
           dataSource,
           querySegmentSpec,
-          threshold,
+          limitSpec,
           dimFilter,
           granularity,
           dimensions,

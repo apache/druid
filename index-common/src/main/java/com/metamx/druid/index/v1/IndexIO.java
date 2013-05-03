@@ -31,6 +31,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.io.smoosh.FileSmoosher;
@@ -38,7 +39,6 @@ import com.metamx.common.io.smoosh.Smoosh;
 import com.metamx.common.io.smoosh.SmooshedFileMapper;
 import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
-import com.metamx.common.spatial.rtree.ImmutableRTree;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.SimpleQueryableIndex;
 import com.metamx.druid.index.column.Column;
@@ -57,6 +57,7 @@ import com.metamx.druid.index.serde.LongGenericColumnSupplier;
 import com.metamx.druid.index.serde.SpatialIndexColumnPartSupplier;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.kv.ArrayIndexed;
+import com.metamx.druid.kv.ByteBufferSerializer;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.IndexedIterable;
@@ -333,7 +334,7 @@ public class IndexIO
       Map<String, GenericIndexed<String>> dimValueLookups = Maps.newHashMap();
       Map<String, VSizeIndexed> dimColumns = Maps.newHashMap();
       Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexed = Maps.newHashMap();
-      Map<String, GenericIndexed<ImmutableRTree>> spatialIndexed = Maps.newHashMap();
+      Map<String, ImmutableRTree> spatialIndexed = Maps.newHashMap();
 
       for (String dimension : IndexedIterable.create(availableDimensions)) {
         ByteBuffer dimBuffer = smooshedFiles.mapFile(makeDimFile(inDir, dimension).getName());
@@ -358,13 +359,11 @@ public class IndexIO
       }
 
       ByteBuffer spatialBuffer = smooshedFiles.mapFile("spatial.drd");
-      if (spatialBuffer != null) {
-        for (String dimension : IndexedIterable.create(availableDimensions)) {
-          spatialIndexed.put(
-              serializerUtils.readString(spatialBuffer),
-              GenericIndexed.read(spatialBuffer, IndexedRTree.objectStrategy)
-          );
-        }
+      while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
+        spatialIndexed.put(
+            serializerUtils.readString(spatialBuffer),
+            ByteBufferSerializer.read(spatialBuffer, IndexedRTree.objectStrategy)
+        );
       }
 
       final MMappedIndex retVal = new MMappedIndex(
@@ -422,12 +421,12 @@ public class IndexIO
         );
       }
 
-      Map<String, GenericIndexed<ImmutableRTree>> spatialIndexes = Maps.newHashMap();
+      Map<String, ImmutableRTree> spatialIndexes = Maps.newHashMap();
       final ByteBuffer spatialBuffer = v8SmooshedFiles.mapFile("spatial.drd");
       while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
         spatialIndexes.put(
             serializerUtils.readString(spatialBuffer),
-            GenericIndexed.read(spatialBuffer, IndexedRTree.objectStrategy)
+            ByteBufferSerializer.read(spatialBuffer, IndexedRTree.objectStrategy)
         );
       }
 
@@ -464,7 +463,7 @@ public class IndexIO
           VSizeIndexedInts singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
           GenericIndexed<ImmutableConciseSet> bitmaps = bitmapIndexes.get(dimension);
-          GenericIndexed<ImmutableRTree> spatialIndex = spatialIndexes.get(dimension);
+          ImmutableRTree spatialIndex = spatialIndexes.get(dimension);
 
           boolean onlyOneValue = true;
           ConciseSet nullsSet = null;

@@ -19,7 +19,7 @@
 
 package com.metamx.druid.index.brita;
 
-import com.metamx.common.spatial.rtree.ImmutableRTree;
+import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.druid.kv.Indexed;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 

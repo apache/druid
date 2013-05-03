@@ -19,7 +19,7 @@
 package com.metamx.druid.index.serde;
 
 import com.google.common.base.Supplier;
-import com.metamx.common.spatial.rtree.ImmutableRTree;
+import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.druid.index.column.SpatialIndex;
 import com.metamx.druid.kv.GenericIndexed;
 
@@ -29,13 +29,13 @@ public class SpatialIndexColumnPartSupplier implements Supplier<SpatialIndex>
 {
   private static final ImmutableRTree EMPTY_SET = new ImmutableRTree();
 
-  private final GenericIndexed<ImmutableRTree> indexedTree;
+  private final ImmutableRTree indexedTree;
 
   public SpatialIndexColumnPartSupplier(
-      GenericIndexed<ImmutableRTree> indexedTree
+      ImmutableRTree indexedTree
   )
   {
-    this.indexedTree = indexedTree;
+    this.indexedTree = (indexedTree == null) ? EMPTY_SET : indexedTree;
   }
 
   @Override
@@ -46,8 +46,7 @@ public class SpatialIndexColumnPartSupplier implements Supplier<SpatialIndex>
       @Override
       public ImmutableRTree getRTree()
       {
-        // There is only ever 1 RTree per dimension
-        return indexedTree.get(0);
+        return indexedTree;
       }
     };
   }
