@@ -25,8 +25,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Longs;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.ConcatSequence;
@@ -50,7 +48,6 @@ import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
 import javax.annotation.Nullable;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -159,15 +156,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         }
     );
 
-    // sort results to be returned
-    if (!query.getLimitSpec().getOrderBy().isEmpty()) {
-      retVal = Sequences.sort(retVal, query.getLimitSpec().getComparator());
-    }
-
-    return Sequences.limit(
-        retVal,
-        (query.getLimitSpec().getLimit() > 0) ? query.getLimitSpec().getLimit() : maxRows
-    );
+    return query.applyLimit(retVal);
   }
 
   @Override
