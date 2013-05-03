@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.merger.common.actions.TaskActionClient;
@@ -68,6 +69,7 @@ public class TaskMasterLifecycle
       final TaskRunnerFactory runnerFactory,
       final ResourceManagementSchedulerFactory managementSchedulerFactory,
       final CuratorFramework curator,
+      final ServiceAnnouncer serviceAnnouncer,
       final ServiceEmitter emitter
   )
   {
@@ -101,7 +103,7 @@ public class TaskMasterLifecycle
           final Lifecycle leaderLifecycle = new Lifecycle();
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addManagedInstance(taskRunner);
-          Initialization.makeServiceDiscoveryClient(curator, serviceDiscoveryConfig, leaderLifecycle);
+          Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, leaderLifecycle);
           leaderLifecycle.addManagedInstance(taskConsumer);
           leaderLifecycle.addManagedInstance(resourceManagementScheduler);
 

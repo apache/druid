@@ -36,6 +36,10 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.BaseServerNode;
+import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
+import com.metamx.druid.curator.discovery.NoopServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusServlet;
@@ -111,6 +115,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private DataSegmentPusher segmentPusher = null;
   private TaskToolboxFactory taskToolboxFactory = null;
   private ServiceDiscovery serviceDiscovery = null;
+  private ServiceAnnouncer serviceAnnouncer = null;
   private ServiceProvider coordinatorServiceProvider = null;
   private Server server = null;
   private ExecutorServiceTaskRunner taskRunner = null;
@@ -186,7 +191,6 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     initializeMonitors();
     initializeMergerConfig();
     initializeServiceDiscovery();
-    initializeCoordinatorServiceProvider();
     initializeDataSegmentPusher();
     initializeTaskToolbox();
     initializeTaskRunner();
@@ -387,16 +391,16 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
 
   public void initializeServiceDiscovery() throws Exception
   {
+    final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
     if (serviceDiscovery == null) {
-      final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
           getCuratorFramework(), config, lifecycle
       );
     }
-  }
-
-  public void initializeCoordinatorServiceProvider()
-  {
+    if (serviceAnnouncer == null) {
+      final ServiceInstanceFactory instanceFactory = Initialization.makeServiceInstanceFactory(config);
+      this.serviceAnnouncer = new CuratorServiceAnnouncer(serviceDiscovery, instanceFactory);
+    }
     if (coordinatorServiceProvider == null) {
       this.coordinatorServiceProvider = Initialization.makeServiceProvider(
           workerConfig.getMasterService(),
@@ -425,9 +429,17 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   public void initializeEventReceiverProvider()
   {
     if (eventReceiverProvider == null) {
+      final EventReceiverProviderConfig config = configFactory.build(EventReceiverProviderConfig.class);
+      final ServiceAnnouncer myServiceAnnouncer;
+      if (config.getServiceFormat() == null) {
+        log.info("EventReceiverProvider: Using NoopServiceAnnouncer. Good luck finding your firehoses!");
+        myServiceAnnouncer = new NoopServiceAnnouncer();
+      } else {
+        myServiceAnnouncer = serviceAnnouncer;
+      }
       this.eventReceiverProvider = new EventReceiverProvider(
-          configFactory.build(EventReceiverProviderConfig.class),
-          serviceDiscovery
+          config,
+          myServiceAnnouncer
       );
     }
   }

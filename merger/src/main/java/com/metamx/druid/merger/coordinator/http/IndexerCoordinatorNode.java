@@ -46,6 +46,9 @@ import com.metamx.druid.QueryableNode;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
+import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.GuiceServletConfig;
@@ -111,6 +114,7 @@ import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
@@ -152,6 +156,8 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   private DBI dbi = null;
   private IndexerCoordinatorConfig config = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
+  private ServiceDiscovery serviceDiscovery = null;
+  private ServiceAnnouncer serviceAnnouncer = null;
   private TaskStorage taskStorage = null;
   private TaskQueue taskQueue = null;
   private TaskLockbox taskLockbox = null;
@@ -256,6 +262,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     initializeMergeDBCoordinator();
     initializeJacksonSubtypes();
     initializeJacksonInjections();
+    initializeServiceDiscovery();
     initializeTaskStorage();
     initializeTaskLockbox();
     initializeTaskQueue();
@@ -365,6 +372,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
           taskRunnerFactory,
           resourceManagementSchedulerFactory,
           getCuratorFramework(),
+          serviceAnnouncer,
           emitter
       );
       getLifecycle().addManagedInstance(taskMasterLifecycle);
@@ -553,6 +561,20 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
           dbConnectorConfig,
           dbi
       );
+    }
+  }
+
+  public void initializeServiceDiscovery() throws Exception
+  {
+    final ServiceDiscoveryConfig config = getConfigFactory().build(ServiceDiscoveryConfig.class);
+    if (serviceDiscovery == null) {
+      this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
+          getCuratorFramework(), config, getLifecycle()
+      );
+    }
+    if (serviceAnnouncer == null) {
+      final ServiceInstanceFactory instanceFactory = Initialization.makeServiceInstanceFactory(config);
+      this.serviceAnnouncer = new CuratorServiceAnnouncer(serviceDiscovery, instanceFactory);
     }
   }
 

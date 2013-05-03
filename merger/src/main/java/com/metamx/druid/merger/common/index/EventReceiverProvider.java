@@ -4,10 +4,9 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.merger.worker.config.EventReceiverProviderConfig;
 import org.apache.curator.x.discovery.ServiceDiscovery;
-import org.apache.curator.x.discovery.ServiceInstance;
 
 import java.util.concurrent.ConcurrentMap;
 
@@ -21,92 +20,65 @@ public class EventReceiverProvider
   private static final Logger log = new Logger(EventReceiverProvider.class);
 
   private final EventReceiverProviderConfig config;
-  private final ServiceDiscovery<?> discovery;
-  private final ConcurrentMap<String, EventReceiverHolder> receivers;
+  private final ServiceAnnouncer serviceAnnouncer;
+  private final ConcurrentMap<String, EventReceiver> receivers;
 
   public EventReceiverProvider(
       EventReceiverProviderConfig config,
-      ServiceDiscovery discovery
+      ServiceAnnouncer serviceAnnouncer
   )
   {
     this.config = config;
-    this.discovery = discovery;
+    this.serviceAnnouncer = serviceAnnouncer;
     this.receivers = Maps.newConcurrentMap();
   }
 
   public void register(final String key, EventReceiver receiver)
   {
-    log.info("Registering event receiver: %s", key);
+    final String service = serviceName(key);
+    log.info("Registering EventReceiver: %s", key);
 
-    final EventReceiverHolder holder = new EventReceiverHolder(
-        receiver,
-        isDiscoverable() ? Initialization.serviceInstance(
-            String.format(config.getServiceFormat(), key),
-            config.getHost(),
-            config.getPort()
-        ) : null
-    );
-
-    if (receivers.putIfAbsent(key, holder) != null) {
+    if (receivers.putIfAbsent(key, receiver) != null) {
       throw new ISE("Receiver already registered for key: %s", key);
     }
 
-    if (isDiscoverable()) {
-      try {
-        discovery.registerService(holder.service);
-      }
-      catch (Exception e) {
-        log.warn(e, "Failed to register service: %s", holder.service.getName());
-        receivers.remove(key, holder);
-      }
+    try {
+      serviceAnnouncer.announce(service);
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to register service: %s", service);
+      receivers.remove(key, receiver);
     }
   }
 
   public void unregister(final String key)
   {
+    final String service = serviceName(key);
+
     log.info("Unregistering event receiver: %s", key);
 
-    final EventReceiverHolder holder = receivers.get(key);
-    if (holder == null) {
+    final EventReceiver receiver = receivers.get(key);
+    if (receiver == null) {
       log.warn("Receiver not currently registered, ignoring: %s", key);
     }
 
-    if (isDiscoverable()) {
-      try {
-        discovery.unregisterService(holder.service);
-      }
-      catch (Exception e) {
-        log.warn(e, "Failed to unregister service: %s", holder.service.getName());
-      }
+    try {
+      serviceAnnouncer.unannounce(service);
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to unregister service: %s", service);
     }
 
-    receivers.remove(key);
+    receivers.remove(key, receiver);
   }
 
   public Optional<EventReceiver> get(final String key)
   {
-    final EventReceiverHolder holder = receivers.get(key);
-    if (holder != null) {
-      return Optional.of(holder.receiver);
-    } else {
-      return Optional.absent();
-    }
+    return Optional.fromNullable(receivers.get(key));
   }
 
-  public boolean isDiscoverable()
+  private String serviceName(String key)
   {
-    return discovery != null;
-  }
-
-  private static class EventReceiverHolder
-  {
-    final EventReceiver receiver;
-    final ServiceInstance service;
-
-    private EventReceiverHolder(EventReceiver receiver, ServiceInstance service)
-    {
-      this.receiver = receiver;
-      this.service = service;
-    }
+    return String.format(config.getServiceFormat(), key);
   }
 }

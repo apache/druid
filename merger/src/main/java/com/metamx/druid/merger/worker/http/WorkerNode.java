@@ -34,6 +34,9 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.QueryableNode;
+import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
@@ -102,6 +105,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
   private ServiceEmitter emitter = null;
   private WorkerConfig workerConfig = null;
   private ServiceDiscovery serviceDiscovery = null;
+  private ServiceAnnouncer serviceAnnouncer = null;
   private ServiceProvider coordinatorServiceProvider = null;
   private WorkerCuratorCoordinator workerCuratorCoordinator = null;
   private WorkerTaskMonitor workerTaskMonitor = null;
@@ -177,7 +181,6 @@ public class WorkerNode extends QueryableNode<WorkerNode>
     initializeMonitors();
     initializeMergerConfig();
     initializeServiceDiscovery();
-    initializeCoordinatorServiceProvider();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeCuratorCoordinator();
@@ -336,10 +339,6 @@ public class WorkerNode extends QueryableNode<WorkerNode>
           getLifecycle()
       );
     }
-  }
-
-  public void initializeCoordinatorServiceProvider()
-  {
     if (coordinatorServiceProvider == null) {
       this.coordinatorServiceProvider = Initialization.makeServiceProvider(
           workerConfig.getMasterService(),
