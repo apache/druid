@@ -121,29 +121,39 @@ public class Initialization
     if (tmp_props.getProperty(zkHostsProperty) != null) {
       final ConfigurationObjectFactory factory = Config.createFactory(tmp_props);
 
-      Lifecycle lifecycle = new Lifecycle();
+      ZkPathsConfig config;
       try {
-        final ZkPathsConfig config = factory.build(ZkPathsConfig.class);
-        CuratorFramework curator = makeCuratorFramework(factory.build(CuratorConfig.class), lifecycle);
-
-        lifecycle.start();
-
-        final Stat stat = curator.checkExists().forPath(config.getPropertiesPath());
-        if (stat != null) {
-          final byte[] data = curator.getData().forPath(config.getPropertiesPath());
-          zkProps.load(new InputStreamReader(new ByteArrayInputStream(data), Charsets.UTF_8));
-        }
-
-        // log properties from zk
-        for (String prop : zkProps.stringPropertyNames()) {
-          log.info("Loaded(zk) Property[%s] as [%s]", prop, zkProps.getProperty(prop));
-        }
+        config = factory.build(ZkPathsConfig.class);
       }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
+      catch (IllegalArgumentException e) {
+        log.warn(e, "Unable to build ZkPathsConfig.  Cannot load properties from ZK.");
+        config = null;
       }
-      finally {
-        lifecycle.stop();
+
+      if (config != null) {
+        Lifecycle lifecycle = new Lifecycle();
+        try {
+          CuratorFramework curator = makeCuratorFramework(factory.build(CuratorConfig.class), lifecycle);
+
+          lifecycle.start();
+
+          final Stat stat = curator.checkExists().forPath(config.getPropertiesPath());
+          if (stat != null) {
+            final byte[] data = curator.getData().forPath(config.getPropertiesPath());
+            zkProps.load(new InputStreamReader(new ByteArrayInputStream(data), Charsets.UTF_8));
+          }
+
+          // log properties from zk
+          for (String prop : zkProps.stringPropertyNames()) {
+            log.info("Loaded(zk) Property[%s] as [%s]", prop, zkProps.getProperty(prop));
+          }
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
+        finally {
+          lifecycle.stop();
+        }
       }
     } else {
       log.warn("property[%s] not set, skipping ZK-specified properties.", zkHostsProperty);

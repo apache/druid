@@ -21,6 +21,7 @@ package com.metamx.druid.query.group;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.metamx.druid.input.Row;
 
 import java.util.Comparator;
 import java.util.List;
@@ -37,7 +38,7 @@ public interface LimitSpec
 
   public int getLimit();
 
-  public Comparator getComparator();
+  public Comparator<Row> getComparator();
 
   public byte[] getCacheKey();
 }

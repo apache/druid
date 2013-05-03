@@ -50,7 +50,6 @@ import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -162,7 +161,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
     // sort results to be returned
     if (!query.getLimitSpec().getOrderBy().isEmpty()) {
-      retVal = Sequences.sort(retVal, makeComparator(query));
+      retVal = Sequences.sort(retVal, query.getLimitSpec().getComparator());
     }
 
     return Sequences.limit(
@@ -220,47 +219,5 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   public TypeReference<Row> getResultTypeReference()
   {
     return TYPE_REFERENCE;
-  }
-
-  private Comparator<Row> makeComparator(GroupByQuery query)
-  {
-    Ordering<Row> ordering = new Ordering<Row>()
-    {
-      @Override
-      public int compare(Row left, Row right)
-      {
-        return Longs.compare(left.getTimestampFromEpoch(), right.getTimestampFromEpoch());
-      }
-    };
-
-    for (final String dimension : query.getLimitSpec().getOrderBy()) {
-      ordering = ordering.compound(
-          new Comparator<Row>()
-          {
-            @Override
-            public int compare(Row left, Row right)
-            {
-              if (left instanceof MapBasedRow && right instanceof MapBasedRow) {
-                // There are no multi-value dimensions at this point, they should have been flattened out
-                String leftDimVal = left.getDimension(dimension).get(0);
-                String rightDimVal = right.getDimension(dimension).get(0);
-                return leftDimVal.compareTo(rightDimVal);
-              } else {
-                throw new ISE("Unknown type for rows[%s, %s]", left.getClass(), right.getClass());
-              }
-            }
-          }
-      );
-    }
-    final Ordering<Row> theOrdering = ordering;
-
-    return new Comparator<Row>()
-    {
-      @Override
-      public int compare(Row row, Row row2)
-      {
-        return theOrdering.compare(row, row2);
-      }
-    };
   }
 }

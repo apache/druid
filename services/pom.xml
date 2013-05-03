@@ -24,11 +24,11 @@
     <artifactId>druid-services</artifactId>
     <name>druid-services</name>
     <description>druid-services</description>
-    <version>0.4.1-SNAPSHOT</version>
+    <version>0.4.3-SNAPSHOT</version>
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.4.1-SNAPSHOT</version>
+        <version>0.4.3-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -42,7 +42,6 @@
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-
     </dependencies>
     <build>
         <plugins>
@@ -64,6 +63,25 @@
                     </execution>
                 </executions>
             </plugin>
+<!--
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>distro-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+-->
         </plugins>
     </build>
 </project>
