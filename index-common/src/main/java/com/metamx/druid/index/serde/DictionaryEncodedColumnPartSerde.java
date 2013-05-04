@@ -149,16 +149,15 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     GenericIndexed<ImmutableConciseSet> bitmaps = GenericIndexed.read(
         buffer, ConciseCompressedIndexedInts.objectStrategy
     );
+    builder.setBitmapIndex(new BitmapIndexColumnPartSupplier(bitmaps, dictionary));
 
     ImmutableRTree spatialIndex = null;
     if (buffer.hasRemaining()) {
       spatialIndex = ByteBufferSerializer.read(
           buffer, IndexedRTree.objectStrategy
       );
+      builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(spatialIndex));
     }
-
-    builder.setBitmapIndex(new BitmapIndexColumnPartSupplier(bitmaps, dictionary));
-    builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(spatialIndex));
 
     return new DictionaryEncodedColumnPartSerde(
         dictionary,

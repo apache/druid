@@ -334,7 +334,6 @@ public class IndexIO
       Map<String, GenericIndexed<String>> dimValueLookups = Maps.newHashMap();
       Map<String, VSizeIndexed> dimColumns = Maps.newHashMap();
       Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexed = Maps.newHashMap();
-      Map<String, ImmutableRTree> spatialIndexed = Maps.newHashMap();
 
       for (String dimension : IndexedIterable.create(availableDimensions)) {
         ByteBuffer dimBuffer = smooshedFiles.mapFile(makeDimFile(inDir, dimension).getName());
@@ -358,6 +357,7 @@ public class IndexIO
         );
       }
 
+      Map<String, ImmutableRTree> spatialIndexed = Maps.newHashMap();
       ByteBuffer spatialBuffer = smooshedFiles.mapFile("spatial.drd");
       while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
         spatialIndexed.put(

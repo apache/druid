@@ -25,7 +25,6 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -38,11 +37,6 @@ import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.Aggregator;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
-import com.metamx.druid.index.column.Column;
-import com.metamx.druid.index.column.ComplexColumn;
-import com.metamx.druid.index.column.DictionaryEncodedColumn;
-import com.metamx.druid.index.column.GenericColumn;
-import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.index.v1.serde.ComplexMetricExtractor;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
@@ -58,7 +52,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -84,6 +77,7 @@ public class IncrementalIndex implements Iterable<Row>
   private final ImmutableList<String> metricNames;
   private final LinkedHashMap<String, Integer> dimensionOrder;
   private final CopyOnWriteArrayList<String> dimensions;
+  private final List<SpatialDimensionSchema> spatialDimensions;
   private final SpatialDimensionRowFormatter spatialDimensionRowFormatter;
   private final DimensionHolder dimValues;
   private final ConcurrentSkipListMap<TimeAndDims, Aggregator[]> facts;
@@ -119,7 +113,8 @@ public class IncrementalIndex implements Iterable<Row>
       dimensionOrder.put(dim, index++);
       dimensions.add(dim);
     }
-    this.spatialDimensionRowFormatter = new SpatialDimensionRowFormatter(incrementalIndexSchema.getSpatialDimensions());
+    this.spatialDimensions = incrementalIndexSchema.getSpatialDimensions();
+    this.spatialDimensionRowFormatter = new SpatialDimensionRowFormatter(spatialDimensions);
 
     this.dimValues = new DimensionHolder();
     this.facts = new ConcurrentSkipListMap<TimeAndDims, Aggregator[]>();
@@ -354,6 +349,11 @@ public class IncrementalIndex implements Iterable<Row>
   public List<String> getDimensions()
   {
     return dimensions;
+  }
+
+  public List<SpatialDimensionSchema> getSpatialDimensions()
+  {
+    return spatialDimensions;
   }
 
   public String getMetricType(String metric)

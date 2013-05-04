@@ -39,8 +39,6 @@ public class SpatialDimFilter implements DimFilter
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
-    //FIXME
-    Preconditions.checkArgument(dimension.endsWith(".geo"), "must filter over geo dimension!");
     Preconditions.checkArgument(bound != null, "bound must not be null");
 
     this.dimension = dimension;

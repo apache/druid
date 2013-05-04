@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.index.v1;
 
 import com.google.common.base.Function;
@@ -45,22 +64,35 @@ public class SpatialDimensionRowFormatter
 
   public InputRow formatRow(final InputRow row)
   {
-    final Map<String, List<String>> finalDims = Maps.newHashMap();
+    final Map<String, List<String>> finalDimLookup = Maps.newHashMap();
 
     // remove all spatial dimensions
-    Set<String> filtered = Sets.filter(
-        Sets.newHashSet(row.getDimensions()),
-        new Predicate<String>()
-        {
-          @Override
-          public boolean apply(String input)
-          {
-            return !spatialDimNames.contains(input);
-          }
-        }
+    final List<String> finalDims = Lists.newArrayList(
+        Iterables.filter(
+            Lists.transform(
+                row.getDimensions(),
+                new Function<String, String>()
+                {
+                  @Override
+                  public String apply(String input)
+                  {
+                    return input.toLowerCase();
+                  }
+                }
+            )
+            ,
+            new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
+              {
+                return !spatialDimNames.contains(input);
+              }
+            }
+        )
     );
-    for (String dim : filtered) {
-      finalDims.put(dim, row.getDimension(dim));
+    for (String dim : finalDims) {
+      finalDimLookup.put(dim, row.getDimension(dim));
     }
 
     InputRow retVal = new InputRow()
@@ -68,7 +100,7 @@ public class SpatialDimensionRowFormatter
       @Override
       public List<String> getDimensions()
       {
-        return Lists.newArrayList(finalDims.keySet());
+        return finalDims;
       }
 
       @Override
@@ -80,7 +112,7 @@ public class SpatialDimensionRowFormatter
       @Override
       public List<String> getDimension(String dimension)
       {
-        return finalDims.get(dimension);
+        return finalDimLookup.get(dimension);
       }
 
       @Override
@@ -99,7 +131,8 @@ public class SpatialDimensionRowFormatter
         }
         spatialDimVals.addAll(dimVals);
       }
-      finalDims.put(spatialDimension.getDimName(), Arrays.asList(JOINER.join(spatialDimVals)));
+      finalDimLookup.put(spatialDimension.getDimName(), Arrays.asList(JOINER.join(spatialDimVals)));
+      finalDims.add(spatialDimension.getDimName());
     }
 
     return retVal;

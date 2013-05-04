@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.index.brita;
 
 import com.google.common.base.Throwables;
@@ -42,7 +61,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- */
+*/
 @RunWith(Parameterized.class)
 public class SpatialFilterTest
 {
@@ -241,7 +260,8 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-01").toString(),
                   "dim", "foo",
-                  "dim.geo", Arrays.asList(0.0f, 0.0f),
+                  "lat", 0.0f,
+                  "long", 0.0f,
                   "val", 17l
               )
           )
@@ -253,7 +273,8 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-02").toString(),
                   "dim", "foo",
-                  "dim.geo", Arrays.asList(1.0f, 3.0f),
+                  "lat", 1.0f,
+                  "long", 3.0f,
                   "val", 29l
               )
           )
@@ -265,7 +286,8 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-03").toString(),
                   "dim", "foo",
-                  "dim.geo", Arrays.asList(4.0f, 2.0f),
+                  "lat", 4.0f,
+                  "long", 2.0f,
                   "val", 13l
               )
           )
@@ -277,7 +299,8 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-04").toString(),
                   "dim", "foo",
-                  "dim.geo", Arrays.asList(7.0f, 3.0f),
+                  "lat", 7.0f,
+                  "long", 3.0f,
                   "val", 91l
               )
           )
@@ -289,7 +312,8 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-05").toString(),
                   "dim", "foo",
-                  "dim.geo", Arrays.asList(8.0f, 6.0f),
+                  "lat", 8.0f,
+                  "long", 6.0f,
                   "val", 47l
               )
           )
@@ -303,14 +327,11 @@ public class SpatialFilterTest
                 new DateTime("2013-01-01").getMillis(),
                 DIMS,
                 ImmutableMap.<String, Object>of(
-                    "timestamp",
-                    new DateTime("2013-01-01").toString(),
-                    "dim",
-                    "boo",
-                    "dim.geo",
-                    Arrays.asList((float) (rand.nextFloat() * 10 + 10.0), (float) (rand.nextFloat() * 10 + 10.0)),
-                    "val",
-                    i
+                    "timestamp", new DateTime("2013-01-01").toString(),
+                    "dim", "boo",
+                    "lat", (float) (rand.nextFloat() * 10 + 10.0),
+                    "long", (float) (rand.nextFloat() * 10 + 10.0),
+                    "val", i
                 )
             )
         );

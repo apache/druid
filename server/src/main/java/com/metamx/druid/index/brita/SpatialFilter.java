@@ -20,6 +20,9 @@ package com.metamx.druid.index.brita;
 
 import com.metamx.collections.spatial.search.Bound;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import it.uniroma3.mat.extendedset.intset.IntSet;
+
+import java.util.Iterator;
 
 /**
  */
@@ -40,7 +43,48 @@ public class SpatialFilter implements Filter
   @Override
   public ImmutableConciseSet goConcise(final BitmapIndexSelector selector)
   {
-    return ImmutableConciseSet.union(selector.getSpatialIndex(dimension).search(bound));
+    final Iterator<ImmutableConciseSet> dimValueIndexesIter = selector.getSpatialIndex(dimension).search(bound)
+                                                                      .iterator();
+    ImmutableConciseSet retVal = ImmutableConciseSet.union(
+        new Iterable<ImmutableConciseSet>()
+        {
+          @Override
+          public Iterator<ImmutableConciseSet> iterator()
+          {
+            return new Iterator<ImmutableConciseSet>()
+            {
+              private IntSet.IntIterator iter;
+
+              @Override
+              public boolean hasNext()
+              {
+                return dimValueIndexesIter.hasNext() || iter.hasNext();
+              }
+
+              @Override
+              public ImmutableConciseSet next()
+              {
+                if (iter != null && !iter.hasNext()) {
+                  iter = null;
+                }
+                if (iter == null) {
+                  ImmutableConciseSet immutableConciseSet = dimValueIndexesIter.next();
+                  iter = immutableConciseSet.iterator();
+                }
+                return selector.getConciseInvertedIndex(dimension, iter.next());
+              }
+
+              @Override
+              public void remove()
+              {
+                throw new UnsupportedOperationException();
+              }
+            };
+          }
+        }
+    );
+
+    return retVal;
   }
 
   @Override

@@ -36,7 +36,6 @@ import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
-import com.metamx.collections.spatial.search.RadiusBound;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
@@ -55,8 +54,8 @@ import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
 import com.metamx.druid.kv.ByteBufferWriter;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
-import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.GenericIndexed;
+import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.IOPeon;
 import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedInts;
@@ -575,7 +574,13 @@ public class IndexMerger
                         j++;
                       }
 
-                      return new Rowboat(input.getTimestamp(), newDims, newMetrics, input.getRowNum());
+                      return new Rowboat(
+                          input.getTimestamp(),
+                          newDims,
+                          newMetrics,
+                          input.getRowNum(),
+                          input.getDescriptions()
+                      );
                     }
                   }
               )
@@ -628,6 +633,7 @@ public class IndexMerger
       rowNumConversions.add(IntBuffer.wrap(arr));
     }
 
+    final Map<String, String> descriptions = Maps.newHashMap();
     for (Rowboat theRow : theRows) {
       progress.progress();
       timeWriter.add(theRow.getTimestamp());
@@ -662,6 +668,8 @@ public class IndexMerger
         );
         time = System.currentTimeMillis();
       }
+
+      descriptions.putAll(theRow.getDescriptions());
     }
 
     for (IntBuffer rowNumConversion : rowNumConversions) {
@@ -759,7 +767,7 @@ public class IndexMerger
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       String dimension = mergedDimensions.get(i);
 
-      if (!dimension.endsWith(".geo")) {
+      if (!"spatial".equals(descriptions.get(dimension))) {
         continue;
       }
 
@@ -1073,7 +1081,13 @@ public class IndexMerger
                 }
               }
 
-              final Rowboat retVal = new Rowboat(input.getTimestamp(), newDims, input.getMetrics(), input.getRowNum());
+              final Rowboat retVal = new Rowboat(
+                  input.getTimestamp(),
+                  newDims,
+                  input.getMetrics(),
+                  input.getRowNum(),
+                  input.getDescriptions()
+              );
 
               retVal.addRow(indexNumber, input.getRowNum());
 
@@ -1152,7 +1166,8 @@ public class IndexMerger
           lhs.getTimestamp(),
           lhs.getDims(),
           metrics,
-          lhs.getRowNum()
+          lhs.getRowNum(),
+          lhs.getDescriptions()
       );
 
       for (Rowboat rowboat : Arrays.asList(lhs, rhs)) {
