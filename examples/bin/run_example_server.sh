@@ -53,7 +53,7 @@ JAVA_ARGS="-Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8"
 JAVA_ARGS="${JAVA_ARGS} -Ddruid.realtime.specFile=${SPEC_FILE}"
 
 DRUID_CP=${EXAMPLE_LOC}
-DRUID_CP=${DRUID_CP}:../config
+DRUID_CP=${DRUID_CP}:./config
 DRUID_CP=${DRUID_CP}:`ls ../target/druid-examples-*-selfcontained.jar`
 DRUID_CP=${DRUID_CP}:`ls ./lib/druid-examples-*-selfcontained.jar`
 
