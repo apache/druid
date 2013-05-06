@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.druid.indexer.data.MapInputRowParser;
 import com.metamx.druid.input.InputRow;
@@ -14,6 +15,10 @@ import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.emitter.EmittingLogger;
 
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -25,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Builds firehoses that accept events through the {@link EventReceiver} interface. Can also register these
- * firehoses with an {@link EventReceiverProvider}.
+ * firehoses with an {@link ChatHandlerProvider}.
  */
 @JsonTypeName("receiver")
 public class EventReceiverFirehoseFactory implements FirehoseFactory
@@ -36,20 +41,20 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   private final String firehoseId;
   private final int bufferSize;
   private final MapInputRowParser parser;
-  private final Optional<EventReceiverProvider> eventReceiverProvider;
+  private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   @JsonCreator
   public EventReceiverFirehoseFactory(
       @JsonProperty("firehoseId") String firehoseId,
       @JsonProperty("bufferSize") Integer bufferSize,
       @JsonProperty("parser") MapInputRowParser parser,
-      @JacksonInject("eventReceiverProvider") EventReceiverProvider eventReceiverProvider
+      @JacksonInject("chatHandlerProvider") ChatHandlerProvider chatHandlerProvider
   )
   {
     this.firehoseId = Preconditions.checkNotNull(firehoseId, "firehoseId");
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
     this.parser = Preconditions.checkNotNull(parser, "parser");
-    this.eventReceiverProvider = Optional.fromNullable(eventReceiverProvider);
+    this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
   }
 
   @Override
@@ -59,8 +64,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
 
     final EventReceiverFirehose firehose = new EventReceiverFirehose();
 
-    if (eventReceiverProvider.isPresent()) {
-      eventReceiverProvider.get().register(firehoseId, firehose);
+    if (chatHandlerProvider.isPresent()) {
+      chatHandlerProvider.get().register(firehoseId, firehose);
     }
 
     return firehose;
@@ -84,7 +89,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
     return parser;
   }
 
-  public class EventReceiverFirehose implements EventReceiver, Firehose
+  public class EventReceiverFirehose implements ChatHandler, Firehose
   {
     private final BlockingQueue<InputRow> buffer;
     private final Object readLock = new Object();
@@ -97,7 +102,15 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
     }
 
     @Override
-    public void addAll(Collection<Map<String, Object>> events)
+    public String getHandlerId()
+    {
+      return firehoseId;
+    }
+
+    @POST
+    @Path("/push-events")
+    @Produces("application/json")
+    public Response addAll(Collection<Map<String, Object>> events)
     {
       log.debug("Adding %,d events to firehose: %s", events.size(), firehoseId);
 
@@ -118,6 +131,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
             throw new IllegalStateException("Cannot add events to closed firehose!");
           }
         }
+
+        return Response.ok().entity(ImmutableMap.of("eventCount", events.size())).build();
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw Throwables.propagate(e);
@@ -176,8 +191,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
       log.info("Firehose closing.");
       closed = true;
 
-      if (eventReceiverProvider.isPresent()) {
-        eventReceiverProvider.get().unregister(firehoseId);
+      if (chatHandlerProvider.isPresent()) {
+        chatHandlerProvider.get().unregister(firehoseId);
       }
     }
   }

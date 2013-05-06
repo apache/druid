@@ -3,9 +3,9 @@ package com.metamx.druid.merger.worker.config;
 import org.skife.config.Config;
 import org.skife.config.DefaultNull;
 
-public abstract class EventReceiverProviderConfig
+public abstract class ChatHandlerProviderConfig
 {
-  @Config("druid.indexer.eventreceiver.service")
+  @Config("druid.indexer.chathandler.service")
   @DefaultNull
   public abstract String getServiceFormat();
 

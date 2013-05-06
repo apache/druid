@@ -267,7 +267,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
 
     injectables.addValue("s3Client", null)
                .addValue("segmentPusher", null)
-               .addValue("eventReceiverProvider", null);
+               .addValue("chatHandlerProvider", null);
 
     getJsonMapper().setInjectableValues(injectables);
   }

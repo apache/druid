@@ -57,10 +57,10 @@ import com.metamx.druid.merger.common.actions.RemoteTaskActionClientFactory;
 import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.EventReceiverFirehoseFactory;
-import com.metamx.druid.merger.common.index.EventReceiverProvider;
+import com.metamx.druid.merger.common.index.ChatHandlerProvider;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.ExecutorServiceTaskRunner;
-import com.metamx.druid.merger.worker.config.EventReceiverProviderConfig;
+import com.metamx.druid.merger.worker.config.ChatHandlerProviderConfig;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
@@ -120,7 +120,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private Server server = null;
   private ExecutorServiceTaskRunner taskRunner = null;
   private ExecutorLifecycle executorLifecycle = null;
-  private EventReceiverProvider eventReceiverProvider = null;
+  private ChatHandlerProvider chatHandlerProvider = null;
 
   public ExecutorNode(
       String nodeType,
@@ -194,7 +194,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     initializeDataSegmentPusher();
     initializeTaskToolbox();
     initializeTaskRunner();
-    initializeEventReceiverProvider();
+    initializeChatHandlerProvider();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeServer();
@@ -212,7 +212,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     final Injector injector = Guice.createInjector(
         new ExecutorServletModule(
             getJsonMapper(),
-            eventReceiverProvider
+            chatHandlerProvider
         )
     );
     final Context root = new Context(server, "/", Context.SESSIONS);
@@ -289,7 +289,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
 
     injectables.addValue("s3Client", s3Service)
                .addValue("segmentPusher", segmentPusher)
-               .addValue("eventReceiverProvider", eventReceiverProvider);
+               .addValue("chatHandlerProvider", chatHandlerProvider);
 
     getJsonMapper().setInjectableValues(injectables);
   }
@@ -426,18 +426,18 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     }
   }
 
-  public void initializeEventReceiverProvider()
+  public void initializeChatHandlerProvider()
   {
-    if (eventReceiverProvider == null) {
-      final EventReceiverProviderConfig config = configFactory.build(EventReceiverProviderConfig.class);
+    if (chatHandlerProvider == null) {
+      final ChatHandlerProviderConfig config = configFactory.build(ChatHandlerProviderConfig.class);
       final ServiceAnnouncer myServiceAnnouncer;
       if (config.getServiceFormat() == null) {
-        log.info("EventReceiverProvider: Using NoopServiceAnnouncer. Good luck finding your firehoses!");
+        log.info("ChatHandlerProvider: Using NoopServiceAnnouncer. Good luck finding your firehoses!");
         myServiceAnnouncer = new NoopServiceAnnouncer();
       } else {
         myServiceAnnouncer = serviceAnnouncer;
       }
-      this.eventReceiverProvider = new EventReceiverProvider(
+      this.chatHandlerProvider = new ChatHandlerProvider(
           config,
           myServiceAnnouncer
       );
