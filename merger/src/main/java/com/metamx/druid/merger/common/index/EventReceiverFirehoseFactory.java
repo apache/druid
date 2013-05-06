@@ -101,12 +101,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
       this.buffer = new ArrayBlockingQueue<InputRow>(bufferSize);
     }
 
-    @Override
-    public String getHandlerId()
-    {
-      return firehoseId;
-    }
-
     @POST
     @Path("/push-events")
     @Produces("application/json")
