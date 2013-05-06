@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.worker.http;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.Lists;
@@ -33,6 +34,9 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.QueryableNode;
+import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
@@ -41,6 +45,7 @@ import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.TaskLogConfig;
+import com.metamx.druid.merger.common.index.EventReceiverFirehoseFactory;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.common.tasklogs.NoopTaskLogs;
 import com.metamx.druid.merger.common.tasklogs.S3TaskLogs;
@@ -100,6 +105,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
   private ServiceEmitter emitter = null;
   private WorkerConfig workerConfig = null;
   private ServiceDiscovery serviceDiscovery = null;
+  private ServiceAnnouncer serviceAnnouncer = null;
   private ServiceProvider coordinatorServiceProvider = null;
   private WorkerCuratorCoordinator workerCuratorCoordinator = null;
   private WorkerTaskMonitor workerTaskMonitor = null;
@@ -175,7 +181,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
     initializeMonitors();
     initializeMergerConfig();
     initializeServiceDiscovery();
-    initializeCoordinatorServiceProvider();
+    initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeCuratorCoordinator();
     initializePersistentTaskLogs();
@@ -255,9 +261,21 @@ public class WorkerNode extends QueryableNode<WorkerNode>
     }
   }
 
+  private void initializeJacksonInjections()
+  {
+    InjectableValues.Std injectables = new InjectableValues.Std();
+
+    injectables.addValue("s3Client", null)
+               .addValue("segmentPusher", null)
+               .addValue("chatHandlerProvider", null);
+
+    getJsonMapper().setInjectableValues(injectables);
+  }
+
   private void initializeJacksonSubtypes()
   {
     getJsonMapper().registerSubtypes(StaticS3FirehoseFactory.class);
+    getJsonMapper().registerSubtypes(EventReceiverFirehoseFactory.class);
   }
 
   private void initializeHttpClient()
@@ -321,10 +339,6 @@ public class WorkerNode extends QueryableNode<WorkerNode>
           getLifecycle()
       );
     }
-  }
-
-  public void initializeCoordinatorServiceProvider()
-  {
     if (coordinatorServiceProvider == null) {
       this.coordinatorServiceProvider = Initialization.makeServiceProvider(
           workerConfig.getMasterService(),

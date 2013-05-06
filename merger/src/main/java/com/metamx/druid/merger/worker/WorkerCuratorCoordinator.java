@@ -71,9 +71,9 @@ public class WorkerCuratorCoordinator
     this.worker = worker;
     this.config = config;
 
-    this.baseAnnouncementsPath = getPath(Arrays.asList(config.getAnnouncementPath(), worker.getHost()));
-    this.baseTaskPath = getPath(Arrays.asList(config.getTaskPath(), worker.getHost()));
-    this.baseStatusPath = getPath(Arrays.asList(config.getStatusPath(), worker.getHost()));
+    this.baseAnnouncementsPath = getPath(Arrays.asList(config.getIndexerAnnouncementPath(), worker.getHost()));
+    this.baseTaskPath = getPath(Arrays.asList(config.getIndexerTaskPath(), worker.getHost()));
+    this.baseStatusPath = getPath(Arrays.asList(config.getIndexerStatusPath(), worker.getHost()));
   }
 
   @LifecycleStart

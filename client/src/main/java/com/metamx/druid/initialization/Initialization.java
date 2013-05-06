@@ -28,6 +28,10 @@ import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
+import com.metamx.druid.curator.discovery.AddressPortServiceInstanceFactory;
+import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.http.EmittingRequestLogger;
 import com.metamx.druid.http.FileRequestLogger;
 import com.metamx.druid.http.RequestLogger;
@@ -224,17 +228,10 @@ public class Initialization
   )
       throws Exception
   {
-    final ServiceInstance serviceInstance =
-        ServiceInstance.builder()
-                       .name(config.getServiceName().replace('/', ':'))
-                       .address(addressFromHost(config.getHost()))
-                       .port(config.getPort())
-                       .build();
     final ServiceDiscovery serviceDiscovery =
         ServiceDiscoveryBuilder.builder(Void.class)
                                .basePath(config.getDiscoveryPath())
                                .client(discoveryClient)
-                               .thisInstance(serviceInstance)
                                .build();
 
     lifecycle.addHandler(
@@ -260,6 +257,46 @@ public class Initialization
     );
 
     return serviceDiscovery;
+  }
+
+  public static ServiceAnnouncer makeServiceAnnouncer(
+      ServiceDiscoveryConfig config,
+      ServiceDiscovery serviceDiscovery
+  )
+  {
+    final ServiceInstanceFactory serviceInstanceFactory = makeServiceInstanceFactory(config);
+    return new CuratorServiceAnnouncer(serviceDiscovery, serviceInstanceFactory);
+  }
+
+  public static void announceDefaultService(
+      final ServiceDiscoveryConfig config,
+      final ServiceAnnouncer serviceAnnouncer,
+      final Lifecycle lifecycle
+  ) throws Exception
+  {
+    final String service = config.getServiceName().replace('/', ':');
+
+    lifecycle.addHandler(
+        new Lifecycle.Handler()
+        {
+          @Override
+          public void start() throws Exception
+          {
+            serviceAnnouncer.announce(service);
+          }
+
+          @Override
+          public void stop()
+          {
+            try {
+              serviceAnnouncer.unannounce(service);
+            }
+            catch (Exception e) {
+              log.warn(e, "Failed to unannouce default service[%s]", service);
+            }
+          }
+        }
+    );
   }
 
   public static ServiceProvider makeServiceProvider(
@@ -320,13 +357,17 @@ public class Initialization
     );
   }
 
-  public static String addressFromHost(final String host)
+  public static ServiceInstanceFactory<Void> makeServiceInstanceFactory(ServiceDiscoveryConfig config)
   {
+    final String host = config.getHost();
+    final String address;
     final int colon = host.indexOf(':');
     if (colon < 0) {
-      return host;
+      address = host;
     } else {
-      return host.substring(0, colon);
+      address = host.substring(0, colon);
     }
+
+    return new AddressPortServiceInstanceFactory(address, config.getPort());
   }
 }

@@ -27,8 +27,8 @@ import com.google.common.collect.Iterators;
 import com.google.common.io.Closeables;
 import com.metamx.druid.indexer.data.StringInputRowParser;
 import com.metamx.druid.input.InputRow;
-import com.metamx.druid.realtime.Firehose;
-import com.metamx.druid.realtime.FirehoseFactory;
+import com.metamx.druid.realtime.firehose.Firehose;
+import com.metamx.druid.realtime.firehose.FirehoseFactory;
 
 import java.io.BufferedReader;
 import java.io.File;

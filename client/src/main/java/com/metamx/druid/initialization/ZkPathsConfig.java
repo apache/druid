@@ -19,6 +19,7 @@
 
 package com.metamx.druid.initialization;
 
+import org.apache.curator.utils.ZKPaths;
 import org.skife.config.Config;
 
 public abstract class ZkPathsConfig
@@ -56,7 +57,32 @@ public abstract class ZkPathsConfig
     return defaultPath("master");
   }
 
-  private String defaultPath(final String subPath) {
-    return String.format("%s/%s", getZkBasePath(), subPath);
+  @Config("druid.zk.paths.indexer.announcementsPath")
+  public String getIndexerAnnouncementPath()
+  {
+    return defaultPath("indexer/announcements");
+  }
+
+  @Config("druid.zk.paths.indexer.tasksPath")
+  public String getIndexerTaskPath()
+  {
+    return defaultPath("indexer/tasks");
+  }
+
+  @Config("druid.zk.paths.indexer.statusPath")
+  public String getIndexerStatusPath()
+  {
+    return defaultPath("indexer/status");
+  }
+
+  @Config("druid.zk.paths.indexer.leaderLatchPath")
+  public String getIndexerLeaderLatchPath()
+  {
+    return defaultPath("indexer/leaderLatchPath");
+  }
+
+  private String defaultPath(final String subPath)
+  {
+    return ZKPaths.makePath(getZkBasePath(), subPath);
   }
 }
