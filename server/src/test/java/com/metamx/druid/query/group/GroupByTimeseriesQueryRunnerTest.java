@@ -34,7 +34,6 @@ import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
-import org.joda.time.DateTime;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -48,6 +47,7 @@ import java.util.Collection;
 @RunWith(Parameterized.class)
 public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 {
+  @SuppressWarnings("unchecked")
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {

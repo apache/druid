@@ -23,7 +23,7 @@
     <groupId>com.metamx</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.4.1-SNAPSHOT</version>
+    <version>0.4.6-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -38,7 +38,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.22.0</metamx.java-util.version>
+        <metamx.java-util.version>0.22.3</metamx.java-util.version>
         <netflix.curator.version>2.0.1-21-22</netflix.curator.version>
     </properties>
 
@@ -51,7 +51,7 @@
         <module>merger</module>
         <module>realtime</module>
         <module>examples</module>
-        <module>druid-services</module>
+        <module>services</module>
     </modules>
 
     <dependencyManagement>
@@ -60,7 +60,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.2.0</version>
+                <version>0.2.3</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -413,6 +413,11 @@
                     <groupId>org.antlr</groupId>
                     <artifactId>antlr4-maven-plugin</artifactId>
                     <version>4.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>2.4</version>
                 </plugin>
             </plugins>
         </pluginManagement>
