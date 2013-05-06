@@ -30,7 +30,4 @@ public abstract class CassandraDataSegmentPusherConfig
 
   @Config("druid.pusher.cassandra.keyspace")
   public abstract String getKeyspace();
-
-  @Config("druid.pusher.cassandra.table")
-  public abstract String getTable();
 }

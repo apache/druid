@@ -19,6 +19,18 @@
 
 package com.metamx.druid.initialization;
 
+import java.lang.reflect.InvocationTargetException;
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.hadoop.conf.Configuration;
+import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.security.AWSCredentials;
+import org.skife.config.ConfigurationObjectFactory;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -29,6 +41,9 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.DruidProcessingConfig;
 import com.metamx.druid.Query;
 import com.metamx.druid.collect.StupidPool;
+import com.metamx.druid.loading.CassandraDataSegmentPuller;
+import com.metamx.druid.loading.CassandraDataSegmentPusher;
+import com.metamx.druid.loading.CassandraDataSegmentPusherConfig;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.DelegatingSegmentLoader;
 import com.metamx.druid.loading.HdfsDataSegmentPuller;
@@ -60,17 +75,6 @@ import com.metamx.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import com.metamx.druid.utils.PropUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.security.AWSCredentials;
-import org.skife.config.ConfigurationObjectFactory;
-
-import java.lang.reflect.InvocationTargetException;
-import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -96,6 +100,7 @@ public class ServerInit
                     .put("s3_zip", s3segmentLoader)
                     .put("local", new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config))
                     .put("hdfs", new SingleSegmentLoader(new HdfsDataSegmentPuller(new Configuration()), factory, config))
+                    .put("cassandra", new SingleSegmentLoader(new CassandraDataSegmentPuller(new Configuration()), factory, config))
                     .build()
     );
 
@@ -170,6 +175,11 @@ public class ServerInit
   {
     if (Boolean.parseBoolean(props.getProperty("druid.pusher.local", "false"))) {
       return new LocalDataSegmentPusher(configFactory.build(LocalDataSegmentPusherConfig.class), jsonMapper);
+    }
+    else if (Boolean.parseBoolean(props.getProperty("druid.pusher.cassandra", "false"))) {
+      final CassandraDataSegmentPusherConfig config = configFactory.build(CassandraDataSegmentPusherConfig.class);
+
+      return new CassandraDataSegmentPusher(config, jsonMapper);
     }
     else if (Boolean.parseBoolean(props.getProperty("druid.pusher.hdfs", "false"))) {
       final HdfsDataSegmentPusherConfig config = configFactory.build(HdfsDataSegmentPusherConfig.class);
