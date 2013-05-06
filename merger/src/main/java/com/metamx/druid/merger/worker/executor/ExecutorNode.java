@@ -25,6 +25,9 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -33,6 +36,11 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.BaseServerNode;
+import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
+import com.metamx.druid.curator.discovery.NoopServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
+import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
@@ -48,8 +56,11 @@ import com.metamx.druid.merger.common.TaskToolboxFactory;
 import com.metamx.druid.merger.common.actions.RemoteTaskActionClientFactory;
 import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.common.config.TaskConfig;
+import com.metamx.druid.merger.common.index.EventReceiverFirehoseFactory;
+import com.metamx.druid.merger.common.index.ChatHandlerProvider;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.coordinator.ExecutorServiceTaskRunner;
+import com.metamx.druid.merger.worker.config.ChatHandlerProviderConfig;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
@@ -70,6 +81,7 @@ import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
@@ -103,10 +115,12 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private DataSegmentPusher segmentPusher = null;
   private TaskToolboxFactory taskToolboxFactory = null;
   private ServiceDiscovery serviceDiscovery = null;
+  private ServiceAnnouncer serviceAnnouncer = null;
   private ServiceProvider coordinatorServiceProvider = null;
   private Server server = null;
   private ExecutorServiceTaskRunner taskRunner = null;
   private ExecutorLifecycle executorLifecycle = null;
+  private ChatHandlerProvider chatHandlerProvider = null;
 
   public ExecutorNode(
       String nodeType,
@@ -177,10 +191,10 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     initializeMonitors();
     initializeMergerConfig();
     initializeServiceDiscovery();
-    initializeCoordinatorServiceProvider();
     initializeDataSegmentPusher();
     initializeTaskToolbox();
     initializeTaskRunner();
+    initializeChatHandlerProvider();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeServer();
@@ -195,9 +209,18 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     executorLifecycle = executorLifecycleFactory.build(taskRunner, getJsonMapper());
     lifecycle.addManagedInstance(executorLifecycle);
 
+    final Injector injector = Guice.createInjector(
+        new ExecutorServletModule(
+            getJsonMapper(),
+            chatHandlerProvider
+        )
+    );
     final Context root = new Context(server, "/", Context.SESSIONS);
 
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
+    root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+    root.addEventListener(new GuiceServletConfig(injector));
+    root.addFilter(GuiceFilter.class, "/mmx/worker/v1/*", 0);
     root.addServlet(
         new ServletHolder(
             new QueryServlet(getJsonMapper(), getSmileMapper(), taskRunner, emitter, getRequestLogger())
@@ -265,7 +288,8 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     InjectableValues.Std injectables = new InjectableValues.Std();
 
     injectables.addValue("s3Client", s3Service)
-               .addValue("segmentPusher", segmentPusher);
+               .addValue("segmentPusher", segmentPusher)
+               .addValue("chatHandlerProvider", chatHandlerProvider);
 
     getJsonMapper().setInjectableValues(injectables);
   }
@@ -273,6 +297,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private void initializeJacksonSubtypes()
   {
     getJsonMapper().registerSubtypes(StaticS3FirehoseFactory.class);
+    getJsonMapper().registerSubtypes(EventReceiverFirehoseFactory.class);
   }
 
   private void initializeHttpClient()
@@ -366,16 +391,16 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
 
   public void initializeServiceDiscovery() throws Exception
   {
+    final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
     if (serviceDiscovery == null) {
-      final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
           getCuratorFramework(), config, lifecycle
       );
     }
-  }
-
-  public void initializeCoordinatorServiceProvider()
-  {
+    if (serviceAnnouncer == null) {
+      final ServiceInstanceFactory instanceFactory = Initialization.makeServiceInstanceFactory(config);
+      this.serviceAnnouncer = new CuratorServiceAnnouncer(serviceDiscovery, instanceFactory);
+    }
     if (coordinatorServiceProvider == null) {
       this.coordinatorServiceProvider = Initialization.makeServiceProvider(
           workerConfig.getMasterService(),
@@ -397,6 +422,24 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
                       .build()
               )
           )
+      );
+    }
+  }
+
+  public void initializeChatHandlerProvider()
+  {
+    if (chatHandlerProvider == null) {
+      final ChatHandlerProviderConfig config = configFactory.build(ChatHandlerProviderConfig.class);
+      final ServiceAnnouncer myServiceAnnouncer;
+      if (config.getServiceFormat() == null) {
+        log.info("ChatHandlerProvider: Using NoopServiceAnnouncer. Good luck finding your firehoses!");
+        myServiceAnnouncer = new NoopServiceAnnouncer();
+      } else {
+        myServiceAnnouncer = serviceAnnouncer;
+      }
+      this.chatHandlerProvider = new ChatHandlerProvider(
+          config,
+          myServiceAnnouncer
       );
     }
   }

@@ -140,12 +140,7 @@ public class IndexerCoordinatorResource
   @Produces("application/json")
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
-    final Optional<TaskStatus> status = taskStorageQueryAdapter.getSameGroupMergedStatus(taskid);
-    if (!status.isPresent()) {
-      return Response.status(Response.Status.NOT_FOUND).build();
-    } else {
-      return Response.ok().entity(status.get()).build();
-    }
+    return optionalTaskResponse(taskid, "status", taskStorageQueryAdapter.getSameGroupMergedStatus(taskid));
   }
 
   @GET
@@ -348,6 +343,17 @@ public class IndexerCoordinatorResource
     } catch (Exception e) {
       log.warn(e, "Failed to stream log for task %s", taskid);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  public <T> Response optionalTaskResponse(String taskid, String objectType, Optional<T> x) {
+    final Map<String, Object> results = Maps.newHashMap();
+    results.put("task", taskid);
+    if (x.isPresent()) {
+      results.put(objectType, x.get());
+      return Response.status(Response.Status.OK).entity(results).build();
+    } else {
+      return Response.status(Response.Status.NOT_FOUND).entity(results).build();
     }
   }
 

@@ -21,6 +21,7 @@ package com.metamx.druid.merger.coordinator.http;
 
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.ec2.AmazonEC2Client;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Charsets;
@@ -45,6 +46,9 @@ import com.metamx.druid.QueryableNode;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
+import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.GuiceServletConfig;
@@ -62,6 +66,7 @@ import com.metamx.druid.merger.common.actions.TaskActionToolbox;
 import com.metamx.druid.merger.common.config.IndexerZkConfig;
 import com.metamx.druid.merger.common.config.RetryPolicyConfig;
 import com.metamx.druid.merger.common.config.TaskLogConfig;
+import com.metamx.druid.merger.common.index.EventReceiverFirehoseFactory;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.merger.common.tasklogs.NoopTaskLogs;
 import com.metamx.druid.merger.common.tasklogs.S3TaskLogs;
@@ -109,6 +114,7 @@ import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
@@ -150,6 +156,8 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   private DBI dbi = null;
   private IndexerCoordinatorConfig config = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
+  private ServiceDiscovery serviceDiscovery = null;
+  private ServiceAnnouncer serviceAnnouncer = null;
   private TaskStorage taskStorage = null;
   private TaskQueue taskQueue = null;
   private TaskLockbox taskLockbox = null;
@@ -253,6 +261,8 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     initializeIndexerCoordinatorConfig();
     initializeMergeDBCoordinator();
     initializeJacksonSubtypes();
+    initializeJacksonInjections();
+    initializeServiceDiscovery();
     initializeTaskStorage();
     initializeTaskLockbox();
     initializeTaskQueue();
@@ -362,6 +372,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
           taskRunnerFactory,
           resourceManagementSchedulerFactory,
           getCuratorFramework(),
+          serviceAnnouncer,
           emitter
       );
       getLifecycle().addManagedInstance(taskMasterLifecycle);
@@ -461,9 +472,21 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     }
   }
 
+  private void initializeJacksonInjections()
+  {
+    InjectableValues.Std injectables = new InjectableValues.Std();
+
+    injectables.addValue("s3Client", null)
+               .addValue("segmentPusher", null)
+               .addValue("chatHandlerProvider", null);
+
+    getJsonMapper().setInjectableValues(injectables);
+  }
+
   private void initializeJacksonSubtypes()
   {
     getJsonMapper().registerSubtypes(StaticS3FirehoseFactory.class);
+    getJsonMapper().registerSubtypes(EventReceiverFirehoseFactory.class);
   }
 
   private void initializeHttpClient()
@@ -541,6 +564,20 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     }
   }
 
+  public void initializeServiceDiscovery() throws Exception
+  {
+    final ServiceDiscoveryConfig config = getConfigFactory().build(ServiceDiscoveryConfig.class);
+    if (serviceDiscovery == null) {
+      this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
+          getCuratorFramework(), config, getLifecycle()
+      );
+    }
+    if (serviceAnnouncer == null) {
+      final ServiceInstanceFactory instanceFactory = Initialization.makeServiceInstanceFactory(config);
+      this.serviceAnnouncer = new CuratorServiceAnnouncer(serviceDiscovery, instanceFactory);
+    }
+  }
+
   public void initializeTaskQueue()
   {
     if (taskQueue == null) {
@@ -609,7 +646,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
                 getJsonMapper(),
                 getConfigFactory().build(RemoteTaskRunnerConfig.class),
                 curator,
-                new PathChildrenCache(curator, indexerZkConfig.getAnnouncementPath(), true),
+                new PathChildrenCache(curator, indexerZkConfig.getIndexerAnnouncementPath(), true),
                 retryScheduledExec,
                 new RetryPolicyFactory(
                     getConfigFactory().buildWithReplacements(

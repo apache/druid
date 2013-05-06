@@ -109,11 +109,14 @@ public class TaskStorageQueryAdapter
     int nSuccesses = 0;
     int nFailures = 0;
     int nTotal = 0;
+    int nPresent = 0;
 
     for(final Optional<TaskStatus> statusOption : statuses.values()) {
       nTotal ++;
 
       if(statusOption.isPresent()) {
+        nPresent ++;
+
         final TaskStatus status = statusOption.get();
 
         if(status.isSuccess()) {
@@ -126,7 +129,7 @@ public class TaskStorageQueryAdapter
 
     final Optional<TaskStatus> status;
 
-    if(nTotal == 0) {
+    if(nPresent == 0) {
       status = Optional.absent();
     } else if(nSuccesses == nTotal) {
       status = Optional.of(TaskStatus.success(taskid));

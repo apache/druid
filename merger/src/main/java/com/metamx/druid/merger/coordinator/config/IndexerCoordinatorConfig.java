@@ -21,6 +21,7 @@ package com.metamx.druid.merger.coordinator.config;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import org.skife.config.Config;
 import org.skife.config.Default;
 import org.skife.config.DefaultNull;
@@ -29,15 +30,12 @@ import java.util.Set;
 
 /**
  */
-public abstract class IndexerCoordinatorConfig
+public abstract class IndexerCoordinatorConfig extends ZkPathsConfig
 {
   private volatile Set<String> whitelistDatasources = null;
 
   @Config("druid.host")
   public abstract String getServerName();
-
-  @Config("druid.zk.paths.indexer.leaderLatchPath")
-  public abstract String getLeaderLatchPath();
 
   @Config("druid.merger.threads")
   @Default("1")

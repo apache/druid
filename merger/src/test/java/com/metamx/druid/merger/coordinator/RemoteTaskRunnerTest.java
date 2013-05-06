@@ -252,21 +252,27 @@ public class RemoteTaskRunnerTest
         new IndexerZkConfig()
         {
           @Override
-          public String getAnnouncementPath()
+          public String getIndexerAnnouncementPath()
           {
             return announcementsPath;
           }
 
           @Override
-          public String getTaskPath()
+          public String getIndexerTaskPath()
           {
             return tasksPath;
           }
 
           @Override
-          public String getStatusPath()
+          public String getIndexerStatusPath()
           {
             return statusPath;
+          }
+
+          @Override
+          public String getZkBasePath()
+          {
+            throw new UnsupportedOperationException();
           }
 
           @Override
@@ -375,21 +381,27 @@ public class RemoteTaskRunnerTest
   private static class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   {
     @Override
-    public String getAnnouncementPath()
+    public String getIndexerAnnouncementPath()
     {
       return announcementsPath;
     }
 
     @Override
-    public String getTaskPath()
+    public String getIndexerTaskPath()
     {
       return tasksPath;
     }
 
     @Override
-    public String getStatusPath()
+    public String getIndexerStatusPath()
     {
       return statusPath;
+    }
+
+    @Override
+    public String getZkBasePath()
+    {
+      throw new UnsupportedOperationException();
     }
 
     @Override
