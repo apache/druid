@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
@@ -50,19 +49,13 @@ public class DefaultLimitSpec implements LimitSpec
   @JsonCreator
   public DefaultLimitSpec(
       @JsonProperty("orderBy") List<OrderByColumnSpec> orderBy,
-      @JsonProperty("limit") int limit
+      @JsonProperty("limit") Integer limit
   )
   {
     this.orderBy = (orderBy == null) ? ImmutableList.<OrderByColumnSpec>of() : orderBy;
-    this.limit = limit;
+    this.limit = (limit == null) ? Integer.MAX_VALUE : limit;
 
     Preconditions.checkState(limit > 0, "limit[%s] must be >0", limit);
-  }
-
-  public DefaultLimitSpec()
-  {
-    this.orderBy = Lists.newArrayList();
-    this.limit = 0;
   }
 
   @JsonProperty

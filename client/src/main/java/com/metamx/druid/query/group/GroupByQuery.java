@@ -39,6 +39,7 @@ import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.group.limit.DefaultLimitSpec;
 import com.metamx.druid.query.group.limit.LimitSpec;
+import com.metamx.druid.query.group.limit.NoopLimitSpec;
 import com.metamx.druid.query.group.limit.OrderByColumnSpec;
 import com.metamx.druid.query.segment.LegacySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
@@ -78,7 +79,7 @@ public class GroupByQuery extends BaseQuery<Row>
   )
   {
     super(dataSource, querySegmentSpec, context);
-    this.limitSpec = (limitSpec == null) ? new DefaultLimitSpec() : limitSpec;
+    this.limitSpec = (limitSpec == null) ? new NoopLimitSpec() : limitSpec;
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions == null ? ImmutableList.<DimensionSpec>of() : dimensions;
