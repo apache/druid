@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.realtime.firehose;
 
 import com.metamx.druid.input.InputRow;
 
@@ -28,7 +28,7 @@ import java.io.Closeable;
  * abstraction.  In order to add a new type of source for realtime data ingestion, all you need to do is implement
  * one of these and register it with the RealtimeMain.
  *
- * This object acts a lot like an Iterator, but it doesn't not extend the Iterator interface because it extends
+ * This object acts a lot like an Iterator, but it doesn't extend the Iterator interface because it extends
  * Closeable and it is very important that the close() method doesn't get forgotten, which is easy to do if this
  * gets passed around as an Iterator.
  * <p>

@@ -22,7 +22,6 @@ package com.metamx.druid.query.group;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -41,6 +40,7 @@ import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerTestHelper;
 import com.metamx.druid.query.dimension.DefaultDimensionSpec;
 import com.metamx.druid.query.dimension.DimensionSpec;
+import com.metamx.druid.query.group.limit.OrderByColumnSpec;
 import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -126,7 +126,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-      List<Row> expectedResults = Arrays.<Row>asList(
+      List<Row> expectedResults = Arrays.asList(
           createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
           createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
           createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 158L),
@@ -187,25 +187,25 @@ public class GroupByQueryRunnerTest
                                      .build();
 
       List<Row> expectedResults = Arrays.asList(
-          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "automotive", "rows", 1L, "idx", 135L)),
-          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "business",   "rows", 1L, "idx", 118L)),
-          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "entertainment", "rows", 1L, "idx", 158L)),
-          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "health", "rows", 1L, "idx", 120L)),
-          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "mezzanine", "rows", 3L, "idx", 2870L)),
-          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "news", "rows", 1L, "idx", 121L)),
-          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "premium", "rows", 3L, "idx", 2900L)),
-          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "technology", "rows", 1L, "idx", 78L)),
-          (Row) new MapBasedRow(new DateTime("2011-03-31", tz),ImmutableMap.<String, Object>of("alias", "travel", "rows", 1L, "idx", 119L)),
+          createExpectedRow(new DateTime("2011-03-31", tz), "alias", "automotive", "rows", 1L, "idx", 135L),
+          createExpectedRow(new DateTime("2011-03-31", tz), "alias", "business",   "rows", 1L, "idx", 118L),
+          createExpectedRow(new DateTime("2011-03-31", tz), "alias", "entertainment", "rows", 1L, "idx", 158L),
+          createExpectedRow(new DateTime("2011-03-31", tz), "alias", "health", "rows", 1L, "idx", 120L),
+          createExpectedRow(new DateTime("2011-03-31", tz), "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+          createExpectedRow(new DateTime("2011-03-31", tz), "alias", "news", "rows", 1L, "idx", 121L),
+          createExpectedRow(new DateTime("2011-03-31", tz), "alias", "premium", "rows", 3L, "idx", 2900L),
+          createExpectedRow(new DateTime("2011-03-31", tz), "alias", "technology", "rows", 1L, "idx", 78L),
+          createExpectedRow(new DateTime("2011-03-31", tz), "alias", "travel", "rows", 1L, "idx", 119L),
 
-          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "automotive", "rows", 1L, "idx", 147L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "business",   "rows", 1L, "idx", 112L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "entertainment", "rows", 1L, "idx", 166L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "health", "rows", 1L, "idx", 113L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "mezzanine", "rows", 3L, "idx", 2447L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "news", "rows", 1L, "idx", 114L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "premium", "rows", 3L, "idx", 2505L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "technology", "rows", 1L, "idx", 97L)),
-          (Row) new MapBasedRow(new DateTime("2011-04-01", tz),ImmutableMap.<String, Object>of("alias", "travel", "rows", 1L, "idx", 126L))
+          createExpectedRow(new DateTime("2011-04-01", tz), "alias", "automotive", "rows", 1L, "idx", 147L),
+          createExpectedRow(new DateTime("2011-04-01", tz), "alias", "business",   "rows", 1L, "idx", 112L),
+          createExpectedRow(new DateTime("2011-04-01", tz), "alias", "entertainment", "rows", 1L, "idx", 166L),
+          createExpectedRow(new DateTime("2011-04-01", tz), "alias", "health", "rows", 1L, "idx", 113L),
+          createExpectedRow(new DateTime("2011-04-01", tz), "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+          createExpectedRow(new DateTime("2011-04-01", tz), "alias", "news", "rows", 1L, "idx", 114L),
+          createExpectedRow(new DateTime("2011-04-01", tz), "alias", "premium", "rows", 3L, "idx", 2505L),
+          createExpectedRow(new DateTime("2011-04-01", tz), "alias", "technology", "rows", 1L, "idx", 97L),
+          createExpectedRow(new DateTime("2011-04-01", tz), "alias", "travel", "rows", 1L, "idx", 126L)
       );
 
       Iterable<Row> results = Sequences.toList(
@@ -252,7 +252,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    List<Row> expectedResults = Arrays.<Row>asList(
+    List<Row> expectedResults = Arrays.asList(
         createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
         createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
         createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
@@ -267,7 +267,7 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, runner.run(fullQuery), "direct");
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery), "merged");
 
-    List<Row> allGranExpectedResults = Arrays.<Row>asList(
+    List<Row> allGranExpectedResults = Arrays.asList(
         createExpectedRow("2011-04-02", "alias", "automotive", "rows", 2L, "idx", 269L),
         createExpectedRow("2011-04-02", "alias", "business", "rows", 2L, "idx", 217L),
         createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 2L, "idx", 319L),
@@ -284,7 +284,92 @@ public class GroupByQueryRunnerTest
 
   }
 
-  private MapBasedRow createExpectedRow(final String timestamp, Object... vals)
+  @Test
+  public void testGroupByOrderLimit() throws Exception
+  {
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .addOrderByColumn("rows")
+        .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+
+    final GroupByQuery query = builder.build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L),
+        createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
+        createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
+        createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
+        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
+        createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
+        createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
+    );
+
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
+
+    TestHelper.assertExpectedObjects(
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build()), "limited"
+    );
+  }
+
+  @Test
+  public void testGroupByWithOrderLimit2() throws Exception
+  {
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .addOrderByColumn("rows", "desc")
+        .addOrderByColumn("alias", "d")
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+
+    final GroupByQuery query = builder.build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
+        createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L),
+        createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
+        createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
+        createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
+        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L)
+    );
+
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
+    TestHelper.assertExpectedObjects(
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build()), "limited"
+    );
+
+  }
+
+  private Row createExpectedRow(final String timestamp, Object... vals)
+  {
+    return createExpectedRow(new DateTime(timestamp), vals);
+  }
+
+  private Row createExpectedRow(final DateTime timestamp, Object... vals)
   {
     Preconditions.checkArgument(vals.length % 2 == 0);
 
@@ -293,6 +378,6 @@ public class GroupByQueryRunnerTest
       theVals.put(vals[i].toString(), vals[i+1]);
     }
 
-    return new MapBasedRow(new DateTime(timestamp), theVals);
+    return new MapBasedRow(timestamp, theVals);
   }
 }

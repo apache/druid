@@ -42,6 +42,8 @@ import com.metamx.druid.client.cache.MapCache;
 import com.metamx.druid.client.cache.MapCacheConfig;
 import com.metamx.druid.client.cache.MemcachedCache;
 import com.metamx.druid.client.cache.MemcachedCacheConfig;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -225,15 +227,17 @@ public class BrokerNode extends QueryableNode<BrokerNode>
   {
     if (useDiscovery) {
       final Lifecycle lifecycle = getLifecycle();
-
       final ServiceDiscoveryConfig serviceDiscoveryConfig = getConfigFactory().build(ServiceDiscoveryConfig.class);
-      CuratorFramework curatorFramework = Initialization.makeCuratorFramework(
+      final CuratorFramework curatorFramework = Initialization.makeCuratorFramework(
           serviceDiscoveryConfig, lifecycle
       );
-
       final ServiceDiscovery serviceDiscovery = Initialization.makeServiceDiscoveryClient(
           curatorFramework, serviceDiscoveryConfig, lifecycle
       );
+      final ServiceAnnouncer serviceAnnouncer = Initialization.makeServiceAnnouncer(
+          serviceDiscoveryConfig, serviceDiscovery
+      );
+      Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, lifecycle);
     }
   }
 

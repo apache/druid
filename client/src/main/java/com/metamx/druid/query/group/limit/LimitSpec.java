@@ -17,28 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.query.group.limit;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Function;
+import com.metamx.common.guava.Sequence;
+import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.aggregation.post.PostAggregator;
+import com.metamx.druid.input.Row;
+import com.metamx.druid.query.dimension.DimensionSpec;
 
-import java.io.IOException;
+import java.util.List;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes({
-                  @JsonSubTypes.Type(name = "kafka-0.7.2", value = KafkaFirehoseFactory.class)
-              })
-public interface FirehoseFactory
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopLimitSpec.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "default", value = DefaultLimitSpec.class)
+})
+public interface LimitSpec
 {
-  /**
-   * Initialization method that connects up the fire hose.  If this method returns successfully it should be safe to
-   * call hasMore() on the returned Firehose (which might subsequently block).
-   *
-   * If this method returns null, then any attempt to call hasMore(), nextRow(), commit() and close() on the return
-   * value will throw a surprising NPE.   Throwing IOException on connection failure or runtime exception on
-   * invalid configuration is preferred over returning null.
-   */
-  public Firehose connect() throws IOException;
+  public Function<Sequence<Row>, Sequence<Row>> build(List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs);
 }

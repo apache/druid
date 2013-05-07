@@ -37,7 +37,7 @@ public class ExecutorMain
   {
     LogLevelAdjuster.register();
 
-    if (args.length != 3) {
+    if (args.length != 2) {
       log.info("Usage: ExecutorMain <task.json> <status.json>");
       System.exit(2);
     }

@@ -19,22 +19,14 @@
 
 package com.metamx.druid.merger.common.config;
 
+import com.metamx.druid.initialization.ZkPathsConfig;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
 /**
  */
-public abstract class IndexerZkConfig
+public abstract class IndexerZkConfig extends ZkPathsConfig
 {
-  @Config("druid.zk.paths.indexer.announcementsPath")
-  public abstract String getAnnouncementPath();
-
-  @Config("druid.zk.paths.indexer.tasksPath")
-  public abstract String getTaskPath();
-
-  @Config("druid.zk.paths.indexer.statusPath")
-  public abstract String getStatusPath();
-
   @Config("druid.zk.maxNumBytes")
   @Default("512000")
   public abstract long getMaxNumBytes();
