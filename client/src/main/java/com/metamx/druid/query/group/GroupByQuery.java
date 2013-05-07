@@ -379,4 +379,18 @@ public class GroupByQuery extends BaseQuery<Row>
       );
     }
   }
+
+  @Override
+  public String toString()
+  {
+    return "GroupByQuery{" +
+           "limitSpec=" + limitSpec +
+           ", dimFilter=" + dimFilter +
+           ", granularity=" + granularity +
+           ", dimensions=" + dimensions +
+           ", aggregatorSpecs=" + aggregatorSpecs +
+           ", postAggregatorSpecs=" + postAggregatorSpecs +
+           ", orderByLimitFn=" + orderByLimitFn +
+           '}';
+  }
 }
