@@ -17,25 +17,25 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.io.IOException;
 
-/**
- */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-                  @JsonSubTypes.Type(name = "kafka-0.7.2", value = KafkaFirehoseFactory.class)
+                  @JsonSubTypes.Type(name = "kafka-0.7.2", value = KafkaFirehoseFactory.class),
+                  @JsonSubTypes.Type(name = "clipped", value = ClippedFirehoseFactory.class),
+                  @JsonSubTypes.Type(name = "timed", value = TimedShutoffFirehoseFactory.class)
               })
 public interface FirehoseFactory
 {
   /**
    * Initialization method that connects up the fire hose.  If this method returns successfully it should be safe to
    * call hasMore() on the returned Firehose (which might subsequently block).
-   *
+   * <p/>
    * If this method returns null, then any attempt to call hasMore(), nextRow(), commit() and close() on the return
    * value will throw a surprising NPE.   Throwing IOException on connection failure or runtime exception on
    * invalid configuration is preferred over returning null.

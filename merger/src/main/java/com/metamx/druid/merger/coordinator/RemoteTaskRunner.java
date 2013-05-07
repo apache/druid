@@ -430,7 +430,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   private void cleanup(final String workerId, final String taskId)
   {
     runningTasks.remove(taskId);
-    final String statusPath = JOINER.join(config.getStatusPath(), workerId, taskId);
+    final String statusPath = JOINER.join(config.getIndexerStatusPath(), workerId, taskId);
     try {
       cf.delete().guaranteed().forPath(statusPath);
     }
@@ -493,7 +493,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
       .withMode(CreateMode.EPHEMERAL)
       .forPath(
           JOINER.join(
-              config.getTaskPath(),
+              config.getIndexerTaskPath(),
               theWorker.getHost(),
               task.getId()
           ),
@@ -522,7 +522,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   private void addWorker(final Worker worker)
   {
     try {
-      final String workerStatusPath = JOINER.join(config.getStatusPath(), worker.getHost());
+      final String workerStatusPath = JOINER.join(config.getIndexerStatusPath(), worker.getHost());
       final PathChildrenCache statusCache = new PathChildrenCache(cf, workerStatusPath, true);
       final ZkWorker zkWorker = new ZkWorker(
           worker,
@@ -626,18 +626,18 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
       try {
         Set<String> tasksToRetry = Sets.newHashSet(
             cf.getChildren()
-              .forPath(JOINER.join(config.getTaskPath(), worker.getHost()))
+              .forPath(JOINER.join(config.getIndexerTaskPath(), worker.getHost()))
         );
         tasksToRetry.addAll(
             cf.getChildren()
-              .forPath(JOINER.join(config.getStatusPath(), worker.getHost()))
+              .forPath(JOINER.join(config.getIndexerStatusPath(), worker.getHost()))
         );
         log.info("%s has %d tasks to retry", worker.getHost(), tasksToRetry.size());
 
         for (String taskId : tasksToRetry) {
           TaskRunnerWorkItem taskRunnerWorkItem = runningTasks.get(taskId);
           if (taskRunnerWorkItem != null) {
-            String taskPath = JOINER.join(config.getTaskPath(), worker.getHost(), taskId);
+            String taskPath = JOINER.join(config.getIndexerTaskPath(), worker.getHost(), taskId);
             if (cf.checkExists().forPath(taskPath) != null) {
               cf.delete().guaranteed().forPath(taskPath);
             }

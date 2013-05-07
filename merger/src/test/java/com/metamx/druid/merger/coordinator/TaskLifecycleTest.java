@@ -19,6 +19,7 @@
 
 package com.metamx.druid.merger.coordinator;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -58,8 +59,8 @@ import com.metamx.druid.merger.common.task.IndexTask;
 import com.metamx.druid.merger.common.task.KillTask;
 import com.metamx.druid.merger.common.task.Task;
 import com.metamx.druid.merger.coordinator.exec.TaskConsumer;
-import com.metamx.druid.realtime.Firehose;
-import com.metamx.druid.realtime.FirehoseFactory;
+import com.metamx.druid.realtime.firehose.Firehose;
+import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -205,6 +206,9 @@ public class TaskLifecycleTest
         ),
         -1
     );
+
+    final Optional<TaskStatus> preRunTaskStatus = tsqa.getSameGroupMergedStatus(indexTask.getId());
+    Assert.assertTrue("pre run task status not present", !preRunTaskStatus.isPresent());
 
     final TaskStatus mergedStatus = runTask(indexTask);
     final TaskStatus status = ts.getStatus(indexTask.getId()).get();
