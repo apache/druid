@@ -45,11 +45,11 @@ public class RealtimeStandaloneMain
     );
 
     // Create dummy objects for the various interfaces that interact with the DB, ZK and deep storage
-    //rn.setSegmentPublisher(new NoopSegmentPublisher());
-    //rn.setAnnouncer(new NoopDataSegmentAnnouncer());
-    //rn.setDataSegmentPusher(new NoopDataSegmentPusher());
-    //rn.setServerView(new NoopServerView());
-    //rn.setInventoryView(new NoopInventoryView());
+    rn.setSegmentPublisher(new NoopSegmentPublisher());
+    rn.setAnnouncer(new NoopDataSegmentAnnouncer());
+    rn.setDataSegmentPusher(new NoopDataSegmentPusher());
+    rn.setServerView(new NoopServerView());
+    rn.setInventoryView(new NoopInventoryView());
     
     Runtime.getRuntime().addShutdownHook(
         new Thread(
