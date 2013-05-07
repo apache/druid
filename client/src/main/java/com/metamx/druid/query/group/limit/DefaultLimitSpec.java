@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
@@ -44,31 +43,25 @@ import java.util.Map;
  */
 public class DefaultLimitSpec implements LimitSpec
 {
-  private final List<OrderByColumnSpec> orderBy;
+  private final List<OrderByColumnSpec> columns;
   private final int limit;
 
   @JsonCreator
   public DefaultLimitSpec(
-      @JsonProperty("orderBy") List<OrderByColumnSpec> orderBy,
-      @JsonProperty("limit") int limit
+      @JsonProperty("columns") List<OrderByColumnSpec> columns,
+      @JsonProperty("limit") Integer limit
   )
   {
-    this.orderBy = (orderBy == null) ? ImmutableList.<OrderByColumnSpec>of() : orderBy;
-    this.limit = limit;
+    this.columns = (columns == null) ? ImmutableList.<OrderByColumnSpec>of() : columns;
+    this.limit = (limit == null) ? Integer.MAX_VALUE : limit;
 
     Preconditions.checkState(limit > 0, "limit[%s] must be >0", limit);
   }
 
-  public DefaultLimitSpec()
-  {
-    this.orderBy = Lists.newArrayList();
-    this.limit = 0;
-  }
-
   @JsonProperty
-  public List<OrderByColumnSpec> getOrderBy()
+  public List<OrderByColumnSpec> getColumns()
   {
-    return orderBy;
+    return columns;
   }
 
   @JsonProperty
@@ -124,7 +117,7 @@ public class DefaultLimitSpec implements LimitSpec
       possibleOrderings.put(column, metricOrdering(column, postAgg.getComparator()));
     }
 
-    for (OrderByColumnSpec columnSpec : orderBy) {
+    for (OrderByColumnSpec columnSpec : columns) {
       Ordering<Row> nextOrdering = possibleOrderings.get(columnSpec.getDimension());
 
       if (nextOrdering == null) {
@@ -177,7 +170,7 @@ public class DefaultLimitSpec implements LimitSpec
   public String toString()
   {
     return "DefaultLimitSpec{" +
-           "orderBy='" + orderBy + '\'' +
+           "columns='" + columns + '\'' +
            ", limit=" + limit +
            '}';
   }

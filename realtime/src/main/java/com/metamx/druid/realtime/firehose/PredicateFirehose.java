@@ -1,26 +1,25 @@
-package com.metamx.druid.realtime;
+package com.metamx.druid.realtime.firehose;
 
+import com.google.common.base.Predicate;
 import com.metamx.druid.input.InputRow;
-import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.util.NoSuchElementException;
 
 /**
- * Provides a view on a firehose that only returns rows at or after a certain minimum timestamp.
+ * Provides a view on a firehose that only returns rows that match a certain predicate.
  * Not thread-safe.
  */
-public class MinTimeFirehose implements Firehose
+public class PredicateFirehose implements Firehose
 {
   private final Firehose firehose;
-  private final DateTime minTime;
+  private final Predicate<InputRow> predicate;
 
   private InputRow savedInputRow = null;
 
-  public MinTimeFirehose(Firehose firehose, DateTime minTime)
+  public PredicateFirehose(Firehose firehose, Predicate<InputRow> predicate)
   {
     this.firehose = firehose;
-    this.minTime = minTime;
+    this.predicate = predicate;
   }
 
   @Override
@@ -32,7 +31,7 @@ public class MinTimeFirehose implements Firehose
 
     while (firehose.hasMore()) {
       final InputRow row = firehose.nextRow();
-      if (acceptable(row)) {
+      if (predicate.apply(row)) {
         savedInputRow = row;
         return true;
       }
@@ -59,10 +58,5 @@ public class MinTimeFirehose implements Firehose
   public void close() throws IOException
   {
     firehose.close();
-  }
-
-  private boolean acceptable(InputRow row)
-  {
-    return row.getTimestampFromEpoch() >= minTime.getMillis();
   }
 }

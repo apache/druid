@@ -32,7 +32,7 @@ import com.metamx.druid.merger.common.TaskStatus;
 import com.metamx.druid.merger.common.TaskToolbox;
 import com.metamx.druid.merger.common.actions.SpawnTasksAction;
 import com.metamx.druid.merger.common.actions.TaskActionClient;
-import com.metamx.druid.realtime.FirehoseFactory;
+import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
 import org.joda.time.DateTime;

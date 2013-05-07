@@ -39,6 +39,7 @@ import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
+import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseRuleManagerConfig;
 import com.metamx.druid.db.DatabaseSegmentManager;
@@ -174,6 +175,10 @@ public class MasterMain
         serviceDiscoveryConfig,
         lifecycle
     );
+    final ServiceAnnouncer serviceAnnouncer = Initialization.makeServiceAnnouncer(
+        serviceDiscoveryConfig, serviceDiscovery
+    );
+    Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, lifecycle);
 
     ServiceProvider serviceProvider = null;
     if (druidMasterConfig.getMergerServiceName() != null) {
