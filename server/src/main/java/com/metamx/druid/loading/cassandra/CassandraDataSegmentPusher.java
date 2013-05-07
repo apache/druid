@@ -24,12 +24,13 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.recipes.storage.CassandraChunkedStorageProvider;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
 import com.netflix.astyanax.recipes.storage.ChunkedStorageProvider;
-import com.netflix.astyanax.recipes.storage.ObjectMetadata;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 /**
- * This is the data segment pusher for Cassandra.
+ * Cassandra Segment Pusher
+ *
+ * @author boneill42
  */
 // TODO: Auto-create the schema if it does not exist.
 // Should we make it so they can specify tables?
@@ -84,20 +85,22 @@ public class CassandraDataSegmentPusher implements DataSegmentPusher
 		// Create index
 		final File compressedIndexFile = File.createTempFile("druid", "index.zip");
 		long indexSize = CompressionUtils.zip(indexFilesDir, compressedIndexFile);
+		log.info("Wrote compressed file [%s] to [%s]", compressedIndexFile.getAbsolutePath(), key);
+
 		int version = IndexIO.getVersionFromDir(indexFilesDir);
 
 		try
 		{
-			ObjectMetadata indexMeta = ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
+			long start = System.currentTimeMillis();
+			ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
 			    .withConcurrencyLevel(CONCURRENCY).call();
 			byte[] json = jsonMapper.writeValueAsBytes(segment);
-			//CassandraDataSegmentDescriptor descriptor = new CassandraDataSegmentDescriptor(segment, json);
 			MutationBatch mutation = this.keyspace.prepareMutationBatch();
       mutation.withRow(descriptorStorage, key)
       	.putColumn("lastmodified", System.currentTimeMillis(), null)
       	.putColumn("descriptor", json, null);      	
       mutation.execute();
-			log.info("Wrote index to C* [" + indexMeta.getParentPath() + "]");
+			log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
 		} catch (Exception e)
 		{
 			throw new IOException(e);

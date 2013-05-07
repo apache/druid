@@ -20,66 +20,36 @@
 package com.metamx.druid.loading.cassandra;
 
 import java.io.File;
-import java.io.IOException;
+import java.io.OutputStream;
 
-import org.apache.commons.io.FileUtils;
-
+import com.google.common.base.Throwables;
 import com.google.common.io.Files;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.loading.DataSegmentPuller;
 import com.metamx.druid.loading.SegmentLoadingException;
-import com.netflix.astyanax.AstyanaxContext;
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
+import com.metamx.druid.utils.CompressionUtils;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
-import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
-import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.recipes.storage.CassandraChunkedStorageProvider;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
-import com.netflix.astyanax.recipes.storage.ChunkedStorageProvider;
 import com.netflix.astyanax.recipes.storage.ObjectMetadata;
-import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 /**
+ * Cassandra Segment Puller
+ *
+ * @author boneill42
  */
-public class CassandraDataSegmentPuller implements DataSegmentPuller
+public class CassandraDataSegmentPuller extends CassandraStorage implements DataSegmentPuller 
 {
 	private static final Logger log = new Logger(CassandraDataSegmentPuller.class);
-	private static final String CLUSTER_NAME = "druid_cassandra_cluster";
-	private static final String INDEX_TABLE_NAME = "index_storage";
-	private static final String DESCRIPTOR_TABLE_NAME = "descriptor_storage";
 	private static final int CONCURRENCY = 10;
 	private static final int BATCH_SIZE = 10;
 
-	private Keyspace keyspace;
-	private AstyanaxContext<Keyspace> astyanaxContext;
-	private ChunkedStorageProvider indexStorage;
-	private ColumnFamily<String, String> descriptorStorage;
-
-	public CassandraDataSegmentPuller(CassandraDataSegmentConfig config)
+	public CassandraDataSegmentPuller(CassandraDataSegmentConfig config) 
 	{
-		this.astyanaxContext = new AstyanaxContext.Builder()
-		    .forCluster(CLUSTER_NAME)
-		    .forKeyspace(config.getKeyspace())
-		    .withAstyanaxConfiguration(new AstyanaxConfigurationImpl().setDiscoveryType(NodeDiscoveryType.NONE))
-		    .withConnectionPoolConfiguration(
-		        new ConnectionPoolConfigurationImpl("MyConnectionPool").setMaxConnsPerHost(10)
-		            .setSeeds(config.getHost())).withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-		    .buildKeyspace(ThriftFamilyFactory.getInstance());
-		this.astyanaxContext.start();
-		this.keyspace = this.astyanaxContext.getEntity();
-
-		indexStorage = new CassandraChunkedStorageProvider(keyspace, INDEX_TABLE_NAME);
-
-		descriptorStorage = new ColumnFamily<String, String>(DESCRIPTOR_TABLE_NAME,
-		    StringSerializer.get(), StringSerializer.get());
+		super(config);
 	}
 
 	@Override
@@ -103,27 +73,22 @@ public class CassandraDataSegmentPuller implements DataSegmentPuller
 		ObjectMetadata meta = null;
 		try
 		{
-			final File outFile = new File(outDir, toFilename(key, ".gz"));
+			final File outFile = new File(outDir, "index.zip");
+			log.info("Writing to [" + outFile.getAbsolutePath() + "]");
+			OutputStream os = Files.newOutputStreamSupplier(outFile).getOutput();
 			meta = ChunkedStorage
-			    .newReader(indexStorage, key, Files.newOutputStreamSupplier(outFile).getOutput())
+			    .newReader(indexStorage, key, os)
 			    .withBatchSize(BATCH_SIZE)
 			    .withConcurrencyLevel(CONCURRENCY)
-			    .call();
+			    .call();			
+			os.close();
+			CompressionUtils.unzip(outFile, outDir);
 		} catch (Exception e)
 		{
-			log.error("Could not pull segment [" + key + "] from C*", e);
-			try
-			{
-				FileUtils.deleteDirectory(outDir);
-			} catch (IOException ioe)
-			{
-				log.error("Couldn't delete directory [" + outDir + "] for cleanup.", ioe);
-			}
-		}
-
-		log.info("Pull of file[%s] completed in %,d millis (%s chunks)", key, System.currentTimeMillis() - startTime,
-		    meta.getChunkSize());
-
+			throw Throwables.propagate(e);
+		} 
+		log.info("Pull of file[%s] completed in %,d millis (%s bytes)", key, System.currentTimeMillis() - startTime,
+		    meta.getObjectSize());
 	}
 
 	@Override
@@ -144,12 +109,5 @@ public class CassandraDataSegmentPuller implements DataSegmentPuller
 		{
 			throw new SegmentLoadingException(e, e.getMessage());
 		}
-	}
-
-	private String toFilename(String key, final String suffix)
-	{
-		String filename = key.substring(key.lastIndexOf("/") + 1);
-		filename = filename.substring(0, filename.length() - suffix.length());
-		return filename;
 	}
 }

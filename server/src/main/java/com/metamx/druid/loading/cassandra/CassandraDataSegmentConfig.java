@@ -22,6 +22,9 @@ package com.metamx.druid.loading.cassandra;
 import org.skife.config.Config;
 
 /**
+ * Cassandra Config
+ * 
+ * @author boneill42
  */
 public abstract class CassandraDataSegmentConfig
 {
