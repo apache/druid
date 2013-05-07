@@ -21,6 +21,7 @@ package com.metamx.druid.initialization;
 
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
@@ -41,9 +42,6 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.DruidProcessingConfig;
 import com.metamx.druid.Query;
 import com.metamx.druid.collect.StupidPool;
-import com.metamx.druid.loading.CassandraDataSegmentPuller;
-import com.metamx.druid.loading.CassandraDataSegmentPusher;
-import com.metamx.druid.loading.CassandraDataSegmentPusherConfig;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.DelegatingSegmentLoader;
 import com.metamx.druid.loading.HdfsDataSegmentPuller;
@@ -60,6 +58,9 @@ import com.metamx.druid.loading.S3DataSegmentPusherConfig;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SingleSegmentLoader;
+import com.metamx.druid.loading.cassandra.CassandraDataSegmentConfig;
+import com.metamx.druid.loading.cassandra.CassandraDataSegmentPuller;
+import com.metamx.druid.loading.cassandra.CassandraDataSegmentPusher;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.query.group.GroupByQueryEngine;
@@ -83,27 +84,42 @@ public class ServerInit
   private static Logger log = new Logger(ServerInit.class);
 
   public static SegmentLoader makeDefaultQueryableLoader(
-      RestS3Service s3Client,
-      SegmentLoaderConfig config
-  )
+  		final ConfigurationObjectFactory configFactory,
+  		final Properties props
+  ) throws S3ServiceException
   {
+  	SegmentLoaderConfig config = configFactory.build(SegmentLoaderConfig.class);
     DelegatingSegmentLoader delegateLoader = new DelegatingSegmentLoader();
-
-    final S3DataSegmentPuller segmentGetter = new S3DataSegmentPuller(s3Client);
     final QueryableIndexFactory factory = new MMappedQueryableIndexFactory();
 
-    SingleSegmentLoader s3segmentLoader = new SingleSegmentLoader(segmentGetter, factory, config);
+    SingleSegmentLoader s3segmentLoader= null;
+    try {
+      final RestS3Service s3Client = new RestS3Service(
+          new AWSCredentials(
+              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
+              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
+          )
+      );
+      final S3DataSegmentPuller segmentGetter = new S3DataSegmentPuller(s3Client);
+      s3segmentLoader = new SingleSegmentLoader(segmentGetter, factory, config);
+    } catch (com.metamx.common.ISE ise){
+    	log.warn("Could not create s3Client.", ise);
+    }
 
+    Map<String, SegmentLoader> loaderTypes = new HashMap<String, SegmentLoader>();
+    loaderTypes.put("local", new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config));
+    loaderTypes.put("hdfs", new SingleSegmentLoader(new HdfsDataSegmentPuller(new Configuration()), factory, config));
+    loaderTypes.put("c*", 
+    		new SingleSegmentLoader(new CassandraDataSegmentPuller(configFactory.build(CassandraDataSegmentConfig.class)), factory, config));
+
+    if (s3segmentLoader != null){
+      loaderTypes.put("s3", s3segmentLoader);
+      loaderTypes.put("s3_zip", s3segmentLoader);
+    }
+    
     delegateLoader.setLoaderTypes(
-        ImmutableMap.<String, SegmentLoader>builder()
-                    .put("s3", s3segmentLoader)
-                    .put("s3_zip", s3segmentLoader)
-                    .put("local", new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config))
-                    .put("hdfs", new SingleSegmentLoader(new HdfsDataSegmentPuller(new Configuration()), factory, config))
-                    .put("cassandra", new SingleSegmentLoader(new CassandraDataSegmentPuller(new Configuration()), factory, config))
-                    .build()
+        ImmutableMap.<String, SegmentLoader>copyOf(loaderTypes)
     );
-
     return delegateLoader;
   }
 
@@ -177,7 +193,7 @@ public class ServerInit
       return new LocalDataSegmentPusher(configFactory.build(LocalDataSegmentPusherConfig.class), jsonMapper);
     }
     else if (Boolean.parseBoolean(props.getProperty("druid.pusher.cassandra", "false"))) {
-      final CassandraDataSegmentPusherConfig config = configFactory.build(CassandraDataSegmentPusherConfig.class);
+      final CassandraDataSegmentConfig config = configFactory.build(CassandraDataSegmentConfig.class);
 
       return new CassandraDataSegmentPusher(config, jsonMapper);
     }

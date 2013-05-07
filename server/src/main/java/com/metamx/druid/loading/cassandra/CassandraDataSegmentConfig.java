@@ -17,13 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.loading;
+package com.metamx.druid.loading.cassandra;
 
 import org.skife.config.Config;
 
 /**
  */
-public abstract class CassandraDataSegmentPusherConfig
+public abstract class CassandraDataSegmentConfig
 {
   @Config("druid.pusher.cassandra.host")
   public abstract String getHost();
