@@ -135,7 +135,7 @@ public class ServerInventoryView implements ServerView, InventoryView
           @Override
           public void deadContainer(DruidServer deadContainer)
           {
-            log.info("Server Disdappeared[%s]", deadContainer);
+            log.info("Server Disappeared[%s]", deadContainer);
             runServerCallbacks(deadContainer);
           }
 
