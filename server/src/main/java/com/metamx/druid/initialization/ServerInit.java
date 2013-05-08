@@ -21,7 +21,6 @@ package com.metamx.druid.initialization;
 
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
@@ -92,33 +91,23 @@ public class ServerInit
     DelegatingSegmentLoader delegateLoader = new DelegatingSegmentLoader();
     final QueryableIndexFactory factory = new MMappedQueryableIndexFactory();
 
-    SingleSegmentLoader s3segmentLoader= null;
-    try {
-      final RestS3Service s3Client = new RestS3Service(
-          new AWSCredentials(
-              PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-              PropUtils.getProperty(props, "com.metamx.aws.secretKey")
-          )
-      );
-      final S3DataSegmentPuller segmentGetter = new S3DataSegmentPuller(s3Client);
-      s3segmentLoader = new SingleSegmentLoader(segmentGetter, factory, config);
-    } catch (com.metamx.common.ISE ise){
-    	log.warn("Could not create s3Client.", ise);
-    }
-
-    Map<String, SegmentLoader> loaderTypes = new HashMap<String, SegmentLoader>();
-    loaderTypes.put("local", new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config));
-    loaderTypes.put("hdfs", new SingleSegmentLoader(new HdfsDataSegmentPuller(new Configuration()), factory, config));
-    loaderTypes.put("c*", 
-    		new SingleSegmentLoader(new CassandraDataSegmentPuller(configFactory.build(CassandraDataSegmentConfig.class)), factory, config));
-
-    if (s3segmentLoader != null){
-      loaderTypes.put("s3", s3segmentLoader);
-      loaderTypes.put("s3_zip", s3segmentLoader);
-    }
+    final RestS3Service s3Client = new RestS3Service(
+        new AWSCredentials(
+            props.getProperty("com.metamx.aws.accessKey", ""),
+            props.getProperty("com.metamx.aws.secretKey", "")
+        )
+    );
+    final S3DataSegmentPuller segmentGetter = new S3DataSegmentPuller(s3Client);
+    final SingleSegmentLoader s3segmentLoader = new SingleSegmentLoader(segmentGetter, factory, config);
     
     delegateLoader.setLoaderTypes(
-        ImmutableMap.<String, SegmentLoader>copyOf(loaderTypes)
+        ImmutableMap.<String, SegmentLoader>builder()
+        .put("local", new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config))
+        .put("hdfs", new SingleSegmentLoader(new HdfsDataSegmentPuller(new Configuration()), factory, config))
+        .put("s3", s3segmentLoader)
+        .put("s3_zip", s3segmentLoader)
+        .put("c*",new SingleSegmentLoader(new CassandraDataSegmentPuller(configFactory.build(CassandraDataSegmentConfig.class)), factory, config))
+        .build()
     );
     return delegateLoader;
   }
