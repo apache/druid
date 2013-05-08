@@ -19,7 +19,10 @@
 
 package com.metamx.druid.http;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
+import com.metamx.druid.Query;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 import org.joda.time.DateTime;
@@ -64,28 +67,50 @@ public class EmittingRequestLogger implements RequestLogger
     }
 
     @Override
+    // override JsonValue serialization, instead use annotations
+    // to include type information for polymorphic Query objects
+    @JsonValue(value=false)
     public Map<String, Object> toMap()
     {
-      return ImmutableMap.<String, Object>builder()
-              .put("feed", getFeed())
-              .put("timestamp", request.getTimestamp())
-              .put("service", service)
-              .put("host", host)
-              .put("query", request.getQuery())
-              .put("remoteAddr", request.getRemoteAddr())
-              .build();
+      return ImmutableMap.of();
     }
 
     @Override
+    @JsonProperty("feed")
     public String getFeed()
     {
       return feed;
     }
 
     @Override
+    @JsonProperty("timestamp")
     public DateTime getCreatedTime()
     {
       return request.getTimestamp();
+    }
+
+    @JsonProperty("service")
+    public String getService()
+    {
+      return service;
+    }
+
+    @JsonProperty("host")
+    public String getHost()
+    {
+      return host;
+    }
+
+    @JsonProperty("query")
+    public Query getQuery()
+    {
+      return request.getQuery();
+    }
+
+    @JsonProperty("remoteAddr")
+    public String getRemoteAddr()
+    {
+      return request.getRemoteAddr();
     }
 
     @Override
