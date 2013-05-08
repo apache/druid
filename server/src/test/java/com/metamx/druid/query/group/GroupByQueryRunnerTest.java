@@ -32,6 +32,7 @@ import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.TestHelper;
 import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
 import com.metamx.druid.aggregation.LongSumAggregatorFactory;
 import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.input.MapBasedRow;
@@ -361,7 +362,45 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build()), "limited"
     );
+  }
 
+  @Test
+  public void testGroupByWithOrderLimit3() throws Exception
+  {
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                new DoubleSumAggregatorFactory("idx", "index")
+            )
+        )
+        .addOrderByColumn("idx", "desc")
+        .addOrderByColumn("alias", "d")
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+
+    final GroupByQuery query = builder.build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4423.6533203125D),
+        createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4418.61865234375D),
+        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319.94403076171875D),
+        createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 270.3977966308594D),
+        createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243.65843200683594D),
+        createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 222.20980834960938D),
+        createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 218.7224884033203D),
+        createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216.97836303710938D),
+        createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 178.24917602539062D)
+    );
+
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
+    TestHelper.assertExpectedObjects(
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build()), "limited"
+    );
   }
 
   private Row createExpectedRow(final String timestamp, Object... vals)
