@@ -46,9 +46,10 @@ public class CassandraStorage
 	private static final String DESCRIPTOR_TABLE_NAME = "descriptor_storage";
 
 	private AstyanaxContext<Keyspace> astyanaxContext;
-	Keyspace keyspace;
-	ChunkedStorageProvider indexStorage;
-	ColumnFamily<String, String> descriptorStorage;
+	final Keyspace keyspace;
+	final ChunkedStorageProvider indexStorage;
+	final ColumnFamily<String, String> descriptorStorage;	
+	final CassandraDataSegmentConfig config;
 
 	public CassandraStorage(CassandraDataSegmentConfig config)
 	{
@@ -62,7 +63,7 @@ public class CassandraStorage
 		    .buildKeyspace(ThriftFamilyFactory.getInstance());
 		this.astyanaxContext.start();
 		this.keyspace = this.astyanaxContext.getEntity();
-
+		this.config = config;
 		indexStorage = new CassandraChunkedStorageProvider(keyspace, INDEX_TABLE_NAME);
 
 		descriptorStorage = new ColumnFamily<String, String>(DESCRIPTOR_TABLE_NAME,
