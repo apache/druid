@@ -19,6 +19,7 @@
 
 package com.metamx.druid.aggregation;
 
+import com.google.common.primitives.Doubles;
 import com.metamx.druid.processing.FloatMetricSelector;
 
 import java.util.Comparator;
@@ -32,7 +33,7 @@ public class DoubleSumAggregator implements Aggregator
     @Override
     public int compare(Object o, Object o1)
     {
-      return ((Double) o).compareTo((Double) o1);
+      return Doubles.compare(((Number) o).doubleValue(), ((Number) o1).doubleValue());
     }
   };
 
