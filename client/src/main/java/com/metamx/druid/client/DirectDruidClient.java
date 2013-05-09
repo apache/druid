@@ -60,6 +60,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -74,6 +76,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final HttpClient httpClient;
   private final String host;
 
+  private final AtomicInteger openConnections;
   private final boolean isSmile;
 
   public DirectDruidClient(
@@ -88,7 +91,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.httpClient = httpClient;
     this.host = host;
 
-    isSmile = this.objectMapper.getJsonFactory() instanceof SmileFactory;
+    this.isSmile = this.objectMapper.getJsonFactory() instanceof SmileFactory;
+    this.openConnections = new AtomicInteger();
+  }
+
+  public int getNumOpenConnections()
+  {
+    return openConnections.get();
   }
 
   @Override
@@ -121,6 +130,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     try {
       log.debug("Querying url[%s]", url);
+      openConnections.getAndIncrement();
       future = httpClient
           .post(new URL(url))
           .setContent(objectMapper.writeValueAsBytes(query))
@@ -128,7 +138,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           .go(
               new InputStreamResponseHandler()
               {
-
                 long startTime;
                 long byteCount = 0;
 
@@ -162,6 +171,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       stopTime - startTime,
                       byteCount / (0.0001 * (stopTime - startTime))
                   );
+                  openConnections.getAndDecrement();
                   return super.done(clientResponse);
                 }
               }
