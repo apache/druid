@@ -687,7 +687,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
       );
 
       if (workerQueue.isEmpty()) {
-        log.info("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
+        log.debug("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
         return null;
       }
 
