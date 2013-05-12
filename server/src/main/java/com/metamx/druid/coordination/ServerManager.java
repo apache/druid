@@ -20,6 +20,7 @@
 package com.metamx.druid.coordination;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Ordering;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
@@ -255,6 +256,16 @@ public class ServerManager implements QuerySegmentWalker
                           }
                         }
                     );
+              }
+            }
+        )
+        .filter(
+            new Predicate<QueryRunner<T>>()
+            {
+              @Override
+              public boolean apply(@Nullable QueryRunner<T> input)
+              {
+                return (input != null);
               }
             }
         );
