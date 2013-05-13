@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
@@ -513,10 +514,12 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
 
     // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
     // on a worker - this avoids overflowing a worker with tasks
+    Stopwatch timeoutStopwatch = new Stopwatch();
+    timeoutStopwatch.start();
     synchronized (statusLock) {
       while (!isWorkerRunningTask(theWorker.getHost(), task.getId())) {
         statusLock.wait(config.getTaskAssignmentTimeoutDuration().getMillis());
-        if (!isWorkerRunningTask(theWorker.getHost(), task.getId())) {
+        if (timeoutStopwatch.elapsedMillis() >= config.getTaskAssignmentTimeoutDuration().getMillis()) {
           log.error(
               "Something went wrong! %s never ran task %s after %s!",
               theWorker.getHost(),
