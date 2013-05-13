@@ -1,0 +1,23 @@
+Launching the AMI using Cloud Formation Template
+================================================
+
+From AWS Console go to the CloudFormation for stack creation.
+
+Give the template URL which will be used for creation of instances.
+
+Once the stack creation completes User would be able to see the instances running on the AWS console.
+
+There will be a Master and three Compute nodes. 
+
+CODE AND SCRIPTS
+=================
+
+The code and scripts can be find in the launched instance.
+
+There is an index.html file located in /home/ubuntu/index.html
+
+There is a main class "SkilledAnalystsDemoMain.java" which adds a servlet "DemoServlet.java" to the jetty servlet context.
+
+A template file will also be used for launching the instances.
+
+The code should be compiled against 0.3.27.2 version
