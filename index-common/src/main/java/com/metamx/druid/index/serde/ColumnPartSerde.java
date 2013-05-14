@@ -38,7 +38,7 @@ import java.nio.channels.WritableByteChannel;
 })
 public interface ColumnPartSerde
 {
-  public int numBytes();
+  public long numBytes();
   public void write(WritableByteChannel channel) throws IOException;
   public ColumnPartSerde read(ByteBuffer buffer, ColumnBuilder builder);
 }

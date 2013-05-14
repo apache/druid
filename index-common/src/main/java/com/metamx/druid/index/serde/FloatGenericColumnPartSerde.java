@@ -58,7 +58,7 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
   }
 
   @Override
-  public int numBytes()
+  public long numBytes()
   {
     return compressedFloats.getSerializedSize();
   }

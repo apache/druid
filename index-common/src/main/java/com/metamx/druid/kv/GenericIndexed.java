@@ -207,7 +207,7 @@ public class GenericIndexed<T> implements Indexed<T>
     return -(minIndex + 1);
   }
 
-  public int getSerializedSize()
+  public long getSerializedSize()
   {
     return theBuffer.remaining() + 2 + 4 + 4;
   }
