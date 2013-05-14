@@ -19,21 +19,30 @@
 
 package com.metamx.druid.client.selector;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 
-import java.util.LinkedHashSet;
-import java.util.Random;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Set;
 
 /**
  */
 public class ServerSelector
 {
-  private static final Random random = new Random();
+  private static final Comparator<QueryableDruidServer> comparator = new Comparator<QueryableDruidServer>()
+  {
+    @Override
+    public int compare(QueryableDruidServer left, QueryableDruidServer right)
+    {
+      return Ints.compare(left.getClient().getNumOpenConnections(), right.getClient().getNumOpenConnections());
+    }
+  };
 
-  private final LinkedHashSet<DruidServer> servers = Sets.newLinkedHashSet();
+  private final Set<QueryableDruidServer> servers = Sets.newHashSet();
+
   private final DataSegment segment;
 
   public ServerSelector(
@@ -49,7 +58,7 @@ public class ServerSelector
   }
 
   public void addServer(
-      DruidServer server
+      QueryableDruidServer server
   )
   {
     synchronized (this) {
@@ -57,7 +66,7 @@ public class ServerSelector
     }
   }
 
-  public boolean removeServer(DruidServer server)
+  public boolean removeServer(QueryableDruidServer server)
   {
     synchronized (this) {
       return servers.remove(server);
@@ -71,15 +80,10 @@ public class ServerSelector
     }
   }
 
-  public DruidServer pick()
+  public QueryableDruidServer pick()
   {
     synchronized (this) {
-      final int size = servers.size();
-      switch (size) {
-        case 0: return null;
-        case 1: return servers.iterator().next();
-        default: return Iterables.get(servers, random.nextInt(size));
-      }
+      return Collections.min(servers, comparator);
     }
   }
 }

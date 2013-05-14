@@ -74,9 +74,9 @@ public class ColumnDescriptor
     return parts;
   }
 
-  public int numBytes()
+  public long numBytes()
   {
-    int retVal = 0;
+    long retVal = 0;
 
     for (ColumnPartSerde part : parts) {
       retVal += part.numBytes();

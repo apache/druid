@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.VersionedIntervalTimeline;
+import com.metamx.druid.client.selector.QueryableDruidServer;
 import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.query.QueryRunner;
@@ -44,7 +45,7 @@ public class BrokerServerView implements TimelineServerView
 
   private final Object lock = new Object();
 
-  private final ConcurrentMap<DruidServer, DirectDruidClient> clients;
+  private final ConcurrentMap<String, QueryableDruidServer> clients;
   private final Map<String, ServerSelector> selectors;
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines;
 
@@ -107,7 +108,7 @@ public class BrokerServerView implements TimelineServerView
   public void clear()
   {
     synchronized (lock) {
-      final Iterator<DruidServer> clientsIter = clients.keySet().iterator();
+      final Iterator<String> clientsIter = clients.keySet().iterator();
       while (clientsIter.hasNext()) {
         clientsIter.remove();
       }
@@ -119,7 +120,7 @@ public class BrokerServerView implements TimelineServerView
         final ServerSelector selector = selectorsIter.next();
         selectorsIter.remove();
         while (!selector.isEmpty()) {
-          final DruidServer pick = selector.pick();
+          final QueryableDruidServer pick = selector.pick();
           selector.removeServer(pick);
         }
       }
@@ -128,7 +129,10 @@ public class BrokerServerView implements TimelineServerView
 
   private void addServer(DruidServer server)
   {
-    QueryRunner exists = clients.put(server, makeDirectClient(server));
+    QueryableDruidServer exists = clients.put(
+        server.getName(),
+        new QueryableDruidServer(server, makeDirectClient(server))
+    );
     if (exists != null) {
       log.warn("QueryRunner for server[%s] already existed!?", server);
     }
@@ -141,7 +145,7 @@ public class BrokerServerView implements TimelineServerView
 
   private void removeServer(DruidServer server)
   {
-    clients.remove(server);
+    clients.remove(server.getName());
     for (DataSegment segment : server.getSegments().values()) {
       serverRemovedSegment(server, segment);
     }
@@ -167,10 +171,10 @@ public class BrokerServerView implements TimelineServerView
         selectors.put(segmentId, selector);
       }
 
-      if (!clients.containsKey(server)) {
+      if (!clients.containsKey(server.getName())) {
         addServer(server);
       }
-      selector.addServer(server);
+      selector.addServer(clients.get(server.getName()));
     }
   }
 
@@ -188,7 +192,8 @@ public class BrokerServerView implements TimelineServerView
         return;
       }
 
-      if (!selector.removeServer(server)) {
+      QueryableDruidServer queryableDruidServer = clients.get(server.getName());
+      if (!selector.removeServer(queryableDruidServer)) {
         log.warn(
             "Asked to disassociate non-existant association between server[%s] and segment[%s]",
             server,
@@ -228,7 +233,11 @@ public class BrokerServerView implements TimelineServerView
   public <T> QueryRunner<T> getQueryRunner(DruidServer server)
   {
     synchronized (lock) {
-      return clients.get(server);
+      QueryableDruidServer queryableDruidServer = clients.get(server.getName());
+      if (queryableDruidServer == null) {
+        log.error("WTF?! No QueryableDruidServer found for %s", server.getName());
+      }
+      return queryableDruidServer.getClient();
     }
   }
 

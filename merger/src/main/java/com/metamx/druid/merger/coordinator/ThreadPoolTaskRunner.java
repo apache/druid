@@ -28,7 +28,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.Query;
 import com.metamx.druid.merger.common.TaskStatus;
@@ -51,20 +50,19 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * Runs tasks in a JVM thread using an ExecutorService.
  */
-public class ExecutorServiceTaskRunner implements TaskRunner, QuerySegmentWalker
+public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
 {
   private final TaskToolboxFactory toolboxFactory;
   private final ListeningExecutorService exec;
   private final Set<TaskRunnerWorkItem> runningItems = new ConcurrentSkipListSet<TaskRunnerWorkItem>();
 
-  private static final EmittingLogger log = new EmittingLogger(ExecutorServiceTaskRunner.class);
+  private static final EmittingLogger log = new EmittingLogger(ThreadPoolTaskRunner.class);
 
-  public ExecutorServiceTaskRunner(
+  public ThreadPoolTaskRunner(
       TaskToolboxFactory toolboxFactory,
       ExecutorService exec
   )

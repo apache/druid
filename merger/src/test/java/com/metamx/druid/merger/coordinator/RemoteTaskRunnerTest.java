@@ -291,7 +291,7 @@ public class RemoteTaskRunnerTest
         new PathChildrenCache(cf, String.format("%s/worker1", tasksPath), true),
         cf,
         workerCuratorCoordinator,
-        new ExecutorServiceTaskRunner(
+        new ThreadPoolTaskRunner(
             new TaskToolboxFactory(
                 new TaskConfig()
                 {

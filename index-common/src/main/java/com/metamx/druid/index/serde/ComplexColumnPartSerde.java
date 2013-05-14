@@ -61,7 +61,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   }
 
   @Override
-  public int numBytes()
+  public long numBytes()
   {
     return column.getSerializedSize();
   }
