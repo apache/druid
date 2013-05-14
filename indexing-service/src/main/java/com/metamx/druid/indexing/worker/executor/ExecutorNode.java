@@ -43,25 +43,26 @@ import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusServlet;
+import com.metamx.druid.initialization.CuratorDiscoveryConfig;
+import com.metamx.druid.initialization.DruidNodeConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServerInit;
-import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentKiller;
-import com.metamx.druid.indexing.common.RetryPolicyFactory;
-import com.metamx.druid.indexing.common.TaskToolboxFactory;
-import com.metamx.druid.indexing.common.actions.RemoteTaskActionClientFactory;
-import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
-import com.metamx.druid.indexing.common.config.TaskConfig;
-import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
-import com.metamx.druid.indexing.common.index.ChatHandlerProvider;
-import com.metamx.druid.indexing.common.index.StaticS3FirehoseFactory;
-import com.metamx.druid.indexing.coordinator.ThreadPoolTaskRunner;
-import com.metamx.druid.indexing.worker.config.ChatHandlerProviderConfig;
-import com.metamx.druid.indexing.worker.config.WorkerConfig;
+import com.metamx.druid.merger.common.RetryPolicyFactory;
+import com.metamx.druid.merger.common.TaskToolboxFactory;
+import com.metamx.druid.merger.common.actions.RemoteTaskActionClientFactory;
+import com.metamx.druid.merger.common.config.RetryPolicyConfig;
+import com.metamx.druid.merger.common.config.TaskConfig;
+import com.metamx.druid.merger.common.index.ChatHandlerProvider;
+import com.metamx.druid.merger.common.index.EventReceiverFirehoseFactory;
+import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
+import com.metamx.druid.merger.coordinator.ExecutorServiceTaskRunner;
+import com.metamx.druid.merger.worker.config.ChatHandlerProviderConfig;
+import com.metamx.druid.merger.worker.config.WorkerConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -114,7 +115,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private WorkerConfig workerConfig = null;
   private DataSegmentPusher segmentPusher = null;
   private TaskToolboxFactory taskToolboxFactory = null;
-  private ServiceDiscovery serviceDiscovery = null;
+  private ServiceDiscovery<Void> serviceDiscovery = null;
   private ServiceAnnouncer serviceAnnouncer = null;
   private ServiceProvider coordinatorServiceProvider = null;
   private Server server = null;
@@ -391,14 +392,15 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
 
   public void initializeServiceDiscovery() throws Exception
   {
-    final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
+    final CuratorDiscoveryConfig config = configFactory.build(CuratorDiscoveryConfig.class);
     if (serviceDiscovery == null) {
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
           getCuratorFramework(), config, lifecycle
       );
     }
     if (serviceAnnouncer == null) {
-      final ServiceInstanceFactory instanceFactory = Initialization.makeServiceInstanceFactory(config);
+      DruidNodeConfig nodeConfig = configFactory.build(DruidNodeConfig.class);
+      final ServiceInstanceFactory<Void> instanceFactory = Initialization.makeServiceInstanceFactory(nodeConfig);
       this.serviceAnnouncer = new CuratorServiceAnnouncer(serviceDiscovery, instanceFactory);
     }
     if (coordinatorServiceProvider == null) {

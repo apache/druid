@@ -37,9 +37,9 @@ import com.metamx.druid.QueryableNode;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.StatusServlet;
+import com.metamx.druid.initialization.CuratorDiscoveryConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.indexing.common.config.IndexerZkConfig;
 import com.metamx.druid.indexing.common.config.TaskLogConfig;
@@ -330,7 +330,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
   public void initializeServiceDiscovery() throws Exception
   {
     if (serviceDiscovery == null) {
-      final ServiceDiscoveryConfig config = getConfigFactory().build(ServiceDiscoveryConfig.class);
+      final CuratorDiscoveryConfig config = getConfigFactory().build(CuratorDiscoveryConfig.class);
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
           getCuratorFramework(),
           config,

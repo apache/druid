@@ -27,6 +27,7 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
 import com.metamx.druid.curator.discovery.AddressPortServiceInstanceFactory;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
@@ -42,7 +43,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
-import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.zookeeper.data.Stat;
 import org.mortbay.jetty.Connector;
@@ -221,16 +221,16 @@ public class Initialization
     return framework;
   }
 
-  public static ServiceDiscovery makeServiceDiscoveryClient(
+  public static ServiceDiscovery<Void> makeServiceDiscoveryClient(
       CuratorFramework discoveryClient,
-      ServiceDiscoveryConfig config,
+      CuratorDiscoveryConfig config,
       Lifecycle lifecycle
   )
       throws Exception
   {
-    final ServiceDiscovery serviceDiscovery =
+    final ServiceDiscovery<Void> serviceDiscovery =
         ServiceDiscoveryBuilder.builder(Void.class)
-                               .basePath(config.getDiscoveryPath())
+                               .basePath(config.getPath())
                                .client(discoveryClient)
                                .build();
 
@@ -260,21 +260,21 @@ public class Initialization
   }
 
   public static ServiceAnnouncer makeServiceAnnouncer(
-      ServiceDiscoveryConfig config,
-      ServiceDiscovery serviceDiscovery
+      DruidNodeConfig config,
+      ServiceDiscovery<Void> serviceDiscovery
   )
   {
-    final ServiceInstanceFactory serviceInstanceFactory = makeServiceInstanceFactory(config);
+    final ServiceInstanceFactory<Void> serviceInstanceFactory = makeServiceInstanceFactory(config);
     return new CuratorServiceAnnouncer(serviceDiscovery, serviceInstanceFactory);
   }
 
   public static void announceDefaultService(
-      final ServiceDiscoveryConfig config,
+      final DruidNodeConfig nodeConfig,
       final ServiceAnnouncer serviceAnnouncer,
       final Lifecycle lifecycle
   ) throws Exception
   {
-    final String service = config.getServiceName().replace('/', ':');
+    final String service = nodeConfig.getServiceName().replace('/', ':');
 
     lifecycle.addHandler(
         new Lifecycle.Handler()
@@ -357,7 +357,7 @@ public class Initialization
     );
   }
 
-  public static ServiceInstanceFactory<Void> makeServiceInstanceFactory(ServiceDiscoveryConfig config)
+  public static ServiceInstanceFactory<Void> makeServiceInstanceFactory(DruidNodeConfig config)
   {
     final String host = config.getHost();
     final String address;

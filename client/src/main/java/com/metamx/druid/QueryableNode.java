@@ -25,7 +25,6 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -42,9 +41,9 @@ import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
+import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.RequestLogger;
-import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
@@ -70,8 +69,6 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -349,14 +346,10 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private void initializeServerInventoryView()
   {
     if (serverInventoryView == null) {
-      final ExecutorService exec = Executors.newFixedThreadPool(
-          1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryView-%s").build()
-      );
       serverInventoryView = new ServerInventoryView(
           getConfigFactory().build(ServerInventoryViewConfig.class),
           getZkPaths(),
           getCuratorFramework(),
-          exec,
           getJsonMapper()
       );
       lifecycle.addManagedInstance(serverInventoryView);

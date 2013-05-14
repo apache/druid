@@ -19,10 +19,10 @@
 
 package com.metamx.druid.db;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
-import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,7 +32,6 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -48,21 +47,8 @@ public class DatabaseSegmentManagerTest
     dbi = EasyMock.createMock(DBI.class);
     manager = new DatabaseSegmentManager(
         new DefaultObjectMapper(),
-        EasyMock.createMock(ScheduledExecutorService.class),
-        new DatabaseSegmentManagerConfig()
-        {
-          @Override
-          public String getSegmentTable()
-          {
-            return null;
-          }
-
-          @Override
-          public Duration getPollDuration()
-          {
-            return null;
-          }
-        },
+        Suppliers.ofInstance(new DatabaseSegmentManagerConfig()),
+        Suppliers.ofInstance(DbTablesConfig.fromBase("test")),
         dbi
     );
 

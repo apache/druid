@@ -19,7 +19,6 @@
 
 package com.metamx.druid.metrics;
 
-import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.emitter.service.ServiceEmitter;

@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -55,9 +56,10 @@ import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
+import com.metamx.druid.initialization.CuratorDiscoveryConfig;
+import com.metamx.druid.initialization.DruidNodeConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.actions.LocalTaskActionClientFactory;
@@ -156,7 +158,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   private DBI dbi = null;
   private IndexerCoordinatorConfig config = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
-  private ServiceDiscovery serviceDiscovery = null;
+  private ServiceDiscovery<Void> serviceDiscovery = null;
   private ServiceAnnouncer serviceAnnouncer = null;
   private TaskStorage taskStorage = null;
   private TaskQueue taskQueue = null;
@@ -365,12 +367,12 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   private void initializeTaskMasterLifecycle()
   {
     if (taskMasterLifecycle == null) {
-      final ServiceDiscoveryConfig serviceDiscoveryConfig = getConfigFactory().build(ServiceDiscoveryConfig.class);
+      final DruidNodeConfig nodeConfig = getConfigFactory().build(DruidNodeConfig.class);
       taskMasterLifecycle = new TaskMasterLifecycle(
           taskQueue,
           taskActionClientFactory,
           config,
-          serviceDiscoveryConfig,
+          nodeConfig,
           taskRunnerFactory,
           resourceManagementSchedulerFactory,
           getCuratorFramework(),
@@ -534,7 +536,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
       dbConnectorConfig = getConfigFactory().build(DbConnectorConfig.class);
     }
     if (dbi == null) {
-      dbi = new DbConnector(dbConnectorConfig).getDBI();
+      dbi = new DbConnector(Suppliers.ofInstance(dbConnectorConfig), null).getDBI(); // TODO
     }
   }
 
@@ -568,14 +570,15 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
 
   public void initializeServiceDiscovery() throws Exception
   {
-    final ServiceDiscoveryConfig config = getConfigFactory().build(ServiceDiscoveryConfig.class);
+    final CuratorDiscoveryConfig config = getConfigFactory().build(CuratorDiscoveryConfig.class);
     if (serviceDiscovery == null) {
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
           getCuratorFramework(), config, getLifecycle()
       );
     }
     if (serviceAnnouncer == null) {
-      final ServiceInstanceFactory instanceFactory = Initialization.makeServiceInstanceFactory(config);
+      DruidNodeConfig nodeConfig = getConfigFactory().build(DruidNodeConfig.class);
+      final ServiceInstanceFactory<Void> instanceFactory = Initialization.makeServiceInstanceFactory(nodeConfig);
       this.serviceAnnouncer = new CuratorServiceAnnouncer(serviceDiscovery, instanceFactory);
     }
   }
@@ -616,7 +619,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
         taskStorage = new DbTaskStorage(
             getJsonMapper(),
             dbConnectorConfig,
-            new DbConnector(dbConnectorConfig).getDBI()
+            new DbConnector(Suppliers.<DbConnectorConfig>ofInstance(dbConnectorConfig), null).getDBI() // TODO
         );
       } else {
         throw new ISE("Invalid storage implementation: %s", config.getStorageImpl());

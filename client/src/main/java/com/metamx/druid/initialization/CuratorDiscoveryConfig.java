@@ -17,21 +17,24 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.db;
+package com.metamx.druid.initialization;
 
-import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public abstract class DatabaseRuleManagerConfig
+public abstract class CuratorDiscoveryConfig
 {
-  @Config("druid.database.rules.defaultTier")
-  @Default("_default")
-  public abstract String getDefaultTier();
+  @JsonProperty
+  private String path = null;
 
-  @Config("druid.database.rules.poll.duration")
-  @Default("PT1M")
-  public abstract Duration getRulesPollDuration();
+  public String getPath()
+  {
+    return path;
+  }
+
+  public boolean useDiscovery()
+  {
+    return path != null;
+  }
 }

@@ -1,6 +1,7 @@
 package com.metamx.druid.curator.discovery;
 
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceInstance;
@@ -10,18 +11,19 @@ import java.util.Map;
 /**
  * Uses the Curator Service Discovery recipe to announce services.
  */
-public class CuratorServiceAnnouncer<T> implements ServiceAnnouncer
+public class CuratorServiceAnnouncer implements ServiceAnnouncer
 {
   private static final Logger log = new Logger(CuratorServiceAnnouncer.class);
 
-  private final ServiceDiscovery<T> discovery;
-  private final ServiceInstanceFactory<T> instanceFactory;
-  private final Map<String, ServiceInstance<T>> instanceMap = Maps.newHashMap();
+  private final ServiceDiscovery<Void> discovery;
+  private final ServiceInstanceFactory<Void> instanceFactory;
+  private final Map<String, ServiceInstance<Void>> instanceMap = Maps.newHashMap();
   private final Object monitor = new Object();
 
+  @Inject
   public CuratorServiceAnnouncer(
-      ServiceDiscovery<T> discovery,
-      ServiceInstanceFactory<T> instanceFactory
+      ServiceDiscovery<Void> discovery,
+      ServiceInstanceFactory<Void> instanceFactory
   )
   {
     this.discovery = discovery;
@@ -31,7 +33,7 @@ public class CuratorServiceAnnouncer<T> implements ServiceAnnouncer
   @Override
   public void announce(String service) throws Exception
   {
-    final ServiceInstance<T> instance;
+    final ServiceInstance<Void> instance;
 
     synchronized (monitor) {
       if (instanceMap.containsKey(service)) {
@@ -57,7 +59,7 @@ public class CuratorServiceAnnouncer<T> implements ServiceAnnouncer
   @Override
   public void unannounce(String service) throws Exception
   {
-    final ServiceInstance<T> instance;
+    final ServiceInstance<Void> instance;
 
     synchronized (monitor) {
       instance = instanceMap.get(service);

@@ -25,15 +25,15 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.initialization.DruidNodeConfig;
 import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.ServiceDiscoveryConfig;
-import com.metamx.druid.indexing.common.actions.TaskActionClient;
-import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
-import com.metamx.druid.indexing.common.task.Task;
-import com.metamx.druid.indexing.coordinator.config.IndexerCoordinatorConfig;
-import com.metamx.druid.indexing.coordinator.exec.TaskConsumer;
-import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
-import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementSchedulerFactory;
+import com.metamx.druid.merger.common.actions.TaskActionClient;
+import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
+import com.metamx.druid.merger.common.task.Task;
+import com.metamx.druid.merger.coordinator.config.IndexerCoordinatorConfig;
+import com.metamx.druid.merger.coordinator.exec.TaskConsumer;
+import com.metamx.druid.merger.coordinator.scaling.ResourceManagementScheduler;
+import com.metamx.druid.merger.coordinator.scaling.ResourceManagementSchedulerFactory;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
@@ -65,7 +65,7 @@ public class TaskMasterLifecycle
       final TaskQueue taskQueue,
       final TaskActionClientFactory taskActionClientFactory,
       final IndexerCoordinatorConfig indexerCoordinatorConfig,
-      final ServiceDiscoveryConfig serviceDiscoveryConfig,
+      final DruidNodeConfig nodeConfig,
       final TaskRunnerFactory runnerFactory,
       final ResourceManagementSchedulerFactory managementSchedulerFactory,
       final CuratorFramework curator,
@@ -103,7 +103,7 @@ public class TaskMasterLifecycle
           final Lifecycle leaderLifecycle = new Lifecycle();
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addManagedInstance(taskRunner);
-          Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, leaderLifecycle);
+          Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, leaderLifecycle);
           leaderLifecycle.addManagedInstance(taskConsumer);
 
           if (indexerCoordinatorConfig.isAutoScalingEnabled()) {
