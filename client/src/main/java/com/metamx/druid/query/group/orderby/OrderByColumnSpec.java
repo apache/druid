@@ -1,12 +1,17 @@
-package com.metamx.druid.query.group.limit;
+package com.metamx.druid.query.group.orderby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 
+import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -50,6 +55,46 @@ public class OrderByColumnSpec
     else {
       throw new ISE("Cannot build an OrderByColumnSpec from a %s", obj.getClass());
     }
+  }
+
+  public static OrderByColumnSpec asc(String dimension)
+  {
+    return new OrderByColumnSpec(dimension, Direction.ASCENDING);
+  }
+
+  public static List<OrderByColumnSpec> ascending(String... dimension)
+  {
+    return Lists.transform(
+        Arrays.asList(dimension),
+        new Function<String, OrderByColumnSpec>()
+        {
+          @Override
+          public OrderByColumnSpec apply(@Nullable String input)
+          {
+            return asc(input);
+          }
+        }
+    );
+  }
+
+  public static OrderByColumnSpec desc(String dimension)
+  {
+    return new OrderByColumnSpec(dimension, Direction.DESCENDING);
+  }
+
+  public static List<OrderByColumnSpec> descending(String... dimension)
+  {
+    return Lists.transform(
+        Arrays.asList(dimension),
+        new Function<String, OrderByColumnSpec>()
+        {
+          @Override
+          public OrderByColumnSpec apply(@Nullable String input)
+          {
+            return desc(input);
+          }
+        }
+    );
   }
 
   public OrderByColumnSpec(

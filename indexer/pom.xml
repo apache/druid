@@ -120,12 +120,6 @@
                             <outputFile>
                                 ${project.build.directory}/${project.artifactId}-${project.version}-selfcontained.jar
                             </outputFile>
-                            <relocations>
-                                <relocation>
-                                    <pattern>org.codehaus.jackson</pattern>
-                                    <shadedPattern>druid.org.codehaus.jackson</shadedPattern>
-                                </relocation>
-                            </relocations>
                         </configuration>
                     </execution>
                 </executions>

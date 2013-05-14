@@ -69,7 +69,7 @@ public class TestHelper
 
       assertResult(failMsg, expectedNext, next);
       assertResult(
-          String.format("%sSecond iterator bad, multiple calls to iterator() should be safe", failMsg),
+          String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
           expectedNext,
           next2
       );
@@ -77,20 +77,20 @@ public class TestHelper
 
     if (resultsIter.hasNext()) {
       Assert.fail(
-          String.format("%sExpected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
+          String.format("%s: Expected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
       );
     }
 
     if (resultsIter2.hasNext()) {
       Assert.fail(
-          String.format("%sExpected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
+          String.format("%s: Expected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
       );
     }
 
     if (expectedResultsIter.hasNext()) {
       Assert.fail(
           String.format(
-              "%sExpected expectedResultsIter to be exhausted, next element was %s", failMsg, expectedResultsIter.next()
+              "%s: Expected expectedResultsIter to be exhausted, next element was %s", failMsg, expectedResultsIter.next()
           )
       );
     }
@@ -109,7 +109,7 @@ public class TestHelper
 
       Assert.assertEquals(failMsg, expectedNext, next);
       Assert.assertEquals(
-          String.format("%sSecond iterator bad, multiple calls to iterator() should be safe", failMsg),
+          String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
           expectedNext,
           next2
       );
@@ -117,20 +117,20 @@ public class TestHelper
 
     if (resultsIter.hasNext()) {
       Assert.fail(
-          String.format("%sExpected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
+          String.format("%s: Expected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
       );
     }
 
     if (resultsIter2.hasNext()) {
       Assert.fail(
-          String.format("%sExpected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
+          String.format("%s: Expected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
       );
     }
 
     if (expectedResultsIter.hasNext()) {
       Assert.fail(
           String.format(
-              "%sExpected expectedResultsIter to be exhausted, next element was %s", failMsg, expectedResultsIter.next()
+              "%s: Expected expectedResultsIter to be exhausted, next element was %s", failMsg, expectedResultsIter.next()
           )
       );
     }
