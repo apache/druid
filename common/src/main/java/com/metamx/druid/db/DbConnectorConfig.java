@@ -20,37 +20,60 @@
 package com.metamx.druid.db;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.skife.config.Config;
+
+import javax.validation.constraints.NotNull;
 
 /**
  */
 public abstract class DbConnectorConfig
 {
-  @JsonProperty("connectURI")
-  @Config("druid.database.connectURI")
-  public abstract String getDatabaseConnectURI();
+  @JsonProperty
+  private boolean createTables = true;
 
-  @JsonProperty("user")
-  @Config("druid.database.user")
-  public abstract String getDatabaseUser();
+  @JsonProperty
+  @NotNull
+  private String connectURI = null;
 
-  @JsonProperty("password")
-  @Config("druid.database.password")
-  public abstract String getDatabasePassword();
+  @JsonProperty
+  @NotNull
+  private String user = null;
 
-  @JsonProperty("segmentTable")
-  @Config("druid.database.segmentTable")
-  public abstract String getSegmentTable();
+  @JsonProperty
+  @NotNull
+  private String password = null;
 
-  @JsonProperty("useValidationQuery")
-  @Config("druid.database.validation")
-  public boolean isValidationQuery() {
-    return false;
+  @JsonProperty
+  private boolean useValidationQuery = false;
+
+  @JsonProperty
+  private String validationQuery = "SELECT 1";
+
+  public boolean isCreateTables()
+  {
+    return createTables;
   }
 
-  @JsonProperty("validationQuery")
-  @Config("druid.database.validationQuery")
+  public String getConnectURI()
+  {
+    return connectURI;
+  }
+
+  public String getUser()
+  {
+    return user;
+  }
+
+  public String getPassword()
+  {
+    return password;
+  }
+
+  public boolean isUseValidationQuery()
+  {
+    return useValidationQuery;
+  }
+
   public String getValidationQuery() {
-    return "SELECT 1";
+    return validationQuery;
   }
 }

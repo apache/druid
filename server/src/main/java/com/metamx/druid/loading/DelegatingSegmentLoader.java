@@ -19,12 +19,12 @@
 
 package com.metamx.druid.loading;
 
+import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.Segment;
 
-import javax.inject.Inject;
 import java.util.Map;
 
 /**

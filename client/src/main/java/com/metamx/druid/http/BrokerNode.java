@@ -42,10 +42,11 @@ import com.metamx.druid.client.cache.MapCache;
 import com.metamx.druid.client.cache.MapCacheConfig;
 import com.metamx.druid.client.cache.MemcachedCache;
 import com.metamx.druid.client.cache.MemcachedCacheConfig;
+import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
-import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
+import com.metamx.druid.initialization.CuratorDiscoveryConfig;
+import com.metamx.druid.initialization.DruidNodeConfig;
 import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.query.QueryToolChestWarehouse;
 import com.metamx.druid.query.ReflectionQueryToolChestWarehouse;
@@ -227,17 +228,18 @@ public class BrokerNode extends QueryableNode<BrokerNode>
   {
     if (useDiscovery) {
       final Lifecycle lifecycle = getLifecycle();
-      final ServiceDiscoveryConfig serviceDiscoveryConfig = getConfigFactory().build(ServiceDiscoveryConfig.class);
+      final CuratorDiscoveryConfig curatorDiscoveryConfig = getConfigFactory().build(CuratorDiscoveryConfig.class);
+      final DruidNodeConfig nodeConfig = getConfigFactory().build(DruidNodeConfig.class);
       final CuratorFramework curatorFramework = Initialization.makeCuratorFramework(
-          serviceDiscoveryConfig, lifecycle
+          getConfigFactory().build(CuratorConfig.class), lifecycle
       );
-      final ServiceDiscovery serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-          curatorFramework, serviceDiscoveryConfig, lifecycle
+      final ServiceDiscovery<Void> serviceDiscovery = Initialization.makeServiceDiscoveryClient(
+          curatorFramework, curatorDiscoveryConfig, lifecycle
       );
       final ServiceAnnouncer serviceAnnouncer = Initialization.makeServiceAnnouncer(
-          serviceDiscoveryConfig, serviceDiscovery
+          nodeConfig, serviceDiscovery
       );
-      Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, lifecycle);
+      Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, lifecycle);
     }
   }
 

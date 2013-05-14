@@ -19,6 +19,7 @@
 
 package com.metamx.druid.db;
 
+import com.google.common.base.Supplier;
 import com.metamx.common.logger.Logger;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
@@ -159,12 +160,14 @@ public class DbConnector
     }
   }
 
-  private final DbConnectorConfig config;
+  private final Supplier<DbConnectorConfig> config;
+  private final Supplier<DbTablesConfig> dbTables;
   private final DBI dbi;
 
-  public DbConnector(DbConnectorConfig config)
+  public DbConnector(Supplier<DbConnectorConfig> config, Supplier<DbTablesConfig> dbTables)
   {
     this.config = config;
+    this.dbTables = dbTables;
 
     this.dbi = new DBI(getDatasource());
   }
@@ -176,16 +179,28 @@ public class DbConnector
 
   private DataSource getDatasource()
   {
-    BasicDataSource dataSource = new BasicDataSource();
-    dataSource.setUsername(config.getDatabaseUser());
-    dataSource.setPassword(config.getDatabasePassword());
-    dataSource.setUrl(config.getDatabaseConnectURI());
+    DbConnectorConfig connectorConfig = config.get();
 
-    if (config.isValidationQuery()) {
-      dataSource.setValidationQuery(config.getValidationQuery());
+    BasicDataSource dataSource = new BasicDataSource();
+    dataSource.setUsername(connectorConfig.getUser());
+    dataSource.setPassword(connectorConfig.getPassword());
+    dataSource.setUrl(connectorConfig.getConnectURI());
+
+    if (connectorConfig.isUseValidationQuery()) {
+      dataSource.setValidationQuery(connectorConfig.getValidationQuery());
       dataSource.setTestOnBorrow(true);
     }
 
     return dataSource;
+  }
+
+  public void createSegmentTable()
+  {
+    createSegmentTable(dbi, dbTables.get().getSegmentsTable());
+  }
+
+  public void createRulesTable()
+  {
+    createRuleTable(dbi, dbTables.get().getRulesTable());
   }
 }

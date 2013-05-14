@@ -25,8 +25,8 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.initialization.DruidNodeConfig;
 import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.merger.common.actions.TaskActionClient;
 import com.metamx.druid.merger.common.actions.TaskActionClientFactory;
 import com.metamx.druid.merger.common.task.Task;
@@ -65,7 +65,7 @@ public class TaskMasterLifecycle
       final TaskQueue taskQueue,
       final TaskActionClientFactory taskActionClientFactory,
       final IndexerCoordinatorConfig indexerCoordinatorConfig,
-      final ServiceDiscoveryConfig serviceDiscoveryConfig,
+      final DruidNodeConfig nodeConfig,
       final TaskRunnerFactory runnerFactory,
       final ResourceManagementSchedulerFactory managementSchedulerFactory,
       final CuratorFramework curator,
@@ -103,7 +103,7 @@ public class TaskMasterLifecycle
           final Lifecycle leaderLifecycle = new Lifecycle();
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addManagedInstance(taskRunner);
-          Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, leaderLifecycle);
+          Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, leaderLifecycle);
           leaderLifecycle.addManagedInstance(taskConsumer);
           leaderLifecycle.addManagedInstance(resourceManagementScheduler);
 

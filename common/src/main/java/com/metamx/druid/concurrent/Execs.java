@@ -23,6 +23,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 
 /**
  */
@@ -31,7 +33,19 @@ public class Execs
   public static ExecutorService singleThreaded(String nameFormat)
   {
     return Executors.newSingleThreadExecutor(
-        new ThreadFactoryBuilder().setDaemon(true).setNameFormat(nameFormat).build()
+        makeThreadFactory(nameFormat)
     );
+  }
+
+  public static ScheduledExecutorService scheduledSingleThreaded(String nameFormat)
+  {
+    return Executors.newSingleThreadScheduledExecutor(
+        makeThreadFactory(nameFormat)
+    );
+  }
+
+  public static ThreadFactory makeThreadFactory(String nameFormat)
+  {
+    return new ThreadFactoryBuilder().setDaemon(true).setNameFormat(nameFormat).build();
   }
 }

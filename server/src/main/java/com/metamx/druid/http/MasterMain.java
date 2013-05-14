@@ -21,57 +21,56 @@ package com.metamx.druid.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.collect.Iterables;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import com.google.inject.servlet.GuiceFilter;
+import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.ServerInventoryView;
-import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
+import com.metamx.druid.curator.CuratorModule;
+import com.metamx.druid.curator.discovery.DiscoveryModule;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.db.DatabaseRuleManager;
-import com.metamx.druid.db.DatabaseRuleManagerConfig;
 import com.metamx.druid.db.DatabaseSegmentManager;
-import com.metamx.druid.db.DatabaseSegmentManagerConfig;
 import com.metamx.druid.db.DbConnector;
-import com.metamx.druid.db.DbConnectorConfig;
+import com.metamx.druid.guice.DruidGuiceExtensions;
+import com.metamx.druid.guice.DruidSecondaryModule;
+import com.metamx.druid.guice.LifecycleModule;
+import com.metamx.druid.guice.MasterModule;
+import com.metamx.druid.guice.ServerModule;
+import com.metamx.druid.initialization.ConfigFactoryModule;
+import com.metamx.druid.initialization.DruidNodeConfig;
+import com.metamx.druid.initialization.EmitterModule;
 import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.initialization.PropertiesModule;
 import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.jackson.JacksonModule;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterConfig;
 import com.metamx.druid.master.LoadQueueTaskMaster;
-import com.metamx.druid.utils.PropUtils;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.Emitters;
+import com.metamx.druid.metrics.MetricsModule;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.HttpClientConfig;
-import com.metamx.http.client.HttpClientInit;
 import com.metamx.http.client.response.ToStringResponseHandler;
-import com.metamx.metrics.JvmMonitor;
-import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
-import com.metamx.metrics.MonitorSchedulerConfig;
-import com.metamx.metrics.SysMonitor;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceProvider;
-import org.joda.time.Duration;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -80,11 +79,9 @@ import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 import org.skife.jdbi.v2.DBI;
 
+import javax.annotation.Nullable;
 import java.net.URL;
-import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.Arrays;
 
 /**
  */
@@ -96,89 +93,41 @@ public class MasterMain
   {
     LogLevelAdjuster.register();
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
-    final Properties props = Initialization.loadProperties();
-    final ConfigurationObjectFactory configFactory = Config.createFactory(props);
-    final Lifecycle lifecycle = new Lifecycle();
-
-    final HttpClientConfig.Builder httpClientConfigBuilder = HttpClientConfig.builder().withNumConnections(1);
-
-    final String emitterTimeout = props.getProperty("druid.emitter.timeOut");
-    if (emitterTimeout != null) {
-      httpClientConfigBuilder.withReadTimeout(new Duration(emitterTimeout));
-    }
-    final HttpClient httpClient = HttpClientInit.createClient(httpClientConfigBuilder.build(), lifecycle);
-
-    final ServiceEmitter emitter = new ServiceEmitter(
-        PropUtils.getProperty(props, "druid.service"),
-        PropUtils.getProperty(props, "druid.host"),
-        Emitters.create(props, httpClient, jsonMapper, lifecycle)
+    Injector injector = makeInjector(
+        DruidSecondaryModule.class,
+        new LifecycleModule(Key.get(MonitorScheduler.class)),
+        EmitterModule.class,
+        CuratorModule.class,
+        MetricsModule.class,
+        DiscoveryModule.class,
+        ServerModule.class,
+        MasterModule.class
     );
-    EmittingLogger.registerEmitter(emitter);
+
+    final ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
+    final ConfigurationObjectFactory configFactory = injector.getInstance(ConfigurationObjectFactory.class);
+    final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
+
+    final ServiceEmitter emitter = injector.getInstance(ServiceEmitter.class);
 
     final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
 
-    final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
-    CuratorFramework curatorFramework = Initialization.makeCuratorFramework(
-        serviceDiscoveryConfig,
-        lifecycle
-    );
+    CuratorFramework curatorFramework = injector.getInstance(CuratorFramework.class);
 
     final ZkPathsConfig zkPaths = configFactory.build(ZkPathsConfig.class);
 
-    final ExecutorService exec = Executors.newFixedThreadPool(
-        1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryView-%s").build()
-    );
-    ServerInventoryView serverInventoryView = new ServerInventoryView(
-        configFactory.build(ServerInventoryViewConfig.class), zkPaths, curatorFramework, exec, jsonMapper
-    );
-    lifecycle.addManagedInstance(serverInventoryView);
+    ServerInventoryView serverInventoryView = injector.getInstance(ServerInventoryView.class);
 
-    final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);
-    final DatabaseRuleManagerConfig databaseRuleManagerConfig = configFactory.build(DatabaseRuleManagerConfig.class);
-    final DBI dbi = new DbConnector(dbConnectorConfig).getDBI();
-    DbConnector.createSegmentTable(dbi, PropUtils.getProperty(props, "druid.database.segmentTable"));
-    DbConnector.createRuleTable(dbi, PropUtils.getProperty(props, "druid.database.ruleTable"));
-    DatabaseRuleManager.createDefaultRule(
-        dbi, databaseRuleManagerConfig.getRuleTable(), databaseRuleManagerConfig.getDefaultDatasource(), jsonMapper
-    );
 
-    final DatabaseSegmentManager databaseSegmentManager = new DatabaseSegmentManager(
-        jsonMapper,
-        scheduledExecutorFactory.create(1, "DatabaseSegmentManager-Exec--%d"),
-        configFactory.build(DatabaseSegmentManagerConfig.class),
-        dbi
-    );
-    final DatabaseRuleManager databaseRuleManager = new DatabaseRuleManager(
-        jsonMapper,
-        scheduledExecutorFactory.create(1, "DatabaseRuleManager-Exec--%d"),
-        databaseRuleManagerConfig,
-        dbi
-    );
-
-    final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
-    final MonitorScheduler healthMonitor = new MonitorScheduler(
-        configFactory.build(MonitorSchedulerConfig.class),
-        globalScheduledExec,
-        emitter,
-        ImmutableList.<Monitor>of(
-            new JvmMonitor(),
-            new SysMonitor()
-        )
-    );
-    lifecycle.addManagedInstance(healthMonitor);
+    final DatabaseSegmentManager databaseSegmentManager = injector.getInstance(DatabaseSegmentManager.class);
+    final DatabaseRuleManager databaseRuleManager = injector.getInstance(DatabaseRuleManager.class);
 
     final DruidMasterConfig druidMasterConfig = configFactory.build(DruidMasterConfig.class);
+    final DruidNodeConfig nodeConfig = configFactory.build(DruidNodeConfig.class);
 
-    final ServiceDiscovery serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-        curatorFramework,
-        serviceDiscoveryConfig,
-        lifecycle
-    );
-    final ServiceAnnouncer serviceAnnouncer = Initialization.makeServiceAnnouncer(
-        serviceDiscoveryConfig, serviceDiscovery
-    );
-    Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, lifecycle);
+    final ServiceDiscovery<Void> serviceDiscovery = injector.getInstance(Key.get(new TypeLiteral<ServiceDiscovery<Void>>(){}));
+    final ServiceAnnouncer serviceAnnouncer = injector.getInstance(ServiceAnnouncer.class);
+    Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, lifecycle);
 
     IndexingServiceClient indexingServiceClient = null;
     if (druidMasterConfig.getMergerServiceName() != null) {
@@ -187,9 +136,10 @@ public class MasterMain
           serviceDiscovery,
           lifecycle
       );
-      indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider);
+//      indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider); TODO
     }
 
+    DBI dbi = injector.getInstance(DBI.class);
     final ConfigManagerConfig configManagerConfig = configFactory.build(ConfigManagerConfig.class);
     DbConnector.createConfigTable(dbi, configManagerConfig.getConfigTable());
     JacksonConfigManager configManager = new JacksonConfigManager(
@@ -237,7 +187,7 @@ public class MasterMain
         )
     );
 
-    final Injector injector = Guice.createInjector(
+    final Injector injector2 = Guice.createInjector(
         new MasterServletModule(
             serverInventoryView,
             databaseSegmentManager,
@@ -289,7 +239,7 @@ public class MasterMain
     final Context root = new Context(server, "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-    root.addEventListener(new GuiceServletConfig(injector));
+    root.addEventListener(new GuiceServletConfig(injector2));
     root.addFilter(
         new FilterHolder(
             new RedirectFilter(
@@ -303,5 +253,42 @@ public class MasterMain
 
     server.start();
     server.join();
+  }
+
+  private static Injector makeInjector(final Object... modules)
+  {
+    final Injector baseInjector = Guice.createInjector(
+        new DruidGuiceExtensions(),
+        new JacksonModule(),
+        new PropertiesModule("runtime.properties"),
+        new ConfigFactoryModule()
+    );
+
+    return Guice.createInjector(
+        Iterables.transform(
+            Arrays.asList(modules),
+            new Function<Object, Module>()
+            {
+              @Override
+              @SuppressWarnings("unchecked")
+              public Module apply(@Nullable Object input)
+              {
+                if (input instanceof Module) {
+                  baseInjector.injectMembers(input);
+                  return (Module) input;
+                }
+                if (input instanceof Class) {
+                  if (Module.class.isAssignableFrom((Class) input)) {
+                    return baseInjector.getInstance((Class<? extends Module>) input);
+                  }
+                  else {
+                    throw new ISE("Class[%s] does not implement %s", input.getClass(), Module.class);
+                  }
+                }
+                throw new ISE("Unknown module type[%s]", input.getClass());
+              }
+            }
+        )
+    );
   }
 }

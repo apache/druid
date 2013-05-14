@@ -19,10 +19,10 @@
 
 package com.metamx.druid.http;
 
+import com.google.inject.Inject;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.LoadPeonCallback;
 
-import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;

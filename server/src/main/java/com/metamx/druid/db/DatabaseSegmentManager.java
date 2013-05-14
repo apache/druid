@@ -21,9 +21,11 @@ package com.metamx.druid.db;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -33,7 +35,8 @@ import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
-
+import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.guice.ManageLifecycle;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -57,6 +60,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
+@ManageLifecycle
 public class DatabaseSegmentManager
 {
   private static final Logger log = new Logger(DatabaseSegmentManager.class);
@@ -65,26 +69,30 @@ public class DatabaseSegmentManager
 
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService exec;
-  private final DatabaseSegmentManagerConfig config;
+  private final Supplier<DatabaseSegmentManagerConfig> config;
+  private final Supplier<DbTablesConfig> dbTables;
   private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
   private final DBI dbi;
 
   private volatile boolean started = false;
 
+  @Inject
   public DatabaseSegmentManager(
       ObjectMapper jsonMapper,
-      ScheduledExecutorService exec,
-      DatabaseSegmentManagerConfig config,
+      Supplier<DatabaseSegmentManagerConfig> config,
+      Supplier<DbTablesConfig> dbTables,
       DBI dbi
   )
   {
     this.jsonMapper = jsonMapper;
-    this.exec = exec;
     this.config = config;
+    this.dbTables = dbTables;
     this.dataSources = new AtomicReference<ConcurrentHashMap<String, DruidDataSource>>(
         new ConcurrentHashMap<String, DruidDataSource>()
     );
     this.dbi = dbi;
+
+    this.exec = Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d");
   }
 
   @LifecycleStart
@@ -98,7 +106,7 @@ public class DatabaseSegmentManager
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
           new Duration(0),
-          config.getPollDuration(),
+          config.get().getPollDuration(),
           new Runnable()
           {
             @Override
@@ -136,7 +144,7 @@ public class DatabaseSegmentManager
             public VersionedIntervalTimeline<String, DataSegment> withHandle(Handle handle) throws Exception
             {
               return handle.createQuery(
-                  String.format("SELECT payload FROM %s WHERE dataSource = :dataSource", config.getSegmentTable())
+                  String.format("SELECT payload FROM %s WHERE dataSource = :dataSource", getSegmentsTable())
               )
                            .bind("dataSource", ds)
                            .fold(
@@ -204,7 +212,7 @@ public class DatabaseSegmentManager
                 batch.add(
                     String.format(
                         "UPDATE %s SET used=1 WHERE id = '%s'",
-                        config.getSegmentTable(),
+                        getSegmentsTable(),
                         segment.getIdentifier()
                     )
                 );
@@ -234,7 +242,7 @@ public class DatabaseSegmentManager
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  String.format("UPDATE %s SET used=1 WHERE id = :id", config.getSegmentTable())
+                  String.format("UPDATE %s SET used=1 WHERE id = :id", getSegmentsTable())
               )
                     .bind("id", segmentId)
                     .execute();
@@ -268,7 +276,7 @@ public class DatabaseSegmentManager
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  String.format("UPDATE %s SET used=0 WHERE dataSource = :dataSource", config.getSegmentTable())
+                  String.format("UPDATE %s SET used=0 WHERE dataSource = :dataSource", getSegmentsTable())
               )
                     .bind("dataSource", ds)
                     .execute();
@@ -298,7 +306,7 @@ public class DatabaseSegmentManager
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  String.format("UPDATE %s SET used=0 WHERE id = :segmentID", config.getSegmentTable())
+                  String.format("UPDATE %s SET used=0 WHERE id = :segmentID", getSegmentsTable())
               ).bind("segmentID", segmentID)
                     .execute();
 
@@ -354,7 +362,7 @@ public class DatabaseSegmentManager
             public List<String> withHandle(Handle handle) throws Exception
             {
               return handle.createQuery(
-                  String.format("SELECT DISTINCT(datasource) FROM %s", config.getSegmentTable())
+                  String.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable())
               )
                            .fold(
                                Lists.<String>newArrayList(),
@@ -398,7 +406,7 @@ public class DatabaseSegmentManager
             public List<Map<String, Object>> withHandle(Handle handle) throws Exception
             {
               return handle.createQuery(
-                  String.format("SELECT payload FROM %s WHERE used=1", config.getSegmentTable())
+                  String.format("SELECT payload FROM %s WHERE used=1", getSegmentsTable())
               ).list();
             }
           }
@@ -450,5 +458,9 @@ public class DatabaseSegmentManager
     catch (Exception e) {
       log.error(e, "Problem polling DB.");
     }
+  }
+
+  private String getSegmentsTable() {
+    return dbTables.get().getSegmentsTable();
   }
 }

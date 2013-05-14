@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,21 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.db;
+package com.metamx.druid.initialization;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
 
 /**
  */
-public abstract class DatabaseRuleManagerConfig
+public abstract class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
 {
-  @Config("druid.database.rules.defaultTier")
-  @Default("_default")
-  public abstract String getDefaultTier();
+  @JsonProperty
+  private Duration timeOut = new Duration("PT5m");
 
-  @Config("druid.database.rules.poll.duration")
-  @Default("PT1M")
-  public abstract Duration getRulesPollDuration();
+  public Duration getReadTimeout()
+  {
+    return timeOut;
+  }
 }

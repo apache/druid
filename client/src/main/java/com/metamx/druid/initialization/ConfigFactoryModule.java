@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,17 +19,28 @@
 
 package com.metamx.druid.initialization;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.metamx.common.config.Config;
+import com.metamx.druid.guice.LazySingleton;
+import org.skife.config.ConfigurationObjectFactory;
+
+import java.util.Properties;
 
 /**
  */
-public abstract class CuratorConfig
+public class ConfigFactoryModule implements Module
 {
-  @Config("druid.zk.service.host")
-  public abstract String getZkHosts();
+  @Override
+  public void configure(Binder binder)
+  {
 
-  @Config("druid.zk.service.sessionTimeoutMs")
-  @Default("30000")
-  public abstract int getZkSessionTimeoutMs();
+  }
+
+  @Provides @LazySingleton
+  public ConfigurationObjectFactory makeFactory(Properties props)
+  {
+    return Config.createFactory(props);
+  }
 }

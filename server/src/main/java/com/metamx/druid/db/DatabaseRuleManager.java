@@ -21,17 +21,20 @@ package com.metamx.druid.db;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.druid.master.rules.PeriodLoadRule;
 import com.metamx.druid.master.rules.Rule;
-
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -52,12 +55,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
+@ManageLifecycle
 public class DatabaseRuleManager
 {
   public static void createDefaultRule(
       final DBI dbi,
       final String ruleTable,
-      final String defaultDatasource,
+      final String defaultTier,
       final ObjectMapper jsonMapper
   )
   {
@@ -72,7 +76,7 @@ public class DatabaseRuleManager
                   String.format(
                       "SELECT id from %s where datasource='%s';",
                       ruleTable,
-                      defaultDatasource
+                      defaultTier
                   )
               );
 
@@ -94,8 +98,8 @@ public class DatabaseRuleManager
                       ruleTable
                   )
               )
-                    .bind("id", String.format("%s_%s", defaultDatasource, version))
-                    .bind("dataSource", defaultDatasource)
+                    .bind("id", String.format("%s_%s", defaultTier, version))
+                    .bind("dataSource", defaultTier)
                     .bind("version", version)
                     .bind("payload", jsonMapper.writeValueAsString(defaultRules))
                     .execute();
@@ -115,6 +119,7 @@ public class DatabaseRuleManager
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService exec;
   private final DatabaseRuleManagerConfig config;
+  private final Supplier<DbTablesConfig> dbTables;
   private final DBI dbi;
   private final AtomicReference<ConcurrentHashMap<String, List<Rule>>> rules;
 
@@ -122,17 +127,20 @@ public class DatabaseRuleManager
 
   private volatile boolean started = false;
 
+  @Inject
   public DatabaseRuleManager(
       ObjectMapper jsonMapper,
-      ScheduledExecutorService exec,
       DatabaseRuleManagerConfig config,
+      Supplier<DbTablesConfig> dbTables,
       DBI dbi
   )
   {
     this.jsonMapper = jsonMapper;
-    this.exec = exec;
     this.config = config;
+    this.dbTables = dbTables;
     this.dbi = dbi;
+
+    this.exec = Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d");
 
     this.rules = new AtomicReference<ConcurrentHashMap<String, List<Rule>>>(
         new ConcurrentHashMap<String, List<Rule>>()
@@ -147,6 +155,7 @@ public class DatabaseRuleManager
         return;
       }
 
+      createDefaultRule(dbi, getRulesTable(), config.getDefaultTier(), jsonMapper);
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
           new Duration(0),
@@ -192,8 +201,11 @@ public class DatabaseRuleManager
                   return handle.createQuery(
                       // Return latest version rule by dataSource
                       String.format(
-                          "SELECT %1$s.dataSource, %1$s.payload FROM %1$s INNER JOIN(SELECT dataSource, max(version) as version, payload FROM %1$s GROUP BY dataSource) ds ON %1$s.datasource = ds.datasource and %1$s.version = ds.version",
-                          config.getRuleTable()
+                          "SELECT r.dataSource, r.payload "
+                          + "FROM %1$s r "
+                          + "INNER JOIN(SELECT dataSource, max(version) as version, payload FROM %1$s GROUP BY dataSource) ds "
+                          + "ON r.datasource = ds.datasource and r.version = ds.version",
+                          getRulesTable()
                       )
                   ).fold(
                       Maps.<String, List<Rule>>newHashMap(),
@@ -255,8 +267,8 @@ public class DatabaseRuleManager
     if (theRules.get(dataSource) != null) {
       retVal.addAll(theRules.get(dataSource));
     }
-    if (theRules.get(config.getDefaultDatasource()) != null) {
-      retVal.addAll(theRules.get(config.getDefaultDatasource()));
+    if (theRules.get(config.getDefaultTier()) != null) {
+      retVal.addAll(theRules.get(config.getDefaultTier()));
     }
     return retVal;
   }
@@ -275,7 +287,7 @@ public class DatabaseRuleManager
                 handle.createStatement(
                     String.format(
                         "INSERT INTO %s (id, dataSource, version, payload) VALUES (:id, :dataSource, :version, :payload)",
-                        config.getRuleTable()
+                        getRulesTable()
                     )
                 )
                       .bind("id", String.format("%s_%s", dataSource, version))
@@ -303,4 +315,6 @@ public class DatabaseRuleManager
 
     return true;
   }
+
+  private String getRulesTable() {return dbTables.get().getRulesTable();}
 }

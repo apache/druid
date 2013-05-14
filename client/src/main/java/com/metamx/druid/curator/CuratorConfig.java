@@ -17,23 +17,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.initialization;
+package com.metamx.druid.curator;
 
 import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  */
-public abstract class ServiceDiscoveryConfig extends CuratorConfig
+public abstract class CuratorConfig
 {
-  @Config("druid.service")
-  public abstract String getServiceName();
+  @Config("druid.zk.service.host")
+  public abstract String getZkHosts();
 
-  @Config("druid.host")
-  public abstract String getHost();
-
-  @Config("druid.port")
-  public abstract int getPort();
-
-  @Config("druid.zk.paths.discoveryPath")
-  public abstract String getDiscoveryPath();
+  @Config("druid.zk.service.sessionTimeoutMs")
+  @Default("30000")
+  public abstract int getZkSessionTimeoutMs();
 }

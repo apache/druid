@@ -24,11 +24,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.MapMaker;
+import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.curator.inventory.CuratorInventoryManager;
 import com.metamx.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import com.metamx.druid.curator.inventory.InventoryManagerConfig;
+import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
@@ -38,11 +41,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
+@ManageLifecycle
 public class ServerInventoryView implements ServerView, InventoryView
 {
   private static final EmittingLogger log = new EmittingLogger(ServerInventoryView.class);
@@ -55,11 +58,11 @@ public class ServerInventoryView implements ServerView, InventoryView
 
   private static final Map<String, Integer> removedSegments = new MapMaker().makeMap();
 
+  @Inject
   public ServerInventoryView(
       final ServerInventoryViewConfig config,
       final ZkPathsConfig zkPaths,
       final CuratorFramework curator,
-      final ExecutorService exec,
       final ObjectMapper jsonMapper
   )
   {
@@ -79,7 +82,7 @@ public class ServerInventoryView implements ServerView, InventoryView
             return zkPaths.getServedSegmentsPath();
           }
         },
-        exec,
+        Execs.singleThreaded("ServerInventoryView-%s"),
         new CuratorInventoryManagerStrategy<DruidServer, DataSegment>()
         {
           @Override
