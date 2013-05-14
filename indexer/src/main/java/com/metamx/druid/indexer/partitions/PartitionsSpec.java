@@ -8,10 +8,14 @@ import javax.annotation.Nullable;
 
 public class PartitionsSpec
 {
+  private static final double DEFAULT_OVERSIZE_THRESHOLD = 1.5;
+
   @Nullable
   private final String partitionDimension;
 
   private final long targetPartitionSize;
+
+  private final long maxPartitionSize;
 
   private final boolean assumeGrouped;
 
@@ -19,11 +23,15 @@ public class PartitionsSpec
   public PartitionsSpec(
       @JsonProperty("partitionDimension") @Nullable String partitionDimension,
       @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
+      @JsonProperty("maxPartitionSize") @Nullable Long maxPartitionSize,
       @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
   )
   {
     this.partitionDimension = partitionDimension;
     this.targetPartitionSize = targetPartitionSize == null ? -1 : targetPartitionSize;
+    this.maxPartitionSize = maxPartitionSize == null
+                            ? (long) (this.targetPartitionSize * DEFAULT_OVERSIZE_THRESHOLD)
+                            : maxPartitionSize;
     this.assumeGrouped = assumeGrouped == null ? false : assumeGrouped;
   }
 
@@ -44,6 +52,12 @@ public class PartitionsSpec
   public long getTargetPartitionSize()
   {
     return targetPartitionSize;
+  }
+
+  @JsonProperty
+  public long getMaxPartitionSize()
+  {
+    return maxPartitionSize;
   }
 
   @JsonProperty

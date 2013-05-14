@@ -44,7 +44,7 @@ public abstract class DbConnectorConfig
 
   @JsonProperty("useValidationQuery")
   @Config("druid.database.validation")
-  public boolean isValidationQuery() {
+  public boolean useValidationQuery() {
     return false;
   }
 

@@ -504,7 +504,6 @@ public class DeterminePartitionsJob implements Jobby
   public static class DeterminePartitionsDimSelectionReducer extends DeterminePartitionsDimSelectionBaseReducer
   {
     private static final double SHARD_COMBINE_THRESHOLD = 0.25;
-    private static final double SHARD_OVERSIZE_THRESHOLD = 1.5;
     private static final int HIGH_CARDINALITY_THRESHOLD = 3000000;
 
     @Override
@@ -672,7 +671,7 @@ public class DeterminePartitionsJob implements Jobby
         // Make sure none of these shards are oversized
         boolean oversized = false;
         for(final DimPartition partition : dimPartitions.partitions) {
-          if(partition.rows > config.getTargetPartitionSize() * SHARD_OVERSIZE_THRESHOLD) {
+          if(partition.rows > config.getMaxPartitionSize()) {
             log.info("Dimension[%s] has an oversized shard: %s", dimPartitions.dim, partition.shardSpec);
             oversized = true;
           }
