@@ -630,7 +630,7 @@ public class IndexIO
 
       GenericIndexed<String> cols = GenericIndexed.fromIterable(columns, GenericIndexed.stringStrategy);
 
-      final int numBytes = cols.getSerializedSize() + dims9.getSerializedSize() + 16;
+      final long numBytes = cols.getSerializedSize() + dims9.getSerializedSize() + 16;
       final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
       cols.writeToChannel(writer);
       dims9.writeToChannel(writer);

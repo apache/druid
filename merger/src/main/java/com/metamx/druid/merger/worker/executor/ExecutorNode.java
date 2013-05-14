@@ -59,7 +59,7 @@ import com.metamx.druid.merger.common.config.TaskConfig;
 import com.metamx.druid.merger.common.index.EventReceiverFirehoseFactory;
 import com.metamx.druid.merger.common.index.ChatHandlerProvider;
 import com.metamx.druid.merger.common.index.StaticS3FirehoseFactory;
-import com.metamx.druid.merger.coordinator.ExecutorServiceTaskRunner;
+import com.metamx.druid.merger.coordinator.ThreadPoolTaskRunner;
 import com.metamx.druid.merger.worker.config.ChatHandlerProviderConfig;
 import com.metamx.druid.merger.worker.config.WorkerConfig;
 import com.metamx.druid.utils.PropUtils;
@@ -118,7 +118,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private ServiceAnnouncer serviceAnnouncer = null;
   private ServiceProvider coordinatorServiceProvider = null;
   private Server server = null;
-  private ExecutorServiceTaskRunner taskRunner = null;
+  private ThreadPoolTaskRunner taskRunner = null;
   private ExecutorLifecycle executorLifecycle = null;
   private ChatHandlerProvider chatHandlerProvider = null;
 
@@ -247,7 +247,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     executorLifecycle.join();
   }
 
-  public ExecutorServiceTaskRunner getTaskRunner()
+  public ThreadPoolTaskRunner getTaskRunner()
   {
     return taskRunner;
   }
@@ -414,7 +414,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   {
     if (taskRunner == null) {
       this.taskRunner = lifecycle.addManagedInstance(
-          new ExecutorServiceTaskRunner(
+          new ThreadPoolTaskRunner(
               taskToolboxFactory,
               Executors.newSingleThreadExecutor(
                   new ThreadFactoryBuilder()

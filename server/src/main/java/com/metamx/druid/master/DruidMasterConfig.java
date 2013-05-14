@@ -51,13 +51,13 @@ public abstract class DruidMasterConfig
   @Config("druid.master.merger.on")
   public boolean isMergeSegments()
   {
-    return true;
+    return false;
   }
 
   @Config("druid.master.conversion.on")
   public boolean isConvertSegments()
   {
-    return true;
+    return false;
   }
 
   @Config("druid.master.merger.service")

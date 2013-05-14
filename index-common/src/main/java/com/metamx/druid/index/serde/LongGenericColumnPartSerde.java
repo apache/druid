@@ -58,7 +58,7 @@ public class LongGenericColumnPartSerde implements ColumnPartSerde
   }
 
   @Override
-  public int numBytes()
+  public long numBytes()
   {
     return compressedLongs.getSerializedSize();
   }
