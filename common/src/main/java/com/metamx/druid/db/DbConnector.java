@@ -181,7 +181,7 @@ public class DbConnector
     dataSource.setPassword(config.getDatabasePassword());
     dataSource.setUrl(config.getDatabaseConnectURI());
 
-    if (config.isValidationQuery()) {
+    if (config.useValidationQuery()) {
       dataSource.setValidationQuery(config.getValidationQuery());
       dataSource.setTestOnBorrow(true);
     }
