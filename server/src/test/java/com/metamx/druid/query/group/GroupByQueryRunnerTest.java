@@ -27,7 +27,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.PeriodGranularity;
@@ -338,16 +337,6 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
-
-    mergeRunner.run(fullQuery).accumulate(null, new Accumulator<Object, Row>()
-    {
-      @Override
-      public Object accumulate(Object o, Row row)
-      {
-        System.out.printf("%d: %s%n", limit, row);
-        return null;
-      }
-    });
 
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery), String.format("limit: %d", limit)
