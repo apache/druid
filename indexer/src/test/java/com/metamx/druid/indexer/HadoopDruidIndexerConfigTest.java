@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.partitions.PartitionsSpec;
+import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 
 import org.joda.time.Interval;
@@ -39,8 +40,8 @@ public class HadoopDruidIndexerConfigTest
     final HadoopDruidIndexerConfig cfg;
 
     try {
-      cfg = jsonMapper.readValue(
-            "{"
+      cfg = jsonReadWriteRead(
+          "{"
           + " \"granularitySpec\":{"
           + "   \"type\":\"uniform\","
           + "   \"gran\":\"hour\","
@@ -74,7 +75,7 @@ public class HadoopDruidIndexerConfigTest
     final HadoopDruidIndexerConfig cfg;
 
     try {
-      cfg = jsonMapper.readValue(
+      cfg = jsonReadWriteRead(
           "{"
           + "\"segmentGranularity\":\"day\","
           + "\"intervals\":[\"2012-02-01/P1D\"]"
@@ -137,7 +138,7 @@ public class HadoopDruidIndexerConfigTest
   public void testInvalidGranularityCombination() {
     boolean thrown = false;
     try {
-      final HadoopDruidIndexerConfig cfg = jsonMapper.readValue(
+      final HadoopDruidIndexerConfig cfg = jsonReadWriteRead(
           "{"
           + "\"segmentGranularity\":\"day\","
           + "\"intervals\":[\"2012-02-01/P1D\"],"
@@ -161,7 +162,7 @@ public class HadoopDruidIndexerConfigTest
     final HadoopDruidIndexerConfig cfg;
 
     try {
-      cfg = jsonMapper.readValue(
+      cfg = jsonReadWriteRead(
           "{}",
           HadoopDruidIndexerConfig.class
       );
@@ -183,7 +184,7 @@ public class HadoopDruidIndexerConfigTest
     final HadoopDruidIndexerConfig cfg;
 
     try {
-      cfg = jsonMapper.readValue(
+      cfg = jsonReadWriteRead(
           "{"
           + "\"partitionsSpec\":{"
           + "   \"targetPartitionSize\":100"
@@ -221,7 +222,7 @@ public class HadoopDruidIndexerConfigTest
     final HadoopDruidIndexerConfig cfg;
 
     try {
-      cfg = jsonMapper.readValue(
+      cfg = jsonReadWriteRead(
           "{"
           + "\"partitionsSpec\":{"
           + "   \"targetPartitionSize\":100,"
@@ -266,7 +267,7 @@ public class HadoopDruidIndexerConfigTest
     final HadoopDruidIndexerConfig cfg;
 
     try {
-      cfg = jsonMapper.readValue(
+      cfg = jsonReadWriteRead(
           "{"
           + "\"targetPartitionSize\":100,"
           + "\"partitionDimension\":\"foo\""
@@ -309,7 +310,7 @@ public class HadoopDruidIndexerConfigTest
     final HadoopDruidIndexerConfig cfg;
 
     try {
-      cfg = jsonMapper.readValue(
+      cfg = jsonReadWriteRead(
           "{"
           + "\"partitionsSpec\":{"
           + "   \"targetPartitionSize\":100,"
@@ -354,7 +355,7 @@ public class HadoopDruidIndexerConfigTest
   public void testInvalidPartitionsCombination() {
     boolean thrown = false;
     try {
-      final HadoopDruidIndexerConfig cfg = jsonMapper.readValue(
+      final HadoopDruidIndexerConfig cfg = jsonReadWriteRead(
           "{"
           + "\"targetPartitionSize\":100,"
           + "\"partitionsSpec\":{"
@@ -368,5 +369,41 @@ public class HadoopDruidIndexerConfigTest
     }
 
     Assert.assertTrue("Exception thrown", thrown);
+  }
+
+  @Test
+  public void testDbUpdaterJobSpec() throws Exception
+  {
+    final HadoopDruidIndexerConfig cfg;
+
+    cfg = jsonReadWriteRead(
+        "{"
+        + "\"updaterJobSpec\":{\n"
+        + "    \"type\" : \"db\",\n"
+        + "    \"connectURI\" : \"jdbc:mysql://localhost/druid\",\n"
+        + "    \"user\" : \"rofl\",\n"
+        + "    \"password\" : \"p4ssw0rd\",\n"
+        + "    \"segmentTable\" : \"segments\"\n"
+        + "  }"
+        + "}",
+        HadoopDruidIndexerConfig.class
+    );
+
+    final DbUpdaterJobSpec spec = (DbUpdaterJobSpec) cfg.getUpdaterJobSpec();
+    Assert.assertEquals("segments", spec.getSegmentTable());
+    Assert.assertEquals("jdbc:mysql://localhost/druid", spec.getDatabaseConnectURI());
+    Assert.assertEquals("rofl", spec.getDatabaseUser());
+    Assert.assertEquals("p4ssw0rd", spec.getDatabasePassword());
+    Assert.assertEquals(false, spec.useValidationQuery());
+  }
+
+  private <T> T jsonReadWriteRead(String s, Class<T> klass)
+  {
+    try {
+      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 }
