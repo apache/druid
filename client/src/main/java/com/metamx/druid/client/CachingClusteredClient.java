@@ -203,7 +203,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     // Compile list of all segments not pulled from cache
     for(Pair<ServerSelector, SegmentDescriptor> segment : segments) {
-      final DruidServer server = segment.lhs.pick();
+      final DruidServer server = segment.lhs.pick().getServer();
       List<SegmentDescriptor> descriptors = serverSegments.get(server);
 
       if (descriptors == null) {

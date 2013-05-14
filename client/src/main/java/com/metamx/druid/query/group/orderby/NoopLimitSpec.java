@@ -1,4 +1,4 @@
-package com.metamx.druid.query.group.limit;
+package com.metamx.druid.query.group.orderby;
 
 import com.google.common.base.Function;
 import com.google.common.base.Functions;

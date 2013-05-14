@@ -17,13 +17,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.query.group.limit;
+package com.metamx.druid.query.group.orderby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
@@ -35,6 +36,8 @@ import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.dimension.DimensionSpec;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +58,7 @@ public class DefaultLimitSpec implements LimitSpec
     this.columns = (columns == null) ? ImmutableList.<OrderByColumnSpec>of() : columns;
     this.limit = (limit == null) ? Integer.MAX_VALUE : limit;
 
-    Preconditions.checkState(limit > 0, "limit[%s] must be >0", limit);
+    Preconditions.checkArgument(this.limit > 0, "limit[%s] must be >0", limit);
   }
 
   @JsonProperty
@@ -75,20 +78,22 @@ public class DefaultLimitSpec implements LimitSpec
       List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
   )
   {
-    // Materialize the Comparator first for fast-fail error checking.
-    final Comparator<Row> comparator = makeComparator(dimensions, aggs, postAggs);
+    if (columns.isEmpty()) {
+      return new LimitingFn(limit);
+    }
 
-    return new Function<Sequence<Row>, Sequence<Row>>()
-    {
-      @Override
-      public Sequence<Row> apply(Sequence<Row> input)
-      {
-        return Sequences.limit(Sequences.sort(input, comparator), limit);
-      }
-    };
+    // Materialize the Comparator first for fast-fail error checking.
+    final Ordering<Row> ordering = makeComparator(dimensions, aggs, postAggs);
+
+    if (limit == Integer.MAX_VALUE) {
+      return new SortingFn(ordering);
+    }
+    else {
+      return new TopNFunction(ordering, limit);
+    }
   }
 
-  private Comparator<Row> makeComparator(
+  private Ordering<Row> makeComparator(
       List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
   )
   {
@@ -173,5 +178,58 @@ public class DefaultLimitSpec implements LimitSpec
            "columns='" + columns + '\'' +
            ", limit=" + limit +
            '}';
+  }
+
+  private static class LimitingFn implements Function<Sequence<Row>, Sequence<Row>>
+  {
+    private int limit;
+
+    public LimitingFn(int limit)
+    {
+      this.limit = limit;
+    }
+
+    @Override
+    public Sequence<Row> apply(
+        @Nullable Sequence<Row> input
+    )
+    {
+      return Sequences.limit(input, limit);
+    }
+  }
+
+  private static class SortingFn implements Function<Sequence<Row>, Sequence<Row>>
+  {
+    private final Ordering<Row> ordering;
+
+    public SortingFn(Ordering<Row> ordering) {this.ordering = ordering;}
+
+    @Override
+    public Sequence<Row> apply(@Nullable Sequence<Row> input)
+    {
+      return Sequences.sort(input, ordering);
+    }
+  }
+
+  private static class TopNFunction implements Function<Sequence<Row>, Sequence<Row>>
+  {
+    private final TopNSorter<Row> sorter;
+    private final int limit;
+
+    public TopNFunction(Ordering<Row> ordering, int limit)
+    {
+      this.limit = limit;
+
+      this.sorter = new TopNSorter<Row>(ordering);
+    }
+
+    @Override
+    public Sequence<Row> apply(
+        @Nullable Sequence<Row> input
+    )
+    {
+      final ArrayList<Row> materializedList = Sequences.toList(input, Lists.<Row>newArrayList());
+      return Sequences.simple(sorter.toTopN(materializedList, limit));
+    }
   }
 }

@@ -150,7 +150,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     };
   }
 
-  public int getSerializedSize()
+  public long getSerializedSize()
   {
     return baseFloatBuffers.getSerializedSize() + 1 + 4 + 4;
   }

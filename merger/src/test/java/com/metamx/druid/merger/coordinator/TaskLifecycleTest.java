@@ -162,7 +162,7 @@ public class TaskLifecycleTest
         new DefaultObjectMapper()
     );
 
-    tr = new ExecutorServiceTaskRunner(
+    tr = new ThreadPoolTaskRunner(
         tb,
         Executors.newSingleThreadExecutor()
     );

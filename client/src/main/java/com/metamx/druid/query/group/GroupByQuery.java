@@ -22,11 +22,14 @@ package com.metamx.druid.query.group;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import com.metamx.druid.BaseQuery;
 import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
@@ -37,13 +40,15 @@ import com.metamx.druid.query.Queries;
 import com.metamx.druid.query.dimension.DefaultDimensionSpec;
 import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.filter.DimFilter;
-import com.metamx.druid.query.group.limit.DefaultLimitSpec;
-import com.metamx.druid.query.group.limit.LimitSpec;
-import com.metamx.druid.query.group.limit.NoopLimitSpec;
-import com.metamx.druid.query.group.limit.OrderByColumnSpec;
+import com.metamx.druid.query.group.having.HavingSpec;
+import com.metamx.druid.query.group.orderby.DefaultLimitSpec;
+import com.metamx.druid.query.group.orderby.LimitSpec;
+import com.metamx.druid.query.group.orderby.NoopLimitSpec;
+import com.metamx.druid.query.group.orderby.OrderByColumnSpec;
 import com.metamx.druid.query.segment.LegacySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -57,6 +62,7 @@ public class GroupByQuery extends BaseQuery<Row>
   }
 
   private final LimitSpec limitSpec;
+  private final HavingSpec havingSpec;
   private final DimFilter dimFilter;
   private final QueryGranularity granularity;
   private final List<DimensionSpec> dimensions;
@@ -69,34 +75,88 @@ public class GroupByQuery extends BaseQuery<Row>
   public GroupByQuery(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
-      @JsonProperty("limitSpec") LimitSpec limitSpec,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
+      @JsonProperty("having") HavingSpec havingSpec,
+      @JsonProperty("limitSpec") LimitSpec limitSpec,
+      @JsonProperty("orderBy") LimitSpec orderBySpec,
       @JsonProperty("context") Map<String, String> context
   )
   {
     super(dataSource, querySegmentSpec, context);
-    this.limitSpec = (limitSpec == null) ? new NoopLimitSpec() : limitSpec;
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions == null ? ImmutableList.<DimensionSpec>of() : dimensions;
     this.aggregatorSpecs = aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
+    this.havingSpec = havingSpec;
+    this.limitSpec = (limitSpec == null) ? (orderBySpec == null ? new NoopLimitSpec() : orderBySpec) : limitSpec;
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
     Preconditions.checkNotNull(this.aggregatorSpecs, "Must specify at least one aggregator");
     Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
 
-    orderByLimitFn = this.limitSpec.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
+    Function<Sequence<Row>, Sequence<Row>> postProcFn =
+        this.limitSpec.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
+
+    if (havingSpec != null) {
+      postProcFn = Functions.compose(
+          new Function<Sequence<Row>, Sequence<Row>>()
+          {
+            @Override
+            public Sequence<Row> apply(@Nullable Sequence<Row> input)
+            {
+              return Sequences.filter(
+                  input,
+                  new Predicate<Row>()
+                  {
+                    @Override
+                    public boolean apply(@Nullable Row input)
+                    {
+                      return GroupByQuery.this.havingSpec.eval(input);
+                    }
+                  }
+              );
+            }
+          },
+          postProcFn
+      );
+    }
+
+    orderByLimitFn = postProcFn;
   }
 
-  @JsonProperty
-  public LimitSpec getLimitSpec()
+  /**
+   * A private constructor that avoids all of the various state checks.  Used by the with*() methods where the checks
+   * have already passed in order for the object to exist.
+   */
+  private GroupByQuery(
+      String dataSource,
+      QuerySegmentSpec querySegmentSpec,
+      DimFilter dimFilter,
+      QueryGranularity granularity,
+      List<DimensionSpec> dimensions,
+      List<AggregatorFactory> aggregatorSpecs,
+      List<PostAggregator> postAggregatorSpecs,
+      HavingSpec havingSpec,
+      LimitSpec orderBySpec,
+      Function<Sequence<Row>, Sequence<Row>> orderByLimitFn,
+      Map<String, String> context
+  )
   {
-    return limitSpec;
+    super(dataSource, querySegmentSpec, context);
+
+    this.dimFilter = dimFilter;
+    this.granularity = granularity;
+    this.dimensions = dimensions;
+    this.aggregatorSpecs = aggregatorSpecs;
+    this.postAggregatorSpecs = postAggregatorSpecs;
+    this.havingSpec = havingSpec;
+    this.limitSpec = orderBySpec;
+    this.orderByLimitFn = orderByLimitFn;
   }
 
   @JsonProperty("filter")
@@ -129,6 +189,18 @@ public class GroupByQuery extends BaseQuery<Row>
     return postAggregatorSpecs;
   }
 
+  @JsonProperty("having")
+  public HavingSpec getHavingSpec()
+  {
+    return havingSpec;
+  }
+
+  @JsonProperty
+  public LimitSpec getOrderBy()
+  {
+    return limitSpec;
+  }
+
   @Override
   public boolean hasFilters()
   {
@@ -152,12 +224,14 @@ public class GroupByQuery extends BaseQuery<Row>
     return new GroupByQuery(
         getDataSource(),
         getQuerySegmentSpec(),
-        limitSpec,
         dimFilter,
         granularity,
         dimensions,
         aggregatorSpecs,
         postAggregatorSpecs,
+        havingSpec,
+        limitSpec,
+        orderByLimitFn,
         computeOverridenContext(contextOverride)
     );
   }
@@ -168,12 +242,14 @@ public class GroupByQuery extends BaseQuery<Row>
     return new GroupByQuery(
         getDataSource(),
         spec,
-        limitSpec,
         dimFilter,
         granularity,
         dimensions,
         aggregatorSpecs,
         postAggregatorSpecs,
+        havingSpec,
+        limitSpec,
+        orderByLimitFn,
         getContext()
     );
   }
@@ -187,6 +263,8 @@ public class GroupByQuery extends BaseQuery<Row>
     private List<DimensionSpec> dimensions;
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
+    private HavingSpec havingSpec;
+
     private Map<String, String> context;
 
     private LimitSpec limitSpec = null;
@@ -205,6 +283,9 @@ public class GroupByQuery extends BaseQuery<Row>
       dimensions = builder.dimensions;
       aggregatorSpecs = builder.aggregatorSpecs;
       postAggregatorSpecs = builder.postAggregatorSpecs;
+      havingSpec = builder.havingSpec;
+      limit = builder.limit;
+
       context = builder.context;
     }
 
@@ -264,7 +345,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
     private void ensureFluentLimitsNotSet()
     {
-      if (! (limit == Integer.MAX_VALUE && orderByColumnSpecs.isEmpty()) ) {
+      if (!(limit == Integer.MAX_VALUE && orderByColumnSpecs.isEmpty())) {
         throw new ISE("Ambiguous build, limit[%s] or columnSpecs[%s] already set.", limit, orderByColumnSpecs);
       }
     }
@@ -351,6 +432,20 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
+    public Builder setHavingSpec(HavingSpec havingSpec)
+    {
+      this.havingSpec = havingSpec;
+
+      return this;
+    }
+
+    public Builder setLimit(Integer limit)
+    {
+      this.limit = limit;
+
+      return this;
+    }
+
     public Builder copy()
     {
       return new Builder(this);
@@ -361,20 +456,21 @@ public class GroupByQuery extends BaseQuery<Row>
       final LimitSpec theLimitSpec;
       if (limitSpec == null) {
         theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, limit);
-      }
-      else {
+      } else {
         theLimitSpec = limitSpec;
       }
 
       return new GroupByQuery(
           dataSource,
           querySegmentSpec,
-          theLimitSpec,
           dimFilter,
           granularity,
           dimensions,
           aggregatorSpecs,
           postAggregatorSpecs,
+          havingSpec,
+          null,
+          theLimitSpec,
           context
       );
     }

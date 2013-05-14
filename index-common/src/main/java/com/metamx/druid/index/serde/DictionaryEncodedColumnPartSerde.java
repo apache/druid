@@ -54,7 +54,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   private final GenericIndexed<ImmutableConciseSet> bitmaps;
   private final ImmutableRTree spatialIndex;
 
-  private final int size;
+  private final long size;
 
   public DictionaryEncodedColumnPartSerde(
       GenericIndexed<String> dictionary,
@@ -70,7 +70,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     this.bitmaps = bitmaps;
     this.spatialIndex = spatialIndex;
 
-    int size = dictionary.getSerializedSize();
+    long size = dictionary.getSerializedSize();
     if (singleValCol != null && multiValCol == null) {
       size += singleValCol.getSerializedSize();
     } else if (singleValCol == null && multiValCol != null) {
@@ -103,7 +103,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   }
 
   @Override
-  public int numBytes()
+  public long numBytes()
   {
     return 1 + size;
   }

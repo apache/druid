@@ -161,7 +161,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     };
   }
 
-  public int getSerializedSize()
+  public long getSerializedSize()
   {
     return baseLongBuffers.getSerializedSize() + 1 + 4 + 4;
   }

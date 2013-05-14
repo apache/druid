@@ -236,7 +236,7 @@ public class HadoopDruidIndexerConfig
       this.partitionsSpec = partitionsSpec;
     } else {
       // Backwards compatibility
-      this.partitionsSpec = new PartitionsSpec(partitionDimension, targetPartitionSize, false);
+      this.partitionsSpec = new PartitionsSpec(partitionDimension, targetPartitionSize, null, false);
     }
 
     if(granularitySpec != null) {
@@ -429,6 +429,11 @@ public class HadoopDruidIndexerConfig
   public Long getTargetPartitionSize()
   {
     return partitionsSpec.getTargetPartitionSize();
+  }
+
+  public long getMaxPartitionSize()
+  {
+    return partitionsSpec.getMaxPartitionSize();
   }
 
   public boolean isUpdaterJobSpecSet()
