@@ -249,6 +249,12 @@ public class HadoopDruidIndexerConfigTest
     );
 
     Assert.assertEquals(
+        "getMaxPartitionSize",
+        partitionsSpec.getMaxPartitionSize(),
+        150
+    );
+
+    Assert.assertEquals(
         "getPartitionDimension",
         partitionsSpec.getPartitionDimension(),
         "foo"
@@ -283,6 +289,58 @@ public class HadoopDruidIndexerConfigTest
         "getTargetPartitionSize",
         partitionsSpec.getTargetPartitionSize(),
         100
+    );
+
+    Assert.assertEquals(
+        "getMaxPartitionSize",
+        partitionsSpec.getMaxPartitionSize(),
+        150
+    );
+
+    Assert.assertEquals(
+        "getPartitionDimension",
+        partitionsSpec.getPartitionDimension(),
+        "foo"
+    );
+  }
+
+  @Test
+  public void testPartitionsSpecMaxPartitionSize() {
+    final HadoopDruidIndexerConfig cfg;
+
+    try {
+      cfg = jsonMapper.readValue(
+          "{"
+          + "\"partitionsSpec\":{"
+          + "   \"targetPartitionSize\":100,"
+          + "   \"maxPartitionSize\":200,"
+          + "   \"partitionDimension\":\"foo\""
+          + " }"
+          + "}",
+          HadoopDruidIndexerConfig.class
+      );
+    } catch(Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
+
+    Assert.assertEquals(
+        "isDeterminingPartitions",
+        partitionsSpec.isDeterminingPartitions(),
+        true
+    );
+
+    Assert.assertEquals(
+        "getTargetPartitionSize",
+        partitionsSpec.getTargetPartitionSize(),
+        100
+    );
+
+    Assert.assertEquals(
+        "getMaxPartitionSize",
+        partitionsSpec.getMaxPartitionSize(),
+        200
     );
 
     Assert.assertEquals(
