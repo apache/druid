@@ -21,7 +21,7 @@ package com.metamx.druid.index.v1;
 
 import com.google.common.io.OutputSupplier;
 import com.metamx.druid.collect.ResourceHolder;
-import com.metamx.druid.kv.FlattenedArrayWriter;
+import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.IndexedLongs;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,7 +43,7 @@ public class CompressedLongsSupplierSerializerTest
     final ByteOrder order = ByteOrder.nativeOrder();
     CompressedLongsSupplierSerializer serializer = new CompressedLongsSupplierSerializer(
         999,
-        new FlattenedArrayWriter<ResourceHolder<LongBuffer>>(
+        new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
             new IOPeonForTesting(),
             "test",
             CompressedLongBufferObjectStrategy.getBufferForOrder(order)

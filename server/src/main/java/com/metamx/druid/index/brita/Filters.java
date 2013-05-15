@@ -30,6 +30,7 @@ import com.metamx.druid.query.filter.OrDimFilter;
 import com.metamx.druid.query.filter.RegexDimFilter;
 import com.metamx.druid.query.filter.SearchQueryDimFilter;
 import com.metamx.druid.query.filter.SelectorDimFilter;
+import com.metamx.druid.query.filter.SpatialDimFilter;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -89,6 +90,10 @@ public class Filters
       final JavaScriptDimFilter javaScriptDimFilter = (JavaScriptDimFilter) dimFilter;
 
       filter = new JavaScriptFilter(javaScriptDimFilter.getDimension(), javaScriptDimFilter.getFunction());
+    } else if (dimFilter instanceof SpatialDimFilter) {
+      final SpatialDimFilter spatialDimFilter = (SpatialDimFilter) dimFilter;
+
+      filter = new SpatialFilter(spatialDimFilter.getDimension(), spatialDimFilter.getBound());
     }
 
     return filter;

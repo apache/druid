@@ -20,6 +20,7 @@
 package com.metamx.druid.index.brita;
 
 import com.google.common.base.Predicate;
+import com.metamx.collections.spatial.search.Bound;
 
 /**
  */
@@ -27,4 +28,5 @@ public interface ValueMatcherFactory
 {
   public ValueMatcher makeValueMatcher(String dimension, String value);
   public ValueMatcher makeValueMatcher(String dimension, Predicate<String> value);
+  public ValueMatcher makeValueMatcher(String dimension, Bound bound);
 }

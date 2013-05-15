@@ -28,4 +28,5 @@ public interface BitmapIndex
   public int getCardinality();
   public String getValue(int index);
   public ImmutableConciseSet getConciseSet(String value);
+  public ImmutableConciseSet getConciseSet(int idx);
 }

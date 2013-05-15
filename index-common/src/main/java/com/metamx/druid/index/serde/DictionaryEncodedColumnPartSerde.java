@@ -21,11 +21,15 @@ package com.metamx.druid.index.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.primitives.Ints;
+import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
 import com.metamx.druid.index.column.ColumnBuilder;
 import com.metamx.druid.index.column.ValueType;
+import com.metamx.druid.kv.ByteBufferSerializer;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
+import com.metamx.druid.kv.IndexedRTree;
 import com.metamx.druid.kv.VSizeIndexed;
 import com.metamx.druid.kv.VSizeIndexedInts;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
@@ -35,7 +39,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
-*/
+ */
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
   @JsonCreator
@@ -48,6 +52,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   private final VSizeIndexedInts singleValuedColumn;
   private final VSizeIndexed multiValuedColumn;
   private final GenericIndexed<ImmutableConciseSet> bitmaps;
+  private final ImmutableRTree spatialIndex;
 
   private final long size;
 
@@ -55,25 +60,28 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       GenericIndexed<String> dictionary,
       VSizeIndexedInts singleValCol,
       VSizeIndexed multiValCol,
-      GenericIndexed<ImmutableConciseSet> bitmaps
+      GenericIndexed<ImmutableConciseSet> bitmaps,
+      ImmutableRTree spatialIndex
   )
   {
     this.dictionary = dictionary;
     this.singleValuedColumn = singleValCol;
     this.multiValuedColumn = multiValCol;
     this.bitmaps = bitmaps;
+    this.spatialIndex = spatialIndex;
 
     long size = dictionary.getSerializedSize();
     if (singleValCol != null && multiValCol == null) {
       size += singleValCol.getSerializedSize();
-    }
-    else if (singleValCol == null && multiValCol != null) {
+    } else if (singleValCol == null && multiValCol != null) {
       size += multiValCol.getSerializedSize();
-    }
-    else {
+    } else {
       throw new IAE("Either singleValCol[%s] or multiValCol[%s] must be set", singleValCol, multiValCol);
     }
     size += bitmaps.getSerializedSize();
+    if (spatialIndex != null) {
+      size += spatialIndex.size() + Ints.BYTES;
+    }
 
     this.size = size;
   }
@@ -84,6 +92,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     singleValuedColumn = null;
     multiValuedColumn = null;
     bitmaps = null;
+    spatialIndex = null;
     size = 0;
   }
 
@@ -106,11 +115,13 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     dictionary.writeToChannel(channel);
     if (isSingleValued()) {
       singleValuedColumn.writeToChannel(channel);
-    }
-    else {
+    } else {
       multiValuedColumn.writeToChannel(channel);
     }
     bitmaps.writeToChannel(channel);
+    if (spatialIndex != null) {
+      ByteBufferSerializer.writeToChannel(spatialIndex, IndexedRTree.objectStrategy, channel);
+    }
   }
 
   @Override
@@ -128,8 +139,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       multiValuedColumn = null;
       builder.setHasMultipleValues(false)
              .setDictionaryEncodedColumn(new DictionaryEncodedColumnSupplier(dictionary, singleValuedColumn, null));
-    }
-    else {
+    } else {
       singleValuedColumn = null;
       multiValuedColumn = VSizeIndexed.readFromByteBuffer(buffer);
       builder.setHasMultipleValues(true)
@@ -139,9 +149,22 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     GenericIndexed<ImmutableConciseSet> bitmaps = GenericIndexed.read(
         buffer, ConciseCompressedIndexedInts.objectStrategy
     );
-
     builder.setBitmapIndex(new BitmapIndexColumnPartSupplier(bitmaps, dictionary));
 
-    return new DictionaryEncodedColumnPartSerde(dictionary, singleValuedColumn, multiValuedColumn, bitmaps);
+    ImmutableRTree spatialIndex = null;
+    if (buffer.hasRemaining()) {
+      spatialIndex = ByteBufferSerializer.read(
+          buffer, IndexedRTree.objectStrategy
+      );
+      builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(spatialIndex));
+    }
+
+    return new DictionaryEncodedColumnPartSerde(
+        dictionary,
+        singleValuedColumn,
+        multiValuedColumn,
+        bitmaps,
+        spatialIndex
+    );
   }
 }

@@ -50,7 +50,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
-*/
+ */
 public class QueryableIndexIndexableAdapter implements IndexableAdapter
 {
   private static final Logger log = new Logger(QueryableIndexIndexableAdapter.class);
@@ -74,11 +74,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
       if (col == null) {
         log.warn("Wtf!? column[%s] didn't exist!?!?!?", dim);
-      }
-      else if (col.getDictionaryEncoding() != null) {
+      } else if (col.getDictionaryEncoding() != null) {
         availableDimensions.add(dim);
-      }
-      else {
+      } else {
         log.info("No dictionary on dimension[%s]", dim);
       }
     }
@@ -236,8 +234,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
               final IndexedInts dimVals;
               if (dict.hasMultipleValues()) {
                 dimVals = dict.getMultiValueRow(currRow);
-              }
-              else {
+              } else {
                 dimVals = new ArrayBasedIndexedInts(new int[]{dict.getSingleValueRow(currRow)});
               }
 
@@ -253,14 +250,19 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
             for (int i = 0; i < metricArray.length; ++i) {
               if (metrics[i] instanceof GenericColumn) {
                 metricArray[i] = ((GenericColumn) metrics[i]).getFloatSingleValueRow(currRow);
-              }
-              else if (metrics[i] instanceof ComplexColumn) {
+              } else if (metrics[i] instanceof ComplexColumn) {
                 metricArray[i] = ((ComplexColumn) metrics[i]).getRowValue(currRow);
               }
             }
 
+            Map<String, String> descriptions = Maps.newHashMap();
+            for (String columnName : input.getColumnNames()) {
+              if (input.getColumn(columnName).getSpatialIndex() != null) {
+                descriptions.put(columnName, "spatial");
+              }
+            }
             final Rowboat retVal = new Rowboat(
-                timestamps.getLongSingleValueRow(currRow), dims, metricArray, currRow
+                timestamps.getLongSingleValueRow(currRow), dims, metricArray, currRow, descriptions
             );
 
             ++currRow;

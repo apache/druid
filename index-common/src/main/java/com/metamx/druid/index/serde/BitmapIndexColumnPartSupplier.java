@@ -63,11 +63,17 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
       {
         final int index = dictionary.indexOf(value);
 
-        if (index < 0) {
+        return getConciseSet(index);
+      }
+
+      @Override
+      public ImmutableConciseSet getConciseSet(int idx)
+      {
+        if (idx < 0) {
           return EMPTY_SET;
         }
 
-        final ImmutableConciseSet bitmap = bitmaps.get(index);
+        final ImmutableConciseSet bitmap = bitmaps.get(idx);
         return bitmap == null ? EMPTY_SET : bitmap;
       }
     };

@@ -44,6 +44,8 @@ public abstract class BaseStorageAdapter implements StorageAdapter
 
   public abstract ImmutableConciseSet getInvertedIndex(String dimension, String dimVal);
 
+  public abstract ImmutableConciseSet getInvertedIndex(String dimension, int idx);
+
   public abstract Offset getFilterOffset(Filter filter);
 
   @Override

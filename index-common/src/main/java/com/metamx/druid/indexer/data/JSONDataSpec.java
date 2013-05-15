@@ -20,8 +20,10 @@
 package com.metamx.druid.indexer.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Lists;
 import com.metamx.common.parsers.JSONParser;
 import com.metamx.common.parsers.Parser;
+import com.metamx.druid.index.v1.SpatialDimensionSchema;
 
 import java.util.List;
 
@@ -30,12 +32,17 @@ import java.util.List;
 public class JSONDataSpec implements DataSpec
 {
   private final List<String> dimensions;
+  private final List<SpatialDimensionSchema> spatialDimensions;
 
   public JSONDataSpec(
-      @JsonProperty("dimensions") List<String> dimensions
+      @JsonProperty("dimensions") List<String> dimensions,
+      @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions
   )
   {
     this.dimensions = dimensions;
+    this.spatialDimensions = (spatialDimensions == null)
+                             ? Lists.<SpatialDimensionSchema>newArrayList()
+                             : spatialDimensions;
   }
 
   @JsonProperty("dimensions")
@@ -43,6 +50,13 @@ public class JSONDataSpec implements DataSpec
   public List<String> getDimensions()
   {
     return dimensions;
+  }
+
+  @JsonProperty("spatialDimensions")
+  @Override
+  public List<SpatialDimensionSchema> getSpatialDimensions()
+  {
+    return spatialDimensions;
   }
 
   @Override

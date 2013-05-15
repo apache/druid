@@ -21,7 +21,7 @@ package com.metamx.druid.index.v1;
 
 import com.google.common.io.Files;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
-import com.metamx.druid.kv.FlattenedArrayWriter;
+import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.IOPeon;
 
 import java.io.File;
@@ -36,7 +36,7 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
   private final IOPeon ioPeon;
   private final File outDir;
 
-  private FlattenedArrayWriter writer;
+  private GenericIndexedWriter writer;
 
   public ComplexMetricColumnSerializer(
       String metricName,
@@ -55,7 +55,7 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
   @Override
   public void open() throws IOException
   {
-    writer = new FlattenedArrayWriter(
+    writer = new GenericIndexedWriter(
         ioPeon, String.format("%s_%s", metricName, outDir.getName()), serde.getObjectStrategy()
     );
 
