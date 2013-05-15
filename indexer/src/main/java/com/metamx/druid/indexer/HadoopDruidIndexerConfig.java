@@ -199,7 +199,7 @@ public class HadoopDruidIndexerConfig
       final @JsonProperty("targetPartitionSize") Long targetPartitionSize,
       final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
-      final @JsonProperty("cleanupOnFailure") boolean cleanupOnFailure,
+      final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
       final @JsonProperty("shardSpecs") Map<DateTime, List<HadoopyShardSpec>> shardSpecs,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
       final @JsonProperty("rollupSpec") DataRollupSpec rollupSpec,
@@ -219,7 +219,7 @@ public class HadoopDruidIndexerConfig
     this.version = version == null ? new DateTime().toString() : version;
     this.partitionsSpec = partitionsSpec;
     this.leaveIntermediate = leaveIntermediate;
-    this.cleanupOnFailure = cleanupOnFailure;
+    this.cleanupOnFailure = (cleanupOnFailure == null ? true : cleanupOnFailure);
     this.shardSpecs = shardSpecs;
     this.overwriteFiles = overwriteFiles;
     this.rollupSpec = rollupSpec;

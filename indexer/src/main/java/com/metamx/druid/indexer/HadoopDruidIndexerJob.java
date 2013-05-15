@@ -102,6 +102,10 @@ public class HadoopDruidIndexerJob implements Jobby
       }
     }
 
+    if (failedMessage == null) {
+      publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
+    }
+
     if (!config.isLeaveIntermediate()) {
       if (failedMessage == null || config.isCleanupOnFailure()) {
         Path workingPath = config.makeIntermediatePath();
@@ -118,8 +122,6 @@ public class HadoopDruidIndexerJob implements Jobby
     if (failedMessage != null) {
       throw new ISE(failedMessage);
     }
-
-    publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
 
     return true;
   }
