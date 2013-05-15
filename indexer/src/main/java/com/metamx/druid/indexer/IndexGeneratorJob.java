@@ -35,6 +35,7 @@ import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IncrementalIndex;
+import com.metamx.druid.index.v1.IncrementalIndexSchema;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.indexer.data.StringInputRowParser;
@@ -152,7 +153,8 @@ public class IndexGeneratorJob implements Jobby
     }
   }
 
-  public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config) {
+  public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
+  {
 
     final Configuration conf = new Configuration();
     final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.jsonMapper;
@@ -182,7 +184,7 @@ public class IndexGeneratorJob implements Jobby
     List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
 
     return publishedSegments;
-}
+  }
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Text>
 
@@ -197,7 +199,7 @@ public class IndexGeneratorJob implements Jobby
       // Group by bucket, sort by timestamp
       final Optional<Bucket> bucket = getConfig().getBucket(inputRow);
 
-      if(!bucket.isPresent()) {
+      if (!bucket.isPresent()) {
         throw new ISE("WTF?! No bucket found for row: %s", inputRow);
       }
 
@@ -590,9 +592,12 @@ public class IndexGeneratorJob implements Jobby
     private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs)
     {
       return new IncrementalIndex(
-          theBucket.time.getMillis(),
-          config.getRollupSpec().getRollupGranularity(),
-          aggs
+          new IncrementalIndexSchema.Builder()
+              .withMinTimestamp(theBucket.time.getMillis())
+              .withSpatialDimensions(config.getDataSpec().getSpatialDimensions())
+              .withQueryGranularity(config.getRollupSpec().getRollupGranularity())
+              .withMetrics(aggs)
+              .build()
       );
     }
 

@@ -22,8 +22,10 @@ package com.metamx.druid.indexer.data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.metamx.common.parsers.DelimitedParser;
 import com.metamx.common.parsers.Parser;
+import com.metamx.druid.index.v1.SpatialDimensionSchema;
 
 import java.util.List;
 
@@ -34,12 +36,14 @@ public class DelimitedDataSpec implements DataSpec
   private final String delimiter;
   private final List<String> columns;
   private final List<String> dimensions;
+  private final List<SpatialDimensionSchema> spatialDimensions;
 
   @JsonCreator
   public DelimitedDataSpec(
       @JsonProperty("delimiter") String delimiter,
       @JsonProperty("columns") List<String> columns,
-      @JsonProperty("dimensions") List<String> dimensions
+      @JsonProperty("dimensions") List<String> dimensions,
+      @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions
   )
   {
     Preconditions.checkNotNull(columns);
@@ -50,6 +54,9 @@ public class DelimitedDataSpec implements DataSpec
     this.delimiter = (delimiter == null) ? DelimitedParser.DEFAULT_DELIMITER : delimiter;
     this.columns = columns;
     this.dimensions = dimensions;
+    this.spatialDimensions = (spatialDimensions == null)
+                             ? Lists.<SpatialDimensionSchema>newArrayList()
+                             : spatialDimensions;
   }
 
   @JsonProperty("delimiter")
@@ -69,6 +76,13 @@ public class DelimitedDataSpec implements DataSpec
   public List<String> getDimensions()
   {
     return dimensions;
+  }
+
+  @JsonProperty("spatialDimensions")
+  @Override
+  public List<SpatialDimensionSchema> getSpatialDimensions()
+  {
+    return spatialDimensions;
   }
 
   @Override

@@ -317,7 +317,7 @@ public class TaskSerdeTest
             "foo",
             "timestamp",
             "auto",
-            new JSONDataSpec(ImmutableList.of("foo")),
+            new JSONDataSpec(ImmutableList.of("foo"), null),
             null,
             new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P1D"))),
             new StaticPathSpec("bar"),
