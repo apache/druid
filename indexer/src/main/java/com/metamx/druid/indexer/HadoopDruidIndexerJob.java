@@ -102,7 +102,7 @@ public class HadoopDruidIndexerJob implements Jobby
       }
     }
 
-    if (failedMessage != null) {
+    if (failedMessage == null) {
       publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
     }
 
