@@ -16,18 +16,38 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package com.metamx.druid.index.serde;
 
-package com.metamx.druid.index.column;
+import com.google.common.base.Supplier;
+import com.metamx.collections.spatial.ImmutableRTree;
+import com.metamx.druid.index.column.SpatialIndex;
+import com.metamx.druid.kv.GenericIndexed;
 
 /**
  */
-public interface ColumnCapabilities
+public class SpatialIndexColumnPartSupplier implements Supplier<SpatialIndex>
 {
-  public ValueType getType();
+  private static final ImmutableRTree EMPTY_SET = new ImmutableRTree();
 
-  public boolean isDictionaryEncoded();
-  public boolean isRunLengthEncoded();
-  public boolean hasBitmapIndexes();
-  public boolean hasSpatialIndexes();
-  public boolean hasMultipleValues();
+  private final ImmutableRTree indexedTree;
+
+  public SpatialIndexColumnPartSupplier(
+      ImmutableRTree indexedTree
+  )
+  {
+    this.indexedTree = (indexedTree == null) ? EMPTY_SET : indexedTree;
+  }
+
+  @Override
+  public SpatialIndex get()
+  {
+    return new SpatialIndex()
+    {
+      @Override
+      public ImmutableRTree getRTree()
+      {
+        return indexedTree;
+      }
+    };
+  }
 }

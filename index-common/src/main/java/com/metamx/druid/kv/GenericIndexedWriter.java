@@ -36,7 +36,7 @@ import java.util.Arrays;
 /**
  * Streams arrays of objects out in the binary format described by GenericIndexed
  */
-public class FlattenedArrayWriter<T> implements Closeable
+public class GenericIndexedWriter<T> implements Closeable
 {
   private static final byte[] EMPTY_ARRAY = new byte[]{};
   
@@ -51,7 +51,7 @@ public class FlattenedArrayWriter<T> implements Closeable
   private CountingOutputStream valuesOut = null;
   int numWritten = 0;
 
-  public FlattenedArrayWriter(
+  public GenericIndexedWriter(
       IOPeon ioPeon,
       String filenameBase,
       ObjectStrategy<T> strategy

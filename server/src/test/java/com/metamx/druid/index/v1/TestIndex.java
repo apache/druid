@@ -162,7 +162,7 @@ public class TestIndex
           {
             StringInputRowParser parser = new StringInputRowParser(
                 new TimestampSpec("ts", "iso"),
-                new DelimitedDataSpec("\t", Arrays.asList(COLUMNS), Arrays.asList(DIMENSIONS)),
+                new DelimitedDataSpec("\t", Arrays.asList(COLUMNS), Arrays.asList(DIMENSIONS), null),
                 Arrays.<String>asList()
             );
             boolean runOnce = false;

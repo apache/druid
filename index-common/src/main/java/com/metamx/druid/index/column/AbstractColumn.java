@@ -30,6 +30,12 @@ public abstract class AbstractColumn implements Column
   }
 
   @Override
+  public SpatialIndex getSpatialIndex()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public ComplexColumn getComplexColumn()
   {
     throw new UnsupportedOperationException();

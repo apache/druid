@@ -27,7 +27,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
-import com.metamx.druid.kv.FlattenedArrayWriter;
+import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedFloats;
@@ -63,7 +63,7 @@ public class MetricHolder
   }
 
   public static void writeComplexMetric(
-      OutputSupplier<? extends OutputStream> outSupplier, String name, String typeName, FlattenedArrayWriter column
+      OutputSupplier<? extends OutputStream> outSupplier, String name, String typeName, GenericIndexedWriter column
   ) throws IOException
   {
     OutputStream out = null;

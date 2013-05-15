@@ -22,6 +22,7 @@ package com.metamx.druid.indexer.data;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.common.parsers.Parser;
+import com.metamx.druid.index.v1.SpatialDimensionSchema;
 
 import java.util.List;
 
@@ -40,6 +41,8 @@ public interface DataSpec
   public boolean hasCustomDimensions();
 
   public List<String> getDimensions();
+
+  public List<SpatialDimensionSchema> getSpatialDimensions();
 
   public Parser<String, Object> getParser();
 }

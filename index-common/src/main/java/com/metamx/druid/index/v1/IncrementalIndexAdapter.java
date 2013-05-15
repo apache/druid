@@ -24,7 +24,6 @@ import com.google.common.collect.Maps;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.aggregation.Aggregator;
-import com.metamx.druid.input.Row;
 import com.metamx.druid.kv.EmptyIndexedInts;
 import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedInts;
@@ -63,9 +62,6 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
 
     int rowNum = 0;
-    for (Row row : index) {
-
-    }
     for (IncrementalIndex.TimeAndDims timeAndDims : index.getFacts().keySet()) {
       final String[][] dims = timeAndDims.getDims();
 
@@ -211,11 +207,16 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                   metrics[i] = aggs[i].get();
                 }
 
+                Map<String, String> description = Maps.newHashMap();
+                for (SpatialDimensionSchema spatialDimensionSchema : index.getSpatialDimensions()) {
+                  description.put(spatialDimensionSchema.getDimName(), "spatial");
+                }
                 return new Rowboat(
                     timeAndDims.getTimestamp(),
                     dims,
                     metrics,
-                    count++
+                    count++,
+                    description
                 );
               }
             }

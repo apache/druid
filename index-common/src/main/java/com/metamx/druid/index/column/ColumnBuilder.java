@@ -34,6 +34,7 @@ public class ColumnBuilder
   private Supplier<GenericColumn> genericColumn = null;
   private Supplier<ComplexColumn> complexColumn = null;
   private Supplier<BitmapIndex> bitmapIndex = null;
+  private Supplier<SpatialIndex> spatialIndex = null;
 
   public ColumnBuilder setType(ValueType type)
   {
@@ -77,6 +78,12 @@ public class ColumnBuilder
     return this;
   }
 
+  public ColumnBuilder setSpatialIndex(Supplier<SpatialIndex> spatialIndex)
+  {
+    this.spatialIndex = spatialIndex;
+    return this;
+  }
+
   public Column build()
   {
     Preconditions.checkState(type != null, "Type must be set.");
@@ -86,6 +93,7 @@ public class ColumnBuilder
             .setType(type)
             .setDictionaryEncoded(dictionaryEncodedColumn != null)
             .setHasBitmapIndexes(bitmapIndex != null)
+            .setHasSpatialIndexes(spatialIndex != null)
             .setRunLengthEncoded(runLengthColumn != null)
             .setHasMultipleValues(hasMultipleValues)
         ,
@@ -93,7 +101,8 @@ public class ColumnBuilder
         runLengthColumn,
         genericColumn,
         complexColumn,
-        bitmapIndex
+        bitmapIndex,
+        spatialIndex
     );
   }
 }

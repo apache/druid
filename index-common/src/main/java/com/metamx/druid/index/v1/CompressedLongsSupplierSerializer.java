@@ -26,7 +26,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.collect.StupidResourceHolder;
-import com.metamx.druid.kv.FlattenedArrayWriter;
+import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.IOPeon;
 
 import java.io.IOException;
@@ -44,7 +44,7 @@ public class CompressedLongsSupplierSerializer
   {
     final CompressedLongsSupplierSerializer retVal = new CompressedLongsSupplierSerializer(
         0xFFFF / Longs.BYTES,
-        new FlattenedArrayWriter<ResourceHolder<LongBuffer>>(
+        new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
             ioPeon, filenameBase, CompressedLongBufferObjectStrategy.getBufferForOrder(order)
         )
     );
@@ -52,7 +52,7 @@ public class CompressedLongsSupplierSerializer
   }
 
   private final int sizePer;
-  private final FlattenedArrayWriter<ResourceHolder<LongBuffer>> flattener;
+  private final GenericIndexedWriter<ResourceHolder<LongBuffer>> flattener;
 
   private int numInserted = 0;
 
@@ -60,7 +60,7 @@ public class CompressedLongsSupplierSerializer
 
   public CompressedLongsSupplierSerializer(
       int sizePer,
-      FlattenedArrayWriter<ResourceHolder<LongBuffer>> flattener
+      GenericIndexedWriter<ResourceHolder<LongBuffer>> flattener
   )
   {
     this.sizePer = sizePer;
