@@ -26,7 +26,6 @@ $(document).ready(function() {
       // build segment table
       for (var segment in segments) {
         segmentTable.setCell(segmentRow, 'Server host', data[server]['host']);
-        segmentTable.setCell(segmentRow, 'Segment name', segment);
 
         for (field in segments[segment]) {
           if (!(segments[segment][field] instanceof Object)) {
@@ -119,6 +118,7 @@ $(document).ready(function() {
       });
     }
 
+/*
     $.ajax({
       url:"/master/move",
       type: "POST",
@@ -134,11 +134,13 @@ $(document).ready(function() {
         }
       }
     });
-    
+*/
     return false;
   });
 
-  /*$('#drop_segment').submit(function() {
+
+/*$
+  ('#drop_segment').submit(function() {
     var data = [];
 
     if ($.isEmptyObject(CONSOLE.selected_segments)) {
@@ -163,7 +165,8 @@ $(document).ready(function() {
     });
 
     return false;
-  });*/
+  });
+*/
 
   $.get('/info/cluster', function(data) {
     $('.loading').hide();
@@ -175,7 +178,7 @@ $(document).ready(function() {
     initDataTable($('#segments'), oTable);
 
     // init select segments
-    $("#segments tbody").click(function(event) {
+    /*$("#segments tbody").click(function(event) {
       var el = $(event.target.parentNode);
       var key = el.children('.segment_name').text();
       if (el.is("tr")) {
@@ -193,6 +196,6 @@ $(document).ready(function() {
         }
         $('#selected_segments').html(html);
       }
-    });
+    });*/
   });
 });
