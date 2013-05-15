@@ -158,28 +158,6 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testPartitionsSpecNoPartitioning() {
-    final HadoopDruidIndexerConfig cfg;
-
-    try {
-      cfg = jsonReadWriteRead(
-          "{}",
-          HadoopDruidIndexerConfig.class
-      );
-    } catch(Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
-
-    Assert.assertEquals(
-        "isDeterminingPartitions",
-        partitionsSpec.isDeterminingPartitions(),
-        false
-    );
-  }
-
-  @Test
   public void testPartitionsSpecAutoDimension() {
     final HadoopDruidIndexerConfig cfg;
 
@@ -395,6 +373,58 @@ public class HadoopDruidIndexerConfigTest
     Assert.assertEquals("rofl", spec.getDatabaseUser());
     Assert.assertEquals("p4ssw0rd", spec.getDatabasePassword());
     Assert.assertEquals(false, spec.useValidationQuery());
+  }
+
+  @Test
+  public void testDefaultSettings() {
+    final HadoopDruidIndexerConfig cfg;
+
+    try {
+      cfg = jsonReadWriteRead(
+          "{}",
+          HadoopDruidIndexerConfig.class
+      );
+    } catch(Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    Assert.assertEquals(
+        "cleanupOnFailure",
+        cfg.isCleanupOnFailure(),
+        true
+    );
+
+    Assert.assertEquals(
+        "overwriteFiles",
+        cfg.isOverwriteFiles(),
+        false
+    );
+
+    Assert.assertEquals(
+        "isDeterminingPartitions",
+        cfg.getPartitionsSpec().isDeterminingPartitions(),
+        false
+    );
+  }
+
+  @Test
+  public void testNoCleanupOnFailure() {
+    final HadoopDruidIndexerConfig cfg;
+
+    try {
+      cfg = jsonReadWriteRead(
+          "{\"cleanupOnFailure\":false}",
+          HadoopDruidIndexerConfig.class
+      );
+    } catch(Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    Assert.assertEquals(
+        "cleanupOnFailure",
+        cfg.isCleanupOnFailure(),
+        false
+    );
   }
 
   private <T> T jsonReadWriteRead(String s, Class<T> klass)
