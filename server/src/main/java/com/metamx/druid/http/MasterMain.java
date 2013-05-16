@@ -180,15 +180,15 @@ public class MasterMain
     );
     Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, lifecycle);
 
-    IndexingServiceClient indexingServiceClient = null;
+    ServiceProvider serviceProvider = null;
     if (druidMasterConfig.getMergerServiceName() != null) {
-      ServiceProvider serviceProvider = Initialization.makeServiceProvider(
+      serviceProvider = Initialization.makeServiceProvider(
           druidMasterConfig.getMergerServiceName(),
           serviceDiscovery,
           lifecycle
       );
-      indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider);
     }
+    IndexingServiceClient indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider);
 
     final ConfigManagerConfig configManagerConfig = configFactory.build(ConfigManagerConfig.class);
     DbConnector.createConfigTable(dbi, configManagerConfig.getConfigTable());

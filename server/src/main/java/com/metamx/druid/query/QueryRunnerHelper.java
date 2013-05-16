@@ -21,6 +21,7 @@ package com.metamx.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Longs;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryGranularity;

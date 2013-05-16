@@ -22,8 +22,10 @@ package com.metamx.druid.indexer.data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.metamx.common.parsers.CSVParser;
 import com.metamx.common.parsers.Parser;
+import com.metamx.druid.index.v1.SpatialDimensionSchema;
 
 import java.util.List;
 
@@ -33,11 +35,13 @@ public class CSVDataSpec implements DataSpec
 {
   private final List<String> columns;
   private final List<String> dimensions;
+  private final List<SpatialDimensionSchema> spatialDimensions;
 
   @JsonCreator
   public CSVDataSpec(
       @JsonProperty("columns") List<String> columns,
-      @JsonProperty("dimensions") List<String> dimensions
+      @JsonProperty("dimensions") List<String> dimensions,
+      @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions
   )
   {
     Preconditions.checkNotNull(columns, "columns");
@@ -47,6 +51,9 @@ public class CSVDataSpec implements DataSpec
 
     this.columns = columns;
     this.dimensions = dimensions;
+    this.spatialDimensions = (spatialDimensions == null)
+                             ? Lists.<SpatialDimensionSchema>newArrayList()
+                             : spatialDimensions;
   }
 
   @JsonProperty("columns")
@@ -60,6 +67,13 @@ public class CSVDataSpec implements DataSpec
   public List<String> getDimensions()
   {
     return dimensions;
+  }
+
+  @JsonProperty("spatialDimensions")
+  @Override
+  public List<SpatialDimensionSchema> getSpatialDimensions()
+  {
+    return spatialDimensions;
   }
 
   @Override

@@ -209,7 +209,7 @@ public class HadoopDruidIndexerConfig
   )
   {
     this.dataSource = dataSource;
-    this.timestampColumnName = timestampColumnName;
+    this.timestampColumnName = (timestampColumnName == null) ? null : timestampColumnName.toLowerCase();
     this.timestampFormat = timestampFormat;
     this.dataSpec = dataSpec;
     this.granularitySpec = granularitySpec;
@@ -294,7 +294,7 @@ public class HadoopDruidIndexerConfig
 
   public void setTimestampColumnName(String timestampColumnName)
   {
-    this.timestampColumnName = timestampColumnName;
+    this.timestampColumnName = timestampColumnName.toLowerCase();
   }
 
   @JsonProperty()

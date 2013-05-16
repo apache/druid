@@ -19,6 +19,7 @@
 
 package com.metamx.druid.index.v1;
 
+import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.logger.Logger;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.Interval;
@@ -45,6 +46,7 @@ public class Index
   final Map<String, Map<String, Integer>> dimIdLookup;
   final Map<String, String[]> reverseDimLookup;
   final Map<String, ImmutableConciseSet[]> indexes;
+  final Map<String, ImmutableRTree> spatialIndexes;
   final Map<String, DimensionColumn> dimensionValues;
 
   /*
@@ -79,6 +81,7 @@ public class Index
       Map<String, Map<String, Integer>> dimIdLookup,
       Map<String, String[]> reverseDimLookup,
       Map<String, ImmutableConciseSet[]> indexes,
+      Map<String, ImmutableRTree> spatialIndexes,
       Map<String, DimensionColumn> dimensionValues
   )
   {
@@ -90,6 +93,7 @@ public class Index
     this.dimIdLookup = dimIdLookup;
     this.reverseDimLookup = reverseDimLookup;
     this.indexes = indexes;
+    this.spatialIndexes = spatialIndexes;
     this.dimensionValues = dimensionValues;
 
     for (int i = 0; i < dimensions.length; i++) {
@@ -124,6 +128,39 @@ public class Index
           dataInterval
       );
       return emptySet;
+    }
+  }
+
+  public ImmutableConciseSet getInvertedIndex(String dimension, int valueIndex)
+  {
+    try {
+      return indexes.get(dimension)[valueIndex];
+    }
+    catch (NullPointerException e) {
+      log.warn(
+          e,
+          "NPE on dimension[%s], valueIndex[%d], with index over interval[%s]",
+          dimension,
+          valueIndex,
+          dataInterval
+      );
+      return emptySet;
+    }
+  }
+
+  public ImmutableRTree getSpatialIndex(String dimension)
+  {
+    try {
+      return spatialIndexes.get(dimension);
+    }
+    catch (NullPointerException e) {
+      log.warn(
+          e,
+          "NPE on dimension[%s] over interval[%s]",
+          dimension,
+          dataInterval
+      );
+      return new ImmutableRTree();
     }
   }
 }

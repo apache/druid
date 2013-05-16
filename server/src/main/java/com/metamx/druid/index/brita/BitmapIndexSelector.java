@@ -19,6 +19,7 @@
 
 package com.metamx.druid.index.brita;
 
+import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.druid.kv.Indexed;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
@@ -29,4 +30,6 @@ public interface BitmapIndexSelector
   public Indexed<String> getDimensionValues(String dimension);
   public int getNumRows();
   public ImmutableConciseSet getConciseInvertedIndex(String dimension, String value);
+  public ImmutableConciseSet getConciseInvertedIndex(String dimension, int idx);
+  public ImmutableRTree getSpatialIndex(String dimension);
 }

@@ -22,6 +22,7 @@ package com.metamx.druid.indexer.data;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.metamx.common.parsers.Parser;
 import com.metamx.common.parsers.ToLowerCaseParser;
+import com.metamx.druid.index.v1.SpatialDimensionSchema;
 
 import java.util.List;
 
@@ -54,6 +55,12 @@ public class ToLowercaseDataSpec implements DataSpec
   public List<String> getDimensions()
   {
     return delegate.getDimensions();
+  }
+
+  @Override
+  public List<SpatialDimensionSchema> getSpatialDimensions()
+  {
+    return delegate.getSpatialDimensions();
   }
 
   @Override

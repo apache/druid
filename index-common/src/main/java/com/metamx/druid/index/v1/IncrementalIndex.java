@@ -20,6 +20,7 @@
 package com.metamx.druid.index.v1;
 
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
@@ -36,11 +37,6 @@ import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.Aggregator;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
-import com.metamx.druid.index.column.Column;
-import com.metamx.druid.index.column.ComplexColumn;
-import com.metamx.druid.index.column.DictionaryEncodedColumn;
-import com.metamx.druid.index.column.GenericColumn;
-import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.index.v1.serde.ComplexMetricExtractor;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
@@ -70,6 +66,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class IncrementalIndex implements Iterable<Row>
 {
   private static final Logger log = new Logger(IncrementalIndex.class);
+  private static final Joiner JOINER = Joiner.on(",");
 
   private final long minTimestamp;
   private final QueryGranularity gran;
@@ -80,6 +77,8 @@ public class IncrementalIndex implements Iterable<Row>
   private final ImmutableList<String> metricNames;
   private final LinkedHashMap<String, Integer> dimensionOrder;
   private final CopyOnWriteArrayList<String> dimensions;
+  private final List<SpatialDimensionSchema> spatialDimensions;
+  private final SpatialDimensionRowFormatter spatialDimensionRowFormatter;
   private final DimensionHolder dimValues;
   private final ConcurrentSkipListMap<TimeAndDims, Aggregator[]> facts;
 
@@ -88,15 +87,11 @@ public class IncrementalIndex implements Iterable<Row>
   // This is modified on add() by a (hopefully) single thread.
   private InputRow in;
 
-  public IncrementalIndex(
-      long minTimestamp,
-      QueryGranularity gran,
-      final AggregatorFactory[] metrics
-  )
+  public IncrementalIndex(IncrementalIndexSchema incrementalIndexSchema)
   {
-    this.minTimestamp = minTimestamp;
-    this.gran = gran;
-    this.metrics = metrics;
+    this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
+    this.gran = incrementalIndexSchema.getGran();
+    this.metrics = incrementalIndexSchema.getMetrics();
 
     final ImmutableList.Builder<String> metricNamesBuilder = ImmutableList.builder();
     final ImmutableMap.Builder<String, Integer> metricIndexesBuilder = ImmutableMap.builder();
@@ -113,9 +108,30 @@ public class IncrementalIndex implements Iterable<Row>
 
     this.dimensionOrder = Maps.newLinkedHashMap();
     this.dimensions = new CopyOnWriteArrayList<String>();
-    this.dimValues = new DimensionHolder();
+    int index = 0;
+    for (String dim : incrementalIndexSchema.getDimensions()) {
+      dimensionOrder.put(dim, index++);
+      dimensions.add(dim);
+    }
+    this.spatialDimensions = incrementalIndexSchema.getSpatialDimensions();
+    this.spatialDimensionRowFormatter = new SpatialDimensionRowFormatter(spatialDimensions);
 
+    this.dimValues = new DimensionHolder();
     this.facts = new ConcurrentSkipListMap<TimeAndDims, Aggregator[]>();
+  }
+
+  public IncrementalIndex(
+      long minTimestamp,
+      QueryGranularity gran,
+      final AggregatorFactory[] metrics
+  )
+  {
+    this(
+        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
+                                            .withQueryGranularity(gran)
+                                            .withMetrics(metrics)
+                                            .build()
+    );
   }
 
   /**
@@ -130,6 +146,8 @@ public class IncrementalIndex implements Iterable<Row>
    */
   public int add(InputRow row)
   {
+    row = spatialDimensionRowFormatter.formatRow(row);
+
     if (row.getTimestampFromEpoch() < minTimestamp) {
       throw new IAE("Cannot add row[%s] because it is below the minTimestamp[%s]", row, new DateTime(minTimestamp));
     }
@@ -140,6 +158,7 @@ public class IncrementalIndex implements Iterable<Row>
     List<String[]> overflow = null;
     for (String dimension : rowDimensions) {
       dimension = dimension.toLowerCase();
+      List<String> dimensionValues = row.getDimension(dimension);
 
       final Integer index = dimensionOrder.get(dimension);
       if (index == null) {
@@ -149,9 +168,9 @@ public class IncrementalIndex implements Iterable<Row>
         if (overflow == null) {
           overflow = Lists.newArrayList();
         }
-        overflow.add(getDimVals(dimValues.add(dimension), row.getDimension(dimension)));
+        overflow.add(getDimVals(dimValues.add(dimension), dimensionValues));
       } else {
-        dims[index] = getDimVals(dimValues.get(dimension), row.getDimension(dimension));
+        dims[index] = getDimVals(dimValues.get(dimension), dimensionValues);
       }
     }
 
@@ -227,7 +246,7 @@ public class IncrementalIndex implements Iterable<Row>
                 final String typeName = agg.getTypeName();
                 final String columnName = column.toLowerCase();
 
-                if(typeName.equals("float")) {
+                if (typeName.equals("float")) {
                   return new ObjectColumnSelector<Float>()
                   {
                     @Override
@@ -330,6 +349,11 @@ public class IncrementalIndex implements Iterable<Row>
   public List<String> getDimensions()
   {
     return dimensions;
+  }
+
+  public List<SpatialDimensionSchema> getSpatialDimensions()
+  {
+    return spatialDimensions;
   }
 
   public String getMetricType(String metric)
@@ -463,8 +487,7 @@ public class IncrementalIndex implements Iterable<Row>
       if (holder == null) {
         holder = new DimDim();
         dimensions.put(dimension, holder);
-      }
-      else {
+      } else {
         throw new ISE("dimension[%s] already existed even though add() was called!?", dimension);
       }
       return holder;

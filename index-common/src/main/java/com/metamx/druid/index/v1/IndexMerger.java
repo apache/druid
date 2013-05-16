@@ -21,6 +21,8 @@ package com.metamx.druid.index.v1;
 
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
+import com.google.common.base.Splitter;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -32,6 +34,9 @@ import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
+import com.metamx.collections.spatial.ImmutableRTree;
+import com.metamx.collections.spatial.RTree;
+import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
@@ -47,13 +52,15 @@ import com.metamx.druid.guava.GuavaUtils;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
+import com.metamx.druid.kv.ByteBufferWriter;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
-import com.metamx.druid.kv.FlattenedArrayWriter;
 import com.metamx.druid.kv.GenericIndexed;
+import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.IOPeon;
 import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.IndexedIterable;
+import com.metamx.druid.kv.IndexedRTree;
 import com.metamx.druid.kv.TmpFileIOPeon;
 import com.metamx.druid.kv.VSizeIndexedWriter;
 import com.metamx.druid.utils.JodaUtils;
@@ -88,6 +95,7 @@ public class IndexMerger
 
   private static final SerializerUtils serializerUtils = new SerializerUtils();
   private static final int INVALID_ROW = -1;
+  private static final Splitter SPLITTER = Splitter.on(",");
 
   public static File persist(final IncrementalIndex index, File outDir) throws IOException
   {
@@ -446,7 +454,7 @@ public class IndexMerger
     }
 
     for (String dimension : mergedDimensions) {
-      final FlattenedArrayWriter<String> writer = new FlattenedArrayWriter<String>(
+      final GenericIndexedWriter<String> writer = new GenericIndexedWriter<String>(
           ioPeon, dimension, GenericIndexed.stringStrategy
       );
       writer.open();
@@ -566,7 +574,13 @@ public class IndexMerger
                         j++;
                       }
 
-                      return new Rowboat(input.getTimestamp(), newDims, newMetrics, input.getRowNum());
+                      return new Rowboat(
+                          input.getTimestamp(),
+                          newDims,
+                          newMetrics,
+                          input.getRowNum(),
+                          input.getDescriptions()
+                      );
                     }
                   }
               )
@@ -619,6 +633,7 @@ public class IndexMerger
       rowNumConversions.add(IntBuffer.wrap(arr));
     }
 
+    final Map<String, String> descriptions = Maps.newHashMap();
     for (Rowboat theRow : theRows) {
       progress.progress();
       timeWriter.add(theRow.getTimestamp());
@@ -653,6 +668,8 @@ public class IndexMerger
         );
         time = System.currentTimeMillis();
       }
+
+      descriptions.putAll(theRow.getDescriptions());
     }
 
     for (IntBuffer rowNumConversion : rowNumConversions) {
@@ -701,7 +718,7 @@ public class IndexMerger
       Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.stringStrategy);
       log.info("Starting dimension[%s] with cardinality[%,d]", dimension, dimVals.size());
 
-      FlattenedArrayWriter<ImmutableConciseSet> writer = new FlattenedArrayWriter<ImmutableConciseSet>(
+      GenericIndexedWriter<ImmutableConciseSet> writer = new GenericIndexedWriter<ImmutableConciseSet>(
           ioPeon, dimension, ConciseCompressedIndexedInts.objectStrategy
       );
       writer.open();
@@ -718,7 +735,10 @@ public class IndexMerger
         }
 
         ConciseSet bitset = new ConciseSet();
-        for (Integer row : CombiningIterable.createSplatted(convertedInverteds, Ordering.<Integer>natural().nullsFirst())) {
+        for (Integer row : CombiningIterable.createSplatted(
+            convertedInverteds,
+            Ordering.<Integer>natural().nullsFirst()
+        )) {
           if (row != INVALID_ROW) {
             bitset.add(row);
           }
@@ -734,12 +754,68 @@ public class IndexMerger
 
       log.info("Completed dimension[%s] in %,d millis.", dimension, System.currentTimeMillis() - dimStartTime);
     }
+
+    /************ Create Geographical Indexes *************/
+    // FIXME: Rewrite when indexing is updated
+    Stopwatch stopwatch = new Stopwatch();
+    stopwatch.start();
+
+    final File geoFile = new File(v8OutDir, "spatial.drd");
+    Files.touch(geoFile);
+    out = Files.newOutputStreamSupplier(geoFile, true);
+
+    for (int i = 0; i < mergedDimensions.size(); ++i) {
+      String dimension = mergedDimensions.get(i);
+
+      if (!"spatial".equals(descriptions.get(dimension))) {
+        continue;
+      }
+
+      File dimOutFile = dimOuts.get(i).getFile();
+      final MappedByteBuffer dimValsMapped = Files.map(dimOutFile);
+
+      if (!dimension.equals(serializerUtils.readString(dimValsMapped))) {
+        throw new ISE("dimensions[%s] didn't equate!?  This is a major WTF moment.", dimension);
+      }
+      Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.stringStrategy);
+      log.info("Indexing geo dimension[%s] with cardinality[%,d]", dimension, dimVals.size());
+
+      ByteBufferWriter<ImmutableRTree> writer = new ByteBufferWriter<ImmutableRTree>(
+          ioPeon, dimension, IndexedRTree.objectStrategy
+      );
+      writer.open();
+
+      RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50));
+
+      int count = 0;
+      for (String dimVal : IndexedIterable.create(dimVals)) {
+        progress.progress();
+
+        List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
+        float[] coords = new float[stringCoords.size()];
+        for (int j = 0; j < coords.length; j++) {
+          coords[j] = Float.valueOf(stringCoords.get(j));
+        }
+        tree.insert(coords, count);
+        count++;
+      }
+
+      writer.write(ImmutableRTree.newImmutableFromMutable(tree));
+      writer.close();
+
+      serializerUtils.writeString(out, dimension);
+      ByteStreams.copy(writer.combineStreams(), out);
+      ioPeon.cleanup();
+
+      log.info("Completed spatial dimension[%s] in %,d millis.", dimension, stopwatch.elapsedMillis());
+    }
+
     log.info("outDir[%s] completed inverted.drd in %,d millis.", v8OutDir, System.currentTimeMillis() - startTime);
 
     final ArrayList<String> expectedFiles = Lists.newArrayList(
         Iterables.concat(
             Arrays.asList(
-                "index.drd", "inverted.drd", String.format("time_%s.drd", IndexIO.BYTE_ORDER)
+                "index.drd", "inverted.drd", "spatial.drd", String.format("time_%s.drd", IndexIO.BYTE_ORDER)
             ),
             Iterables.transform(mergedDimensions, GuavaUtils.formatFunction("dim_%s.drd")),
             Iterables.transform(
@@ -1005,7 +1081,13 @@ public class IndexMerger
                 }
               }
 
-              final Rowboat retVal = new Rowboat(input.getTimestamp(), newDims, input.getMetrics(), input.getRowNum());
+              final Rowboat retVal = new Rowboat(
+                  input.getTimestamp(),
+                  newDims,
+                  input.getMetrics(),
+                  input.getRowNum(),
+                  input.getDescriptions()
+              );
 
               retVal.addRow(indexNumber, input.getRowNum());
 
@@ -1084,7 +1166,8 @@ public class IndexMerger
           lhs.getTimestamp(),
           lhs.getDims(),
           metrics,
-          lhs.getRowNum()
+          lhs.getRowNum(),
+          lhs.getDescriptions()
       );
 
       for (Rowboat rowboat : Arrays.asList(lhs, rhs)) {

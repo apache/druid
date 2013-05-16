@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
+import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.collect.MoreIterators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.FunctionalIterator;
@@ -136,10 +137,13 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
   public Iterable<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran)
   {
     Interval actualInterval = interval;
-    final Interval dataInterval = getInterval();
-    if (!actualInterval.overlaps(dataInterval)) {
+    final Interval indexInterval = getInterval();
+
+    if (!actualInterval.overlaps(indexInterval)) {
       return ImmutableList.of();
     }
+
+    final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
 
     if (actualInterval.getStart().isBefore(dataInterval.getStart())) {
       actualInterval = actualInterval.withStart(dataInterval.getStart());
@@ -222,6 +226,30 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
     }
 
     return column.getBitmapIndex().getConciseSet(dimVal);
+  }
+
+  @Override
+  public ImmutableConciseSet getInvertedIndex(String dimension, int idx)
+  {
+    final Column column = index.getColumn(dimension.toLowerCase());
+    if (column == null) {
+      return new ImmutableConciseSet();
+    }
+    if (!column.getCapabilities().hasBitmapIndexes()) {
+      return new ImmutableConciseSet();
+    }
+
+    return column.getBitmapIndex().getConciseSet(idx);
+  }
+
+  public ImmutableRTree getRTreeSpatialIndex(String dimension)
+  {
+    final Column column = index.getColumn(dimension.toLowerCase());
+    if (column == null || !column.getCapabilities().hasSpatialIndexes()) {
+      return new ImmutableRTree();
+    }
+
+    return column.getSpatialIndex().getRTree();
   }
 
   @Override
@@ -349,8 +377,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                             return column.lookupId(name);
                           }
                         };
-                      }
-                      else {
+                      } else {
                         return new DimensionSelector()
                         {
                           @Override
@@ -409,8 +436,8 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(metricName);
                         if (holder != null && holder.getCapabilities().getType() == ValueType.FLOAT) {
-                            cachedMetricVals = holder.getGenericColumn();
-                            genericColumnCache.put(metricName, cachedMetricVals);
+                          cachedMetricVals = holder.getGenericColumn();
+                          genericColumnCache.put(metricName, cachedMetricVals);
                         }
                       }
 
@@ -788,8 +815,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                             return column.lookupId(name);
                           }
                         };
-                      }
-                      else {
+                      } else {
                         return new DimensionSelector()
                         {
                           @Override
@@ -848,8 +874,8 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(metricName);
                         if (holder != null && holder.getCapabilities().getType() == ValueType.FLOAT) {
-                            cachedMetricVals = holder.getGenericColumn();
-                            genericColumnCache.put(metricName, cachedMetricVals);
+                          cachedMetricVals = holder.getGenericColumn();
+                          genericColumnCache.put(metricName, cachedMetricVals);
                         }
                       }
 
@@ -1132,6 +1158,18 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
     public ImmutableConciseSet getConciseInvertedIndex(String dimension, String value)
     {
       return getInvertedIndex(dimension, value);
+    }
+
+    @Override
+    public ImmutableConciseSet getConciseInvertedIndex(String dimension, int idx)
+    {
+      return getInvertedIndex(dimension, idx);
+    }
+
+    @Override
+    public ImmutableRTree getSpatialIndex(String dimension)
+    {
+      return getRTreeSpatialIndex(dimension);
     }
   }
 }
