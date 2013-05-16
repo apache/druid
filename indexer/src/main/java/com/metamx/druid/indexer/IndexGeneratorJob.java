@@ -220,7 +220,7 @@ public class IndexGeneratorJob implements Jobby
     public int getPartition(BytesWritable bytesWritable, Text text, int numPartitions)
     {
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
-      bytes.position(4); // Skip length added by BytesWritable
+      bytes.position(4); // Skip length added by SortableBytes
       int shardNum = bytes.getInt();
 
       if (shardNum >= numPartitions) {
