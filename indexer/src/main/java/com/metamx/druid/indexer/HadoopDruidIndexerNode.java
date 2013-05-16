@@ -19,6 +19,18 @@
 
 package com.metamx.druid.indexer;
 
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.joda.time.Interval;
+
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -26,16 +38,6 @@ import com.google.common.io.CharStreams;
 import com.google.common.io.InputSupplier;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.joda.time.Interval;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  */
