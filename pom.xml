@@ -40,18 +40,18 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.22.3</metamx.java-util.version>
-        <netflix.curator.version>2.0.1-21-22</netflix.curator.version>
+        <apache.curator.version>2.0.1-21-22</apache.curator.version>
     </properties>
 
     <modules>
-        <module>common</module>
-        <module>index-common</module>
         <module>client</module>
-        <module>indexer</module>
-        <module>server</module>
+        <module>common</module>
+        <module>examples</module>
+        <module>indexing-common</module>
+        <module>indexing-hadoop</module>
         <module>indexing-service</module>
         <module>realtime</module>
-        <module>examples</module>
+        <module>server</module>
         <module>services</module>
     </modules>
 
@@ -127,22 +127,22 @@
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-client</artifactId>
-                <version>${netflix.curator.version}</version>
+                <version>${apache.curator.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-framework</artifactId>
-                <version>${netflix.curator.version}</version>
+                <version>${apache.curator.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-recipes</artifactId>
-                <version>${netflix.curator.version}</version>
+                <version>${apache.curator.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-x-discovery</artifactId>
-                <version>${netflix.curator.version}</version>
+                <version>${apache.curator.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
@@ -346,7 +346,7 @@
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-test</artifactId>
-                <version>${netflix.curator.version}</version>
+                <version>${apache.curator.version}</version>
                 <scope>test</scope>
             </dependency>
 

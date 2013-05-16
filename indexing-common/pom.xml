@@ -22,9 +22,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metamx.druid</groupId>
-    <artifactId>druid-index-common</artifactId>
-    <name>druid-index-common</name>
-    <description>Druid Indexer</description>
+    <artifactId>druid-indexing-common</artifactId>
+    <name>druid-indexing-common</name>
+    <description>Druid Indexing Common</description>
 
     <parent>
         <groupId>com.metamx</groupId>
