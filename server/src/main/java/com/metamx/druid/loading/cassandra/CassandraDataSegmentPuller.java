@@ -22,6 +22,8 @@ package com.metamx.druid.loading.cassandra;
 import java.io.File;
 import java.io.OutputStream;
 
+import org.apache.commons.io.FileUtils;
+
 import com.google.common.base.Throwables;
 import com.google.common.io.Files;
 import com.metamx.common.ISE;
@@ -41,13 +43,13 @@ import com.netflix.astyanax.recipes.storage.ObjectMetadata;
  *
  * @author boneill42
  */
-public class CassandraDataSegmentPuller extends CassandraStorage implements DataSegmentPuller 
+public class CassandraDataSegmentPuller extends CassandraStorage implements DataSegmentPuller
 {
 	private static final Logger log = new Logger(CassandraDataSegmentPuller.class);
 	private static final int CONCURRENCY = 10;
 	private static final int BATCH_SIZE = 10;
 
-	public CassandraDataSegmentPuller(CassandraDataSegmentConfig config) 
+	public CassandraDataSegmentPuller(CassandraDataSegmentConfig config)
 	{
 		super(config);
 	}
@@ -56,7 +58,6 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
 	public void getSegmentFiles(DataSegment segment, File outDir) throws SegmentLoadingException
 	{
 		String key = (String) segment.getLoadSpec().get("key");
-
 		log.info("Pulling index from C* at path[%s] to outDir[%s]", key, outDir);
 
 		if (!outDir.exists())
@@ -71,22 +72,28 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
 
 		long startTime = System.currentTimeMillis();
 		ObjectMetadata meta = null;
+		final File outFile = new File(outDir, "index.zip");
 		try
 		{
-			final File outFile = new File(outDir, "index.zip");
-			log.info("Writing to [" + outFile.getAbsolutePath() + "]");
-			OutputStream os = Files.newOutputStreamSupplier(outFile).getOutput();
-			meta = ChunkedStorage
-			    .newReader(indexStorage, key, os)
-			    .withBatchSize(BATCH_SIZE)
-			    .withConcurrencyLevel(CONCURRENCY)
-			    .call();			
-			os.close();
-			CompressionUtils.unzip(outFile, outDir);
+			try
+			{
+				log.info("Writing to [" + outFile.getAbsolutePath() + "]");
+				OutputStream os = Files.newOutputStreamSupplier(outFile).getOutput();
+				meta = ChunkedStorage
+				    .newReader(indexStorage, key, os)
+				    .withBatchSize(BATCH_SIZE)
+				    .withConcurrencyLevel(CONCURRENCY)
+				    .call();
+				os.close();
+				CompressionUtils.unzip(outFile, outDir);
+			} catch (Exception e)
+			{
+				FileUtils.deleteDirectory(outDir);
+			}
 		} catch (Exception e)
 		{
-			throw Throwables.propagate(e);
-		} 
+			throw new SegmentLoadingException(e, e.getMessage());
+		}
 		log.info("Pull of file[%s] completed in %,d millis (%s bytes)", key, System.currentTimeMillis() - startTime,
 		    meta.getObjectSize());
 	}
