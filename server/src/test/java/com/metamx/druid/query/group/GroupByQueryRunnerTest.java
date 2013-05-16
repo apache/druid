@@ -43,6 +43,7 @@ import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerTestHelper;
 import com.metamx.druid.query.dimension.DefaultDimensionSpec;
 import com.metamx.druid.query.dimension.DimensionSpec;
+import com.metamx.druid.query.filter.RegexDimFilter;
 import com.metamx.druid.query.group.having.EqualToHavingSpec;
 import com.metamx.druid.query.group.having.GreaterThanHavingSpec;
 import com.metamx.druid.query.group.having.OrHavingSpec;
@@ -631,6 +632,32 @@ public class GroupByQueryRunnerTest
     );
 
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery), "merged");
+  }
+
+  @Test
+  public void testGroupByWithRegEx() throws Exception
+  {
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimFilter(new RegexDimFilter("quality", "auto.*"))
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "quality")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+
+    final GroupByQuery query = builder.build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "quality", "automotive", "rows", 2L)
+  );
+
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 
   private Row createExpectedRow(final String timestamp, Object... vals)

@@ -77,8 +77,12 @@ public class IndexerCoordinatorResource
           return new ImmutableMap.Builder<String, Object>()
               .put("id", input.getTask().getId())
               .put("dataSource", input.getTask().getDataSource())
-              .put("interval", input.getTask().getImplicitLockInterval())
-              .put("nodeType", input.getTask().getNodeType())
+              .put("interval",
+                   input.getTask().getImplicitLockInterval().get() == null
+                   ? ""
+                   : input.getTask().getImplicitLockInterval().get()
+              )
+              .put("nodeType", input.getTask().getNodeType() == null ? "" : input.getTask().getNodeType())
               .put("createdTime", input.getCreatedTime())
               .put("queueInsertionTime", input.getQueueInsertionTime())
               .build();

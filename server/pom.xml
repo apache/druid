@@ -23,7 +23,7 @@
     <groupId>com.metamx.druid</groupId>
     <artifactId>druid-server</artifactId>
     <name>druid-server</name>
-    <description>druid-server</description>
+    <description>Druid Server</description>
 
     <parent>
         <groupId>com.metamx</groupId>
