@@ -13,11 +13,8 @@ import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.DataSegmentPusherUtil;
 import com.metamx.druid.utils.CompressionUtils;
-import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
-import com.netflix.astyanax.recipes.storage.ChunkedStorageProvider;
 
 /**
  * Cassandra Segment Pusher

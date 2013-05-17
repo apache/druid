@@ -76,7 +76,7 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
 		{
 			try
 			{
-				log.info("Writing to [" + outFile.getAbsolutePath() + "]");
+				log.info("Writing to [%s]", outFile.getAbsolutePath());
 				OutputStream os = Files.newOutputStreamSupplier(outFile).getOutput();
 				meta = ChunkedStorage
 				    .newReader(indexStorage, key, os)
@@ -109,7 +109,7 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
 			    .execute();
 			ColumnList<String> children = result.getResult();
 			long lastModified = children.getColumnByName("lastmodified").getLongValue();
-			log.info("Read lastModified for [" + key + "] as [" + lastModified + "]");
+			log.info("Read lastModified for [%s] as [%d]", key, lastModified);
 			return lastModified;
 		} catch (ConnectionException e)
 		{
