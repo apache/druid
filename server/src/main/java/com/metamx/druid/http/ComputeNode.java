@@ -141,17 +141,9 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
   private void initializeSegmentLoader()
   {
     if (segmentLoader == null) {
-      final Properties props = getProps();
       try {
-        final RestS3Service s3Client = new RestS3Service(
-            new AWSCredentials(
-                PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
-                PropUtils.getProperty(props, "com.metamx.aws.secretKey")
-            )
-        );
-
         setSegmentLoader(
-            ServerInit.makeDefaultQueryableLoader(s3Client, getConfigFactory().build(SegmentLoaderConfig.class))
+            ServerInit.makeDefaultQueryableLoader(getConfigFactory(), getProps())
         );
       }
       catch (S3ServiceException e) {
