@@ -50,7 +50,7 @@ public class RealtimeStandaloneMain
     rn.setDataSegmentPusher(new NoopDataSegmentPusher());
     rn.setServerView(new NoopServerView());
     rn.setInventoryView(new NoopInventoryView());
-
+    
     Runtime.getRuntime().addShutdownHook(
         new Thread(
             new Runnable()

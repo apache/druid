@@ -72,6 +72,7 @@ public class InfoResource
       InventoryView serverInventoryView,
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
+      @Nullable
       IndexingServiceClient indexingServiceClient
   )
   {
