@@ -1,5 +1,7 @@
 package com.metamx.druid.index.v1;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 
@@ -12,7 +14,11 @@ public class SpatialDimensionSchema
   private final String dimName;
   private final List<String> dims;
 
-  public SpatialDimensionSchema(String dimName, List<String> dims)
+  @JsonCreator
+  public SpatialDimensionSchema(
+      @JsonProperty("dimName") String dimName,
+      @JsonProperty("dims") List<String> dims
+  )
   {
     this.dimName = dimName.toLowerCase();
     this.dims = Lists.transform(
@@ -28,11 +34,13 @@ public class SpatialDimensionSchema
     );
   }
 
+  @JsonProperty
   public String getDimName()
   {
     return dimName;
   }
 
+  @JsonProperty
   public List<String> getDims()
   {
     return dims;
