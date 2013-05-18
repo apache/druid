@@ -124,7 +124,7 @@ public class DruidServer implements Comparable
     return segments.get(segmentName);
   }
 
-  public DruidServer addDataSegment(String segmentName, DataSegment segment)
+  public DruidServer addDataSegment(String segmentId, DataSegment segment)
   {
     synchronized (lock) {
       String dataSourceName = segment.getDataSource();
@@ -138,10 +138,11 @@ public class DruidServer implements Comparable
         dataSources.put(dataSourceName, dataSource);
       }
 
-      dataSource.addSegment(segmentName, segment);
-      segments.put(segmentName, segment);
-
-      currSize += segment.getSize();
+      dataSource.addSegment(segmentId, segment);
+      if (!segments.containsKey(segmentId)) {
+        segments.put(segmentId, segment);
+        currSize += segment.getSize();
+      }
     }
     return this;
   }
@@ -156,13 +157,13 @@ public class DruidServer implements Comparable
     return this;
   }
 
-  public DruidServer removeDataSegment(String segmentName)
+  public DruidServer removeDataSegment(String segmentId)
   {
     synchronized (lock) {
-      DataSegment segment = segments.get(segmentName);
+      DataSegment segment = segments.get(segmentId);
 
       if (segment == null) {
-        log.warn("Asked to remove data segment that doesn't exist!? server[%s], segment[%s]", getName(), segmentName);
+        log.warn("Asked to remove data segment that doesn't exist!? server[%s], segment[%s]", getName(), segmentId);
         return this;
       }
 
@@ -172,18 +173,21 @@ public class DruidServer implements Comparable
         log.warn(
             "Asked to remove data segment from dataSource[%s] that doesn't exist, but the segment[%s] exists!?!?!?! wtf?  server[%s]",
             segment.getDataSource(),
-            segmentName,
+            segmentId,
             getName()
         );
         return this;
       }
 
-      dataSource.removePartition(segmentName);
-      segments.remove(segmentName);
+      dataSource.removePartition(segmentId);
+      if (segments.containsKey(segmentId)) {
+        segments.remove(segmentId);
+        currSize -= segment.getSize();
+      }
+
       if (dataSource.isEmpty()) {
         dataSources.remove(dataSource.getName());
       }
-      currSize -= segment.getSize();
     }
 
     return this;

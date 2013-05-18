@@ -136,10 +136,13 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
   public Iterable<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran)
   {
     Interval actualInterval = interval;
-    final Interval dataInterval = getInterval();
-    if (!actualInterval.overlaps(dataInterval)) {
+    final Interval indexInterval = getInterval();
+
+    if (!actualInterval.overlaps(indexInterval)) {
       return ImmutableList.of();
     }
+
+    final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
 
     if (actualInterval.getStart().isBefore(dataInterval.getStart())) {
       actualInterval = actualInterval.withStart(dataInterval.getStart());
