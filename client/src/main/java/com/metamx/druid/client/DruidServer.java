@@ -139,10 +139,16 @@ public class DruidServer implements Comparable
       }
 
       dataSource.addSegment(segmentId, segment);
-      if (!segments.containsKey(segmentId)) {
-        segments.put(segmentId, segment);
-        currSize += segment.getSize();
+
+      DataSegment shouldNotExist = segments.get(segmentId);
+
+      if (shouldNotExist != null) {
+        log.warn("Asked to add data segment that already exists!? server[%s], segment[%s]", getName(), segmentId);
+        return this;
       }
+
+      segments.put(segmentId, segment);
+      currSize += segment.getSize();
     }
     return this;
   }
@@ -180,10 +186,9 @@ public class DruidServer implements Comparable
       }
 
       dataSource.removePartition(segmentId);
-      if (segments.containsKey(segmentId)) {
-        segments.remove(segmentId);
-        currSize -= segment.getSize();
-      }
+
+      segments.remove(segmentId);
+      currSize -= segment.getSize();
 
       if (dataSource.isEmpty()) {
         dataSources.remove(dataSource.getName());
