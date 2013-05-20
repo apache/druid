@@ -20,6 +20,7 @@
 package com.metamx.druid.loading.cassandra;
 
 import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
  * Cassandra Config
@@ -29,8 +30,10 @@ import org.skife.config.Config;
 public abstract class CassandraDataSegmentConfig
 {
   @Config("druid.pusher.cassandra.host")
+  @Default("")
   public abstract String getHost();
 
   @Config("druid.pusher.cassandra.keyspace")
+  @Default("")
   public abstract String getKeyspace();
 }
