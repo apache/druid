@@ -103,11 +103,13 @@ public class DruidSetup
       if ("dump".equals(cmd) && args.length == 3) {
         final String zkConnect = args[1];
         curator = connectToZK(zkConnect);
+        curator.start();
         String zpathBase = args[2];
         dumpFromZk(curator, zkConnect, zpathBase, System.out);
       } else if ("put".equals(cmd) && args.length == 3) {
         final String zkConnect = args[1];
         curator = connectToZK(zkConnect);
+        curator.start();
         final String pfile = args[2];
         putToZk(curator, pfile);
       } else {

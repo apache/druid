@@ -255,7 +255,8 @@ public class ServerManager implements QuerySegmentWalker
                             );
                           }
                         }
-                    );
+                    )
+                    .filter(Predicates.<QueryRunner<T>>notNull());
               }
             }
         )
