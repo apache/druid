@@ -64,7 +64,7 @@ public class SpatialDimensionRowFormatter
 
   public InputRow formatRow(final InputRow row)
   {
-    final Map<String, List<String>> finalDimLookup = Maps.newHashMap();
+    final Map<String, List<String>> spatialLookup = Maps.newHashMap();
 
     // remove all spatial dimensions
     final List<String> finalDims = Lists.newArrayList(
@@ -91,9 +91,6 @@ public class SpatialDimensionRowFormatter
             }
         )
     );
-    for (String dim : finalDims) {
-      finalDimLookup.put(dim, row.getDimension(dim));
-    }
 
     InputRow retVal = new InputRow()
     {
@@ -112,7 +109,8 @@ public class SpatialDimensionRowFormatter
       @Override
       public List<String> getDimension(String dimension)
       {
-        return finalDimLookup.get(dimension);
+        List<String> retVal = spatialLookup.get(dimension);
+        return (retVal == null) ? row.getDimension(dimension) : retVal;
       }
 
       @Override
@@ -131,7 +129,7 @@ public class SpatialDimensionRowFormatter
         }
         spatialDimVals.addAll(dimVals);
       }
-      finalDimLookup.put(spatialDimension.getDimName(), Arrays.asList(JOINER.join(spatialDimVals)));
+      spatialLookup.put(spatialDimension.getDimName(), Arrays.asList(JOINER.join(spatialDimVals)));
       finalDims.add(spatialDimension.getDimName());
     }
 

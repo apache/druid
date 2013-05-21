@@ -30,6 +30,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IncrementalIndex;
+import com.metamx.druid.index.v1.IncrementalIndexSchema;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Schema;
@@ -42,7 +43,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
-*/
+ */
 public class Sink implements Iterable<FireHydrant>
 {
   private static final Logger log = new Logger(Sink.class);
@@ -145,7 +146,8 @@ public class Sink implements Iterable<FireHydrant>
           {
             return input.getName();
           }
-        }),
+        }
+        ),
         schema.getShardSpec(),
         null,
         0
@@ -155,7 +157,12 @@ public class Sink implements Iterable<FireHydrant>
   private FireHydrant makeNewCurrIndex(long minTimestamp, Schema schema)
   {
     IncrementalIndex newIndex = new IncrementalIndex(
-        minTimestamp, schema.getIndexGranularity(), schema.getAggregators()
+        new IncrementalIndexSchema.Builder()
+            .withMinTimestamp(minTimestamp)
+            .withQueryGranularity(schema.getIndexGranularity())
+            .withSpatialDimensions(schema.getSpatialDimensions())
+            .withMetrics(schema.getAggregators())
+            .build()
     );
 
     FireHydrant old;

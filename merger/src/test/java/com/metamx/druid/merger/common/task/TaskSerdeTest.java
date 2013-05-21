@@ -33,6 +33,7 @@ public class TaskSerdeTest
         null,
         "foo",
         new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P2D"))),
+        null,
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
         10000,
@@ -65,6 +66,7 @@ public class TaskSerdeTest
         null,
         new Schema(
             "foo",
+            null,
             new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
             QueryGranularity.NONE,
             new NoneShardSpec()
@@ -201,7 +203,7 @@ public class TaskSerdeTest
   {
     final Task task = new RealtimeIndexTask(
         null,
-        new Schema("foo", new AggregatorFactory[0], QueryGranularity.NONE, new NoneShardSpec()),
+        new Schema("foo", null, new AggregatorFactory[0], QueryGranularity.NONE, new NoneShardSpec()),
         null,
         null,
         new Period("PT10M"),

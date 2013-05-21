@@ -105,7 +105,7 @@ public class SegmentAnalyzer
       return ColumnAnalysis.error("multi_value");
     }
 
-    return new ColumnAnalysis(capabilities.getType(), column.getLength() * numBytes, null);
+    return new ColumnAnalysis(capabilities.getType(), column.getLength() * numBytes, null, null);
   }
 
   public ColumnAnalysis analyzeStringColumn(Column column)
@@ -125,7 +125,7 @@ public class SegmentAnalyzer
         }
       }
 
-      return new ColumnAnalysis(capabilities.getType(), size, cardinality);
+      return new ColumnAnalysis(capabilities.getType(), size, cardinality, null);
     }
 
     return ColumnAnalysis.error("string_no_bitmap");
@@ -153,6 +153,6 @@ public class SegmentAnalyzer
       size += inputSizeFn.apply(complexColumn.getRowValue(i));
     }
 
-    return new ColumnAnalysis(capabilities.getType(), size, null);
+    return new ColumnAnalysis(capabilities.getType(), size, null, null);
   }
 }

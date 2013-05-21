@@ -31,32 +31,36 @@ public class ColumnAnalysis
 
   public static ColumnAnalysis error(String reason)
   {
-    return new ColumnAnalysis(ERROR_PREFIX + reason, -1, null);
+    return new ColumnAnalysis(ValueType.STRING, -1, null, ERROR_PREFIX + reason);
   }
 
   private final String type;
   private final long size;
   private final Integer cardinality;
+  private final String errorMessage;
 
   @JsonCreator
   public ColumnAnalysis(
       @JsonProperty("type") ValueType type,
       @JsonProperty("size") long size,
-      @JsonProperty("cardinality") Integer cardinality
+      @JsonProperty("cardinality") Integer cardinality,
+      @JsonProperty("errorMessage") String errorMessage
   )
   {
-    this(type.name(), size, cardinality);
+    this(type.name(), size, cardinality, errorMessage);
   }
 
   private ColumnAnalysis(
       String type,
       long size,
-      Integer cardinality
+      Integer cardinality,
+      String errorMessage
   )
   {
     this.type = type;
     this.size = size;
     this.cardinality = cardinality;
+    this.errorMessage = errorMessage;
   }
 
   @JsonProperty
@@ -77,9 +81,15 @@ public class ColumnAnalysis
     return cardinality;
   }
 
+  @JsonProperty
+  public String getErrorMessage()
+  {
+    return errorMessage;
+  }
+
   public boolean isError()
   {
-    return type.startsWith(ERROR_PREFIX);
+    return (errorMessage != null && !errorMessage.isEmpty());
   }
 
   public ColumnAnalysis fold(ColumnAnalysis rhs)
@@ -103,7 +113,7 @@ public class ColumnAnalysis
       }
     }
 
-    return new ColumnAnalysis(type, size + rhs.getSize(), cardinality);
+    return new ColumnAnalysis(type, size + rhs.getSize(), cardinality, null);
   }
 
   @Override
@@ -113,6 +123,7 @@ public class ColumnAnalysis
            "type='" + type + '\'' +
            ", size=" + size +
            ", cardinality=" + cardinality +
+           ", errorMessage='" + errorMessage + '\'' +
            '}';
   }
 }

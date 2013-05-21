@@ -251,6 +251,7 @@ public class IndexDeterminePartitionsTask extends AbstractTask
                 firehoseFactory,
                 new Schema(
                     schema.getDataSource(),
+                    schema.getSpatialDimensions(),
                     schema.getAggregators(),
                     schema.getIndexGranularity(),
                     shardSpec
