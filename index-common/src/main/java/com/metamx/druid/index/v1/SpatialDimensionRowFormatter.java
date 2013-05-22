@@ -22,31 +22,50 @@ package com.metamx.druid.index.v1;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Floats;
+import com.metamx.common.ISE;
 import com.metamx.druid.input.InputRow;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
+ * We throw away all invalid spatial dimensions
  */
 public class SpatialDimensionRowFormatter
 {
   private static final Joiner JOINER = Joiner.on(",");
+  private static final Splitter SPLITTER = Splitter.on(",");
 
   private final List<SpatialDimensionSchema> spatialDimensions;
   private final Set<String> spatialDimNames;
+  private final Set<String> spatialPartialDimNames;
 
   public SpatialDimensionRowFormatter(List<SpatialDimensionSchema> spatialDimensions)
   {
     this.spatialDimensions = spatialDimensions;
     this.spatialDimNames = Sets.newHashSet(
+        Lists.transform(
+            spatialDimensions,
+            new Function<SpatialDimensionSchema, String>()
+            {
+              @Override
+              public String apply(SpatialDimensionSchema input)
+              {
+                return input.getDimName();
+              }
+            }
+        )
+    );
+    this.spatialPartialDimNames = Sets.newHashSet(
         Iterables.concat(
             Lists.transform(
                 spatialDimensions,
@@ -87,7 +106,7 @@ public class SpatialDimensionRowFormatter
               @Override
               public boolean apply(String input)
               {
-                return !spatialDimNames.contains(input);
+                return !spatialDimNames.contains(input) && !spatialPartialDimNames.contains(input);
               }
             }
         )
@@ -121,23 +140,32 @@ public class SpatialDimensionRowFormatter
       }
     };
 
-    for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
-      if (!row.getDimension(spatialDimension.getDimName()).isEmpty()) {
-        continue;
-      }
+    if (!spatialPartialDimNames.isEmpty()) {
+      for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
+        List<String> spatialDimVals = Lists.newArrayList();
 
-      List<String> spatialDimVals = Lists.newArrayList();
+        for (String partialSpatialDim : spatialDimension.getDims()) {
+          List<String> dimVals = row.getDimension(partialSpatialDim);
+          if (isSpatialDimValsValid(dimVals)) {
+            spatialDimVals.addAll(dimVals);
+          }
+        }
 
-      for (String partialSpatialDim : spatialDimension.getDims()) {
-        List<String> dimVals = row.getDimension(partialSpatialDim);
-        if (isSpatialDimValsValid(dimVals)) {
-          spatialDimVals.addAll(dimVals);
+        if (spatialDimVals.size() == spatialPartialDimNames.size()) {
+          spatialLookup.put(spatialDimension.getDimName(), Arrays.asList(JOINER.join(spatialDimVals)));
+          finalDims.add(spatialDimension.getDimName());
         }
       }
-
-      if (spatialDimVals.size() == spatialDimNames.size()) {
-        spatialLookup.put(spatialDimension.getDimName(), Arrays.asList(JOINER.join(spatialDimVals)));
-        finalDims.add(spatialDimension.getDimName());
+    } else {
+      for (String spatialDimName : spatialDimNames) {
+        List<String> dimVals = row.getDimension(spatialDimName);
+        if (dimVals.size() != 1) {
+          throw new ISE("Cannot have a spatial dimension value with size[%d]", dimVals.size());
+        }
+        if (isJoinedSpatialDimValValid(dimVals.get(0))) {
+          spatialLookup.put(spatialDimName, dimVals);
+          finalDims.add(spatialDimName);
+        }
       }
     }
 
@@ -151,6 +179,20 @@ public class SpatialDimensionRowFormatter
     }
     for (String dimVal : dimVals) {
       if (Floats.tryParse(dimVal) == null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean isJoinedSpatialDimValValid(String dimVal)
+  {
+    if (dimVal == null || dimVal.isEmpty()) {
+      return false;
+    }
+    Iterable<String> dimVals = SPLITTER.split(dimVal);
+    for (String val : dimVals) {
+      if (Floats.tryParse(val) == null) {
         return false;
       }
     }

@@ -63,7 +63,7 @@ import java.util.Random;
 /**
  */
 @RunWith(Parameterized.class)
-public class SpatialFilterTest
+public class SpatialFilterBonusTest
 {
   private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
 
@@ -72,7 +72,7 @@ public class SpatialFilterTest
       new LongSumAggregatorFactory("val", "val")
   };
 
-  private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long");
+  private static List<String> DIMS = Lists.newArrayList("dim", "dim.geo");
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
@@ -105,7 +105,7 @@ public class SpatialFilterTest
                                                 Arrays.asList(
                                                     new SpatialDimensionSchema(
                                                         "dim.geo",
-                                                        Arrays.asList("lat", "long")
+                                                        Lists.<String>newArrayList()
                                                     )
                                                 )
                                             ).build()
@@ -117,8 +117,7 @@ public class SpatialFilterTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-01").toString(),
                 "dim", "foo",
-                "lat", 0.0f,
-                "long", 0.0f,
+                "dim.geo", "0.0,0.0",
                 "val", 17l
             )
         )
@@ -130,8 +129,7 @@ public class SpatialFilterTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-02").toString(),
                 "dim", "foo",
-                "lat", 1.0f,
-                "long", 3.0f,
+                "dim.geo", "1.0,3.0",
                 "val", 29l
             )
         )
@@ -143,8 +141,7 @@ public class SpatialFilterTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-03").toString(),
                 "dim", "foo",
-                "lat", 4.0f,
-                "long", 2.0f,
+                "dim.geo", "4.0,2.0",
                 "val", 13l
             )
         )
@@ -156,8 +153,7 @@ public class SpatialFilterTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-04").toString(),
                 "dim", "foo",
-                "lat", 7.0f,
-                "long", 3.0f,
+                "dim.geo", "7.0,3.0",
                 "val", 91l
             )
         )
@@ -169,22 +165,8 @@ public class SpatialFilterTest
             ImmutableMap.<String, Object>of(
                 "timestamp", new DateTime("2013-01-05").toString(),
                 "dim", "foo",
-                "lat", 8.0f,
-                "long", 6.0f,
+                "dim.geo", "8.0,6.0",
                 "val", 47l
-            )
-        )
-    );
-    theIndex.add(
-        new MapBasedInputRow(
-            new DateTime("2013-01-05").getMillis(),
-            DIMS,
-            ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-05").toString(),
-                "dim", "foo",
-                "lat", "_mmx.unknown",
-                "long", "_mmx.unknown",
-                "val", 101l
             )
         )
     );
@@ -211,8 +193,11 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-01").toString(),
                   "dim", "boo",
-                  "lat", (float) (rand.nextFloat() * 10 + 10.0),
-                  "long", (float) (rand.nextFloat() * 10 + 10.0),
+                  "dim.geo", String.format(
+                  "%s,%s",
+                  (float) (rand.nextFloat() * 10 + 10.0),
+                  (float) (rand.nextFloat() * 10 + 10.0)
+              ),
                   "val", i
               )
           )
@@ -245,7 +230,7 @@ public class SpatialFilterTest
                                                   Arrays.asList(
                                                       new SpatialDimensionSchema(
                                                           "dim.geo",
-                                                          Arrays.asList("lat", "long")
+                                                          Lists.<String>newArrayList()
                                                       )
                                                   )
                                               ).build()
@@ -258,7 +243,7 @@ public class SpatialFilterTest
                                                   Arrays.asList(
                                                       new SpatialDimensionSchema(
                                                           "dim.geo",
-                                                          Arrays.asList("lat", "long")
+                                                          Lists.<String>newArrayList()
                                                       )
                                                   )
                                               ).build()
@@ -271,7 +256,7 @@ public class SpatialFilterTest
                                                   Arrays.asList(
                                                       new SpatialDimensionSchema(
                                                           "dim.geo",
-                                                          Arrays.asList("lat", "long")
+                                                          Lists.<String>newArrayList()
                                                       )
                                                   )
                                               ).build()
@@ -285,8 +270,7 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-01").toString(),
                   "dim", "foo",
-                  "lat", 0.0f,
-                  "long", 0.0f,
+                  "dim.geo", "0.0,0.0",
                   "val", 17l
               )
           )
@@ -298,8 +282,7 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-02").toString(),
                   "dim", "foo",
-                  "lat", 1.0f,
-                  "long", 3.0f,
+                  "dim.geo", "1.0,3.0",
                   "val", 29l
               )
           )
@@ -311,22 +294,8 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-03").toString(),
                   "dim", "foo",
-                  "lat", 4.0f,
-                  "long", 2.0f,
+                  "dim.geo", "4.0,2.0",
                   "val", 13l
-              )
-          )
-      );
-      first.add(
-          new MapBasedInputRow(
-              new DateTime("2013-01-05").getMillis(),
-              DIMS,
-              ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-05").toString(),
-                  "dim", "foo",
-                  "lat", "_mmx.unknown",
-                  "long", "_mmx.unknown",
-                  "val", 101l
               )
           )
       );
@@ -349,8 +318,7 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-04").toString(),
                   "dim", "foo",
-                  "lat", 7.0f,
-                  "long", 3.0f,
+                  "dim.geo", "7.0,3.0",
                   "val", 91l
               )
           )
@@ -362,8 +330,7 @@ public class SpatialFilterTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-05").toString(),
                   "dim", "foo",
-                  "lat", 8.0f,
-                  "long", 6.0f,
+                  "dim.geo", "8.0,6.0",
                   "val", 47l
               )
           )
@@ -379,8 +346,11 @@ public class SpatialFilterTest
                 ImmutableMap.<String, Object>of(
                     "timestamp", new DateTime("2013-01-01").toString(),
                     "dim", "boo",
-                    "lat", (float) (rand.nextFloat() * 10 + 10.0),
-                    "long", (float) (rand.nextFloat() * 10 + 10.0),
+                    "dim.geo", String.format(
+                    "%s,%s",
+                    (float) (rand.nextFloat() * 10 + 10.0),
+                    (float) (rand.nextFloat() * 10 + 10.0)
+                ),
                     "val", i
                 )
             )
@@ -426,7 +396,7 @@ public class SpatialFilterTest
 
   private final Segment segment;
 
-  public SpatialFilterTest(Segment segment)
+  public SpatialFilterBonusTest(Segment segment)
   {
     this.segment = segment;
   }
