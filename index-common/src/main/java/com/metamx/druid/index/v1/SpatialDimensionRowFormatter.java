@@ -122,6 +122,10 @@ public class SpatialDimensionRowFormatter
     };
 
     for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
+      if (!row.getDimension(spatialDimension.getDimName()).isEmpty()) {
+        continue;
+      }
+
       List<String> spatialDimVals = Lists.newArrayList();
 
       for (String partialSpatialDim : spatialDimension.getDims()) {
@@ -131,7 +135,7 @@ public class SpatialDimensionRowFormatter
         }
       }
 
-      if (!spatialDimVals.isEmpty()) {
+      if (spatialDimVals.size() == spatialDimNames.size()) {
         spatialLookup.put(spatialDimension.getDimName(), Arrays.asList(JOINER.join(spatialDimVals)));
         finalDims.add(spatialDimension.getDimName());
       }

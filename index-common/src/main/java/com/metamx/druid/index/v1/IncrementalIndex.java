@@ -356,6 +356,11 @@ public class IncrementalIndex implements Iterable<Row>
     return spatialDimensions;
   }
 
+  public SpatialDimensionRowFormatter getSpatialDimensionRowFormatter()
+  {
+    return spatialDimensionRowFormatter;
+  }
+
   public String getMetricType(String metric)
   {
     return metricTypes.get(metric);
