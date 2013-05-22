@@ -237,8 +237,10 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
     if (!column.getCapabilities().hasBitmapIndexes()) {
       return new ImmutableConciseSet();
     }
+    // This is a workaround given the current state of indexing, I feel shame
+    final int index = column.getBitmapIndex().hasNulls() ? idx + 1 : idx;
 
-    return column.getBitmapIndex().getConciseSet(idx);
+    return column.getBitmapIndex().getConciseSet(index);
   }
 
   public ImmutableRTree getRTreeSpatialIndex(String dimension)

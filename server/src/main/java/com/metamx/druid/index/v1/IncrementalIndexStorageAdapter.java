@@ -227,7 +227,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                             numAdvanced++;
                           }
                         } else {
-                          Iterators.skip(baseIter, numAdvanced);
+                          Iterators.advance(baseIter, numAdvanced);
                           if (baseIter.hasNext()) {
                             currEntry.set(baseIter.next());
                           }

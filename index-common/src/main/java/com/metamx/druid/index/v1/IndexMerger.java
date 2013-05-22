@@ -790,6 +790,9 @@ public class IndexMerger
       int count = 0;
       for (String dimVal : IndexedIterable.create(dimVals)) {
         progress.progress();
+        if (dimVal == null) {
+          continue;
+        }
 
         List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
         float[] coords = new float[stringCoords.size()];

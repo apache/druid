@@ -59,6 +59,12 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
       }
 
       @Override
+      public boolean hasNulls()
+      {
+        return dictionary.indexOf(null) >= 0;
+      }
+
+      @Override
       public ImmutableConciseSet getConciseSet(String value)
       {
         final int index = dictionary.indexOf(value);

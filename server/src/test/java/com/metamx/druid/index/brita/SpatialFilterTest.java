@@ -61,7 +61,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
-*/
+ */
 @RunWith(Parameterized.class)
 public class SpatialFilterTest
 {
@@ -172,6 +172,19 @@ public class SpatialFilterTest
                 "lat", 8.0f,
                 "long", 6.0f,
                 "val", 47l
+            )
+        )
+    );
+    theIndex.add(
+        new MapBasedInputRow(
+            new DateTime("2013-01-05").getMillis(),
+            DIMS,
+            ImmutableMap.<String, Object>of(
+                "timestamp", new DateTime("2013-01-05").toString(),
+                "dim", "foo",
+                "lat", "_mmx.unknown",
+                "long", "_mmx.unknown",
+                "val", 101l
             )
         )
     );
@@ -289,6 +302,19 @@ public class SpatialFilterTest
                   "lat", 4.0f,
                   "long", 2.0f,
                   "val", 13l
+              )
+          )
+      );
+      first.add(
+          new MapBasedInputRow(
+              new DateTime("2013-01-05").getMillis(),
+              DIMS,
+              ImmutableMap.<String, Object>of(
+                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "dim", "foo",
+                  "lat", "_mmx.unknown",
+                  "long", "_mmx.unknown",
+                  "val", 101l
               )
           )
       );

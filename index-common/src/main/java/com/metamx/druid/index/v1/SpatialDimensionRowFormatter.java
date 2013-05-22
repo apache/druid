@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Floats;
 import com.metamx.druid.input.InputRow;
 
 import java.util.Arrays;
@@ -122,17 +123,33 @@ public class SpatialDimensionRowFormatter
 
     for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
       List<String> spatialDimVals = Lists.newArrayList();
+
       for (String partialSpatialDim : spatialDimension.getDims()) {
         List<String> dimVals = row.getDimension(partialSpatialDim);
-        if (dimVals == null || dimVals.isEmpty()) {
-          return retVal;
+        if (isSpatialDimValsValid(dimVals)) {
+          spatialDimVals.addAll(dimVals);
         }
-        spatialDimVals.addAll(dimVals);
       }
-      spatialLookup.put(spatialDimension.getDimName(), Arrays.asList(JOINER.join(spatialDimVals)));
-      finalDims.add(spatialDimension.getDimName());
+
+      if (!spatialDimVals.isEmpty()) {
+        spatialLookup.put(spatialDimension.getDimName(), Arrays.asList(JOINER.join(spatialDimVals)));
+        finalDims.add(spatialDimension.getDimName());
+      }
     }
 
     return retVal;
+  }
+
+  private boolean isSpatialDimValsValid(List<String> dimVals)
+  {
+    if (dimVals == null || dimVals.isEmpty()) {
+      return false;
+    }
+    for (String dimVal : dimVals) {
+      if (Floats.tryParse(dimVal) == null) {
+        return false;
+      }
+    }
+    return true;
   }
 }

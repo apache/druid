@@ -40,9 +40,9 @@ public class RegexFilter extends DimensionPredicateFilter
           Pattern compiled = Pattern.compile(pattern);
 
           @Override
-          public boolean apply(@Nullable String input)
+          public boolean apply(String input)
           {
-            return compiled.matcher(input).find();
+            return (input != null) && compiled.matcher(input).find();
           }
         }
     );
