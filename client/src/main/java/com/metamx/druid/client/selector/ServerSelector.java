@@ -83,7 +83,12 @@ public class ServerSelector
   public QueryableDruidServer pick()
   {
     synchronized (this) {
-      return Collections.min(servers, comparator);
+      final int size = servers.size();
+      switch (size) {
+        case 0: return null;
+        case 1: return servers.iterator().next();
+        default: return Collections.min(servers, comparator);
+      }
     }
   }
 }
