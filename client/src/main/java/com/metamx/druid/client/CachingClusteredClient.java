@@ -44,6 +44,7 @@ import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.cache.Cache;
+import com.metamx.druid.client.selector.QueryableDruidServer;
 import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.query.CacheStrategy;
@@ -203,7 +204,13 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     // Compile list of all segments not pulled from cache
     for(Pair<ServerSelector, SegmentDescriptor> segment : segments) {
-      final DruidServer server = segment.lhs.pick().getServer();
+      final QueryableDruidServer queryableDruidServer = segment.lhs.pick();
+
+      if (queryableDruidServer == null) {
+        log.error("No servers found for %s?! How can this be?!", segment.rhs);
+      }
+
+      final DruidServer server = queryableDruidServer.getServer();
       List<SegmentDescriptor> descriptors = serverSegments.get(server);
 
       if (descriptors == null) {

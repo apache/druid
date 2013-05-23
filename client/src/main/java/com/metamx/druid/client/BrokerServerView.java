@@ -129,15 +129,13 @@ public class BrokerServerView implements TimelineServerView
 
   private QueryableDruidServer addServer(DruidServer server)
   {
-    QueryableDruidServer exists = clients.put(
-        server.getName(),
-        new QueryableDruidServer(server, makeDirectClient(server))
-    );
+    QueryableDruidServer retVal = new QueryableDruidServer(server, makeDirectClient(server));
+    QueryableDruidServer exists = clients.put(server.getName(), retVal);
     if (exists != null) {
-      log.warn("QueryRunner for server[%s] already existed!?", server);
+      log.warn("QueryRunner for server[%s] already existed!? Well it's getting replaced", server);
     }
 
-    return exists;
+    return retVal;
   }
 
   private DirectDruidClient makeDirectClient(DruidServer server)
