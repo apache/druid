@@ -172,6 +172,16 @@ public class ServerInventoryView implements ServerView, InventoryView
             final DataSegment segment = container.getSegment(inventoryKey);
             final DruidServer retVal = container.removeDataSegment(inventoryKey);
 
+            if (segment == null) {
+              log.warn(
+                  "Not running callbacks or cleanup for non-existing segment[%s] on server[%s]",
+                  inventoryKey,
+                  container.getName()
+              );
+
+              return retVal;
+            }
+
             runSegmentCallbacks(
                 new Function<SegmentCallback, CallbackAction>()
                 {
