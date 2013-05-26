@@ -153,7 +153,7 @@ public class ServerInventoryView implements ServerView, InventoryView
 
             if (segment != null) {
               log.warn(
-                  "Not running callbacks for existing segment[%s] on server[%s]",
+                  "Not adding or running callbacks for existing segment[%s] on server[%s]",
                   inventoryKey,
                   container.getName()
               );
@@ -185,7 +185,7 @@ public class ServerInventoryView implements ServerView, InventoryView
 
             if (segment == null) {
               log.warn(
-                  "Not running callbacks or cleanup for non-existing segment[%s] on server[%s]",
+                  "Not running cleanup or callbacks for non-existing segment[%s] on server[%s]",
                   inventoryKey,
                   container.getName()
               );
