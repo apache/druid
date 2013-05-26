@@ -127,6 +127,13 @@ public class DruidServer implements Comparable
   public DruidServer addDataSegment(String segmentId, DataSegment segment)
   {
     synchronized (lock) {
+      DataSegment shouldNotExist = segments.get(segmentId);
+
+      if (shouldNotExist != null) {
+        log.warn("Asked to add data segment that already exists!? server[%s], segment[%s]", getName(), segmentId);
+        return this;
+      }
+
       String dataSourceName = segment.getDataSource();
       DruidDataSource dataSource = dataSources.get(dataSourceName);
 
@@ -139,13 +146,6 @@ public class DruidServer implements Comparable
       }
 
       dataSource.addSegment(segmentId, segment);
-
-      DataSegment shouldNotExist = segments.get(segmentId);
-
-      if (shouldNotExist != null) {
-        log.warn("Asked to add data segment that already exists!? server[%s], segment[%s]", getName(), segmentId);
-        return this;
-      }
 
       segments.put(segmentId, segment);
       currSize += segment.getSize();
