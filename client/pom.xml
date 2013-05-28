@@ -181,6 +181,10 @@
             <groupId>com.metamx</groupId>
             <artifactId>bytebuffer-collections</artifactId>
         </dependency>
+        <dependency>
+          <groupId>org.xerial.snappy</groupId>
+          <artifactId>snappy-java</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
