@@ -149,9 +149,8 @@ public class ServerInventoryView implements ServerView, InventoryView
           public DruidServer addInventory(final DruidServer container, String inventoryKey, final DataSegment inventory)
           {
             log.info("Server[%s] added segment[%s]", container.getName(), inventoryKey);
-            final DataSegment segment = container.getSegment(inventoryKey);
 
-            if (segment != null) {
+            if (container.getSegment(inventoryKey) != null) {
               log.warn(
                   "Not adding or running callbacks for existing segment[%s] on server[%s]",
                   inventoryKey,

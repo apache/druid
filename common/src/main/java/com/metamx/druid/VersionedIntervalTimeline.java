@@ -26,6 +26,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.partition.ImmutablePartitionHolder;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.partition.PartitionHolder;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -78,7 +79,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
     this.versionComparator = versionComparator;
   }
 
-  public void add(Interval interval, VersionType version, PartitionChunk<ObjectType> object)
+  public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
   {
     try {
       lock.writeLock().lock();
@@ -278,6 +279,13 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
     addIntervalToTimeline(interval, entry, timeline);
   }
 
+  /**
+   *
+   * @param timeline
+   * @param key
+   * @param entry
+   * @return boolean flag indicating whether or not we inserted or discarded something
+   */
   private boolean addAtKey(
       NavigableMap<Interval, TimelineEntry> timeline,
       Interval key,
@@ -292,7 +300,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
       return false;
     }
 
-    while (currKey != null && currKey.overlaps(entryInterval)) {
+    while (entryInterval != null && currKey != null && currKey.overlaps(entryInterval)) {
       Interval nextKey = timeline.higherKey(currKey);
 
       int versionCompare = versionComparator.compare(
@@ -311,7 +319,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
           if (entryInterval.getEnd().isAfter(currKey.getEnd())) {
             entryInterval = new Interval(currKey.getEnd(), entryInterval.getEnd());
           } else {
-            entryInterval = null;
+            entryInterval = null; // discard this entry
           }
         }
       } else if (versionCompare > 0) {
@@ -490,5 +498,10 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
     {
       return partitionHolder;
     }
+  }
+
+  public static void main(String[] args)
+  {
+    System.out.println(new Interval(new DateTime(), (DateTime) null));
   }
 }

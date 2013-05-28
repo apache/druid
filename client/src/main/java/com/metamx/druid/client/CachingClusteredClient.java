@@ -56,7 +56,6 @@ import com.metamx.druid.query.segment.MultipleSpecificSegmentSpec;
 import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -121,7 +120,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
     final boolean useCache = Boolean.parseBoolean(query.getContextValue("useCache", "true")) && strategy != null;
-    final boolean populateCache = Boolean.parseBoolean(query.getContextValue("populateCache", "true")) && strategy != null;
+    final boolean populateCache = Boolean.parseBoolean(query.getContextValue("populateCache", "true"))
+                                  && strategy != null;
     final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
 
     final Query<T> rewrittenQuery;
@@ -161,22 +161,22 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     }
 
     final byte[] queryCacheKey;
-    if(strategy != null) {
+    if (strategy != null) {
       queryCacheKey = strategy.computeCacheKey(query);
     } else {
       queryCacheKey = null;
     }
 
     // Pull cached segments from cache and remove from set of segments to query
-    if(useCache && queryCacheKey != null) {
+    if (useCache && queryCacheKey != null) {
       Map<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> cacheKeys = Maps.newHashMap();
-      for(Pair<ServerSelector, SegmentDescriptor> e : segments) {
+      for (Pair<ServerSelector, SegmentDescriptor> e : segments) {
         cacheKeys.put(e, computeSegmentCacheKey(e.lhs.getSegment().getIdentifier(), e.rhs, queryCacheKey));
       }
 
       Map<Cache.NamedKey, byte[]> cachedValues = cache.getBulk(cacheKeys.values());
 
-      for(Map.Entry<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> entry : cacheKeys.entrySet()) {
+      for (Map.Entry<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> entry : cacheKeys.entrySet()) {
         Pair<ServerSelector, SegmentDescriptor> segment = entry.getKey();
         Cache.NamedKey segmentCacheKey = entry.getValue();
 
@@ -191,8 +191,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
           // remove cached segment from set of segments to query
           segments.remove(segment);
-        }
-        else {
+        } else {
           final String segmentIdentifier = selector.getSegment().getIdentifier();
           cachePopulatorMap.put(
               String.format("%s_%s", segmentIdentifier, segmentQueryInterval),
@@ -203,22 +202,22 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     }
 
     // Compile list of all segments not pulled from cache
-    for(Pair<ServerSelector, SegmentDescriptor> segment : segments) {
+    for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
       final QueryableDruidServer queryableDruidServer = segment.lhs.pick();
 
       if (queryableDruidServer == null) {
         log.error("No servers found for %s?! How can this be?!", segment.rhs);
+      } else {
+        final DruidServer server = queryableDruidServer.getServer();
+        List<SegmentDescriptor> descriptors = serverSegments.get(server);
+
+        if (descriptors == null) {
+          descriptors = Lists.newArrayList();
+          serverSegments.put(server, descriptors);
+        }
+
+        descriptors.add(segment.rhs);
       }
-
-      final DruidServer server = queryableDruidServer.getServer();
-      List<SegmentDescriptor> descriptors = serverSegments.get(server);
-
-      if (descriptors == null) {
-        descriptors = Lists.newArrayList();
-        serverSegments.put(server, descriptors);
-      }
-
-      descriptors.add(segment.rhs);
     }
 
     return new LazySequence<T>(
@@ -242,8 +241,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             );
             if (strategy == null) {
               return toolChest.mergeSequences(seq);
-            }
-            else {
+            } else {
               return strategy.mergeSequences(seq);
             }
           }
@@ -356,7 +354,11 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     );
   }
 
-  private Cache.NamedKey computeSegmentCacheKey(String segmentIdentifier, SegmentDescriptor descriptor, byte[] queryCacheKey)
+  private Cache.NamedKey computeSegmentCacheKey(
+      String segmentIdentifier,
+      SegmentDescriptor descriptor,
+      byte[] queryCacheKey
+  )
   {
     final Interval segmentQueryInterval = descriptor.getInterval();
     final byte[] versionBytes = descriptor.getVersion().getBytes();
