@@ -39,7 +39,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.22.3</metamx.java-util.version>
-        <netflix.curator.version>2.0.1-21-22</netflix.curator.version>
+        <netflix.curator.version>2.0.2-21-22</netflix.curator.version>
     </properties>
 
     <modules>
