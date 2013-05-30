@@ -34,6 +34,11 @@ import java.util.Set;
  */
 public class Queries
 {
+  public static enum Priority
+  {
+    HIGH, NORMAL, LOW
+  }
+
   public static void verifyAggregations(
       List<AggregatorFactory> aggFactories,
       List<PostAggregator> postAggs

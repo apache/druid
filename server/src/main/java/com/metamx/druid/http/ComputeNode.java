@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ExecutorServiceConfig;
-import com.metamx.common.concurrent.ExecutorServices;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -38,17 +37,14 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.SegmentLoader;
-import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.metrics.ServerMonitor;
 import com.metamx.druid.query.MetricsEmittingExecutorService;
+import com.metamx.druid.query.PriorityExecutorService;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
-import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.Monitor;
 import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.security.AWSCredentials;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
@@ -101,13 +97,15 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     final List<Monitor> monitors = getMonitors();
     final QueryRunnerFactoryConglomerate conglomerate = getConglomerate();
 
+    final ExecutorService innerExecutorService = PriorityExecutorService.create(
+        getLifecycle(),
+        getConfigFactory().buildWithReplacements(
+            ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
+        )
+    );
+
     final ExecutorService executorService = new MetricsEmittingExecutorService(
-        ExecutorServices.create(
-            getLifecycle(),
-            getConfigFactory().buildWithReplacements(
-                ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
-            )
-        ),
+        innerExecutorService,
         emitter,
         new ServiceMetricEvent.Builder()
     );

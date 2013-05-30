@@ -49,6 +49,7 @@ import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.query.CacheStrategy;
 import com.metamx.druid.query.MetricManipulationFn;
+import com.metamx.druid.query.Queries;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.QueryToolChestWarehouse;
@@ -123,15 +124,18 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final boolean populateCache = Boolean.parseBoolean(query.getContextValue("populateCache", "true"))
                                   && strategy != null;
     final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+    final String priority = query.getContextValue("priority", Integer.toString(Queries.Priority.NORMAL.ordinal()));
+
+    final Query<T> prioritizedQuery = query.withOverriddenContext(ImmutableMap.of("priority", priority));
 
     final Query<T> rewrittenQuery;
     if (populateCache) {
-      rewrittenQuery = query.withOverriddenContext(ImmutableMap.of("bySegment", "true", "intermediate", "true"));
+      rewrittenQuery = prioritizedQuery.withOverriddenContext(ImmutableMap.of("bySegment", "true", "intermediate", "true"));
     } else {
-      rewrittenQuery = query.withOverriddenContext(ImmutableMap.of("intermediate", "true"));
+      rewrittenQuery = prioritizedQuery.withOverriddenContext(ImmutableMap.of("intermediate", "true"));
     }
 
-    VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+    VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(prioritizedQuery.getDataSource());
     if (timeline == null) {
       return Sequences.empty();
     }
@@ -147,7 +151,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     // Let tool chest filter out unneeded segments
     final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
-        toolChest.filterSegments(query, serversLookup);
+        toolChest.filterSegments(prioritizedQuery, serversLookup);
 
     for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
       for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
@@ -162,7 +166,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final byte[] queryCacheKey;
     if (strategy != null) {
-      queryCacheKey = strategy.computeCacheKey(query);
+      queryCacheKey = strategy.computeCacheKey(prioritizedQuery);
     } else {
       queryCacheKey = null;
     }

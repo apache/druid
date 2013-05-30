@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.primitives.Ints;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.Sequence;
@@ -99,8 +100,19 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                       public Future<List<T>> apply(final QueryRunner<T> input)
                       {
                         return exec.submit(
-                            new Callable<List<T>>()
+                            new PrioritizedCallable<List<T>>()
                             {
+                              @Override
+                              public int getPriority()
+                              {
+                                return Ints.tryParse(
+                                    query.getContextValue(
+                                        "priority",
+                                        Integer.toString(Queries.Priority.NORMAL.ordinal())
+                                    )
+                                );
+                              }
+
                               @Override
                               public List<T> call() throws Exception
                               {
