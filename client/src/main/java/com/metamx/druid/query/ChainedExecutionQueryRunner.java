@@ -24,7 +24,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.Sequence;
@@ -35,7 +34,6 @@ import com.metamx.druid.Query;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -105,12 +103,12 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                               @Override
                               public int getPriority()
                               {
-                                return Ints.tryParse(
+                                return Queries.Priority.valueOf(
                                     query.getContextValue(
                                         "priority",
-                                        Integer.toString(Queries.Priority.NORMAL.ordinal())
+                                        Queries.Priority.NORMAL.name()
                                     )
-                                );
+                                ).ordinal();
                               }
 
                               @Override

@@ -116,9 +116,26 @@ public class PriorityExecutorService extends AbstractExecutorService
   }
 
   @Override
-  protected <T> RunnableFuture<T> newTaskFor(Callable<T> tCallable)
+  protected <T> RunnableFuture<T> newTaskFor(final Callable<T> tCallable)
   {
-    return new PrioritizedFuture<T>((PrioritizedCallable) tCallable);
+    Callable<T> theCallable = tCallable;
+    if (!(tCallable instanceof PrioritizedCallable)) {
+      theCallable = new PrioritizedCallable<T>()
+      {
+        @Override
+        public int getPriority()
+        {
+          return Queries.Priority.NORMAL.ordinal();
+        }
+
+        @Override
+        public T call() throws Exception
+        {
+          return tCallable.call();
+        }
+      };
+    }
+    return new PrioritizedFuture<T>((PrioritizedCallable) theCallable);
   }
 
   private static class PrioritizedFuture<V> extends FutureTask<V> implements Comparable<PrioritizedFuture>

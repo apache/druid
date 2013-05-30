@@ -124,13 +124,20 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final boolean populateCache = Boolean.parseBoolean(query.getContextValue("populateCache", "true"))
                                   && strategy != null;
     final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
-    final String priority = query.getContextValue("priority", Integer.toString(Queries.Priority.NORMAL.ordinal()));
+    final String priority = query.getContextValue("priority", Queries.Priority.NORMAL.name());
 
     final Query<T> prioritizedQuery = query.withOverriddenContext(ImmutableMap.of("priority", priority));
 
     final Query<T> rewrittenQuery;
     if (populateCache) {
-      rewrittenQuery = prioritizedQuery.withOverriddenContext(ImmutableMap.of("bySegment", "true", "intermediate", "true"));
+      rewrittenQuery = prioritizedQuery.withOverriddenContext(
+          ImmutableMap.of(
+              "bySegment",
+              "true",
+              "intermediate",
+              "true"
+          )
+      );
     } else {
       rewrittenQuery = prioritizedQuery.withOverriddenContext(ImmutableMap.of("intermediate", "true"));
     }
