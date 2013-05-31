@@ -219,6 +219,7 @@ public class TaskQueue
 
     try {
       Preconditions.checkState(active, "Queue is not active!");
+      Preconditions.checkNotNull(task, "task");
 
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
       // insert the task into our queue.
