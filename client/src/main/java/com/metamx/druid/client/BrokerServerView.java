@@ -127,15 +127,15 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
-  private void addServer(DruidServer server)
+  private QueryableDruidServer addServer(DruidServer server)
   {
-    QueryableDruidServer exists = clients.put(
-        server.getName(),
-        new QueryableDruidServer(server, makeDirectClient(server))
-    );
+    QueryableDruidServer retVal = new QueryableDruidServer(server, makeDirectClient(server));
+    QueryableDruidServer exists = clients.put(server.getName(), retVal);
     if (exists != null) {
-      log.warn("QueryRunner for server[%s] already existed!?", server);
+      log.warn("QueryRunner for server[%s] already existed!? Well it's getting replaced", server);
     }
+
+    return retVal;
   }
 
   private DirectDruidClient makeDirectClient(DruidServer server)
@@ -143,12 +143,12 @@ public class BrokerServerView implements TimelineServerView
     return new DirectDruidClient(warehose, smileMapper, httpClient, server.getHost());
   }
 
-  private void removeServer(DruidServer server)
+  private QueryableDruidServer removeServer(DruidServer server)
   {
-    clients.remove(server.getName());
     for (DataSegment segment : server.getSegments().values()) {
       serverRemovedSegment(server, segment);
     }
+    return clients.remove(server.getName());
   }
 
   private void serverAddedSegment(final DruidServer server, final DataSegment segment)
@@ -171,10 +171,11 @@ public class BrokerServerView implements TimelineServerView
         selectors.put(segmentId, selector);
       }
 
-      if (!clients.containsKey(server.getName())) {
-        addServer(server);
+      QueryableDruidServer queryableDruidServer = clients.get(server.getName());
+      if (queryableDruidServer == null) {
+        queryableDruidServer = addServer(server);
       }
-      selector.addServer(clients.get(server.getName()));
+      selector.addServer(queryableDruidServer);
     }
   }
 
@@ -236,6 +237,7 @@ public class BrokerServerView implements TimelineServerView
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
         log.error("WTF?! No QueryableDruidServer found for %s", server.getName());
+        return null;
       }
       return queryableDruidServer.getClient();
     }

@@ -255,7 +255,8 @@ public class ServerManager implements QuerySegmentWalker
                             );
                           }
                         }
-                    );
+                    )
+                    .filter(Predicates.<QueryRunner<T>>notNull());
               }
             }
         )
@@ -313,6 +314,9 @@ public class ServerManager implements QuerySegmentWalker
                 );
               }
             }
+        )
+        .filter(
+            Predicates.<QueryRunner<T>>notNull()
         );
 
     return new FinalizeResultsQueryRunner<T>(toolChest.mergeResults(factory.mergeRunners(exec, adapters)), toolChest);

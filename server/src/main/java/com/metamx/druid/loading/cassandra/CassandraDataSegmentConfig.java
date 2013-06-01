@@ -17,17 +17,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.index.column;
+package com.metamx.druid.loading.cassandra;
 
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import org.skife.config.Config;
+import org.skife.config.Default;
 
 /**
+ * Cassandra Config
+ * 
+ * @author boneill42
  */
-public interface BitmapIndex
+public abstract class CassandraDataSegmentConfig
 {
-  public int getCardinality();
-  public String getValue(int index);
-  public boolean hasNulls();
-  public ImmutableConciseSet getConciseSet(String value);
-  public ImmutableConciseSet getConciseSet(int idx);
+  @Config("druid.pusher.cassandra.host")
+  @Default("")
+  public abstract String getHost();
+
+  @Config("druid.pusher.cassandra.keyspace")
+  @Default("")
+  public abstract String getKeyspace();
 }

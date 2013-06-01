@@ -22,18 +22,22 @@ package com.metamx.druid.realtime;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.index.v1.SpatialDimensionSchema;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  */
 public class Schema
 {
   private final String dataSource;
+  private final List<SpatialDimensionSchema> spatialDimensions;
   private final AggregatorFactory[] aggregators;
   private final QueryGranularity indexGranularity;
   private final ShardSpec shardSpec;
@@ -41,12 +45,15 @@ public class Schema
   @JsonCreator
   public Schema(
       @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions,
       @JsonProperty("aggregators") AggregatorFactory[] aggregators,
       @JsonProperty("indexGranularity") QueryGranularity indexGranularity,
       @JsonProperty("shardSpec") ShardSpec shardSpec
   )
   {
     this.dataSource = dataSource;
+    this.spatialDimensions = (spatialDimensions == null) ? Lists.<SpatialDimensionSchema>newArrayList()
+                                                                     : spatialDimensions;
     this.aggregators = aggregators;
     this.indexGranularity = indexGranularity;
     this.shardSpec = shardSpec == null ? new NoneShardSpec() : shardSpec;
@@ -60,6 +67,12 @@ public class Schema
   public String getDataSource()
   {
     return dataSource;
+  }
+
+  @JsonProperty("spatialDimensions")
+  public List<SpatialDimensionSchema> getSpatialDimensions()
+  {
+    return spatialDimensions;
   }
 
   @JsonProperty
@@ -85,8 +98,10 @@ public class Schema
   {
     return "Schema{" +
            "dataSource='" + dataSource + '\'' +
+           ", spatialDimensions=" + spatialDimensions +
            ", aggregators=" + (aggregators == null ? null : Arrays.asList(aggregators)) +
            ", indexGranularity=" + indexGranularity +
+           ", shardSpec=" + shardSpec +
            '}';
   }
 }

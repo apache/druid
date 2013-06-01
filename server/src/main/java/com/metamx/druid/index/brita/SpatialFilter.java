@@ -58,7 +58,7 @@ public class SpatialFilter implements Filter
               @Override
               public boolean hasNext()
               {
-                return dimValueIndexesIter.hasNext() || iter.hasNext();
+                return dimValueIndexesIter.hasNext() || (iter != null && iter.hasNext());
               }
 
               @Override

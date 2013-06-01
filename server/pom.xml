@@ -18,7 +18,8 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metamx.druid</groupId>
     <artifactId>druid-server</artifactId>
@@ -28,7 +29,7 @@
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.4.17-SNAPSHOT</version>
+        <version>0.4.33-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -194,6 +195,11 @@
             <artifactId>java-xmlbuilder</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>com.netflix.astyanax</groupId>
+            <artifactId>astyanax</artifactId>
+            <version>1.0.1</version>
+        </dependency>
         <!-- Dependencies required for jets3t -->
 
         <!-- Tests -->
@@ -226,7 +232,6 @@
             <artifactId>curator-test</artifactId>
             <scope>test</scope>
         </dependency>
-
 
 
     </dependencies>

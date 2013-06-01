@@ -148,7 +148,18 @@ public class ServerInventoryView implements ServerView, InventoryView
           @Override
           public DruidServer addInventory(final DruidServer container, String inventoryKey, final DataSegment inventory)
           {
-            log.info("Server[%s] added segment[%s]", container.getName(), inventory);
+            log.info("Server[%s] added segment[%s]", container.getName(), inventoryKey);
+
+            if (container.getSegment(inventoryKey) != null) {
+              log.warn(
+                  "Not adding or running callbacks for existing segment[%s] on server[%s]",
+                  inventoryKey,
+                  container.getName()
+              );
+
+              return container;
+            }
+
             final DruidServer retVal = container.addDataSegment(inventoryKey, inventory);
 
             runSegmentCallbacks(
@@ -170,6 +181,17 @@ public class ServerInventoryView implements ServerView, InventoryView
           {
             log.info("Server[%s] removed segment[%s]", container.getName(), inventoryKey);
             final DataSegment segment = container.getSegment(inventoryKey);
+
+            if (segment == null) {
+              log.warn(
+                  "Not running cleanup or callbacks for non-existing segment[%s] on server[%s]",
+                  inventoryKey,
+                  container.getName()
+              );
+
+              return container;
+            }
+
             final DruidServer retVal = container.removeDataSegment(inventoryKey);
 
             runSegmentCallbacks(

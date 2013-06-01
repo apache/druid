@@ -119,13 +119,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public Iterable<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran)
   {
     Interval actualIntervalTmp = interval;
-    final Interval indexInterval = getInterval();
-
-    if (!actualIntervalTmp.overlaps(indexInterval)) {
-      return ImmutableList.of();
-    }
 
     final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
+    if (!actualIntervalTmp.overlaps(dataInterval)) {
+      return ImmutableList.of();
+    }
 
     if (actualIntervalTmp.getStart().isBefore(dataInterval.getStart())) {
       actualIntervalTmp = actualIntervalTmp.withStart(dataInterval.getStart());
@@ -229,7 +227,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                             numAdvanced++;
                           }
                         } else {
-                          Iterators.skip(baseIter, numAdvanced);
+                          Iterators.advance(baseIter, numAdvanced);
                           if (baseIter.hasNext()) {
                             currEntry.set(baseIter.next());
                           }

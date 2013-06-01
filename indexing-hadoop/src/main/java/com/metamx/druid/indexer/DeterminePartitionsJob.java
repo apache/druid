@@ -90,8 +90,8 @@ import java.util.Set;
  *   put all those rows in the same partition, and that partition may be much larger than the target size.</li>
  * </ul>
  *
- * "Best" means a very high cardinality dimension, or, if none exist, the dimension that minimizes segment size
- * variance.
+ * "Best" means a very high cardinality dimension, or, if none exist, the dimension that minimizes variation of
+ * segment size relative to the target.
  */
 public class DeterminePartitionsJob implements Jobby
 {
@@ -692,8 +692,8 @@ public class DeterminePartitionsJob implements Jobby
       }
 
       int maxCardinality = Integer.MIN_VALUE;
-      long minVariance = Long.MAX_VALUE;
-      DimPartitions minVariancePartitions = null;
+      long minDistance = Long.MAX_VALUE;
+      DimPartitions minDistancePartitions = null;
       DimPartitions maxCardinalityPartitions = null;
 
       for(final DimPartitions dimPartitions : dimPartitionss.values()) {
@@ -722,16 +722,16 @@ public class DeterminePartitionsJob implements Jobby
         }
 
         final int cardinality = dimPartitions.getCardinality();
-        final long variance = dimPartitions.getVariance();
+        final long distance = dimPartitions.getDistanceSquaredFromTarget(config.getTargetPartitionSize());
 
         if(cardinality > maxCardinality) {
           maxCardinality = cardinality;
           maxCardinalityPartitions = dimPartitions;
         }
 
-        if(variance < minVariance) {
-          minVariance = variance;
-          minVariancePartitions = dimPartitions;
+        if(distance < minDistance) {
+          minDistance = distance;
+          minDistancePartitions = dimPartitions;
         }
       }
 
@@ -745,7 +745,7 @@ public class DeterminePartitionsJob implements Jobby
 
       final DimPartitions chosenPartitions = maxCardinality > HIGH_CARDINALITY_THRESHOLD
                                              ? maxCardinalityPartitions
-                                             : minVariancePartitions;
+                                             : minDistancePartitions;
 
       final List<ShardSpec> chosenShardSpecs = Lists.transform(
           chosenPartitions.partitions, new Function<DimPartition, ShardSpec>()
@@ -824,17 +824,15 @@ public class DeterminePartitionsJob implements Jobby
       return sum;
     }
 
-    public long getVariance()
+    public long getDistanceSquaredFromTarget(long target)
     {
-      final long meanRows = getRows() / partitions.size();
-
-      long variance = 0;
+      long distance = 0;
       for(final DimPartition dimPartition : partitions) {
-        variance += (dimPartition.rows - meanRows) * (dimPartition.rows - meanRows);
+        distance += (dimPartition.rows - target) * (dimPartition.rows - target);
       }
 
-      variance /= partitions.size();
-      return variance;
+      distance /= partitions.size();
+      return distance;
     }
 
     public int getRows()

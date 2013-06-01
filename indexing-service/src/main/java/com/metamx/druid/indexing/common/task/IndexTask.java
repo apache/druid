@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
+import com.metamx.druid.index.v1.SpatialDimensionSchema;
 import com.metamx.druid.indexer.granularity.GranularitySpec;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
@@ -34,6 +35,7 @@ import com.metamx.druid.indexing.common.actions.SpawnTasksAction;
 import com.metamx.druid.indexing.common.actions.TaskActionClient;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.druid.realtime.Schema;
+import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.druid.shard.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -44,6 +46,9 @@ public class IndexTask extends AbstractTask
 {
   @JsonIgnore
   private final GranularitySpec granularitySpec;
+
+  @JsonProperty
+  private final List<SpatialDimensionSchema> spatialDimensions;
 
   @JsonIgnore
   private final AggregatorFactory[] aggregators;
@@ -67,6 +72,7 @@ public class IndexTask extends AbstractTask
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
+      @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions,
       @JsonProperty("aggregators") AggregatorFactory[] aggregators,
       @JsonProperty("indexGranularity") QueryGranularity indexGranularity,
       @JsonProperty("targetPartitionSize") long targetPartitionSize,
@@ -85,6 +91,9 @@ public class IndexTask extends AbstractTask
     );
 
     this.granularitySpec = Preconditions.checkNotNull(granularitySpec, "granularitySpec");
+    this.spatialDimensions = (spatialDimensions == null)
+                             ? Lists.<SpatialDimensionSchema>newArrayList()
+                             : spatialDimensions;
     this.aggregators = aggregators;
     this.indexGranularity = indexGranularity;
     this.targetPartitionSize = targetPartitionSize;
@@ -107,6 +116,7 @@ public class IndexTask extends AbstractTask
                 firehoseFactory,
                 new Schema(
                     getDataSource(),
+                    spatialDimensions,
                     aggregators,
                     indexGranularity,
                     new NoneShardSpec()
@@ -125,6 +135,7 @@ public class IndexTask extends AbstractTask
                 firehoseFactory,
                 new Schema(
                     getDataSource(),
+                    spatialDimensions,
                     aggregators,
                     indexGranularity,
                     new NoneShardSpec()

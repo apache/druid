@@ -24,7 +24,7 @@
     <groupId>com.metamx</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.4.17-SNAPSHOT</version>
+    <version>0.4.33-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -40,7 +40,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.22.3</metamx.java-util.version>
-        <apache.curator.version>2.0.1-21-22</apache.curator.version>
+        <apache.curator.version>2.0.2-21-22</apache.curator.version>
     </properties>
 
     <modules>
@@ -163,7 +163,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>11.0.1</version>
+                <version>14.0.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject</groupId>

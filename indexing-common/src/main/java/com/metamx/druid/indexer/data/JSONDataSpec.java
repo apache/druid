@@ -19,6 +19,7 @@
 
 package com.metamx.druid.indexer.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.metamx.common.parsers.JSONParser;
@@ -34,6 +35,7 @@ public class JSONDataSpec implements DataSpec
   private final List<String> dimensions;
   private final List<SpatialDimensionSchema> spatialDimensions;
 
+  @JsonCreator
   public JSONDataSpec(
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions

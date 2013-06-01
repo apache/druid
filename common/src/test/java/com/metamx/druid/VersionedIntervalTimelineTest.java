@@ -1068,6 +1068,27 @@ public class VersionedIntervalTimelineTest
     );
   }
 
+  //     |----3---||---1---|
+  //   |---2---|
+  @Test
+  public void testOverlapCausesNullEntries() throws Exception
+  {
+    timeline = makeStringIntegerTimeline();
+
+    add("2011-01-01T12/2011-01-02", "3", 3);
+    add("2011-01-02/3011-01-03", "1", 1);
+    add("2011-01-01/2011-01-02", "2", 2);
+
+    assertValues(
+        Arrays.asList(
+            createExpected("2011-01-01/2011-01-01T12", "2", 2),
+            createExpected("2011-01-01T12/2011-01-02", "3", 3),
+            createExpected("2011-01-02/3011-01-03", "1", 1)
+        ),
+        timeline.lookup(new Interval("2011-01-01/3011-01-03"))
+    );
+  }
+
   //    1|----|    |----|
   //   2|------|  |------|
   //  3|------------------|

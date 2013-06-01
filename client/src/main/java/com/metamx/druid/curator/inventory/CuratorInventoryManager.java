@@ -44,10 +44,10 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * An InventoryManager watches updates to inventory on Zookeeper (or some other discovery-like service publishing
  * system).  It is built up on two object types: containers and inventory objects.
- *
+ * <p/>
  * The logic of the InventoryManager just maintains a local cache of the containers and inventory it sees on ZK.  It
  * provides methods for getting at the container objects, which house the actual individual pieces of inventory.
- *
+ * <p/>
  * A Strategy is provided to the constructor of an Inventory manager, this strategy provides all of the
  * object-specific logic to serialize, deserialize, compose and alter the container and inventory objects.
  */
@@ -128,8 +128,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
       final ContainerHolder containerHolder = containers.remove(containerKey);
       if (containerHolder == null) {
         log.wtf("!?  Got key[%s] from keySet() but it didn't have a value!?", containerKey);
-      }
-      else {
+      } else {
         // This close() call actually calls shutdownNow() on the executor registered with the Cache object...
         containerHolder.getCache().close();
       }
@@ -202,52 +201,60 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
       switch (event.getType()) {
         case CHILD_ADDED:
-          container = strategy.deserializeContainer(child.getData());
+          synchronized (lock) {
+            container = strategy.deserializeContainer(child.getData());
 
-          // This would normally be a race condition, but the only thing that should be mutating the containers
-          // map is this listener, which should never run concurrently.  If the same container is going to disappear
-          // and come back, we expect a removed event in between.
-          if (containers.containsKey(containerKey)) {
-            log.error("New node[%s] but there was already one.  That's not good, ignoring new one.", child.getPath());
-          }
+            // This would normally be a race condition, but the only thing that should be mutating the containers
+            // map is this listener, which should never run concurrently.  If the same container is going to disappear
+            // and come back, we expect a removed event in between.
+            if (containers.containsKey(containerKey)) {
+              log.error("New node[%s] but there was already one.  That's not good, ignoring new one.", child.getPath());
+            } else {
+              final String inventoryPath = String.format("%s/%s", config.getInventoryPath(), containerKey);
+              PathChildrenCache inventoryCache = cacheFactory.make(curatorFramework, inventoryPath);
+              inventoryCache.getListenable().addListener(new InventoryCacheListener(containerKey, inventoryPath));
 
-          final String inventoryPath = String.format("%s/%s", config.getInventoryPath(), containerKey);
-          PathChildrenCache inventoryCache = cacheFactory.make(curatorFramework, inventoryPath);
-          inventoryCache.getListenable().addListener(new InventoryCacheListener(containerKey, inventoryPath));
+              containers.put(containerKey, new ContainerHolder(container, inventoryCache));
 
-          containers.put(containerKey, new ContainerHolder(container, inventoryCache));
+              log.info("Starting inventory cache for %s, inventoryPath %s", containerKey, inventoryPath);
+              inventoryCache.start();
+              strategy.newContainer(container);
+            }
 
-          inventoryCache.start();
-          strategy.newContainer(container);
-
-          break;
-        case CHILD_REMOVED:
-          final ContainerHolder removed = containers.remove(containerKey);
-          if (removed == null) {
-            log.warn("Container[%s] removed that wasn't a container!?", child.getPath());
             break;
           }
-
-          // This close() call actually calls shutdownNow() on the executor registered with the Cache object, it
-          // better have its own executor or ignore shutdownNow() calls...
-          removed.getCache().close();
-          strategy.deadContainer(removed.getContainer());
-
-          break;
-        case CHILD_UPDATED:
-          container = strategy.deserializeContainer(child.getData());
-
-          ContainerHolder oldContainer = containers.get(containerKey);
-          if (oldContainer == null) {
-            log.warn("Container update[%s], but the old container didn't exist!?  Ignoring.", child.getPath());
-          }
-          else {
-            synchronized (oldContainer) {
-              oldContainer.setContainer(strategy.updateContainer(oldContainer.getContainer(), container));
+        case CHILD_REMOVED:
+          synchronized (lock) {
+            final ContainerHolder removed = containers.remove(containerKey);
+            if (removed == null) {
+              log.warn("Container[%s] removed that wasn't a container!?", child.getPath());
+              break;
             }
-          }
 
-          break;
+            // This close() call actually calls shutdownNow() on the executor registered with the Cache object, it
+            // better have its own executor or ignore shutdownNow() calls...
+            log.info("Closing inventory cache for %s. Also removing listeners.", containerKey);
+            removed.getCache().getListenable().clear();
+            removed.getCache().close();
+            strategy.deadContainer(removed.getContainer());
+
+            break;
+          }
+        case CHILD_UPDATED:
+          synchronized (lock) {
+            container = strategy.deserializeContainer(child.getData());
+
+            ContainerHolder oldContainer = containers.get(containerKey);
+            if (oldContainer == null) {
+              log.warn("Container update[%s], but the old container didn't exist!?  Ignoring.", child.getPath());
+            } else {
+              synchronized (oldContainer) {
+                oldContainer.setContainer(strategy.updateContainer(oldContainer.getContainer(), container));
+              }
+            }
+
+            break;
+          }
       }
     }
 
@@ -260,6 +267,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
       {
         this.containerKey = containerKey;
         this.inventoryPath = inventoryPath;
+
+        log.info("Created new InventoryCacheListener for %s", inventoryPath);
       }
 
       @Override

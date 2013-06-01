@@ -137,13 +137,12 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
   public Iterable<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran)
   {
     Interval actualInterval = interval;
-    final Interval indexInterval = getInterval();
-
-    if (!actualInterval.overlaps(indexInterval)) {
-      return ImmutableList.of();
-    }
 
     final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
+
+    if (!actualInterval.overlaps(dataInterval)) {
+      return ImmutableList.of();
+    }
 
     if (actualInterval.getStart().isBefore(dataInterval.getStart())) {
       actualInterval = actualInterval.withStart(dataInterval.getStart());
@@ -238,8 +237,10 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
     if (!column.getCapabilities().hasBitmapIndexes()) {
       return new ImmutableConciseSet();
     }
+    // This is a workaround given the current state of indexing, I feel shame
+    final int index = column.getBitmapIndex().hasNulls() ? idx + 1 : idx;
 
-    return column.getBitmapIndex().getConciseSet(idx);
+    return column.getBitmapIndex().getConciseSet(index);
   }
 
   public ImmutableRTree getRTreeSpatialIndex(String dimension)
@@ -285,7 +286,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
 
       final Map<String, GenericColumn> genericColumnCache = Maps.newHashMap();
       final Map<String, ComplexColumn> complexColumnCache = Maps.newHashMap();
-      final Map<String, Object> objectColumnCache  = Maps.newHashMap();
+      final Map<String, Object> objectColumnCache = Maps.newHashMap();
 
       final GenericColumn timestamps = index.getTimeColumn().getGenericColumn();
 
@@ -508,27 +509,25 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                       if (cachedColumnVals == null) {
                         Column holder = index.getColumn(columnName);
 
-                        if(holder != null) {
+                        if (holder != null) {
                           final ColumnCapabilities capabilities = holder.getCapabilities();
 
-                          if(capabilities.hasMultipleValues()) {
+                          if (capabilities.hasMultipleValues()) {
                             throw new UnsupportedOperationException(
-                              "makeObjectColumnSelector does not support multivalued columns"
+                                "makeObjectColumnSelector does not support multivalued columns"
                             );
                           }
 
-                          if(capabilities.isDictionaryEncoded()) {
+                          if (capabilities.isDictionaryEncoded()) {
                             cachedColumnVals = holder.getDictionaryEncoding();
-                          }
-                          else if(capabilities.getType() == ValueType.COMPLEX) {
+                          } else if (capabilities.getType() == ValueType.COMPLEX) {
                             cachedColumnVals = holder.getComplexColumn();
-                          }
-                          else {
+                          } else {
                             cachedColumnVals = holder.getGenericColumn();
                           }
                         }
 
-                        if(cachedColumnVals != null) {
+                        if (cachedColumnVals != null) {
                           objectColumnCache.put(columnName, cachedColumnVals);
                         }
                       }
@@ -537,11 +536,11 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                         return null;
                       }
 
-                      if(cachedColumnVals instanceof GenericColumn) {
+                      if (cachedColumnVals instanceof GenericColumn) {
                         final GenericColumn columnVals = (GenericColumn) cachedColumnVals;
                         final ValueType type = columnVals.getType();
 
-                        if(type == ValueType.FLOAT) {
+                        if (type == ValueType.FLOAT) {
                           return new ObjectColumnSelector<Float>()
                           {
                             @Override
@@ -557,7 +556,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                             }
                           };
                         }
-                        if(type == ValueType.LONG) {
+                        if (type == ValueType.LONG) {
                           return new ObjectColumnSelector<Long>()
                           {
                             @Override
@@ -573,7 +572,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                             }
                           };
                         }
-                        if(type == ValueType.STRING) {
+                        if (type == ValueType.STRING) {
                           return new ObjectColumnSelector<String>()
                           {
                             @Override
@@ -609,7 +608,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                         };
                       }
 
-                      final ComplexColumn columnVals = (ComplexColumn)cachedColumnVals;
+                      final ComplexColumn columnVals = (ComplexColumn) cachedColumnVals;
                       return new ObjectColumnSelector()
                       {
                         @Override
@@ -647,8 +646,8 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                 Closeables.closeQuietly(complexColumn);
               }
               for (Object column : complexColumnCache.values()) {
-                if(column instanceof Closeable) {
-                  Closeables.closeQuietly((Closeable)column);
+                if (column instanceof Closeable) {
+                  Closeables.closeQuietly((Closeable) column);
                 }
               }
             }
@@ -946,26 +945,24 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                       if (cachedColumnVals == null) {
                         Column holder = index.getColumn(columnName);
 
-                        if(holder != null) {
-                          if(holder.getCapabilities().hasMultipleValues()) {
+                        if (holder != null) {
+                          if (holder.getCapabilities().hasMultipleValues()) {
                             throw new UnsupportedOperationException(
-                              "makeObjectColumnSelector does not support multivalued columns"
+                                "makeObjectColumnSelector does not support multivalued columns"
                             );
                           }
                           final ValueType type = holder.getCapabilities().getType();
 
-                          if(holder.getCapabilities().isDictionaryEncoded()) {
+                          if (holder.getCapabilities().isDictionaryEncoded()) {
                             cachedColumnVals = holder.getDictionaryEncoding();
-                          }
-                          else if(type == ValueType.COMPLEX) {
+                          } else if (type == ValueType.COMPLEX) {
                             cachedColumnVals = holder.getComplexColumn();
-                          }
-                          else {
+                          } else {
                             cachedColumnVals = holder.getGenericColumn();
                           }
                         }
 
-                        if(cachedColumnVals != null) {
+                        if (cachedColumnVals != null) {
                           objectColumnCache.put(columnName, cachedColumnVals);
                         }
                       }
@@ -974,11 +971,11 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                         return null;
                       }
 
-                      if(cachedColumnVals instanceof GenericColumn) {
+                      if (cachedColumnVals instanceof GenericColumn) {
                         final GenericColumn columnVals = (GenericColumn) cachedColumnVals;
                         final ValueType type = columnVals.getType();
 
-                        if(type == ValueType.FLOAT) {
+                        if (type == ValueType.FLOAT) {
                           return new ObjectColumnSelector<Float>()
                           {
                             @Override
@@ -994,7 +991,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                             }
                           };
                         }
-                        if(type == ValueType.LONG) {
+                        if (type == ValueType.LONG) {
                           return new ObjectColumnSelector<Long>()
                           {
                             @Override
@@ -1010,7 +1007,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                             }
                           };
                         }
-                        if(type == ValueType.STRING) {
+                        if (type == ValueType.STRING) {
                           return new ObjectColumnSelector<String>()
                           {
                             @Override
@@ -1046,7 +1043,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                         };
                       }
 
-                      final ComplexColumn columnVals = (ComplexColumn)cachedColumnVals;
+                      final ComplexColumn columnVals = (ComplexColumn) cachedColumnVals;
                       return new ObjectColumnSelector()
                       {
                         @Override
@@ -1082,7 +1079,9 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                 Closeables.closeQuietly(complexColumn);
               }
               for (Object column : objectColumnCache.values()) {
-                if(column instanceof Closeable) Closeables.closeQuietly((Closeable)column);
+                if (column instanceof Closeable) {
+                  Closeables.closeQuietly((Closeable) column);
+                }
               }
             }
           }
