@@ -58,6 +58,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
+import org.mortbay.servlet.GzipFilter;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.List;
@@ -214,6 +215,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
         new ServletHolder(new QueryServlet(getJsonMapper(), getSmileMapper(), texasRanger, getEmitter(), getRequestLogger())),
         "/druid/v2/*"
     );
+    root.addFilter(GzipFilter.class, "/*", 0);
 
     root.addEventListener(new GuiceServletConfig(injector));
     root.addFilter(GuiceFilter.class, "/druid/v2/datasources/*", 0);
