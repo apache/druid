@@ -401,18 +401,20 @@ public class InfoResource
   }
 
   @GET
-  @Path("/datasources/{dataSourceName}")
+  @Path("/rules/{dataSourceName}")
   @Produces("application/json")
-  public Response getSegmentDataSource(
-      @PathParam("dataSourceName") final String dataSourceName
+  public Response getDatasourceRules(
+      @PathParam("dataSourceName") final String dataSourceName,
+      @QueryParam("full") final String full
+
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
-    if (dataSource == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+    if (full != null) {
+      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
+                     .build();
     }
-
-    return Response.status(Response.Status.OK).entity(dataSource).build();
+    return Response.ok(databaseRuleManager.getRules(dataSourceName))
+                   .build();
   }
 
   @DELETE
