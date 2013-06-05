@@ -41,6 +41,7 @@ import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
 import com.metamx.druid.shard.SingleDimensionShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -49,6 +50,16 @@ import java.util.Set;
 
 public class IndexDeterminePartitionsTask extends AbstractTask
 {
+  private static String makeTaskId(String groupId, DateTime start, DateTime end)
+  {
+    return String.format(
+        "%s_partitions_%s_%s",
+        groupId,
+        start,
+        end
+    );
+  }
+
   @JsonIgnore
   private final FirehoseFactory firehoseFactory;
 
@@ -75,13 +86,9 @@ public class IndexDeterminePartitionsTask extends AbstractTask
   )
   {
     super(
-        id != null ? id : String.format(
-            "%s_partitions_%s_%s",
-            groupId,
-            interval.getStart(),
-            interval.getEnd()
-        ),
+        id != null ? id : makeTaskId(groupId, interval.getStart(), interval.getEnd()),
         groupId,
+        makeTaskId(groupId, interval.getStart(), interval.getEnd()),
         schema.getDataSource(),
         Preconditions.checkNotNull(interval, "interval")
     );

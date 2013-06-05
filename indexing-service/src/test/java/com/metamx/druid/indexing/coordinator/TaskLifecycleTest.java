@@ -273,90 +273,6 @@ public class TaskLifecycleTest
   @Test
   public void testRealtimeishTask() throws Exception
   {
-    class RealtimeishTask extends AbstractTask
-    {
-      RealtimeishTask()
-      {
-        super("rt1", "rt", "foo", null);
-      }
-
-      @Override
-      public String getType()
-      {
-        return "realtime_test";
-      }
-
-      @Override
-      public TaskStatus run(TaskToolbox toolbox) throws Exception
-      {
-        final Interval interval1 = new Interval("2010-01-01T00/PT1H");
-        final Interval interval2 = new Interval("2010-01-01T01/PT1H");
-
-        // Sort of similar to what realtime tasks do:
-
-        // Acquire lock for first interval
-        final TaskLock lock1 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval1));
-        final List<TaskLock> locks1 = toolbox.getTaskActionClient().submit(new LockListAction());
-
-        // (Confirm lock sanity)
-        Assert.assertEquals("lock1 interval", interval1, lock1.getInterval());
-        Assert.assertEquals("locks1", ImmutableList.of(lock1), locks1);
-
-        // Acquire lock for second interval
-        final TaskLock lock2 = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval2));
-        final List<TaskLock> locks2 = toolbox.getTaskActionClient().submit(new LockListAction());
-
-        // (Confirm lock sanity)
-        Assert.assertEquals("lock2 interval", interval2, lock2.getInterval());
-        Assert.assertEquals("locks2", ImmutableList.of(lock1, lock2), locks2);
-
-        // Push first segment
-        toolbox.getTaskActionClient()
-               .submit(
-                   new SegmentInsertAction(
-                       ImmutableSet.of(
-                           DataSegment.builder()
-                                      .dataSource("foo")
-                                      .interval(interval1)
-                                      .version(lock1.getVersion())
-                                      .build()
-                       )
-                   )
-               );
-
-        // Release first lock
-        toolbox.getTaskActionClient().submit(new LockReleaseAction(interval1));
-        final List<TaskLock> locks3 = toolbox.getTaskActionClient().submit(new LockListAction());
-
-        // (Confirm lock sanity)
-        Assert.assertEquals("locks3", ImmutableList.of(lock2), locks3);
-
-        // Push second segment
-        toolbox.getTaskActionClient()
-               .submit(
-                   new SegmentInsertAction(
-                       ImmutableSet.of(
-                           DataSegment.builder()
-                                      .dataSource("foo")
-                                      .interval(interval2)
-                                      .version(lock2.getVersion())
-                                      .build()
-                       )
-                   )
-               );
-
-        // Release second lock
-        toolbox.getTaskActionClient().submit(new LockReleaseAction(interval2));
-        final List<TaskLock> locks4 = toolbox.getTaskActionClient().submit(new LockListAction());
-
-        // (Confirm lock sanity)
-        Assert.assertEquals("locks4", ImmutableList.<TaskLock>of(), locks4);
-
-        // Exit
-        return TaskStatus.success(getId());
-      }
-    }
-
     final Task rtishTask = new RealtimeishTask();
     final TaskStatus status = runTask(rtishTask);
 
@@ -368,7 +284,7 @@ public class TaskLifecycleTest
   @Test
   public void testSimple() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractTask("id1", "id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
       @Override
       public String getType()
@@ -405,7 +321,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadInterval() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractTask("id1", "id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
       @Override
       public String getType()
@@ -439,7 +355,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadVersion() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractTask("id1", "id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
       @Override
       public String getType()

@@ -63,7 +63,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-@Path("/mmx/merger/v1")
+@Path("/mmx/indexer/v1")
 public class IndexerCoordinatorResource
 {
   private static final Logger log = new Logger(IndexerCoordinatorResource.class);

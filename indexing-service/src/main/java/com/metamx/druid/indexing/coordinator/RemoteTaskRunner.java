@@ -70,6 +70,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -113,6 +114,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   private final TaskRunnerWorkQueue runningTasks = new TaskRunnerWorkQueue();
   // tasks that have not yet run
   private final TaskRunnerWorkQueue pendingTasks = new TaskRunnerWorkQueue();
+  // idempotent task retry
+  private final Set<String> tasksToRetry = new ConcurrentSkipListSet<String>();
 
   private final ExecutorService runPendingTasksExec = Executors.newSingleThreadExecutor();
 
@@ -402,14 +405,19 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
 
   /**
    * Retries a task by inserting it back into the pending queue after a given delay.
-   * This method will also clean up any status paths that were associated with the task.
    *
    * @param taskRunnerWorkItem - the task to retry
-   * @param workerId           - the worker that was previously running this task
    */
-  private void retryTask(final TaskRunnerWorkItem taskRunnerWorkItem, final String workerId)
+  private void retryTask(final TaskRunnerWorkItem taskRunnerWorkItem)
   {
     final String taskId = taskRunnerWorkItem.getTask().getId();
+
+    if (tasksToRetry.contains(taskId)) {
+      return;
+    }
+
+    tasksToRetry.add(taskId);
+
     if (!taskRunnerWorkItem.getRetryPolicy().hasExceededRetryThreshold()) {
       log.info("Retry scheduled in %s for %s", taskRunnerWorkItem.getRetryPolicy().getRetryDelay(), taskId);
       scheduledExec.schedule(
@@ -419,6 +427,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
             public void run()
             {
               runningTasks.remove(taskId);
+              tasksToRetry.remove(taskId);
               addPendingTask(taskRunnerWorkItem);
             }
           },
@@ -469,7 +478,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
         log.info("Task %s switched from pending to running", taskId);
       } else {
         // Nothing running this task, announce it in ZK for a worker to run it
-        zkWorker = findWorkerForTask();
+        zkWorker = findWorkerForTask(taskRunnerWorkItem.getTask());
         if (zkWorker != null) {
           announceTask(zkWorker.getWorker(), taskRunnerWorkItem);
         }
@@ -518,14 +527,14 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     synchronized (statusLock) {
       while (!isWorkerRunningTask(theWorker.getHost(), task.getId())) {
         statusLock.wait(config.getTaskAssignmentTimeoutDuration().getMillis());
-        if (timeoutStopwatch.elapsedMillis() >= config.getTaskAssignmentTimeoutDuration().getMillis()) {
+        if (timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS) >= config.getTaskAssignmentTimeoutDuration().getMillis()) {
           log.error(
               "Something went wrong! %s never ran task %s after %s!",
               theWorker.getHost(),
               task.getId(),
               config.getTaskAssignmentTimeoutDuration()
           );
-          retryTask(runningTasks.get(task.getId()), theWorker.getHost());
+          retryTask(runningTasks.get(task.getId()));
           break;
         }
       }
@@ -546,8 +555,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
       final PathChildrenCache statusCache = new PathChildrenCache(cf, workerStatusPath, true);
       final ZkWorker zkWorker = new ZkWorker(
           worker,
-          statusCache,
-          jsonMapper
+          statusCache
       );
 
       // Add status listener to the watcher for status changes
@@ -568,7 +576,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
 
                     // This can fail if a worker writes a bogus status. Retry if so.
                     if (!taskStatus.getId().equals(taskId)) {
-                      retryTask(runningTasks.get(taskId), worker.getHost());
+                      retryTask(runningTasks.get(taskId));
                       return;
                     }
 
@@ -578,6 +586,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                         taskStatus.getStatusCode(),
                         taskId
                     );
+
 
                     // Synchronizing state with ZK
                     statusLock.notify();
@@ -589,6 +598,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                           worker.getHost(),
                           taskId
                       );
+                    } else {
+                      zkWorker.addTask(taskRunnerWorkItem);
                     }
 
                     if (taskStatus.isComplete()) {
@@ -597,6 +608,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                         if (result != null) {
                           ((SettableFuture<TaskStatus>) result).set(taskStatus);
                         }
+                        zkWorker.removeTask(taskRunnerWorkItem);
                       }
 
                       // Worker is done with this task
@@ -606,9 +618,11 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                     }
                   } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_REMOVED)) {
                     final String taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
-                    if (runningTasks.containsKey(taskId)) {
+                    TaskRunnerWorkItem taskRunnerWorkItem = runningTasks.get(taskId);
+                    if (taskRunnerWorkItem != null) {
                       log.info("Task %s just disappeared!", taskId);
-                      retryTask(runningTasks.get(taskId), worker.getHost());
+                      zkWorker.removeTask(taskRunnerWorkItem);
+                      retryTask(taskRunnerWorkItem);
                     }
                   }
                 }
@@ -644,9 +658,15 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     ZkWorker zkWorker = zkWorkers.get(worker.getHost());
     if (zkWorker != null) {
       try {
-        List<String> tasksToRetry = cf.getChildren()
-              .forPath(JOINER.join(config.getIndexerTaskPath(), worker.getHost()));
-        log.info("%s has %d pending tasks to retry", worker.getHost(), tasksToRetry.size());
+        Set<String> tasksToRetry = Sets.newHashSet(
+            cf.getChildren()
+              .forPath(JOINER.join(config.getIndexerTaskPath(), worker.getHost()))
+        );
+        tasksToRetry.addAll(
+            cf.getChildren()
+              .forPath(JOINER.join(config.getIndexerStatusPath(), worker.getHost()))
+        );
+        log.info("%s has %d tasks to retry", worker.getHost(), tasksToRetry.size());
 
         for (String taskId : tasksToRetry) {
           TaskRunnerWorkItem taskRunnerWorkItem = runningTasks.get(taskId);
@@ -655,13 +675,13 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
             if (cf.checkExists().forPath(taskPath) != null) {
               cf.delete().guaranteed().forPath(taskPath);
             }
-            retryTask(taskRunnerWorkItem, worker.getHost());
+            retryTask(taskRunnerWorkItem);
           } else {
             log.warn("RemoteTaskRunner has no knowledge of task %s", taskId);
           }
         }
 
-        zkWorker.getStatusCache().close();
+        zkWorker.close();
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -672,7 +692,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     }
   }
 
-  private ZkWorker findWorkerForTask()
+  private ZkWorker findWorkerForTask(final Task task)
   {
     try {
       final MinMaxPriorityQueue<ZkWorker> workerQueue = MinMaxPriorityQueue.<ZkWorker>orderedBy(
@@ -694,7 +714,9 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                   return (!input.isAtCapacity() &&
                           input.getWorker()
                                .getVersion()
-                               .compareTo(workerSetupData.get().getMinVersion()) >= 0);
+                               .compareTo(workerSetupData.get().getMinVersion()) >= 0 &&
+                          !input.getAvailabilityGroups().contains(task.getAvailabilityGroup())
+                  );
                 }
               }
           )

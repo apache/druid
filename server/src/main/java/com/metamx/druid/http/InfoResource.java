@@ -346,11 +346,16 @@ public class InfoResource
   @Path("/rules/{dataSourceName}")
   @Produces("application/json")
   public Response getDatasourceRules(
-      @PathParam("dataSourceName") final String dataSourceName
+      @PathParam("dataSourceName") final String dataSourceName,
+      @QueryParam("full") final String full
+
   )
   {
-    return Response.status(Response.Status.OK)
-                   .entity(databaseRuleManager.getRules(dataSourceName))
+    if (full != null) {
+      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
+                     .build();
+    }
+    return Response.ok(databaseRuleManager.getRules(dataSourceName))
                    .build();
   }
 

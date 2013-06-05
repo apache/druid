@@ -72,6 +72,13 @@ public interface Task
   public String getGroupId();
 
   /**
+   * Returns availability group ID of this task. Tasks the same availability group cannot be assigned to the same
+   * worker. If tasks do not have this restriction, a common convention is to set the availability group ID to the
+   * task ID.
+   */
+  public String getAvailabilityGroup();
+
+  /**
    * Returns a descriptive label for this task type. Used for metrics emission and logging.
    */
   public String getType();

@@ -43,6 +43,9 @@ public abstract class AbstractTask implements Task
   private final String groupId;
 
   @JsonIgnore
+  private final String availabilityGroup;
+
+  @JsonIgnore
   private final String dataSource;
 
   @JsonIgnore
@@ -50,13 +53,14 @@ public abstract class AbstractTask implements Task
 
   protected AbstractTask(String id, String dataSource, Interval interval)
   {
-    this(id, id, dataSource, interval);
+    this(id, id, id, dataSource, interval);
   }
 
-  protected AbstractTask(String id, String groupId, String dataSource, Interval interval)
+  protected AbstractTask(String id, String groupId, String availabilityGroup, String dataSource, Interval interval)
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.groupId = Preconditions.checkNotNull(groupId, "groupId");
+    this.availabilityGroup = Preconditions.checkNotNull(availabilityGroup, "availabilityGroup");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.interval = Optional.fromNullable(interval);
   }
@@ -73,6 +77,13 @@ public abstract class AbstractTask implements Task
   public String getGroupId()
   {
     return groupId;
+  }
+
+  @JsonProperty
+  @Override
+  public String getAvailabilityGroup()
+  {
+    return availabilityGroup;
   }
 
   @Override

@@ -692,25 +692,29 @@ public class IndexIO
       Map<String, Column> columns = Maps.newHashMap();
 
       for (String dimension : index.getAvailableDimensions()) {
+        ColumnBuilder builder = new ColumnBuilder()
+            .setType(ValueType.STRING)
+            .setHasMultipleValues(true)
+            .setDictionaryEncodedColumn(
+                new DictionaryEncodedColumnSupplier(
+                    index.getDimValueLookup(dimension), null, (index.getDimColumn(dimension))
+                )
+            )
+            .setBitmapIndex(
+                new BitmapIndexColumnPartSupplier(
+                    index.getInvertedIndexes().get(dimension), index.getDimValueLookup(dimension)
+                )
+            );
+        if (index.getSpatialIndexes().get(dimension) != null) {
+          builder.setSpatialIndex(
+              new SpatialIndexColumnPartSupplier(
+                  index.getSpatialIndexes().get(dimension)
+              )
+          );
+        }
         columns.put(
             dimension.toLowerCase(),
-            new ColumnBuilder()
-                .setType(ValueType.STRING)
-                .setHasMultipleValues(true)
-                .setDictionaryEncodedColumn(
-                    new DictionaryEncodedColumnSupplier(
-                        index.getDimValueLookup(dimension), null, (index.getDimColumn(dimension))
-                    )
-                )
-                .setBitmapIndex(
-                    new BitmapIndexColumnPartSupplier(
-                        index.getInvertedIndexes().get(dimension), index.getDimValueLookup(dimension)
-                    )
-                ).setSpatialIndex(
-                new SpatialIndexColumnPartSupplier(
-                    index.getSpatialIndexes().get(dimension)
-                )
-            ).build()
+            builder.build()
         );
       }
 

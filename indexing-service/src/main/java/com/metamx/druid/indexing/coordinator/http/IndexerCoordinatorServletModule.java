@@ -68,6 +68,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
   protected void configureServlets()
   {
     bind(IndexerCoordinatorResource.class);
+    bind(OldIndexerCoordinatorResource.class);
     bind(ObjectMapper.class).toInstance(jsonMapper);
     bind(IndexerCoordinatorConfig.class).toInstance(indexerCoordinatorConfig);
     bind(ServiceEmitter.class).toInstance(emitter);

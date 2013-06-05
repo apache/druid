@@ -2,6 +2,7 @@ package com.metamx.druid.indexing.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
@@ -41,8 +42,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static junit.framework.Assert.fail;
@@ -245,6 +248,34 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue("TaskCallback was not called!", callbackCalled.booleanValue());
   }
 
+
+  @Test
+  public void testRunSameAvailabilityGroup() throws Exception
+  {
+    TestRealtimeTask theTask = new TestRealtimeTask("rt1", "rt1", "foo", TaskStatus.running("rt1"));
+    remoteTaskRunner.run(theTask);
+    remoteTaskRunner.run(
+        new TestRealtimeTask("rt2", "rt1", "foo", TaskStatus.running("rt2"))
+    );
+    remoteTaskRunner.run(
+        new TestRealtimeTask("rt3", "rt2", "foo", TaskStatus.running("rt3"))
+    );
+
+    Stopwatch stopwatch = new Stopwatch();
+    stopwatch.start();
+    while (remoteTaskRunner.getRunningTasks().isEmpty()) {
+      Thread.sleep(100);
+      if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
+        throw new ISE("Cannot find running task");
+      }
+    }
+
+    Assert.assertTrue(remoteTaskRunner.getRunningTasks().size() == 2);
+    Assert.assertTrue(remoteTaskRunner.getPendingTasks().size() == 1);
+    Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTask().getId().equals("rt2"));
+  }
+
+
   private void makeTaskMonitor() throws Exception
   {
     WorkerCuratorCoordinator workerCuratorCoordinator = new WorkerCuratorCoordinator(
@@ -323,6 +354,7 @@ public class RemoteTaskRunnerTest
         Executors.newSingleThreadExecutor()
     );
     jsonMapper.registerSubtypes(new NamedType(TestTask.class, "test"));
+    jsonMapper.registerSubtypes(new NamedType(TestRealtimeTask.class, "test_realtime"));
     workerTaskMonitor.start();
   }
 

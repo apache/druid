@@ -27,15 +27,13 @@ import com.metamx.druid.kv.GenericIndexed;
  */
 public class SpatialIndexColumnPartSupplier implements Supplier<SpatialIndex>
 {
-  private static final ImmutableRTree EMPTY_SET = new ImmutableRTree();
-
   private final ImmutableRTree indexedTree;
 
   public SpatialIndexColumnPartSupplier(
       ImmutableRTree indexedTree
   )
   {
-    this.indexedTree = (indexedTree == null) ? EMPTY_SET : indexedTree;
+    this.indexedTree = indexedTree;
   }
 
   @Override

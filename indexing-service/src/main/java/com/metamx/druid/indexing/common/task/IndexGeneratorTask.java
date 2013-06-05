@@ -53,6 +53,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class IndexGeneratorTask extends AbstractTask
 {
+  private static String makeTaskId(String groupId, DateTime start, DateTime end, int partitionNum)
+  {
+    return String.format(
+        "%s_generator_%s_%s_%s",
+        groupId,
+        start,
+        end,
+        partitionNum
+    );
+  }
+
   @JsonIgnore
   private final FirehoseFactory firehoseFactory;
 
@@ -75,14 +86,11 @@ public class IndexGeneratorTask extends AbstractTask
   )
   {
     super(
-        id != null ? id : String.format(
-            "%s_generator_%s_%s_%s",
-            groupId,
-            interval.getStart(),
-            interval.getEnd(),
-            schema.getShardSpec().getPartitionNum()
-        ),
+        id != null
+        ? id
+        : makeTaskId(groupId, interval.getStart(), interval.getEnd(), schema.getShardSpec().getPartitionNum()),
         groupId,
+        makeTaskId(groupId, interval.getStart(), interval.getEnd(), schema.getShardSpec().getPartitionNum()),
         schema.getDataSource(),
         Preconditions.checkNotNull(interval, "interval")
     );
@@ -149,10 +157,10 @@ public class IndexGeneratorTask extends AbstractTask
                                    : toolbox.getConfig().getDefaultRowFlushBoundary();
 
     try {
-      while(firehose.hasMore()) {
+      while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
-        if(shouldIndex(inputRow)) {
+        if (shouldIndex(inputRow)) {
           final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
           if (sink == null) {
             throw new NullPointerException(
@@ -166,14 +174,15 @@ public class IndexGeneratorTask extends AbstractTask
           int numRows = sink.add(inputRow);
           metrics.incrementProcessed();
 
-          if(numRows >= myRowFlushBoundary) {
+          if (numRows >= myRowFlushBoundary) {
             plumber.persist(firehose.commit());
           }
         } else {
           metrics.incrementThrownAway();
         }
       }
-    } finally {
+    }
+    finally {
       firehose.close();
     }
 
@@ -200,18 +209,21 @@ public class IndexGeneratorTask extends AbstractTask
 
   /**
    * Should we index this inputRow? Decision is based on our interval and shardSpec.
+   *
    * @param inputRow the row to check
+   *
    * @return true or false
    */
-  private boolean shouldIndex(InputRow inputRow) {
-    if(!getImplicitLockInterval().get().contains(inputRow.getTimestampFromEpoch())) {
+  private boolean shouldIndex(InputRow inputRow)
+  {
+    if (!getImplicitLockInterval().get().contains(inputRow.getTimestampFromEpoch())) {
       return false;
     }
 
     final Map<String, String> eventDimensions = Maps.newHashMapWithExpectedSize(inputRow.getDimensions().size());
-    for(final String dim : inputRow.getDimensions()) {
+    for (final String dim : inputRow.getDimensions()) {
       final List<String> dimValues = inputRow.getDimension(dim);
-      if(dimValues.size() == 1) {
+      if (dimValues.size() == 1) {
         eventDimensions.put(dim, Iterables.getOnlyElement(dimValues));
       }
     }

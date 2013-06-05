@@ -345,6 +345,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
             )
         ), "/*", 0
     );
+    root.addFilter(GuiceFilter.class, "/mmx/indexer/v1/*", 0);
     root.addFilter(GuiceFilter.class, "/mmx/merger/v1/*", 0);
 
     initialized = true;

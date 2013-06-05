@@ -202,6 +202,7 @@ public class TaskSerdeTest
   {
     final Task task = new RealtimeIndexTask(
         null,
+        null,
         new Schema("foo", null, new AggregatorFactory[0], QueryGranularity.NONE, new NoneShardSpec()),
         null,
         null,

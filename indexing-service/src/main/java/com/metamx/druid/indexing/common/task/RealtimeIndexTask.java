@@ -64,6 +64,14 @@ public class RealtimeIndexTask extends AbstractTask
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
 
+  private static String makeTaskId(String dataSource, int partitionNum, DateTime version)
+  {
+    return String.format(
+        "index_realtime_%s_%d_%s",
+        dataSource, partitionNum, version
+    );
+  }
+
   @JsonIgnore
   private final Schema schema;
 
@@ -97,6 +105,7 @@ public class RealtimeIndexTask extends AbstractTask
   @JsonCreator
   public RealtimeIndexTask(
       @JsonProperty("id") String id,
+      @JsonProperty("availabilityGroup") String availabilityGroup,
       @JsonProperty("schema") Schema schema,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
@@ -105,14 +114,14 @@ public class RealtimeIndexTask extends AbstractTask
   )
   {
     super(
-        id != null ? id : String.format(
-            "index_realtime_%s_%d_%s",
-            schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime()
-        ),
+        id != null ? id : makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime()),
         String.format(
             "index_realtime_%s",
             schema.getDataSource()
         ),
+        availabilityGroup != null
+        ? availabilityGroup
+        : makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime()),
         schema.getDataSource(),
         null
     );
