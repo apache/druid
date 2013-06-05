@@ -53,7 +53,7 @@ public class MemcachedCache implements Cache
   public static MemcachedCache create(final MemcachedCacheConfig config)
   {
     try {
-      SnappyTranscoder transcoder = new SnappyTranscoder(config.getMaxObjectSize());
+      LZ4Transcoder transcoder = new LZ4Transcoder(config.getMaxObjectSize());
 
       // always use compression
       transcoder.setCompressionThreshold(0);

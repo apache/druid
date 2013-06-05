@@ -182,8 +182,8 @@
             <artifactId>bytebuffer-collections</artifactId>
         </dependency>
         <dependency>
-          <groupId>org.xerial.snappy</groupId>
-          <artifactId>snappy-java</artifactId>
+          <groupId>net.jpountz.lz4</groupId>
+          <artifactId>lz4</artifactId>
         </dependency>
 
         <!-- Tests -->
