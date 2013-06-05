@@ -400,23 +400,6 @@ public class InfoResource
     ).build();
   }
 
-  @GET
-  @Path("/rules/{dataSourceName}")
-  @Produces("application/json")
-  public Response getDatasourceRules(
-      @PathParam("dataSourceName") final String dataSourceName,
-      @QueryParam("full") final String full
-
-  )
-  {
-    if (full != null) {
-      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
-                     .build();
-    }
-    return Response.ok(databaseRuleManager.getRules(dataSourceName))
-                   .build();
-  }
-
   @DELETE
   @Path("/datasources/{dataSourceName}")
   public Response deleteDataSource(
