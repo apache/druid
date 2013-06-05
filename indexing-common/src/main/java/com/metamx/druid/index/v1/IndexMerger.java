@@ -705,6 +705,11 @@ public class IndexMerger
     final File invertedFile = new File(v8OutDir, "inverted.drd");
     Files.touch(invertedFile);
     out = Files.newOutputStreamSupplier(invertedFile, true);
+
+    final File geoFile = new File(v8OutDir, "spatial.drd");
+    Files.touch(geoFile);
+    OutputSupplier<FileOutputStream> spatialOut = Files.newOutputStreamSupplier(geoFile, true);
+
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       long dimStartTime = System.currentTimeMillis();
       String dimension = mergedDimensions.get(i);
@@ -722,6 +727,18 @@ public class IndexMerger
           ioPeon, dimension, ConciseCompressedIndexedInts.objectStrategy
       );
       writer.open();
+
+      boolean isSpatialDim = "spatial".equals(descriptions.get(dimension));
+      ByteBufferWriter<ImmutableRTree> spatialWriter = null;
+      RTree tree = null;
+      IOPeon spatialIoPeon = new TmpFileIOPeon();
+      if (isSpatialDim) {
+        spatialWriter = new ByteBufferWriter<ImmutableRTree>(
+            spatialIoPeon, dimension, IndexedRTree.objectStrategy
+        );
+        spatialWriter.open();
+        tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50));
+      }
 
       for (String dimVal : IndexedIterable.create(dimVals)) {
         progress.progress();
@@ -745,6 +762,15 @@ public class IndexMerger
         }
 
         writer.write(ImmutableConciseSet.newImmutableFromMutable(bitset));
+
+        if (isSpatialDim && dimVal != null) {
+          List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
+          float[] coords = new float[stringCoords.size()];
+          for (int j = 0; j < coords.length; j++) {
+            coords[j] = Float.valueOf(stringCoords.get(j));
+          }
+          tree.insert(coords, bitset);
+        }
       }
       writer.close();
 
@@ -753,64 +779,16 @@ public class IndexMerger
       ioPeon.cleanup();
 
       log.info("Completed dimension[%s] in %,d millis.", dimension, System.currentTimeMillis() - dimStartTime);
-    }
 
-    /************ Create Geographical Indexes *************/
-    // FIXME: Rewrite when indexing is updated
-    Stopwatch stopwatch = new Stopwatch();
-    stopwatch.start();
+      if (isSpatialDim) {
+        spatialWriter.write(ImmutableRTree.newImmutableFromMutable(tree));
+        spatialWriter.close();
 
-    final File geoFile = new File(v8OutDir, "spatial.drd");
-    Files.touch(geoFile);
-    out = Files.newOutputStreamSupplier(geoFile, true);
-
-    for (int i = 0; i < mergedDimensions.size(); ++i) {
-      String dimension = mergedDimensions.get(i);
-
-      if (!"spatial".equals(descriptions.get(dimension))) {
-        continue;
+        serializerUtils.writeString(spatialOut, dimension);
+        ByteStreams.copy(spatialWriter.combineStreams(), spatialOut);
+        spatialIoPeon.cleanup();
       }
 
-      File dimOutFile = dimOuts.get(i).getFile();
-      final MappedByteBuffer dimValsMapped = Files.map(dimOutFile);
-
-      if (!dimension.equals(serializerUtils.readString(dimValsMapped))) {
-        throw new ISE("dimensions[%s] didn't equate!?  This is a major WTF moment.", dimension);
-      }
-      Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.stringStrategy);
-      log.info("Indexing geo dimension[%s] with cardinality[%,d]", dimension, dimVals.size());
-
-      ByteBufferWriter<ImmutableRTree> writer = new ByteBufferWriter<ImmutableRTree>(
-          ioPeon, dimension, IndexedRTree.objectStrategy
-      );
-      writer.open();
-
-      RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50));
-
-      int count = 0;
-      for (String dimVal : IndexedIterable.create(dimVals)) {
-        progress.progress();
-        if (dimVal == null) {
-          continue;
-        }
-
-        List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
-        float[] coords = new float[stringCoords.size()];
-        for (int j = 0; j < coords.length; j++) {
-          coords[j] = Float.valueOf(stringCoords.get(j));
-        }
-        tree.insert(coords, count);
-        count++;
-      }
-
-      writer.write(ImmutableRTree.newImmutableFromMutable(tree));
-      writer.close();
-
-      serializerUtils.writeString(out, dimension);
-      ByteStreams.copy(writer.combineStreams(), out);
-      ioPeon.cleanup();
-
-      log.info("Completed spatial dimension[%s] in %,d millis.", dimension, stopwatch.elapsedMillis());
     }
 
     log.info("outDir[%s] completed inverted.drd in %,d millis.", v8OutDir, System.currentTimeMillis() - startTime);
