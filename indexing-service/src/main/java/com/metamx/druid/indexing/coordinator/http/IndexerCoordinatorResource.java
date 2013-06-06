@@ -63,7 +63,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-@Path("/mmx/indexer/v1")
+@Path("/druid/indexer/v1")
 public class IndexerCoordinatorResource
 {
   private static final Logger log = new Logger(IndexerCoordinatorResource.class);

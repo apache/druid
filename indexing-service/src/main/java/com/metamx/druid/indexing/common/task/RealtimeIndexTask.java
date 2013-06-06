@@ -64,7 +64,7 @@ public class RealtimeIndexTask extends AbstractTask
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
 
-  private static String makeTaskId(String dataSource, int partitionNum, DateTime version)
+  private static String makeTaskId(String dataSource, int partitionNum, String version)
   {
     return String.format(
         "index_realtime_%s_%d_%s",
@@ -114,14 +114,16 @@ public class RealtimeIndexTask extends AbstractTask
   )
   {
     super(
-        id != null ? id : makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime()),
+        id != null
+        ? id
+        : makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString()),
         String.format(
             "index_realtime_%s",
             schema.getDataSource()
         ),
         availabilityGroup != null
         ? availabilityGroup
-        : makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime()),
+        : makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString()),
         schema.getDataSource(),
         null
     );

@@ -56,6 +56,15 @@ public abstract class AbstractTask implements Task
     this(id, id, id, dataSource, interval);
   }
 
+  protected AbstractTask(String id, String groupId, String dataSource, Interval interval)
+  {
+    this.id = Preconditions.checkNotNull(id, "id");
+    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
+    this.availabilityGroup = id;
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    this.interval = Optional.fromNullable(interval);
+  }
+
   protected AbstractTask(String id, String groupId, String availabilityGroup, String dataSource, Interval interval)
   {
     this.id = Preconditions.checkNotNull(id, "id");

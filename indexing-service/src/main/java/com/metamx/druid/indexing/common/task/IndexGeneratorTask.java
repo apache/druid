@@ -53,17 +53,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class IndexGeneratorTask extends AbstractTask
 {
-  private static String makeTaskId(String groupId, DateTime start, DateTime end, int partitionNum)
-  {
-    return String.format(
-        "%s_generator_%s_%s_%s",
-        groupId,
-        start,
-        end,
-        partitionNum
-    );
-  }
-
   @JsonIgnore
   private final FirehoseFactory firehoseFactory;
 
@@ -88,9 +77,14 @@ public class IndexGeneratorTask extends AbstractTask
     super(
         id != null
         ? id
-        : makeTaskId(groupId, interval.getStart(), interval.getEnd(), schema.getShardSpec().getPartitionNum()),
+        : String.format(
+            "%s_generator_%s_%s_%s",
+            groupId,
+            interval.getStart(),
+            interval.getEnd(),
+            schema.getShardSpec().getPartitionNum()
+        ),
         groupId,
-        makeTaskId(groupId, interval.getStart(), interval.getEnd(), schema.getShardSpec().getPartitionNum()),
         schema.getDataSource(),
         Preconditions.checkNotNull(interval, "interval")
     );

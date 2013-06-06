@@ -108,7 +108,7 @@ public class IndexingServiceClient
         throw new ISE("Cannot find instance of indexingService");
       }
 
-      return String.format("http://%s:%s/mmx/indexer/v1", instance.getAddress(), instance.getPort());
+      return String.format("http://%s:%s/druid/indexer/v1", instance.getAddress(), instance.getPort());
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
