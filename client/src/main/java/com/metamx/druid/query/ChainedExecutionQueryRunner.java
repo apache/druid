@@ -34,7 +34,6 @@ import com.metamx.druid.Query;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -83,6 +82,8 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query)
   {
+    final int priority = Integer.parseInt(query.getContextValue("priority", "0"));
+
     return new BaseSequence<T, Iterator<T>>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
@@ -99,7 +100,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                       public Future<List<T>> apply(final QueryRunner<T> input)
                       {
                         return exec.submit(
-                            new Callable<List<T>>()
+                            new PrioritizedCallable<List<T>>(priority)
                             {
                               @Override
                               public List<T> call() throws Exception
