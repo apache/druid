@@ -20,11 +20,19 @@
 package com.metamx.druid.indexing.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.worker.Worker;
+import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Set;
@@ -36,17 +44,27 @@ public class ZkWorker implements Closeable
 {
   private final Worker worker;
   private final PathChildrenCache statusCache;
-  private final Set<String> runningTasks;
-  private final Set<String> availabilityGroups;
+  private final Function<ChildData, String> cacheConverter;
 
   private volatile DateTime lastCompletedTaskTime = new DateTime();
 
-  public ZkWorker(Worker worker, PathChildrenCache statusCache)
+  public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
     this.worker = worker;
     this.statusCache = statusCache;
-    this.runningTasks = Sets.newHashSet();
-    this.availabilityGroups = Sets.newHashSet();
+    this.cacheConverter = new Function<ChildData, String>()
+    {
+      @Override
+      public String apply(@Nullable ChildData input)
+      {
+        try {
+          return jsonMapper.readValue(input.getData(), TaskStatus.class).getId();
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
+      }
+    };
   }
 
   @JsonProperty
@@ -58,13 +76,12 @@ public class ZkWorker implements Closeable
   @JsonProperty
   public Set<String> getRunningTasks()
   {
-    return runningTasks;
-  }
-
-  @JsonProperty
-  public Set<String> getAvailabilityGroups()
-  {
-    return availabilityGroups;
+    return Sets.newHashSet(
+        Lists.transform(
+            statusCache.getCurrentData(),
+            cacheConverter
+        )
+    );
   }
 
   @JsonProperty
@@ -76,24 +93,12 @@ public class ZkWorker implements Closeable
   @JsonProperty
   public boolean isAtCapacity()
   {
-    return runningTasks.size() >= worker.getCapacity();
+    return statusCache.getCurrentData().size() >= worker.getCapacity();
   }
 
   public void setLastCompletedTaskTime(DateTime completedTaskTime)
   {
     lastCompletedTaskTime = completedTaskTime;
-  }
-
-  public void addTask(TaskRunnerWorkItem item)
-  {
-    runningTasks.add(item.getTask().getId());
-    availabilityGroups.add(item.getTask().getAvailabilityGroup());
-  }
-
-  public void removeTask(TaskRunnerWorkItem item)
-  {
-    runningTasks.remove(item.getTask().getId());
-    availabilityGroups.remove(item.getTask().getAvailabilityGroup());
   }
 
   @Override
@@ -107,8 +112,6 @@ public class ZkWorker implements Closeable
   {
     return "ZkWorker{" +
            "worker=" + worker +
-           ", runningTasks=" + runningTasks +
-           ", availabilityGroups=" + availabilityGroups +
            ", lastCompletedTaskTime=" + lastCompletedTaskTime +
            '}';
   }

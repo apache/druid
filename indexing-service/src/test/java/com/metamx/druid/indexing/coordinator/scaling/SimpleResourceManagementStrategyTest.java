@@ -334,7 +334,7 @@ public class SimpleResourceManagementStrategyTest
         Task testTask
     )
     {
-      super(new Worker("host", "ip", 3, "version"), null);
+      super(new Worker("host", "ip", 3, "version"), null, null);
 
       this.testTask = testTask;
     }

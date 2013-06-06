@@ -39,7 +39,7 @@ import java.io.InputStream;
 
 /**
  */
-@Path("/mmx/worker/v1")
+@Path("/druid/worker/v1")
 public class WorkerResource
 {
   private static final Logger log = new Logger(WorkerResource.class);

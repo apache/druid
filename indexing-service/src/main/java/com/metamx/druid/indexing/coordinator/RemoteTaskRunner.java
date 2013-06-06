@@ -41,8 +41,8 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.indexing.common.RetryPolicy;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.TaskStatus;
-import com.metamx.druid.indexing.common.tasklogs.TaskLogProvider;
 import com.metamx.druid.indexing.common.task.Task;
+import com.metamx.druid.indexing.common.tasklogs.TaskLogProvider;
 import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.indexing.worker.Worker;
@@ -164,14 +164,14 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                     event.getData().getData(),
                     Worker.class
                 );
-                log.info("New worker[%s] found!", worker.getHost());
+                log.info("Worker[%s] reportin' for duty!", worker.getHost());
                 addWorker(worker);
               } else if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_REMOVED)) {
                 final Worker worker = jsonMapper.readValue(
                     event.getData().getData(),
                     Worker.class
                 );
-                log.info("Worker[%s] removed!", worker.getHost());
+                log.info("Kaboom! Worker[%s] removed!", worker.getHost());
                 removeWorker(worker);
               }
             }
@@ -352,7 +352,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     Preconditions.checkArgument(path.startsWith("/"), "path must start with '/': %s", path);
 
     try {
-      return new URL(String.format("http://%s/mmx/worker/v1%s", worker.getHost(), path));
+      return new URL(String.format("http://%s/druid/worker/v1%s", worker.getHost(), path));
     }
     catch (MalformedURLException e) {
       throw Throwables.propagate(e);
@@ -555,7 +555,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
       final PathChildrenCache statusCache = new PathChildrenCache(cf, workerStatusPath, true);
       final ZkWorker zkWorker = new ZkWorker(
           worker,
-          statusCache
+          statusCache,
+          jsonMapper
       );
 
       // Add status listener to the watcher for status changes
@@ -598,8 +599,6 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                           worker.getHost(),
                           taskId
                       );
-                    } else {
-                      zkWorker.addTask(taskRunnerWorkItem);
                     }
 
                     if (taskStatus.isComplete()) {
@@ -608,7 +607,6 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                         if (result != null) {
                           ((SettableFuture<TaskStatus>) result).set(taskStatus);
                         }
-                        zkWorker.removeTask(taskRunnerWorkItem);
                       }
 
                       // Worker is done with this task
@@ -621,7 +619,6 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                     TaskRunnerWorkItem taskRunnerWorkItem = runningTasks.get(taskId);
                     if (taskRunnerWorkItem != null) {
                       log.info("Task %s just disappeared!", taskId);
-                      zkWorker.removeTask(taskRunnerWorkItem);
                       retryTask(taskRunnerWorkItem);
                     }
                   }
@@ -711,12 +708,17 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                 @Override
                 public boolean apply(ZkWorker input)
                 {
+                  for (String taskId : input.getRunningTasks()) {
+                    TaskRunnerWorkItem workerTask = runningTasks.get(taskId);
+                    if (workerTask != null && task.getAvailabilityGroup()
+                                                  .equalsIgnoreCase(workerTask.getTask().getAvailabilityGroup())) {
+                      return false;
+                    }
+                  }
                   return (!input.isAtCapacity() &&
                           input.getWorker()
                                .getVersion()
-                               .compareTo(workerSetupData.get().getMinVersion()) >= 0 &&
-                          !input.getAvailabilityGroups().contains(task.getAvailabilityGroup())
-                  );
+                               .compareTo(workerSetupData.get().getMinVersion()) >= 0);
                 }
               }
           )

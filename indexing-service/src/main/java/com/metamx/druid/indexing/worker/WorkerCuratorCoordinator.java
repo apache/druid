@@ -23,10 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.config.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -52,6 +54,7 @@ public class WorkerCuratorCoordinator
   private final CuratorFramework curatorFramework;
   private final Worker worker;
   private final IndexerZkConfig config;
+  private final Announcer announcer;
 
   private final String baseAnnouncementsPath;
   private final String baseTaskPath;
@@ -71,6 +74,8 @@ public class WorkerCuratorCoordinator
     this.worker = worker;
     this.config = config;
 
+    this.announcer = new Announcer(curatorFramework, MoreExecutors.sameThreadExecutor());
+
     this.baseAnnouncementsPath = getPath(Arrays.asList(config.getIndexerAnnouncementPath(), worker.getHost()));
     this.baseTaskPath = getPath(Arrays.asList(config.getIndexerTaskPath(), worker.getHost()));
     this.baseStatusPath = getPath(Arrays.asList(config.getIndexerStatusPath(), worker.getHost()));
@@ -79,7 +84,7 @@ public class WorkerCuratorCoordinator
   @LifecycleStart
   public void start() throws Exception
   {
-    log.info("Starting WorkerCuratorCoordinator for server[%s]", worker.getHost());
+    log.info("WorkerCuratorCoordinator good to go sir. Server[%s]", worker.getHost());
     synchronized (lock) {
       if (started) {
         return;
@@ -95,33 +100,8 @@ public class WorkerCuratorCoordinator
           CreateMode.PERSISTENT,
           ImmutableMap.of("created", new DateTime().toString())
       );
-      makePathIfNotExisting(
-          getAnnouncementsPathForWorker(),
-          CreateMode.EPHEMERAL,
-          worker
-      );
-
-      curatorFramework.getConnectionStateListenable().addListener(
-          new ConnectionStateListener()
-          {
-            @Override
-            public void stateChanged(CuratorFramework client, ConnectionState newState)
-            {
-              try {
-                if (newState.equals(ConnectionState.RECONNECTED)) {
-                  makePathIfNotExisting(
-                      getAnnouncementsPathForWorker(),
-                      CreateMode.EPHEMERAL,
-                      worker
-                  );
-                }
-              }
-              catch (Exception e) {
-                throw Throwables.propagate(e);
-              }
-            }
-          }
-      );
+      announcer.start();
+      announcer.announce(getAnnouncementsPathForWorker(), jsonMapper.writeValueAsBytes(worker));
 
       started = true;
     }
@@ -136,9 +116,8 @@ public class WorkerCuratorCoordinator
         return;
       }
 
-      curatorFramework.delete()
-                      .guaranteed()
-                      .forPath(getAnnouncementsPathForWorker());
+      announcer.unannounce(getAnnouncementsPathForWorker());
+      announcer.stop();
 
       started = false;
     }
@@ -191,16 +170,6 @@ public class WorkerCuratorCoordinator
   public String getStatusPathForId(String statusId)
   {
     return getPath(Arrays.asList(baseStatusPath, statusId));
-  }
-
-  public boolean statusExists(String id)
-  {
-    try {
-      return (curatorFramework.checkExists().forPath(getStatusPathForId(id)) != null);
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   public void unannounceTask(String taskId)

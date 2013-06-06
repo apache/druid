@@ -10,7 +10,7 @@ import com.google.common.util.concurrent.Futures;
 import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
 import com.metamx.druid.indexing.TestTask;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.TaskStatus;
@@ -23,14 +23,15 @@ import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.indexing.worker.Worker;
 import com.metamx.druid.indexing.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.indexing.worker.WorkerTaskMonitor;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -42,7 +43,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -81,6 +81,7 @@ public class RemoteTaskRunnerTest
     cf = CuratorFrameworkFactory.builder()
                                 .connectString(testingCluster.getConnectString())
                                 .retryPolicy(new ExponentialBackoffRetry(1, 10))
+                                .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
                                 .build();
     cf.start();
 

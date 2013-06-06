@@ -209,7 +209,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     root.addEventListener(new GuiceServletConfig(injector));
-    root.addFilter(GuiceFilter.class, "/mmx/worker/v1/*", 0);
+    root.addFilter(GuiceFilter.class, "/druid/worker/v1/*", 0);
   }
 
   @LifecycleStart

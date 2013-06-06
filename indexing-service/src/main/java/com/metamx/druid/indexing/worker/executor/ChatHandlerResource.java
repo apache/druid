@@ -10,7 +10,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 
-@Path("/mmx/worker/v1")
+@Path("/druid/worker/v1")
 public class ChatHandlerResource
 {
   private final ObjectMapper jsonMapper;

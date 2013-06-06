@@ -39,7 +39,7 @@ import java.util.concurrent.ExecutorService;
 /**
  * The monitor watches ZK at a specified path for new tasks to appear. Upon starting the monitor, a listener will be
  * created that waits for new tasks. Tasks are executed as soon as they are seen.
- *
+ * <p/>
  * The monitor implements {@link QuerySegmentWalker} so tasks can offer up queryable data. This is useful for
  * realtime index tasks.
  */
@@ -96,7 +96,10 @@ public class WorkerTaskMonitor
                 );
 
                 if (isTaskRunning(task)) {
-                  log.warn("Got task %s that I am already running...", task.getId());
+                  log.warn(
+                      "I can't build it. There's something in the way. Got task %s that I am already running...",
+                      task.getId()
+                  );
                   workerCuratorCoordinator.unannounceTask(task.getId());
                   return;
                 }
@@ -109,7 +112,7 @@ public class WorkerTaskMonitor
                       {
                         final long startTime = System.currentTimeMillis();
 
-                        log.info("Running task [%s]", task.getId());
+                        log.info("Affirmative. Running task [%s]", task.getId());
                         running.add(task);
 
                         TaskStatus taskStatus;
@@ -119,11 +122,12 @@ public class WorkerTaskMonitor
                           taskStatus = taskRunner.run(task).get();
                         }
                         catch (Exception e) {
-                          log.makeAlert(e, "Failed to run task")
+                          log.makeAlert(e, "I can't build there. Failed to run task")
                              .addData("task", task.getId())
                              .emit();
                           taskStatus = TaskStatus.failure(task.getId());
-                        } finally {
+                        }
+                        finally {
                           running.remove(task);
                         }
 
@@ -131,7 +135,11 @@ public class WorkerTaskMonitor
 
                         try {
                           workerCuratorCoordinator.updateStatus(taskStatus);
-                          log.info("Completed task [%s] with status [%s]", task.getId(), taskStatus.getStatusCode());
+                          log.info(
+                              "Job's finished. Completed [%s] with status [%s]",
+                              task.getId(),
+                              taskStatus.getStatusCode()
+                          );
                         }
                         catch (Exception e) {
                           log.makeAlert(e, "Failed to update task status")

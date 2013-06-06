@@ -311,7 +311,8 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
 
     final Context root = new Context(server, "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
-    root.addServlet(new ServletHolder(new DefaultServlet()), "/mmx/*");
+    root.addServlet(new ServletHolder(new DefaultServlet()), "/druid/*");
+    root.addServlet(new ServletHolder(new DefaultServlet()), "/mmx/*"); // backwards compatibility
     root.addEventListener(new GuiceServletConfig(injector));
     root.addFilter(
         new FilterHolder(
@@ -346,7 +347,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
         ), "/*", 0
     );
     root.addFilter(GuiceFilter.class, "/druid/indexer/v1/*", 0);
-    root.addFilter(GuiceFilter.class, "/mmx/merger/v1/*", 0); //backwards compatability, soon to be removed
+    root.addFilter(GuiceFilter.class, "/mmx/merger/v1/*", 0); //backwards compatibility, soon to be removed
 
     initialized = true;
   }
