@@ -122,14 +122,8 @@ public class PrioritizedExecutorService extends AbstractExecutorService
   {
     Callable<T> theCallable = tCallable;
     if (!(tCallable instanceof PrioritizedCallable)) {
-      theCallable = new PrioritizedCallable<T>()
+      theCallable = new PrioritizedCallable<T>(DEFAULT_PRIORITY)
       {
-        @Override
-        public int getPriority()
-        {
-          return DEFAULT_PRIORITY;
-        }
-
         @Override
         public T call() throws Exception
         {

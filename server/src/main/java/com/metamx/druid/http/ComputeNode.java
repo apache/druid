@@ -101,7 +101,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
         getLifecycle(),
         getConfigFactory().buildWithReplacements(
             ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
-        ), callable2
+        )
     );
 
     final ExecutorService executorService = new MetricsEmittingExecutorService(

@@ -76,14 +76,8 @@ public class PrioritizedExecutorServiceTest
     final ConcurrentLinkedQueue<Integer> order = new ConcurrentLinkedQueue<Integer>();
 
     exec.submit(
-        new PrioritizedCallable<Void>()
+        new PrioritizedCallable<Void>(0)
         {
-          @Override
-          public int getPriority()
-          {
-            return 0;
-          }
-
           @Override
           public Void call() throws Exception
           {
@@ -94,14 +88,8 @@ public class PrioritizedExecutorServiceTest
     );
 
     exec.submit(
-        new PrioritizedCallable<Void>()
+        new PrioritizedCallable<Void>(-1)
         {
-          @Override
-          public int getPriority()
-          {
-            return -1;
-          }
-
           @Override
           public Void call() throws Exception
           {
@@ -112,14 +100,8 @@ public class PrioritizedExecutorServiceTest
         }
     );
     exec.submit(
-        new PrioritizedCallable<Void>()
+        new PrioritizedCallable<Void>(0)
         {
-          @Override
-          public int getPriority()
-          {
-            return 0;
-          }
-
           @Override
           public Void call() throws Exception
           {
@@ -130,14 +112,8 @@ public class PrioritizedExecutorServiceTest
         }
     );
     exec.submit(
-        new PrioritizedCallable<Void>()
+        new PrioritizedCallable<Void>(2)
         {
-          @Override
-          public int getPriority()
-          {
-            return 2;
-          }
-
           @Override
           public Void call() throws Exception
           {
