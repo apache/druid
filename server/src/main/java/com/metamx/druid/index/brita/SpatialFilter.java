@@ -43,48 +43,7 @@ public class SpatialFilter implements Filter
   @Override
   public ImmutableConciseSet goConcise(final BitmapIndexSelector selector)
   {
-    final Iterator<ImmutableConciseSet> dimValueIndexesIter = selector.getSpatialIndex(dimension).search(bound)
-                                                                      .iterator();
-    ImmutableConciseSet retVal = ImmutableConciseSet.union(
-        new Iterable<ImmutableConciseSet>()
-        {
-          @Override
-          public Iterator<ImmutableConciseSet> iterator()
-          {
-            return new Iterator<ImmutableConciseSet>()
-            {
-              private IntSet.IntIterator iter;
-
-              @Override
-              public boolean hasNext()
-              {
-                return dimValueIndexesIter.hasNext() || (iter != null && iter.hasNext());
-              }
-
-              @Override
-              public ImmutableConciseSet next()
-              {
-                if (iter != null && !iter.hasNext()) {
-                  iter = null;
-                }
-                if (iter == null) {
-                  ImmutableConciseSet immutableConciseSet = dimValueIndexesIter.next();
-                  iter = immutableConciseSet.iterator();
-                }
-                return selector.getConciseInvertedIndex(dimension, iter.next());
-              }
-
-              @Override
-              public void remove()
-              {
-                throw new UnsupportedOperationException();
-              }
-            };
-          }
-        }
-    );
-
-    return retVal;
+    return ImmutableConciseSet.union(selector.getSpatialIndex(dimension).search(bound));
   }
 
   @Override

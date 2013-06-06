@@ -18,17 +18,18 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metamx.druid</groupId>
     <artifactId>druid-server</artifactId>
     <name>druid-server</name>
-    <description>druid-server</description>
+    <description>Druid Server</description>
 
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.4.31-SNAPSHOT</version>
+        <version>0.5.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -39,7 +40,7 @@
         </dependency>
         <dependency>
             <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-index-common</artifactId>
+            <artifactId>druid-indexing-common</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
 
@@ -195,7 +196,7 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-        	<groupId>com.netflix.astyanax</groupId>
+            <groupId>com.netflix.astyanax</groupId>
             <artifactId>astyanax</artifactId>
             <version>1.0.1</version>
         </dependency>
@@ -214,7 +215,7 @@
         </dependency>
         <dependency>
             <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-index-common</artifactId>
+            <artifactId>druid-indexing-common</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
@@ -231,7 +232,6 @@
             <artifactId>curator-test</artifactId>
             <scope>test</scope>
         </dependency>
-
 
 
     </dependencies>

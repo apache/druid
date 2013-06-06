@@ -18,7 +18,8 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metamx.druid</groupId>
     <artifactId>druid-client</artifactId>
@@ -28,7 +29,7 @@
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.4.31-SNAPSHOT</version>
+        <version>0.5.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -39,7 +40,7 @@
         </dependency>
         <dependency>
             <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-index-common</artifactId>
+            <artifactId>druid-indexing-common</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
 
@@ -91,7 +92,6 @@
         <dependency>
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty-util</artifactId>
-            <version>6.1.26</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -177,6 +177,10 @@
         <dependency>
             <groupId>commons-cli</groupId>
             <artifactId>commons-cli</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.metamx</groupId>
+            <artifactId>bytebuffer-collections</artifactId>
         </dependency>
 
         <!-- Tests -->

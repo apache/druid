@@ -60,6 +60,42 @@ import java.util.TreeSet;
 @Path("/info")
 public class InfoResource
 {
+  private static final Function<DruidServer, Map<String, Object>> simplifyClusterFn =
+      new Function<DruidServer, Map<String, Object>>()
+      {
+        @Override
+        public Map<String, Object> apply(DruidServer server)
+        {
+          return new ImmutableMap.Builder<String, Object>()
+              .put("host", server.getHost())
+              .put("type", server.getType())
+              .put("tier", server.getTier())
+              .put("currSize", server.getCurrSize())
+              .put("maxSize", server.getMaxSize())
+              .put(
+                  "segments",
+                  Collections2.transform(
+                      server.getSegments().values(),
+                      new Function<DataSegment, Map<String, Object>>()
+                      {
+                        @Override
+                        public Map<String, Object> apply(DataSegment segment)
+                        {
+                          return new ImmutableMap.Builder<String, Object>()
+                              .put("id", segment.getIdentifier())
+                              .put("dataSource", segment.getDimensions())
+                              .put("interval", segment.getInterval())
+                              .put("version", segment.getVersion())
+                              .put("size", segment.getSize())
+                              .build();
+                        }
+                      }
+                  )
+              )
+              .build();
+        }
+      };
+
   private final DruidMaster master;
   private final InventoryView serverInventoryView;
   private final DatabaseSegmentManager databaseSegmentManager;
@@ -96,11 +132,20 @@ public class InfoResource
   @GET
   @Path("/cluster")
   @Produces("application/json")
-  public Response getClusterInfo()
+  public Response getClusterInfo(
+      @QueryParam("full") String full
+  )
   {
-    return Response.status(Response.Status.OK)
-                   .entity(serverInventoryView.getInventory())
-                   .build();
+    if (full != null) {
+      return Response.ok(serverInventoryView.getInventory())
+                     .build();
+    }
+    return Response.ok(
+        Iterables.transform(
+            serverInventoryView.getInventory(),
+            simplifyClusterFn
+        )
+    ).build();
   }
 
   @GET
@@ -301,11 +346,16 @@ public class InfoResource
   @Path("/rules/{dataSourceName}")
   @Produces("application/json")
   public Response getDatasourceRules(
-      @PathParam("dataSourceName") final String dataSourceName
+      @PathParam("dataSourceName") final String dataSourceName,
+      @QueryParam("full") final String full
+
   )
   {
-    return Response.status(Response.Status.OK)
-                   .entity(databaseRuleManager.getRules(dataSourceName))
+    if (full != null) {
+      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
+                     .build();
+    }
+    return Response.ok(databaseRuleManager.getRules(dataSourceName))
                    .build();
   }
 
@@ -348,21 +398,6 @@ public class InfoResource
             }
         )
     ).build();
-  }
-
-  @GET
-  @Path("/datasources/{dataSourceName}")
-  @Produces("application/json")
-  public Response getSegmentDataSource(
-      @PathParam("dataSourceName") final String dataSourceName
-  )
-  {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
-    if (dataSource == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
-    }
-
-    return Response.status(Response.Status.OK).entity(dataSource).build();
   }
 
   @DELETE

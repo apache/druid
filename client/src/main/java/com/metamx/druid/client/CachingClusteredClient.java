@@ -57,6 +57,7 @@ import com.metamx.druid.query.segment.MultipleSpecificSegmentSpec;
 import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
+import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -74,7 +75,7 @@ import java.util.concurrent.Executors;
  */
 public class CachingClusteredClient<T> implements QueryRunner<T>
 {
-  private static final Logger log = new Logger(CachingClusteredClient.class);
+  private static final EmittingLogger log = new EmittingLogger(CachingClusteredClient.class);
 
   private final QueryToolChestWarehouse warehouse;
   private final TimelineServerView serverView;
@@ -307,7 +308,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
               final QueryRunner clientQueryable = serverView.getQueryRunner(server);
               if (clientQueryable == null) {
-                throw new ISE("WTF!? server[%s] doesn't have a client Queryable?", server);
+                log.makeAlert("WTF!? server[%s] doesn't have a client Queryable?", server).emit();
+                continue;
               }
 
               final Sequence<T> resultSeqToAdd;
