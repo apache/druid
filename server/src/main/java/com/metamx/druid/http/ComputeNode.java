@@ -39,7 +39,7 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.metrics.ServerMonitor;
 import com.metamx.druid.query.MetricsEmittingExecutorService;
-import com.metamx.druid.query.PriorityExecutorService;
+import com.metamx.druid.query.PrioritizedExecutorService;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -97,11 +97,11 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     final List<Monitor> monitors = getMonitors();
     final QueryRunnerFactoryConglomerate conglomerate = getConglomerate();
 
-    final ExecutorService innerExecutorService = PriorityExecutorService.create(
+    final ExecutorService innerExecutorService = PrioritizedExecutorService.create(
         getLifecycle(),
         getConfigFactory().buildWithReplacements(
             ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
-        )
+        ), callable2
     );
 
     final ExecutorService executorService = new MetricsEmittingExecutorService(

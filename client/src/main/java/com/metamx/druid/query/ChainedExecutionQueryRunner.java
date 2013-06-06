@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.primitives.Ints;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.Sequence;
@@ -82,6 +83,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query)
   {
+    final int priority = Ints.tryParse(query.getContextValue("priority", "0"));
     return new BaseSequence<T, Iterator<T>>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
@@ -103,12 +105,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                               @Override
                               public int getPriority()
                               {
-                                return Queries.Priority.valueOf(
-                                    query.getContextValue(
-                                        "priority",
-                                        Queries.Priority.NORMAL.name()
-                                    )
-                                ).ordinal();
+                                return priority;
                               }
 
                               @Override

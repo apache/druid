@@ -36,11 +36,11 @@ import java.util.concurrent.TimeUnit;
 
 /**
  */
-public class PriorityExecutorService extends AbstractExecutorService
+public class PrioritizedExecutorService extends AbstractExecutorService
 {
   public static ExecutorService create(Lifecycle lifecycle, ExecutorServiceConfig config)
   {
-    final ExecutorService service = new PriorityExecutorService(
+    final ExecutorService service = new PrioritizedExecutorService(
         new ThreadPoolExecutor(
             config.getNumThreads(),
             config.getNumThreads(),
@@ -69,10 +69,12 @@ public class PriorityExecutorService extends AbstractExecutorService
 
     return service;
   }
+  private static final int DEFAULT_PRIORITY = 0;
+
 
   private final ThreadPoolExecutor threadPoolExecutor;
 
-  public PriorityExecutorService(
+  public PrioritizedExecutorService(
       ThreadPoolExecutor threadPoolExecutor
   )
   {
@@ -125,7 +127,7 @@ public class PriorityExecutorService extends AbstractExecutorService
         @Override
         public int getPriority()
         {
-          return Queries.Priority.NORMAL.ordinal();
+          return DEFAULT_PRIORITY;
         }
 
         @Override
@@ -156,7 +158,7 @@ public class PriorityExecutorService extends AbstractExecutorService
     @Override
     public int compareTo(PrioritizedFuture future)
     {
-      return Ints.compare(getPriority(), future.getPriority());
+      return -Ints.compare(getPriority(), future.getPriority());
     }
   }
 }

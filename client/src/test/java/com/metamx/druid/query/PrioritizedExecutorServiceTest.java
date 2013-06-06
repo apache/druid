@@ -19,7 +19,7 @@
 
 package com.metamx.druid.query;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 import com.metamx.common.concurrent.ExecutorServiceConfig;
 import com.metamx.common.lifecycle.Lifecycle;
 import junit.framework.Assert;
@@ -33,7 +33,7 @@ import java.util.concurrent.ExecutorService;
 
 /**
  */
-public class PriorityExecutorServiceTest
+public class PrioritizedExecutorServiceTest
 {
   private ExecutorService exec;
   private CountDownLatch latch;
@@ -42,7 +42,7 @@ public class PriorityExecutorServiceTest
   @Before
   public void setUp() throws Exception
   {
-    exec = PriorityExecutorService.create(
+    exec = PrioritizedExecutorService.create(
         new Lifecycle(),
         new ExecutorServiceConfig()
         {
@@ -73,7 +73,7 @@ public class PriorityExecutorServiceTest
   @Test
   public void testSubmit() throws Exception
   {
-    final ConcurrentLinkedQueue<Queries.Priority> order = new ConcurrentLinkedQueue<Queries.Priority>();
+    final ConcurrentLinkedQueue<Integer> order = new ConcurrentLinkedQueue<Integer>();
 
     exec.submit(
         new PrioritizedCallable<Void>()
@@ -81,7 +81,7 @@ public class PriorityExecutorServiceTest
           @Override
           public int getPriority()
           {
-            return Queries.Priority.NORMAL.ordinal();
+            return 0;
           }
 
           @Override
@@ -99,13 +99,13 @@ public class PriorityExecutorServiceTest
           @Override
           public int getPriority()
           {
-            return Queries.Priority.LOW.ordinal();
+            return -1;
           }
 
           @Override
           public Void call() throws Exception
           {
-            order.add(Queries.Priority.LOW);
+            order.add(-1);
             finishLatch.countDown();
             return null;
           }
@@ -117,13 +117,13 @@ public class PriorityExecutorServiceTest
           @Override
           public int getPriority()
           {
-            return Queries.Priority.HIGH.ordinal();
+            return 0;
           }
 
           @Override
           public Void call() throws Exception
           {
-            order.add(Queries.Priority.HIGH);
+            order.add(0);
             finishLatch.countDown();
             return null;
           }
@@ -135,13 +135,13 @@ public class PriorityExecutorServiceTest
           @Override
           public int getPriority()
           {
-            return Queries.Priority.NORMAL.ordinal();
+            return 2;
           }
 
           @Override
           public Void call() throws Exception
           {
-            order.add(Queries.Priority.NORMAL);
+            order.add(2);
             finishLatch.countDown();
             return null;
           }
@@ -153,16 +153,7 @@ public class PriorityExecutorServiceTest
 
     Assert.assertTrue(order.size() == 3);
 
-    List<Queries.Priority> expected = Lists.newArrayList(
-        Queries.Priority.HIGH,
-        Queries.Priority.NORMAL,
-        Queries.Priority.LOW
-    );
-
-    int i = 0;
-    for (Queries.Priority priority : order) {
-      Assert.assertEquals(expected.get(i), priority);
-      i++;
-    }
+    List<Integer> expected = ImmutableList.of(2, 0, -1);
+    Assert.assertEquals(expected, ImmutableList.copyOf(order));
   }
 }

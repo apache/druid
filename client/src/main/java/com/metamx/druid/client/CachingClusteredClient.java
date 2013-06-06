@@ -125,25 +125,21 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final boolean populateCache = Boolean.parseBoolean(query.getContextValue("populateCache", "true"))
                                   && strategy != null;
     final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
-    final String priority = query.getContextValue("priority", Queries.Priority.NORMAL.name());
 
-    final Query<T> prioritizedQuery = query.withOverriddenContext(ImmutableMap.of("priority", priority));
 
-    final Query<T> rewrittenQuery;
+    ImmutableMap.Builder<String, String> contextBuilder = new ImmutableMap.Builder<String, String>();
+
+    final String priority = query.getContextValue("priority", "0");
+    contextBuilder.put("priority", priority);
+
     if (populateCache) {
-      rewrittenQuery = prioritizedQuery.withOverriddenContext(
-          ImmutableMap.of(
-              "bySegment",
-              "true",
-              "intermediate",
-              "true"
-          )
-      );
-    } else {
-      rewrittenQuery = prioritizedQuery.withOverriddenContext(ImmutableMap.of("intermediate", "true"));
+      contextBuilder.put("bySegment", "true");
     }
+    contextBuilder.put("intermediate", "true");
 
-    VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(prioritizedQuery.getDataSource());
+    final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
+
+    VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
     if (timeline == null) {
       return Sequences.empty();
     }
@@ -159,7 +155,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     // Let tool chest filter out unneeded segments
     final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
-        toolChest.filterSegments(prioritizedQuery, serversLookup);
+        toolChest.filterSegments(query, serversLookup);
 
     for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
       for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
@@ -174,7 +170,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final byte[] queryCacheKey;
     if (strategy != null) {
-      queryCacheKey = strategy.computeCacheKey(prioritizedQuery);
+      queryCacheKey = strategy.computeCacheKey(query);
     } else {
       queryCacheKey = null;
     }
