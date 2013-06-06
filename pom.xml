@@ -18,12 +18,13 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metamx</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.4.33-SNAPSHOT</version>
+    <version>0.5.0-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -39,18 +40,18 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.22.3</metamx.java-util.version>
-        <netflix.curator.version>2.0.2-21-22</netflix.curator.version>
+        <apache.curator.version>2.0.2-21-22</apache.curator.version>
     </properties>
 
     <modules>
-        <module>common</module>
-        <module>index-common</module>
         <module>client</module>
-        <module>indexer</module>
-        <module>server</module>
-        <module>merger</module>
-        <module>realtime</module>
+        <module>common</module>
         <module>examples</module>
+        <module>indexing-common</module>
+        <module>indexing-hadoop</module>
+        <module>indexing-service</module>
+        <module>realtime</module>
+        <module>server</module>
         <module>services</module>
     </modules>
 
@@ -75,7 +76,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>bytebuffer-collections</artifactId>
-                <version>0.0.1</version>
+                <version>0.0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -126,22 +127,22 @@
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-client</artifactId>
-                <version>${netflix.curator.version}</version>
+                <version>${apache.curator.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-framework</artifactId>
-                <version>${netflix.curator.version}</version>
+                <version>${apache.curator.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-recipes</artifactId>
-                <version>${netflix.curator.version}</version>
+                <version>${apache.curator.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-x-discovery</artifactId>
-                <version>${netflix.curator.version}</version>
+                <version>${apache.curator.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
@@ -180,24 +181,24 @@
                 <version>4.8.1</version>
             </dependency>
             <dependency>
-              <groupId>com.fasterxml.jackson.core</groupId>
-              <artifactId>jackson-annotations</artifactId>
-              <version>2.1.4</version>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>2.1.4</version>
             </dependency>
             <dependency>
-              <groupId>com.fasterxml.jackson.core</groupId>
-              <artifactId>jackson-core</artifactId>
-              <version>2.1.4</version>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>2.1.4</version>
             </dependency>
             <dependency>
-              <groupId>com.fasterxml.jackson.core</groupId>
-              <artifactId>jackson-databind</artifactId>
-              <version>2.1.4</version>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.1.4</version>
             </dependency>
             <dependency>
-              <groupId>com.fasterxml.jackson.datatype</groupId>
-              <artifactId>jackson-datatype-guava</artifactId>
-              <version>2.1.2</version>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-guava</artifactId>
+                <version>2.1.2</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -253,12 +254,12 @@
                 <groupId>org.mortbay.jetty</groupId>
                 <artifactId>jetty</artifactId>
                 <version>6.1.26</version>
-                    <exclusions>
-                        <exclusion>
-                            <groupId>org.mortbay.jetty</groupId>
-                            <artifactId>servlet-api</artifactId>
-                        </exclusion>
-                    </exclusions>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.mortbay.jetty</groupId>
@@ -310,8 +311,16 @@
                 <artifactId>commons-cli</artifactId>
                 <version>1.2</version>
             </dependency>
-
-
+            <dependency>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+                <version>1.9.11</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+                <version>1.9.11</version>
+            </dependency>
 
             <!-- Test Scope -->
             <dependency>
@@ -342,7 +351,7 @@
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-test</artifactId>
-                <version>${netflix.curator.version}</version>
+                <version>${apache.curator.version}</version>
                 <scope>test</scope>
             </dependency>
 

@@ -42,6 +42,7 @@ public class IndexMergerTest
   public void testPersistCaseInsensitive() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
+
     IncrementalIndex toPersist = IncrementalIndexTest.createCaseInsensitiveIndex(timestamp);
 
     final File tempDir = Files.createTempDir();
