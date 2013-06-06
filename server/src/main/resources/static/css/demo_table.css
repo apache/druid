@@ -109,7 +109,7 @@ table {
   font-size:12px;
   clear:both;
   padding-right:20px;
-  cursor:pointer;
+  /*cursor:pointer;*/
 }
 
 td, tr {
