@@ -22,7 +22,7 @@ package com.metamx.druid.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -82,6 +82,7 @@ import org.skife.config.ConfigurationObjectFactory;
 import org.skife.jdbi.v2.DBI;
 
 import java.net.URL;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -158,14 +159,17 @@ public class MasterMain
     );
 
     final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
+    final List<Monitor> monitors = Lists.newArrayList();
+    monitors.add(new JvmMonitor());
+    if (Boolean.parseBoolean(props.getProperty("druid.monitoring.monitorSystem", "false"))) {
+      monitors.add(new SysMonitor());
+    }
+
     final MonitorScheduler healthMonitor = new MonitorScheduler(
         configFactory.build(MonitorSchedulerConfig.class),
         globalScheduledExec,
         emitter,
-        ImmutableList.<Monitor>of(
-            new JvmMonitor(),
-            new SysMonitor()
-        )
+        monitors
     );
     lifecycle.addManagedInstance(healthMonitor);
 
