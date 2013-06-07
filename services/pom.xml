@@ -24,11 +24,11 @@
     <artifactId>druid-services</artifactId>
     <name>druid-services</name>
     <description>druid-services</description>
-    <version>0.5.1</version>
+    <version>0.5.2-SNAPSHOT</version>
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.5.1</version>
+        <version>0.5.2-SNAPSHOT</version>
     </parent>
 
     <dependencies>
