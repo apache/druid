@@ -32,10 +32,7 @@ import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.config.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.state.ConnectionState;
-import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
-
 import org.joda.time.DateTime;
 
 import java.util.Arrays;

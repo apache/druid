@@ -38,9 +38,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class PrioritizedExecutorService extends AbstractExecutorService
 {
-  public static ExecutorService create(Lifecycle lifecycle, ExecutorServiceConfig config)
+  public static PrioritizedExecutorService create(Lifecycle lifecycle, ExecutorServiceConfig config)
   {
-    final ExecutorService service = new PrioritizedExecutorService(
+    final PrioritizedExecutorService service = new PrioritizedExecutorService(
         new ThreadPoolExecutor(
             config.getNumThreads(),
             config.getNumThreads(),
