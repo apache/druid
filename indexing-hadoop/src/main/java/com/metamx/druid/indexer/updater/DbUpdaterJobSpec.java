@@ -20,11 +20,12 @@
 package com.metamx.druid.indexer.updater;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
 import com.metamx.druid.db.DbConnectorConfig;
 
 /**
  */
-public class DbUpdaterJobSpec extends DbConnectorConfig implements UpdaterJobSpec
+public class DbUpdaterJobSpec implements Supplier<DbConnectorConfig>
 {
   @JsonProperty("connectURI")
   public String connectURI;
@@ -38,26 +39,33 @@ public class DbUpdaterJobSpec extends DbConnectorConfig implements UpdaterJobSpe
   @JsonProperty("segmentTable")
   public String segmentTable;
 
-  @Override
-  public String getDatabaseConnectURI()
-  {
-    return connectURI;
-  }
-
-  @Override
-  public String getDatabaseUser()
-  {
-    return user;
-  }
-
-  @Override
-  public String getDatabasePassword()
-  {
-    return password;
-  }
-
   public String getSegmentTable()
   {
     return segmentTable;
+  }
+
+  @Override
+  public DbConnectorConfig get()
+  {
+    return new DbConnectorConfig()
+    {
+      @Override
+      public String getConnectURI()
+      {
+        return connectURI;
+      }
+
+      @Override
+      public String getUser()
+      {
+        return user;
+      }
+
+      @Override
+      public String getPassword()
+      {
+        return password;
+      }
+    };
   }
 }

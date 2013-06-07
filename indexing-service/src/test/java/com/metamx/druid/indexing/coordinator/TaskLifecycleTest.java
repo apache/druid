@@ -36,20 +36,12 @@ import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.loading.DataSegmentKiller;
-import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.indexing.common.TaskLock;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
 import com.metamx.druid.indexing.common.TaskToolboxFactory;
 import com.metamx.druid.indexing.common.actions.LocalTaskActionClientFactory;
-import com.metamx.druid.indexing.common.actions.LockAcquireAction;
 import com.metamx.druid.indexing.common.actions.LockListAction;
-import com.metamx.druid.indexing.common.actions.LockReleaseAction;
 import com.metamx.druid.indexing.common.actions.SegmentInsertAction;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionToolbox;
@@ -59,6 +51,12 @@ import com.metamx.druid.indexing.common.task.IndexTask;
 import com.metamx.druid.indexing.common.task.KillTask;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.coordinator.exec.TaskConsumer;
+import com.metamx.druid.input.InputRow;
+import com.metamx.druid.input.MapBasedInputRow;
+import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.loading.DataSegmentKiller;
+import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.emitter.EmittingLogger;
@@ -417,7 +415,7 @@ public class TaskLifecycleTest
 
     private MockMergerDBCoordinator()
     {
-      super(null, null, null);
+      super(null, null, null, null);
     }
 
     @Override

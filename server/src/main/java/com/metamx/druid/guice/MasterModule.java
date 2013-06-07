@@ -5,10 +5,12 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.druid.client.ServerInventoryViewConfig;
+import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.db.DbTablesConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
+import com.metamx.http.client.HttpClient;
 import org.skife.jdbi.v2.DBI;
 
 /**
@@ -24,6 +26,13 @@ public class MasterModule implements Module
 
     JsonConfigProvider.bind(binder, "druid.database.tables", DbTablesConfig.class);
 
+  }
+
+  @Provides
+  public IndexingServiceClient getIndexingServiceClient(HttpClient client)
+  {
+    // TODO
+    return null;
   }
 
   @Provides @LazySingleton

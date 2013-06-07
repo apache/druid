@@ -24,7 +24,6 @@ import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
@@ -56,11 +55,6 @@ import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
-import com.metamx.druid.initialization.CuratorDiscoveryConfig;
-import com.metamx.druid.initialization.DruidNodeConfig;
-import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
@@ -101,6 +95,11 @@ import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler
 import com.metamx.druid.indexing.coordinator.scaling.SimpleResourceManagementStrategy;
 import com.metamx.druid.indexing.coordinator.scaling.SimpleResourceManagmentConfig;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
+import com.metamx.druid.initialization.CuratorDiscoveryConfig;
+import com.metamx.druid.initialization.DruidNodeConfig;
+import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -108,7 +107,6 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
-import com.metamx.http.client.response.ToStringResponseHandler;
 import com.metamx.metrics.JvmMonitor;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
@@ -319,7 +317,6 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     root.addFilter(
         new FilterHolder(
             new RedirectFilter(
-                new ToStringResponseHandler(Charsets.UTF_8),
                 new RedirectInfo()
                 {
                   @Override
@@ -563,6 +560,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
       mergerDBCoordinator = new MergerDBCoordinator(
           getJsonMapper(),
           dbConnectorConfig,
+          null, // TODO
           dbi
       );
     }

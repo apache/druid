@@ -22,11 +22,11 @@ package com.metamx.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.partitions.PartitionsSpec;
 import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -367,12 +367,14 @@ public class HadoopDruidIndexerConfigTest
         HadoopDruidIndexerConfig.class
     );
 
-    final DbUpdaterJobSpec spec = (DbUpdaterJobSpec) cfg.getUpdaterJobSpec();
+    final DbUpdaterJobSpec spec = cfg.getUpdaterJobSpec();
+    final DbConnectorConfig connectorConfig = spec.get();
+
     Assert.assertEquals("segments", spec.getSegmentTable());
-    Assert.assertEquals("jdbc:mysql://localhost/druid", spec.getDatabaseConnectURI());
-    Assert.assertEquals("rofl", spec.getDatabaseUser());
-    Assert.assertEquals("p4ssw0rd", spec.getDatabasePassword());
-    Assert.assertEquals(false, spec.useValidationQuery());
+    Assert.assertEquals("jdbc:mysql://localhost/druid", connectorConfig.getConnectURI());
+    Assert.assertEquals("rofl", connectorConfig.getUser());
+    Assert.assertEquals("p4ssw0rd", connectorConfig.getPassword());
+    Assert.assertEquals(false, connectorConfig.isUseValidationQuery());
   }
 
   @Test

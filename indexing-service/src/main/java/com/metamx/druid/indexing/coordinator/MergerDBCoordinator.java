@@ -31,6 +31,7 @@ import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DbConnectorConfig;
+import com.metamx.druid.db.DbTablesConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.DBI;
@@ -57,16 +58,19 @@ public class MergerDBCoordinator
 
   private final ObjectMapper jsonMapper;
   private final DbConnectorConfig dbConnectorConfig;
+  private final DbTablesConfig dbTables;
   private final DBI dbi;
 
   public MergerDBCoordinator(
       ObjectMapper jsonMapper,
       DbConnectorConfig dbConnectorConfig,
+      DbTablesConfig dbTables,
       DBI dbi
   )
   {
     this.jsonMapper = jsonMapper;
     this.dbConnectorConfig = dbConnectorConfig;
+    this.dbTables = dbTables;
     this.dbi = dbi;
   }
 
@@ -87,7 +91,7 @@ public class MergerDBCoordinator
                 handle.createQuery(
                     String.format(
                         "SELECT payload FROM %s WHERE used = 1 AND dataSource = :dataSource",
-                        dbConnectorConfig.getSegmentTable()
+                        dbTables.getSegmentsTable()
                     )
                 )
                       .bind("dataSource", dataSource)
@@ -170,7 +174,7 @@ public class MergerDBCoordinator
       final List<Map<String, Object>> exists = handle.createQuery(
           String.format(
               "SELECT id FROM %s WHERE id = :identifier",
-              dbConnectorConfig.getSegmentTable()
+              dbTables.getSegmentsTable()
           )
       ).bind(
           "identifier",
@@ -185,7 +189,7 @@ public class MergerDBCoordinator
       handle.createStatement(
           String.format(
               "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbConnectorConfig.getSegmentTable()
+              dbTables.getSegmentsTable()
           )
       )
             .bind("id", segment.getIdentifier())
@@ -230,7 +234,7 @@ public class MergerDBCoordinator
   private void deleteSegment(final Handle handle, final DataSegment segment)
   {
     handle.createStatement(
-        String.format("DELETE from %s WHERE id = :id", dbConnectorConfig.getSegmentTable())
+        String.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable())
     ).bind("id", segment.getIdentifier())
           .execute();
   }
@@ -246,7 +250,7 @@ public class MergerDBCoordinator
             return handle.createQuery(
                 String.format(
                     "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and end <= :end and used = 0",
-                    dbConnectorConfig.getSegmentTable()
+                    dbTables.getSegmentsTable()
                 )
             )
                          .bind("dataSource", dataSource)

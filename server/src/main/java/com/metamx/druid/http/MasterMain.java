@@ -20,7 +20,6 @@
 package com.metamx.druid.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -66,7 +65,6 @@ import com.metamx.druid.master.DruidMasterConfig;
 import com.metamx.druid.master.LoadQueueTaskMaster;
 import com.metamx.druid.metrics.MetricsModule;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.http.client.response.ToStringResponseHandler;
 import com.metamx.metrics.MonitorScheduler;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
@@ -131,6 +129,7 @@ public class MasterMain
     Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, lifecycle);
 
     ServiceProvider serviceProvider = null;
+    IndexingServiceClient indexingServiceClient = null;
     if (druidMasterConfig.getMergerServiceName() != null) {
       serviceProvider = Initialization.makeServiceProvider(
           druidMasterConfig.getMergerServiceName(),
@@ -139,7 +138,6 @@ public class MasterMain
       );
 //      indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider); TODO
     }
-    IndexingServiceClient indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider);
 
     DBI dbi = injector.getInstance(DBI.class);
     final ConfigManagerConfig configManagerConfig = configFactory.build(ConfigManagerConfig.class);
@@ -246,7 +244,6 @@ public class MasterMain
     root.addFilter(
         new FilterHolder(
             new RedirectFilter(
-                new ToStringResponseHandler(Charsets.UTF_8),
                 redirectInfo
             )
         ), "/*", 0

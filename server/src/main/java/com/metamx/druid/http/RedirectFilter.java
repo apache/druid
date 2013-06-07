@@ -20,7 +20,6 @@
 package com.metamx.druid.http;
 
 import com.metamx.common.logger.Logger;
-import com.metamx.http.client.response.HttpResponseHandler;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -39,15 +38,12 @@ public class RedirectFilter implements Filter
 {
   private static final Logger log = new Logger(RedirectFilter.class);
 
-  private final HttpResponseHandler<StringBuilder, String> responseHandler;
   private final RedirectInfo redirectInfo;
 
   public RedirectFilter(
-      HttpResponseHandler<StringBuilder, String> responseHandler,
       RedirectInfo redirectInfo
   )
   {
-    this.responseHandler = responseHandler;
     this.redirectInfo = redirectInfo;
   }
 

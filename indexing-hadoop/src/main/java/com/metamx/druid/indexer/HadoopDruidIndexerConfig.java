@@ -51,7 +51,7 @@ import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.partitions.PartitionsSpec;
 import com.metamx.druid.indexer.path.PathSpec;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
-import com.metamx.druid.indexer.updater.UpdaterJobSpec;
+import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.shard.ShardSpec;
@@ -59,7 +59,6 @@ import com.metamx.druid.utils.JodaUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.ISODateTimeFormat;
@@ -178,7 +177,7 @@ public class HadoopDruidIndexerConfig
   private volatile Map<DateTime, List<HadoopyShardSpec>> shardSpecs = ImmutableMap.of();
   private volatile boolean overwriteFiles = false;
   private volatile DataRollupSpec rollupSpec;
-  private volatile UpdaterJobSpec updaterJobSpec;
+  private volatile DbUpdaterJobSpec updaterJobSpec;
   private volatile boolean ignoreInvalidRows = false;
   private volatile List<String> registererers = Lists.newArrayList();
 
@@ -203,7 +202,7 @@ public class HadoopDruidIndexerConfig
       final @JsonProperty("shardSpecs") Map<DateTime, List<HadoopyShardSpec>> shardSpecs,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
       final @JsonProperty("rollupSpec") DataRollupSpec rollupSpec,
-      final @JsonProperty("updaterJobSpec") UpdaterJobSpec updaterJobSpec,
+      final @JsonProperty("updaterJobSpec") DbUpdaterJobSpec updaterJobSpec,
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
       final @JsonProperty("registererers") List<String> registererers
   )
@@ -497,12 +496,12 @@ public class HadoopDruidIndexerConfig
   }
 
   @JsonProperty
-  public UpdaterJobSpec getUpdaterJobSpec()
+  public DbUpdaterJobSpec getUpdaterJobSpec()
   {
     return updaterJobSpec;
   }
 
-  public void setUpdaterJobSpec(UpdaterJobSpec updaterJobSpec)
+  public void setUpdaterJobSpec(DbUpdaterJobSpec updaterJobSpec)
   {
     this.updaterJobSpec = updaterJobSpec;
   }

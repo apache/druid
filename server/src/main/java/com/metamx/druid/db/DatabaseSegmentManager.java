@@ -106,7 +106,7 @@ public class DatabaseSegmentManager
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
           new Duration(0),
-          config.get().getPollDuration(),
+          config.get().getPollDuration().toStandardDuration(),
           new Runnable()
           {
             @Override

@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DbConnector;
-import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.DBI;
@@ -43,7 +42,6 @@ public class DbUpdaterJob implements Jobby
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   private final HadoopDruidIndexerConfig config;
-  private final DbUpdaterJobSpec spec;
   private final DBI dbi;
 
   public DbUpdaterJob(
@@ -51,8 +49,7 @@ public class DbUpdaterJob implements Jobby
   )
   {
     this.config = config;
-    this.spec = (DbUpdaterJobSpec) config.getUpdaterJobSpec();
-    this.dbi = new DbConnector(spec).getDBI();
+    this.dbi = new DbConnector(config.getUpdaterJobSpec(), null).getDBI();
   }
 
   @Override
@@ -70,13 +67,13 @@ public class DbUpdaterJob implements Jobby
                 String.format(
                     "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                    spec.getSegmentTable()
+                    config.getUpdaterJobSpec().getSegmentTable()
                 )
             );
             for (final DataSegment segment : segments) {
 
               batch.add(
-                  new ImmutableMap.Builder()
+                  new ImmutableMap.Builder<String, Object>()
                       .put("id", segment.getIdentifier())
                       .put("dataSource", segment.getDataSource())
                       .put("created_date", new DateTime().toString())

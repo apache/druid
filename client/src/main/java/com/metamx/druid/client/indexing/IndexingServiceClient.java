@@ -21,6 +21,7 @@ package com.metamx.druid.client.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.druid.client.DataSegment;
@@ -43,6 +44,7 @@ public class IndexingServiceClient
   private final ObjectMapper jsonMapper;
   private final ServiceProvider serviceProvider;
 
+  @Inject
   public IndexingServiceClient(
       HttpClient client,
       ObjectMapper jsonMapper,

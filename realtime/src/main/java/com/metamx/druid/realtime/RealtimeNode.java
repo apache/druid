@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
@@ -235,7 +236,7 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
       segmentPublisher = new DbSegmentPublisher(
           getJsonMapper(),
           dbSegmentPublisherConfig,
-          new DbConnector(getConfigFactory().build(DbConnectorConfig.class)).getDBI()
+          new DbConnector(Suppliers.ofInstance(getConfigFactory().build(DbConnectorConfig.class)), null).getDBI() // TODO
       );
       getLifecycle().addManagedInstance(segmentPublisher);
     }

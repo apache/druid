@@ -20,16 +20,16 @@
 package com.metamx.druid.db;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Duration;
+import org.joda.time.Period;
 
 /**
  */
 public class DatabaseSegmentManagerConfig
 {
   @JsonProperty
-  private Duration pollDuration = new Duration("PT1M");
+  private Period pollDuration = new Period("PT1M");
 
-  public Duration getPollDuration()
+  public Period getPollDuration()
   {
     return pollDuration;
   }

@@ -29,12 +29,12 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
 import com.metamx.druid.indexer.HadoopDruidIndexerJob;
-import com.metamx.druid.loading.S3DataSegmentPusher;
 import com.metamx.druid.indexing.common.TaskLock;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
 import com.metamx.druid.indexing.common.actions.LockListAction;
 import com.metamx.druid.indexing.common.actions.SegmentInsertAction;
+import com.metamx.druid.loading.S3DataSegmentPusher;
 import com.metamx.druid.utils.JodaUtils;
 import org.joda.time.DateTime;
 
@@ -51,7 +51,7 @@ public class HadoopIndexTask extends AbstractTask
    * @param config is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *               for creating Druid index segments. It may be modified.
    *               <p/>
-   *               Here, we will ensure that the UpdaterJobSpec field of the config is set to null, such that the
+   *               Here, we will ensure that the DbConnectorConfig field of the config is set to null, such that the
    *               job does not push a list of published segments the database. Instead, we will use the method
    *               IndexGeneratorJob.getPublishedSegments() to simply return a list of the published
    *               segments, and let the indexing service report these segments to the database.
