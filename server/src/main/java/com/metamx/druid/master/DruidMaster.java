@@ -57,6 +57,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -473,6 +474,13 @@ public class DruidMaster
 
       stopBeingMaster();
 
+      try {
+        leaderLatch.get().close();
+      }
+      catch (IOException e) {
+        log.warn(e, "unable to close leaderLatch, ignoring");
+      }
+
       started = false;
 
       exec.shutdownNow();
@@ -557,8 +565,6 @@ public class DruidMaster
     synchronized (lock) {
       try {
         log.info("I am no longer the master...");
-
-        leaderLatch.get().close();
 
         for (String server : loadManagementPeons.keySet()) {
           LoadQueuePeon peon = loadManagementPeons.remove(server);
