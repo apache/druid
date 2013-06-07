@@ -78,7 +78,7 @@ public class IndexerCoordinatorResource
               .put("id", input.getTask().getId())
               .put("dataSource", input.getTask().getDataSource())
               .put("interval",
-                   input.getTask().getImplicitLockInterval().get() == null
+                   !input.getTask().getImplicitLockInterval().isPresent()
                    ? ""
                    : input.getTask().getImplicitLockInterval().get()
               )
