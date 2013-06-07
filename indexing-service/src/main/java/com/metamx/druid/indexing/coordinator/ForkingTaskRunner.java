@@ -155,13 +155,17 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
                             );
 
                             for (String propName : props.stringPropertyNames()) {
-                              command.add(
-                                  String.format(
-                                      "-D%s=%s",
-                                      propName,
-                                      props.getProperty(propName)
-                                  )
-                              );
+                              for (String allowedPrefix : config.getAllowedPrefixes()) {
+                                if (propName.startsWith(allowedPrefix)) {
+                                  command.add(
+                                      String.format(
+                                          "-D%s=%s",
+                                          propName,
+                                          props.getProperty(propName)
+                                      )
+                                  );
+                                }
+                              }
                             }
 
                             // Override child JVM specific properties
