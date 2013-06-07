@@ -97,7 +97,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     final List<Monitor> monitors = getMonitors();
     final QueryRunnerFactoryConglomerate conglomerate = getConglomerate();
 
-    final ExecutorService innerExecutorService = PrioritizedExecutorService.create(
+    final PrioritizedExecutorService innerExecutorService = PrioritizedExecutorService.create(
         getLifecycle(),
         getConfigFactory().buildWithReplacements(
             ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")

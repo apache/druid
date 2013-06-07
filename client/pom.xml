@@ -181,6 +181,10 @@
             <groupId>com.metamx</groupId>
             <artifactId>bytebuffer-collections</artifactId>
         </dependency>
+        <dependency>
+          <groupId>net.jpountz.lz4</groupId>
+          <artifactId>lz4</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
