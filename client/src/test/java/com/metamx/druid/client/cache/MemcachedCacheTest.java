@@ -52,8 +52,8 @@ import java.util.concurrent.TimeoutException;
  */
 public class MemcachedCacheTest
 {
-  private static final byte[] HI = "hi".getBytes();
-  private static final byte[] HO = "ho".getBytes();
+  private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes();
+  private static final byte[] HO = "hooooooooooooooooooo".getBytes();
   private MemcachedCache cache;
 
   @Before
@@ -124,7 +124,13 @@ public class MemcachedCacheTest
 class MockMemcachedClient implements MemcachedClientIF
 {
   private final ConcurrentMap<String, CachedData> theMap = new ConcurrentHashMap<String, CachedData>();
-  private final Transcoder<Object> transcoder = new SerializingTranscoder();
+  private final SerializingTranscoder transcoder;
+
+  public MockMemcachedClient()
+  {
+    transcoder = new LZ4Transcoder();
+    transcoder.setCompressionThreshold(0);
+  }
 
   @Override
   public Collection<SocketAddress> getAvailableServers()

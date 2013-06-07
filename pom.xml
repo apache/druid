@@ -320,6 +320,12 @@
                 <artifactId>jackson-mapper-asl</artifactId>
                 <version>1.9.11</version>
             </dependency>
+            <dependency>
+                <groupId>net.jpountz.lz4</groupId>
+                <artifactId>lz4</artifactId>
+                <version>1.1.2</version>
+            </dependency>
+
 
             <!-- Test Scope -->
             <dependency>
