@@ -32,7 +32,6 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.guice.DruidScopes;
 import com.metamx.druid.guice.LazySingleton;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitter;
@@ -66,7 +65,7 @@ public class EmitterModule implements Module
     binder.install(new LogEmitterModule());
     binder.install(new HttpEmitterModule());
 
-    binder.bind(Emitter.class).toProvider(new EmitterProvider(emitterType)).in(DruidScopes.SINGLETON);
+    binder.bind(Emitter.class).toProvider(new EmitterProvider(emitterType)).in(LazySingleton.class);
   }
 
   @Provides

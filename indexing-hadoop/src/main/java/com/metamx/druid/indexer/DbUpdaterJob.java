@@ -26,8 +26,8 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.joda.time.DateTime;
-import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -42,7 +42,7 @@ public class DbUpdaterJob implements Jobby
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   private final HadoopDruidIndexerConfig config;
-  private final DBI dbi;
+  private final IDBI dbi;
 
   public DbUpdaterJob(
       HadoopDruidIndexerConfig config

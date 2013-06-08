@@ -28,16 +28,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.druid.indexing.common.TaskLock;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.actions.TaskAction;
-import com.metamx.druid.indexing.common.TaskLock;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.coordinator.config.IndexerDbConnectorConfig;
 import com.metamx.emitter.EmittingLogger;
-
 import org.joda.time.DateTime;
-import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.exceptions.StatementException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -48,11 +47,11 @@ public class DbTaskStorage implements TaskStorage
 {
   private final ObjectMapper jsonMapper;
   private final IndexerDbConnectorConfig dbConnectorConfig;
-  private final DBI dbi;
+  private final IDBI dbi;
 
   private static final EmittingLogger log = new EmittingLogger(DbTaskStorage.class);
 
-  public DbTaskStorage(ObjectMapper jsonMapper, IndexerDbConnectorConfig dbConnectorConfig, DBI dbi)
+  public DbTaskStorage(ObjectMapper jsonMapper, IndexerDbConnectorConfig dbConnectorConfig, IDBI dbi)
   {
     this.jsonMapper = jsonMapper;
     this.dbConnectorConfig = dbConnectorConfig;

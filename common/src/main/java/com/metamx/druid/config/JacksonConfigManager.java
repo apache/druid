@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.inject.Inject;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,6 +35,7 @@ public class JacksonConfigManager
   private final ConfigManager configManager;
   private final ObjectMapper jsonMapper;
 
+  @Inject
   public JacksonConfigManager(
       ConfigManager configManager,
       ObjectMapper jsonMapper

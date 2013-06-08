@@ -41,10 +41,10 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Batch;
-import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -72,7 +72,7 @@ public class DatabaseSegmentManager
   private final Supplier<DatabaseSegmentManagerConfig> config;
   private final Supplier<DbTablesConfig> dbTables;
   private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
-  private final DBI dbi;
+  private final IDBI dbi;
 
   private volatile boolean started = false;
 
@@ -81,7 +81,7 @@ public class DatabaseSegmentManager
       ObjectMapper jsonMapper,
       Supplier<DatabaseSegmentManagerConfig> config,
       Supplier<DbTablesConfig> dbTables,
-      DBI dbi
+      IDBI dbi
   )
   {
     this.jsonMapper = jsonMapper;

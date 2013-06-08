@@ -25,10 +25,11 @@ import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.client.selector.DiscoverySelector;
+import com.metamx.druid.client.selector.Server;
+import com.metamx.druid.guice.annotations.Global;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.InputStreamResponseHandler;
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.ServiceProvider;
 import org.joda.time.Interval;
 
 import java.io.InputStream;
@@ -42,13 +43,13 @@ public class IndexingServiceClient
 
   private final HttpClient client;
   private final ObjectMapper jsonMapper;
-  private final ServiceProvider serviceProvider;
+  private final DiscoverySelector<Server> serviceProvider;
 
   @Inject
   public IndexingServiceClient(
-      HttpClient client,
+      @Global HttpClient client,
       ObjectMapper jsonMapper,
-      ServiceProvider serviceProvider
+      @IndexingService DiscoverySelector<Server> serviceProvider
   )
   {
     this.client = client;
@@ -105,12 +106,12 @@ public class IndexingServiceClient
   private String baseUrl()
   {
     try {
-      final ServiceInstance instance = serviceProvider.getInstance();
+      final Server instance = serviceProvider.pick();
       if (instance == null) {
         throw new ISE("Cannot find instance of indexingService");
       }
 
-      return String.format("http://%s:%s/druid/indexer/v1", instance.getAddress(), instance.getPort());
+      return String.format("http://%s:%s/druid/indexer/v1", instance.getHost(), instance.getPort());
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

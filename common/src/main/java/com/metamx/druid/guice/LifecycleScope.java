@@ -34,7 +34,7 @@ public class LifecycleScope implements Scope
   {
     return new Provider<T>()
     {
-      private T value = null;
+      private volatile T value = null;
 
       @Override
       public synchronized T get()

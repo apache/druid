@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import org.joda.time.DateTime;
-import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
@@ -18,12 +18,12 @@ public class DbSegmentPublisher implements SegmentPublisher
 
   private final ObjectMapper jsonMapper;
   private final DbSegmentPublisherConfig config;
-  private final DBI dbi;
+  private final IDBI dbi;
 
   public DbSegmentPublisher(
       ObjectMapper jsonMapper,
       DbSegmentPublisherConfig config,
-      DBI dbi
+      IDBI dbi
   )
   {
     this.jsonMapper = jsonMapper;

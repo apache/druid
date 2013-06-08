@@ -38,10 +38,10 @@ import com.metamx.druid.master.rules.Rule;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -59,7 +59,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DatabaseRuleManager
 {
   public static void createDefaultRule(
-      final DBI dbi,
+      final IDBI dbi,
       final String ruleTable,
       final String defaultTier,
       final ObjectMapper jsonMapper
@@ -120,7 +120,7 @@ public class DatabaseRuleManager
   private final ScheduledExecutorService exec;
   private final DatabaseRuleManagerConfig config;
   private final Supplier<DbTablesConfig> dbTables;
-  private final DBI dbi;
+  private final IDBI dbi;
   private final AtomicReference<ConcurrentHashMap<String, List<Rule>>> rules;
 
   private final Object lock = new Object();
@@ -132,7 +132,7 @@ public class DatabaseRuleManager
       ObjectMapper jsonMapper,
       DatabaseRuleManagerConfig config,
       Supplier<DbTablesConfig> dbTables,
-      DBI dbi
+      IDBI dbi
   )
   {
     this.jsonMapper = jsonMapper;

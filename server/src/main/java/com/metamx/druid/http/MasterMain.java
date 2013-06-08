@@ -22,12 +22,11 @@ package com.metamx.druid.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.TypeLiteral;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
@@ -48,6 +47,7 @@ import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.guice.DruidGuiceExtensions;
 import com.metamx.druid.guice.DruidSecondaryModule;
+import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.MasterModule;
 import com.metamx.druid.guice.ServerModule;
@@ -67,8 +67,6 @@ import com.metamx.druid.metrics.MetricsModule;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.x.discovery.ServiceDiscovery;
-import org.apache.curator.x.discovery.ServiceProvider;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -76,11 +74,12 @@ import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.mortbay.servlet.GzipFilter;
 import org.skife.config.ConfigurationObjectFactory;
-import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.IDBI;
 
 import javax.annotation.Nullable;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  */
@@ -93,9 +92,9 @@ public class MasterMain
     LogLevelAdjuster.register();
 
     Injector injector = makeInjector(
-        DruidSecondaryModule.class,
         new LifecycleModule(Key.get(MonitorScheduler.class)),
         EmitterModule.class,
+        HttpClientModule.class,
         CuratorModule.class,
         MetricsModule.class,
         DiscoveryModule.class,
@@ -124,22 +123,10 @@ public class MasterMain
     final DruidMasterConfig druidMasterConfig = configFactory.build(DruidMasterConfig.class);
     final DruidNodeConfig nodeConfig = configFactory.build(DruidNodeConfig.class);
 
-    final ServiceDiscovery<Void> serviceDiscovery = injector.getInstance(Key.get(new TypeLiteral<ServiceDiscovery<Void>>(){}));
     final ServiceAnnouncer serviceAnnouncer = injector.getInstance(ServiceAnnouncer.class);
     Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, lifecycle);
 
-    ServiceProvider serviceProvider = null;
-    IndexingServiceClient indexingServiceClient = null;
-    if (druidMasterConfig.getMergerServiceName() != null) {
-      serviceProvider = Initialization.makeServiceProvider(
-          druidMasterConfig.getMergerServiceName(),
-          serviceDiscovery,
-          lifecycle
-      );
-//      indexingServiceClient = new IndexingServiceClient(httpClient, jsonMapper, serviceProvider); TODO
-    }
-
-    DBI dbi = injector.getInstance(DBI.class);
+    IDBI dbi = injector.getInstance(IDBI.class); // TODO: make tables and stuff
     final ConfigManagerConfig configManagerConfig = configFactory.build(ConfigManagerConfig.class);
     DbConnector.createConfigTable(dbi, configManagerConfig.getConfigTable());
     JacksonConfigManager configManager = new JacksonConfigManager(
@@ -160,7 +147,7 @@ public class MasterMain
         curatorFramework,
         emitter,
         scheduledExecutorFactory,
-        indexingServiceClient,
+        injector.getInstance(IndexingServiceClient.class),
         taskMaster
     );
     lifecycle.addManagedInstance(master);
@@ -184,17 +171,6 @@ public class MasterMain
                 lifecycle.stop();
               }
             }
-        )
-    );
-
-    final Injector injector2 = Guice.createInjector(
-        new MasterServletModule(
-            serverInventoryView,
-            databaseSegmentManager,
-            databaseRuleManager,
-            master,
-            jsonMapper,
-            indexingServiceClient
         )
     );
 
@@ -264,9 +240,14 @@ public class MasterMain
         new ConfigFactoryModule()
     );
 
+    List<Object> actualModules = Lists.newArrayList();
+
+    actualModules.add(DruidSecondaryModule.class);
+    actualModules.addAll(Arrays.asList(modules));
+
     return Guice.createInjector(
-        Iterables.transform(
-            Arrays.asList(modules),
+        Lists.transform(
+            actualModules,
             new Function<Object, Module>()
             {
               @Override

@@ -126,7 +126,7 @@ import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.mortbay.resource.ResourceCollection;
 import org.skife.config.ConfigurationObjectFactory;
-import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.IDBI;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -153,7 +153,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   private List<Monitor> monitors = null;
   private ServiceEmitter emitter = null;
   private DbConnectorConfig dbConnectorConfig = null;
-  private DBI dbi = null;
+  private IDBI dbi = null;
   private IndexerCoordinatorConfig config = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
   private ServiceDiscovery<Void> serviceDiscovery = null;

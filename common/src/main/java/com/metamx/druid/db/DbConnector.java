@@ -24,6 +24,7 @@ import com.metamx.common.logger.Logger;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import javax.sql.DataSource;
@@ -36,7 +37,7 @@ public class DbConnector
 {
   private static final Logger log = new Logger(DbConnector.class);
 
-  public static void createSegmentTable(final DBI dbi, final String segmentTableName)
+  public static void createSegmentTable(final IDBI dbi, final String segmentTableName)
   {
     createTable(
         dbi,
@@ -48,7 +49,7 @@ public class DbConnector
     );
   }
 
-  public static void createRuleTable(final DBI dbi, final String ruleTableName)
+  public static void createRuleTable(final IDBI dbi, final String ruleTableName)
   {
     createTable(
         dbi,
@@ -60,7 +61,7 @@ public class DbConnector
     );
   }
 
-  public static void createConfigTable(final DBI dbi, final String configTableName)
+  public static void createConfigTable(final IDBI dbi, final String configTableName)
   {
     createTable(
         dbi,
@@ -72,7 +73,7 @@ public class DbConnector
     );
   }
 
-  public static void createTaskTable(final DBI dbi, final String taskTableName)
+  public static void createTaskTable(final IDBI dbi, final String taskTableName)
   {
     createTable(
         dbi,
@@ -92,7 +93,7 @@ public class DbConnector
     );
   }
 
-  public static void createTaskLogTable(final DBI dbi, final String taskLogsTableName)
+  public static void createTaskLogTable(final IDBI dbi, final String taskLogsTableName)
   {
     createTable(
         dbi,
@@ -110,7 +111,7 @@ public class DbConnector
     );
   }
 
-  public static void createTaskLockTable(final DBI dbi, final String taskLocksTableName)
+  public static void createTaskLockTable(final IDBI dbi, final String taskLocksTableName)
   {
     createTable(
         dbi,
@@ -129,7 +130,7 @@ public class DbConnector
   }
 
   public static void createTable(
-      final DBI dbi,
+      final IDBI dbi,
       final String tableName,
       final String sql
   )

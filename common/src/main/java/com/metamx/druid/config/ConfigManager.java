@@ -2,6 +2,7 @@ package com.metamx.druid.config;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -42,7 +43,8 @@ public class ConfigManager
 
   private volatile ConfigManager.PollingCallable poller;
 
-  public ConfigManager(IDBI dbi, ConfigManagerConfig config)
+  @Inject
+  public ConfigManager(IDBI dbi, ConfigManagerConfig config) // TODO: use DbTables and a different config
   {
     this.dbi = dbi;
     this.config = config;

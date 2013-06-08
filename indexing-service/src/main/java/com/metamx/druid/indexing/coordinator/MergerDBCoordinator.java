@@ -34,10 +34,10 @@ import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.db.DbTablesConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
@@ -59,13 +59,13 @@ public class MergerDBCoordinator
   private final ObjectMapper jsonMapper;
   private final DbConnectorConfig dbConnectorConfig;
   private final DbTablesConfig dbTables;
-  private final DBI dbi;
+  private final IDBI dbi;
 
   public MergerDBCoordinator(
       ObjectMapper jsonMapper,
       DbConnectorConfig dbConnectorConfig,
       DbTablesConfig dbTables,
-      DBI dbi
+      IDBI dbi
   )
   {
     this.jsonMapper = jsonMapper;

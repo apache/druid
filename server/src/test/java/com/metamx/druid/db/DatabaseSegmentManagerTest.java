@@ -26,7 +26,7 @@ import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.util.Arrays;
@@ -38,13 +38,13 @@ import java.util.Map;
 public class DatabaseSegmentManagerTest
 {
   private DatabaseSegmentManager manager;
-  private DBI dbi;
+  private IDBI dbi;
   private List<Map<String, Object>> testRows;
 
   @Before
   public void setUp() throws Exception
   {
-    dbi = EasyMock.createMock(DBI.class);
+    dbi = EasyMock.createMock(IDBI.class);
     manager = new DatabaseSegmentManager(
         new DefaultObjectMapper(),
         Suppliers.ofInstance(new DatabaseSegmentManagerConfig()),

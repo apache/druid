@@ -22,7 +22,6 @@ package com.metamx.druid.client.selector;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidServer;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -30,7 +29,7 @@ import java.util.Set;
 
 /**
  */
-public class ServerSelector
+public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
 {
   private static final Comparator<QueryableDruidServer> comparator = new Comparator<QueryableDruidServer>()
   {
