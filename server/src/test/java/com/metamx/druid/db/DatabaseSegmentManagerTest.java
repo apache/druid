@@ -94,10 +94,7 @@ public class DatabaseSegmentManagerTest
                    + "\"twitterstream_2012-01-05T00:00:00.000Z_2012-01-06T00:00:00.000Z_2012-01-06T22:19:12.565Z\"}"
     );
 
-    testRows = Arrays.<Map<String, Object>>asList(
-        map1,
-        map2
-    );
+    testRows = Arrays.<Map<String, Object>>asList(map1, map2);
   }
 
   @After
@@ -114,5 +111,6 @@ public class DatabaseSegmentManagerTest
 
     manager.start();
     manager.poll();
+    manager.stop();
   }
 }

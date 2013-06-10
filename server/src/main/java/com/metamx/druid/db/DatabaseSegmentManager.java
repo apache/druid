@@ -103,10 +103,11 @@ public class DatabaseSegmentManager
         return;
       }
 
+      final Duration delay = config.get().getPollDuration().toStandardDuration();
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
-          new Duration(0),
-          config.get().getPollDuration().toStandardDuration(),
+          delay,
+          delay,
           new Runnable()
           {
             @Override
@@ -131,6 +132,7 @@ public class DatabaseSegmentManager
 
       started = false;
       dataSources.set(new ConcurrentHashMap<String, DruidDataSource>());
+      exec.shutdownNow();
     }
   }
 
