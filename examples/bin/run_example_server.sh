@@ -55,11 +55,11 @@ JAVA_ARGS="${JAVA_ARGS} -Ddruid.realtime.specFile=${SPEC_FILE}"
 
 DRUID_CP=${EXAMPLE_LOC}
 #For a pull
-DRUID_CP=${DRUID_CP}:`ls ../target/druid-examples-*-selfcontained.jar`
-DRUID_CP=${DRUID_CP}:../config
+DRUID_CP=${DRUID_CP}:`ls ${SCRIPT_DIR}/../target/druid-examples-*-selfcontained.jar`
+DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/../config
 #For the kit
-DRUID_CP=${DRUID_CP}:`ls ./lib/druid-examples-*-selfcontained.jar`
-DRUID_CP=${DRUID_CP}:./config
+DRUID_CP=${DRUID_CP}:`ls ${SCRIPT_DIR}/lib/druid-examples-*-selfcontained.jar`
+DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/config
 
 echo "Running command:"
 
