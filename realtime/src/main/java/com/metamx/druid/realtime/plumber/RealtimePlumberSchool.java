@@ -383,7 +383,7 @@ public class RealtimePlumberSchool implements PlumberSchool
           final File[] sinkFiles = sinkDir.listFiles(new FilenameFilter() {  		
         			@Override
         			public boolean accept(File dir, String fileName) {				
-        				return !fileName.equalsIgnoreCase("merged");
+        				return !(Ints.tryParse(fileName) == null);
         			}
         		});
           Arrays.sort(
@@ -409,12 +409,14 @@ public class RealtimePlumberSchool implements PlumberSchool
             for (File segmentDir : sinkFiles) {
               log.info("Loading previously persisted segment at [%s]", segmentDir);
               
-              // Although this is has been tackled at start of this method.
+              // Although this has been tackled at start of this method.
               // Just a doubly-check added to skip "merged" dir. from being added to hydrants 
               // If 100% sure that this is not needed, this check can be removed.
-              if(segmentDir.getName().equalsIgnoreCase("merged"))
+              if(Ints.tryParse(segmentDir.getName()) == null)
+              {
                 continue;
-                
+              }
+              
               hydrants.add(
                   new FireHydrant(
                       new QueryableIndexSegment(null, IndexIO.loadIndex(segmentDir)),
