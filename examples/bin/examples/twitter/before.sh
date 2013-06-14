@@ -13,10 +13,16 @@ if [ ! -e "$PF" ]; then
     touch created
     touch $PF
     chmod 700 $PF
-    echo "   Your twitter user login name and pw is needed "
-    read -p 'twitter username? '  TWIT_USER
-    read -s -p 'twitter password? ' TWIT_PW
-    echo "user=${TWIT_USER}" >> $PF
-    echo "password=${TWIT_PW}" >> $PF
-    TWIT_PW=""
+    echo "   Your twitter OAuth information is needed. Go to https://twitter.com/oauth_clients/new to register a new application and retrieve your keys "
+    read -p 'Twitter consumer key? ' CONSUMER_KEY
+    read -p 'Twitter consumer secret? ' CONSUMER_SECRET
+    read -p 'Twitter access token? ' ACCESS_TOKEN
+    read -p 'Twitter access token secret? ' ACCESS_TOKEN_SECRET
+    echo "debug=true" >> $PF
+    echo "oauth.consumerKey=${CONSUMER_KEY}" >> $PF
+    echo "oauth.consumerSecret=${CONSUMER_SECRET}" >> $PF
+    echo "oauth.accessToken=${ACCESS_TOKEN}" >> $PF
+    echo "oauth.accessTokenSecret=${ACCESS_TOKEN_SECRET}" >> $PF
+    CONSUMER_SECRET=""
+    ACCESS_TOKEN_SECRET=""
 fi
