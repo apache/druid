@@ -17,6 +17,7 @@ import twitter4j.StatusListener;
 import twitter4j.TwitterStream;
 import twitter4j.TwitterStreamFactory;
 import twitter4j.User;
+import twitter4j.StallWarning;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -31,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 import static java.lang.Thread.sleep;
 
 /**
- * Twitter "spritzer" Firehost Factory named "twitzer".
+ * Twitter "spritzer" Firehose Factory named "twitzer".
  * Builds a Firehose that emits a stream of
  * ??
  * with timestamps along with ??.
@@ -175,6 +176,11 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
       public void onException(Exception ex)
       {
         ex.printStackTrace();
+      }
+
+      @Override
+      public void onStallWarning(StallWarning warning) {
+        System.out.println("Got stall warning:" + warning);
       }
     };
 
