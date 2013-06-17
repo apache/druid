@@ -43,6 +43,7 @@ import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.announcement.Announcer;
+import com.metamx.druid.guice.JsonConfigurator;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
@@ -60,10 +61,11 @@ import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import org.apache.curator.framework.CuratorFramework;
+import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
-import org.mortbay.jetty.Server;
 import org.skife.config.ConfigurationObjectFactory;
 
+import javax.validation.Validation;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -83,6 +85,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private final Properties props;
   private final ConfigurationObjectFactory configFactory;
   private final String nodeType;
+  private final JsonConfigurator jsonConfigurator;
 
   private DruidServerMetadata druidServerMetadata = null;
   private ServiceEmitter emitter = null;
@@ -123,6 +126,8 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     Preconditions.checkNotNull(smileMapper, "smileMapper");
     Preconditions.checkNotNull(configFactory, "configFactory");
+
+    this.jsonConfigurator = new JsonConfigurator(jsonMapper, Validation.buildDefaultValidatorFactory().getValidator());
 
     Preconditions.checkState(smileMapper.getJsonFactory() instanceof SmileFactory, "smileMapper should use smile.");
     this.nodeType = nodeType;
@@ -243,6 +248,11 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   public ConfigurationObjectFactory getConfigFactory()
   {
     return configFactory;
+  }
+
+  public JsonConfigurator getJsonConfigurator()
+  {
+    return jsonConfigurator;
   }
 
   public DruidServerMetadata getDruidServerMetadata()

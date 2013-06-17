@@ -57,9 +57,9 @@ import com.metamx.http.client.HttpClientInit;
 import com.metamx.metrics.Monitor;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.servlet.GzipFilter;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.servlets.GzipFilter;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.List;
@@ -210,19 +210,22 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     theModules.addAll(extraModules);
 
     final Injector injector = Guice.createInjector(theModules);
-    final Context root = new Context(getServer(), "/", Context.SESSIONS);
+    final ServletContextHandler root = new ServletContextHandler();
+    root.setContextPath("/");
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(
-        new ServletHolder(new QueryServlet(getJsonMapper(), getSmileMapper(), texasRanger, getEmitter(), getRequestLogger())),
+        new ServletHolder(
+            new QueryServlet(getJsonMapper(), getSmileMapper(), texasRanger, getEmitter(), getRequestLogger())
+        ),
         "/druid/v2/*"
     );
-    root.addFilter(GzipFilter.class, "/*", 0);
+    root.addFilter(GzipFilter.class, "/*", null);
 
     root.addEventListener(new GuiceServletConfig(injector));
-    root.addFilter(GuiceFilter.class, "/druid/v2/datasources/*", 0);
+    root.addFilter(GuiceFilter.class, "/druid/v2/datasources/*", null);
 
     for (String path : pathsForGuiceFilter) {
-      root.addFilter(GuiceFilter.class, path, 0);
+      root.addFilter(GuiceFilter.class, path, null);
     }
   }
 

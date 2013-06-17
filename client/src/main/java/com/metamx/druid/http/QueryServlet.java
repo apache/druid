@@ -33,9 +33,8 @@ import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
+import org.eclipse.jetty.server.Request;
 import org.joda.time.DateTime;
-import org.mortbay.jetty.Request;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;

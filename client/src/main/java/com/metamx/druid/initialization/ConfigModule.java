@@ -23,19 +23,23 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.config.Config;
+import com.metamx.druid.guice.JsonConfigurator;
 import com.metamx.druid.guice.LazySingleton;
 import org.skife.config.ConfigurationObjectFactory;
 
+import javax.validation.Validation;
+import javax.validation.Validator;
 import java.util.Properties;
 
 /**
  */
-public class ConfigFactoryModule implements Module
+public class ConfigModule implements Module
 {
   @Override
   public void configure(Binder binder)
   {
-
+    binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+    binder.bind(JsonConfigurator.class).in(LazySingleton.class);
   }
 
   @Provides @LazySingleton

@@ -1,18 +1,20 @@
 package com.metamx.druid.config;
 
-import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Period;
+
+import javax.validation.constraints.NotNull;
 
 /**
  */
-public abstract class ConfigManagerConfig
+public class ConfigManagerConfig
 {
-  @Config("druid.database.configTable")
-  public abstract String getConfigTable();
+  @JsonProperty
+  @NotNull
+  private Period pollDuration = new Period("PT1M");
 
-  @Config("druid.indexer.poll.duration")
-  @Default("PT1M")
-  public abstract Duration getPollDuration();
-
+  public Period getPollDuration()
+  {
+    return pollDuration;
+  }
 }

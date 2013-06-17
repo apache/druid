@@ -1,6 +1,7 @@
 package com.metamx.druid.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -26,7 +27,7 @@ public class HttpClientModule implements Module
     JsonConfigProvider.bind(binder, "druid.global.http", DruidHttpClientConfig.class);
   }
 
-  public abstract static class DruidHttpClientConfig
+  public static class DruidHttpClientConfig
   {
     @JsonProperty
     @Min(0)
@@ -47,8 +48,14 @@ public class HttpClientModule implements Module
   }
 
   @Provides @LazySingleton @Global
-  public HttpClient makeHttpClient(DruidHttpClientConfig config, Lifecycle lifecycle, @Nullable SSLContext sslContext)
+  public HttpClient makeHttpClient(
+      Supplier<DruidHttpClientConfig> configSupplier,
+      Lifecycle lifecycle,
+      @Nullable SSLContext sslContext
+  )
   {
+    final DruidHttpClientConfig config = configSupplier.get();
+
     final HttpClientConfig.Builder builder = HttpClientConfig
         .builder()
         .withNumConnections(config.getNumConnections())

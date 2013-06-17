@@ -20,6 +20,7 @@
 package com.metamx.druid.master;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.util.concurrent.ExecutorService;
@@ -33,6 +34,7 @@ public class LoadQueueTaskMaster
   private final ObjectMapper jsonMapper;
   private final ExecutorService peonExec;
 
+  @Inject
   public LoadQueueTaskMaster(
       CuratorFramework curator,
       ObjectMapper jsonMapper,

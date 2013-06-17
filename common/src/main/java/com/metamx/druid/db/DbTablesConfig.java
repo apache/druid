@@ -12,7 +12,7 @@ public class DbTablesConfig
 {
   public static DbTablesConfig fromBase(String base)
   {
-    return new DbTablesConfig(base, null, null);
+    return new DbTablesConfig(base, null, null, null, null, null, null);
   }
 
   @NotNull
@@ -22,19 +22,38 @@ public class DbTablesConfig
   private final String segmentsTable;
 
   @NotNull
-  private final String ruleTable;
+  private final String rulesTable;
+
+  @NotNull
+  private final String configTable;
+
+  @NotNull
+  private final String tasksTable;
+
+  @NotNull
+  private final String taskLogTable;
+
+  @NotNull
+  private final String taskLockTable;
 
   @JsonCreator
   public DbTablesConfig(
       @JsonProperty("base") String base,
       @JsonProperty("segments") String segmentsTable,
-      @JsonProperty("rules") String rulesTable
+      @JsonProperty("rules") String rulesTable,
+      @JsonProperty("config") String configTable,
+      @JsonProperty("tasks") String tasksTable,
+      @JsonProperty("taskLog") String taskLogTable,
+      @JsonProperty("taskLock") String taskLockTable
   )
   {
-
     this.base = base;
     this.segmentsTable = makeTableName(segmentsTable, "segments");
-    this.ruleTable = makeTableName(rulesTable, "rules");
+    this.rulesTable = makeTableName(rulesTable, "rules");
+    this.configTable = makeTableName(configTable, "config");
+    this.tasksTable = makeTableName(tasksTable, "tasks");
+    this.taskLogTable = makeTableName(taskLogTable, "task_log");
+    this.taskLockTable = makeTableName(taskLockTable, "task_lock");
   }
 
   private String makeTableName(String explicitTableName, String defaultSuffix)
@@ -64,6 +83,30 @@ public class DbTablesConfig
   @JsonProperty("rules")
   public String getRulesTable()
   {
-    return ruleTable;
+    return rulesTable;
+  }
+
+  @JsonProperty("config")
+  public String getConfigTable()
+  {
+    return configTable;
+  }
+
+  @JsonProperty("tasks")
+  public String getTasksTable()
+  {
+    return tasksTable;
+  }
+
+  @JsonProperty("taskLog")
+  public String getTaskLogTable()
+  {
+    return taskLogTable;
+  }
+
+  @JsonProperty("taskLock")
+  public String getTaskLockTable()
+  {
+    return taskLockTable;
   }
 }

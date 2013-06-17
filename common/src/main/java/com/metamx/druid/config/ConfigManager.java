@@ -1,5 +1,6 @@
 package com.metamx.druid.config;
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -7,6 +8,7 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.db.DbTablesConfig;
 import org.joda.time.Duration;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -34,7 +36,7 @@ public class ConfigManager
   private boolean started = false;
 
   private final IDBI dbi;
-  private final ConfigManagerConfig config;
+  private final Supplier<ConfigManagerConfig> config;
 
   private final ScheduledExecutorService exec;
   private final ConcurrentMap<String, ConfigHolder> watchedConfigs;
@@ -44,17 +46,20 @@ public class ConfigManager
   private volatile ConfigManager.PollingCallable poller;
 
   @Inject
-  public ConfigManager(IDBI dbi, ConfigManagerConfig config) // TODO: use DbTables and a different config
+  public ConfigManager(IDBI dbi, Supplier<DbTablesConfig> dbTables, Supplier<ConfigManagerConfig> config)
   {
     this.dbi = dbi;
     this.config = config;
 
     this.exec = ScheduledExecutors.fixed(1, "config-manager-%s");
     this.watchedConfigs = Maps.newConcurrentMap();
-    this.selectStatement = String.format("SELECT payload FROM %s WHERE name = :name", config.getConfigTable());
+
+    final String configTable = dbTables.get().getConfigTable();
+
+    this.selectStatement = String.format("SELECT payload FROM %s WHERE name = :name", configTable);
     insertStatement = String.format(
         "INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload",
-        config.getConfigTable()
+        configTable
     );
   }
 
@@ -67,7 +72,9 @@ public class ConfigManager
       }
 
       poller = new PollingCallable();
-      ScheduledExecutors.scheduleWithFixedDelay(exec, new Duration(0), config.getPollDuration(), poller);
+      ScheduledExecutors.scheduleWithFixedDelay(
+          exec, new Duration(0), config.get().getPollDuration().toStandardDuration(), poller
+      );
 
       started = true;
     }

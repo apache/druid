@@ -19,19 +19,26 @@
 
 package com.metamx.druid.db;
 
-import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Period;
 
 /**
  */
-public abstract class DatabaseRuleManagerConfig
+public class DatabaseRuleManagerConfig
 {
-  @Config("druid.database.rules.defaultTier")
-  @Default("_default")
-  public abstract String getDefaultTier();
+  @JsonProperty
+  private String defaultTier = "_default";
 
-  @Config("druid.database.rules.poll.duration")
-  @Default("PT1M")
-  public abstract Duration getRulesPollDuration();
+  @JsonProperty
+  private Period pollDuration = new Period("PT1M");
+
+  public String getDefaultTier()
+  {
+    return defaultTier;
+  }
+
+  public Period getPollDuration()
+  {
+    return pollDuration;
+  }
 }

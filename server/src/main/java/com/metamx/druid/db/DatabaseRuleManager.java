@@ -118,7 +118,7 @@ public class DatabaseRuleManager
 
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService exec;
-  private final DatabaseRuleManagerConfig config;
+  private final Supplier<DatabaseRuleManagerConfig> config;
   private final Supplier<DbTablesConfig> dbTables;
   private final IDBI dbi;
   private final AtomicReference<ConcurrentHashMap<String, List<Rule>>> rules;
@@ -130,7 +130,7 @@ public class DatabaseRuleManager
   @Inject
   public DatabaseRuleManager(
       ObjectMapper jsonMapper,
-      DatabaseRuleManagerConfig config,
+      Supplier<DatabaseRuleManagerConfig> config,
       Supplier<DbTablesConfig> dbTables,
       IDBI dbi
   )
@@ -155,11 +155,11 @@ public class DatabaseRuleManager
         return;
       }
 
-      createDefaultRule(dbi, getRulesTable(), config.getDefaultTier(), jsonMapper);
+      createDefaultRule(dbi, getRulesTable(), config.get().getDefaultTier(), jsonMapper);
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
           new Duration(0),
-          config.getRulesPollDuration(),
+          config.get().getPollDuration().toStandardDuration(),
           new Runnable()
           {
             @Override
@@ -267,8 +267,8 @@ public class DatabaseRuleManager
     if (theRules.get(dataSource) != null) {
       retVal.addAll(theRules.get(dataSource));
     }
-    if (theRules.get(config.getDefaultTier()) != null) {
-      retVal.addAll(theRules.get(config.getDefaultTier()));
+    if (theRules.get(config.get().getDefaultTier()) != null) {
+      retVal.addAll(theRules.get(config.get().getDefaultTier()));
     }
     return retVal;
   }

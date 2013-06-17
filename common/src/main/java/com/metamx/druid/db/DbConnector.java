@@ -20,6 +20,7 @@
 package com.metamx.druid.db;
 
 import com.google.common.base.Supplier;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
@@ -165,6 +166,7 @@ public class DbConnector
   private final Supplier<DbTablesConfig> dbTables;
   private final DBI dbi;
 
+  @Inject
   public DbConnector(Supplier<DbConnectorConfig> config, Supplier<DbTablesConfig> dbTables)
   {
     this.config = config;
@@ -197,11 +199,32 @@ public class DbConnector
 
   public void createSegmentTable()
   {
-    createSegmentTable(dbi, dbTables.get().getSegmentsTable());
+    if (config.get().isCreateTables()) {
+      createSegmentTable(dbi, dbTables.get().getSegmentsTable());
+    }
   }
 
   public void createRulesTable()
   {
-    createRuleTable(dbi, dbTables.get().getRulesTable());
+    if (config.get().isCreateTables()) {
+      createRuleTable(dbi, dbTables.get().getRulesTable());
+    }
+  }
+
+  public void createConfigTable()
+  {
+    if (config.get().isCreateTables()) {
+      createRuleTable(dbi, dbTables.get().getConfigTable());
+    }
+  }
+
+  public void createTaskTables()
+  {
+    if (config.get().isCreateTables()) {
+      final DbTablesConfig dbTablesConfig = dbTables.get();
+      createTaskTable(dbi, dbTablesConfig.getTasksTable());
+      createTaskLogTable(dbi, dbTablesConfig.getTaskLogTable());
+      createTaskLockTable(dbi, dbTablesConfig.getTaskLockTable());
+    }
   }
 }

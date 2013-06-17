@@ -41,10 +41,8 @@ import com.metamx.druid.indexing.coordinator.TaskQueue;
 import com.metamx.druid.indexing.coordinator.TaskRunner;
 import com.metamx.druid.indexing.coordinator.TaskRunnerWorkItem;
 import com.metamx.druid.indexing.coordinator.TaskStorageQueryAdapter;
-import com.metamx.druid.indexing.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
-import com.metamx.emitter.service.ServiceEmitter;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -89,8 +87,6 @@ public class IndexerCoordinatorResource
         }
       };
 
-  private final IndexerCoordinatorConfig config;
-  private final ServiceEmitter emitter;
   private final TaskMasterLifecycle taskMasterLifecycle;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
   private final TaskLogProvider taskLogProvider;
@@ -101,8 +97,6 @@ public class IndexerCoordinatorResource
 
   @Inject
   public IndexerCoordinatorResource(
-      IndexerCoordinatorConfig config,
-      ServiceEmitter emitter,
       TaskMasterLifecycle taskMasterLifecycle,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
       TaskLogProvider taskLogProvider,
@@ -110,8 +104,6 @@ public class IndexerCoordinatorResource
       ObjectMapper jsonMapper
   ) throws Exception
   {
-    this.config = config;
-    this.emitter = emitter;
     this.taskMasterLifecycle = taskMasterLifecycle;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
     this.taskLogProvider = taskLogProvider;

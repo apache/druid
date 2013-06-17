@@ -1,5 +1,6 @@
 package com.metamx.druid.metrics;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -8,13 +9,13 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.guice.JsonConfigProvider;
 import com.metamx.druid.guice.LazySingleton;
 import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.JvmMonitor;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
-import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 
 import java.util.List;
@@ -44,8 +45,10 @@ public class MetricsModule implements Module
   @Override
   public void configure(Binder binder)
   {
+    JsonConfigProvider.bind(binder, "druid.monitoring", DruidMonitorSchedulerConfig.class);
+
     binder.bind(JvmMonitor.class).in(LazySingleton.class);
-    binder.bind(SysMonitor.class).in(LazySingleton.class);
+    binder.bind(SysMonitor.class).in(LazySingleton.class); // TODO: allow for disabling of this monitor
 
     for (Class<? extends Monitor> monitor : monitors) {
       binder.bind(monitor).in(LazySingleton.class);
@@ -53,7 +56,11 @@ public class MetricsModule implements Module
   }
 
   @Provides @ManageLifecycle
-  public MonitorScheduler getMonitorScheduler(MonitorSchedulerConfig config, ServiceEmitter emitter, Injector injector)
+  public MonitorScheduler getMonitorScheduler(
+      Supplier<DruidMonitorSchedulerConfig> config,
+      ServiceEmitter emitter,
+      Injector injector
+  )
   {
     List<Monitor> monitors = Lists.newArrayList();
 
@@ -68,7 +75,7 @@ public class MetricsModule implements Module
     }
 
     return new MonitorScheduler(
-        config,
+        config.get(),
         Execs.scheduledSingleThreaded("MonitorScheduler-%s"),
         emitter,
         monitors

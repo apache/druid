@@ -21,8 +21,14 @@ package com.metamx.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
@@ -33,9 +39,12 @@ import com.metamx.druid.curator.discovery.AddressPortServiceInstanceFactory;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
+import com.metamx.druid.guice.DruidGuiceExtensions;
+import com.metamx.druid.guice.DruidSecondaryModule;
 import com.metamx.druid.http.EmittingRequestLogger;
 import com.metamx.druid.http.FileRequestLogger;
 import com.metamx.druid.http.RequestLogger;
+import com.metamx.druid.jackson.JacksonModule;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.core.Emitter;
 import org.apache.curator.framework.CuratorFramework;
@@ -45,17 +54,20 @@ import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.zookeeper.data.Stat;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.thread.QueuedThreadPool;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.nio.SelectChannelConnector;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.skife.config.ConfigurationObjectFactory;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -369,5 +381,47 @@ public class Initialization
     }
 
     return new AddressPortServiceInstanceFactory(address, config.getPort());
+  }
+
+  public static Injector makeInjector(final Object... modules)
+  {
+    final Injector baseInjector = Guice.createInjector(
+        new DruidGuiceExtensions(),
+        new JacksonModule(),
+        new PropertiesModule("runtime.properties"),
+        new ConfigModule()
+    );
+
+    List<Object> actualModules = Lists.newArrayList();
+
+    actualModules.add(DruidSecondaryModule.class);
+    actualModules.addAll(Arrays.asList(modules));
+
+    return Guice.createInjector(
+        Lists.transform(
+            actualModules,
+            new Function<Object, Module>()
+            {
+              @Override
+              @SuppressWarnings("unchecked")
+              public Module apply(@Nullable Object input)
+              {
+                if (input instanceof Module) {
+                  baseInjector.injectMembers(input);
+                  return (Module) input;
+                }
+                if (input instanceof Class) {
+                  if (Module.class.isAssignableFrom((Class) input)) {
+                    return baseInjector.getInstance((Class<? extends Module>) input);
+                  }
+                  else {
+                    throw new ISE("Class[%s] does not implement %s", input.getClass(), Module.class);
+                  }
+                }
+                throw new ISE("Unknown module type[%s]", input.getClass());
+              }
+            }
+        )
+    );
   }
 }

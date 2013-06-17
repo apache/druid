@@ -19,6 +19,7 @@
 
 package com.metamx.druid.initialization;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
@@ -46,6 +47,7 @@ import java.util.Properties;
 public class EmitterModule implements Module
 {
   private static final Logger log = new Logger(EmitterModule.class);
+  private static final String EMITTER_PROPERTY = "druid.emitter";
 
   private final Properties props;
 
@@ -60,7 +62,7 @@ public class EmitterModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    String emitterType = props.getProperty("druid.emitter", "");
+    String emitterType = props.getProperty(EMITTER_PROPERTY, "");
 
     binder.install(new LogEmitterModule());
     binder.install(new HttpEmitterModule());
@@ -70,8 +72,9 @@ public class EmitterModule implements Module
 
   @Provides
   @LazySingleton
-  public ServiceEmitter getServiceEmitter(DruidNodeConfig config, Emitter emitter)
+  public ServiceEmitter getServiceEmitter(Supplier<DruidNodeConfig> configSupplier, Emitter emitter)
   {
+    final DruidNodeConfig config = configSupplier.get();
     final ServiceEmitter retVal = new ServiceEmitter(config.getServiceName(), config.getHost(), emitter);
     EmittingLogger.registerEmitter(retVal);
     return retVal;
@@ -110,7 +113,7 @@ public class EmitterModule implements Module
             knownTypes.add(((Named) annotation).value());
           }
         }
-        throw new ISE("Uknown emitter type, known types[%s]", knownTypes);
+        throw new ISE("Uknown emitter type[%s]=[%s], known types[%s]", EMITTER_PROPERTY, emitterType, knownTypes);
       }
     }
 

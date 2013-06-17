@@ -20,16 +20,16 @@
 package com.metamx.druid.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Duration;
+import org.joda.time.Period;
 
 /**
  */
-public abstract class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
+public class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
 {
   @JsonProperty
-  private Duration timeOut = new Duration("PT5m");
+  private Period timeOut = new Period("PT5M");
 
-  public Duration getReadTimeout()
+  public Period getReadTimeout()
   {
     return timeOut;
   }

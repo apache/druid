@@ -68,6 +68,10 @@
             <artifactId>hibernate-validator</artifactId>
         </dependency>
         <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>it.uniroma3.mat</groupId>
             <artifactId>extendedset</artifactId>
         </dependency>

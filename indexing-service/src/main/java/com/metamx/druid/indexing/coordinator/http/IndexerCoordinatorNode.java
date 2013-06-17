@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -51,6 +52,7 @@ import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
+import com.metamx.druid.db.DbTablesConfig;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
@@ -115,18 +117,17 @@ import com.metamx.metrics.SysMonitor;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.x.discovery.ServiceDiscovery;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.resource.ResourceCollection;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
 import org.joda.time.Duration;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.resource.ResourceCollection;
 import org.skife.config.ConfigurationObjectFactory;
-import org.skife.jdbi.v2.IDBI;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -153,7 +154,8 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   private List<Monitor> monitors = null;
   private ServiceEmitter emitter = null;
   private DbConnectorConfig dbConnectorConfig = null;
-  private IDBI dbi = null;
+  private DbConnector dbi = null;
+  private Supplier<DbTablesConfig> dbTables = null;
   private IndexerCoordinatorConfig config = null;
   private MergerDBCoordinator mergerDBCoordinator = null;
   private ServiceDiscovery<Void> serviceDiscovery = null;
@@ -238,19 +240,30 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     return this;
   }
 
+  public Supplier<DbTablesConfig> getDbTables()
+  {
+    if (dbTables == null) {
+      dbTables = Suppliers.ofInstance(
+          getJsonConfigurator().configurate(getProps(), "druid.database.tables", DbTablesConfig.class)
+      );
+    }
+    return dbTables;
+  }
+
   public void doInit() throws Exception
   {
     final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(getLifecycle());
     initializeDB();
 
     final ConfigManagerConfig managerConfig = getConfigFactory().build(ConfigManagerConfig.class);
-    DbConnector.createConfigTable(dbi, managerConfig.getConfigTable());
+    dbi.createConfigTable();
     JacksonConfigManager configManager =
         new JacksonConfigManager(
             getLifecycle().addManagedInstance(
                 new ConfigManager(
-                    dbi,
-                    managerConfig
+                    dbi.getDBI(),
+                    getDbTables(),
+                    Suppliers.ofInstance(managerConfig)
                 )
             ), getJsonMapper()
         );
@@ -296,7 +309,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
         )
     );
 
-    final Context staticContext = new Context(server, "/static", Context.SESSIONS);
+    final ServletContextHandler staticContext = new ServletContextHandler(server, "/static", ServletContextHandler.SESSIONS);
     staticContext.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
     ResourceCollection resourceCollection = new ResourceCollection(
@@ -309,7 +322,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
 
     // If we want to support querying tasks (e.g. for realtime in local mode), we need a QueryServlet here.
 
-    final Context root = new Context(server, "/", Context.SESSIONS);
+    final ServletContextHandler root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/druid/*");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/mmx/*"); // backwards compatibility
@@ -343,10 +356,10 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
                   }
                 }
             )
-        ), "/*", 0
+        ), "/*", null
     );
-    root.addFilter(GuiceFilter.class, "/druid/indexer/v1/*", 0);
-    root.addFilter(GuiceFilter.class, "/mmx/merger/v1/*", 0); //backwards compatibility, soon to be removed
+    root.addFilter(GuiceFilter.class, "/druid/indexer/v1/*", null);
+    root.addFilter(GuiceFilter.class, "/mmx/merger/v1/*", null); //backwards compatibility, soon to be removed
 
     initialized = true;
   }
@@ -533,7 +546,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
       dbConnectorConfig = getConfigFactory().build(DbConnectorConfig.class);
     }
     if (dbi == null) {
-      dbi = new DbConnector(Suppliers.ofInstance(dbConnectorConfig), null).getDBI(); // TODO
+      dbi = new DbConnector(Suppliers.ofInstance(dbConnectorConfig), null); // TODO
     }
   }
 
@@ -560,8 +573,8 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
       mergerDBCoordinator = new MergerDBCoordinator(
           getJsonMapper(),
           dbConnectorConfig,
-          null, // TODO
-          dbi
+          getDbTables().get(),
+          dbi.getDBI()
       );
     }
   }
@@ -610,15 +623,9 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
         taskStorage = new HeapMemoryTaskStorage();
       } else if (config.getStorageImpl().equals("db")) {
         final IndexerDbConnectorConfig dbConnectorConfig = getConfigFactory().build(IndexerDbConnectorConfig.class);
-        DbConnector.createTaskTable(dbi, dbConnectorConfig.getTaskTable());
-        DbConnector.createTaskLogTable(dbi, dbConnectorConfig.getTaskLogTable());
-        DbConnector.createTaskLockTable(dbi, dbConnectorConfig.getTaskLockTable());
+        dbi.createTaskTables();
 
-        taskStorage = new DbTaskStorage(
-            getJsonMapper(),
-            dbConnectorConfig,
-            new DbConnector(Suppliers.<DbConnectorConfig>ofInstance(dbConnectorConfig), null).getDBI() // TODO
-        );
+        taskStorage = new DbTaskStorage(getJsonMapper(), dbConnectorConfig, dbi.getDBI());
       } else {
         throw new ISE("Invalid storage implementation: %s", config.getStorageImpl());
       }

@@ -25,7 +25,7 @@ import javax.validation.constraints.NotNull;
 
 /**
  */
-public abstract class DbConnectorConfig
+public class DbConnectorConfig
 {
   @JsonProperty
   private boolean createTables = true;

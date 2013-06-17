@@ -1,5 +1,6 @@
 package com.metamx.druid.curator.discovery;
 
+import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -26,18 +27,18 @@ public class DiscoveryModule implements Module
   @Provides @LazySingleton
   public ServiceDiscovery<Void> getServiceDiscovery(
       CuratorFramework curator,
-      CuratorDiscoveryConfig config,
+      Supplier<CuratorDiscoveryConfig> config,
       Lifecycle lifecycle
   ) throws Exception
   {
-    return Initialization.makeServiceDiscoveryClient(curator, config, lifecycle);
+    return Initialization.makeServiceDiscoveryClient(curator, config.get(), lifecycle);
   }
 
   @Provides @LazySingleton
   public ServiceInstanceFactory<Void> getServiceInstanceFactory(
-      DruidNodeConfig nodeConfig
+      Supplier<DruidNodeConfig> nodeConfig
   )
   {
-    return Initialization.makeServiceInstanceFactory(nodeConfig);
+    return Initialization.makeServiceInstanceFactory(nodeConfig.get());
   }
 }

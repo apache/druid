@@ -24,6 +24,7 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
+import com.google.inject.util.Providers;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.druid.guice.JsonConfigProvider;
 import com.metamx.druid.guice.LazySingleton;
@@ -43,6 +44,9 @@ public class HttpEmitterModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.emitter.http", HttpEmitterConfig.class);
+
+    // Fix the injection of this if we want to enable ssl emission of events.
+    binder.bind(SSLContext.class).toProvider(Providers.<SSLContext>of(null)).in(LazySingleton.class);
   }
 
   @Provides @LazySingleton @Named("http")
@@ -51,7 +55,7 @@ public class HttpEmitterModule implements Module
     final HttpClientConfig.Builder builder = HttpClientConfig
         .builder()
         .withNumConnections(1)
-        .withReadTimeout(config.get().getReadTimeout());
+        .withReadTimeout(config.get().getReadTimeout().toStandardDuration());
 
     if (sslContext != null) {
       builder.withSslContext(sslContext);

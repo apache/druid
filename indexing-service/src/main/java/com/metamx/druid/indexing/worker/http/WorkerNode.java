@@ -37,10 +37,6 @@ import com.metamx.druid.QueryableNode;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.StatusServlet;
-import com.metamx.druid.initialization.CuratorDiscoveryConfig;
-import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.indexing.common.config.IndexerZkConfig;
 import com.metamx.druid.indexing.common.config.TaskLogConfig;
 import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
@@ -54,6 +50,10 @@ import com.metamx.druid.indexing.worker.Worker;
 import com.metamx.druid.indexing.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.indexing.worker.WorkerTaskMonitor;
 import com.metamx.druid.indexing.worker.config.WorkerConfig;
+import com.metamx.druid.initialization.CuratorDiscoveryConfig;
+import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -70,14 +70,14 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceProvider;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
 import org.joda.time.Duration;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.List;
@@ -204,12 +204,12 @@ public class WorkerNode extends QueryableNode<WorkerNode>
             forkingTaskRunner
         )
     );
-    final Context root = new Context(server, "/", Context.SESSIONS);
+    final ServletContextHandler root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
 
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     root.addEventListener(new GuiceServletConfig(injector));
-    root.addFilter(GuiceFilter.class, "/druid/worker/v1/*", 0);
+    root.addFilter(GuiceFilter.class, "/druid/worker/v1/*", null);
   }
 
   @LifecycleStart

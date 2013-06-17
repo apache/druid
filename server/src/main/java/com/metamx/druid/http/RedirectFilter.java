@@ -19,6 +19,7 @@
 
 package com.metamx.druid.http;
 
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 
 import javax.servlet.Filter;
@@ -40,6 +41,7 @@ public class RedirectFilter implements Filter
 
   private final RedirectInfo redirectInfo;
 
+  @Inject
   public RedirectFilter(
       RedirectInfo redirectInfo
   )

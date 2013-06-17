@@ -38,19 +38,15 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.SegmentLoader;
-import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.metrics.ServerMonitor;
 import com.metamx.druid.query.MetricsEmittingExecutorService;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
-import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.Monitor;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.security.AWSCredentials;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.List;
@@ -128,7 +124,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     monitors.add(new ServerMonitor(getDruidServerMetadata(), serverManager));
     startMonitoring(monitors);
 
-    final Context root = new Context(getServer(), "/", Context.SESSIONS);
+    final ServletContextHandler root = new ServletContextHandler(getServer(), "/", ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(
         new ServletHolder(

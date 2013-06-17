@@ -19,67 +19,33 @@
 
 package com.metamx.druid.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
-import com.metamx.common.ISE;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.ServerInventoryView;
-import com.metamx.druid.client.indexing.IndexingServiceClient;
-import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.config.ConfigManager;
-import com.metamx.druid.config.ConfigManagerConfig;
-import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.curator.CuratorModule;
 import com.metamx.druid.curator.discovery.DiscoveryModule;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
-import com.metamx.druid.db.DatabaseRuleManager;
-import com.metamx.druid.db.DatabaseSegmentManager;
-import com.metamx.druid.db.DbConnector;
-import com.metamx.druid.guice.DruidGuiceExtensions;
-import com.metamx.druid.guice.DruidSecondaryModule;
 import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.MasterModule;
 import com.metamx.druid.guice.ServerModule;
-import com.metamx.druid.initialization.ConfigFactoryModule;
 import com.metamx.druid.initialization.DruidNodeConfig;
 import com.metamx.druid.initialization.EmitterModule;
 import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.PropertiesModule;
-import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ZkPathsConfig;
-import com.metamx.druid.jackson.JacksonModule;
+import com.metamx.druid.initialization.JettyServerInitializer;
+import com.metamx.druid.initialization.JettyServerModule;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.master.DruidMaster;
-import com.metamx.druid.master.DruidMasterConfig;
-import com.metamx.druid.master.LoadQueueTaskMaster;
 import com.metamx.druid.metrics.MetricsModule;
-import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
-import org.apache.curator.framework.CuratorFramework;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.servlet.GzipFilter;
-import org.skife.config.ConfigurationObjectFactory;
-import org.skife.jdbi.v2.IDBI;
-
-import javax.annotation.Nullable;
-import java.net.URL;
-import java.util.Arrays;
-import java.util.List;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.servlets.GzipFilter;
 
 /**
  */
@@ -91,185 +57,55 @@ public class MasterMain
   {
     LogLevelAdjuster.register();
 
-    Injector injector = makeInjector(
-        new LifecycleModule(Key.get(MonitorScheduler.class)),
+    Injector injector = Initialization.makeInjector(
+        new LifecycleModule(Key.get(MonitorScheduler.class), Key.get(DruidMaster.class)),
         EmitterModule.class,
         HttpClientModule.class,
         CuratorModule.class,
-        MetricsModule.class,
+        new MetricsModule(),
         DiscoveryModule.class,
         ServerModule.class,
+        new JettyServerModule(new MasterJettyServerInitializer()),
         MasterModule.class
     );
 
-    final ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
-    final ConfigurationObjectFactory configFactory = injector.getInstance(ConfigurationObjectFactory.class);
     final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
 
-    final ServiceEmitter emitter = injector.getInstance(ServiceEmitter.class);
-
-    final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
-
-    CuratorFramework curatorFramework = injector.getInstance(CuratorFramework.class);
-
-    final ZkPathsConfig zkPaths = configFactory.build(ZkPathsConfig.class);
-
-    ServerInventoryView serverInventoryView = injector.getInstance(ServerInventoryView.class);
-
-
-    final DatabaseSegmentManager databaseSegmentManager = injector.getInstance(DatabaseSegmentManager.class);
-    final DatabaseRuleManager databaseRuleManager = injector.getInstance(DatabaseRuleManager.class);
-
-    final DruidMasterConfig druidMasterConfig = configFactory.build(DruidMasterConfig.class);
-    final DruidNodeConfig nodeConfig = configFactory.build(DruidNodeConfig.class);
+    final DruidNodeConfig nodeConfig = injector.getInstance(DruidNodeConfig.class);
 
     final ServiceAnnouncer serviceAnnouncer = injector.getInstance(ServiceAnnouncer.class);
-    Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, lifecycle);
-
-    IDBI dbi = injector.getInstance(IDBI.class); // TODO: make tables and stuff
-    final ConfigManagerConfig configManagerConfig = configFactory.build(ConfigManagerConfig.class);
-    DbConnector.createConfigTable(dbi, configManagerConfig.getConfigTable());
-    JacksonConfigManager configManager = new JacksonConfigManager(
-        new ConfigManager(dbi, configManagerConfig), jsonMapper
-    );
-
-    final LoadQueueTaskMaster taskMaster = new LoadQueueTaskMaster(
-        curatorFramework, jsonMapper, Execs.singleThreaded("Master-PeonExec--%d")
-    );
-
-    final DruidMaster master = new DruidMaster(
-        druidMasterConfig,
-        zkPaths,
-        configManager,
-        databaseSegmentManager,
-        serverInventoryView,
-        databaseRuleManager,
-        curatorFramework,
-        emitter,
-        scheduledExecutorFactory,
-        injector.getInstance(IndexingServiceClient.class),
-        taskMaster
-    );
-    lifecycle.addManagedInstance(master);
 
     try {
       lifecycle.start();
+
+      Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, lifecycle);
     }
     catch (Throwable t) {
       log.error(t, "Error when starting up.  Failing.");
       System.exit(1);
     }
 
-    Runtime.getRuntime().addShutdownHook(
-        new Thread(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                log.info("Running shutdown hook");
-                lifecycle.stop();
-              }
-            }
-        )
-    );
-
-    final Server server = Initialization.makeJettyServer(configFactory.build(ServerConfig.class));
-
-    final RedirectInfo redirectInfo = new RedirectInfo()
-    {
-      @Override
-      public boolean doLocal()
-      {
-        return master.isClusterMaster();
-      }
-
-      @Override
-      public URL getRedirectURL(String queryString, String requestURI)
-      {
-        try {
-          final String currentMaster = master.getCurrentMaster();
-          if (currentMaster == null) {
-            return null;
-          }
-
-          String location = String.format("http://%s%s", currentMaster, requestURI);
-
-          if (queryString != null) {
-            location = String.format("%s?%s", location, queryString);
-          }
-
-          return new URL(location);
-        }
-        catch (Exception e) {
-          throw Throwables.propagate(e);
-        }
-      }
-    };
-
-    final Context staticContext = new Context(server, "/static", Context.SESSIONS);
-    staticContext.addServlet(new ServletHolder(new RedirectServlet(redirectInfo)), "/*");
-
-    staticContext.setResourceBase(ComputeMain.class.getClassLoader().getResource("static").toExternalForm());
-
-    final Context root = new Context(server, "/", Context.SESSIONS);
-    root.addServlet(new ServletHolder(new StatusServlet()), "/status");
-    root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-    root.addEventListener(new GuiceServletConfig(injector));
-    root.addFilter(GzipFilter.class, "/*", 0);
-    root.addFilter(
-        new FilterHolder(
-            new RedirectFilter(
-                redirectInfo
-            )
-        ), "/*", 0
-    );
-    root.addFilter(GuiceFilter.class, "/info/*", 0);
-    root.addFilter(GuiceFilter.class, "/master/*", 0);
-
-    server.start();
-    server.join();
+    lifecycle.join();
   }
 
-  private static Injector makeInjector(final Object... modules)
+  private static class MasterJettyServerInitializer implements JettyServerInitializer
   {
-    final Injector baseInjector = Guice.createInjector(
-        new DruidGuiceExtensions(),
-        new JacksonModule(),
-        new PropertiesModule("runtime.properties"),
-        new ConfigFactoryModule()
-    );
+    @Override
+    public void initialize(Server server, Injector injector)
+    {
+      final ServletContextHandler staticContext = new ServletContextHandler(server, "/static", ServletContextHandler.SESSIONS);
+      staticContext.addServlet(new ServletHolder(injector.getInstance(RedirectServlet.class)), "/*");
 
-    List<Object> actualModules = Lists.newArrayList();
+      staticContext.setResourceBase(ComputeMain.class.getClassLoader().getResource("static").toExternalForm());
 
-    actualModules.add(DruidSecondaryModule.class);
-    actualModules.addAll(Arrays.asList(modules));
-
-    return Guice.createInjector(
-        Lists.transform(
-            actualModules,
-            new Function<Object, Module>()
-            {
-              @Override
-              @SuppressWarnings("unchecked")
-              public Module apply(@Nullable Object input)
-              {
-                if (input instanceof Module) {
-                  baseInjector.injectMembers(input);
-                  return (Module) input;
-                }
-                if (input instanceof Class) {
-                  if (Module.class.isAssignableFrom((Class) input)) {
-                    return baseInjector.getInstance((Class<? extends Module>) input);
-                  }
-                  else {
-                    throw new ISE("Class[%s] does not implement %s", input.getClass(), Module.class);
-                  }
-                }
-                throw new ISE("Unknown module type[%s]", input.getClass());
-              }
-            }
-        )
-    );
+      final ServletContextHandler root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
+      root.addServlet(new ServletHolder(new StatusServlet()), "/status");
+      root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+      root.addEventListener(new GuiceServletConfig(injector));
+      root.addFilter(GzipFilter.class, "/*", null);
+      root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+      root.addFilter(GuiceFilter.class, "/info/*", null);
+      root.addFilter(GuiceFilter.class, "/master/*", null);
+    }
   }
 }

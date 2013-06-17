@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
+import com.google.inject.Inject;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -44,6 +45,7 @@ import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
@@ -68,6 +70,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
+@ManageLifecycle
 public class DruidMaster
 {
   public static final String MASTER_OWNER_NODE = "_MASTER";
@@ -94,6 +97,7 @@ public class DruidMaster
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final AtomicReference<LeaderLatch> leaderLatch;
 
+  @Inject
   public DruidMaster(
       DruidMasterConfig config,
       ZkPathsConfig zkPaths,

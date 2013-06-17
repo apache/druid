@@ -19,6 +19,7 @@
 
 package com.metamx.druid.http;
 
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import org.mortbay.jetty.servlet.DefaultServlet;
 
@@ -38,6 +39,7 @@ public class RedirectServlet extends DefaultServlet
 
   private final RedirectInfo redirectInfo;
 
+  @Inject
   public RedirectServlet(
       RedirectInfo redirectInfo
   )

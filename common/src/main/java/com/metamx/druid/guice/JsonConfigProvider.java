@@ -19,36 +19,26 @@
 
 package com.metamx.druid.guice;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.base.Suppliers;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Provider;
-import com.google.inject.TypeLiteral;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
+import com.google.inject.util.Types;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.Validator;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 /**
  */
 public class JsonConfigProvider<T> implements Provider<Supplier<T>>
 {
-
-  private static final Joiner JOINER = Joiner.on(", ");
-
+  @SuppressWarnings("unchecked")
   public static <T> void bind(Binder binder, String propertyBase, Class<T> classToProvide)
   {
-    binder.bind(new TypeLiteral<Supplier<T>>(){}).toProvider(of(propertyBase, classToProvide)).in(DruidScopes.SINGLETON);
+    binder.bind(Key.get(Types.newParameterizedType(Supplier.class, classToProvide)))
+          .toProvider((Provider) of(propertyBase, classToProvide))
+          .in(LazySingleton.class);
   }
 
   public static <T> JsonConfigProvider<T> of(String propertyBase, Class<T> classToProvide)
@@ -59,7 +49,8 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
   private final String propertyBase;
   private final Class<T> classToProvide;
 
-  private Supplier<T> supplier;
+  private Properties props;
+  private JsonConfigurator configurator;
 
   public JsonConfigProvider(
       String propertyBase,
@@ -73,49 +64,17 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
   @Inject
   public void inject(
       Properties props,
-      ObjectMapper jsonMapper,
-      Validator validator
+      JsonConfigurator configurator
   )
   {
-    Map<String, Object> jsonMap = Maps.newHashMap();
-    for (String prop : props.stringPropertyNames()) {
-      if (prop.startsWith(propertyBase)) {
-        final String propValue = props.getProperty(prop);
-        try {
-          jsonMap.put(prop.substring(propertyBase.length()), jsonMapper.readValue(propValue, Object.class));
-        }
-        catch (IOException e) {
-          throw new IAE("Unable to parse an object out of prop[%s]=[%s]", prop, propValue);
-        }
-      }
-    }
-
-    final T config = jsonMapper.convertValue(jsonMap, classToProvide);
-
-    final Set<ConstraintViolation<T>> violations = validator.validate(config);
-    if (!violations.isEmpty()) {
-      List<String> messages = Lists.newArrayList();
-
-      for (ConstraintViolation<T> violation : violations) {
-        messages.add(String.format("%s - %s", violation.getPropertyPath().toString(), violation.getMessage()));
-      }
-
-      throw new ISE("Configuration violations[%s]", JOINER.join(messages));
-    }
-
-    this.supplier = new Supplier<T>()
-    {
-      @Override
-      public T get()
-      {
-        return config;
-      }
-    };
+    this.props = props;
+    this.configurator = configurator;
   }
 
   @Override
   public Supplier<T> get()
   {
-    return supplier;
+    final T config = configurator.configurate(props, propertyBase, classToProvide);
+    return Suppliers.ofInstance(config);
   }
 }

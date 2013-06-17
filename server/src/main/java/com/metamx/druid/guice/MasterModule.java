@@ -1,9 +1,12 @@
 package com.metamx.druid.guice;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
+import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.indexing.IndexingService;
@@ -11,11 +14,25 @@ import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.client.indexing.IndexingServiceSelector;
 import com.metamx.druid.client.selector.DiscoverySelector;
 import com.metamx.druid.client.selector.Server;
+import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.config.ConfigManager;
+import com.metamx.druid.config.ConfigManagerConfig;
+import com.metamx.druid.config.ConfigManagerProvider;
+import com.metamx.druid.db.DatabaseRuleManager;
+import com.metamx.druid.db.DatabaseRuleManagerConfig;
+import com.metamx.druid.db.DatabaseRuleManagerProvider;
+import com.metamx.druid.db.DatabaseSegmentManager;
+import com.metamx.druid.db.DatabaseSegmentManagerConfig;
+import com.metamx.druid.db.DatabaseSegmentManagerProvider;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.db.DbTablesConfig;
+import com.metamx.druid.http.MasterRedirectInfo;
+import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.master.DruidMasterConfig;
+import com.metamx.druid.master.LoadQueueTaskMaster;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.skife.jdbi.v2.IDBI;
@@ -27,52 +44,58 @@ public class MasterModule implements Module
   @Override
   public void configure(Binder binder)
   {
+    ConfigProvider.bind(binder, DruidMasterConfig.class);
     ConfigProvider.bind(binder, ZkPathsConfig.class);
     ConfigProvider.bind(binder, ServerInventoryViewConfig.class);
-    ConfigProvider.bind(binder, DbConnectorConfig.class);
 
-    JsonConfigProvider.bind(binder, "druid.database.tables", DbTablesConfig.class);
+    JsonConfigProvider.bind(binder, "druid.db.tables", DbTablesConfig.class);
+    JsonConfigProvider.bind(binder, "druid.db.connector", DbConnectorConfig.class);
+    JsonConfigProvider.bind(binder, "druid.manager.config", ConfigManagerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.manager.segment", DatabaseSegmentManagerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
+
+    binder.bind(DatabaseSegmentManager.class)
+          .toProvider(DatabaseSegmentManagerProvider.class)
+          .in(ManageLifecycle.class);
+
+    binder.bind(DatabaseRuleManager.class)
+          .toProvider(DatabaseRuleManagerProvider.class)
+          .in(ManageLifecycle.class);
+
+    binder.bind(ConfigManager.class)
+          .toProvider(ConfigManagerProvider.class)
+          .in(ManageLifecycle.class);
 
     binder.bind(new TypeLiteral<DiscoverySelector<Server>>(){})
           .annotatedWith(IndexingService.class)
           .to(IndexingServiceSelector.class)
           .in(ManageLifecycle.class);
     binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
+
+    binder.bind(RedirectInfo.class).to(MasterRedirectInfo.class).in(LazySingleton.class);
   }
 
-  @Provides @ManageLifecycle @IndexingService
-  public DiscoverySelector<Server> getIndexingServiceSelector(DruidMasterConfig config, ServiceDiscovery serviceDiscovery)
+  @Provides @LazySingleton @IndexingService
+  public ServiceProvider getServiceProvider(DruidMasterConfig config, ServiceDiscovery<Void> serviceDiscovery)
   {
-    final ServiceProvider serviceProvider = serviceDiscovery.serviceProviderBuilder()
-                                                            .serviceName(config.getMergerServiceName())
-                                                            .build();
-
-    return new IndexingServiceSelector(serviceProvider);
+    return serviceDiscovery.serviceProviderBuilder().serviceName(config.getMergerServiceName()).build();
   }
 
   @Provides @LazySingleton
-  public IDBI getDbi(final DbConnector dbConnector, final DbConnectorConfig config, Lifecycle lifecycle)
+  public IDBI getDbi(final DbConnector dbConnector)
   {
-    if (config.isCreateTables()) {
-      lifecycle.addHandler(
-          new Lifecycle.Handler()
-          {
-            @Override
-            public void start() throws Exception
-            {
-              dbConnector.createSegmentTable();
-              dbConnector.createRulesTable();
-            }
-
-            @Override
-            public void stop()
-            {
-
-            }
-          }
-      );
-    }
-
     return dbConnector.getDBI();
+  }
+
+  @Provides @LazySingleton
+  public LoadQueueTaskMaster getLoadQueueTaskMaster(CuratorFramework curator, ObjectMapper jsonMapper)
+  {
+    return new LoadQueueTaskMaster(curator, jsonMapper, Execs.singleThreaded("Master-PeonExec--%d"));
+  }
+
+  @Provides @LazySingleton
+  public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
+  {
+    return ScheduledExecutors.createFactory(lifecycle);
   }
 }
