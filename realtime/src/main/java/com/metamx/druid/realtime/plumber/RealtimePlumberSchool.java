@@ -514,8 +514,9 @@ public class RealtimePlumberSchool implements PlumberSchool
 
                     log.info("Starting merge and push.");
 
-                    long minTimestamp = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime()).getMillis()
-                                        - windowMillis;
+                    long minTimestamp = segmentGranularity.truncate(
+                        rejectionPolicy.getCurrMaxTime().minus(windowMillis)
+                    ).getMillis();
 
                     List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
                     for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
