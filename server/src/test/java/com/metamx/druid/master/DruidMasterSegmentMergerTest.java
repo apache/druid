@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
+import com.metamx.druid.shard.LinearShardSpec;
 import junit.framework.Assert;
 import org.joda.time.Interval;
 import org.junit.Test;
@@ -190,7 +191,7 @@ public class DruidMasterSegmentMergerTest
         ImmutableList.of(
             ImmutableList.of(segments.get(0), segments.get(1)),
             ImmutableList.of(segments.get(2), segments.get(3), segments.get(4), segments.get(5), segments.get(6))
-            ), merge(segments)
+        ), merge(segments)
     );
   }
 
@@ -370,6 +371,35 @@ public class DruidMasterSegmentMergerTest
     );
 
     Assert.assertEquals(ImmutableList.of(ImmutableList.of(segments.get(4), segments.get(5))), merge(segments));
+  }
+
+  @Test
+  public void testMergeLinearShardSpecs()
+  {
+    final List<DataSegment> segments = ImmutableList.of(
+        DataSegment.builder()
+                   .dataSource("foo")
+                   .interval(new Interval("2012-01-01/P1D"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(1))
+                   .build(),
+        DataSegment.builder()
+                   .dataSource("foo")
+                   .interval(new Interval("2012-01-02/P1D"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(7))
+                   .build(),
+        DataSegment.builder().dataSource("foo")
+                   .interval(new Interval("2012-01-03/P1D"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(1500))
+                   .build()
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(ImmutableList.of(segments.get(0), segments.get(1), segments.get(2))),
+        merge(segments)
+    );
   }
 
   /**
