@@ -284,6 +284,12 @@ public class RemoteTaskRunnerTest
         new IndexerZkConfig()
         {
           @Override
+          public int getSegmentsPerNode()
+          {
+            return 1;
+          }
+
+          @Override
           public String getIndexerAnnouncementPath()
           {
             return announcementsPath;
@@ -447,6 +453,12 @@ public class RemoteTaskRunnerTest
     public long getMaxNumBytes()
     {
       return 1000;
+    }
+
+    @Override
+    public int getSegmentsPerNode()
+    {
+      return 1;
     }
   }
 }

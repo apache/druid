@@ -29,7 +29,9 @@ import com.metamx.druid.index.QueryableIndexSegment;
 import com.metamx.druid.index.Segment;
 import org.apache.commons.io.FileUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 /**
  */

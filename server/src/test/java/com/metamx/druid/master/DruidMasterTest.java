@@ -130,6 +130,18 @@ public class DruidMasterTest
           {
             return "";
           }
+
+          @Override
+          public int getSegmentsPerNode()
+          {
+            return 1;
+          }
+
+          @Override
+          public long getMaxNumBytes()
+          {
+            return 1000;
+          }
         },
         null,
         databaseSegmentManager,
