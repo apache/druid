@@ -19,14 +19,10 @@
 
 package com.metamx.druid.coordination;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.SegmentReader;
@@ -108,6 +104,7 @@ public class BatchingCuratorDataSegmentAnnouncer extends AbstractDataSegmentAnno
     zkSegments.remove(segment);
 
     log.info("Unannouncing segment[%s] at path[%s]", segment.getIdentifier(), path);
+
     if (zkSegments.isEmpty()) {
       announcer.unannounce(path);
     } else if (zkSegments.size() < config.getSegmentsPerNode()) {
