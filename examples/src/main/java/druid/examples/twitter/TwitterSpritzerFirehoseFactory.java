@@ -139,7 +139,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
       public void onStatus(Status status)
       {
         // time to stop?
-        if (Thread.currentThread().isInterrupted()) {
+         if (Thread.currentThread().isInterrupted()) {
           throw new RuntimeException("Interrupted, time to stop");
         }
         try {
