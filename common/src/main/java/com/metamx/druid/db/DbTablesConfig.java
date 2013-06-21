@@ -2,7 +2,6 @@ package com.metamx.druid.db;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.ISE;
 
 import javax.validation.constraints.NotNull;
 
@@ -18,22 +17,16 @@ public class DbTablesConfig
   @NotNull
   private final String base;
 
-  @NotNull
   private final String segmentsTable;
 
-  @NotNull
   private final String rulesTable;
 
-  @NotNull
   private final String configTable;
 
-  @NotNull
   private final String tasksTable;
 
-  @NotNull
   private final String taskLogTable;
 
-  @NotNull
   private final String taskLockTable;
 
   @JsonCreator
@@ -60,7 +53,7 @@ public class DbTablesConfig
   {
     if (explicitTableName == null) {
       if (base == null) {
-        throw new ISE("table[%s] unknown!  Both base and %s were null!", defaultSuffix, defaultSuffix);
+        return null;
       }
       return String.format("%s_%s", base, defaultSuffix);
     }

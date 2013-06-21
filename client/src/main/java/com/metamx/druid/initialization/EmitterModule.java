@@ -98,11 +98,10 @@ public class EmitterModule implements Module
     {
       final List<Binding<Emitter>> emitterBindings = injector.findBindingsByType(new TypeLiteral<Emitter>(){});
 
-      for (Binding<Emitter> binding : emitterBindings) {
-        if (Names.named(emitterType).equals(binding.getKey().getAnnotation())) {
-          emitter = binding.getProvider().get();
-          break;
-        }
+      emitter = findEmitter(emitterType, emitterBindings);
+
+      if (emitter == null) {
+        emitter = findEmitter(LogEmitterModule.EMITTER_TYPE, emitterBindings);
       }
 
       if (emitter == null) {
@@ -115,6 +114,16 @@ public class EmitterModule implements Module
         }
         throw new ISE("Uknown emitter type[%s]=[%s], known types[%s]", EMITTER_PROPERTY, emitterType, knownTypes);
       }
+    }
+
+    private Emitter findEmitter(String emitterType, List<Binding<Emitter>> emitterBindings)
+    {
+      for (Binding<Emitter> binding : emitterBindings) {
+        if (Names.named(emitterType).equals(binding.getKey().getAnnotation())) {
+          return binding.getProvider().get();
+        }
+      }
+      return null;
     }
 
 

@@ -76,9 +76,8 @@ public class MasterMain
     final ServiceAnnouncer serviceAnnouncer = injector.getInstance(ServiceAnnouncer.class);
 
     try {
-      lifecycle.start();
-
       Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, lifecycle);
+      lifecycle.start();
     }
     catch (Throwable t) {
       log.error(t, "Error when starting up.  Failing.");

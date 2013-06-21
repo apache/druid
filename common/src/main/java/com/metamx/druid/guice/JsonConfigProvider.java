@@ -52,6 +52,8 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
   private Properties props;
   private JsonConfigurator configurator;
 
+  private Supplier<T> retVal = null;
+
   public JsonConfigProvider(
       String propertyBase,
       Class<T> classToProvide
@@ -74,7 +76,22 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
   @Override
   public Supplier<T> get()
   {
-    final T config = configurator.configurate(props, propertyBase, classToProvide);
-    return Suppliers.ofInstance(config);
+    if (retVal != null) {
+      return retVal;
+    }
+
+    try {
+      final T config = configurator.configurate(props, propertyBase, classToProvide);
+      retVal = Suppliers.ofInstance(config);
+    }
+    catch (RuntimeException e) {
+      // When a runtime exception gets thrown out, this provider will get called again if the object is asked for again.
+      // This will have the same failed result, 'cause when it's called no parameters will have actually changed. For
+      // Guice will then report the same error multiple times, which is pretty annoying. Cache a null supplier and
+      // return that instead.  This is technically enforcing a singleton, but such is life.
+      retVal = Suppliers.ofInstance(null);
+      throw e;
+    }
+    return retVal;
   }
 }

@@ -34,13 +34,15 @@ import com.metamx.emitter.core.LoggingEmitterConfig;
  */
 public class LogEmitterModule implements Module
 {
+  public static final String EMITTER_TYPE = "logging";
+
   @Override
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.emitter.logging", LoggingEmitterConfig.class);
   }
 
-  @Provides @LazySingleton @Named("logging")
+  @Provides @LazySingleton @Named(EMITTER_TYPE)
   public Emitter makeEmitter(LoggingEmitterConfig config, ObjectMapper jsonMapper)
   {
     return new LoggingEmitter(config, jsonMapper);
