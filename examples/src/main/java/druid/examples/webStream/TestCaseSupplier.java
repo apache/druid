@@ -10,9 +10,12 @@ import java.util.ArrayList;
 public class TestCaseSupplier implements InputSupplier<BufferedReader>
 {
   private final ArrayList<String> inputList = new ArrayList<String>();
-  public TestCaseSupplier(String s){
+
+  public TestCaseSupplier(String s)
+  {
     inputList.add(s);
   }
+
   @Override
   public BufferedReader getInput() throws IOException
   {

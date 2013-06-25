@@ -29,23 +29,25 @@ public class WebFirehoseFactory implements FirehoseFactory
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("newDimensionNames") List<String> newDimensionNames,
       @JsonProperty("timeDimension") String s
-      )
+  )
   {
-    this.url=url;
-    this.dimensions=dimensions;
+    this.url = url;
+    this.dimensions = dimensions;
     this.timeDimension = s;
-    this.newDimensionNames=newDimensionNames;
+    this.newDimensionNames = newDimensionNames;
   }
 
   @Override
   public Firehose connect() throws IOException
   {
-    final int QUEUE_SIZE=2000;
-    final BlockingQueue<Map<String,Object>> queue= new ArrayBlockingQueue<Map<String,Object>>(QUEUE_SIZE);
+    final int QUEUE_SIZE = 2000;
+    final BlockingQueue<Map<String, Object>> queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
 
-    Runnable updateStream = new UpdateStream(new WebJsonSupplier(dimensions,url),queue,timeDimension);
-    Thread.UncaughtExceptionHandler h = new Thread.UncaughtExceptionHandler() {
-      public void uncaughtException(Thread th, Throwable ex) {
+    Runnable updateStream = new UpdateStream(new WebJsonSupplier(dimensions, url), queue);
+    Thread.UncaughtExceptionHandler h = new Thread.UncaughtExceptionHandler()
+    {
+      public void uncaughtException(Thread th, Throwable ex)
+      {
         System.out.println("Uncaught exception: " + ex);
       }
     };
@@ -53,19 +55,22 @@ public class WebFirehoseFactory implements FirehoseFactory
     t.setUncaughtExceptionHandler(h);
     t.start();
 
-    return new Firehose() {
-      private final Runnable doNothingRunnable = new Runnable() {
-        public void run(){
+    return new Firehose()
+    {
+      private final Runnable doNothingRunnable = new Runnable()
+      {
+        public void run()
+        {
 
         }
       };
 
       @Override
-      public boolean hasMore(){
-        if (t.isAlive()){
+      public boolean hasMore()
+      {
+        if (t.isAlive()) {
           return true;
-        }
-        else{
+        } else {
           return false;
         }
       }
@@ -77,48 +82,52 @@ public class WebFirehoseFactory implements FirehoseFactory
         if (Thread.currentThread().isInterrupted()) {
           throw new RuntimeException("Interrupted, time to stop");
         }
-        Map<String,Object> update;
-        try{
-          update=queue.take();
+        Map<String, Object> update;
+        try {
+          update = queue.take();
         }
         catch (InterruptedException e) {
           throw new RuntimeException("InterrutpedException", e);
         }
-        Map<String,Object> processedMap = processMap(update);
-        return new MapBasedInputRow(((Integer) processedMap.get(timeDimension)).longValue()*1000,newDimensionNames,processedMap);
+        Map<String, Object> processedMap = processMap(update);
+        return new MapBasedInputRow(
+            ((Integer) processedMap.get(timeDimension)).longValue() * 1000,
+            newDimensionNames,
+            processedMap
+        );
       }
 
-      private Map<String,Object> renameKeys (Map <String,Object> update){
-        Map<String,Object> renamedMap = new HashMap<String,Object>();
-        int iter=0;
-        while (iter<dimensions.size()){
+      private Map<String, Object> renameKeys(Map<String, Object> update)
+      {
+        Map<String, Object> renamedMap = new HashMap<String, Object>();
+        int iter = 0;
+        while (iter < dimensions.size()) {
           Object obj = update.get(dimensions.get(iter));
-          renamedMap.put(newDimensionNames.get(iter),obj);
+          renamedMap.put(newDimensionNames.get(iter), obj);
           iter++;
         }
         return renamedMap;
       }
 
-      private void processNullDimensions(Map<String,Object> map)
+      private void processNullDimensions(Map<String, Object> map)
       {
-        for (String key:newDimensionNames){
-          if (map.get(key)==null){
-            if (key.equals(timeDimension)){
-              map.put(key,new Integer((int) System.currentTimeMillis()/1000));
-            }
-            else{
-            map.put(key, null);
+        for (String key : newDimensionNames) {
+          if (map.get(key) == null) {
+            if (key.equals(timeDimension)) {
+              map.put(key, new Integer((int) System.currentTimeMillis() / 1000));
+            } else {
+              map.put(key, null);
             }
           }
         }
       }
 
-      private Map<String,Object> processMap(Map<String,Object> map){
-        Map<String,Object> renamedMap = renameKeys(map);
+      private Map<String, Object> processMap(Map<String, Object> map)
+      {
+        Map<String, Object> renamedMap = renameKeys(map);
         processNullDimensions(renamedMap);
         return renamedMap;
       }
-
 
 
       @Override
