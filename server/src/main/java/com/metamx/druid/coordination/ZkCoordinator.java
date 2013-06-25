@@ -261,7 +261,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       announcer.unannounceSegment(segment);
     }
     catch (Exception e) {
-      log.makeAlert("Failed to remove segment")
+      log.makeAlert(e, "Failed to remove segment")
           .addData("segment", segment)
           .emit();
     }
