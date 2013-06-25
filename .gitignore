@@ -13,3 +13,4 @@ target
 examples/rand/RealtimeNode.out
 examples/twitter/RealtimeNode.out
 *.log
+*.DS_Store
