@@ -21,11 +21,20 @@ package com.metamx.druid.initialization;
 
 import org.apache.curator.utils.ZKPaths;
 import org.skife.config.Config;
+import org.skife.config.Default;
 
 public abstract class ZkPathsConfig
 {
   @Config("druid.zk.paths.base")
   public abstract String getZkBasePath();
+
+  @Config("druid.zk.segmentsPerNode")
+  @Default("50")
+  public abstract int getSegmentsPerNode();
+
+  @Config("druid.zk.maxNumBytesPerNode")
+  @Default("512000")
+  public abstract long getMaxNumBytes();
 
   @Config("druid.zk.paths.propertiesPath")
   public String getPropertiesPath()
@@ -43,6 +52,12 @@ public abstract class ZkPathsConfig
   public String getServedSegmentsPath()
   {
     return defaultPath("servedSegments");
+  }
+
+  @Config("druid.zk.paths.liveSegmentsPath")
+  public String getLiveSegmentsPath()
+  {
+    return defaultPath("segments");
   }
 
   @Config("druid.zk.paths.loadQueuePath")

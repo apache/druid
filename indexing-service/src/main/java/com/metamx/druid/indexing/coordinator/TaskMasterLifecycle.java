@@ -106,9 +106,7 @@ public class TaskMasterLifecycle
           Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, leaderLifecycle);
           leaderLifecycle.addManagedInstance(taskConsumer);
 
-          if (indexerCoordinatorConfig.isAutoScalingEnabled()) {
-            leaderLifecycle.addManagedInstance(resourceManagementScheduler);
-          }
+          leaderLifecycle.addManagedInstance(resourceManagementScheduler);
 
           try {
             leaderLifecycle.start();

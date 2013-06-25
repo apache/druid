@@ -80,7 +80,7 @@ public class DruidServerMetadata
   @Override
   public String toString()
   {
-    return "DruidServer{" +
+    return "DruidServerMetadata{" +
            "name='" + name + '\'' +
            ", host='" + host + '\'' +
            ", maxSize=" + maxSize +

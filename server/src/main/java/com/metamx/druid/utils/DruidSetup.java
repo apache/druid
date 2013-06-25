@@ -169,6 +169,18 @@ public class DruidSetup
       {
         return zPathBase;
       }
+
+      @Override
+      public int getSegmentsPerNode()
+      {
+        return 50;
+      }
+
+      @Override
+      public long getMaxNumBytes()
+      {
+        return 1000;
+      }
     };
 
     try {

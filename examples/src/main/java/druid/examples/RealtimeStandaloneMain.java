@@ -142,5 +142,17 @@ public class RealtimeStandaloneMain
     {
       // do nothing
     }
+
+    @Override
+    public void announceSegments(Iterable<DataSegment> segments) throws IOException
+    {
+      // do nothing
+    }
+
+    @Override
+    public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+    {
+      // do nothing
+    }
   }
 }

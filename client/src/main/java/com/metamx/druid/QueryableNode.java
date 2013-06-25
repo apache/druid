@@ -39,9 +39,12 @@ import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.ServerView;
 import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.coordination.BatchingCuratorDataSegmentAnnouncer;
 import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
+import com.metamx.druid.coordination.MultipleDataSegmentAnnouncerDataSegmentAnnouncer;
+import com.metamx.druid.curator.SegmentReader;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.initialization.CuratorConfig;
@@ -368,18 +371,21 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     if (requestLogger == null) {
       try {
         final String loggingType = props.getProperty("druid.request.logging.type");
-        if("emitter".equals(loggingType)) {
-          setRequestLogger(Initialization.makeEmittingRequestLogger(
-            getProps(),
-            getEmitter()
-          ));
-        }
-        else {
-          setRequestLogger(Initialization.makeFileRequestLogger(
-            getJsonMapper(),
-            getScheduledExecutorFactory(),
-            getProps()
-          ));
+        if ("emitter".equals(loggingType)) {
+          setRequestLogger(
+              Initialization.makeEmittingRequestLogger(
+                  getProps(),
+                  getEmitter()
+              )
+          );
+        } else {
+          setRequestLogger(
+              Initialization.makeFileRequestLogger(
+                  getJsonMapper(),
+                  getScheduledExecutorFactory(),
+                  getProps()
+              )
+          );
         }
       }
       catch (IOException e) {
@@ -421,7 +427,25 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       final Announcer announcer = new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s"));
       lifecycle.addManagedInstance(announcer);
 
-      setAnnouncer(new CuratorDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper()));
+      setAnnouncer(
+          new MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
+              getDruidServerMetadata(),
+              getZkPaths(),
+              announcer,
+              getJsonMapper(),
+              Arrays.<DataSegmentAnnouncer>asList(
+                  new BatchingCuratorDataSegmentAnnouncer(
+                      getDruidServerMetadata(),
+                      getZkPaths(),
+                      announcer,
+                      getJsonMapper(),
+                      new SegmentReader(curator, getJsonMapper())
+                  ),
+                  new CuratorDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper())
+              )
+          )
+      );
+
       lifecycle.addManagedInstance(getAnnouncer(), Lifecycle.Stage.LAST);
     }
   }

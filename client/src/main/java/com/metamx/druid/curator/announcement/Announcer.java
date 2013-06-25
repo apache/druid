@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.curator.announcement;
 
 import com.google.common.base.Throwables;
@@ -21,6 +40,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.data.Stat;
 
 import java.util.List;
 import java.util.Map;
@@ -99,7 +119,7 @@ public class Announcer
    * Announces the provided bytes at the given path.  Announcement means that it will create an ephemeral node
    * and monitor it to make sure that it always exists until it is unannounced or this object is closed.
    *
-   * @param path The path to announce at
+   * @param path  The path to announce at
    * @param bytes The payload to announce
    */
   public void announce(String path, byte[] bytes)
@@ -127,7 +147,7 @@ public class Announcer
 
       // Synchronize to make sure that I only create a listener once.
       synchronized (finalSubPaths) {
-        if (! listeners.containsKey(parentPath)) {
+        if (!listeners.containsKey(parentPath)) {
           final PathChildrenCache cache = factory.make(curator, parentPath);
           cache.getListenable().addListener(
               new PathChildrenCacheListener()
@@ -226,15 +246,42 @@ public class Announcer
     }
   }
 
+  public void update(final String path, final byte[] bytes)
+  {
+    final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
+
+    final String parentPath = pathAndNode.getPath();
+    final String nodePath = pathAndNode.getNode();
+
+    ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
+
+    if (subPaths == null || subPaths.get(nodePath) == null) {
+      announce(path, bytes);
+      return;
+    }
+
+    try {
+      updateAnnouncement(path, bytes);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
   private String createAnnouncement(final String path, byte[] value) throws Exception
   {
     return curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground().forPath(path, value);
   }
 
+  private Stat updateAnnouncement(final String path, final byte[] value) throws Exception
+  {
+    return curator.setData().compressed().inBackground().forPath(path, value);
+  }
+
   /**
    * Unannounces an announcement created at path.  Note that if all announcements get removed, the Announcer
    * will continue to have ZK watches on paths because clearing them out is a source of ugly race conditions.
-   *
+   * <p/>
    * If you need to completely clear all the state of what is being watched and announced, stop() the Announcer.
    *
    * @param path

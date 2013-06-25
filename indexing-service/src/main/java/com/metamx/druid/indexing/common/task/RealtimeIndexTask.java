@@ -30,7 +30,6 @@ import com.metamx.druid.Query;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.index.v1.IndexGranularity;
-import com.metamx.druid.input.InputRow;
 import com.metamx.druid.indexing.common.TaskLock;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
@@ -38,6 +37,7 @@ import com.metamx.druid.indexing.common.actions.LockAcquireAction;
 import com.metamx.druid.indexing.common.actions.LockListAction;
 import com.metamx.druid.indexing.common.actions.LockReleaseAction;
 import com.metamx.druid.indexing.common.actions.SegmentInsertAction;
+import com.metamx.druid.input.InputRow;
 import com.metamx.druid.query.FinalizeResultsQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
@@ -224,6 +224,28 @@ public class RealtimeIndexTask extends AbstractTask
         }
         finally {
           toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
+        }
+      }
+
+      @Override
+      public void announceSegments(Iterable<DataSegment> segments) throws IOException
+      {
+        for (DataSegment segment : segments) {
+          toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
+        }
+        toolbox.getSegmentAnnouncer().announceSegments(segments);
+      }
+
+      @Override
+      public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+      {
+        try {
+          toolbox.getSegmentAnnouncer().unannounceSegments(segments);
+        }
+        finally {
+          for (DataSegment segment : segments) {
+            toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
+          }
         }
       }
     };
