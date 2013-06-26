@@ -55,6 +55,9 @@ import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
+import com.metamx.druid.query.segment.SegmentDescriptor;
+import com.metamx.druid.query.segment.SpecificSegmentQueryRunner;
+import com.metamx.druid.query.segment.SpecificSegmentSpec;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Schema;
@@ -253,23 +256,32 @@ public class RealtimePlumberSchool implements PlumberSchool
                         new Function<Sink, QueryRunner<T>>()
                         {
                           @Override
-                          public QueryRunner<T> apply(@Nullable Sink input)
+                          public QueryRunner<T> apply(Sink input)
                           {
-                            return new MetricsEmittingQueryRunner<T>(
-                                emitter,
-                                builderFn,
-                                factory.mergeRunners(
-                                    EXEC,
-                                    Iterables.transform(
-                                        input,
-                                        new Function<FireHydrant, QueryRunner<T>>()
-                                        {
-                                          @Override
-                                          public QueryRunner<T> apply(@Nullable FireHydrant input)
-                                          {
-                                            return factory.createRunner(input.getSegment());
-                                          }
-                                        }
+                            return new SpecificSegmentQueryRunner<T>(
+                                new MetricsEmittingQueryRunner<T>(
+                                    emitter,
+                                    builderFn,
+                                    factory.mergeRunners(
+                                        EXEC,
+                                        Iterables.transform(
+                                            input,
+                                            new Function<FireHydrant, QueryRunner<T>>()
+                                            {
+                                              @Override
+                                              public QueryRunner<T> apply(FireHydrant input)
+                                              {
+                                                return factory.createRunner(input.getSegment());
+                                              }
+                                            }
+                                        )
+                                    )
+                                ),
+                                new SpecificSegmentSpec(
+                                    new SegmentDescriptor(
+                                        input.getInterval(),
+                                        input.getSegment().getVersion(),
+                                        input.getSegment().getShardSpec().getPartitionNum()
                                     )
                                 )
                             );
@@ -380,12 +392,16 @@ public class RealtimePlumberSchool implements PlumberSchool
 
           //final File[] sinkFiles = sinkDir.listFiles();
           // To avoid reading and listing of "merged" dir
-          final File[] sinkFiles = sinkDir.listFiles(new FilenameFilter() {  		
-        			@Override
-        			public boolean accept(File dir, String fileName) {				
-        				return !(Ints.tryParse(fileName) == null);
-        			}
-        		});
+          final File[] sinkFiles = sinkDir.listFiles(
+              new FilenameFilter()
+              {
+                @Override
+                public boolean accept(File dir, String fileName)
+                {
+                  return !(Ints.tryParse(fileName) == null);
+                }
+              }
+          );
           Arrays.sort(
               sinkFiles,
               new Comparator<File>()
@@ -408,15 +424,14 @@ public class RealtimePlumberSchool implements PlumberSchool
             List<FireHydrant> hydrants = Lists.newArrayList();
             for (File segmentDir : sinkFiles) {
               log.info("Loading previously persisted segment at [%s]", segmentDir);
-              
+
               // Although this has been tackled at start of this method.
               // Just a doubly-check added to skip "merged" dir. from being added to hydrants 
               // If 100% sure that this is not needed, this check can be removed.
-              if(Ints.tryParse(segmentDir.getName()) == null)
-              {
+              if (Ints.tryParse(segmentDir.getName()) == null) {
                 continue;
               }
-              
+
               hydrants.add(
                   new FireHydrant(
                       new QueryableIndexSegment(null, IndexIO.loadIndex(segmentDir)),
