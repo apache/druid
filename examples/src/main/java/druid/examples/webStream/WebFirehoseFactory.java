@@ -7,6 +7,7 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
+import com.metamx.emitter.EmittingLogger;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -14,27 +15,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @JsonTypeName("webstream")
 public class WebFirehoseFactory implements FirehoseFactory
 {
+  private static final EmittingLogger log = new EmittingLogger(WebFirehoseFactory.class);
   private final String url;
   private final List<String> dimensions;
   private final String timeDimension;
-  private final List<String> newDimensionNames;
+  private final List<String> renamedDimensions;
 
   @JsonCreator
   public WebFirehoseFactory(
       @JsonProperty("url") String url,
       @JsonProperty("dimensions") List<String> dimensions,
-      @JsonProperty("newDimensionNames") List<String> newDimensionNames,
+      @JsonProperty("renamedDimensions") List<String> renamedDimensions,
       @JsonProperty("timeDimension") String s
   )
   {
     this.url = url;
     this.dimensions = dimensions;
+    this.renamedDimensions = renamedDimensions;
     this.timeDimension = s;
-    this.newDimensionNames = newDimensionNames;
   }
 
   @Override
@@ -44,35 +49,27 @@ public class WebFirehoseFactory implements FirehoseFactory
     final BlockingQueue<Map<String, Object>> queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
 
     Runnable updateStream = new UpdateStream(new WebJsonSupplier(dimensions, url), queue);
-    Thread.UncaughtExceptionHandler h = new Thread.UncaughtExceptionHandler()
-    {
-      public void uncaughtException(Thread th, Throwable ex)
-      {
-        System.out.println("Uncaught exception: " + ex);
-      }
-    };
-    final Thread t = new Thread(updateStream);
-    t.setUncaughtExceptionHandler(h);
-    t.start();
+//    Thread.UncaughtExceptionHandler h = new Thread.UncaughtExceptionHandler()
+//    {
+//      public void uncaughtException(Thread th, Throwable ex)
+//      {
+//        log.info("Uncaught exception: " + ex);
+//      }
+//    };
+//    final Thread streamReader = new Thread(updateStream);
+//    streamReader.setUncaughtExceptionHandler(h);
+//    streamReader.start();
+    final ExecutorService service = Executors.newSingleThreadExecutor();
+    service.submit(updateStream);
 
     return new Firehose()
     {
-      private final Runnable doNothingRunnable = new Runnable()
-      {
-        public void run()
-        {
-
-        }
-      };
+      private final Runnable doNothingRunnable = new NoopRunnable();
 
       @Override
       public boolean hasMore()
       {
-        if (t.isAlive()) {
-          return true;
-        } else {
-          return false;
-        }
+        return !(service.isTerminated());
       }
 
 
@@ -92,7 +89,7 @@ public class WebFirehoseFactory implements FirehoseFactory
         Map<String, Object> processedMap = processMap(update);
         return new MapBasedInputRow(
             ((Integer) processedMap.get(timeDimension)).longValue() * 1000,
-            newDimensionNames,
+            renamedDimensions,
             processedMap
         );
       }
@@ -103,7 +100,7 @@ public class WebFirehoseFactory implements FirehoseFactory
         int iter = 0;
         while (iter < dimensions.size()) {
           Object obj = update.get(dimensions.get(iter));
-          renamedMap.put(newDimensionNames.get(iter), obj);
+          renamedMap.put(renamedDimensions.get(iter), obj);
           iter++;
         }
         return renamedMap;
@@ -111,7 +108,7 @@ public class WebFirehoseFactory implements FirehoseFactory
 
       private void processNullDimensions(Map<String, Object> map)
       {
-        for (String key : newDimensionNames) {
+        for (String key : renamedDimensions) {
           if (map.get(key) == null) {
             if (key.equals(timeDimension)) {
               map.put(key, new Integer((int) System.currentTimeMillis() / 1000));
@@ -140,7 +137,8 @@ public class WebFirehoseFactory implements FirehoseFactory
       @Override
       public void close() throws IOException
       {
-        System.out.println("CLOSING!!!");
+        log.info("CLOSING!!!");
+        service.shutdown();
       }
 
     };

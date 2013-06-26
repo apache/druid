@@ -1,5 +1,6 @@
 package druid.examples.webStream;
 
+import com.google.common.base.Throwables;
 import com.google.common.io.InputSupplier;
 import com.metamx.emitter.EmittingLogger;
 import org.codehaus.jackson.JsonParseException;
@@ -8,6 +9,7 @@ import org.codehaus.jackson.type.TypeReference;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.util.HashMap;
@@ -20,11 +22,21 @@ public class UpdateStream implements Runnable
   private static final EmittingLogger log = new EmittingLogger(UpdateStream.class);
   private InputSupplier supplier;
   private BlockingQueue<Map<String, Object>> queue;
+  private ObjectMapper mapper;
+  private final TypeReference<HashMap<String,Object>> typeRef;
 
   public UpdateStream(InputSupplier supplier, BlockingQueue<Map<String, Object>> queue)
   {
     this.supplier = supplier;
     this.queue = queue;
+    this.mapper = new ObjectMapper();
+    this.typeRef= new TypeReference<HashMap<String, Object>>()
+    {
+    };
+  }
+
+  private boolean isValid(String s){
+    return !(s.isEmpty());
   }
 
   @Override
@@ -33,39 +45,26 @@ public class UpdateStream implements Runnable
     try {
       BufferedReader reader = (BufferedReader) supplier.getInput();
       String line;
-      ObjectMapper mapper = new ObjectMapper();
-      TypeReference<HashMap<String, Object>> typeRef = new TypeReference<HashMap<String, Object>>()
-      {
-      };
       while ((line = reader.readLine()) != null) {
-        if (!line.equals("")) {
+        if (isValid(line)) {
           try {
             HashMap<String, Object> map = mapper.readValue(line, typeRef);
-            ;
             queue.offer(map, 15L, TimeUnit.SECONDS);
             log.info("Successfully added to queue");
           }
           catch (JsonParseException e) {
-            System.out.println("Invalid JSON Stream. Please check if the url returns a proper JSON stream.");
-            throw new RuntimeException("Invalid JSON Stream");
+            log.info("Invalid JSON Stream. Please check if the url returns a proper JSON stream.");
+            Throwables.propagate(e);
           }
           catch (Exception e) {
-            System.out.println(e);
-            return;
+            Throwables.propagate(e);
           }
         }
       }
     }
-    catch (MalformedURLException e) {
-      throw new RuntimeException("Malformed url");
-    }
-    catch (ProtocolException e) {
-      e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-      throw new RuntimeException(e.getMessage());
-    }
-    catch (IOException e) {
-      e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-      throw new RuntimeException(e.getMessage());
+    catch (Exception e) {
+      e.printStackTrace();
+      Throwables.propagate(e);
     }
 
   }
