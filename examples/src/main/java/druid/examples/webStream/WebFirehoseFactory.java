@@ -27,6 +27,8 @@ public class WebFirehoseFactory implements FirehoseFactory
   private final List<String> dimensions;
   private final String timeDimension;
   private final List<String> renamedDimensions;
+  private static final int QUEUE_SIZE = 2000;
+
 
   @JsonCreator
   public WebFirehoseFactory(
@@ -45,7 +47,6 @@ public class WebFirehoseFactory implements FirehoseFactory
   @Override
   public Firehose connect() throws IOException
   {
-    final int QUEUE_SIZE = 2000;
     final BlockingQueue<Map<String, Object>> queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
 
     Runnable updateStream = new UpdateStream(new WebJsonSupplier(dimensions, url), queue);

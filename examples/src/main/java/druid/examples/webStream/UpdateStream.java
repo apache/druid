@@ -24,6 +24,7 @@ public class UpdateStream implements Runnable
   private BlockingQueue<Map<String, Object>> queue;
   private ObjectMapper mapper;
   private final TypeReference<HashMap<String,Object>> typeRef;
+  private static final long queueWaitTime = 15L;
 
   public UpdateStream(InputSupplier supplier, BlockingQueue<Map<String, Object>> queue)
   {
@@ -49,7 +50,7 @@ public class UpdateStream implements Runnable
         if (isValid(line)) {
           try {
             HashMap<String, Object> map = mapper.readValue(line, typeRef);
-            queue.offer(map, 15L, TimeUnit.SECONDS);
+            queue.offer(map, queueWaitTime, TimeUnit.SECONDS);
             log.info("Successfully added to queue");
           }
           catch (JsonParseException e) {
