@@ -1,0 +1,20 @@
+${name:"sample",type:"combine",endToken:"---",trim:true,separator:""}
+{
+   "appid": ${type:"minmax", min:1, max:280},
+   "event": "${event_name}",
+   "event_timestamp": ${type:"time", format:"millis"},
+   "event_value": ${type:"minmax", min:1, max:100},
+   "country": "${country}"
+}
+---
+
+${name:"country", type:"weighted",delimiter:","}
+80:US,5:AR,3:BE,1:CA,1:CH,8:CN,5:DE
+
+${name:"event_name",type:"weighted"}
+20:like
+100:clicked
+20:deleted
+30:login
+33:search
+
