@@ -27,6 +27,7 @@ import java.io.File;
 public abstract class TaskConfig
 {
   @Config("druid.indexer.taskDir")
+  @Default("/tmp/persistent/task")
   public abstract File getBaseTaskDir();
 
   @Config("druid.indexer.rowFlushBoundary")
@@ -34,5 +35,6 @@ public abstract class TaskConfig
   public abstract int getDefaultRowFlushBoundary();
 
   @Config("druid.indexer.hadoopWorkingPath")
+  @Default("/tmp/druid-indexing")
   public abstract String getHadoopWorkingPath();
 }

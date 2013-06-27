@@ -23,11 +23,23 @@ import com.google.common.base.Optional;
 
 /**
  */
-public interface ChatHandlerProvider
+public class NoopChatHandlerProvider implements ChatHandlerProvider
 {
-  public void register(final String key, ChatHandler handler);
+  @Override
+  public void register(String key, ChatHandler handler)
+  {
+    // do nothing
+  }
 
-  public void unregister(final String key);
+  @Override
+  public void unregister(String key)
+  {
+    // do nothing
+  }
 
-  public Optional<ChatHandler> get(final String key);
+  @Override
+  public Optional<ChatHandler> get(String key)
+  {
+    return Optional.absent();
+  }
 }

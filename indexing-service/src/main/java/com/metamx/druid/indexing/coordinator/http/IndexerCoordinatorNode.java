@@ -34,6 +34,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -386,15 +387,17 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   {
     if (persistentTaskLogs == null) {
       final TaskLogConfig taskLogConfig = getConfigFactory().build(TaskLogConfig.class);
-      if (taskLogConfig.getLogStorageBucket() != null) {
+      if (taskLogConfig.getLogType().equalsIgnoreCase("s3")) {
         initializeS3Service();
         persistentTaskLogs = new S3TaskLogs(
             taskLogConfig.getLogStorageBucket(),
             taskLogConfig.getLogStoragePrefix(),
             s3Service
         );
-      } else {
+      } else if (taskLogConfig.getLogType().equalsIgnoreCase("noop")) {
         persistentTaskLogs = new NoopTaskLogs();
+      } else {
+        throw new IAE("Unknown log type %s", taskLogConfig.getLogType());
       }
     }
   }

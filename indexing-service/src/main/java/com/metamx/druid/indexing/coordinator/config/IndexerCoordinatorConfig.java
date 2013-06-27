@@ -41,7 +41,7 @@ public abstract class IndexerCoordinatorConfig extends ZkPathsConfig
   public abstract int getNumLocalThreads();
 
   @Config("druid.indexer.runner")
-  @Default("remote")
+  @Default("local")
   public abstract String getRunnerImpl();
 
   @Config("druid.indexer.storage")
