@@ -46,6 +46,7 @@ import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.coordination.MultipleDataSegmentAnnouncerDataSegmentAnnouncer;
 import com.metamx.druid.curator.SegmentReader;
 import com.metamx.druid.curator.announcement.Announcer;
+import com.metamx.druid.http.NoopRequestLogger;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
@@ -371,21 +372,20 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     if (requestLogger == null) {
       try {
         final String loggingType = props.getProperty("druid.request.logging.type");
-        if ("emitter".equals(loggingType)) {
-          setRequestLogger(
-              Initialization.makeEmittingRequestLogger(
-                  getProps(),
-                  getEmitter()
-              )
-          );
+        if("emitter".equals(loggingType)) {
+          setRequestLogger(Initialization.makeEmittingRequestLogger(
+            getProps(),
+            getEmitter()
+          ));
+        }
+        else if ("file".equalsIgnoreCase(loggingType)) {
+          setRequestLogger(Initialization.makeFileRequestLogger(
+            getJsonMapper(),
+            getScheduledExecutorFactory(),
+            getProps()
+          ));
         } else {
-          setRequestLogger(
-              Initialization.makeFileRequestLogger(
-                  getJsonMapper(),
-                  getScheduledExecutorFactory(),
-                  getProps()
-              )
-          );
+          setRequestLogger(new NoopRequestLogger());
         }
       }
       catch (IOException e) {

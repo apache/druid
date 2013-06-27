@@ -62,16 +62,18 @@ public abstract class LoadRule implements Rule
     final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
     final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
 
-    stats.accumulate(
-        assign(
-            params.getReplicationManager(),
-            expectedReplicants,
-            totalReplicants,
-            analyzer,
-            serverHolderList,
-            segment
-        )
-    );
+    if (params.getAvailableSegments().contains(segment)) {
+      stats.accumulate(
+          assign(
+              params.getReplicationManager(),
+              expectedReplicants,
+              totalReplicants,
+              analyzer,
+              serverHolderList,
+              segment
+          )
+      );
+    }
 
     stats.accumulate(drop(expectedReplicants, clusterReplicants, segment, params));
 

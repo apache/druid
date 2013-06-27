@@ -112,15 +112,16 @@ public class DruidMasterBalancer implements DruidMasterHelper
         continue;
       }
 
-      int iter = 0;
-      while (iter < maxSegmentsToMove) {
-        iter++;
+      for (int iter = 0; iter < maxSegmentsToMove; iter++) {
         final BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList);
-        final ServerHolder holder = analyzer.findNewSegmentHomeBalance(segmentToMove.getSegment(), serverHolderList);
-        if (holder == null) {
-          continue;
+
+        if (params.getAvailableSegments().contains(segmentToMove.getSegment())) {
+          final ServerHolder holder = analyzer.findNewSegmentHomeBalance(segmentToMove.getSegment(), serverHolderList);
+
+          if (holder != null) {
+            moveSegment(segmentToMove, holder.getServer(), params);
+          }
         }
-        moveSegment(segmentToMove, holder.getServer(), params);
       }
 
       final double initialTotalCost = analyzer.calculateInitialTotalCost(serverHolderList);
