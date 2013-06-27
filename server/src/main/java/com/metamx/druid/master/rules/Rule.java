@@ -35,7 +35,9 @@ import org.joda.time.DateTime;
     @JsonSubTypes.Type(name = "loadByPeriod", value = PeriodLoadRule.class),
     @JsonSubTypes.Type(name = "loadByInterval", value = IntervalLoadRule.class),
     @JsonSubTypes.Type(name = "dropByPeriod", value = PeriodDropRule.class),
-    @JsonSubTypes.Type(name = "dropByInterval", value = IntervalDropRule.class)
+    @JsonSubTypes.Type(name = "dropByInterval", value = IntervalDropRule.class),
+    @JsonSubTypes.Type(name = "loadBySize", value = SizeLoadRule.class),
+    @JsonSubTypes.Type(name = "dropBySize", value = SizeDropRule.class)
 })
 
 public interface Rule

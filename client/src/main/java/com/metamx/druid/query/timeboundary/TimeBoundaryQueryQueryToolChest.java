@@ -22,6 +22,8 @@ package com.metamx.druid.query.timeboundary;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.common.guava.MergeSequence;
@@ -59,13 +61,29 @@ public class TimeBoundaryQueryQueryToolChest
   };
 
   @Override
-  public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> input)
+  public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> segments)
   {
-    if(input.size() <= 1) {
-      return input;
+    if (segments.size() <= 1) {
+      return segments;
     }
 
-    return Lists.newArrayList(input.get(0), input.get(input.size() - 1));
+    final T first = segments.get(0);
+    final T second = segments.get(segments.size() - 1);
+
+    return Lists.newArrayList(
+        Iterables.filter(
+            segments,
+            new Predicate<T>()
+            {
+              @Override
+              public boolean apply(T input)
+              {
+                return input.getInterval().overlaps(first.getInterval()) || input.getInterval()
+                                                                                 .overlaps(second.getInterval());
+              }
+            }
+        )
+    );
   }
 
   @Override
