@@ -13,10 +13,10 @@ import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.realtime.RealtimeNode;
 import com.metamx.druid.realtime.SegmentPublisher;
-import druid.examples.webStream.WebFirehoseFactory;
 import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
+import druid.examples.webStream.WebFirehoseFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,7 +53,7 @@ public class RealtimeStandaloneMain
     rn.setDataSegmentPusher(new NoopDataSegmentPusher());
     rn.setServerView(new NoopServerView());
     rn.setInventoryView(new NoopInventoryView());
-    
+
     Runtime.getRuntime().addShutdownHook(
         new Thread(
             new Runnable()

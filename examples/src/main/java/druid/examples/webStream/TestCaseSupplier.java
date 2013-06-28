@@ -27,19 +27,16 @@ import java.io.StringReader;
 
 public class TestCaseSupplier implements InputSupplier<BufferedReader>
 {
-  private final String s;
+  private final String testString;
 
-  public TestCaseSupplier(String s)
+  public TestCaseSupplier(String testString)
   {
-    this.s = s;
+    this.testString = testString;
   }
 
   @Override
   public BufferedReader getInput() throws IOException
   {
-    StringBuilder buffer = new StringBuilder();
-    buffer.append(s);
-    BufferedReader br = new BufferedReader(new StringReader(buffer.toString()));
-    return br;
+    return new BufferedReader(new StringReader(testString));
   }
 }

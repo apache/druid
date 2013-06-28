@@ -11,13 +11,13 @@ import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import twitter4j.ConnectionLifeCycleListener;
 import twitter4j.HashtagEntity;
+import twitter4j.StallWarning;
 import twitter4j.Status;
 import twitter4j.StatusDeletionNotice;
 import twitter4j.StatusListener;
 import twitter4j.TwitterStream;
 import twitter4j.TwitterStreamFactory;
 import twitter4j.User;
-import twitter4j.StallWarning;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -49,21 +49,23 @@ import static java.lang.Thread.sleep;
  * is UTC):
  * <pre>
  * </pre>
- *
- *
+ * <p/>
+ * <p/>
  * Notes on twitter.com HTTP (REST) API: v1.0 will be disabled around 2013-03 so v1.1 should be used;
  * twitter4j 3.0 (not yet released) will support the v1.1 api.
  * Specifically, we should be using https://stream.twitter.com/1.1/statuses/sample.json
  * See: http://jira.twitter4j.org/browse/TFJ-186
+ * <p/>
+ * Notes on JSON parsing: as of twitter4j 2.2.x, the json parser has some bugs (ex: Status.toString()
+ * can have number format exceptions), so it might be necessary to extract raw json and process it
+ * separately.  If so, set twitter4.jsonStoreEnabled=true and look at DataObjectFactory#getRawJSON();
+ * com.fasterxml.jackson.databind.ObjectMapper should be used to parse.
  *
- *  Notes on JSON parsing: as of twitter4j 2.2.x, the json parser has some bugs (ex: Status.toString()
- *  can have number format exceptions), so it might be necessary to extract raw json and process it
- *  separately.  If so, set twitter4.jsonStoreEnabled=true and look at DataObjectFactory#getRawJSON();
- *  com.fasterxml.jackson.databind.ObjectMapper should be used to parse.
  * @author pbaclace
  */
 @JsonTypeName("twitzer")
-public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
+public class TwitterSpritzerFirehoseFactory implements FirehoseFactory
+{
   private static final Logger log = new Logger(TwitterSpritzerFirehoseFactory.class);
   /**
    * max events to receive, -1 is infinite, 0 means nothing is delivered; use this to prevent
@@ -94,7 +96,8 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
   @Override
   public Firehose connect() throws IOException
   {
-    final ConnectionLifeCycleListener connectionLifeCycleListener = new ConnectionLifeCycleListener() {
+    final ConnectionLifeCycleListener connectionLifeCycleListener = new ConnectionLifeCycleListener()
+    {
       @Override
       public void onConnect()
       {
@@ -134,7 +137,8 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
     //
     twitterStream = new TwitterStreamFactory().getInstance();
     twitterStream.addConnectionLifeCycleListener(connectionLifeCycleListener);
-    statusListener = new StatusListener() {  // This is what really gets called to deliver stuff from twitter4j
+    statusListener = new StatusListener()
+    {  // This is what really gets called to deliver stuff from twitter4j
       @Override
       public void onStatus(Status status)
       {
@@ -147,7 +151,8 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
           if (!success) {
             log.warn("queue too slow!");
           }
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e) {
           throw new RuntimeException("InterruptedException", e);
         }
       }
@@ -179,7 +184,8 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
       }
 
       @Override
-      public void onStallWarning(StallWarning warning) {
+      public void onStallWarning(StallWarning warning)
+      {
         System.out.println("Got stall warning:" + warning);
       }
     };
@@ -188,9 +194,11 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
     twitterStream.sample(); // creates a generic StatusStream
     log.info("returned from sample()");
 
-    return new Firehose() {
+    return new Firehose()
+    {
 
-      private final Runnable doNothingRunnable = new Runnable() {
+      private final Runnable doNothingRunnable = new Runnable()
+      {
         public void run()
         {
         }
@@ -240,7 +248,8 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
             try {
               log.info("reached limit, sleeping a long time...");
               sleep(2000000000L);
-            } catch (InterruptedException e) {
+            }
+            catch (InterruptedException e) {
               throw new RuntimeException("InterruptedException", e);
             }
           } else {
@@ -254,7 +263,8 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
         Status status;
         try {
           status = queue.take();
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e) {
           throw new RuntimeException("InterruptedException", e);
         }
 

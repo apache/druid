@@ -21,6 +21,7 @@ package druid.examples.webStream;
 
 import com.google.common.io.InputSupplier;
 import com.metamx.druid.input.InputRow;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import org.testng.annotations.Test;
@@ -128,7 +129,7 @@ public class WebFirehoseFactoryTest
     InputSupplier testCaseSupplier = new TestCaseSupplier(
         "{ \"a\": \"Mozilla\\/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko\\/20100101 Firefox\\/21.0\", \"c\": \"US\", \"nk\": 1, \"tz\": \"America\\/New_York\", \"gr\": \"NY\", \"g\": \"1Chgyj\", \"h\": \"15vMQjX\", \"l\": \"o_d63rn9enb\", \"al\": \"en-US,en;q=0.5\", \"hh\": \"1.usa.gov\", \"r\": \"http:\\/\\/forecast.weather.gov\\/MapClick.php?site=okx&FcstType=text&zmx=1&zmy=1&map.x=98&map.y=200&site=OKX\", \"u\": \"http:\\/\\/www.spc.ncep.noaa.gov\\/\", \"t\": 1372121562, \"hc\": 1368193091, \"cy\": \"New York\", \"ll\": [ 40.862598, -73.921799 ] }"
     );
-    UpdateStream updateStream = new UpdateStream(testCaseSupplier, queue);
+    UpdateStream updateStream = new UpdateStream(testCaseSupplier, queue, new DefaultObjectMapper());
     Thread t = new Thread(updateStream);
     t.start();
     Map<String, Object> expectedAnswer = new HashMap<String, Object>();
@@ -188,7 +189,7 @@ public class WebFirehoseFactoryTest
     InputSupplier testCaseSupplier = new TestCaseSupplier(
         "{ \"a\": \"Mozilla\\/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko\\/20100101 Firefox\\/21.0\", \"nk\": 1, \"tz\": \"America\\/New_York\", \"g\": \"1Chgyj\", \"h\": \"15vMQjX\", \"l\": \"o_d63rn9enb\", \"al\": \"en-US,en;q=0.5\", \"hh\": \"1.usa.gov\", \"r\": \"http:\\/\\/forecast.weather.gov\\/MapClick.php?site=okx&FcstType=text&zmx=1&zmy=1&map.x=98&map.y=200&site=OKX\", \"u\": \"http:\\/\\/www.spc.ncep.noaa.gov\\/\", \"t\": 1372121562, \"hc\": 1368193091, \"kw\": \"spcnws\", \"cy\": \"New York\", \"ll\": [ 40.862598, -73.921799 ] }"
     );
-    UpdateStream updateStream = new UpdateStream(testCaseSupplier, queue);
+    UpdateStream updateStream = new UpdateStream(testCaseSupplier, queue, new DefaultObjectMapper());
     Thread t = new Thread(updateStream);
     t.start();
     InputRow row = webbieHose.nextRow();
