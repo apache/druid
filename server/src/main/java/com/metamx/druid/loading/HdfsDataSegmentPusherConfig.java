@@ -19,6 +19,7 @@
 
 package com.metamx.druid.loading;
 
+import org.apache.hadoop.fs.Path;
 import org.skife.config.Config;
 
 import java.io.File;
@@ -28,5 +29,5 @@ import java.io.File;
 public abstract class HdfsDataSegmentPusherConfig
 {
   @Config("druid.pusher.hdfs.storageDirectory")
-  public abstract File getStorageDirectory();
+  public abstract Path getStorageDirectory();
 }
