@@ -288,6 +288,10 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
         final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
 
+        if (inventoryKey == null) {
+          return;
+        }
+
         switch (event.getType()) {
           case CHILD_ADDED:
           case CHILD_UPDATED:
