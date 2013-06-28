@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.parsers.TimestampParser;
+import com.metamx.druid.guava.Runnables;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -77,7 +78,7 @@ public class WebFirehoseFactory implements FirehoseFactory
 
     return new Firehose()
     {
-      private final Runnable doNothingRunnable = new NoopRunnable();
+      private final Runnable doNothingRunnable = Runnables.getNoopRunnable();
 
       @Override
       public boolean hasMore()
