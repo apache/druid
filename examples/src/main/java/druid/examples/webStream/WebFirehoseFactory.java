@@ -114,11 +114,10 @@ public class WebFirehoseFactory implements FirehoseFactory
       {
         Map<String, Object> renamedMap = Maps.newHashMap();
         for (int iter = 0; iter < dimensions.size(); iter++) {
-          if (update.get(dimensions.get(iter)) == null) {
-            update.put(dimensions.get(iter), null);
+          if (update.get(dimensions.get(iter)) != null) {
+            Object obj = update.get(dimensions.get(iter));
+            renamedMap.put(renamedDimensions.get(iter), obj);
           }
-          Object obj = update.get(dimensions.get(iter));
-          renamedMap.put(renamedDimensions.get(iter), obj);
         }
         if (renamedMap.get(timeDimension) == null) {
           renamedMap.put(timeDimension, System.currentTimeMillis());

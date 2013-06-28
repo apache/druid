@@ -69,7 +69,7 @@ public class UpdateStream implements Runnable
         if (isValid(line)) {
           HashMap<String, Object> map = mapper.readValue(line, typeRef);
           queue.offer(map, queueWaitTime, TimeUnit.SECONDS);
-          log.info("Successfully added to queue");
+          log.debug("Successfully added to queue");
         }
       }
     }
