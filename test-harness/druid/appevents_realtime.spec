@@ -6,7 +6,7 @@
 	       },
   "config" : { "maxRowsInMemory" : 500000,
                "intermediatePersistPeriod" : "PT1m" },
-  "firehose" : { "type" : "kafka-0.6.3",
+  "firehose" : { "type" : "kafka-0.7.2",
                  "consumerProps" : { "zk.connect" : "localhost:2181",
                                      "zk.connectiontimeout.ms" : "15000",
                                      "zk.sessiontimeout.ms" : "15000",
