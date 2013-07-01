@@ -48,6 +48,7 @@ import com.metamx.druid.indexing.worker.executor.ExecutorMain;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -207,7 +208,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
 
                           log.info("Logging task %s output to: %s", task.getId(), logFile);
 
-                          final OutputStream toProc = processHolder.process.getOutputStream();
                           final InputStream fromProc = processHolder.process.getInputStream();
                           final OutputStream toLogfile = Files.newOutputStreamSupplier(logFile).getOutput();
 
@@ -221,15 +221,16 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
                             if (statusCode != 0) {
                               runFailed = true;
                             }
+
+                            toLogfile.close();
                           }
                           catch (Exception e) {
-                            log.warn(e, "Failed to read from process for task: %s", task.getId());
+                            log.warn(e, "Failed to log process output for task: %s", task.getId());
                             runFailed = true;
+                            Closeables.close(toLogfile, true);
                           }
                           finally {
-                            Closeables.closeQuietly(fromProc);
-                            Closeables.closeQuietly(toLogfile);
-                            Closeables.closeQuietly(toProc);
+                            Closeables.close(processHolder, true);
                           }
 
                           // Upload task logs
@@ -311,31 +312,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
     }
 
     if (taskInfo.processHolder != null) {
-      final int shutdowns = taskInfo.processHolder.shutdowns.getAndIncrement();
-      if (shutdowns == 0) {
-        log.info("Attempting to gracefully shutdown task: %s", taskid);
-        try {
-          // This is gross, but it may still be nicer than talking to the forked JVM via HTTP.
-          final OutputStream out = taskInfo.processHolder.process.getOutputStream();
-          out.write(
-              jsonMapper.writeValueAsBytes(
-                  ImmutableMap.of(
-                      "shutdown",
-                      "now"
-                  )
-              )
-          );
-          out.write('\n');
-          out.flush();
-        }
-        catch (IOException e) {
-          throw Throwables.propagate(e);
-        }
-      } else {
-        // Will trigger normal failure mechanisms due to process exit
-        log.info("Killing process for task: %s", taskid);
-        taskInfo.processHolder.process.destroy();
-      }
+      // Will trigger normal failure mechanisms due to process exit
+      log.info("Killing process for task: %s", taskid);
+      taskInfo.processHolder.process.destroy();
     }
   }
 
@@ -424,18 +403,24 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
     }
   }
 
-  private static class ProcessHolder
+  private static class ProcessHolder implements Closeable
   {
     private final Process process;
     private final File logFile;
     private final int port;
-    private final AtomicInteger shutdowns = new AtomicInteger(0);
 
     private ProcessHolder(Process process, File logFile, int port)
     {
       this.process = process;
       this.logFile = logFile;
       this.port = port;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      process.getInputStream().close();
+      process.getOutputStream().close();
     }
   }
 }

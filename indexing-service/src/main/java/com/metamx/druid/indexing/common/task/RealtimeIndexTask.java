@@ -46,8 +46,8 @@ import com.metamx.druid.realtime.FireDepartmentConfig;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.SegmentPublisher;
+import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
-import com.metamx.druid.realtime.firehose.GracefulShutdownFirehose;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.RealtimePlumberSchool;
 import com.metamx.druid.realtime.plumber.Sink;
@@ -92,15 +92,6 @@ public class RealtimeIndexTask extends AbstractTask
 
   @JsonIgnore
   private volatile TaskToolbox toolbox = null;
-
-  @JsonIgnore
-  private volatile GracefulShutdownFirehose firehose = null;
-
-  @JsonIgnore
-  private final Object lock = new Object();
-
-  @JsonIgnore
-  private volatile boolean shutdown = false;
 
   @JsonCreator
   public RealtimeIndexTask(
@@ -177,19 +168,7 @@ public class RealtimeIndexTask extends AbstractTask
 
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
     final Period intermediatePersistPeriod = fireDepartmentConfig.getIntermediatePersistPeriod();
-
-    synchronized (lock) {
-      if (shutdown) {
-        return TaskStatus.success(getId());
-      }
-
-      log.info(
-          "Wrapping firehose in GracefulShutdownFirehose with segmentGranularity[%s] and windowPeriod[%s]",
-          segmentGranularity,
-          windowPeriod
-      );
-      firehose = new GracefulShutdownFirehose(firehoseFactory.connect(), segmentGranularity, windowPeriod);
-    }
+    final Firehose firehose = firehoseFactory.connect();
 
     // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
     // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
@@ -353,22 +332,6 @@ public class RealtimeIndexTask extends AbstractTask
     }
 
     return TaskStatus.success(getId());
-  }
-
-  @Override
-  public void shutdown()
-  {
-    try {
-      synchronized (lock) {
-        shutdown = true;
-        if (firehose != null) {
-          firehose.shutdown();
-        }
-      }
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   @JsonProperty
