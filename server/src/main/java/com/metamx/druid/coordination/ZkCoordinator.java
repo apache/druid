@@ -230,14 +230,16 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       serverManager.loadSegment(segment);
 
       File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
-      try {
-        jsonMapper.writeValue(segmentInfoCacheFile, segment);
-      }
-      catch (IOException e) {
-        removeSegment(segment);
-        throw new SegmentLoadingException(
-            e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
-        );
+      if (!segmentInfoCacheFile.exists()) {
+        try {
+          jsonMapper.writeValue(segmentInfoCacheFile, segment);
+        }
+        catch (IOException e) {
+          removeSegment(segment);
+          throw new SegmentLoadingException(
+              e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
+          );
+        }
       }
 
       try {
@@ -260,18 +262,19 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   {
     try {
       for (DataSegment segment : segments) {
-
         serverManager.loadSegment(segment);
 
         File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
-        try {
-          jsonMapper.writeValue(segmentInfoCacheFile, segment);
-        }
-        catch (IOException e) {
-          removeSegment(segment);
-          throw new SegmentLoadingException(
-              e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
-          );
+        if (!segmentInfoCacheFile.exists()) {
+          try {
+            jsonMapper.writeValue(segmentInfoCacheFile, segment);
+          }
+          catch (IOException e) {
+            removeSegment(segment);
+            throw new SegmentLoadingException(
+                e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
+            );
+          }
         }
       }
 
@@ -305,7 +308,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       announcer.unannounceSegment(segment);
     }
     catch (Exception e) {
-      log.makeAlert("Failed to remove segment")
+      log.makeAlert(e, "Failed to remove segment")
          .addData("segment", segment)
          .emit();
     }
@@ -321,13 +324,12 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         if (!segmentInfoCacheFile.delete()) {
           log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
         }
-
       }
 
       announcer.unannounceSegments(segments);
     }
     catch (Exception e) {
-      log.makeAlert("Failed to remove segments")
+      log.makeAlert(e, "Failed to remove segments")
          .addData("segments", segments)
          .emit();
     }

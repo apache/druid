@@ -28,14 +28,6 @@ public abstract class ZkPathsConfig
   @Config("druid.zk.paths.base")
   public abstract String getZkBasePath();
 
-  @Config("druid.zk.segmentsPerNode")
-  @Default("50")
-  public abstract int getSegmentsPerNode();
-
-  @Config("druid.zk.maxNumBytesPerNode")
-  @Default("512000")
-  public abstract long getMaxNumBytes();
-
   @Config("druid.zk.paths.propertiesPath")
   public String getPropertiesPath()
   {
