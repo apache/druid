@@ -16,6 +16,9 @@ type ec2-run-instances >/dev/null 2>&1 || { echo >&2 "I require ec2-run-instance
 type ec2-describe-instances >/dev/null 2>&1 || { echo >&2 "I require ec2-describe-instances but it's not installed.  Aborting."; exit 1; }
 
 # Create a keypair for our servers
+echo "Removing old keypair for druid..."
+ec2-delete-keypair druid-keypair
+echo "Creating new keypair for druid..."
 ec2-create-keypair druid-keypair > druid-keypair
 chmod 0600 druid-keypair
 mv druid-keypair ~/.ssh/
@@ -32,11 +35,23 @@ ec2-authorize druid-group -P udp -p 1-65535 -o druid-group
 
 # Use ami ami-e7582d8e - Alestic Ubuntu 12.04 us-east
 INSTANCE_ID=$(ec2-run-instances ami-e7582d8e -n 1 -g druid-group -k druid-keypair --instance-type m1.small| awk '/INSTANCE/{print $2}')
-ec2-describe-instances|grep INSTANCE|grep $INSTANCE_ID
-sleep 30
+while true; do
+    sleep 1
+    INSTANCE_STATUS=$(ec2-describe-instances|grep INSTANCE|grep $INSTANCE_ID|grep -v grep|cut -f6)
+    if [ $INSTANCE_STATUS == "running" ]
+        then
+            echo "Instance $INSTANCE_ID is status $INSTANCE_STATUS..."
+            break
+    fi
+done
+
+# Wait for the instance to come up
+echo "Waiting 60 seconds for instance $INSTANCE_ID to boot..."
+sleep 60
 
 # Get hostname and ssh with the key we created, and ssh there
-INSTANCE_ADDRESS=`ec2-describe-instances|grep 'INSTANCE'|grep $INSTANCE_ID|cut -f4` && echo $INSTANCE_ADDRESS
+INSTANCE_ADDRESS=`ec2-describe-instances|grep 'INSTANCE'|grep $INSTANCE_ID|cut -f4`
+echo "Connecting to $INSTANCE_ADDRESS..."
 ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<\EOI
   # Install dependencies - mysql and Java, and setup druid db
   export DEBIAN_FRONTEND=noninteractive
