@@ -20,6 +20,7 @@
 package com.metamx.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -76,7 +77,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   {
     this.exec = exec;
     this.ordering = ordering;
-    this.queryables = Iterables.unmodifiableIterable(queryables);
+    this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
   }
 
   @Override

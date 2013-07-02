@@ -41,7 +41,7 @@ public class CountAggregatorFactory implements AggregatorFactory
       @JsonProperty("name") String name
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non null aggregator name");
+    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
 
     this.name = name;
   }
