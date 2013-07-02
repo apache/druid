@@ -21,14 +21,18 @@ package com.metamx.druid.loading;
 
 import org.skife.config.Config;
 
-import java.io.File;
-
 /**
  */
 public abstract class SegmentLoaderConfig
 {
   @Config({"druid.paths.indexCache", "druid.segmentCache.path"})
-  public abstract File getCacheDirectory();
+  public abstract String getCacheDirectory();
+
+  @Config("druid.server.maxSize")
+  public long getServerMaxSize()
+  {
+    return Long.MAX_VALUE;
+  }
 
   @Config("druid.segmentCache.deleteOnRemove")
   public boolean deleteOnRemove()

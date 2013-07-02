@@ -20,31 +20,13 @@
 package com.metamx.druid.loading;
 
 import com.google.common.base.Joiner;
-import com.metamx.common.MapUtils;
 import com.metamx.druid.client.DataSegment;
-
-import java.util.Map;
 
 /**
  */
 public class DataSegmentPusherUtil
 {
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
-
-  public static String getLegacyStorageDir(DataSegment segment)
-  {
-    final Map<String,Object> loadSpec = segment.getLoadSpec();
-
-    String specType = MapUtils.getString(loadSpec, "type");
-    if (specType.startsWith("s3")) {
-      String s3Bucket = MapUtils.getString(loadSpec, "bucket");
-      String s3Path = MapUtils.getString(loadSpec, "key");
-
-      return String.format("%s/%s", s3Bucket, s3Path.substring(0, s3Path.lastIndexOf("/")));
-    }
-
-    return null;
-  }
 
   public static String getStorageDir(DataSegment segment)
   {

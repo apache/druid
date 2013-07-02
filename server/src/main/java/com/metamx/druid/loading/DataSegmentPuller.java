@@ -39,9 +39,13 @@ public interface DataSegmentPuller
   /**
    * Returns the last modified time of the given segment.
    *
+   * Note, this is not actually used at this point and doesn't need to actually be implemented.  It's just still here
+   * to not break compatibility.
+   *
    * @param segment The segment to check the last modified time for
    * @return the last modified time in millis from the epoch
    * @throws SegmentLoadingException if there are any errors
    */
+  @Deprecated
   public long getLastModified(DataSegment segment) throws SegmentLoadingException;
 }
