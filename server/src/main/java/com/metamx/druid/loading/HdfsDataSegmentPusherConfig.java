@@ -21,12 +21,10 @@ package com.metamx.druid.loading;
 
 import org.skife.config.Config;
 
-import java.io.File;
-
 /**
  */
 public abstract class HdfsDataSegmentPusherConfig
 {
   @Config("druid.pusher.hdfs.storageDirectory")
-  public abstract File getStorageDirectory();
+  public abstract String getStorageDirectory();
 }
