@@ -51,8 +51,8 @@ public class HistogramAggregatorFactory implements AggregatorFactory
       @JsonProperty("breaks") final List<Float> breaksList
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, nonl null aggregator name");
-    Preconditions.checkNotNull(fieldName, "Must have a valid, non null fieldName");
+    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
+    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
 
     this.name = name;
     this.fieldName = fieldName;

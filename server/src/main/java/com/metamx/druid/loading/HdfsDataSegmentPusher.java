@@ -43,7 +43,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(File inDir, DataSegment segment) throws IOException
   {
     final String storageDir = DataSegmentPusherUtil.getStorageDir(segment);
-    Path outFile = config.getStorageDirectory().suffix(String.format("/%s/index.zip", storageDir));
+    Path outFile = new Path(String.format("%s/%s/index.zip", config.getStorageDirectory(), storageDir));
     FileSystem fs = outFile.getFileSystem(hadoopConfig);
 
     fs.mkdirs(outFile.getParent());

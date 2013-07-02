@@ -45,8 +45,8 @@ public class MinAggregatorFactory implements AggregatorFactory
       @JsonProperty("fieldName") final String fieldName
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non null aggregator name");
-    Preconditions.checkNotNull(fieldName, "Must have a valid, non null fieldName");
+    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
+    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
 
     this.name = name;
     this.fieldName = fieldName;
