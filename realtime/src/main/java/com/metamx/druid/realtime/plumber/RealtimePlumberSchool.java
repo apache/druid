@@ -662,6 +662,14 @@ public class RealtimePlumberSchool implements PlumberSchool
    */
   private int persistHydrant(FireHydrant indexToPersist, Schema schema, Interval interval)
   {
+    if (indexToPersist.hasSwapped()) {
+      log.info(
+          "DataSource[%s], Interval[%s], Hydrant[%s] already swapped. Ignoring request to persist.",
+          schema.getDataSource(), interval, indexToPersist
+      );
+      return 0;
+    }
+
     log.info("DataSource[%s], Interval[%s], persisting Hydrant[%s]", schema.getDataSource(), interval, indexToPersist);
     try {
       int numRows = indexToPersist.getIndex().size();
