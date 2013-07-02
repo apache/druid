@@ -19,15 +19,16 @@
 
 package com.metamx.druid.coordination;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
-import com.metamx.druid.curator.SegmentReader;
 import com.metamx.druid.curator.announcement.Announcer;
-import com.metamx.druid.initialization.ZkPathsConfig;
+import com.metamx.druid.initialization.ZkDataSegmentAnnouncerConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import junit.framework.Assert;
 import org.apache.curator.framework.CuratorFramework;
@@ -91,7 +92,7 @@ public class BatchingCuratorDataSegmentAnnouncerTest
             "type",
             "tier"
         ),
-        new ZkPathsConfig()
+        new ZkDataSegmentAnnouncerConfig()
         {
           @Override
           public String getZkBasePath()
@@ -112,8 +113,7 @@ public class BatchingCuratorDataSegmentAnnouncerTest
           }
         },
         announcer,
-        jsonMapper,
-        segmentReader
+        jsonMapper
     );
     segmentAnnouncer.start();
 
@@ -187,6 +187,14 @@ public class BatchingCuratorDataSegmentAnnouncerTest
     Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
   }
 
+  @Test
+  public void testMultipleBatchAnnounce() throws Exception
+  {
+    for (int i = 0; i < 10; i++) {
+       testBatchAnnounce();
+    }
+  }
+
   private DataSegment makeSegment(int offset)
   {
     return DataSegment.builder()
@@ -199,5 +207,35 @@ public class BatchingCuratorDataSegmentAnnouncerTest
                       )
                       .version(new DateTime().toString())
                       .build();
+  }
+
+  private class SegmentReader
+  {
+    private final CuratorFramework cf;
+    private final ObjectMapper jsonMapper;
+
+    public SegmentReader(CuratorFramework cf, ObjectMapper jsonMapper)
+    {
+      this.cf = cf;
+      this.jsonMapper = jsonMapper;
+    }
+
+    public Set<DataSegment> read(String path)
+    {
+      try {
+        if (cf.checkExists().forPath(path) != null) {
+          return jsonMapper.readValue(
+              cf.getData().forPath(path), new TypeReference<Set<DataSegment>>()
+          {
+          }
+          );
+        }
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+
+      return Sets.newHashSet();
+    }
   }
 }

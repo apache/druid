@@ -42,6 +42,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -226,13 +227,14 @@ public class Announcer
     boolean created = false;
     synchronized (toAnnounce) {
       if (started) {
-        byte[] oldBytes = subPaths.putIfAbsent(pathAndNode.getNode(), bytes);
+        byte[] oldBytes = subPaths.get(pathAndNode.getNode());
 
-        if (oldBytes != null) {
-          throw new IAE("Already announcing[%s], cannot announce it twice.", path);
+        if (oldBytes == null) {
+          subPaths.put(pathAndNode.getNode(), bytes);
+          created = true;
+        } else if (!Arrays.equals(oldBytes, bytes)) {
+          throw new IAE("Cannot reannounce different values under the same path");
         }
-
-        created = true;
       }
     }
 
@@ -261,7 +263,12 @@ public class Announcer
     }
 
     try {
-      updateAnnouncement(path, bytes);
+      byte[] oldBytes = subPaths.get(nodePath);
+
+      if (!Arrays.equals(oldBytes, bytes)) {
+        subPaths.put(nodePath, bytes);
+        updateAnnouncement(path, bytes);
+      }
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

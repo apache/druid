@@ -43,14 +43,11 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
     curator.start();
     manager.start();
 
-    curator.create().creatingParentsIfNeeded().forPath("/container");
-    curator.create().creatingParentsIfNeeded().forPath("/inventory/billy");
-
     Assert.assertTrue(Iterables.isEmpty(manager.getInventory()));
 
     CountDownLatch containerLatch = new CountDownLatch(1);
     strategy.setNewContainerLatch(containerLatch);
-    curator.create().withMode(CreateMode.EPHEMERAL).forPath("/container/billy", new byte[]{});
+    curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath("/container/billy", new byte[]{});
 
     Assert.assertTrue(timing.awaitLatch(containerLatch));
     strategy.setNewContainerLatch(null);
@@ -60,7 +57,7 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
 
     CountDownLatch inventoryLatch = new CountDownLatch(2);
     strategy.setNewInventoryLatch(inventoryLatch);
-    curator.create().withMode(CreateMode.EPHEMERAL).forPath("/inventory/billy/1", Ints.toByteArray(100));
+    curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath("/inventory/billy/1", Ints.toByteArray(100));
     curator.create().withMode(CreateMode.EPHEMERAL).forPath("/inventory/billy/bob", Ints.toByteArray(2287));
 
     Assert.assertTrue(timing.awaitLatch(inventoryLatch));

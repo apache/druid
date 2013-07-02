@@ -20,6 +20,8 @@
 package com.metamx.druid.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.common.lifecycle.LifecycleStart;
+import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.initialization.ZkPathsConfig;
@@ -29,21 +31,31 @@ import java.io.IOException;
 /**
  * This class has the greatest name ever
  */
-public class MultipleDataSegmentAnnouncerDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
+public class MultipleDataSegmentAnnouncerDataSegmentAnnouncer implements DataSegmentAnnouncer
 {
-  private final Iterable<DataSegmentAnnouncer> dataSegmentAnnouncers;
+  private final Iterable<AbstractDataSegmentAnnouncer> dataSegmentAnnouncers;
 
   public MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
-      DruidServerMetadata server,
-      ZkPathsConfig config,
-      Announcer announcer,
-      ObjectMapper jsonMapper,
-      Iterable<DataSegmentAnnouncer> dataSegmentAnnouncers
+      Iterable<AbstractDataSegmentAnnouncer> dataSegmentAnnouncers
   )
   {
-    super(server, config, announcer, jsonMapper);
-
     this.dataSegmentAnnouncers = dataSegmentAnnouncers;
+  }
+
+  @LifecycleStart
+  public void start()
+  {
+    for (AbstractDataSegmentAnnouncer dataSegmentAnnouncer : dataSegmentAnnouncers) {
+      dataSegmentAnnouncer.start();
+    }
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    for (AbstractDataSegmentAnnouncer dataSegmentAnnouncer : dataSegmentAnnouncers) {
+      dataSegmentAnnouncer.stop();
+    }
   }
 
   @Override

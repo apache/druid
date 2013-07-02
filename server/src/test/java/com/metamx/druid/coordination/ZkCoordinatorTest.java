@@ -27,7 +27,6 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.curator.CuratorTestBase;
-import com.metamx.druid.curator.SegmentReader;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.initialization.ZkPathsConfig;
@@ -92,26 +91,11 @@ public class ZkCoordinatorTest extends CuratorTestBase
       {
         return "/druid";
       }
-
-      @Override
-      public int getSegmentsPerNode()
-      {
-        return 1;
-      }
-
-      @Override
-      public long getMaxNumBytes()
-      {
-        return 1000;
-      }
     };
 
-    announcer = new BatchingCuratorDataSegmentAnnouncer(
-        me, zkPaths, new Announcer(curator, Execs.singleThreaded("blah")), jsonMapper, new SegmentReader(curator, jsonMapper)
+    announcer = new CuratorDataSegmentAnnouncer(
+        me, zkPaths, new Announcer(curator, Execs.singleThreaded("blah")), jsonMapper
     );
-    //announcer = new CuratorDataSegmentAnnouncer(
-    //    me, zkPaths, new Announcer(curator, Execs.singleThreaded("blah")), jsonMapper
-    //);
 
     zkCoordinator = new ZkCoordinator(
         jsonMapper,

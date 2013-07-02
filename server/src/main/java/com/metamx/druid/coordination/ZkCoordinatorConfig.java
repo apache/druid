@@ -30,7 +30,7 @@ public abstract class ZkCoordinatorConfig
   @Config("druid.paths.segmentInfoCache")
   public abstract File getSegmentInfoCacheDirectory();
 
-  @Config("druid.start.segmentCache.enable")
+  @Config("druid.segmentCache.enable")
   public boolean isLoadFromSegmentCacheEnabled()
   {
     return true;
