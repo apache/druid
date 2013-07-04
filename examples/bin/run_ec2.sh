@@ -54,7 +54,7 @@ sleep 60
 # Get hostname and ssh with the key we created, and ssh there
 INSTANCE_ADDRESS=`ec2-describe-instances|grep 'INSTANCE'|grep $INSTANCE_ID|cut -f4`
 echo "Connecting to $INSTANCE_ADDRESS to prepare environment for druid..."
-ssh -t -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<\EOI
+ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<\EOI
 
   # Setup Oracle Java
   sudo apt-get purge openjdk*
@@ -81,13 +81,12 @@ ssh -t -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADD
   
   # Install dependencies - mysql and Java, and setup druid db
   export DEBIAN_FRONTEND=noninteractive
-  sudo apt-get -q -y install mysql-server
-
-  # Is localhost expected with multi-node?
-  mysql -u root -e "GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd'; CREATE database druid;"
+  sudo debconf-set-selections <<< 'mysql-server-5.5 mysql-server/root_password password diurd'
+  sudo debconf-set-selections <<< 'mysql-server-5.5 mysql-server/root_password_again password diurd'
+  sudo apt-get -q -y install mysql-server-5.5
   
   # Logout
-  exit
+  exit 0
 EOI
 
 echo "Prepared $INSTANCE_ADDRESS for druid."
@@ -102,6 +101,10 @@ fi
 
 # Now boot druid parts
 ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<\EOI
+
+  # Is localhost expected with multi-node?
+  mysql -u root -pdiurd -e "GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd'; CREATE database druid;"
+
   tar -xvzf druid-services-*-bin.tar.gz
   cd druid-services-*
   
