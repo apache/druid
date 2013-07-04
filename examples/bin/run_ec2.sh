@@ -39,7 +39,7 @@ echo "Booting a single small instance for druid..."
 INSTANCE_ID=$(ec2-run-instances ami-e7582d8e -n 1 -g druid-group -k druid-keypair --instance-type m1.small| awk '/INSTANCE/{print $2}')
 while true; do
     sleep 1
-    INSTANCE_STATUS=$(ec2-describe-instances|grep INSTANCE|grep $INSTANCE_ID|grep -v grep|cut -f6)
+    INSTANCE_STATUS=$(ec2-describe-instances|grep INSTANCE|grep $INSTANCE_ID|cut -f6)
     if [ $INSTANCE_STATUS == "running" ]
         then
             echo "Instance $INSTANCE_ID is status $INSTANCE_STATUS..."
@@ -54,13 +54,7 @@ sleep 60
 # Get hostname and ssh with the key we created, and ssh there
 INSTANCE_ADDRESS=`ec2-describe-instances|grep 'INSTANCE'|grep $INSTANCE_ID|cut -f4`
 echo "Connecting to $INSTANCE_ADDRESS to prepare environment for druid..."
-ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<\EOI
-  # Install dependencies - mysql and Java, and setup druid db
-  export DEBIAN_FRONTEND=noninteractive
-  sudo apt-get -q -y install mysql-server
-
-  # Is localhost expected with multi-node?
-  mysql -u root -e "GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd'; CREATE database druid;"
+ssh -t -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<\EOI
 
   # Setup Oracle Java
   sudo apt-get purge openjdk*
@@ -85,8 +79,41 @@ ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRES
   # in a new console
   nohup bin/kafka-server-start.sh config/server.properties &
   
+  # Install dependencies - mysql and Java, and setup druid db
+  export DEBIAN_FRONTEND=noninteractive
+  sudo apt-get -q -y install mysql-server
+
+  # Is localhost expected with multi-node?
+  mysql -u root -e "GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd'; CREATE database druid;"
+  
   # Logout
   exit
 EOI
 
 echo "Prepared $INSTANCE_ADDRESS for druid."
+
+# Now to scp a tarball up that can run druid!
+if [ -f ../../services/target/druid-services-*-SNAPSHOT-bin.tar.gz ];
+then
+  scp -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ../../services/target/druid-services-*-bin.tar.gz ubuntu@${INSTANCE_ADDRESS}:
+else
+  echo "ERROR - package not built!"
+fi
+
+# Now boot druid parts
+ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<\EOI
+  tar -xvzf druid-services-*-bin.tar.gz
+  cd druid-services-*
+  
+  # Now start a realtime node
+  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=config/realtime/realtime.spec -classpath lib/druid-services-0.5.5-SNAPSHOT-selfcontained.jar:config/realtime com.metamx.druid.realtime.RealtimeMain &
+
+  # And a master node
+  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/druid-services-0.5.5-SNAPSHOT-selfcontained.jar:config/master com.metamx.druid.http.MasterMain &
+
+  # And a compute node
+  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/druid-services-0.5.5-SNAPSHOT-selfcontained.jar:config/compute com.metamx.druid.http.ComputeMain &
+
+  # And a broker node
+  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/druid-services-0.5.5-SNAPSHOT-selfcontained.jar:config/broker com.metamx.druid.http.BrokerMain &
+EOI
