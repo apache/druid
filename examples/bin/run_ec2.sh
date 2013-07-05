@@ -54,7 +54,7 @@ sleep 60
 # Get hostname and ssh with the key we created, and ssh there
 INSTANCE_ADDRESS=`ec2-describe-instances|grep 'INSTANCE'|grep $INSTANCE_ID|cut -f4`
 echo "Connecting to $INSTANCE_ADDRESS to prepare environment for druid..."
-ssh -vvv -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<'EOI'
+ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<'EOI'
 
   # Setup Oracle Java
   sudo apt-get purge openjdk*
