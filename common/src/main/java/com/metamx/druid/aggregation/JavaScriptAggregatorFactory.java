@@ -63,11 +63,11 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
       @JsonProperty("fnCombine") final String fnCombine
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non null aggregator name");
-    Preconditions.checkNotNull(fieldNames, "Must have a valid, non null fieldNames");
-    Preconditions.checkNotNull(fnAggregate, "Must have a valid, non null fnAggregate");
-    Preconditions.checkNotNull(fnReset, "Must have a valid, non null fnReset");
-    Preconditions.checkNotNull(fnCombine, "Must have a valid, non null fnCombine");
+    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
+    Preconditions.checkNotNull(fieldNames, "Must have a valid, non-null fieldNames");
+    Preconditions.checkNotNull(fnAggregate, "Must have a valid, non-null fnAggregate");
+    Preconditions.checkNotNull(fnReset, "Must have a valid, non-null fnReset");
+    Preconditions.checkNotNull(fnCombine, "Must have a valid, non-null fnCombine");
 
     this.name = name;
     this.fieldNames = fieldNames;
