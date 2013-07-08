@@ -62,7 +62,7 @@ public class DbSegmentPublisher implements SegmentPublisher
             {
               handle.createStatement(
                   String.format(
-                      "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
+                      "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
                       + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
                       config.getSegmentTable()
                   )

@@ -64,6 +64,8 @@ public class Announcer
   private final ConcurrentMap<String, PathChildrenCache> listeners = new MapMaker().makeMap();
   private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new MapMaker().makeMap();
 
+  private final Object lock = new Object();
+
   private boolean started = false;
 
   public Announcer(
@@ -227,10 +229,9 @@ public class Announcer
     boolean created = false;
     synchronized (toAnnounce) {
       if (started) {
-        byte[] oldBytes = subPaths.get(pathAndNode.getNode());
+        byte[] oldBytes = subPaths.putIfAbsent(pathAndNode.getNode(), bytes);
 
         if (oldBytes == null) {
-          subPaths.put(pathAndNode.getNode(), bytes);
           created = true;
         } else if (!Arrays.equals(oldBytes, bytes)) {
           throw new IAE("Cannot reannounce different values under the same path");
@@ -250,28 +251,30 @@ public class Announcer
 
   public void update(final String path, final byte[] bytes)
   {
-    final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
+    synchronized (lock) {
+      final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
 
-    final String parentPath = pathAndNode.getPath();
-    final String nodePath = pathAndNode.getNode();
+      final String parentPath = pathAndNode.getPath();
+      final String nodePath = pathAndNode.getNode();
 
-    ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
+      ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
 
-    if (subPaths == null || subPaths.get(nodePath) == null) {
-      announce(path, bytes);
-      return;
-    }
-
-    try {
-      byte[] oldBytes = subPaths.get(nodePath);
-
-      if (!Arrays.equals(oldBytes, bytes)) {
-        subPaths.put(nodePath, bytes);
-        updateAnnouncement(path, bytes);
+      if (subPaths == null || subPaths.get(nodePath) == null) {
+        announce(path, bytes);
+        return;
       }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
+
+      try {
+        byte[] oldBytes = subPaths.get(nodePath);
+
+        if (!Arrays.equals(oldBytes, bytes)) {
+          subPaths.put(nodePath, bytes);
+          updateAnnouncement(path, bytes);
+        }
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
     }
   }
 
