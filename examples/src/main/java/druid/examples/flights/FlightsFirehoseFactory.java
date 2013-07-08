@@ -80,7 +80,8 @@ public class FlightsFirehoseFactory implements FirehoseFactory
         try {
           if (line != null) {
             return true;
-          } else if (in != null) {
+          }
+          else if (in != null) {
             line = in.readLine();
 
             if (line == null) {
@@ -89,14 +90,16 @@ public class FlightsFirehoseFactory implements FirehoseFactory
             }
 
             return true;
-          } else if (files.hasNext()) {
+          }
+          else if (files.hasNext()) {
             final File nextFile = files.next();
 
             if (nextFile.getName().endsWith(".gz")) {
               in = new BufferedReader(
                   new InputStreamReader(new GZIPInputStream(new FileInputStream(nextFile)), Charsets.UTF_8)
               );
-            } else {
+            }
+            else {
               in = new BufferedReader(new FileReader(nextFile));
             }
             return hasMore();

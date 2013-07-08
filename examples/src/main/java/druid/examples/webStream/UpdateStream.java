@@ -22,10 +22,12 @@ package druid.examples.webStream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Maps;
 import com.google.common.io.InputSupplier;
 import com.metamx.emitter.EmittingLogger;
 
 import java.io.BufferedReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -39,11 +41,17 @@ public class UpdateStream implements Runnable
   private final InputSupplier<BufferedReader> supplier;
   private final BlockingQueue<Map<String, Object>> queue;
   private final ObjectMapper mapper;
+  private final ArrayList<String> dimensions;
+  private final ArrayList<String> renamedDimensions;
+  private final String timeDimension;
 
   public UpdateStream(
       InputSupplier<BufferedReader> supplier,
       BlockingQueue<Map<String, Object>> queue,
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      ArrayList<String> dimensions,
+      ArrayList<String> renamedDimensions,
+      String timeDimension
   )
   {
     this.supplier = supplier;
@@ -52,6 +60,9 @@ public class UpdateStream implements Runnable
     this.typeRef = new TypeReference<HashMap<String, Object>>()
     {
     };
+    this.timeDimension = timeDimension;
+    this.dimensions = dimensions;
+    this.renamedDimensions = renamedDimensions;
   }
 
   private boolean isValid(String s)
@@ -60,7 +71,7 @@ public class UpdateStream implements Runnable
   }
 
   @Override
-  public void run() throws RuntimeException
+  public void run()
   {
     try {
       BufferedReader reader = supplier.getInput();
@@ -68,8 +79,13 @@ public class UpdateStream implements Runnable
       while ((line = reader.readLine()) != null) {
         if (isValid(line)) {
           HashMap<String, Object> map = mapper.readValue(line, typeRef);
-          queue.offer(map, queueWaitTime, TimeUnit.SECONDS);
-          log.debug("Successfully added to queue");
+          if (map.get(timeDimension) != null) {
+            Map<String, Object> renamedMap = renameKeys(map);
+            queue.offer(renamedMap, queueWaitTime, TimeUnit.SECONDS);
+            log.debug("Successfully added to queue");
+          } else {
+            log.debug("missing timestamp");
+          }
         }
       }
     }
@@ -78,4 +94,17 @@ public class UpdateStream implements Runnable
     }
 
   }
+
+  private Map<String, Object> renameKeys(Map<String, Object> update)
+  {
+    Map<String, Object> renamedMap = Maps.newHashMap();
+    for (int iter = 0; iter < dimensions.size(); iter++) {
+      if (update.get(dimensions.get(iter)) != null) {
+        Object obj = update.get(dimensions.get(iter));
+        renamedMap.put(renamedDimensions.get(iter), obj);
+      }
+    }
+    return renamedMap;
+  }
+
 }

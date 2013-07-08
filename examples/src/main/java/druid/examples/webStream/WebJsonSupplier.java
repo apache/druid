@@ -37,9 +37,8 @@ public class WebJsonSupplier implements InputSupplier<BufferedReader>
   private String urlString;
   private URL url;
 
-  public WebJsonSupplier(List<String> dimensions, String urlString)
+  public WebJsonSupplier(String urlString)
   {
-    this.dimensions = dimensions;
     this.urlString = urlString;
     try {
       this.url = new URL(urlString);
@@ -56,8 +55,6 @@ public class WebJsonSupplier implements InputSupplier<BufferedReader>
     URL url = new URL(urlString);
     URLConnection connection = url.openConnection();
     connection.setDoInput(true);
-    //connection.setDoOutput(true);
-
     BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
     return reader;
   }

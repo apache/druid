@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import com.metamx.common.parsers.TimestampParser;
 import com.metamx.druid.guava.Runnables;
 import com.metamx.druid.input.InputRow;
@@ -35,7 +34,7 @@ import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -48,23 +47,26 @@ public class WebFirehoseFactory implements FirehoseFactory
   private static final EmittingLogger log = new EmittingLogger(WebFirehoseFactory.class);
   private static final int QUEUE_SIZE = 2000;
   private final String url;
-  private final List<String> dimensions;
+  private final ArrayList<String> dimensions;
   private final String timeDimension;
-  private final List<String> renamedDimensions;
+  private final ArrayList<String> renamedDimensions;
+  private final String timeFormat;
 
 
   @JsonCreator
   public WebFirehoseFactory(
       @JsonProperty("url") String url,
-      @JsonProperty("dimensions") List<String> dimensions,
-      @JsonProperty("renamedDimensions") List<String> renamedDimensions,
-      @JsonProperty("timeDimension") String timeDimension
+      @JsonProperty("dimensions") ArrayList<String> dimensions,
+      @JsonProperty("renamedDimensions") ArrayList<String> renamedDimensions,
+      @JsonProperty("timeDimension") String timeDimension,
+      @JsonProperty("timeFormat") String timeFormat
   )
   {
     this.url = url;
     this.dimensions = dimensions;
     this.renamedDimensions = renamedDimensions;
     this.timeDimension = timeDimension;
+    this.timeFormat = timeFormat;
   }
 
   @Override
@@ -72,7 +74,14 @@ public class WebFirehoseFactory implements FirehoseFactory
   {
     final BlockingQueue<Map<String, Object>> queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
 
-    Runnable updateStream = new UpdateStream(new WebJsonSupplier(dimensions, url), queue, new DefaultObjectMapper());
+    Runnable updateStream = new UpdateStream(
+        new WebJsonSupplier(url),
+        queue,
+        new DefaultObjectMapper(),
+        dimensions,
+        renamedDimensions,
+        timeDimension
+    );
     final ExecutorService service = Executors.newSingleThreadExecutor();
     service.submit(updateStream);
 
@@ -83,7 +92,7 @@ public class WebFirehoseFactory implements FirehoseFactory
       @Override
       public boolean hasMore()
       {
-        return !(service.isTerminated());
+        return !(service.isTerminated()) && queue.size() > 0;
       }
 
 
@@ -91,46 +100,20 @@ public class WebFirehoseFactory implements FirehoseFactory
       public InputRow nextRow()
       {
         try {
-          Map<String, Object> processedMap = processMap(queue.take());
-          DateTime date = TimestampParser.createTimestampParser("auto")
-                                         .apply(processedMap.get(timeDimension).toString());
+          Map<String, Object> map = queue.take();
+          DateTime date = TimestampParser.createTimestampParser(timeFormat)
+                                         .apply(map.get(timeDimension).toString());
           long seconds = (long) date.getMillis();
-          //the parser doesn't check for posix. Only expects iso or millis. This checks for posix
-          if (new DateTime(seconds * 1000).getYear() == new DateTime().getYear()) {
-            seconds = (long) date.getMillis() * 1000;
-          }
           return new MapBasedInputRow(
               seconds,
               renamedDimensions,
-              processedMap
+              map
           );
         }
         catch (Exception e) {
           throw Throwables.propagate(e);
         }
       }
-
-      private Map<String, Object> renameKeys(Map<String, Object> update)
-      {
-        Map<String, Object> renamedMap = Maps.newHashMap();
-        for (int iter = 0; iter < dimensions.size(); iter++) {
-          if (update.get(dimensions.get(iter)) != null) {
-            Object obj = update.get(dimensions.get(iter));
-            renamedMap.put(renamedDimensions.get(iter), obj);
-          }
-        }
-        if (renamedMap.get(timeDimension) == null) {
-          renamedMap.put(timeDimension, System.currentTimeMillis());
-        }
-        return renamedMap;
-      }
-
-      private Map<String, Object> processMap(Map<String, Object> map)
-      {
-        Map<String, Object> renamedMap = renameKeys(map);
-        return renamedMap;
-      }
-
 
       @Override
       public Runnable commit()

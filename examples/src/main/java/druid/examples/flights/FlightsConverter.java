@@ -114,7 +114,8 @@ public class FlightsConverter
 
             if (value.equals("NA")) {
               event.put(metricDimension, 0);
-            } else {
+            }
+            else {
               event.put(metricDimension, Integer.parseInt(value));
             }
           }
