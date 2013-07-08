@@ -27,7 +27,6 @@ import com.metamx.common.parsers.TimestampParser;
 import com.metamx.druid.guava.Runnables;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.emitter.EmittingLogger;
@@ -36,8 +35,6 @@ import org.joda.time.DateTime;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -45,11 +42,8 @@ import java.util.concurrent.Executors;
 public class WebFirehoseFactory implements FirehoseFactory
 {
   private static final EmittingLogger log = new EmittingLogger(WebFirehoseFactory.class);
-  private final String url;
-  private final String timeDimension;
-  private final String newTimeDimension;
-  private final Map<String, String> renamedDimensions;
   private final String timeFormat;
+  private final UpdateStreamFactory updateStreamFactory;
 
 
   @JsonCreator
@@ -60,19 +54,15 @@ public class WebFirehoseFactory implements FirehoseFactory
       @JsonProperty("timeFormat") String timeFormat
   )
   {
-    this.url = url;
-    this.renamedDimensions = renamedDimensions;
-    this.timeDimension = timeDimension;
-    if (renamedDimensions != null) {
-      newTimeDimension = renamedDimensions.get(timeDimension);
-    }
-    else {
-      newTimeDimension = timeDimension;
-    }
+    this(new UpdateStreamFactory(new WebJsonSupplier(url), renamedDimensions, timeDimension), timeFormat);
+  }
+
+  public WebFirehoseFactory(UpdateStreamFactory updateStreamFactory, String timeFormat)
+  {
+    this.updateStreamFactory = updateStreamFactory;
     if (timeFormat == null) {
       this.timeFormat = "auto";
-    }
-    else {
+    } else {
       this.timeFormat = timeFormat;
     }
   }
@@ -81,23 +71,25 @@ public class WebFirehoseFactory implements FirehoseFactory
   public Firehose connect() throws IOException
   {
 
-    final UpdateStream updateStream = new UpdateStream(
-        new WebJsonSupplier(url),
-        new DefaultObjectMapper(),
-        renamedDimensions,
-        timeDimension
-    );
+    final UpdateStream updateStream = updateStreamFactory.build();
     final ExecutorService service = Executors.newSingleThreadExecutor();
     service.submit(updateStream);
 
     return new Firehose()
     {
+      Map<String, Object> map;
       private final Runnable doNothingRunnable = Runnables.getNoopRunnable();
 
       @Override
       public boolean hasMore()
       {
-        return !service.isTerminated();
+        try {
+          map = updateStream.pollFromQueue();
+          return map != null;
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
       }
 
 
@@ -105,9 +97,8 @@ public class WebFirehoseFactory implements FirehoseFactory
       public InputRow nextRow()
       {
         try {
-          Map<String, Object> map = updateStream.takeFromQueue();
           DateTime date = TimestampParser.createTimestampParser(timeFormat)
-                                         .apply(map.get(newTimeDimension).toString());
+                                         .apply(map.get(updateStream.getNewTimeDimension()).toString());
           return new MapBasedInputRow(
               date.getMillis(),
               new ArrayList(map.keySet()),

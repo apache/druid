@@ -19,200 +19,139 @@
 
 package druid.examples.webStream;
 
-import com.google.common.io.InputSupplier;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.beust.jcommander.internal.Lists;
+import com.metamx.druid.input.InputRow;
+import com.metamx.druid.realtime.firehose.Firehose;
 import junit.framework.Assert;
+import org.joda.time.DateTime;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Collections;
+import java.util.List;
 
 public class WebFirehoseFactoryTest
 {
-  private final ArrayList<String> dimensions = new ArrayList<String>();
-  private InputSupplier testCaseSupplier;
-  String timeDimension = "t";
-  DefaultObjectMapper mapper = new DefaultObjectMapper();
-  Map<String, Object> expectedAnswer = new HashMap<String, Object>();
+  private List<String> dimensions;
+  private WebFirehoseFactory webbie;
+  private Firehose firehose;
+  private InputRow inputRow;
+  private TestCaseSupplier testCaseSupplier;
 
   @BeforeClass
-  public void setUp()
+  public void setUp() throws Exception
+  {
+    dimensions = new ArrayList<String>();
+    dimensions.add("item1");
+    dimensions.add("item2");
+    dimensions.add("time");
+    testCaseSupplier = new TestCaseSupplier(
+        "{\"item1\":\"value1\","
+        + "\"item2\":2,"
+        + "\"time\":1372121562 }"
+    );
+
+    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, null, "time");
+    webbie = new WebFirehoseFactory(updateStreamFactory, "posix");
+    firehose = webbie.connect();
+    if (firehose.hasMore()) {
+      inputRow = firehose.nextRow();
+    } else {
+      throw new RuntimeException("queue is empty");
+    }
+
+  }
+
+  @Test
+  public void testDimensions() throws Exception
+  {
+    List<String> actualAnswer = inputRow.getDimensions();
+    Collections.sort(actualAnswer);
+    Assert.assertEquals(actualAnswer, dimensions);
+  }
+
+  @Test
+  public void testPosixTimeStamp() throws Exception
+  {
+    long expectedTime = 1372121562L * 1000L;
+    Assert.assertEquals(expectedTime, inputRow.getTimestampFromEpoch());
+  }
+
+  @Test
+  public void testISOTimeStamp() throws Exception
   {
     testCaseSupplier = new TestCaseSupplier(
-        "{ \"a\": \"Mozilla\\/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko\\/20100101 Firefox\\/21.0\", \"c\": \"US\", \"nk\": 1, \"tz\": \"America\\/New_York\", \"gr\": \"NY\", \"g\": \"1Chgyj\", \"h\": \"15vMQjX\", \"l\": \"o_d63rn9enb\", \"al\": \"en-US,en;q=0.5\", \"hh\": \"1.usa.gov\", \"r\": \"http:\\/\\/forecast.weather.gov\\/MapClick.php?site=okx&FcstType=text&zmx=1&zmy=1&map.x=98&map.y=200&site=OKX\", \"u\": \"http:\\/\\/www.spc.ncep.noaa.gov\\/\", \"t\": 1372121562, \"hc\": 1368193091, \"cy\": \"New York\", \"ll\": [ 40.862598, -73.921799 ] }"
+        "{\"item1\": \"value1\","
+        + "\"item2\":2,"
+        + "\"time\":\"2013-07-08\"}"
     );
 
-    dimensions.add("g");
-    dimensions.add("c");
-    dimensions.add("a");
-    dimensions.add("cy");
-    dimensions.add("l");
-    dimensions.add("hh");
-    dimensions.add("hc");
-    dimensions.add("h");
-    dimensions.add("u");
-    dimensions.add("tz");
-    dimensions.add("t");
-    dimensions.add("r");
-    dimensions.add("gr");
-    dimensions.add("nk");
-    dimensions.add("al");
-    dimensions.add("ll");
-
-    expectedAnswer.put("a", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0");
-    expectedAnswer.put("c", "US");
-    expectedAnswer.put("nk", 1);
-    expectedAnswer.put("tz", "America/New_York");
-    expectedAnswer.put("gr", "NY");
-    expectedAnswer.put("g", "1Chgyj");
-    expectedAnswer.put("h", "15vMQjX");
-    expectedAnswer.put("l", "o_d63rn9enb");
-    expectedAnswer.put("al", "en-US,en;q=0.5");
-    expectedAnswer.put("hh", "1.usa.gov");
-    expectedAnswer.put(
-        "r",
-        "http://forecast.weather.gov/MapClick.php?site=okx&FcstType=text&zmx=1&zmy=1&map.x=98&map.y=200&site=OKX"
-    );
-    expectedAnswer.put("u", "http://www.spc.ncep.noaa.gov/");
-    expectedAnswer.put("t", 1372121562);
-    expectedAnswer.put("hc", 1368193091);
-    expectedAnswer.put("cy", "New York");
-    expectedAnswer.put("ll", Arrays.asList(40.862598, -73.921799));
-
-  }
-
-  @Test(expectedExceptions = UnknownHostException.class)
-  public void checkInvalidUrl() throws Exception
-  {
-
-    String invalidURL = "http://invalid.url";
-    WebJsonSupplier supplier = new WebJsonSupplier(invalidURL);
-    supplier.getInput();
+    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, null, "time");
+    webbie = new WebFirehoseFactory(updateStreamFactory, "iso");
+    Firehose firehose1 = webbie.connect();
+    if (firehose1.hasMore()) {
+      long milliSeconds = firehose1.nextRow().getTimestampFromEpoch();
+      DateTime date = new DateTime("2013-07-08");
+      Assert.assertEquals(date.getMillis(), milliSeconds);
+    } else {
+      Assert.assertFalse("hasMore returned false", true);
+    }
   }
 
   @Test
-  public void basicIngestionCheck() throws Exception
+  public void testAutoIsoTimeStamp() throws Exception
   {
-    UpdateStream updateStream = new UpdateStream(
-        testCaseSupplier,
-        mapper,
-        null,
-        timeDimension
-    );
-    updateStream.run();
-    Map<String, Object> insertedRow = updateStream.takeFromQueue();
-    Assert.assertEquals(expectedAnswer, insertedRow);
-  }
-
-  //If a timestamp is missing, we should throw away the event
-  @Test
-  public void missingTimeStampCheck()
-  {
-    InputSupplier testCaseSupplier = new TestCaseSupplier(
-        "{ \"a\": \"Mozilla\\/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko\\/20100101 Firefox\\/21.0\", \"c\": \"US\", \"nk\": 1, \"tz\": \"America\\/New_York\", \"gr\": \"NY\", \"g\": \"1Chgyj\", \"h\": \"15vMQjX\", \"l\": \"o_d63rn9enb\", \"al\": \"en-US,en;q=0.5\", \"hh\": \"1.usa.gov\", \"r\": \"http:\\/\\/forecast.weather.gov\\/MapClick.php?site=okx&FcstType=text&zmx=1&zmy=1&map.x=98&map.y=200&site=OKX\", \"u\": \"http:\\/\\/www.spc.ncep.noaa.gov\\/\", \"hc\": 1368193091, \"cy\": \"New York\", \"ll\": [ 40.862598, -73.921799 ] }"
-    );
-    UpdateStream updateStream = new UpdateStream(
-        testCaseSupplier,
-        mapper,
-        null,
-        timeDimension
-    );
-    updateStream.run();
-    Assert.assertEquals(updateStream.getQueueSize(), 0);
-  }
-
-  //If any other value is missing, we should still add the event and process it properly
-  @Test
-  public void otherNullValueCheck() throws Exception
-  {
-    Map<String, Object> expectedAnswer = new HashMap<String, Object>();
-    expectedAnswer.put("a", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0");
-    expectedAnswer.put("nk", 1);
-    expectedAnswer.put("tz", "America/New_York");
-    expectedAnswer.put("gr", "NY");
-    expectedAnswer.put("g", "1Chgyj");
-    expectedAnswer.put("h", "15vMQjX");
-    expectedAnswer.put("l", "o_d63rn9enb");
-    expectedAnswer.put("al", "en-US,en;q=0.5");
-    expectedAnswer.put("hh", "1.usa.gov");
-    expectedAnswer.put(
-        "r",
-        "http://forecast.weather.gov/MapClick.php?site=okx&FcstType=text&zmx=1&zmy=1&map.x=98&map.y=200&site=OKX"
-    );
-    expectedAnswer.put("u", "http://www.spc.ncep.noaa.gov/");
-    expectedAnswer.put("t", 1372121562);
-    expectedAnswer.put("hc", 1368193091);
-    expectedAnswer.put("cy", "New York");
-    expectedAnswer.put("ll", Arrays.asList(40.862598, -73.921799));
     testCaseSupplier = new TestCaseSupplier(
-        "{ \"a\": \"Mozilla\\/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko\\/20100101 Firefox\\/21.0\", \"nk\": 1, \"tz\": \"America\\/New_York\", \"gr\": \"NY\", \"g\": \"1Chgyj\", \"h\": \"15vMQjX\", \"l\": \"o_d63rn9enb\", \"al\": \"en-US,en;q=0.5\", \"hh\": \"1.usa.gov\", \"r\": \"http:\\/\\/forecast.weather.gov\\/MapClick.php?site=okx&FcstType=text&zmx=1&zmy=1&map.x=98&map.y=200&site=OKX\", \"u\": \"http:\\/\\/www.spc.ncep.noaa.gov\\/\", \"t\": 1372121562, \"hc\": 1368193091, \"cy\": \"New York\", \"ll\": [ 40.862598, -73.921799 ] }"
+        "{\"item1\": \"value1\","
+        + "\"item2\":2,"
+        + "\"time\":\"2013-07-08\"}"
     );
-    UpdateStream updateStream = new UpdateStream(
-        testCaseSupplier,
-        mapper,
-        null,
-        timeDimension
-    );
-    updateStream.run();
-    Map<String, Object> insertedRow = updateStream.takeFromQueue();
-    Assert.assertEquals(expectedAnswer, insertedRow);
+
+    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, null, "time");
+    webbie = new WebFirehoseFactory(updateStreamFactory, null);
+    Firehose firehose2 = webbie.connect();
+    if (firehose2.hasMore()) {
+      long milliSeconds = firehose2.nextRow().getTimestampFromEpoch();
+      DateTime date = new DateTime("2013-07-08");
+      Assert.assertEquals(date.getMillis(), milliSeconds);
+    } else {
+      Assert.assertFalse("hasMore returned false", true);
+    }
   }
 
   @Test
-  public void checkRenameKeys() throws Exception
+  public void testAutoMilliSecondsTimeStamp() throws Exception
   {
-    Map<String, Object> expectedAnswer = new HashMap<String, Object>();
-    Map<String,String> renamedDimensions = new HashMap<String,String>();
-    renamedDimensions.put("g","bitly_hash");
-    renamedDimensions.put("c","country");
-    renamedDimensions.put("a","user");
-    renamedDimensions.put("cy","city");
-    renamedDimensions.put("l","encoding_user_login");
-    renamedDimensions.put("hh","short_url");
-    renamedDimensions.put("hc","timestamp_hash");
-    renamedDimensions.put("h","user_bitly_hash");
-    renamedDimensions.put("u","url");
-    renamedDimensions.put("tz","timezone");
-    renamedDimensions.put("t","time");
-    renamedDimensions.put("r","referring_url");
-    renamedDimensions.put("gr","geo_region");
-    renamedDimensions.put("nk","known_users");
-    renamedDimensions.put("al","accept_language");
-    renamedDimensions.put("ll","latitude_longitude");
-
-    expectedAnswer.put("user", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0");
-    expectedAnswer.put("country", "US");
-    expectedAnswer.put("known_users", 1);
-    expectedAnswer.put("timezone", "America/New_York");
-    expectedAnswer.put("geo_region", "NY");
-    expectedAnswer.put("bitly_hash", "1Chgyj");
-    expectedAnswer.put("user_bitly_hash", "15vMQjX");
-    expectedAnswer.put("encoding_user_login", "o_d63rn9enb");
-    expectedAnswer.put("accept_language", "en-US,en;q=0.5");
-    expectedAnswer.put("short_url", "1.usa.gov");
-    expectedAnswer.put(
-        "referring_url",
-        "http://forecast.weather.gov/MapClick.php?site=okx&FcstType=text&zmx=1&zmy=1&map.x=98&map.y=200&site=OKX"
+    testCaseSupplier = new TestCaseSupplier(
+        "{\"item1\": \"value1\","
+        + "\"item2\":2,"
+        + "\"time\":1373241600000}"
     );
-    expectedAnswer.put("url", "http://www.spc.ncep.noaa.gov/");
-    expectedAnswer.put("time", 1372121562);
-    expectedAnswer.put("timestamp_hash", 1368193091);
-    expectedAnswer.put("city", "New York");
-    expectedAnswer.put("latitude_longitude", Arrays.asList(40.862598, -73.921799));
 
-    UpdateStream updateStream = new UpdateStream(
-        testCaseSupplier,
-        mapper,
-        renamedDimensions,
-        timeDimension
-    );
-    updateStream.run();
-    Map<String, Object> inputRow = updateStream.takeFromQueue();
-    Assert.assertEquals(expectedAnswer, inputRow);
+    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, null, "time");
+    webbie = new WebFirehoseFactory(updateStreamFactory, null);
+    Firehose firehose3 = webbie.connect();
+    if (firehose3.hasMore()) {
+      long milliSeconds = firehose3.nextRow().getTimestampFromEpoch();
+      DateTime date = new DateTime("2013-07-08");
+      Assert.assertEquals(date.getMillis(), milliSeconds);
+    } else {
+      Assert.assertFalse("hasMore returned false", true);
+    }
   }
 
+  @Test
+  public void testGetDimension()
+  {
+    List<String> column1 = Lists.newArrayList();
+    column1.add("value1");
+    Assert.assertEquals(column1, inputRow.getDimension("item1"));
+  }
+
+  @Test
+  public void testGetFloatMetric()
+  {
+    Assert.assertEquals((float) 2.0, inputRow.getFloatMetric("item2"));
+  }
 }

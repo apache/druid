@@ -24,10 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.InputSupplier;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.emitter.EmittingLogger;
 
 import java.io.BufferedReader;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -40,21 +40,20 @@ public class UpdateStream implements Runnable
   private static final long queueWaitTime = 15L;
   private final TypeReference<HashMap<String, Object>> typeRef;
   private final InputSupplier<BufferedReader> supplier;
-  private final int QUEUE_SIZE=10000;
+  private final int QUEUE_SIZE = 10000;
   private final BlockingQueue<Map<String, Object>> queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
-  private final ObjectMapper mapper;
-  private final Map<String,String> renamedDimensions;
+  private final ObjectMapper mapper = new DefaultObjectMapper();
+  private final Map<String, String> renamedDimensions;
   private final String timeDimension;
+  private final long waitTime = 15L;
 
   public UpdateStream(
       InputSupplier<BufferedReader> supplier,
-      ObjectMapper mapper,
-      Map<String,String> renamedDimensions,
+      Map<String, String> renamedDimensions,
       String timeDimension
   )
   {
     this.supplier = supplier;
-    this.mapper = mapper;
     this.typeRef = new TypeReference<HashMap<String, Object>>()
     {
     };
@@ -94,26 +93,37 @@ public class UpdateStream implements Runnable
 
   private Map<String, Object> renameKeys(Map<String, Object> update)
   {
-    if (renamedDimensions!=null){
+    if (renamedDimensions != null) {
       Map<String, Object> renamedMap = Maps.newHashMap();
       for (String key : renamedDimensions.keySet()) {
-        if(update.get(key)!=null){
-          Object obj= update.get(key);
-          renamedMap.put(renamedDimensions.get(key),obj);
+        if (update.get(key) != null) {
+          Object obj = update.get(key);
+          renamedMap.put(renamedDimensions.get(key), obj);
         }
       }
       return renamedMap;
-    }
-    else{
+    } else {
       return update;
     }
   }
 
-  public Map<String,Object> takeFromQueue() throws InterruptedException{
-    return queue.take();
+  public Map<String, Object> pollFromQueue() throws InterruptedException
+  {
+    return queue.poll(waitTime, TimeUnit.SECONDS);
   }
 
-  public int getQueueSize(){
+  public int getQueueSize()
+  {
     return queue.size();
+  }
+
+  public String getNewTimeDimension()
+  {
+    if (renamedDimensions != null) {
+      return renamedDimensions.get(timeDimension);
+    } else {
+      return timeDimension;
+    }
+
   }
 }
