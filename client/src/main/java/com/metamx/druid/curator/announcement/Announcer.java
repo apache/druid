@@ -227,10 +227,9 @@ public class Announcer
     boolean created = false;
     synchronized (toAnnounce) {
       if (started) {
-        byte[] oldBytes = subPaths.get(pathAndNode.getNode());
+        byte[] oldBytes = subPaths.putIfAbsent(pathAndNode.getNode(), bytes);
 
         if (oldBytes == null) {
-          subPaths.put(pathAndNode.getNode(), bytes);
           created = true;
         } else if (!Arrays.equals(oldBytes, bytes)) {
           throw new IAE("Cannot reannounce different values under the same path");
