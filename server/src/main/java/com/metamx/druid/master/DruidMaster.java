@@ -668,7 +668,7 @@ public class DruidMaster
         synchronized (lock) {
           final LeaderLatch latch = leaderLatch.get();
           if (latch == null || !latch.hasLeadership()) {
-            log.info("[%s] is master, not me.  Phooey.", latch == null ? null : latch.getLeader().getId());
+            log.info("LEGGO MY EGGO. [%s] is master.", latch == null ? null : latch.getLeader().getId());
             stopBeingMaster();
             return;
           }
