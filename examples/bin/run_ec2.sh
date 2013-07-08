@@ -54,40 +54,8 @@ sleep 60
 # Get hostname and ssh with the key we created, and ssh there
 INSTANCE_ADDRESS=`ec2-describe-instances|grep 'INSTANCE'|grep $INSTANCE_ID|cut -f4`
 echo "Connecting to $INSTANCE_ADDRESS to prepare environment for druid..."
-ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<'EOI'
-
-  # Setup Oracle Java
-  sudo apt-get purge openjdk*
-  sudo rm /var/lib/dpkg/info/oracle-java7-installer*
-  sudo apt-get purge oracle-java7-installer*
-  sudo rm /etc/apt/sources.list.d/*java*
-  sudo apt-get update
-  sudo add-apt-repository -y ppa:webupd8team/java
-  sudo apt-get update
-  
-  # Setup yes answer to license question
-  echo debconf shared/accepted-oracle-license-v1-1 select true | sudo debconf-set-selections
-  echo debconf shared/accepted-oracle-license-v1-1 seen true | sudo debconf-set-selections
-  sudo apt-get -y install oracle-java7-installer
-  
-  # Automated Kafka setup
-  curl http://static.druid.io/artifacts/kafka-0.7.2-incubating-bin.tar.gz -o /tmp/kafka-0.7.2-incubating-bin.tar.gz
-  tar -xvzf /tmp/kafka-0.7.2-incubating-bin.tar.gz
-  cd kafka-0.7.2-incubating-bin
-  cat config/zookeeper.properties
-  nohup bin/zookeeper-server-start.sh config/zookeeper.properties &
-  # in a new console
-  nohup bin/kafka-server-start.sh config/server.properties &
-  
-  # Install dependencies - mysql must be built from source, as the 12.04 apt-get hangs
-  export DEBIAN_FRONTEND=noninteractive
-  sudo debconf-set-selections <<< 'mysql-server-5.5 mysql-server/root_password password diurd'
-  sudo debconf-set-selections <<< 'mysql-server-5.5 mysql-server/root_password_again password diurd'
-  sudo apt-get -q -y -V --force-yes --reinstall install mysql-server-5.5
-  
-  echo "ALL DONE with druid environment setup! Hit CTRL-C to proceed."
-  logout
-EOI
+scp -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ./env.sh ubuntu@${INSTANCE_ADDRESS}:
+ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} 'chmod +x ./env.sh;./env.sh'
 
 echo "Prepared $INSTANCE_ADDRESS for druid."
 
@@ -101,28 +69,8 @@ else
 fi
 
 # Now boot druid parts
-ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} <<'EOI2'
-
-  # Is localhost expected with multi-node?
-  mysql -u root -pdiurd -e "GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd'; CREATE database druid;"
-
-  tar -xvzf druid-services-*-bin.tar.gz
-  cd druid-services-*
-  
-  mkdir logs
-  
-  # Now start a realtime node
-  nohup java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=config/realtime/realtime.spec -classpath lib/druid-services-0.5.5-SNAPSHOT-selfcontained.jar:config/realtime com.metamx.druid.realtime.RealtimeMain 2>&1 > logs/realtime.log &
-
-  # And a master node
-  nohup java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/druid-services-0.5.5-SNAPSHOT-selfcontained.jar:config/master com.metamx.druid.http.MasterMain 2>&1 > logs/master.log &
-
-  # And a compute node
-  nohup java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/druid-services-0.5.5-SNAPSHOT-selfcontained.jar:config/compute com.metamx.druid.http.ComputeMain 2>&1 > logs/compute.log &
-
-  # And a broker node
-  nohup java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/druid-services-0.5.5-SNAPSHOT-selfcontained.jar:config/broker com.metamx.druid.http.BrokerMain 2>&1 > logs/broker.log &
-EOI2
+scp -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ./run.sh ubuntu@${INSTANCE_ADDRESS}:
+ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} 'chmod +x ./run.sh;./run.sh'
 
 echo "Druid booting complete!"
 echo "ssh -i ~/.ssh/druid-keypair ubuntu@${INSTANCE_ADDRESS} #to connect"
