@@ -35,11 +35,13 @@ import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @JsonTypeName("webstream")
 public class WebFirehoseFactory implements FirehoseFactory
@@ -47,26 +49,36 @@ public class WebFirehoseFactory implements FirehoseFactory
   private static final EmittingLogger log = new EmittingLogger(WebFirehoseFactory.class);
   private static final int QUEUE_SIZE = 2000;
   private final String url;
-  private final ArrayList<String> dimensions;
   private final String timeDimension;
-  private final ArrayList<String> renamedDimensions;
+  private final String newTimeDimension;
+  private final Map<String,String> renamedDimensions;
   private final String timeFormat;
+  private final long waitTime = 15L;
 
 
   @JsonCreator
   public WebFirehoseFactory(
       @JsonProperty("url") String url,
-      @JsonProperty("dimensions") ArrayList<String> dimensions,
-      @JsonProperty("renamedDimensions") ArrayList<String> renamedDimensions,
+      @JsonProperty("renamedDimensions") Map<String,String> renamedDimensions,
       @JsonProperty("timeDimension") String timeDimension,
       @JsonProperty("timeFormat") String timeFormat
   )
   {
     this.url = url;
-    this.dimensions = dimensions;
     this.renamedDimensions = renamedDimensions;
     this.timeDimension = timeDimension;
-    this.timeFormat = timeFormat;
+    if (renamedDimensions!=null){
+      newTimeDimension=renamedDimensions.get(timeDimension);
+    }
+    else{
+      newTimeDimension=timeDimension;
+    }
+    if (timeFormat==null){
+      this.timeFormat="auto";
+    }
+    else{
+      this.timeFormat = timeFormat;
+    }
   }
 
   @Override
@@ -78,7 +90,6 @@ public class WebFirehoseFactory implements FirehoseFactory
         new WebJsonSupplier(url),
         queue,
         new DefaultObjectMapper(),
-        dimensions,
         renamedDimensions,
         timeDimension
     );
@@ -92,7 +103,7 @@ public class WebFirehoseFactory implements FirehoseFactory
       @Override
       public boolean hasMore()
       {
-        return !(service.isTerminated()) && queue.size() > 0;
+        return !service.isTerminated();
       }
 
 
@@ -102,11 +113,10 @@ public class WebFirehoseFactory implements FirehoseFactory
         try {
           Map<String, Object> map = queue.take();
           DateTime date = TimestampParser.createTimestampParser(timeFormat)
-                                         .apply(map.get(timeDimension).toString());
-          long seconds = (long) date.getMillis();
+                                         .apply(map.get(newTimeDimension).toString());
           return new MapBasedInputRow(
-              seconds,
-              renamedDimensions,
+              date.getMillis(),
+              new ArrayList(map.keySet()),
               map
           );
         }

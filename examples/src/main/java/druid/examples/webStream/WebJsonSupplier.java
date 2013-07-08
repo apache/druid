@@ -44,8 +44,7 @@ public class WebJsonSupplier implements InputSupplier<BufferedReader>
       this.url = new URL(urlString);
     }
     catch (Exception e) {
-      e.printStackTrace();
-      log.info("Malformed url");
+      log.error(e,"Malformed url");
     }
   }
 
@@ -55,7 +54,6 @@ public class WebJsonSupplier implements InputSupplier<BufferedReader>
     URL url = new URL(urlString);
     URLConnection connection = url.openConnection();
     connection.setDoInput(true);
-    BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
-    return reader;
+    return new BufferedReader(new InputStreamReader(url.openStream()));
   }
 }

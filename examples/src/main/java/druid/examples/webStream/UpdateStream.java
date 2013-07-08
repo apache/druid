@@ -41,16 +41,14 @@ public class UpdateStream implements Runnable
   private final InputSupplier<BufferedReader> supplier;
   private final BlockingQueue<Map<String, Object>> queue;
   private final ObjectMapper mapper;
-  private final ArrayList<String> dimensions;
-  private final ArrayList<String> renamedDimensions;
+  private final Map<String,String> renamedDimensions;
   private final String timeDimension;
 
   public UpdateStream(
       InputSupplier<BufferedReader> supplier,
       BlockingQueue<Map<String, Object>> queue,
       ObjectMapper mapper,
-      ArrayList<String> dimensions,
-      ArrayList<String> renamedDimensions,
+      Map<String,String> renamedDimensions,
       String timeDimension
   )
   {
@@ -61,7 +59,6 @@ public class UpdateStream implements Runnable
     {
     };
     this.timeDimension = timeDimension;
-    this.dimensions = dimensions;
     this.renamedDimensions = renamedDimensions;
   }
 
@@ -84,7 +81,7 @@ public class UpdateStream implements Runnable
             queue.offer(renamedMap, queueWaitTime, TimeUnit.SECONDS);
             log.debug("Successfully added to queue");
           } else {
-            log.debug("missing timestamp");
+            log.error("missing timestamp");
           }
         }
       }
@@ -97,14 +94,19 @@ public class UpdateStream implements Runnable
 
   private Map<String, Object> renameKeys(Map<String, Object> update)
   {
-    Map<String, Object> renamedMap = Maps.newHashMap();
-    for (int iter = 0; iter < dimensions.size(); iter++) {
-      if (update.get(dimensions.get(iter)) != null) {
-        Object obj = update.get(dimensions.get(iter));
-        renamedMap.put(renamedDimensions.get(iter), obj);
+    if (renamedDimensions!=null){
+      Map<String, Object> renamedMap = Maps.newHashMap();
+      for (String key : renamedDimensions.keySet()) {
+        if(update.get(key)!=null){
+          Object obj= update.get(key);
+          renamedMap.put(renamedDimensions.get(key),obj);
+        }
       }
+      return renamedMap;
     }
-    return renamedMap;
+    else{
+      return update;
+    }
   }
 
 }

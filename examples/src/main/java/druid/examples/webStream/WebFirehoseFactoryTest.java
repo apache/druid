@@ -107,12 +107,10 @@ public class WebFirehoseFactoryTest
         testCaseSupplier,
         queue,
         mapper,
-        dimensions,
-        dimensions,
+        null,
         timeDimension
     );
-    Thread t = new Thread(updateStream);
-    t.start();
+    updateStream.run();
     Map<String, Object> insertedRow = queue.poll(10, TimeUnit.SECONDS);
     Assert.assertEquals(expectedAnswer, insertedRow);
   }
@@ -129,8 +127,7 @@ public class WebFirehoseFactoryTest
         testCaseSupplier,
         queue,
         mapper,
-        dimensions,
-        dimensions,
+        null,
         timeDimension
     );
     updateStream.run();
@@ -168,12 +165,10 @@ public class WebFirehoseFactoryTest
         testCaseSupplier,
         queue,
         mapper,
-        dimensions,
-        dimensions,
+        null,
         timeDimension
     );
-    Thread t = new Thread(updateStream);
-    t.start();
+    updateStream.run();
     Map<String, Object> insertedRow = queue.poll(10, TimeUnit.SECONDS);
     Assert.assertEquals(expectedAnswer, insertedRow);
   }
@@ -183,23 +178,23 @@ public class WebFirehoseFactoryTest
   {
     Map<String, Object> expectedAnswer = new HashMap<String, Object>();
     queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
-    ArrayList<String> renamedDimensions = new ArrayList<String>();
-    renamedDimensions.add("bitly_hash");
-    renamedDimensions.add("country");
-    renamedDimensions.add("user");
-    renamedDimensions.add("city");
-    renamedDimensions.add("encoding_user_login");
-    renamedDimensions.add("short_url");
-    renamedDimensions.add("timestamp_hash");
-    renamedDimensions.add("user_bitly_hash");
-    renamedDimensions.add("url");
-    renamedDimensions.add("timezone");
-    renamedDimensions.add("time");
-    renamedDimensions.add("referring_url");
-    renamedDimensions.add("geo_region");
-    renamedDimensions.add("known_users");
-    renamedDimensions.add("accept_language");
-    renamedDimensions.add("latitude_longitude");
+    Map<String,String> renamedDimensions = new HashMap<String,String>();
+    renamedDimensions.put("g","bitly_hash");
+    renamedDimensions.put("c","country");
+    renamedDimensions.put("a","user");
+    renamedDimensions.put("cy","city");
+    renamedDimensions.put("l","encoding_user_login");
+    renamedDimensions.put("hh","short_url");
+    renamedDimensions.put("hc","timestamp_hash");
+    renamedDimensions.put("h","user_bitly_hash");
+    renamedDimensions.put("u","url");
+    renamedDimensions.put("tz","timezone");
+    renamedDimensions.put("t","time");
+    renamedDimensions.put("r","referring_url");
+    renamedDimensions.put("gr","geo_region");
+    renamedDimensions.put("nk","known_users");
+    renamedDimensions.put("al","accept_language");
+    renamedDimensions.put("ll","latitude_longitude");
 
     expectedAnswer.put("user", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0");
     expectedAnswer.put("country", "US");
@@ -225,7 +220,6 @@ public class WebFirehoseFactoryTest
         testCaseSupplier,
         queue,
         mapper,
-        dimensions,
         renamedDimensions,
         timeDimension
     );
