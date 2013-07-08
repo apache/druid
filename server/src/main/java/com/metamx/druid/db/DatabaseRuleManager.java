@@ -192,7 +192,7 @@ public class DatabaseRuleManager
                   return handle.createQuery(
                       // Return latest version rule by dataSource
                       String.format(
-                          "SELECT %1$s.dataSource, %1$s.payload FROM %1$s INNER JOIN(SELECT dataSource, max(version) as version, payload FROM %1$s GROUP BY dataSource) ds ON %1$s.datasource = ds.datasource and %1$s.version = ds.version",
+                          "SELECT %1$s.dataSource, %1$s.payload FROM %1$s INNER JOIN(SELECT dataSource, max(version) as version FROM %1$s GROUP BY dataSource) ds ON %1$s.datasource = ds.datasource and %1$s.version = ds.version",
                           config.getRuleTable()
                       )
                   ).fold(
