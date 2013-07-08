@@ -45,7 +45,6 @@ import java.util.concurrent.Executors;
 public class WebFirehoseFactory implements FirehoseFactory
 {
   private static final EmittingLogger log = new EmittingLogger(WebFirehoseFactory.class);
-  private static final int QUEUE_SIZE = 2000;
   private final String url;
   private final String timeDimension;
   private final String newTimeDimension;
@@ -81,11 +80,9 @@ public class WebFirehoseFactory implements FirehoseFactory
   @Override
   public Firehose connect() throws IOException
   {
-    final BlockingQueue<Map<String, Object>> queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
 
-    Runnable updateStream = new UpdateStream(
+    final UpdateStream updateStream = new UpdateStream(
         new WebJsonSupplier(url),
-        queue,
         new DefaultObjectMapper(),
         renamedDimensions,
         timeDimension
@@ -108,7 +105,7 @@ public class WebFirehoseFactory implements FirehoseFactory
       public InputRow nextRow()
       {
         try {
-          Map<String, Object> map = queue.take();
+          Map<String, Object> map = updateStream.takeFromQueue();
           DateTime date = TimestampParser.createTimestampParser(timeFormat)
                                          .apply(map.get(newTimeDimension).toString());
           return new MapBasedInputRow(

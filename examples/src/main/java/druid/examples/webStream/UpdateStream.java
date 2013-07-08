@@ -30,6 +30,7 @@ import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -39,21 +40,20 @@ public class UpdateStream implements Runnable
   private static final long queueWaitTime = 15L;
   private final TypeReference<HashMap<String, Object>> typeRef;
   private final InputSupplier<BufferedReader> supplier;
-  private final BlockingQueue<Map<String, Object>> queue;
+  private final int QUEUE_SIZE=10000;
+  private final BlockingQueue<Map<String, Object>> queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
   private final ObjectMapper mapper;
   private final Map<String,String> renamedDimensions;
   private final String timeDimension;
 
   public UpdateStream(
       InputSupplier<BufferedReader> supplier,
-      BlockingQueue<Map<String, Object>> queue,
       ObjectMapper mapper,
       Map<String,String> renamedDimensions,
       String timeDimension
   )
   {
     this.supplier = supplier;
-    this.queue = queue;
     this.mapper = mapper;
     this.typeRef = new TypeReference<HashMap<String, Object>>()
     {
@@ -109,4 +109,11 @@ public class UpdateStream implements Runnable
     }
   }
 
+  public Map<String,Object> takeFromQueue() throws InterruptedException{
+    return queue.take();
+  }
+
+  public int getQueueSize(){
+    return queue.size();
+  }
 }
