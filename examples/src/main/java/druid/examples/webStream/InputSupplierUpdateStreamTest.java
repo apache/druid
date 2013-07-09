@@ -29,9 +29,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class UpdateStreamTest
+public class InputSupplierUpdateStreamTest
 {
-  private final long waitTime = 15L;
+  private final long waitTime = 1L;
   private final TimeUnit unit = TimeUnit.SECONDS;
   private final ArrayList<String> dimensions = new ArrayList<String>();
   private InputSupplier testCaseSupplier;
@@ -61,7 +61,7 @@ public class UpdateStreamTest
   @Test
   public void basicIngestionCheck() throws Exception
   {
-    UpdateStream updateStream = new UpdateStream(
+    InputSupplierUpdateStream updateStream = new InputSupplierUpdateStream(
         testCaseSupplier,
         timeDimension
     );
@@ -79,7 +79,7 @@ public class UpdateStreamTest
         + "\"item2\":2}"
     );
 
-    UpdateStream updateStream = new UpdateStream(
+    InputSupplierUpdateStream updateStream = new InputSupplierUpdateStream(
         testCaseSupplier,
         timeDimension
     );
@@ -95,7 +95,7 @@ public class UpdateStreamTest
         "{\"item1\": \"value1\","
         + "\"time\":1372121562 }"
     );
-    UpdateStream updateStream = new UpdateStream(
+    InputSupplierUpdateStream updateStream = new InputSupplierUpdateStream(
         testCaseSupplier,
         timeDimension
     );

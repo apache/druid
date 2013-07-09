@@ -34,7 +34,6 @@ import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,7 +44,7 @@ public class WebFirehoseFactory implements FirehoseFactory
 {
   private static final EmittingLogger log = new EmittingLogger(WebFirehoseFactory.class);
   private final String timeFormat;
-  private final RenamingKeysUpdateStreamFactory factory;
+  private final UpdateStreamFactory factory;
   private final long queueWaitTime = 15L;
 
   @JsonCreator
@@ -58,13 +57,13 @@ public class WebFirehoseFactory implements FirehoseFactory
   {
     this(
         new RenamingKeysUpdateStreamFactory(
-            new UpdateStreamFactory(new WebJsonSupplier(url), timeDimension),
+            new InputSupplierUpdateStreamFactory(new WebJsonSupplier(url), timeDimension),
             renamedDimensions
         ), timeFormat
     );
   }
 
-  public WebFirehoseFactory(RenamingKeysUpdateStreamFactory factory, String timeFormat)
+  public WebFirehoseFactory(UpdateStreamFactory factory, String timeFormat)
   {
     this.factory = factory;
     if (timeFormat == null) {
@@ -78,9 +77,9 @@ public class WebFirehoseFactory implements FirehoseFactory
   public Firehose connect() throws IOException
   {
 
-    final RenamingKeysUpdateStream renamingUpdateStream = factory.build();
+    final UpdateStream updateStream = factory.build();
     final ExecutorService service = Executors.newSingleThreadExecutor();
-    service.submit(renamingUpdateStream);
+    service.submit(updateStream);
 
     return new Firehose()
     {
@@ -91,7 +90,7 @@ public class WebFirehoseFactory implements FirehoseFactory
       public boolean hasMore()
       {
         try {
-          map = renamingUpdateStream.pollFromQueue(queueWaitTime, TimeUnit.SECONDS);
+          map = updateStream.pollFromQueue(queueWaitTime, TimeUnit.SECONDS);
           return map != null;
         }
         catch (InterruptedException e) {
@@ -105,7 +104,7 @@ public class WebFirehoseFactory implements FirehoseFactory
       {
         try {
           DateTime date = TimestampParser.createTimestampParser(timeFormat)
-                                         .apply(map.get(renamingUpdateStream.getTimeDimension()).toString());
+                                         .apply(map.get(updateStream.getTimeDimension()).toString());
           return new MapBasedInputRow(
               date.getMillis(),
               new ArrayList(map.keySet()),

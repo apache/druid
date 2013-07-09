@@ -49,7 +49,7 @@ public class RenamingKeysUpdateStreamTest
   @Test
   public void testPollFromQueue() throws Exception
   {
-    UpdateStream updateStream = new UpdateStream(testCaseSupplier, timeDimension);
+    InputSupplierUpdateStream updateStream = new InputSupplierUpdateStream(testCaseSupplier, timeDimension);
     Map<String, String> renamedKeys = new HashMap<String, String>();
     renamedKeys.put("item1", "i1");
     renamedKeys.put("item2", "i2");
@@ -69,7 +69,7 @@ public class RenamingKeysUpdateStreamTest
   @Test
   public void testGetTimeDimension() throws Exception
   {
-    UpdateStream updateStream = new UpdateStream(testCaseSupplier, timeDimension);
+    InputSupplierUpdateStream updateStream = new InputSupplierUpdateStream(testCaseSupplier, timeDimension);
     Map<String, String> renamedKeys = new HashMap<String, String>();
     renamedKeys.put("item1", "i1");
     renamedKeys.put("item2", "i2");
@@ -82,7 +82,7 @@ public class RenamingKeysUpdateStreamTest
   @Test
   public void testMissingTimeRename() throws Exception
   {
-    UpdateStream updateStream = new UpdateStream(testCaseSupplier, timeDimension);
+    InputSupplierUpdateStream updateStream = new InputSupplierUpdateStream(testCaseSupplier, timeDimension);
     Map<String, String> renamedKeys = new HashMap<String, String>();
     renamedKeys.put("item1", "i1");
     renamedKeys.put("item2", "i2");

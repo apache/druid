@@ -20,6 +20,7 @@
 package druid.examples.webStream;
 
 import com.beust.jcommander.internal.Lists;
+import com.google.common.collect.ImmutableMap;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.firehose.Firehose;
 import junit.framework.Assert;
@@ -27,36 +28,91 @@ import org.joda.time.DateTime;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class WebFirehoseFactoryTest
 {
-  private List<String> dimensions;
+  private List<String> dimensions = Lists.newArrayList();
   private WebFirehoseFactory webbie;
-  private TestCaseSupplier testCaseSupplier;
+  private WebFirehoseFactory webbie1;
 
   @BeforeClass
   public void setUp() throws Exception
   {
-    dimensions = new ArrayList<String>();
     dimensions.add("item1");
     dimensions.add("item2");
     dimensions.add("time");
-    testCaseSupplier = new TestCaseSupplier(
-        "{\"item1\":\"value1\","
-        + "\"item2\":2,"
-        + "\"time\":1372121562 }"
+    webbie = new WebFirehoseFactory(
+        new UpdateStreamFactory()
+        {
+          @Override
+          public UpdateStream build()
+          {
+            return new UpdateStream()
+            {
+              @Override
+              public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException
+              {
+                return ImmutableMap.<String, Object>of("item1", "value1", "item2", 2, "time", "1372121562");
+              }
+
+              @Override
+              public String getTimeDimension()
+              {
+                return "time";
+              }
+
+              @Override
+              public void run()
+              {
+
+              }
+            };
+          }
+        },
+        "posix"
     );
+
+    webbie1 = new WebFirehoseFactory(
+        new UpdateStreamFactory()
+        {
+          @Override
+          public UpdateStream build()
+          {
+            return new UpdateStream()
+            {
+              @Override
+              public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException
+              {
+                return ImmutableMap.<String, Object>of("item1", "value1", "item2", 2, "time", "1373241600000");
+              }
+
+              @Override
+              public String getTimeDimension()
+              {
+                return "time";
+              }
+
+              @Override
+              public void run()
+              {
+
+              }
+            };
+          }
+        },
+        "auto"
+    );
+
   }
 
   @Test
   public void testDimensions() throws Exception
   {
     InputRow inputRow;
-    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, "time");
-    webbie = new WebFirehoseFactory(new RenamingKeysUpdateStreamFactory(updateStreamFactory, null), "posix");
     Firehose firehose = webbie.connect();
     if (firehose.hasMore()) {
       inputRow = firehose.nextRow();
@@ -72,8 +128,6 @@ public class WebFirehoseFactoryTest
   public void testPosixTimeStamp() throws Exception
   {
     InputRow inputRow;
-    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, "time");
-    webbie = new WebFirehoseFactory(new RenamingKeysUpdateStreamFactory(updateStreamFactory, null), "posix");
     Firehose firehose = webbie.connect();
     if (firehose.hasMore()) {
       inputRow = firehose.nextRow();
@@ -87,15 +141,37 @@ public class WebFirehoseFactoryTest
   @Test
   public void testISOTimeStamp() throws Exception
   {
-    testCaseSupplier = new TestCaseSupplier(
-        "{\"item1\": \"value1\","
-        + "\"item2\":2,"
-        + "\"time\":\"2013-07-08\"}"
-    );
+    WebFirehoseFactory webbie4 = new WebFirehoseFactory(
+        new UpdateStreamFactory()
+        {
+          @Override
+          public UpdateStream build()
+          {
+            return new UpdateStream()
+            {
+              @Override
+              public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException
+              {
+                return ImmutableMap.<String, Object>of("item1", "value1", "item2", 2, "time", "2013-07-08");
+              }
 
-    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, "time");
-    webbie = new WebFirehoseFactory(new RenamingKeysUpdateStreamFactory(updateStreamFactory, null), "iso");
-    Firehose firehose1 = webbie.connect();
+              @Override
+              public String getTimeDimension()
+              {
+                return "time";
+              }
+
+              @Override
+              public void run()
+              {
+
+              }
+            };
+          }
+        },
+        "auto"
+    );
+    Firehose firehose1 = webbie4.connect();
     if (firehose1.hasMore()) {
       long milliSeconds = firehose1.nextRow().getTimestampFromEpoch();
       DateTime date = new DateTime("2013-07-08");
@@ -108,15 +184,37 @@ public class WebFirehoseFactoryTest
   @Test
   public void testAutoIsoTimeStamp() throws Exception
   {
-    testCaseSupplier = new TestCaseSupplier(
-        "{\"item1\": \"value1\","
-        + "\"item2\":2,"
-        + "\"time\":\"2013-07-08\"}"
-    );
+    WebFirehoseFactory webbie5 = new WebFirehoseFactory(
+        new UpdateStreamFactory()
+        {
+          @Override
+          public UpdateStream build()
+          {
+            return new UpdateStream()
+            {
+              @Override
+              public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException
+              {
+                return ImmutableMap.<String, Object>of("item1", "value1", "item2", 2, "time", "2013-07-08");
+              }
 
-    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, "time");
-    webbie = new WebFirehoseFactory(new RenamingKeysUpdateStreamFactory(updateStreamFactory, null), null);
-    Firehose firehose2 = webbie.connect();
+              @Override
+              public String getTimeDimension()
+              {
+                return "time";
+              }
+
+              @Override
+              public void run()
+              {
+
+              }
+            };
+          }
+        },
+        null
+    );
+    Firehose firehose2 = webbie5.connect();
     if (firehose2.hasMore()) {
       long milliSeconds = firehose2.nextRow().getTimestampFromEpoch();
       DateTime date = new DateTime("2013-07-08");
@@ -129,15 +227,7 @@ public class WebFirehoseFactoryTest
   @Test
   public void testAutoMilliSecondsTimeStamp() throws Exception
   {
-    testCaseSupplier = new TestCaseSupplier(
-        "{\"item1\": \"value1\","
-        + "\"item2\":2,"
-        + "\"time\":1373241600000}"
-    );
-
-    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, "time");
-    webbie = new WebFirehoseFactory(new RenamingKeysUpdateStreamFactory(updateStreamFactory, null), null);
-    Firehose firehose3 = webbie.connect();
+    Firehose firehose3 = webbie1.connect();
     if (firehose3.hasMore()) {
       long milliSeconds = firehose3.nextRow().getTimestampFromEpoch();
       DateTime date = new DateTime("2013-07-08");
@@ -151,9 +241,7 @@ public class WebFirehoseFactoryTest
   public void testGetDimension() throws Exception
   {
     InputRow inputRow;
-    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, "time");
-    webbie = new WebFirehoseFactory(new RenamingKeysUpdateStreamFactory(updateStreamFactory, null), "posix");
-    Firehose firehose = webbie.connect();
+    Firehose firehose = webbie1.connect();
     if (firehose.hasMore()) {
       inputRow = firehose.nextRow();
     } else {
@@ -169,9 +257,7 @@ public class WebFirehoseFactoryTest
   public void testGetFloatMetric() throws Exception
   {
     InputRow inputRow;
-    UpdateStreamFactory updateStreamFactory = new UpdateStreamFactory(testCaseSupplier, "time");
-    webbie = new WebFirehoseFactory(new RenamingKeysUpdateStreamFactory(updateStreamFactory, null), "posix");
-    Firehose firehose = webbie.connect();
+    Firehose firehose = webbie1.connect();
     if (firehose.hasMore()) {
       inputRow = firehose.nextRow();
     } else {

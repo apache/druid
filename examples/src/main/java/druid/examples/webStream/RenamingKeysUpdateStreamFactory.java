@@ -21,12 +21,12 @@ package druid.examples.webStream;
 
 import java.util.Map;
 
-public class RenamingKeysUpdateStreamFactory
+public class RenamingKeysUpdateStreamFactory implements UpdateStreamFactory
 {
-  private UpdateStreamFactory updateStreamFactory;
+  private InputSupplierUpdateStreamFactory updateStreamFactory;
   private Map<String, String> renamedDimensions;
 
-  public RenamingKeysUpdateStreamFactory(UpdateStreamFactory updateStreamFactory, Map<String, String> renamedDimensions)
+  public RenamingKeysUpdateStreamFactory(InputSupplierUpdateStreamFactory updateStreamFactory, Map<String, String> renamedDimensions)
   {
     this.updateStreamFactory = updateStreamFactory;
     this.renamedDimensions = renamedDimensions;

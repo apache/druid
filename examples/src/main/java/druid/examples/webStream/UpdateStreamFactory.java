@@ -16,25 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
 package druid.examples.webStream;
 
-import com.google.common.io.InputSupplier;
-
-public class UpdateStreamFactory
+public interface UpdateStreamFactory
 {
-  private final InputSupplier inputSupplier;
-  private final String timeDimension;
-
-  public UpdateStreamFactory(InputSupplier inputSupplier, String timeDimension)
-  {
-    this.inputSupplier = inputSupplier;
-    this.timeDimension = timeDimension;
-  }
-
-  public UpdateStream build()
-  {
-    return new UpdateStream(inputSupplier, timeDimension);
-  }
-
+  public UpdateStream build();
 }

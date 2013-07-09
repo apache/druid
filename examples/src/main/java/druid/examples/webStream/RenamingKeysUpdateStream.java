@@ -24,14 +24,14 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class RenamingKeysUpdateStream implements Runnable
+public class RenamingKeysUpdateStream implements UpdateStream
 {
 
-  private final UpdateStream updateStream;
+  private final InputSupplierUpdateStream updateStream;
   private Map<String, String> renamedDimensions;
 
   public RenamingKeysUpdateStream(
-      UpdateStream updateStream,
+      InputSupplierUpdateStream updateStream,
       Map<String, String> renamedDimensions
   )
   {
