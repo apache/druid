@@ -54,7 +54,7 @@ sleep 60
 # Get hostname and ssh with the key we created, and ssh there
 INSTANCE_ADDRESS=`ec2-describe-instances|grep 'INSTANCE'|grep $INSTANCE_ID|cut -f4`
 echo "Connecting to $INSTANCE_ADDRESS to prepare environment for druid..."
-scp -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ./env.sh ubuntu@${INSTANCE_ADDRESS}:
+scp -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ./ec2/env.sh ubuntu@${INSTANCE_ADDRESS}:
 ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} 'chmod +x ./env.sh;./env.sh'
 
 echo "Prepared $INSTANCE_ADDRESS for druid."
@@ -69,7 +69,7 @@ else
 fi
 
 # Now boot druid parts
-scp -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ./run.sh ubuntu@${INSTANCE_ADDRESS}:
+scp -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ./ec2/run.sh ubuntu@${INSTANCE_ADDRESS}:
 ssh -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_ADDRESS} 'chmod +x ./run.sh;./run.sh'
 
 echo "Druid booting complete!"
