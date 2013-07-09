@@ -1,8 +1,4 @@
 # Setup Oracle Java
-sudo apt-get purge openjdk*
-sudo rm /var/lib/dpkg/info/oracle-java7-installer*
-sudo apt-get purge oracle-java7-installer*
-sudo rm /etc/apt/sources.list.d/*java*
 sudo apt-get update
 sudo add-apt-repository -y ppa:webupd8team/java
 sudo apt-get update
@@ -17,9 +13,9 @@ curl http://static.druid.io/artifacts/kafka-0.7.2-incubating-bin.tar.gz -o /tmp/
 tar -xvzf /tmp/kafka-0.7.2-incubating-bin.tar.gz
 cd kafka-0.7.2-incubating-bin
 cat config/zookeeper.properties
-nohup bin/zookeeper-server-start.sh config/zookeeper.properties &
+nohup bin/zookeeper-server-start.sh config/zookeeper.properties 2>&1 > /dev/null &
 # in a new console
-nohup bin/kafka-server-start.sh config/server.properties &
+nohup bin/kafka-server-start.sh config/server.properties 2>&1 > /dev/null &
 
 # Install dependencies - mysql must be built from source, as the 12.04 apt-get hangs
 export DEBIAN_FRONTEND=noninteractive
