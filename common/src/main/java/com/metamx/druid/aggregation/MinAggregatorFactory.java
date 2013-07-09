@@ -21,6 +21,7 @@ package com.metamx.druid.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 import com.metamx.druid.processing.ColumnSelectorFactory;
 
@@ -44,6 +45,9 @@ public class MinAggregatorFactory implements AggregatorFactory
       @JsonProperty("fieldName") final String fieldName
   )
   {
+    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
+    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
+
     this.name = name;
     this.fieldName = fieldName;
   }

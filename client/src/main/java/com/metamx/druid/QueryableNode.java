@@ -43,6 +43,7 @@ import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.curator.announcement.Announcer;
+import com.metamx.druid.http.NoopRequestLogger;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
@@ -374,12 +375,14 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
             getEmitter()
           ));
         }
-        else {
+        else if ("file".equalsIgnoreCase(loggingType)) {
           setRequestLogger(Initialization.makeFileRequestLogger(
             getJsonMapper(),
             getScheduledExecutorFactory(),
             getProps()
           ));
+        } else {
+          setRequestLogger(new NoopRequestLogger());
         }
       }
       catch (IOException e) {

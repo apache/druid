@@ -17,26 +17,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.loading;
-
-import org.skife.config.Config;
+package com.metamx.druid.http;
 
 /**
  */
-public abstract class SegmentLoaderConfig
+public class NoopRequestLogger implements RequestLogger
 {
-  @Config({"druid.paths.indexCache", "druid.segmentCache.path"})
-  public abstract String getCacheDirectory();
-
-  @Config("druid.server.maxSize")
-  public long getServerMaxSize()
+  @Override
+  public void log(RequestLogLine requestLogLine) throws Exception
   {
-    return Long.MAX_VALUE;
-  }
-
-  @Config("druid.segmentCache.deleteOnRemove")
-  public boolean deleteOnRemove()
-  {
-    return true;
+    // do nothing
   }
 }

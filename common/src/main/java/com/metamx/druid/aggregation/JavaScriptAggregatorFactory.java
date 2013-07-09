@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.metamx.druid.processing.ColumnSelectorFactory;
@@ -51,7 +52,6 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   private final String fnCombine;
 
 
-
   private final JavaScriptAggregator.ScriptAggregator compiledScript;
 
   @JsonCreator
@@ -63,6 +63,12 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
       @JsonProperty("fnCombine") final String fnCombine
   )
   {
+    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
+    Preconditions.checkNotNull(fieldNames, "Must have a valid, non-null fieldNames");
+    Preconditions.checkNotNull(fnAggregate, "Must have a valid, non-null fnAggregate");
+    Preconditions.checkNotNull(fnReset, "Must have a valid, non-null fnReset");
+    Preconditions.checkNotNull(fnCombine, "Must have a valid, non-null fnCombine");
+
     this.name = name;
     this.fieldNames = fieldNames;
 
@@ -83,7 +89,8 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
             new com.google.common.base.Function<String, ObjectColumnSelector>()
             {
               @Override
-              public ObjectColumnSelector apply(@Nullable String s) {
+              public ObjectColumnSelector apply(@Nullable String s)
+              {
                 return columnFactory.makeObjectColumnSelector(s);
               }
             }
@@ -101,7 +108,8 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
             new com.google.common.base.Function<String, ObjectColumnSelector>()
             {
               @Override
-              public ObjectColumnSelector apply(@Nullable String s) {
+              public ObjectColumnSelector apply(@Nullable String s)
+              {
                 return columnSelectorFactory.makeObjectColumnSelector(s);
               }
             }
@@ -148,7 +156,8 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @JsonProperty
-  public List<String> getFieldNames() {
+  public List<String> getFieldNames()
+  {
     return fieldNames;
   }
 
@@ -182,7 +191,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-1");
       byte[] fieldNameBytes = Joiner.on(",").join(fieldNames).getBytes(Charsets.UTF_8);
-      byte[] sha1 = md.digest((fnAggregate+fnReset+fnCombine).getBytes(Charsets.UTF_8));
+      byte[] sha1 = md.digest((fnAggregate + fnReset + fnCombine).getBytes(Charsets.UTF_8));
 
       return ByteBuffer.allocate(1 + fieldNameBytes.length + sha1.length)
                        .put(CACHE_TYPE_ID)
@@ -225,7 +234,11 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
            '}';
   }
 
-  public static JavaScriptAggregator.ScriptAggregator compileScript(final String aggregate, final String reset, final String combine)
+  public static JavaScriptAggregator.ScriptAggregator compileScript(
+      final String aggregate,
+      final String reset,
+      final String combine
+  )
   {
     final ContextFactory contextFactory = ContextFactory.getGlobal();
     Context context = contextFactory.enterContext();
@@ -234,8 +247,8 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
     final ScriptableObject scope = context.initStandardObjects();
 
     final Function fnAggregate = context.compileFunction(scope, aggregate, "aggregate", 1, null);
-    final Function fnReset     = context.compileFunction(scope, reset,     "reset",     1, null);
-    final Function fnCombine   = context.compileFunction(scope, combine,   "combine",   1, null);
+    final Function fnReset = context.compileFunction(scope, reset, "reset", 1, null);
+    final Function fnCombine = context.compileFunction(scope, combine, "combine", 1, null);
     Context.exit();
 
     return new JavaScriptAggregator.ScriptAggregator()
@@ -244,7 +257,9 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
       public double aggregate(final double current, final ObjectColumnSelector[] selectorList)
       {
         Context cx = Context.getCurrentContext();
-        if(cx == null) cx = contextFactory.enterContext();
+        if (cx == null) {
+          cx = contextFactory.enterContext();
+        }
 
         final int size = selectorList.length;
         final Object[] args = new Object[size + 1];
@@ -292,8 +307,9 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
       }
 
       @Override
-      public void close() {
-        if(Context.getCurrentContext() != null) {
+      public void close()
+      {
+        if (Context.getCurrentContext() != null) {
           Context.exit();
         }
       }
