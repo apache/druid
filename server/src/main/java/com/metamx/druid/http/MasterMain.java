@@ -19,8 +19,10 @@
 
 package com.metamx.druid.http;
 
+import com.google.common.base.Supplier;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -71,12 +73,13 @@ public class MasterMain
 
     final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
 
-    final DruidNodeConfig nodeConfig = injector.getInstance(DruidNodeConfig.class);
+    final Supplier<DruidNodeConfig> nodeConfig = injector.getInstance(Key.get(new TypeLiteral<Supplier<DruidNodeConfig>>(){}));
 
     final ServiceAnnouncer serviceAnnouncer = injector.getInstance(ServiceAnnouncer.class);
 
     try {
-      Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, lifecycle);
+      // TODO: Make the announcement work through the lifecycle
+      Initialization.announceDefaultService(nodeConfig.get(), serviceAnnouncer, lifecycle);
       lifecycle.start();
     }
     catch (Throwable t) {

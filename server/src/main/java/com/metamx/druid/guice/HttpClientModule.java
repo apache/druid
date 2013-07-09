@@ -43,7 +43,7 @@ public class HttpClientModule implements Module
 
     public Duration getReadTimeout()
     {
-      return readTimeout.toStandardDuration();
+      return readTimeout == null ? null : readTimeout.toStandardDuration();
     }
   }
 
