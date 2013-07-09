@@ -16,6 +16,7 @@ import com.metamx.druid.realtime.SegmentPublisher;
 import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
+import io.d8a.conjure.ConjurerFirehoseFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,7 +42,8 @@ public class RealtimeStandaloneMain
     rn.registerJacksonSubtype(
         new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
         new NamedType(FlightsFirehoseFactory.class, "flights"),
-        new NamedType(RandomFirehoseFactory.class, "rand")
+        new NamedType(RandomFirehoseFactory.class, "rand"),
+        new NamedType(ConjurerFirehoseFactory.class, "conjurer")
     );
 
     // Create dummy objects for the various interfaces that interact with the DB, ZK and deep storage
