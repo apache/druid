@@ -19,22 +19,18 @@
 
 package druid.examples.webStream;
 
-import com.google.common.io.InputSupplier;
+import org.testng.annotations.Test;
 
-public class UpdateStreamFactory
+import java.net.UnknownHostException;
+
+public class WebJsonSupplierTest
 {
-  private final InputSupplier inputSupplier;
-  private final String timeDimension;
-
-  public UpdateStreamFactory(InputSupplier inputSupplier, String timeDimension)
+  @Test(expectedExceptions = UnknownHostException.class)
+  public void checkInvalidUrl() throws Exception
   {
-    this.inputSupplier = inputSupplier;
-    this.timeDimension = timeDimension;
-  }
 
-  public UpdateStream build()
-  {
-    return new UpdateStream(inputSupplier, timeDimension);
+    String invalidURL = "http://invalid.url";
+    WebJsonSupplier supplier = new WebJsonSupplier(invalidURL);
+    supplier.getInput();
   }
-
 }

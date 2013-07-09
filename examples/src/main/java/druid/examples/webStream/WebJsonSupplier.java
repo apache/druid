@@ -31,7 +31,6 @@ import java.util.List;
 
 public class WebJsonSupplier implements InputSupplier<BufferedReader>
 {
-  private List<String> dimensions;
   private static final EmittingLogger log = new EmittingLogger(WebJsonSupplier.class);
 
   private String urlString;

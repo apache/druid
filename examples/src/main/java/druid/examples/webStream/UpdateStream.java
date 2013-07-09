@@ -43,13 +43,10 @@ public class UpdateStream implements Runnable
   private final int QUEUE_SIZE = 10000;
   private final BlockingQueue<Map<String, Object>> queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
   private final ObjectMapper mapper = new DefaultObjectMapper();
-  private final Map<String, String> renamedDimensions;
   private final String timeDimension;
-  private final long waitTime = 15L;
 
   public UpdateStream(
       InputSupplier<BufferedReader> supplier,
-      Map<String, String> renamedDimensions,
       String timeDimension
   )
   {
@@ -58,7 +55,6 @@ public class UpdateStream implements Runnable
     {
     };
     this.timeDimension = timeDimension;
-    this.renamedDimensions = renamedDimensions;
   }
 
   private boolean isValid(String s)
@@ -76,8 +72,7 @@ public class UpdateStream implements Runnable
         if (isValid(line)) {
           HashMap<String, Object> map = mapper.readValue(line, typeRef);
           if (map.get(timeDimension) != null) {
-            Map<String, Object> renamedMap = renameKeys(map);
-            queue.offer(renamedMap, queueWaitTime, TimeUnit.SECONDS);
+            queue.offer(map, queueWaitTime, TimeUnit.SECONDS);
             log.debug("Successfully added to queue");
           } else {
             log.error("missing timestamp");
@@ -91,25 +86,10 @@ public class UpdateStream implements Runnable
 
   }
 
-  private Map<String, Object> renameKeys(Map<String, Object> update)
-  {
-    if (renamedDimensions != null) {
-      Map<String, Object> renamedMap = Maps.newHashMap();
-      for (String key : renamedDimensions.keySet()) {
-        if (update.get(key) != null) {
-          Object obj = update.get(key);
-          renamedMap.put(renamedDimensions.get(key), obj);
-        }
-      }
-      return renamedMap;
-    } else {
-      return update;
-    }
-  }
 
-  public Map<String, Object> pollFromQueue() throws InterruptedException
+  public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException
   {
-    return queue.poll(waitTime, TimeUnit.SECONDS);
+    return queue.poll(waitTime, unit);
   }
 
   public int getQueueSize()
@@ -117,13 +97,8 @@ public class UpdateStream implements Runnable
     return queue.size();
   }
 
-  public String getNewTimeDimension()
-  {
-    if (renamedDimensions != null) {
-      return renamedDimensions.get(timeDimension);
-    } else {
-      return timeDimension;
-    }
-
+  public String getTimeDimension(){
+    return timeDimension;
   }
+
 }

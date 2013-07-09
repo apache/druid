@@ -34,17 +34,19 @@ import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @JsonTypeName("webstream")
 public class WebFirehoseFactory implements FirehoseFactory
 {
   private static final EmittingLogger log = new EmittingLogger(WebFirehoseFactory.class);
   private final String timeFormat;
-  private final UpdateStreamFactory updateStreamFactory;
-
+  private final RenamingKeysUpdateStreamFactory factory;
+  private final long queueWaitTime = 15L;
 
   @JsonCreator
   public WebFirehoseFactory(
@@ -54,12 +56,17 @@ public class WebFirehoseFactory implements FirehoseFactory
       @JsonProperty("timeFormat") String timeFormat
   )
   {
-    this(new UpdateStreamFactory(new WebJsonSupplier(url), renamedDimensions, timeDimension), timeFormat);
+    this(
+        new RenamingKeysUpdateStreamFactory(
+            new UpdateStreamFactory(new WebJsonSupplier(url), timeDimension),
+            renamedDimensions
+        ), timeFormat
+    );
   }
 
-  public WebFirehoseFactory(UpdateStreamFactory updateStreamFactory, String timeFormat)
+  public WebFirehoseFactory(RenamingKeysUpdateStreamFactory factory, String timeFormat)
   {
-    this.updateStreamFactory = updateStreamFactory;
+    this.factory = factory;
     if (timeFormat == null) {
       this.timeFormat = "auto";
     } else {
@@ -71,9 +78,9 @@ public class WebFirehoseFactory implements FirehoseFactory
   public Firehose connect() throws IOException
   {
 
-    final UpdateStream updateStream = updateStreamFactory.build();
+    final RenamingKeysUpdateStream renamingUpdateStream = factory.build();
     final ExecutorService service = Executors.newSingleThreadExecutor();
-    service.submit(updateStream);
+    service.submit(renamingUpdateStream);
 
     return new Firehose()
     {
@@ -84,10 +91,10 @@ public class WebFirehoseFactory implements FirehoseFactory
       public boolean hasMore()
       {
         try {
-          map = updateStream.pollFromQueue();
+          map = renamingUpdateStream.pollFromQueue(queueWaitTime, TimeUnit.SECONDS);
           return map != null;
         }
-        catch (Exception e) {
+        catch (InterruptedException e) {
           throw Throwables.propagate(e);
         }
       }
@@ -98,7 +105,7 @@ public class WebFirehoseFactory implements FirehoseFactory
       {
         try {
           DateTime date = TimestampParser.createTimestampParser(timeFormat)
-                                         .apply(map.get(updateStream.getNewTimeDimension()).toString());
+                                         .apply(map.get(renamingUpdateStream.getTimeDimension()).toString());
           return new MapBasedInputRow(
               date.getMillis(),
               new ArrayList(map.keySet()),
@@ -107,6 +114,9 @@ public class WebFirehoseFactory implements FirehoseFactory
         }
         catch (Exception e) {
           throw Throwables.propagate(e);
+        }
+        finally {
+          map = null;
         }
       }
 

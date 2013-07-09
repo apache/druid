@@ -1,4 +1,4 @@
-/*
+package druid.examples.webStream;/*
  * Druid - a distributed column store.
  * Copyright (C) 2012  Metamarkets Group Inc.
  *
@@ -17,24 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package druid.examples.webStream;
+import java.util.Map;
 
-import com.google.common.io.InputSupplier;
-
-public class UpdateStreamFactory
+public class RenamingKeysUpdateStreamFactory
 {
-  private final InputSupplier inputSupplier;
-  private final String timeDimension;
+  private UpdateStreamFactory updateStreamFactory;
+  private Map<String, String> renamedDimensions;
 
-  public UpdateStreamFactory(InputSupplier inputSupplier, String timeDimension)
+  public RenamingKeysUpdateStreamFactory(UpdateStreamFactory updateStreamFactory, Map<String, String> renamedDimensions)
   {
-    this.inputSupplier = inputSupplier;
-    this.timeDimension = timeDimension;
+    this.updateStreamFactory = updateStreamFactory;
+    this.renamedDimensions = renamedDimensions;
   }
 
-  public UpdateStream build()
+  public RenamingKeysUpdateStream build()
   {
-    return new UpdateStream(inputSupplier, timeDimension);
+    return new RenamingKeysUpdateStream(updateStreamFactory.build(), renamedDimensions);
   }
-
 }

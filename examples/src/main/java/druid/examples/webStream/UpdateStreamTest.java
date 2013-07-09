@@ -20,21 +20,21 @@
 package druid.examples.webStream;
 
 import com.google.common.io.InputSupplier;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import junit.framework.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class UpdateStreamTest
 {
+  private final long waitTime = 15L;
+  private final TimeUnit unit = TimeUnit.SECONDS;
   private final ArrayList<String> dimensions = new ArrayList<String>();
   private InputSupplier testCaseSupplier;
-  DefaultObjectMapper mapper = new DefaultObjectMapper();
   Map<String, Object> expectedAnswer = new HashMap<String, Object>();
   String timeDimension;
 
@@ -57,25 +57,16 @@ public class UpdateStreamTest
     expectedAnswer.put("time", 1372121562);
   }
 
-  @Test(expectedExceptions = UnknownHostException.class)
-  public void checkInvalidUrl() throws Exception
-  {
-
-    String invalidURL = "http://invalid.url";
-    WebJsonSupplier supplier = new WebJsonSupplier(invalidURL);
-    supplier.getInput();
-  }
 
   @Test
   public void basicIngestionCheck() throws Exception
   {
     UpdateStream updateStream = new UpdateStream(
         testCaseSupplier,
-        null,
         timeDimension
     );
     updateStream.run();
-    Map<String, Object> insertedRow = updateStream.pollFromQueue();
+    Map<String, Object> insertedRow = updateStream.pollFromQueue(waitTime, unit);
     Assert.assertEquals(expectedAnswer, insertedRow);
   }
 
@@ -90,7 +81,6 @@ public class UpdateStreamTest
 
     UpdateStream updateStream = new UpdateStream(
         testCaseSupplier,
-        null,
         timeDimension
     );
     updateStream.run();
@@ -105,40 +95,17 @@ public class UpdateStreamTest
         "{\"item1\": \"value1\","
         + "\"time\":1372121562 }"
     );
+    UpdateStream updateStream = new UpdateStream(
+        testCaseSupplier,
+        timeDimension
+    );
+    updateStream.run();
+    Map<String, Object> insertedRow = updateStream.pollFromQueue(waitTime, unit);
     Map<String, Object> expectedAnswer = new HashMap<String, Object>();
     expectedAnswer.put("item1", "value1");
     expectedAnswer.put("time", 1372121562);
-    UpdateStream updateStream = new UpdateStream(
-        testCaseSupplier,
-        null,
-        timeDimension
-    );
-    updateStream.run();
-    Map<String, Object> insertedRow = updateStream.pollFromQueue();
     Assert.assertEquals(expectedAnswer, insertedRow);
   }
 
-  @Test
-  public void checkRenameKeys() throws Exception
-  {
-    Map<String, Object> expectedAnswer = new HashMap<String, Object>();
-    Map<String, String> renamedDimensions = new HashMap<String, String>();
-    renamedDimensions.put("item1", "i1");
-    renamedDimensions.put("item2", "i2");
-    renamedDimensions.put("time", "t");
-
-    expectedAnswer.put("i1", "value1");
-    expectedAnswer.put("i2", 2);
-    expectedAnswer.put("t", 1372121562);
-
-    UpdateStream updateStream = new UpdateStream(
-        testCaseSupplier,
-        renamedDimensions,
-        timeDimension
-    );
-    updateStream.run();
-    Map<String, Object> inputRow = updateStream.pollFromQueue();
-    Assert.assertEquals(expectedAnswer, inputRow);
-  }
 
 }
