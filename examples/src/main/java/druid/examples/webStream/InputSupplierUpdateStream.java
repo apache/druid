@@ -43,18 +43,18 @@ public class InputSupplierUpdateStream implements UpdateStream
   private final BlockingQueue<Map<String, Object>> queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final String timeDimension;
-  private final StoppableThread addToQueueThread;
+  private final Thread addToQueueThread;
 
   public InputSupplierUpdateStream(
       final InputSupplier<BufferedReader> supplier,
       final String timeDimension
   )
   {
-    addToQueueThread = new StoppableThread()
+    addToQueueThread = new Thread()
     {
       public void run()
       {
-        while (!finished) {
+        while (!isInterrupted()) {
           try {
             BufferedReader reader = supplier.getInput();
             String line;
@@ -99,7 +99,7 @@ public class InputSupplierUpdateStream implements UpdateStream
 
   public void stop()
   {
-    addToQueueThread.stopMe();
+    addToQueueThread.interrupt();
   }
 
 
