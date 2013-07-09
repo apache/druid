@@ -1,4 +1,4 @@
-package druid.examples.webStream;/*
+/*
  * Druid - a distributed column store.
  * Copyright (C) 2012  Metamarkets Group Inc.
  *
@@ -16,6 +16,8 @@ package druid.examples.webStream;/*
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+
+package druid.examples.webStream;
 
 import com.google.common.io.InputSupplier;
 import junit.framework.Assert;
