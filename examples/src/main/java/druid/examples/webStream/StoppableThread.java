@@ -18,14 +18,10 @@
  */
 package druid.examples.webStream;
 
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-public interface UpdateStream
+public class StoppableThread extends Thread
 {
-  public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException;
-  public String getTimeDimension();
-  public void start();
-  public void stop();
-
+  volatile boolean finished=false;
+  public void stopMe(){
+    finished=true;
+  }
 }

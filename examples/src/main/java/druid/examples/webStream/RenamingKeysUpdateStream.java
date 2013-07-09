@@ -70,10 +70,12 @@ public class RenamingKeysUpdateStream implements UpdateStream
 
   }
 
-
-  @Override
-  public void run()
+  public void start()
   {
-    updateStream.run();
+    updateStream.start();
+  }
+
+  public void stop(){
+    updateStream.stop();
   }
 }

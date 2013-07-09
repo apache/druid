@@ -51,26 +51,7 @@ public class WebFirehoseFactoryTest
           @Override
           public UpdateStream build()
           {
-            return new UpdateStream()
-            {
-              @Override
-              public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException
-              {
-                return ImmutableMap.<String, Object>of("item1", "value1", "item2", 2, "time", "1372121562");
-              }
-
-              @Override
-              public String getTimeDimension()
-              {
-                return "time";
-              }
-
-              @Override
-              public void run()
-              {
-
-              }
-            };
+            return new MyUpdateStream(ImmutableMap.<String,Object>of("item1", "value1", "item2", 2, "time", "1372121562"));
           }
         },
         "posix"
@@ -82,26 +63,7 @@ public class WebFirehoseFactoryTest
           @Override
           public UpdateStream build()
           {
-            return new UpdateStream()
-            {
-              @Override
-              public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException
-              {
-                return ImmutableMap.<String, Object>of("item1", "value1", "item2", 2, "time", "1373241600000");
-              }
-
-              @Override
-              public String getTimeDimension()
-              {
-                return "time";
-              }
-
-              @Override
-              public void run()
-              {
-
-              }
-            };
+            return new MyUpdateStream(ImmutableMap.<String,Object>of("item1", "value1", "item2", 2, "time", "1373241600000"));
           }
         },
         "auto"
@@ -141,37 +103,18 @@ public class WebFirehoseFactoryTest
   @Test
   public void testISOTimeStamp() throws Exception
   {
-    WebFirehoseFactory webbie4 = new WebFirehoseFactory(
+    WebFirehoseFactory webbie3 = new WebFirehoseFactory(
         new UpdateStreamFactory()
         {
           @Override
           public UpdateStream build()
           {
-            return new UpdateStream()
-            {
-              @Override
-              public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException
-              {
-                return ImmutableMap.<String, Object>of("item1", "value1", "item2", 2, "time", "2013-07-08");
-              }
-
-              @Override
-              public String getTimeDimension()
-              {
-                return "time";
-              }
-
-              @Override
-              public void run()
-              {
-
-              }
-            };
+            return new MyUpdateStream(ImmutableMap.<String,Object>of("item1", "value1", "item2", 2, "time", "2013-07-08"));
           }
         },
         "auto"
     );
-    Firehose firehose1 = webbie4.connect();
+    Firehose firehose1 = webbie3.connect();
     if (firehose1.hasMore()) {
       long milliSeconds = firehose1.nextRow().getTimestampFromEpoch();
       DateTime date = new DateTime("2013-07-08");
@@ -184,37 +127,18 @@ public class WebFirehoseFactoryTest
   @Test
   public void testAutoIsoTimeStamp() throws Exception
   {
-    WebFirehoseFactory webbie5 = new WebFirehoseFactory(
+    WebFirehoseFactory webbie2 = new WebFirehoseFactory(
         new UpdateStreamFactory()
         {
           @Override
           public UpdateStream build()
           {
-            return new UpdateStream()
-            {
-              @Override
-              public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException
-              {
-                return ImmutableMap.<String, Object>of("item1", "value1", "item2", 2, "time", "2013-07-08");
-              }
-
-              @Override
-              public String getTimeDimension()
-              {
-                return "time";
-              }
-
-              @Override
-              public void run()
-              {
-
-              }
-            };
+            return new MyUpdateStream(ImmutableMap.<String,Object>of("item1", "value1", "item2", 2, "time", "2013-07-08"));
           }
         },
         null
     );
-    Firehose firehose2 = webbie5.connect();
+    Firehose firehose2 = webbie2.connect();
     if (firehose2.hasMore()) {
       long milliSeconds = firehose2.nextRow().getTimestampFromEpoch();
       DateTime date = new DateTime("2013-07-08");
@@ -265,5 +189,35 @@ public class WebFirehoseFactoryTest
     }
 
     Assert.assertEquals((float) 2.0, inputRow.getFloatMetric("item2"));
+  }
+
+  private static class MyUpdateStream implements UpdateStream
+  {
+    private static ImmutableMap<String,Object> map;
+    public MyUpdateStream(ImmutableMap<String,Object> map){
+        this.map=map;
+    }
+
+    @Override
+    public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException
+    {
+      return map;
+    }
+
+    @Override
+    public String getTimeDimension()
+    {
+      return "time";
+    }
+
+    @Override
+    public void start()
+    {
+    }
+
+    @Override
+    public void stop()
+    {
+    }
   }
 }

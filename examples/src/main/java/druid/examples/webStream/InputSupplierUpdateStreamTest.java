@@ -65,7 +65,7 @@ public class InputSupplierUpdateStreamTest
         testCaseSupplier,
         timeDimension
     );
-    updateStream.run();
+    updateStream.start();
     Map<String, Object> insertedRow = updateStream.pollFromQueue(waitTime, unit);
     Assert.assertEquals(expectedAnswer, insertedRow);
   }
@@ -83,7 +83,7 @@ public class InputSupplierUpdateStreamTest
         testCaseSupplier,
         timeDimension
     );
-    updateStream.run();
+    updateStream.start();
     Assert.assertEquals(updateStream.getQueueSize(), 0);
   }
 
@@ -99,7 +99,7 @@ public class InputSupplierUpdateStreamTest
         testCaseSupplier,
         timeDimension
     );
-    updateStream.run();
+    updateStream.start();
     Map<String, Object> insertedRow = updateStream.pollFromQueue(waitTime, unit);
     Map<String, Object> expectedAnswer = new HashMap<String, Object>();
     expectedAnswer.put("item1", "value1");

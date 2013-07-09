@@ -56,7 +56,7 @@ public class RenamingKeysUpdateStreamTest
     renamedKeys.put("time", "t");
 
     RenamingKeysUpdateStream renamer = new RenamingKeysUpdateStream(updateStream, renamedKeys);
-    renamer.run();
+    renamer.start();
     Map<String, Object> expectedAnswer = new HashMap<String, Object>();
     expectedAnswer.put("i1", "value1");
     expectedAnswer.put("i2", 2);

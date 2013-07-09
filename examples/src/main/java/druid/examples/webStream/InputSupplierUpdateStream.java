@@ -43,7 +43,7 @@ public class InputSupplierUpdateStream implements UpdateStream
   private final BlockingQueue<Map<String, Object>> queue = new ArrayBlockingQueue<Map<String, Object>>(QUEUE_SIZE);
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final String timeDimension;
-
+  private StoppableThread addToQueueThread;
   public InputSupplierUpdateStream(
       InputSupplier<BufferedReader> supplier,
       String timeDimension
@@ -61,28 +61,38 @@ public class InputSupplierUpdateStream implements UpdateStream
     return !(s.isEmpty());
   }
 
-  @Override
-  public void run()
+  public void start()
   {
-    try {
-      BufferedReader reader = supplier.getInput();
-      String line;
-      while ((line = reader.readLine()) != null) {
-        if (isValid(line)) {
-          HashMap<String, Object> map = mapper.readValue(line, typeRef);
-          if (map.get(timeDimension) != null) {
-            queue.offer(map, queueWaitTime, TimeUnit.SECONDS);
-            log.debug("Successfully added to queue");
-          } else {
-            log.error("missing timestamp");
+    addToQueueThread = new StoppableThread(){
+      public void run(){
+        while(!finished)
+        try {
+          BufferedReader reader = supplier.getInput();
+          String line;
+          while ((line = reader.readLine()) != null) {
+            if (isValid(line)) {
+              HashMap<String, Object> map = mapper.readValue(line, typeRef);
+              if (map.get(timeDimension) != null) {
+                queue.offer(map, queueWaitTime, TimeUnit.SECONDS);
+                log.debug("Successfully added to queue");
+              } else {
+                log.error("missing timestamp");
+              }
+            }
           }
         }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
       }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+    };
+    addToQueueThread.setDaemon(true);
+    addToQueueThread.start();
 
+  }
+
+  public void stop(){
+    addToQueueThread.stopMe();
   }
 
 
