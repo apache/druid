@@ -20,6 +20,11 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
+        <groupId>io.d8a</groupId>
+        <artifactId>d8a-conjure</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>com.metamx.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
