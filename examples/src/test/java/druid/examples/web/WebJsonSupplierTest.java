@@ -17,15 +17,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package druid.examples.webStream;
+package druid.examples.web;
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.net.UnknownHostException;
 
 public class WebJsonSupplierTest
 {
-  @Test(expectedExceptions = UnknownHostException.class)
+  @Test(expected = UnknownHostException.class)
   public void checkInvalidUrl() throws Exception
   {
 

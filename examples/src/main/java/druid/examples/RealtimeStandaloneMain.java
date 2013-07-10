@@ -17,7 +17,7 @@ import druid.examples.conjurer.ConjurerFirehoseFactory;
 import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
-import druid.examples.webStream.WebFirehoseFactory;
+import druid.examples.web.WebFirehoseFactory;
 
 import java.io.File;
 import java.io.IOException;

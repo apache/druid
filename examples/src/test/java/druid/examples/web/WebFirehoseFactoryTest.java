@@ -17,16 +17,16 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package druid.examples.webStream;
+package druid.examples.web;
 
-import com.beust.jcommander.internal.Lists;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.firehose.Firehose;
-import junit.framework.Assert;
 import org.joda.time.DateTime;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +39,7 @@ public class WebFirehoseFactoryTest
   private WebFirehoseFactory webbie;
   private WebFirehoseFactory webbie1;
 
-  @BeforeClass
+  @Before
   public void setUp() throws Exception
   {
     dimensions.add("item1");
@@ -188,7 +188,7 @@ public class WebFirehoseFactoryTest
       throw new RuntimeException("queue is empty");
     }
 
-    Assert.assertEquals((float) 2.0, inputRow.getFloatMetric("item2"));
+    Assert.assertEquals((float) 2.0, inputRow.getFloatMetric("item2"), 0.0f);
   }
 
   private static class MyUpdateStream implements UpdateStream

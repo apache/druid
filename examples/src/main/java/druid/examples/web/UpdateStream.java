@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package druid.examples.webStream;
+package druid.examples.web;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
