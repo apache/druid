@@ -375,12 +375,14 @@ public class IndexGeneratorJob implements Jobby
       Interval interval = config.getGranularitySpec().bucketInterval(bucket.time).get();
 
       int attemptNumber = context.getTaskAttemptID().getId();
-      Path indexBasePath = config.makeSegmentOutputPath(bucket);
-      Path indexZipFilePath = new Path(indexBasePath, String.format("index.zip.%s", attemptNumber));
-      final FileSystem infoFS = config.makeDescriptorInfoDir().getFileSystem(context.getConfiguration());
-      final FileSystem outputFS = indexBasePath.getFileSystem(context.getConfiguration());
 
-      outputFS.mkdirs(indexBasePath);
+			FileSystem fileSystem = FileSystem.get(context.getConfiguration());
+			Path indexBasePath = config.makeSegmentOutputPath(fileSystem, bucket);
+			Path indexZipFilePath = new Path(indexBasePath, String.format("index.zip.%s", attemptNumber));
+			final FileSystem infoFS = config.makeDescriptorInfoDir().getFileSystem(context.getConfiguration());
+			final FileSystem outputFS = indexBasePath.getFileSystem(context.getConfiguration());
+
+			outputFS.mkdirs(indexBasePath);
 
       Exception caughtException = null;
       ZipOutputStream out = null;
