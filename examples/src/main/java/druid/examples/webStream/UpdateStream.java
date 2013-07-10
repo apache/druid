@@ -16,28 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package druid.examples.webStream;
 
-package com.metamx.druid.guava;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-/**
- */
-public class Runnables
+public interface UpdateStream
 {
-  public static Runnable threadNaming(final String threadName, final Runnable runnable)
-  {
-    return new ThreadRenamingRunnable(threadName)
-    {
-      @Override
-      public void doRun()
-      {
-        runnable.run();
-      }
-    };
-  }
+  public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException;
+  public String getTimeDimension();
+  public void start();
+  public void stop();
 
-  public static Runnable getNoopRunnable(){
-    return new Runnable(){
-      public void run(){}
-    };
-  }
 }
