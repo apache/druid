@@ -20,68 +20,73 @@
 package com.metamx.druid.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.common.logger.Logger;
+import com.metamx.common.lifecycle.LifecycleStart;
+import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.initialization.ZkPathsConfig;
-import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
 
-public class CuratorDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
+/**
+ * This class has the greatest name ever
+ */
+public class MultipleDataSegmentAnnouncerDataSegmentAnnouncer implements DataSegmentAnnouncer
 {
-  private static final Logger log = new Logger(CuratorDataSegmentAnnouncer.class);
+  private final Iterable<AbstractDataSegmentAnnouncer> dataSegmentAnnouncers;
 
-  private final Announcer announcer;
-  private final ObjectMapper jsonMapper;
-  private final String servedSegmentsLocation;
-
-  public CuratorDataSegmentAnnouncer(
-      DruidServerMetadata server,
-      ZkPathsConfig config,
-      Announcer announcer,
-      ObjectMapper jsonMapper
+  public MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
+      Iterable<AbstractDataSegmentAnnouncer> dataSegmentAnnouncers
   )
   {
-    super(server, config, announcer, jsonMapper);
-
-    this.announcer = announcer;
-    this.jsonMapper = jsonMapper;
-    this.servedSegmentsLocation = ZKPaths.makePath(config.getServedSegmentsPath(), server.getName());
+    this.dataSegmentAnnouncers = dataSegmentAnnouncers;
   }
 
+  @LifecycleStart
+  public void start()
+  {
+    for (AbstractDataSegmentAnnouncer dataSegmentAnnouncer : dataSegmentAnnouncers) {
+      dataSegmentAnnouncer.start();
+    }
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    for (AbstractDataSegmentAnnouncer dataSegmentAnnouncer : dataSegmentAnnouncers) {
+      dataSegmentAnnouncer.stop();
+    }
+  }
+
+  @Override
   public void announceSegment(DataSegment segment) throws IOException
   {
-    final String path = makeServedSegmentPath(segment);
-    log.info("Announcing segment[%s] to path[%s]", segment.getIdentifier(), path);
-    announcer.announce(path, jsonMapper.writeValueAsBytes(segment));
+    for (DataSegmentAnnouncer dataSegmentAnnouncer : dataSegmentAnnouncers) {
+      dataSegmentAnnouncer.announceSegment(segment);
+    }
   }
 
+  @Override
   public void unannounceSegment(DataSegment segment) throws IOException
   {
-    final String path = makeServedSegmentPath(segment);
-    log.info("Unannouncing segment[%s] at path[%s]", segment.getIdentifier(), path);
-    announcer.unannounce(path);
+    for (DataSegmentAnnouncer dataSegmentAnnouncer : dataSegmentAnnouncers) {
+      dataSegmentAnnouncer.unannounceSegment(segment);
+    }
   }
 
   @Override
   public void announceSegments(Iterable<DataSegment> segments) throws IOException
   {
-    for (DataSegment segment : segments) {
-      announceSegment(segment);
+    for (DataSegmentAnnouncer dataSegmentAnnouncer : dataSegmentAnnouncers) {
+      dataSegmentAnnouncer.announceSegments(segments);
     }
   }
 
   @Override
   public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
   {
-    for (DataSegment segment : segments) {
-      unannounceSegment(segment);
+    for (DataSegmentAnnouncer dataSegmentAnnouncer : dataSegmentAnnouncers) {
+      dataSegmentAnnouncer.unannounceSegments(segments);
     }
-  }
-
-  private String makeServedSegmentPath(DataSegment segment)
-  {
-    return ZKPaths.makePath(servedSegmentsLocation, segment.getIdentifier());
   }
 }

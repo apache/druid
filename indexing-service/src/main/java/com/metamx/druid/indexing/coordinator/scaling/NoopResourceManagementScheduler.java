@@ -17,22 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.coordination;
+package com.metamx.druid.indexing.coordinator.scaling;
 
-import org.skife.config.Config;
-
-import java.io.File;
+import com.metamx.common.logger.Logger;
 
 /**
  */
-public abstract class ZkCoordinatorConfig
+public class NoopResourceManagementScheduler extends ResourceManagementScheduler
 {
-  @Config("druid.paths.segmentInfoCache")
-  public abstract File getSegmentInfoCacheDirectory();
+  private static final Logger log = new Logger(NoopResourceManagementScheduler.class);
 
-  @Config("druid.segmentCache.enable")
-  public boolean isLoadFromSegmentCacheEnabled()
+  public NoopResourceManagementScheduler()
   {
-    return true;
+    super(null, null, null, null);
+  }
+
+  @Override
+  public void start()
+  {
+    log.info("Autoscaling is disabled.");
+  }
+
+  @Override
+  public void stop()
+  {
+    // do nothing
+  }
+
+  @Override
+  public ScalingStats getStats()
+  {
+    return new ScalingStats(0);
   }
 }
