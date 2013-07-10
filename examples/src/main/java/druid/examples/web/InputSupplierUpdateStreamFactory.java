@@ -17,26 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package druid.examples.webStream;
+package druid.examples.web;
 
 import com.google.common.io.InputSupplier;
 
 import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.StringReader;
 
-public class TestCaseSupplier implements InputSupplier<BufferedReader>
+public class InputSupplierUpdateStreamFactory implements UpdateStreamFactory
 {
-  private final String testString;
+  private final InputSupplier<BufferedReader> inputSupplier;
+  private final String timeDimension;
 
-  public TestCaseSupplier(String testString)
+  public InputSupplierUpdateStreamFactory(InputSupplier<BufferedReader> inputSupplier, String timeDimension)
   {
-    this.testString = testString;
+    this.inputSupplier = inputSupplier;
+    this.timeDimension = timeDimension;
   }
 
-  @Override
-  public BufferedReader getInput() throws IOException
+  public InputSupplierUpdateStream build()
   {
-    return new BufferedReader(new StringReader(testString));
+    return new InputSupplierUpdateStream(inputSupplier, timeDimension);
   }
+
 }
