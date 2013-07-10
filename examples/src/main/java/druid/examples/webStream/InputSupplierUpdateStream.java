@@ -21,7 +21,6 @@ package druid.examples.webStream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.io.InputSupplier;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.emitter.EmittingLogger;
@@ -65,14 +64,14 @@ public class InputSupplierUpdateStream implements UpdateStream
                   queue.offer(map, queueWaitTime, TimeUnit.SECONDS);
                   log.debug("Successfully added to queue");
                 } else {
-                  log.error("missing timestamp");
+                  log.info("missing timestamp");
                 }
               }
             }
           }
 
           catch (Exception e) {
-            throw Throwables.propagate(e);
+            log.info(e,e.getMessage());
           }
         }
       }
