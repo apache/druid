@@ -13,7 +13,7 @@ import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.realtime.RealtimeNode;
 import com.metamx.druid.realtime.SegmentPublisher;
-import com.metamx.druid.realtime.firehose.ConjurerFirehoseFactory;
+import druid.examples.conjurer.ConjurerFirehoseFactory;
 import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;

@@ -17,7 +17,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-package com.metamx.druid.realtime.firehose;
+package druid.examples.conjurer;
 
 import com.google.common.base.Throwables;
 import com.metamx.emitter.EmittingLogger;
@@ -33,16 +33,15 @@ public class ConjurerWrapper
 {
   private static final EmittingLogger log = new EmittingLogger(ConjurerWrapper.class);
   private final ConjurerBuilder builder;
-  private final Conjurer conjurer;
+  private Conjurer conjurer;
   private final int QUEUE_SIZE = 10000;
   private final Thread conjureThread;
   private final BlockingQueue<Object> queue = new ArrayBlockingQueue<Object>(QUEUE_SIZE);
 
-  public ConjurerWrapper(ConjurerBuilder builder)
+  public ConjurerWrapper(ConjurerBuilder conjurerBuilder)
   {
-    this.builder = builder;
+    this.builder = conjurerBuilder;
     builder.setPrinter(Conjurer.queuePrinter(queue));
-    this.conjurer = builder.build();
     conjureThread = new Thread()
     {
       public void run()
@@ -60,6 +59,11 @@ public class ConjurerWrapper
     conjureThread.start();
   }
 
+  public void buildConjurer()
+  {
+    this.conjurer = builder.build();
+  }
+
   public void stop()
   {
     conjureThread.interrupt();
@@ -68,7 +72,7 @@ public class ConjurerWrapper
   public Map<String, Object> takeFromQueue(long waitTime, TimeUnit unit)
   {
     try {
-      return (Map<String,Object>) queue.poll(waitTime,unit);
+      return (Map<String, Object>) queue.poll(waitTime, unit);
     }
     catch (InterruptedException e) {
       throw Throwables.propagate(e);

@@ -17,7 +17,7 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-package com.metamx.druid.realtime.firehose;
+package druid.examples.conjurer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,6 +26,8 @@ import com.google.common.base.Throwables;
 import com.metamx.druid.guava.Runnables;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
+import com.metamx.druid.realtime.firehose.Firehose;
+import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import io.d8a.conjure.ConjurerBuilder;
 import org.joda.time.DateTime;
 
@@ -37,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 @JsonTypeName("conjurer")
 public class ConjurerFirehoseFactory implements FirehoseFactory
 {
-  private final ConjurerBuilder builder;
+  private final ConjurerWrapper wrapper;
   private final long waitTime = 15L;
   private final TimeUnit unit = TimeUnit.SECONDS;
 
@@ -50,13 +52,19 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       @JsonProperty("filePath") String filePath
   )
   {
-    builder = new ConjurerBuilder(startTime, stopTime, null, linesPerSec, maxLines, filePath, true);
+    this(new ConjurerWrapper(new ConjurerBuilder(startTime, stopTime, null, linesPerSec, maxLines, filePath, true)));
+
+  }
+
+  public ConjurerFirehoseFactory(ConjurerWrapper wrapper)
+  {
+    this.wrapper = wrapper;
   }
 
   @Override
   public Firehose connect() throws IOException
   {
-    final ConjurerWrapper wrapper = new ConjurerWrapper(builder);
+    wrapper.buildConjurer();
     wrapper.start();
     return new Firehose()
     {
