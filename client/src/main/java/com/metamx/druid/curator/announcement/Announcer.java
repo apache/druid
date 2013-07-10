@@ -25,6 +25,7 @@ import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
 import com.metamx.common.IAE;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -63,8 +64,6 @@ public class Announcer
   private final List<Pair<String, byte[]>> toAnnounce = Lists.newArrayList();
   private final ConcurrentMap<String, PathChildrenCache> listeners = new MapMaker().makeMap();
   private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new MapMaker().makeMap();
-
-  private final Object lock = new Object();
 
   private boolean started = false;
 
@@ -251,19 +250,18 @@ public class Announcer
 
   public void update(final String path, final byte[] bytes)
   {
-    synchronized (lock) {
-      final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
+    final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
 
-      final String parentPath = pathAndNode.getPath();
-      final String nodePath = pathAndNode.getNode();
+    final String parentPath = pathAndNode.getPath();
+    final String nodePath = pathAndNode.getNode();
 
-      ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
+    ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
 
-      if (subPaths == null || subPaths.get(nodePath) == null) {
-        announce(path, bytes);
-        return;
-      }
+    if (subPaths == null || subPaths.get(nodePath) == null) {
+      throw new ISE("Cannot update a path[%s] that hasn't been announced!", path);
+    }
 
+    synchronized (subPaths) {
       try {
         byte[] oldBytes = subPaths.get(nodePath);
 

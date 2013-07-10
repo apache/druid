@@ -81,26 +81,33 @@ public class BatchingCuratorDataSegmentAnnouncer extends AbstractDataSegmentAnno
       throw new ISE("byte size %,d exceeds %,d", newBytesLen, config.getMaxNumBytes());
     }
 
+    // create new batch
     if (availableZNodes.isEmpty()) {
-      availableZNodes.add(new SegmentZNode(makeServedSegmentPath(new DateTime().toString())));
-    }
+      SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath(new DateTime().toString()));
+      availableZNode.addSegment(segment);
 
-    Iterator<SegmentZNode> iter = availableZNodes.iterator();
-    boolean done = false;
-    while (iter.hasNext() && !done) {
-      SegmentZNode availableZNode = iter.next();
-      if (availableZNode.getBytes().length + newBytesLen < config.getMaxNumBytes()) {
-        availableZNode.addSegment(segment);
+      log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), availableZNode.getPath());
+      announcer.announce(availableZNode.getPath(), availableZNode.getBytes());
+      segmentLookup.put(segment, availableZNode);
+      availableZNodes.add(availableZNode);
+    } else { // update existing batch
+      Iterator<SegmentZNode> iter = availableZNodes.iterator();
+      boolean done = false;
+      while (iter.hasNext() && !done) {
+        SegmentZNode availableZNode = iter.next();
+        if (availableZNode.getBytes().length + newBytesLen < config.getMaxNumBytes()) {
+          availableZNode.addSegment(segment);
 
-        log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), availableZNode.getPath());
-        announcer.update(availableZNode.getPath(), availableZNode.getBytes());
-        segmentLookup.put(segment, availableZNode);
+          log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), availableZNode.getPath());
+          announcer.update(availableZNode.getPath(), availableZNode.getBytes());
+          segmentLookup.put(segment, availableZNode);
 
-        if (availableZNode.getCount() >= config.getSegmentsPerNode()) {
-          availableZNodes.remove(availableZNode);
+          if (availableZNode.getCount() >= config.getSegmentsPerNode()) {
+            availableZNodes.remove(availableZNode);
+          }
+
+          done = true;
         }
-
-        done = true;
       }
     }
   }
@@ -138,7 +145,7 @@ public class BatchingCuratorDataSegmentAnnouncer extends AbstractDataSegmentAnno
 
       if (count >= config.getSegmentsPerNode() || byteSize + newBytesLen > config.getMaxNumBytes()) {
         segmentZNode.addSegments(batch);
-        announcer.update(segmentZNode.getPath(), segmentZNode.getBytes());
+        announcer.announce(segmentZNode.getPath(), segmentZNode.getBytes());
 
         segmentZNode = new SegmentZNode(makeServedSegmentPath(new DateTime().toString()));
         batch = Sets.newHashSet();
@@ -154,7 +161,7 @@ public class BatchingCuratorDataSegmentAnnouncer extends AbstractDataSegmentAnno
     }
 
     segmentZNode.addSegments(batch);
-    announcer.update(segmentZNode.getPath(), segmentZNode.getBytes());
+    announcer.announce(segmentZNode.getPath(), segmentZNode.getBytes());
   }
 
   @Override
