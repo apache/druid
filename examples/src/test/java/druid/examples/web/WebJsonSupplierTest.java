@@ -19,13 +19,13 @@
 
 package druid.examples.web;
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.net.UnknownHostException;
 
 public class WebJsonSupplierTest
 {
-  @Test(expectedExceptions = UnknownHostException.class)
+  @Test(expected = UnknownHostException.class)
   public void checkInvalidUrl() throws Exception
   {
 

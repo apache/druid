@@ -21,8 +21,8 @@ package druid.examples.web;
 
 import com.google.common.io.InputSupplier;
 import junit.framework.Assert;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,7 +38,7 @@ public class InputSupplierUpdateStreamTest
   Map<String, Object> expectedAnswer = new HashMap<String, Object>();
   String timeDimension;
 
-  @BeforeClass
+  @Before
   public void setUp()
   {
     timeDimension = "time";

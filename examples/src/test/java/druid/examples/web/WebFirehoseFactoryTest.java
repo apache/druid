@@ -24,6 +24,9 @@ import com.google.common.collect.Lists;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.firehose.Firehose;
 import org.joda.time.DateTime;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -36,7 +39,7 @@ public class WebFirehoseFactoryTest
   private WebFirehoseFactory webbie;
   private WebFirehoseFactory webbie1;
 
-  @BeforeClass
+  @Before
   public void setUp() throws Exception
   {
     dimensions.add("item1");
@@ -185,7 +188,7 @@ public class WebFirehoseFactoryTest
       throw new RuntimeException("queue is empty");
     }
 
-    Assert.assertEquals((float) 2.0, inputRow.getFloatMetric("item2"));
+    Assert.assertEquals((float) 2.0, inputRow.getFloatMetric("item2"), 0.0f);
   }
 
   private static class MyUpdateStream implements UpdateStream
