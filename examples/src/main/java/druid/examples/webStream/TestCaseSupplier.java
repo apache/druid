@@ -17,27 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.guava;
+package druid.examples.webStream;
 
-/**
- */
-public class Runnables
+import com.google.common.io.InputSupplier;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
+
+public class TestCaseSupplier implements InputSupplier<BufferedReader>
 {
-  public static Runnable threadNaming(final String threadName, final Runnable runnable)
+  private final String testString;
+
+  public TestCaseSupplier(String testString)
   {
-    return new ThreadRenamingRunnable(threadName)
-    {
-      @Override
-      public void doRun()
-      {
-        runnable.run();
-      }
-    };
+    this.testString = testString;
   }
 
-  public static Runnable getNoopRunnable(){
-    return new Runnable(){
-      public void run(){}
-    };
+  @Override
+  public BufferedReader getInput() throws IOException
+  {
+    return new BufferedReader(new StringReader(testString));
   }
 }

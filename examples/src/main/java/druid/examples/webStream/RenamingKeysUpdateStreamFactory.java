@@ -17,27 +17,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.guava;
+package druid.examples.webStream;
 
-/**
- */
-public class Runnables
+import java.util.Map;
+
+public class RenamingKeysUpdateStreamFactory implements UpdateStreamFactory
 {
-  public static Runnable threadNaming(final String threadName, final Runnable runnable)
+  private InputSupplierUpdateStreamFactory updateStreamFactory;
+  private Map<String, String> renamedDimensions;
+
+  public RenamingKeysUpdateStreamFactory(InputSupplierUpdateStreamFactory updateStreamFactory, Map<String, String> renamedDimensions)
   {
-    return new ThreadRenamingRunnable(threadName)
-    {
-      @Override
-      public void doRun()
-      {
-        runnable.run();
-      }
-    };
+    this.updateStreamFactory = updateStreamFactory;
+    this.renamedDimensions = renamedDimensions;
   }
 
-  public static Runnable getNoopRunnable(){
-    return new Runnable(){
-      public void run(){}
-    };
+  public RenamingKeysUpdateStream build()
+  {
+    return new RenamingKeysUpdateStream(updateStreamFactory.build(), renamedDimensions);
   }
 }
