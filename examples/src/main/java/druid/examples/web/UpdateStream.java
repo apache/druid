@@ -16,21 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package druid.examples.web;
 
-package druid.examples.webStream;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-import org.testng.annotations.Test;
-
-import java.net.UnknownHostException;
-
-public class WebJsonSupplierTest
+public interface UpdateStream
 {
-  @Test(expectedExceptions = UnknownHostException.class)
-  public void checkInvalidUrl() throws Exception
-  {
+  public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException;
+  public String getTimeDimension();
+  public void start();
+  public void stop();
 
-    String invalidURL = "http://invalid.url";
-    WebJsonSupplier supplier = new WebJsonSupplier(invalidURL);
-    supplier.getInput();
-  }
 }

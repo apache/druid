@@ -17,16 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package druid.examples.webStream;
+package druid.examples.web;
 
-import com.beust.jcommander.internal.Lists;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.firehose.Firehose;
-import junit.framework.Assert;
 import org.joda.time.DateTime;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 import java.util.Collections;
 import java.util.List;

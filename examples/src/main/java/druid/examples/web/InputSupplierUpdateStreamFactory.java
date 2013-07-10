@@ -16,16 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package druid.examples.webStream;
 
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+package druid.examples.web;
 
-public interface UpdateStream
+import com.google.common.io.InputSupplier;
+
+import java.io.BufferedReader;
+
+public class InputSupplierUpdateStreamFactory implements UpdateStreamFactory
 {
-  public Map<String, Object> pollFromQueue(long waitTime, TimeUnit unit) throws InterruptedException;
-  public String getTimeDimension();
-  public void start();
-  public void stop();
+  private final InputSupplier<BufferedReader> inputSupplier;
+  private final String timeDimension;
+
+  public InputSupplierUpdateStreamFactory(InputSupplier<BufferedReader> inputSupplier, String timeDimension)
+  {
+    this.inputSupplier = inputSupplier;
+    this.timeDimension = timeDimension;
+  }
+
+  public InputSupplierUpdateStream build()
+  {
+    return new InputSupplierUpdateStream(inputSupplier, timeDimension);
+  }
 
 }

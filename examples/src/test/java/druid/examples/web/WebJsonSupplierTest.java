@@ -17,26 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package druid.examples.webStream;
+package druid.examples.web;
 
-import com.google.common.io.InputSupplier;
+import org.testng.annotations.Test;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.StringReader;
+import java.net.UnknownHostException;
 
-public class TestCaseSupplier implements InputSupplier<BufferedReader>
+public class WebJsonSupplierTest
 {
-  private final String testString;
-
-  public TestCaseSupplier(String testString)
+  @Test(expectedExceptions = UnknownHostException.class)
+  public void checkInvalidUrl() throws Exception
   {
-    this.testString = testString;
-  }
 
-  @Override
-  public BufferedReader getInput() throws IOException
-  {
-    return new BufferedReader(new StringReader(testString));
+    String invalidURL = "http://invalid.url";
+    WebJsonSupplier supplier = new WebJsonSupplier(invalidURL);
+    supplier.getInput();
   }
 }
