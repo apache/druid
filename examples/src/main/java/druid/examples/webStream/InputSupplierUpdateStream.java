@@ -19,13 +19,16 @@
 
 package druid.examples.webStream;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.InputSupplier;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.emitter.EmittingLogger;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -70,8 +73,18 @@ public class InputSupplierUpdateStream implements UpdateStream
             }
           }
 
-          catch (Exception e) {
-            log.info(e,e.getMessage());
+          catch (InterruptedException e){
+            log.info(e, "Thread adding events to the queue interrupted");
+            return;
+          }
+          catch (JsonMappingException e) {
+            log.info(e, "Error in converting json to map");
+          }
+          catch (JsonParseException e) {
+            log.info(e, "Error in parsing json");
+          }
+          catch (IOException e) {
+            log.info(e, "Error in connecting to InputStream");
           }
         }
       }
