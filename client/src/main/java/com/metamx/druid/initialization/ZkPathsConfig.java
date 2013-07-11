@@ -21,6 +21,7 @@ package com.metamx.druid.initialization;
 
 import org.apache.curator.utils.ZKPaths;
 import org.skife.config.Config;
+import org.skife.config.Default;
 
 public abstract class ZkPathsConfig
 {
@@ -43,6 +44,12 @@ public abstract class ZkPathsConfig
   public String getServedSegmentsPath()
   {
     return defaultPath("servedSegments");
+  }
+
+  @Config("druid.zk.paths.liveSegmentsPath")
+  public String getLiveSegmentsPath()
+  {
+    return defaultPath("segments");
   }
 
   @Config("druid.zk.paths.loadQueuePath")

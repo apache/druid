@@ -17,27 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.guava;
+package druid.examples.web;
 
-/**
- */
-public class Runnables
+import com.google.common.io.InputSupplier;
+
+import java.io.BufferedReader;
+
+public class InputSupplierUpdateStreamFactory implements UpdateStreamFactory
 {
-  public static Runnable threadNaming(final String threadName, final Runnable runnable)
+  private final InputSupplier<BufferedReader> inputSupplier;
+  private final String timeDimension;
+
+  public InputSupplierUpdateStreamFactory(InputSupplier<BufferedReader> inputSupplier, String timeDimension)
   {
-    return new ThreadRenamingRunnable(threadName)
-    {
-      @Override
-      public void doRun()
-      {
-        runnable.run();
-      }
-    };
+    this.inputSupplier = inputSupplier;
+    this.timeDimension = timeDimension;
   }
 
-  public static Runnable getNoopRunnable(){
-    return new Runnable(){
-      public void run(){}
-    };
+  public InputSupplierUpdateStream build()
+  {
+    return new InputSupplierUpdateStream(inputSupplier, timeDimension);
   }
+
 }
