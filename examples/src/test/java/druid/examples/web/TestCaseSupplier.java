@@ -16,9 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package druid.examples.webStream;
 
-public interface UpdateStreamFactory
+package druid.examples.web;
+
+import com.google.common.io.InputSupplier;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
+
+public class TestCaseSupplier implements InputSupplier<BufferedReader>
 {
-  public UpdateStream build();
+  private final String testString;
+
+  public TestCaseSupplier(String testString)
+  {
+    this.testString = testString;
+  }
+
+  @Override
+  public BufferedReader getInput() throws IOException
+  {
+    return new BufferedReader(new StringReader(testString));
+  }
 }

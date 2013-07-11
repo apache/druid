@@ -17,26 +17,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package druid.examples.webStream;
+package druid.examples.web;
 
-import com.google.common.io.InputSupplier;
+import java.util.Map;
 
-import java.io.BufferedReader;
-
-public class InputSupplierUpdateStreamFactory implements UpdateStreamFactory
+public class RenamingKeysUpdateStreamFactory implements UpdateStreamFactory
 {
-  private final InputSupplier<BufferedReader> inputSupplier;
-  private final String timeDimension;
+  private InputSupplierUpdateStreamFactory updateStreamFactory;
+  private Map<String, String> renamedDimensions;
 
-  public InputSupplierUpdateStreamFactory(InputSupplier<BufferedReader> inputSupplier, String timeDimension)
+  public RenamingKeysUpdateStreamFactory(InputSupplierUpdateStreamFactory updateStreamFactory, Map<String, String> renamedDimensions)
   {
-    this.inputSupplier = inputSupplier;
-    this.timeDimension = timeDimension;
+    this.updateStreamFactory = updateStreamFactory;
+    this.renamedDimensions = renamedDimensions;
   }
 
-  public InputSupplierUpdateStream build()
+  public RenamingKeysUpdateStream build()
   {
-    return new InputSupplierUpdateStream(inputSupplier, timeDimension);
+    return new RenamingKeysUpdateStream(updateStreamFactory.build(), renamedDimensions);
   }
-
 }

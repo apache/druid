@@ -16,24 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package druid.examples.web;
 
-package druid.examples.webStream;
-
-import java.util.Map;
-
-public class RenamingKeysUpdateStreamFactory implements UpdateStreamFactory
+public interface UpdateStreamFactory
 {
-  private InputSupplierUpdateStreamFactory updateStreamFactory;
-  private Map<String, String> renamedDimensions;
-
-  public RenamingKeysUpdateStreamFactory(InputSupplierUpdateStreamFactory updateStreamFactory, Map<String, String> renamedDimensions)
-  {
-    this.updateStreamFactory = updateStreamFactory;
-    this.renamedDimensions = renamedDimensions;
-  }
-
-  public RenamingKeysUpdateStream build()
-  {
-    return new RenamingKeysUpdateStream(updateStreamFactory.build(), renamedDimensions);
-  }
+  public UpdateStream build();
 }
