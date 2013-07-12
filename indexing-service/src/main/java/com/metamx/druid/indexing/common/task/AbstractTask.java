@@ -43,7 +43,7 @@ public abstract class AbstractTask implements Task
   private final String groupId;
 
   @JsonIgnore
-  private final String availabilityGroup;
+  private final TaskResource taskResource;
 
   @JsonIgnore
   private final String dataSource;
@@ -53,23 +53,23 @@ public abstract class AbstractTask implements Task
 
   protected AbstractTask(String id, String dataSource, Interval interval)
   {
-    this(id, id, id, dataSource, interval);
+    this(id, id, new TaskResource(id, 1), dataSource, interval);
   }
 
   protected AbstractTask(String id, String groupId, String dataSource, Interval interval)
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.groupId = Preconditions.checkNotNull(groupId, "groupId");
-    this.availabilityGroup = id;
+    this.taskResource = new TaskResource(id, 1);
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.interval = Optional.fromNullable(interval);
   }
 
-  protected AbstractTask(String id, String groupId, String availabilityGroup, String dataSource, Interval interval)
+  protected AbstractTask(String id, String groupId, TaskResource taskResource, String dataSource, Interval interval)
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.groupId = Preconditions.checkNotNull(groupId, "groupId");
-    this.availabilityGroup = Preconditions.checkNotNull(availabilityGroup, "availabilityGroup");
+    this.taskResource = Preconditions.checkNotNull(taskResource, "taskResource");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.interval = Optional.fromNullable(interval);
   }
@@ -90,9 +90,9 @@ public abstract class AbstractTask implements Task
 
   @JsonProperty
   @Override
-  public String getAvailabilityGroup()
+  public TaskResource getTaskResource()
   {
-    return availabilityGroup;
+    return taskResource;
   }
 
   @Override
@@ -172,19 +172,16 @@ public abstract class AbstractTask implements Task
 
     AbstractTask that = (AbstractTask) o;
 
-    if (dataSource != null ? !dataSource.equals(that.dataSource) : that.dataSource != null) {
-      return false;
-    }
-    if (groupId != null ? !groupId.equals(that.groupId) : that.groupId != null) {
-      return false;
-    }
-    if (id != null ? !id.equals(that.id) : that.id != null) {
-      return false;
-    }
-    if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
+    if (!id.equals(that.id)) {
       return false;
     }
 
     return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return id.hashCode();
   }
 }

@@ -18,6 +18,8 @@ import com.metamx.druid.indexing.common.TaskToolboxFactory;
 import com.metamx.druid.indexing.common.config.IndexerZkConfig;
 import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
 import com.metamx.druid.indexing.common.config.TaskConfig;
+import com.metamx.druid.indexing.common.task.Task;
+import com.metamx.druid.indexing.common.task.TaskResource;
 import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.indexing.worker.Worker;
@@ -65,8 +67,6 @@ public class RemoteTaskRunnerTest
   private PathChildrenCache pathChildrenCache;
   private RemoteTaskRunner remoteTaskRunner;
   private WorkerTaskMonitor workerTaskMonitor;
-
-  private ScheduledExecutorService scheduledExec;
 
   private TestTask task1;
 
@@ -249,22 +249,26 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue("TaskCallback was not called!", callbackCalled.booleanValue());
   }
 
-
   @Test
   public void testRunSameAvailabilityGroup() throws Exception
   {
-    TestRealtimeTask theTask = new TestRealtimeTask("rt1", "rt1", "foo", TaskStatus.running("rt1"));
+    TestRealtimeTask theTask = new TestRealtimeTask(
+        "rt1",
+        new TaskResource("rt1", 1),
+        "foo",
+        TaskStatus.running("rt1")
+    );
     remoteTaskRunner.run(theTask);
     remoteTaskRunner.run(
-        new TestRealtimeTask("rt2", "rt1", "foo", TaskStatus.running("rt2"))
+        new TestRealtimeTask("rt2", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt2"))
     );
     remoteTaskRunner.run(
-        new TestRealtimeTask("rt3", "rt2", "foo", TaskStatus.running("rt3"))
+        new TestRealtimeTask("rt3", new TaskResource("rt2", 1), "foo", TaskStatus.running("rt3"))
     );
 
     Stopwatch stopwatch = new Stopwatch();
     stopwatch.start();
-    while (remoteTaskRunner.getRunningTasks().isEmpty()) {
+    while (remoteTaskRunner.getRunningTasks().size() < 2) {
       Thread.sleep(100);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
         throw new ISE("Cannot find running task");
@@ -276,6 +280,36 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTask().getId().equals("rt2"));
   }
 
+  @Test
+  public void testRunWithCapacity() throws Exception
+  {
+    TestRealtimeTask theTask = new TestRealtimeTask(
+        "rt1",
+        new TaskResource("rt1", 1),
+        "foo",
+        TaskStatus.running("rt1")
+    );
+    remoteTaskRunner.run(theTask);
+    remoteTaskRunner.run(
+        new TestRealtimeTask("rt2", new TaskResource("rt2", 3), "foo", TaskStatus.running("rt2"))
+    );
+    remoteTaskRunner.run(
+        new TestRealtimeTask("rt3", new TaskResource("rt3", 2), "foo", TaskStatus.running("rt3"))
+    );
+
+    Stopwatch stopwatch = new Stopwatch();
+    stopwatch.start();
+    while (remoteTaskRunner.getRunningTasks().size() < 2) {
+      Thread.sleep(100);
+      if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
+        throw new ISE("Cannot find running task");
+      }
+    }
+
+    Assert.assertTrue(remoteTaskRunner.getRunningTasks().size() == 2);
+    Assert.assertTrue(remoteTaskRunner.getPendingTasks().size() == 1);
+    Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTask().getId().equals("rt2"));
+  }
 
   private void makeTaskMonitor() throws Exception
   {
@@ -361,21 +395,18 @@ public class RemoteTaskRunnerTest
 
   private void makeRemoteTaskRunner() throws Exception
   {
-    scheduledExec = EasyMock.createMock(ScheduledExecutorService.class);
-
     remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
         new TestRemoteTaskRunnerConfig(),
         cf,
         pathChildrenCache,
-        scheduledExec,
-        new RetryPolicyFactory(new TestRetryPolicyConfig()),
         new AtomicReference<WorkerSetupData>(new WorkerSetupData("0", 0, 1, null, null)),
         null
     );
 
     // Create a single worker and wait for things for be ready
     remoteTaskRunner.start();
+    remoteTaskRunner.bootstrap(Lists.<Task>newArrayList());
     cf.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
         String.format("%s/worker1", announcementsPath),
         jsonMapper.writeValueAsBytes(worker1)
@@ -387,27 +418,6 @@ public class RemoteTaskRunnerTest
         throw new ISE("WTF?! Still can't find worker!");
       }
       count++;
-    }
-  }
-
-  private static class TestRetryPolicyConfig extends RetryPolicyConfig
-  {
-    @Override
-    public Duration getRetryMinDuration()
-    {
-      return null;
-    }
-
-    @Override
-    public Duration getRetryMaxDuration()
-    {
-      return null;
-    }
-
-    @Override
-    public long getMaxRetryCount()
-    {
-      return 0;
     }
   }
 

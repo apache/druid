@@ -24,17 +24,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.druid.indexing.common.TaskStatus;
+import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.worker.Worker;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -44,27 +49,28 @@ public class ZkWorker implements Closeable
 {
   private final Worker worker;
   private final PathChildrenCache statusCache;
-  private final Function<ChildData, String> cacheConverter;
 
+  private final Object lock = new Object();
+  private final Map<String, Task> runningTasks = Maps.newHashMap();
+  private final Set<String> availabilityGroups = Sets.newHashSet();
+
+  private volatile int currCapacity = 0;
   private volatile DateTime lastCompletedTaskTime = new DateTime();
 
-  public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
+  public ZkWorker(Worker worker, PathChildrenCache statusCache)
   {
     this.worker = worker;
     this.statusCache = statusCache;
-    this.cacheConverter = new Function<ChildData, String>()
-    {
-      @Override
-      public String apply(@Nullable ChildData input)
-      {
-        try {
-          return jsonMapper.readValue(input.getData(), TaskStatus.class).getId();
-        }
-        catch (Exception e) {
-          throw Throwables.propagate(e);
-        }
-      }
-    };
+  }
+
+  public void start() throws Exception
+  {
+    statusCache.start();
+  }
+
+  public void addListener(PathChildrenCacheListener listener)
+  {
+    statusCache.getListenable().addListener(listener);
   }
 
   @JsonProperty
@@ -74,14 +80,15 @@ public class ZkWorker implements Closeable
   }
 
   @JsonProperty
-  public Set<String> getRunningTasks()
+  public Collection<Task> getRunningTasks()
   {
-    return Sets.newHashSet(
-        Lists.transform(
-            statusCache.getCurrentData(),
-            cacheConverter
-        )
-    );
+    return runningTasks.values();
+  }
+
+  @JsonProperty
+  public int getCurrCapacity()
+  {
+    return currCapacity;
   }
 
   @JsonProperty
@@ -90,11 +97,46 @@ public class ZkWorker implements Closeable
     return lastCompletedTaskTime;
   }
 
-  @JsonProperty
+  public void addRunningTask(Task task)
+  {
+    synchronized (lock) {
+      runningTasks.put(task.getId(), task);
+      availabilityGroups.add(task.getTaskResource().getAvailabilityGroup());
+      currCapacity += task.getTaskResource().getCapacity();
+    }
+  }
+
+  public void addRunningTasks(Collection<Task> tasks)
+  {
+    for (Task task : tasks) {
+      addRunningTask(task);
+    }
+  }
+
+  public Task removeRunningTask(Task task)
+  {
+    synchronized (lock) {
+      currCapacity -= task.getTaskResource().getCapacity();
+      availabilityGroups.remove(task.getTaskResource().getAvailabilityGroup());
+      return runningTasks.remove(task.getId());
+    }
+  }
+
+  public boolean isRunningTask(String taskId)
+  {
+    return runningTasks.containsKey(taskId);
+  }
+
   public boolean isAtCapacity()
   {
-    return statusCache.getCurrentData().size() >= worker.getCapacity();
+    return currCapacity >= worker.getCapacity();
   }
+
+  public boolean canRunTask(Task task)
+  {
+    return (worker.getCapacity() - currCapacity >= task.getTaskResource().getCapacity() && !availabilityGroups.contains(task.getTaskResource().getAvailabilityGroup()));
+  }
+
 
   public void setLastCompletedTaskTime(DateTime completedTaskTime)
   {
@@ -111,8 +153,10 @@ public class ZkWorker implements Closeable
   public String toString()
   {
     return "ZkWorker{" +
-           "worker=" + worker +
+           "runningTasks=" + runningTasks +
            ", lastCompletedTaskTime=" + lastCompletedTaskTime +
+           ", currCapacity=" + currCapacity +
+           ", worker=" + worker +
            '}';
   }
 }

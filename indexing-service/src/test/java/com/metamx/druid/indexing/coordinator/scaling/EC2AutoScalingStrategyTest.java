@@ -84,6 +84,12 @@ public class EC2AutoScalingStrategyTest
           {
             return "8080";
           }
+
+          @Override
+          public String getWorkerVersion()
+          {
+            return "";
+          }
         },
         workerSetupData
     );

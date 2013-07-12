@@ -35,7 +35,6 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 {
   private final Task task;
   private final ListenableFuture<TaskStatus> result;
-  private final RetryPolicy retryPolicy;
   private final DateTime createdTime;
 
   private volatile DateTime queueInsertionTime;
@@ -43,13 +42,11 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
   public TaskRunnerWorkItem(
       Task task,
       ListenableFuture<TaskStatus> result,
-      RetryPolicy retryPolicy,
       DateTime createdTime
   )
   {
     this.task = task;
     this.result = result;
-    this.retryPolicy = retryPolicy;
     this.createdTime = createdTime;
   }
 
@@ -62,11 +59,6 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
   public ListenableFuture<TaskStatus> getResult()
   {
     return result;
-  }
-
-  public RetryPolicy getRetryPolicy()
-  {
-    return retryPolicy;
   }
 
   @JsonProperty
@@ -102,7 +94,6 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
     return "TaskRunnerWorkItem{" +
            "task=" + task +
            ", result=" + result +
-           ", retryPolicy=" + retryPolicy +
            ", createdTime=" + createdTime +
            '}';
   }

@@ -78,12 +78,18 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   }
 
   @Override
+  public void bootstrap(List<Task> tasks)
+  {
+    // do nothing
+  }
+
+  @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     final TaskToolbox toolbox = toolboxFactory.build(task);
     final ListenableFuture<TaskStatus> statusFuture = exec.submit(new ExecutorServiceTaskRunnerCallable(task, toolbox));
 
-    final TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(task, statusFuture, null, new DateTime());
+    final TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(task, statusFuture, new DateTime());
     runningItems.add(taskRunnerWorkItem);
     Futures.addCallback(
         statusFuture, new FutureCallback<TaskStatus>()
@@ -245,7 +251,6 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     {
       return new TaskRunnerWorkItem(
           task,
-          null,
           null,
           createdTime
       );

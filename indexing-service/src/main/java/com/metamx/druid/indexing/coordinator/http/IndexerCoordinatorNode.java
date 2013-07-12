@@ -637,29 +637,12 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
           @Override
           public TaskRunner build()
           {
-            // Don't use scheduledExecutorFactory, since it's linked to the wrong lifecycle (global lifecycle instead
-            // of leadership lifecycle)
-            final ScheduledExecutorService retryScheduledExec = Executors.newScheduledThreadPool(
-                1,
-                new ThreadFactoryBuilder()
-                    .setDaemon(true)
-                    .setNameFormat("RemoteRunnerRetryExec--%d")
-                    .build()
-            );
-
             final CuratorFramework curator = getCuratorFramework();
             return new RemoteTaskRunner(
                 getJsonMapper(),
                 getConfigFactory().build(RemoteTaskRunnerConfig.class),
                 curator,
                 new PathChildrenCache(curator, indexerZkConfig.getIndexerAnnouncementPath(), true),
-                retryScheduledExec,
-                new RetryPolicyFactory(
-                    getConfigFactory().buildWithReplacements(
-                        RetryPolicyConfig.class,
-                        ImmutableMap.of("base_path", "druid.indexing")
-                    )
-                ),
                 configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class),
                 httpClient
             );

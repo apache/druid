@@ -42,6 +42,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -128,7 +129,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -156,7 +157,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -172,7 +173,7 @@ public class SimpleResourceManagementStrategyTest
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -213,7 +214,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -231,7 +232,7 @@ public class SimpleResourceManagementStrategyTest
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -265,7 +266,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -295,7 +296,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -310,7 +311,7 @@ public class SimpleResourceManagementStrategyTest
 
     terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+            new TaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -334,18 +335,18 @@ public class SimpleResourceManagementStrategyTest
         Task testTask
     )
     {
-      super(new Worker("host", "ip", 3, "version"), null, null);
+      super(new Worker("host", "ip", 3, "version"), null);
 
       this.testTask = testTask;
     }
 
     @Override
-    public Set<String> getRunningTasks()
+    public Collection<Task> getRunningTasks()
     {
       if (testTask == null) {
         return Sets.newHashSet();
       }
-      return Sets.newHashSet(testTask.getId());
+      return Sets.newHashSet(testTask);
     }
   }
 }

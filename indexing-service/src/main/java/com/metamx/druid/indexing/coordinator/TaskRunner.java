@@ -24,6 +24,7 @@ import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Interface for handing off tasks. Used by a {@link com.metamx.druid.indexing.coordinator.exec.TaskConsumer} to
@@ -31,6 +32,8 @@ import java.util.Collection;
  */
 public interface TaskRunner
 {
+  public void bootstrap(List<Task> tasks);
+
   /**
    * Run a task. The returned status should be some kind of completed status.
    *
