@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import com.google.protobuf.ByteString;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -212,8 +213,6 @@ public class KafkaFirehoseFactory implements FirehoseFactory
 	private class ProtoBufMessageFirehose extends AbstractKafkaFirehose
 	{
 
-		private ByteBuffer bytes = null;
-
 		public ProtoBufMessageFirehose(KafkaStream<Message> stream, ConsumerConnector connector)
 		{
 			super(connector, stream);
@@ -222,23 +221,7 @@ public class KafkaFirehoseFactory implements FirehoseFactory
 		@Override
 		public InputRow parseMessage(Message message) throws FormattedException
 		{
-
-			int payloadSize = message.payloadSize();
-			if (bytes == null || bytes.remaining() < payloadSize)
-			{
-				bytes = ByteBuffer.allocate(payloadSize);
-			}
-
-			bytes.put(message.payload());
-
-			bytes.flip();
-			try
-			{
-				return parser.parse(bytes);
-			} finally
-			{
-				bytes.clear();
-			}
+				return parser.parse(ByteString.copyFrom(message.payload()));
 		}
 
 	}

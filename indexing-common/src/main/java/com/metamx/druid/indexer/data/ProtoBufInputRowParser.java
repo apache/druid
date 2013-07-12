@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -20,7 +21,7 @@ import com.metamx.druid.input.InputRow;
 /**
  * @author jan.rudert
  */
-public class ProtoBufInputRowParser implements InputRowParser<byte[]>
+public class ProtoBufInputRowParser implements InputRowParser<ByteString>
 {
 
 	private final MapInputRowParser inputRowCreator;
@@ -41,7 +42,7 @@ public class ProtoBufInputRowParser implements InputRowParser<byte[]>
 	}
 
 	@Override
-	public InputRow parse(byte[] input)
+	public InputRow parse(ByteString input)
 	{
 
 		Map<String, Object> theMap = buildStringKeyMap(input);
@@ -49,7 +50,7 @@ public class ProtoBufInputRowParser implements InputRowParser<byte[]>
 		return inputRowCreator.parse(theMap);
 	}
 
-	private Map<String, Object> buildStringKeyMap(byte[] input)
+	private Map<String, Object> buildStringKeyMap(ByteString input)
 	{
 		Map<String, Object> theMap = Maps.newHashMap();
 
@@ -60,7 +61,7 @@ public class ProtoBufInputRowParser implements InputRowParser<byte[]>
 
 			for (Map.Entry<Descriptors.FieldDescriptor, Object> entry : allFields.entrySet())
 			{
-				String name = entry.getKey().getName();
+				String name = entry.getKey().getName().toLowerCase();
 				if (theMap.containsKey(name))
 				{
 					continue;

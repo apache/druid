@@ -7,6 +7,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.List;
 
+import com.google.protobuf.ByteString;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
@@ -59,7 +60,7 @@ public class ProtoBufInputRowParserTest {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     event.writeTo(out);
 
-    InputRow row = parser.parse(out.toByteArray());
+    InputRow row = parser.parse(ByteString.copyFrom(out.toByteArray()));
     System.out.println(row);
     assertEquals(Arrays.asList(DIMENSIONS), row.getDimensions());
     assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
