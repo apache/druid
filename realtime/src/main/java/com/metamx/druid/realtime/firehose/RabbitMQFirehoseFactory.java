@@ -61,12 +61,17 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory{
     factory.setPassword(consumerProps.getProperty("password", factory.getPassword()));
     factory.setVirtualHost(consumerProps.getProperty("virtualHost", factory.getVirtualHost()));
 
+    boolean durable = Boolean.valueOf(consumerProps.getProperty("durable", "false"));
+    boolean exclusive = Boolean.valueOf(consumerProps.getProperty("exclusive", "false"));
+    boolean autoDelete = Boolean.valueOf(consumerProps.getProperty("autoDelete", "false"));
+    boolean autoAck = Boolean.valueOf(consumerProps.getProperty("autoAck", "true"));
+
     final Connection connection = factory.newConnection();
     final Channel channel = connection.createChannel();
-    channel.queueDeclare(queue, true, false, false, null);
+    channel.queueDeclare(queue, durable, exclusive, autoDelete, null);
     channel.queueBind(queue, exchange, routingKey);
     final QueueingConsumer consumer = new QueueingConsumer(channel);
-    channel.basicConsume(queue, false, consumer);
+    channel.basicConsume(queue, autoAck, consumer);
 
     return new Firehose(){
 
@@ -103,6 +108,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory{
         }
 
         // Shouldn't ever get here but in case we'll assume there is no more stuff.
+        log.wtf("We shouldn't be here!");
         return false;
       }
 

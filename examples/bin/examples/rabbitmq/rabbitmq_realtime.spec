@@ -18,7 +18,11 @@
                    "consumerProps" : { "username": "test-dude",
                                        "password": "test-word",
                                        "virtualHost": "test-vhost",
-                                       "host": "localhost"
+                                       "host": "localhost",
+                                       "durable": "true",
+                                       "exclusive": "false",
+                                       "autoDelete": "false",
+                                       "audoAck": "false"
                                      },
                  "queue" : "druidtest",
                  "exchange": "test-exchange",
