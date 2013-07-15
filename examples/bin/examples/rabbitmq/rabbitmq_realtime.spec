@@ -1,40 +1,43 @@
 [{
-    "schema": {
-        "dataSource": "randseq",
-        "aggregators": [
-            {"type": "count", "name": "events"},
-            {"type": "doubleSum", "name": "outColumn", "fieldName": "inColumn"}
+    "schema" : {
+        "dataSource":"rabbitmqtest",
+        "aggregators":[
+            {"type":"count", "name":"impressions"},
+            {"type":"doubleSum","name":"wp","fieldName":"wp"}
         ],
-        "indexGranularity": "minute",
-        "shardSpec": {"type": "none"}
+        "indexGranularity":"minute",
+        "shardSpec" : { "type": "none" }
     },
-
-    "config": {
-        "maxRowsInMemory": 50000,
-        "intermediatePersistPeriod": "PT1m"
+    "config" : {
+        "maxRowsInMemory" : 500000,
+        "intermediatePersistPeriod" : "PT1m"
     },
-
-    "firehose" : { "type" : "rabbitmq",
-                   "consumerProps" : { "username": "test-dude",
-                                       "password": "test-word",
-                                       "virtualHost": "test-vhost",
-                                       "host": "localhost",
-                                       "durable": "true",
-                                       "exclusive": "false",
-                                       "autoDelete": "false",
-                                       "audoAck": "false"
-                                     },
-                 "queue" : "druidtest",
-                 "exchange": "test-exchange",
-                 "routingKey": "#",
-                 "parser" : { "timestampSpec" : { "column" : "utcdt", "format" : "iso" },
-                              "data" : { "format" : "json" },
-                              "dimensionExclusions" : ["wp"] } },
-
-    "plumber": {
-        "type": "realtime",
-        "windowPeriod": "PT5m",
-        "segmentGranularity": "hour",
-        "basePersistDirectory": "/tmp/example/rand_realtime/basePersist"
+    "firehose" : {
+        "type" : "rabbitmq",
+        "consumerProps" : {
+            "host": "localhost",
+            "username": "test-dude",
+            "password": "test-word",
+            "virtualHost": "test-vhost",
+            "durable": "true",
+            "exclusive": "false",
+            "autoDelete": "false",
+            "autoAck": "false"
+        },
+        "exchange": "test-exchange",
+        "queue" : "druidtest",
+        "routingKey": "#",
+        "parser" : {
+            "timestampSpec" : { "column" : "utcdt", "format" : "iso" },
+            "data" : { "format" : "json" },
+            "dimensionExclusions" : ["wp"]
+        }
+    },
+    "plumber" : {
+        "type" : "realtime",
+        "windowPeriod" : "PT5m",
+        "segmentGranularity":"hour",
+        "basePersistDirectory" : "/tmp/realtime/basePersist",
+        "rejectionPolicy": { "type": "messageTime" }
     }
 }]
