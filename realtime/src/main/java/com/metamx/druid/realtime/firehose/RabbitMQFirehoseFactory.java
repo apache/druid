@@ -72,6 +72,20 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory{
     channel.queueBind(queue, exchange, routingKey);
     final QueueingConsumer consumer = new QueueingConsumer(channel);
     channel.basicConsume(queue, autoAck, consumer);
+    channel.addShutdownListener(new ShutdownListener() {
+      @Override
+      public void shutdownCompleted(ShutdownSignalException cause) {
+        log.warn(cause, "Channel closed!");
+        //TODO: should we re-establish the connection here?
+      }
+    });
+    connection.addShutdownListener(new ShutdownListener() {
+      @Override
+      public void shutdownCompleted(ShutdownSignalException cause) {
+        log.warn(cause, "Connection closed!");
+        //TODO: should we re-establish the connection here?
+      }
+    });
 
     return new Firehose(){
 
@@ -148,6 +162,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory{
 
       @Override
       public void close() throws IOException {
+        log.info("Closing connection to RabbitMQ");
         channel.close();
         connection.close();
       }
