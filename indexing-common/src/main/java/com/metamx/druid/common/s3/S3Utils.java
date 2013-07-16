@@ -40,37 +40,6 @@ public class S3Utils
 {
   private static final Logger log = new Logger(S3Utils.class);
 
-  public static void putFileToS3(
-      File localFile, RestS3Service s3Client, String outputS3Bucket, String outputS3Path
-  )
-      throws S3ServiceException, IOException, NoSuchAlgorithmException
-  {
-    S3Object s3Obj = new S3Object(localFile);
-    s3Obj.setBucketName(outputS3Bucket);
-    s3Obj.setKey(outputS3Path);
-
-    log.info("Uploading file[%s] to [s3://%s/%s]", localFile, s3Obj.getBucketName(), s3Obj.getKey());
-    s3Client.putObject(new S3Bucket(outputS3Bucket), s3Obj);
-  }
-
-  public static void putFileToS3WrapExceptions(
-      File localFile, RestS3Service s3Client, String outputS3Bucket, String outputS3Path
-  )
-  {
-    try {
-      putFileToS3(localFile, s3Client, outputS3Bucket, outputS3Path);
-    }
-    catch (S3ServiceException e) {
-      throw new RuntimeException(e);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   public static void closeStreamsQuietly(S3Object s3Obj)
   {
     if (s3Obj == null) {
