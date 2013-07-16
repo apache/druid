@@ -112,7 +112,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller
                 }
                 catch (IOException e) {
                   FileUtils.deleteDirectory(outDir);
-                  throw new SegmentLoadingException(e, "Problem decompressing object[%s]", s3Obj);
+                  throw new IOException(String.format("Problem decompressing object[%s]", s3Obj), e);
                 }
                 finally {
                   Closeables.closeQuietly(in);
