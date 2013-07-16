@@ -19,14 +19,13 @@
             "username": "test-dude",
             "password": "test-word",
             "virtualHost": "test-vhost",
+            "exchange": "test-exchange",
+            "queue" : "druidtest",
+            "routingKey": "#",
             "durable": "true",
             "exclusive": "false",
-            "autoDelete": "false",
-            "autoAck": "false"
+            "autoDelete": "false"
         },
-        "exchange": "test-exchange",
-        "queue" : "druidtest",
-        "routingKey": "#",
         "parser" : {
             "timestampSpec" : { "column" : "utcdt", "format" : "iso" },
             "data" : { "format" : "json" },
