@@ -83,7 +83,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller
     }
 
     try {
-      retryS3Operation(
+      S3Utils.retryS3Operation(
           new Callable<Void>()
           {
             @Override
@@ -140,7 +140,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller
   private boolean isObjectInBucket(final S3Coords coords) throws SegmentLoadingException
   {
     try {
-      return retryS3Operation(
+      return S3Utils.retryS3Operation(
           new Callable<Boolean>()
           {
             @Override
@@ -164,7 +164,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller
   {
     final S3Coords coords = new S3Coords(segment);
     try {
-      final StorageObject objDetails = retryS3Operation(
+      final StorageObject objDetails = S3Utils.retryS3Operation(
           new Callable<StorageObject>()
           {
             @Override
@@ -181,39 +181,6 @@ public class S3DataSegmentPuller implements DataSegmentPuller
     }
     catch (ServiceException e) {
       throw new SegmentLoadingException(e, e.getMessage());
-    }
-  }
-
-  private <T> T retryS3Operation(Callable<T> f) throws ServiceException, InterruptedException
-  {
-    int nTry = 0;
-    final int maxTries = 3;
-    final long baseSleepMillis = 1000;
-    final double fuzziness = 0.2;
-    while (true) {
-      try {
-        nTry++;
-        return f.call();
-      }
-      catch (ServiceException e) {
-        if (nTry <= maxTries &&
-            (e.getCause() instanceof IOException ||
-             (e.getErrorCode() != null && e.getErrorCode().equals("RequestTimeout")))) {
-          // Retryable
-          final long sleepMillis = Math.max(
-              baseSleepMillis,
-              (long) (baseSleepMillis * Math.pow(2, nTry) *
-                      (1 + new Random().nextGaussian() * fuzziness))
-          );
-          log.info(e, "S3 fail on try %d/%d, retrying in %,dms.", nTry, maxTries, sleepMillis);
-          Thread.sleep(sleepMillis);
-        } else {
-          throw e;
-        }
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
     }
   }
 
