@@ -39,15 +39,19 @@ import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.ServerView;
 import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.coordination.AbstractDataSegmentAnnouncer;
+import com.metamx.druid.coordination.BatchingCuratorDataSegmentAnnouncer;
 import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
+import com.metamx.druid.coordination.MultipleDataSegmentAnnouncerDataSegmentAnnouncer;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.NoopRequestLogger;
 import com.metamx.druid.http.RequestLogger;
 import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.initialization.ZkDataSegmentAnnouncerConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
@@ -424,7 +428,20 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       final Announcer announcer = new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s"));
       lifecycle.addManagedInstance(announcer);
 
-      setAnnouncer(new CuratorDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper()));
+      setAnnouncer(
+          new MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
+              Arrays.<AbstractDataSegmentAnnouncer>asList(
+                  new BatchingCuratorDataSegmentAnnouncer(
+                      getDruidServerMetadata(),
+                      getConfigFactory().build(ZkDataSegmentAnnouncerConfig.class),
+                      announcer,
+                      getJsonMapper()
+                  ),
+                  new CuratorDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper())
+              )
+          )
+      );
+
       lifecycle.addManagedInstance(getAnnouncer(), Lifecycle.Stage.LAST);
     }
   }

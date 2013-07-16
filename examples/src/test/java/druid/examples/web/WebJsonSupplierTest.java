@@ -17,27 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.guava;
+package druid.examples.web;
 
-/**
- */
-public class Runnables
+import org.junit.Test;
+
+import java.net.UnknownHostException;
+
+public class WebJsonSupplierTest
 {
-  public static Runnable threadNaming(final String threadName, final Runnable runnable)
+  @Test(expected = UnknownHostException.class)
+  public void checkInvalidUrl() throws Exception
   {
-    return new ThreadRenamingRunnable(threadName)
-    {
-      @Override
-      public void doRun()
-      {
-        runnable.run();
-      }
-    };
-  }
 
-  public static Runnable getNoopRunnable(){
-    return new Runnable(){
-      public void run(){}
-    };
+    String invalidURL = "http://invalid.url";
+    WebJsonSupplier supplier = new WebJsonSupplier(invalidURL);
+    supplier.getInput();
   }
 }

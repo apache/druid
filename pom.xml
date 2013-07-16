@@ -39,7 +39,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.22.3</metamx.java-util.version>
-        <apache.curator.version>2.0.2-21-22</apache.curator.version>
+        <apache.curator.version>2.1.0-incubating</apache.curator.version>
     </properties>
 
     <modules>
@@ -65,7 +65,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>0.7.1</version>
+                <version>0.8.1</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>

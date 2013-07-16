@@ -55,10 +55,6 @@ import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
-import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ServiceDiscoveryConfig;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
@@ -93,12 +89,17 @@ import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.indexing.coordinator.scaling.AutoScalingStrategy;
 import com.metamx.druid.indexing.coordinator.scaling.EC2AutoScalingStrategy;
 import com.metamx.druid.indexing.coordinator.scaling.NoopAutoScalingStrategy;
+import com.metamx.druid.indexing.coordinator.scaling.NoopResourceManagementScheduler;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementSchedulerConfig;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementSchedulerFactory;
 import com.metamx.druid.indexing.coordinator.scaling.SimpleResourceManagementStrategy;
 import com.metamx.druid.indexing.coordinator.scaling.SimpleResourceManagmentConfig;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
+import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.initialization.ServiceDiscoveryConfig;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -687,53 +688,64 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   private void initializeResourceManagement(final JacksonConfigManager configManager)
   {
     if (resourceManagementSchedulerFactory == null) {
-      resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
-      {
-        @Override
-        public ResourceManagementScheduler build(TaskRunner runner)
+      if (!config.isAutoScalingEnabled()) {
+        resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
         {
-          final ScheduledExecutorService scalingScheduledExec = Executors.newScheduledThreadPool(
-              1,
-              new ThreadFactoryBuilder()
-                  .setDaemon(true)
-                  .setNameFormat("ScalingExec--%d")
-                  .build()
-          );
-          final AtomicReference<WorkerSetupData> workerSetupData = configManager.watch(
-              WorkerSetupData.CONFIG_KEY, WorkerSetupData.class
-          );
-
-          AutoScalingStrategy strategy;
-          if (config.getAutoScalingImpl().equalsIgnoreCase("ec2")) {
-            strategy = new EC2AutoScalingStrategy(
-                getJsonMapper(),
-                new AmazonEC2Client(
-                    new BasicAWSCredentials(
-                        PropUtils.getProperty(getProps(), "com.metamx.aws.accessKey"),
-                        PropUtils.getProperty(getProps(), "com.metamx.aws.secretKey")
-                    )
-                ),
-                getConfigFactory().build(EC2AutoScalingStrategyConfig.class),
-                workerSetupData
-            );
-          } else if (config.getAutoScalingImpl().equalsIgnoreCase("noop")) {
-            strategy = new NoopAutoScalingStrategy();
-          } else {
-            throw new ISE("Invalid strategy implementation: %s", config.getAutoScalingImpl());
+          @Override
+          public ResourceManagementScheduler build(TaskRunner runner)
+          {
+            return new NoopResourceManagementScheduler();
           }
+        };
+      } else {
+        resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
+        {
+          @Override
+          public ResourceManagementScheduler build(TaskRunner runner)
+          {
+            final ScheduledExecutorService scalingScheduledExec = Executors.newScheduledThreadPool(
+                1,
+                new ThreadFactoryBuilder()
+                    .setDaemon(true)
+                    .setNameFormat("ScalingExec--%d")
+                    .build()
+            );
+            final AtomicReference<WorkerSetupData> workerSetupData = configManager.watch(
+                WorkerSetupData.CONFIG_KEY, WorkerSetupData.class
+            );
 
-          return new ResourceManagementScheduler(
-              runner,
-              new SimpleResourceManagementStrategy(
-                  strategy,
-                  getConfigFactory().build(SimpleResourceManagmentConfig.class),
+            AutoScalingStrategy strategy;
+            if (config.getAutoScalingImpl().equalsIgnoreCase("ec2")) {
+              strategy = new EC2AutoScalingStrategy(
+                  getJsonMapper(),
+                  new AmazonEC2Client(
+                      new BasicAWSCredentials(
+                          PropUtils.getProperty(getProps(), "com.metamx.aws.accessKey"),
+                          PropUtils.getProperty(getProps(), "com.metamx.aws.secretKey")
+                      )
+                  ),
+                  getConfigFactory().build(EC2AutoScalingStrategyConfig.class),
                   workerSetupData
-              ),
-              getConfigFactory().build(ResourceManagementSchedulerConfig.class),
-              scalingScheduledExec
-          );
-        }
-      };
+              );
+            } else if (config.getAutoScalingImpl().equalsIgnoreCase("noop")) {
+              strategy = new NoopAutoScalingStrategy();
+            } else {
+              throw new ISE("Invalid strategy implementation: %s", config.getAutoScalingImpl());
+            }
+
+            return new ResourceManagementScheduler(
+                runner,
+                new SimpleResourceManagementStrategy(
+                    strategy,
+                    getConfigFactory().build(SimpleResourceManagmentConfig.class),
+                    workerSetupData
+                ),
+                getConfigFactory().build(ResourceManagementSchedulerConfig.class),
+                scalingScheduledExec
+            );
+          }
+        };
+      }
     }
   }
 

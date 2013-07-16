@@ -443,17 +443,17 @@ public class DruidMaster
         curator, ZKPaths.makePath(zkPaths.getMasterPath(), MASTER_OWNER_NODE), config.getHost()
     );
 
-    newLeaderLatch.attachListener(
+    newLeaderLatch.addListener(
         new LeaderLatchListener()
         {
           @Override
-          public void becomeMaster()
+          public void isLeader()
           {
             DruidMaster.this.becomeMaster();
           }
 
           @Override
-          public void stopBeingMaster()
+          public void notLeader()
           {
             DruidMaster.this.stopBeingMaster();
           }

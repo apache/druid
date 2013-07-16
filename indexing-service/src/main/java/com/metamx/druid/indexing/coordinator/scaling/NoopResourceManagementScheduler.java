@@ -17,27 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.guava;
+package com.metamx.druid.indexing.coordinator.scaling;
+
+import com.metamx.common.logger.Logger;
 
 /**
  */
-public class Runnables
+public class NoopResourceManagementScheduler extends ResourceManagementScheduler
 {
-  public static Runnable threadNaming(final String threadName, final Runnable runnable)
+  private static final Logger log = new Logger(NoopResourceManagementScheduler.class);
+
+  public NoopResourceManagementScheduler()
   {
-    return new ThreadRenamingRunnable(threadName)
-    {
-      @Override
-      public void doRun()
-      {
-        runnable.run();
-      }
-    };
+    super(null, null, null, null);
   }
 
-  public static Runnable getNoopRunnable(){
-    return new Runnable(){
-      public void run(){}
-    };
+  @Override
+  public void start()
+  {
+    log.info("Autoscaling is disabled.");
+  }
+
+  @Override
+  public void stop()
+  {
+    // do nothing
+  }
+
+  @Override
+  public ScalingStats getStats()
+  {
+    return new ScalingStats(0);
   }
 }
