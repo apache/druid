@@ -21,14 +21,11 @@ package com.metamx.druid.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.NotNull;
-
 /**
  */
-public class CuratorDiscoveryConfig
+public abstract class CuratorDiscoveryConfig
 {
   @JsonProperty
-  @NotNull
   private String path = null;
 
   public String getPath()
