@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.coordination.DruidServerMetadata;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -116,7 +117,8 @@ public class DruidServer implements Comparable
   @JsonProperty
   public Map<String, DataSegment> getSegments()
   {
-    return ImmutableMap.copyOf(segments);
+    // Copying the map slows things down a lot here, don't use Immutable Map here
+    return Collections.unmodifiableMap(segments);
   }
 
   public DataSegment getSegment(String segmentName)
