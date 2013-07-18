@@ -72,7 +72,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
 
   @JsonCreator
   public RabbitMQFirehoseFactory(
-      @JsonProperty("connection") ConnectionFactory connectionFactory,
+      @JsonProperty("connection") JacksonifiedConnectionFactory connectionFactory,
       @JsonProperty("config") RabbitMQFirehoseConfig config,
       @JsonProperty("parser") StringInputRowParser parser
   )
