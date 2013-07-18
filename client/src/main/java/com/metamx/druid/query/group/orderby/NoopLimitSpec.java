@@ -21,4 +21,10 @@ public class NoopLimitSpec implements LimitSpec
   {
     return Functions.identity();
   }
+
+  @Override
+  public String toString()
+  {
+    return "NoopLimitSpec";
+  }
 }
