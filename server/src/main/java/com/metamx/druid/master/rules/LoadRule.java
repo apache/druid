@@ -92,6 +92,12 @@ public abstract class LoadRule implements Rule
     final MasterStats stats = new MasterStats();
 
     while (totalReplicants < expectedReplicants) {
+      boolean replicate = totalReplicants > 0;
+
+      if (replicate && !replicationManager.canAddReplicant(getTier())) {
+        break;
+      }
+
       final ServerHolder holder = analyzer.findNewSegmentHomeAssign(segment, serverHolderList);
 
       if (holder == null) {
@@ -104,15 +110,10 @@ public abstract class LoadRule implements Rule
         break;
       }
 
-      if (totalReplicants > 0) { // don't throttle if there's only 1 copy of this segment in the cluster
-        if (!replicationManager.canAddReplicant(getTier()) ||
-            !replicationManager.registerReplicantCreation(
-                getTier(),
-                segment.getIdentifier(),
-                holder.getServer().getHost()
-            )) {
-          break;
-        }
+      if (replicate && !replicationManager.registerReplicantCreation(
+          getTier(), segment.getIdentifier(), holder.getServer().getHost()
+      )) {
+        break;
       }
 
       holder.getPeon().loadSegment(
