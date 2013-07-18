@@ -22,7 +22,6 @@ package druid.examples.conjurer;
 import com.google.common.base.Throwables;
 import com.metamx.emitter.EmittingLogger;
 import io.d8a.conjure.Conjurer;
-import io.d8a.conjure.ConjurerBuilder;
 
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -32,16 +31,16 @@ import java.util.concurrent.TimeUnit;
 public class ConjurerWrapper
 {
   private static final EmittingLogger log = new EmittingLogger(ConjurerWrapper.class);
-  private final ConjurerBuilder builder;
+  private final Conjurer.Builder builder;
   private Conjurer conjurer;
   private final int QUEUE_SIZE = 10000;
   private final Thread conjureThread;
   private final BlockingQueue<Object> queue = new ArrayBlockingQueue<Object>(QUEUE_SIZE);
 
-  public ConjurerWrapper(ConjurerBuilder conjurerBuilder)
+  public ConjurerWrapper(Conjurer.Builder conjurerBuilder)
   {
     this.builder = conjurerBuilder;
-    builder.setPrinter(Conjurer.queuePrinter(queue));
+    builder.withPrinter(Conjurer.queuePrinter(queue));
     conjureThread = new Thread()
     {
       public void run()
@@ -56,12 +55,8 @@ public class ConjurerWrapper
 
   public void start()
   {
-    conjureThread.start();
-  }
-
-  public void buildConjurer()
-  {
     this.conjurer = builder.build();
+    conjureThread.start();
   }
 
   public void stop()

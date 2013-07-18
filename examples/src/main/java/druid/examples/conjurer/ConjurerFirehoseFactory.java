@@ -28,7 +28,7 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
-import io.d8a.conjure.ConjurerBuilder;
+import io.d8a.conjure.Conjurer;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
@@ -39,9 +39,9 @@ import java.util.concurrent.TimeUnit;
 @JsonTypeName("conjurer")
 public class ConjurerFirehoseFactory implements FirehoseFactory
 {
-  private final ConjurerWrapper wrapper;
   private final long waitTime = 15L;
   private final TimeUnit unit = TimeUnit.SECONDS;
+  private final ConjurerWrapper wrapperTupac;
 
   @JsonCreator
   public ConjurerFirehoseFactory(
@@ -52,20 +52,18 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       @JsonProperty("filePath") String filePath
   )
   {
-    this(new ConjurerWrapper(new ConjurerBuilder(startTime, stopTime, null, linesPerSec, maxLines, filePath, true)));
-
+    this(Conjurer.getBuilder().withStartTime(startTime).withStopTime(stopTime).withMaxLines(maxLines).withFilePath(filePath).withLinesPerSec(linesPerSec).withCustomSchema(true));
   }
 
-  public ConjurerFirehoseFactory(ConjurerWrapper wrapper)
+  public ConjurerFirehoseFactory(Conjurer.Builder builder)
   {
-    this.wrapper = wrapper;
+    this.wrapperTupac = new ConjurerWrapper(builder);
   }
 
   @Override
   public Firehose connect() throws IOException
   {
-    wrapper.buildConjurer();
-    wrapper.start();
+    wrapperTupac.start();
     return new Firehose()
     {
       Map<String, Object> map = null;
@@ -73,7 +71,7 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       @Override
       public boolean hasMore()
       {
-        map = wrapper.takeFromQueue(waitTime, unit);
+        map = wrapperTupac.takeFromQueue(waitTime, unit);
         return map != null;
       }
 
