@@ -60,51 +60,40 @@ import java.util.Properties;
 public class RabbitMQFirehoseFactory implements FirehoseFactory
 {
   private static final Logger log = new Logger(RabbitMQFirehoseFactory.class);
+
   @JsonProperty
-  private final Properties consumerProps;
+  private final RabbitMQFirehoseConfig config;
+
   @JsonProperty
   private final StringInputRowParser parser;
 
+  @JsonProperty
+  private final ConnectionFactory connectionFactory;
+
   @JsonCreator
   public RabbitMQFirehoseFactory(
-      @JsonProperty("consumerProps") Properties consumerProps,
+      @JsonProperty("connection") ConnectionFactory connectionFactory,
+      @JsonProperty("config") RabbitMQFirehoseConfig config,
       @JsonProperty("parser") StringInputRowParser parser
   )
   {
-    this.consumerProps = consumerProps;
+    this.connectionFactory = connectionFactory;
+    this.config = config;
     this.parser = parser;
   }
 
   @Override
   public Firehose connect() throws IOException
   {
-    final ConnectionFactory factory = new ConnectionFactory();
-    factory.setHost(consumerProps.getProperty("host", factory.getHost()));
-    factory.setPort(Integer.parseInt(consumerProps.getProperty("port", Integer.toString(factory.getPort()))));
-    factory.setUsername(consumerProps.getProperty("username", factory.getUsername()));
-    factory.setPassword(consumerProps.getProperty("password", factory.getPassword()));
-    factory.setVirtualHost(consumerProps.getProperty("virtualHost", factory.getVirtualHost()));
+    String queue = config.getQueue();
+    String exchange = config.getExchange();
+    String routingKey = config.getRoutingKey();
 
-    // If the URI property has a value it overrides the values set above.
-    if(consumerProps.containsKey("uri")){
-      try {
-        factory.setUri(consumerProps.getProperty("uri"));
-      }
-      catch(Exception e){
-        // A little silly to throw an IOException but we'll make do for now with it.
-        throw new IOException("Bad URI format.", e);
-      }
-    }
+    boolean durable = config.isDurable();
+    boolean exclusive = config.isExclusive();
+    boolean autoDelete = config.isAutoDelete();
 
-    String queue = consumerProps.getProperty("queue");
-    String exchange = consumerProps.getProperty("exchange");
-    String routingKey = consumerProps.getProperty("routingKey");
-
-    boolean durable = Boolean.valueOf(consumerProps.getProperty("durable", "false"));
-    boolean exclusive = Boolean.valueOf(consumerProps.getProperty("exclusive", "false"));
-    boolean autoDelete = Boolean.valueOf(consumerProps.getProperty("autoDelete", "false"));
-
-    final Connection connection = factory.newConnection();
+    final Connection connection = connectionFactory.newConnection();
     connection.addShutdownListener(new ShutdownListener()
     {
       @Override
