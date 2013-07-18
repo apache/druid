@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public abstract class CuratorDiscoveryConfig
+public class CuratorDiscoveryConfig
 {
   @JsonProperty
   private String path = null;
