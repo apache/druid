@@ -265,7 +265,8 @@ public class Initialization
               throw Throwables.propagate(e);
             }
           }
-        }
+        },
+        Lifecycle.Stage.LAST
     );
 
     return serviceDiscovery;

@@ -76,4 +76,17 @@ public class DbConnectorConfig
   public String getValidationQuery() {
     return validationQuery;
   }
+
+  @Override
+  public String toString()
+  {
+    return "DbConnectorConfig{" +
+           "createTables=" + createTables +
+           ", connectURI='" + connectURI + '\'' +
+           ", user='" + user + '\'' +
+           ", password=****" +
+           ", useValidationQuery=" + useValidationQuery +
+           ", validationQuery='" + validationQuery + '\'' +
+           '}';
+  }
 }

@@ -34,8 +34,11 @@ import com.metamx.druid.master.DruidMasterConfig;
 import com.metamx.druid.master.LoadQueueTaskMaster;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
+import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.skife.jdbi.v2.IDBI;
+
+import java.io.IOException;
 
 /**
  */
@@ -78,6 +81,29 @@ public class MasterModule implements Module
   @Provides @LazySingleton @IndexingService
   public ServiceProvider getServiceProvider(DruidMasterConfig config, ServiceDiscovery<Void> serviceDiscovery)
   {
+    // TODO: This service discovery stuff is really really janky.  It needs to be reworked.
+    if (config.getMergerServiceName() == null) {
+      return new ServiceProvider()
+      {
+        @Override
+        public void start() throws Exception
+        {
+
+        }
+
+        @Override
+        public ServiceInstance getInstance() throws Exception
+        {
+          return null;
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+
+        }
+      };
+    }
     return serviceDiscovery.serviceProviderBuilder().serviceName(config.getMergerServiceName()).build();
   }
 

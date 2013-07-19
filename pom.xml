@@ -40,7 +40,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.23.0-SNAPSHOT</metamx.java-util.version>
-        <apache.curator.version>2.0.2-21-22</apache.curator.version>
+        <apache.curator.version>2.1.0-incubating</apache.curator.version>
     </properties>
 
     <modules>

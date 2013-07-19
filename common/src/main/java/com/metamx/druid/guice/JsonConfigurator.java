@@ -52,10 +52,15 @@ public class JsonConfigurator
         final String propValue = props.getProperty(prop);
         Object value;
         try {
-          value = jsonMapper.readValue(propValue, Object.class);
+          // If it's a String Jackson wants it to be quoted, so check if it's not an object or array and quote.
+          String modifiedPropValue = propValue;
+          if (! (modifiedPropValue.startsWith("[") || modifiedPropValue.startsWith("{"))) {
+            modifiedPropValue = String.format("\"%s\"", modifiedPropValue);
+          }
+          value = jsonMapper.readValue(modifiedPropValue, Object.class);
         }
         catch (IOException e) {
-          log.debug("Unable to parse [%s]=[%s] as a json object, using as is.", prop, propValue);
+          log.info(e, "Unable to parse [%s]=[%s] as a json object, using as is.", prop, propValue);
           value = propValue;
         }
 
@@ -88,6 +93,8 @@ public class JsonConfigurator
           )
       );
     }
+
+    log.info("Loaded class[%s] as [%s]", clazz, config);
 
     return config;
   }

@@ -3,6 +3,7 @@ package com.metamx.druid.guice;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.metamx.druid.jackson.Json;
 import com.metamx.druid.jackson.Smile;
@@ -46,6 +47,7 @@ public class DruidSecondaryModule implements Module
     binder.install(new DruidGuiceExtensions());
     binder.bind(Properties.class).toInstance(properties);
     binder.bind(ConfigurationObjectFactory.class).toInstance(factory);
+    binder.bind(ObjectMapper.class).to(Key.get(ObjectMapper.class, Json.class));
     binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(jsonMapper);
     binder.bind(ObjectMapper.class).annotatedWith(Smile.class).toInstance(smileMapper);
     binder.bind(Validator.class).toInstance(validator);

@@ -86,7 +86,7 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
     }
     catch (RuntimeException e) {
       // When a runtime exception gets thrown out, this provider will get called again if the object is asked for again.
-      // This will have the same failed result, 'cause when it's called no parameters will have actually changed. For
+      // This will have the same failed result, 'cause when it's called no parameters will have actually changed.
       // Guice will then report the same error multiple times, which is pretty annoying. Cache a null supplier and
       // return that instead.  This is technically enforcing a singleton, but such is life.
       retVal = Suppliers.ofInstance(null);

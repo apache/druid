@@ -9,6 +9,7 @@ import com.metamx.druid.client.selector.Server;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
@@ -21,7 +22,7 @@ public class IndexingServiceSelector implements DiscoverySelector<Server>
 
   @Inject
   public IndexingServiceSelector(
-      @IndexingService ServiceProvider serviceProvider
+      @Nullable @IndexingService ServiceProvider serviceProvider
   ) {
     this.serviceProvider = serviceProvider;
   }

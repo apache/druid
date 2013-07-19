@@ -33,6 +33,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.guice.ManageLifecycle;
+import com.metamx.druid.jackson.Json;
 import com.metamx.druid.master.rules.PeriodLoadRule;
 import com.metamx.druid.master.rules.Rule;
 import org.joda.time.DateTime;
@@ -129,7 +130,7 @@ public class DatabaseRuleManager
 
   @Inject
   public DatabaseRuleManager(
-      ObjectMapper jsonMapper,
+      @Json ObjectMapper jsonMapper,
       Supplier<DatabaseRuleManagerConfig> config,
       Supplier<DbTablesConfig> dbTables,
       IDBI dbi

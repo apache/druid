@@ -62,27 +62,17 @@ public class LifecycleModule implements Module
   @Provides @LazySingleton
   public Lifecycle getLifecycle(final Injector injector)
   {
-    Lifecycle lifecycle = new Lifecycle();
-    scope.setLifecycle(lifecycle);
-
-    lifecycle.addHandler(
-        new Lifecycle.Handler()
-        {
-          @Override
-          public void start() throws Exception
-          {
-            for (Key<?> key : eagerClasses) {
-              injector.getInstance(key); // Pull the key so as to "eagerly" load up the class.
-            }
-          }
-
-          @Override
-          public void stop()
-          {
-
-          }
+    Lifecycle lifecycle = new Lifecycle(){
+      @Override
+      public void start() throws Exception
+      {
+        for (Key<?> key : eagerClasses) {
+          injector.getInstance(key); // Pull the key so as to "eagerly" load up the class.
         }
-    );
+        super.start();
+      }
+    };
+    scope.setLifecycle(lifecycle);
 
     return lifecycle;
   }

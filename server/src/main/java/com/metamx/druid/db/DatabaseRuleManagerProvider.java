@@ -21,6 +21,7 @@ package com.metamx.druid.db;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.metamx.common.lifecycle.Lifecycle;
@@ -54,25 +55,30 @@ public class DatabaseRuleManagerProvider implements Provider<DatabaseRuleManager
   @Override
   public DatabaseRuleManager get()
   {
-    lifecycle.addHandler(
-        new Lifecycle.Handler()
-        {
-          @Override
-          public void start() throws Exception
+    try {
+      lifecycle.addMaybeStartHandler(
+          new Lifecycle.Handler()
           {
-            dbConnector.createRulesTable();
-            DatabaseRuleManager.createDefaultRule(
-                dbConnector.getDBI(), dbTables.get().getRulesTable(), config.get().getDefaultTier(), jsonMapper
-            );
-          }
+            @Override
+            public void start() throws Exception
+            {
+              dbConnector.createRulesTable();
+              DatabaseRuleManager.createDefaultRule(
+                  dbConnector.getDBI(), dbTables.get().getRulesTable(), config.get().getDefaultTier(), jsonMapper
+              );
+            }
 
-          @Override
-          public void stop()
-          {
+            @Override
+            public void stop()
+            {
 
+            }
           }
-        }
-    );
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
 
     return new DatabaseRuleManager(jsonMapper, config, dbTables, dbConnector.getDBI());
   }
