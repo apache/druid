@@ -21,15 +21,11 @@ package com.metamx.druid.realtime.firehose;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CoderResult;
-import java.nio.charset.CodingErrorAction;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import com.google.protobuf.ByteString;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -39,13 +35,10 @@ import kafka.message.MessageAndMetadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.indexer.data.InputRowParser;
-import com.metamx.druid.indexer.data.ProtoBufInputRowParser;
-import com.metamx.druid.indexer.data.StringInputRowParser;
 import com.metamx.druid.input.InputRow;
 
 /**
@@ -61,13 +54,13 @@ public class KafkaFirehoseFactory implements FirehoseFactory
 	private final String feed;
 
 	@JsonProperty
-	private final InputRowParser parser;
+	private final InputRowParser<ByteBuffer> parser;
 
 	@JsonCreator
 	public KafkaFirehoseFactory(
 	    @JsonProperty("consumerProps") Properties consumerProps,
 	    @JsonProperty("feed") String feed,
-	    @JsonProperty("parser") InputRowParser parser)
+	    @JsonProperty("parser") InputRowParser<ByteBuffer> parser)
 	{
 		this.consumerProps = consumerProps;
 		this.feed = feed;
@@ -91,26 +84,20 @@ public class KafkaFirehoseFactory implements FirehoseFactory
 
 		final KafkaStream<Message> stream = streamList.get(0);
 
-		if (parser instanceof StringInputRowParser)
-		{
-
-			return new StringMessageFirehose(connector, stream);
-		} else if (parser instanceof ProtoBufInputRowParser)
-		{
-			return new ProtoBufMessageFirehose(stream, connector);
-		}
-		throw new RuntimeException("No Firehose for parser: " + parser.getClass().getName());
+		return new DefaultFirehose(connector, stream, parser);
 	}
 
-	private abstract static class AbstractKafkaFirehose implements Firehose
+	private static class DefaultFirehose implements Firehose
 	{
-		protected final ConsumerConnector connector;
-		protected final Iterator<MessageAndMetadata<Message>> iter;
+		private final ConsumerConnector connector;
+		private final Iterator<MessageAndMetadata<Message>> iter;
+		private final InputRowParser<ByteBuffer> parser;
 
-		public AbstractKafkaFirehose(ConsumerConnector connector, KafkaStream<Message> stream)
+		public DefaultFirehose(ConsumerConnector connector, KafkaStream<Message> stream, InputRowParser<ByteBuffer> parser)
 		{
 			iter = stream.iterator();
 			this.connector = connector;
+			this.parser = parser;
 		}
 
 		@Override
@@ -132,7 +119,10 @@ public class KafkaFirehoseFactory implements FirehoseFactory
 			return parseMessage(message);
 		}
 
-		protected abstract InputRow parseMessage(Message message);
+		public InputRow parseMessage(Message message) throws FormattedException
+		{
+			return parser.parse(message.payload());
+		}
 
 		@Override
 		public Runnable commit()
@@ -161,68 +151,5 @@ public class KafkaFirehoseFactory implements FirehoseFactory
 		{
 			connector.shutdown();
 		}
-	}
-
-	private class StringMessageFirehose extends AbstractKafkaFirehose
-	{
-
-		private CharBuffer chars = null;
-
-		public StringMessageFirehose(ConsumerConnector connector, KafkaStream<Message> stream)
-		{
-			super(connector, stream);
-		}
-
-		@Override
-		public InputRow parseMessage(Message message) throws FormattedException
-		{
-
-			int payloadSize = message.payloadSize();
-			if (chars == null || chars.remaining() < payloadSize)
-			{
-				chars = CharBuffer.allocate(payloadSize);
-			}
-
-			final CoderResult coderResult = Charsets.UTF_8.newDecoder()
-			    .onMalformedInput(CodingErrorAction.REPLACE)
-			    .onUnmappableCharacter(CodingErrorAction.REPLACE)
-			    .decode(message.payload(), chars, true);
-
-			if (coderResult.isUnderflow())
-			{
-				chars.flip();
-				try
-				{
-					return parser.parse(chars.toString());
-				} finally
-				{
-					chars.clear();
-				}
-			}
-			else
-			{
-				throw new FormattedException.Builder()
-				    .withErrorCode(FormattedException.ErrorCode.UNPARSABLE_ROW)
-				    .withMessage(String.format("Failed with CoderResult[%s]", coderResult))
-				    .build();
-			}
-		}
-
-	}
-
-	private class ProtoBufMessageFirehose extends AbstractKafkaFirehose
-	{
-
-		public ProtoBufMessageFirehose(KafkaStream<Message> stream, ConsumerConnector connector)
-		{
-			super(connector, stream);
-		}
-
-		@Override
-		public InputRow parseMessage(Message message) throws FormattedException
-		{
-				return parser.parse(ByteString.copyFrom(message.payload()));
-		}
-
 	}
 }

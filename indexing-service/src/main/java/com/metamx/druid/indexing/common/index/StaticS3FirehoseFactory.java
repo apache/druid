@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -186,7 +187,7 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
           throw new NoSuchElementException();
         }
 
-        return parser.parse(lineIterator.next());
+        return parser.parse(ByteBuffer.wrap(lineIterator.next().getBytes()));
       }
 
       @Override

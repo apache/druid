@@ -32,8 +32,7 @@ import java.util.List;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "json", value = JSONDataSpec.class),
     @JsonSubTypes.Type(name = "csv", value = CSVDataSpec.class),
-    @JsonSubTypes.Type(name = "tsv", value = DelimitedDataSpec.class),
-    @JsonSubTypes.Type(name = "protobuf", value = ProtoBufDataSpec.class)
+    @JsonSubTypes.Type(name = "tsv", value = DelimitedDataSpec.class)
 })
 public interface DataSpec
 {

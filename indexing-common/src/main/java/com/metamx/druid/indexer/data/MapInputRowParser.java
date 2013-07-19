@@ -8,6 +8,7 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import org.joda.time.DateTime;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,18 +16,20 @@ import java.util.Set;
 public class MapInputRowParser implements InputRowParser<Map<String, Object>>
 {
   private final TimestampSpec timestampSpec;
-  private final DataSpec dataSpec;
+  private List<String> dimensions;
   private final Set<String> dimensionExclusions;
 
   @JsonCreator
   public MapInputRowParser(
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
-      @JsonProperty("data") DataSpec dataSpec,
+      @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("dimensionExclusions") List<String> dimensionExclusions
   )
   {
     this.timestampSpec = timestampSpec;
-    this.dataSpec = dataSpec;
+    if (dimensions != null) {
+      this.dimensions = Collections.unmodifiableList(Lists.newArrayList(dimensions));
+    }
     this.dimensionExclusions = Sets.newHashSet();
     if (dimensionExclusions != null) {
       for (String dimensionExclusion : dimensionExclusions) {
@@ -39,8 +42,8 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   @Override
   public InputRow parse(Map<String, Object> theMap)
   {
-    final List<String> dimensions = dataSpec.hasCustomDimensions()
-                                    ? dataSpec.getDimensions()
+    final List<String> dimensions = hasCustomDimensions()
+                                    ? this.dimensions
                                     : Lists.newArrayList(Sets.difference(theMap.keySet(), dimensionExclusions));
 
     final DateTime timestamp = timestampSpec.extractTimestamp(theMap);
@@ -57,6 +60,10 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return new MapBasedInputRow(timestamp.getMillis(), dimensions, theMap);
   }
 
+  private boolean hasCustomDimensions() {
+    return dimensions != null;
+  }
+
   @Override
   public void addDimensionExclusion(String dimension)
   {
@@ -69,10 +76,10 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return timestampSpec;
   }
 
-  @JsonProperty("data")
-  public DataSpec getDataSpec()
+  @JsonProperty
+  public List<String> getDimensions()
   {
-    return dataSpec;
+    return dimensions;
   }
 
   @JsonProperty

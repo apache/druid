@@ -5,6 +5,7 @@ import static com.google.protobuf.Descriptors.Descriptor;
 import static com.google.protobuf.Descriptors.FileDescriptor;
 
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +22,7 @@ import com.metamx.druid.input.InputRow;
 /**
  * @author jan.rudert
  */
-public class ProtoBufInputRowParser implements InputRowParser<ByteString>
+public class ProtoBufInputRowParser implements InputRowParser<ByteBuffer>
 {
 
 	private final MapInputRowParser inputRowCreator;
@@ -30,19 +31,18 @@ public class ProtoBufInputRowParser implements InputRowParser<ByteString>
 	@JsonCreator
 	public ProtoBufInputRowParser(
 	    @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
-	    @JsonProperty("data") ProtoBufDataSpec dataSpec,
-	    @JsonProperty("dimensionExclusions") List<String> dimensionExclusions)
+      @JsonProperty("dimensions") List<String> dimensions,
+	    @JsonProperty("dimensionExclusions") List<String> dimensionExclusions,
+      @JsonProperty("descriptor") String descriptorFileInClasspath)
 	{
 
-		descriptor = getDescriptor(dataSpec.getDescriptorFileInClassPath());
-
-
-    this.inputRowCreator = new MapInputRowParser(timestampSpec, dataSpec, dimensionExclusions);
+		descriptor = getDescriptor(descriptorFileInClasspath);
+    inputRowCreator = new MapInputRowParser(timestampSpec, dimensions, dimensionExclusions);
 
 	}
 
 	@Override
-	public InputRow parse(ByteString input)
+	public InputRow parse(ByteBuffer input)
 	{
 
 		Map<String, Object> theMap = buildStringKeyMap(input);
@@ -50,18 +50,18 @@ public class ProtoBufInputRowParser implements InputRowParser<ByteString>
 		return inputRowCreator.parse(theMap);
 	}
 
-	private Map<String, Object> buildStringKeyMap(ByteString input)
+	private Map<String, Object> buildStringKeyMap(ByteBuffer input)
 	{
 		Map<String, Object> theMap = Maps.newHashMap();
 
 		try
 		{
-      DynamicMessage message = DynamicMessage.parseFrom(descriptor, input);
+      DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
 			Map<Descriptors.FieldDescriptor, Object> allFields = message.getAllFields();
 
 			for (Map.Entry<Descriptors.FieldDescriptor, Object> entry : allFields.entrySet())
 			{
-				String name = entry.getKey().getName().toLowerCase();
+				String name = entry.getKey().getName();
 				if (theMap.containsKey(name))
 				{
 					continue;

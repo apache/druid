@@ -43,6 +43,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -176,7 +177,7 @@ public class TestIndex
                 runOnce = true;
               }
 
-              retVal.add(parser.parse(line));
+              retVal.add(parser.parse(ByteBuffer.wrap(line.getBytes())));
 
               ++lineCount;
               return true;

@@ -4,6 +4,7 @@ import static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -37,10 +38,9 @@ public class ProtoBufInputRowParserTest {
   @Test
   public void testParse() throws Exception {
 
-    //configure pares with desc file
+    //configure parser with desc file
     ProtoBufInputRowParser parser = new ProtoBufInputRowParser(new TimestampSpec("timestamp", "iso"),
-            new ProtoBufDataSpec("prototest.desc", Arrays.asList(DIMENSIONS), null),
-            Arrays.<String>asList());
+            Arrays.asList(DIMENSIONS), Arrays.<String>asList(), "prototest.desc");
 
 
     //create binary of proto test event
@@ -60,7 +60,7 @@ public class ProtoBufInputRowParserTest {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     event.writeTo(out);
 
-    InputRow row = parser.parse(ByteString.copyFrom(out.toByteArray()));
+    InputRow row = parser.parse(ByteBuffer.wrap(out.toByteArray()));
     System.out.println(row);
     assertEquals(Arrays.asList(DIMENSIONS), row.getDimensions());
     assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
