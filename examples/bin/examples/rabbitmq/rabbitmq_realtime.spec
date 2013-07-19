@@ -14,11 +14,13 @@
     },
     "firehose" : {
         "type" : "rabbitmq",
-        "consumerProps" : {
+        "connection" : {
             "host": "localhost",
             "username": "test-dude",
-            "password": "test-word",
-            "virtualHost": "test-vhost",
+            "password": "word-dude",
+            "virtualHost": "test-vhost"
+        },
+        "config" : {
             "exchange": "test-exchange",
             "queue" : "druidtest",
             "routingKey": "#",
