@@ -10,6 +10,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
 /**
+ * A Jacksonified version of the RabbitMQ ConnectionFactory for better integration
+ * into the realtime.spec configuration file format.
  */
 public class JacksonifiedConnectionFactory extends ConnectionFactory
 {

@@ -3,6 +3,7 @@ package com.metamx.druid.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
+ * A configuration object for a RabbitMQ connection.
  */
 public class RabbitMQFirehoseConfig
 {
