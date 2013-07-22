@@ -16,6 +16,6 @@ public abstract class ZkDataSegmentAnnouncerConfig extends ZkPathsConfig
   public abstract long getMaxNumBytes();
 
   @Config("druid.announcer.type")
-  @Default("curator")
+  @Default("legacy")
   public abstract String getAnnouncerType();
 }

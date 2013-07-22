@@ -435,21 +435,14 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       final String announcerType = config.getAnnouncerType();
 
       final DataSegmentAnnouncer dataSegmentAnnouncer;
-      if ("curator".equalsIgnoreCase(announcerType)) {
-        dataSegmentAnnouncer = new CuratorDataSegmentAnnouncer(
-            getDruidServerMetadata(),
-            getZkPaths(),
-            announcer,
-            getJsonMapper()
-        );
-      } else if ("batch".equalsIgnoreCase(announcerType)) {
+      if ("batch".equalsIgnoreCase(announcerType)) {
         dataSegmentAnnouncer = new BatchingCuratorDataSegmentAnnouncer(
             getDruidServerMetadata(),
             config,
             announcer,
             getJsonMapper()
         );
-      } else if ("multiple".equalsIgnoreCase(announcerType)) {
+      } else if ("legacy".equalsIgnoreCase(announcerType)) {
         dataSegmentAnnouncer = new MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
             Arrays.<AbstractDataSegmentAnnouncer>asList(
                 new BatchingCuratorDataSegmentAnnouncer(
