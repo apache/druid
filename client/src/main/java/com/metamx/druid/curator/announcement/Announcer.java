@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -64,6 +65,7 @@ public class Announcer
   private final List<Pair<String, byte[]>> toAnnounce = Lists.newArrayList();
   private final ConcurrentMap<String, PathChildrenCache> listeners = new MapMaker().makeMap();
   private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new MapMaker().makeMap();
+  private final List<String> parentsIBuilt = new CopyOnWriteArrayList<String>();
 
   private boolean started = false;
 
@@ -114,6 +116,15 @@ public class Announcer
           unannounce(ZKPaths.makePath(basePath, announcementPath));
         }
       }
+
+      for (String parent : parentsIBuilt) {
+        try {
+          curator.delete().forPath(parent);
+        }
+        catch (Exception e) {
+          log.info(e, "Unable to delete parent[%s], boooo.", parent);
+        }
+      }
     }
   }
 
@@ -136,10 +147,19 @@ public class Announcer
     final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
 
     final String parentPath = pathAndNode.getPath();
+    boolean buildParentPath = false;
 
     ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
 
     if (subPaths == null) {
+      try {
+        if (curator.checkExists().forPath(parentPath) == null) {
+          buildParentPath = true;
+        }
+      }
+      catch (Exception e) {
+        log.debug(e, "Problem checking if the parent existed, ignoring.");
+      }
 
       // I don't have a watcher on this path yet, create a Map and start watching.
       announcements.putIfAbsent(parentPath, new MapMaker().<String, byte[]>makeMap());
@@ -208,16 +228,14 @@ public class Announcer
               }
           );
 
-          try {
-            synchronized (toAnnounce) {
-              if (started) {
-                cache.start();
-                listeners.put(parentPath, cache);
+          synchronized (toAnnounce) {
+            if (started) {
+              if (buildParentPath) {
+                createPath(parentPath);
               }
+              startCache(cache);
+              listeners.put(parentPath, cache);
             }
-          }
-          catch (Exception e) {
-            throw Throwables.propagate(e);
           }
         }
       }
@@ -261,7 +279,7 @@ public class Announcer
       throw new ISE("Cannot update a path[%s] that hasn't been announced!", path);
     }
 
-    synchronized (subPaths) {
+    synchronized (toAnnounce) {
       try {
         byte[] oldBytes = subPaths.get(nodePath);
 
@@ -318,6 +336,28 @@ public class Announcer
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
+    }
+  }
+
+  private void startCache(PathChildrenCache cache)
+  {
+    try {
+      cache.start();
+    }
+    catch (Exception e) {
+      Closeables.closeQuietly(cache);
+      throw Throwables.propagate(e);
+    }
+  }
+
+  private void createPath(String parentPath)
+  {
+    try {
+      curator.create().creatingParentsIfNeeded().forPath(parentPath);
+      parentsIBuilt.add(parentPath);
+    }
+    catch (Exception e) {
+      log.info(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
     }
   }
 }

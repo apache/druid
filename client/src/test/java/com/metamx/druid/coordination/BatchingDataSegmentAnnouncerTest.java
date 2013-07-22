@@ -47,7 +47,7 @@ import java.util.Set;
 
 /**
  */
-public class BatchingCuratorDataSegmentAnnouncerTest
+public class BatchingDataSegmentAnnouncerTest
 {
   private static final String testBasePath = "/test";
   private static final String testSegmentsPath = "/test/segments/id";
@@ -58,7 +58,7 @@ public class BatchingCuratorDataSegmentAnnouncerTest
   private ObjectMapper jsonMapper;
   private Announcer announcer;
   private SegmentReader segmentReader;
-  private BatchingCuratorDataSegmentAnnouncer segmentAnnouncer;
+  private BatchingDataSegmentAnnouncer segmentAnnouncer;
   private Set<DataSegment> testSegments;
 
   @Before
@@ -84,7 +84,7 @@ public class BatchingCuratorDataSegmentAnnouncerTest
     announcer.start();
 
     segmentReader = new SegmentReader(cf, jsonMapper);
-    segmentAnnouncer = new BatchingCuratorDataSegmentAnnouncer(
+    segmentAnnouncer = new BatchingDataSegmentAnnouncer(
         new DruidServerMetadata(
             "id",
             "host",
