@@ -22,33 +22,26 @@ package com.metamx.druid.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.initialization.ZkDataSegmentAnnouncerConfig;
-import com.metamx.druid.initialization.ZkPathsConfig;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
-public class BatchingCuratorDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
+public class BatchingDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
 {
-  private static final Logger log = new Logger(BatchingCuratorDataSegmentAnnouncer.class);
+  private static final Logger log = new Logger(BatchingDataSegmentAnnouncer.class);
 
   private final ZkDataSegmentAnnouncerConfig config;
   private final Announcer announcer;
@@ -58,7 +51,7 @@ public class BatchingCuratorDataSegmentAnnouncer extends AbstractDataSegmentAnno
   private final Set<SegmentZNode> availableZNodes = Sets.newHashSet();
   private final Map<DataSegment, SegmentZNode> segmentLookup = Maps.newHashMap();
 
-  public BatchingCuratorDataSegmentAnnouncer(
+  public BatchingDataSegmentAnnouncer(
       DruidServerMetadata server,
       ZkDataSegmentAnnouncerConfig config,
       Announcer announcer,
