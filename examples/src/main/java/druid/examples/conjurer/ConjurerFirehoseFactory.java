@@ -19,6 +19,7 @@
 
 package druid.examples.conjurer;
 
+import com.beust.jcommander.internal.Lists;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -32,15 +33,14 @@ import io.d8a.conjure.Conjurer;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @JsonTypeName("conjurer")
 public class ConjurerFirehoseFactory implements FirehoseFactory
 {
-  private final long waitTime = 15L;
-  private final TimeUnit unit = TimeUnit.SECONDS;
+  private static final long waitTime = 15L;
+  private static final TimeUnit unit = TimeUnit.SECONDS;
   private final ConjurerWrapper wrapperTupac;
 
   @JsonCreator
@@ -52,12 +52,22 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       @JsonProperty("filePath") String filePath
   )
   {
-    this(Conjurer.getBuilder().withStartTime(startTime).withStopTime(stopTime).withMaxLines(maxLines).withFilePath(filePath).withLinesPerSec(linesPerSec).withCustomSchema(true));
+    this(
+        new ConjurerWrapper(
+            Conjurer.getBuilder()
+                    .withStartTime(startTime)
+                    .withStopTime(stopTime)
+                    .withMaxLines(maxLines)
+                    .withFilePath(filePath)
+                    .withLinesPerSec(linesPerSec)
+                    .withCustomSchema(true)
+        )
+    );
   }
 
-  public ConjurerFirehoseFactory(Conjurer.Builder builder)
+  public ConjurerFirehoseFactory(ConjurerWrapper wrapper)
   {
-    this.wrapperTupac = new ConjurerWrapper(builder);
+    this.wrapperTupac = wrapper;
   }
 
   @Override
@@ -66,7 +76,7 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
     wrapperTupac.start();
     return new Firehose()
     {
-      Map<String, Object> map = null;
+      Map<String, Object> map;
 
       @Override
       public boolean hasMore()
@@ -80,7 +90,7 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       {
         try {
           DateTime date = new DateTime(map.get("time"));
-          return new MapBasedInputRow(date.getMillis(), new ArrayList(map.keySet()), map);
+          return new MapBasedInputRow(date.getMillis(), Lists.newArrayList(map.keySet()), map);
         }
         catch (NullPointerException e) {
           throw Throwables.propagate(e);

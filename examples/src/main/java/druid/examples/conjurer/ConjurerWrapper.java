@@ -33,7 +33,7 @@ public class ConjurerWrapper
   private static final EmittingLogger log = new EmittingLogger(ConjurerWrapper.class);
   private final Conjurer.Builder builder;
   private Conjurer conjurer;
-  private final int QUEUE_SIZE = 10000;
+  private static final int QUEUE_SIZE = 10000;
   private final Thread conjureThread;
   private final BlockingQueue<Object> queue = new ArrayBlockingQueue<Object>(QUEUE_SIZE);
 
