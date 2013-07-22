@@ -14,4 +14,8 @@ public abstract class ZkDataSegmentAnnouncerConfig extends ZkPathsConfig
   @Config("druid.zk.maxNumBytesPerNode")
   @Default("512000")
   public abstract long getMaxNumBytes();
+
+  @Config("druid.announcer.type")
+  @Default("curator")
+  public abstract String getAnnouncerType();
 }

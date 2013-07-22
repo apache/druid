@@ -143,10 +143,7 @@ public class SpatialDimensionRowFormatter
       @Override
       public String toString()
       {
-        return "InputRow{" +
-               "timestamp=" + row.getTimestampFromEpoch() +
-               ", dimensions=" + row.getDimensions() +
-               '}';
+        return row.toString();
       }
     };
 

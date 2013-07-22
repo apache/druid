@@ -373,18 +373,21 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     if (requestLogger == null) {
       try {
         final String loggingType = props.getProperty("druid.request.logging.type");
-        if("emitter".equals(loggingType)) {
-          setRequestLogger(Initialization.makeEmittingRequestLogger(
-            getProps(),
-            getEmitter()
-          ));
-        }
-        else if ("file".equalsIgnoreCase(loggingType)) {
-          setRequestLogger(Initialization.makeFileRequestLogger(
-            getJsonMapper(),
-            getScheduledExecutorFactory(),
-            getProps()
-          ));
+        if ("emitter".equals(loggingType)) {
+          setRequestLogger(
+              Initialization.makeEmittingRequestLogger(
+                  getProps(),
+                  getEmitter()
+              )
+          );
+        } else if ("file".equalsIgnoreCase(loggingType)) {
+          setRequestLogger(
+              Initialization.makeFileRequestLogger(
+                  getJsonMapper(),
+                  getScheduledExecutorFactory(),
+                  getProps()
+              )
+          );
         } else {
           setRequestLogger(new NoopRequestLogger());
         }
@@ -428,19 +431,46 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       final Announcer announcer = new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s"));
       lifecycle.addManagedInstance(announcer);
 
-      setAnnouncer(
-          new MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
-              Arrays.<AbstractDataSegmentAnnouncer>asList(
-                  new BatchingCuratorDataSegmentAnnouncer(
-                      getDruidServerMetadata(),
-                      getConfigFactory().build(ZkDataSegmentAnnouncerConfig.class),
-                      announcer,
-                      getJsonMapper()
-                  ),
-                  new CuratorDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper())
-              )
-          )
-      );
+      final ZkDataSegmentAnnouncerConfig config = getConfigFactory().build(ZkDataSegmentAnnouncerConfig.class);
+      final String announcerType = config.getAnnouncerType();
+
+      final DataSegmentAnnouncer dataSegmentAnnouncer;
+      if ("curator".equalsIgnoreCase(announcerType)) {
+        dataSegmentAnnouncer = new CuratorDataSegmentAnnouncer(
+            getDruidServerMetadata(),
+            getZkPaths(),
+            announcer,
+            getJsonMapper()
+        );
+      } else if ("batch".equalsIgnoreCase(announcerType)) {
+        dataSegmentAnnouncer = new BatchingCuratorDataSegmentAnnouncer(
+            getDruidServerMetadata(),
+            config,
+            announcer,
+            getJsonMapper()
+        );
+      } else if ("multiple".equalsIgnoreCase(announcerType)) {
+        dataSegmentAnnouncer = new MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
+            Arrays.<AbstractDataSegmentAnnouncer>asList(
+                new BatchingCuratorDataSegmentAnnouncer(
+                    getDruidServerMetadata(),
+                    config,
+                    announcer,
+                    getJsonMapper()
+                ),
+                new CuratorDataSegmentAnnouncer(
+                    getDruidServerMetadata(),
+                    getZkPaths(),
+                    announcer,
+                    getJsonMapper()
+                )
+            )
+        );
+      } else {
+        throw new ISE("Unknown announcer type [%s]", announcerType);
+      }
+
+      setAnnouncer(dataSegmentAnnouncer);
 
       lifecycle.addManagedInstance(getAnnouncer(), Lifecycle.Stage.LAST);
     }
