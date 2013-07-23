@@ -34,7 +34,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.BatchingServerInventoryView;
+import com.metamx.druid.client.BatchServerInventoryView;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.ServerInventoryView;
@@ -374,7 +374,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
             getJsonMapper()
         );
       } else if ("batch".equalsIgnoreCase(announcerType)) {
-        serverInventoryView = new BatchingServerInventoryView(
+        serverInventoryView = new BatchServerInventoryView(
             serverInventoryViewConfig,
             getZkPaths(),
             getCuratorFramework(),

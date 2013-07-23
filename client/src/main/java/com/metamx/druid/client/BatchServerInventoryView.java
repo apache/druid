@@ -34,13 +34,13 @@ import java.util.concurrent.ExecutorService;
 
 /**
  */
-public class BatchingServerInventoryView extends ServerInventoryView<Set<DataSegment>>
+public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegment>>
 {
-  private static final EmittingLogger log = new EmittingLogger(BatchingServerInventoryView.class);
+  private static final EmittingLogger log = new EmittingLogger(BatchServerInventoryView.class);
 
   final ConcurrentMap<String, Set<DataSegment>> zNodes = new MapMaker().makeMap();
 
-  public BatchingServerInventoryView(
+  public BatchServerInventoryView(
       final ServerInventoryViewConfig config,
       final ZkPathsConfig zkPaths,
       final CuratorFramework curator,

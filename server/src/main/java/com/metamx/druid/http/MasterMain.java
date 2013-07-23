@@ -33,7 +33,7 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.BatchingServerInventoryView;
+import com.metamx.druid.client.BatchServerInventoryView;
 import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.SingleServerInventoryView;
@@ -148,7 +148,7 @@ public class MasterMain
           jsonMapper
       );
     } else if ("batch".equalsIgnoreCase(announcerType)) {
-      serverInventoryView = new BatchingServerInventoryView(
+      serverInventoryView = new BatchServerInventoryView(
           serverInventoryViewConfig,
           zkPaths,
           curatorFramework,
