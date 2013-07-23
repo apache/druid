@@ -346,8 +346,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     }
   }
 
-  private void
-  initializeInventoryView()
+  private void initializeInventoryView()
   {
     if (inventoryView == null) {
       initializeServerInventoryView();
