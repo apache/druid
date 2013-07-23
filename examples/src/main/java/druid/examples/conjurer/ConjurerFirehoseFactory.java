@@ -110,7 +110,7 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       @Override
       public void close() throws IOException
       {
-
+         tupac.stop();
       }
     };
   }
