@@ -10,6 +10,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * Marks the object to be managed by {@link com.metamx.common.lifecycle.Lifecycle}
+ *
+ * This Scope gets defined by {@link com.metamx.druid.guice.LifecycleModule}
  */
 @Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RUNTIME)

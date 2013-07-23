@@ -10,6 +10,7 @@ public class DruidGuiceExtensions implements Module
   @Override
   public void configure(Binder binder)
   {
+    binder.requireExplicitBindings();
     binder.bindScope(LazySingleton.class, DruidScopes.SINGLETON);
   }
 }

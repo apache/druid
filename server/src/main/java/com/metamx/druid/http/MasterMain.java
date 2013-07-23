@@ -29,7 +29,9 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.CuratorModule;
 import com.metamx.druid.curator.discovery.DiscoveryModule;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.guice.DbConnectorModule;
 import com.metamx.druid.guice.HttpClientModule;
+import com.metamx.druid.guice.JacksonConfigManagerModule;
 import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.MasterModule;
 import com.metamx.druid.guice.ServerModule;
@@ -63,6 +65,8 @@ public class MasterMain
         new LifecycleModule(Key.get(MonitorScheduler.class), Key.get(DruidMaster.class)),
         EmitterModule.class,
         HttpClientModule.class,
+        DbConnectorModule.class,
+        JacksonConfigManagerModule.class,
         CuratorModule.class,
         new MetricsModule(),
         DiscoveryModule.class,

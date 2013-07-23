@@ -20,12 +20,13 @@
 package com.metamx.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.metamx.druid.guice.JsonConfigProvider;
-import com.metamx.druid.guice.LazySingleton;
+import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.core.LoggingEmitterConfig;
@@ -42,9 +43,9 @@ public class LogEmitterModule implements Module
     JsonConfigProvider.bind(binder, "druid.emitter.logging", LoggingEmitterConfig.class);
   }
 
-  @Provides @LazySingleton @Named(EMITTER_TYPE)
-  public Emitter makeEmitter(LoggingEmitterConfig config, ObjectMapper jsonMapper)
+  @Provides @ManageLifecycle @Named(EMITTER_TYPE)
+  public Emitter makeEmitter(Supplier<LoggingEmitterConfig> config, ObjectMapper jsonMapper)
   {
-    return new LoggingEmitter(config, jsonMapper);
+    return new LoggingEmitter(config.get(), jsonMapper);
   }
 }

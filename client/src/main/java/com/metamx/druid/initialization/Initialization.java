@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
+import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -390,7 +391,21 @@ public class Initialization
         new DruidGuiceExtensions(),
         new JacksonModule(),
         new PropertiesModule("runtime.properties"),
-        new ConfigModule()
+        new ConfigModule(),
+        new Module()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
+            binder.bind(DruidSecondaryModule.class);
+
+            for (Object module : modules) {
+              if (module instanceof Class) {
+                binder.bind((Class) module);
+              }
+            }
+          }
+        }
     );
 
     List<Object> actualModules = Lists.newArrayList();

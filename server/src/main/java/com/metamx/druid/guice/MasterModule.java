@@ -8,6 +8,7 @@ import com.google.inject.TypeLiteral;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.Lifecycle;
+import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.indexing.IndexingService;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
@@ -15,28 +16,22 @@ import com.metamx.druid.client.indexing.IndexingServiceSelector;
 import com.metamx.druid.client.selector.DiscoverySelector;
 import com.metamx.druid.client.selector.Server;
 import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.config.ConfigManager;
-import com.metamx.druid.config.ConfigManagerConfig;
-import com.metamx.druid.config.ConfigManagerProvider;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseRuleManagerConfig;
 import com.metamx.druid.db.DatabaseRuleManagerProvider;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.db.DatabaseSegmentManagerConfig;
 import com.metamx.druid.db.DatabaseSegmentManagerProvider;
-import com.metamx.druid.db.DbConnector;
-import com.metamx.druid.db.DbConnectorConfig;
-import com.metamx.druid.db.DbTablesConfig;
 import com.metamx.druid.http.MasterRedirectInfo;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.initialization.ZkPathsConfig;
+import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterConfig;
 import com.metamx.druid.master.LoadQueueTaskMaster;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
-import org.skife.jdbi.v2.IDBI;
 
 import java.io.IOException;
 
@@ -51,11 +46,11 @@ public class MasterModule implements Module
     ConfigProvider.bind(binder, ZkPathsConfig.class);
     ConfigProvider.bind(binder, ServerInventoryViewConfig.class);
 
-    JsonConfigProvider.bind(binder, "druid.db.tables", DbTablesConfig.class);
-    JsonConfigProvider.bind(binder, "druid.db.connector", DbConnectorConfig.class);
-    JsonConfigProvider.bind(binder, "druid.manager.config", ConfigManagerConfig.class);
     JsonConfigProvider.bind(binder, "druid.manager.segment", DatabaseSegmentManagerConfig.class);
     JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
+
+    binder.bind(DruidMaster.class);
+    binder.bind(ServerInventoryView.class);
 
     binder.bind(DatabaseSegmentManager.class)
           .toProvider(DatabaseSegmentManagerProvider.class)
@@ -63,10 +58,6 @@ public class MasterModule implements Module
 
     binder.bind(DatabaseRuleManager.class)
           .toProvider(DatabaseRuleManagerProvider.class)
-          .in(ManageLifecycle.class);
-
-    binder.bind(ConfigManager.class)
-          .toProvider(ConfigManagerProvider.class)
           .in(ManageLifecycle.class);
 
     binder.bind(new TypeLiteral<DiscoverySelector<Server>>(){})
@@ -105,12 +96,6 @@ public class MasterModule implements Module
       };
     }
     return serviceDiscovery.serviceProviderBuilder().serviceName(config.getMergerServiceName()).build();
-  }
-
-  @Provides @LazySingleton
-  public IDBI getDbi(final DbConnector dbConnector)
-  {
-    return dbConnector.getDBI();
   }
 
   @Provides @LazySingleton

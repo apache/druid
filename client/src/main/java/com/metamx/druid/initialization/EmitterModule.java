@@ -34,6 +34,7 @@ import com.google.inject.name.Names;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.guice.LazySingleton;
+import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -71,7 +72,7 @@ public class EmitterModule implements Module
   }
 
   @Provides
-  @LazySingleton
+  @ManageLifecycle
   public ServiceEmitter getServiceEmitter(Supplier<DruidNodeConfig> configSupplier, Emitter emitter)
   {
     final DruidNodeConfig config = configSupplier.get();

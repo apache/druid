@@ -28,6 +28,7 @@ import com.google.inject.util.Providers;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.druid.guice.JsonConfigProvider;
 import com.metamx.druid.guice.LazySingleton;
+import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.HttpPostEmitter;
 import com.metamx.http.client.HttpClientConfig;
@@ -49,7 +50,7 @@ public class HttpEmitterModule implements Module
     binder.bind(SSLContext.class).toProvider(Providers.<SSLContext>of(null)).in(LazySingleton.class);
   }
 
-  @Provides @LazySingleton @Named("http")
+  @Provides @ManageLifecycle @Named("http")
   public Emitter getEmitter(Supplier<HttpEmitterConfig> config, @Nullable SSLContext sslContext, Lifecycle lifecycle)
   {
     final HttpClientConfig.Builder builder = HttpClientConfig
