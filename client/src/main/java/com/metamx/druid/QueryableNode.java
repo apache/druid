@@ -40,11 +40,11 @@ import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.ServerView;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.coordination.AbstractDataSegmentAnnouncer;
-import com.metamx.druid.coordination.BatchingCuratorDataSegmentAnnouncer;
-import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
+import com.metamx.druid.coordination.BatchingDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.coordination.MultipleDataSegmentAnnouncerDataSegmentAnnouncer;
+import com.metamx.druid.coordination.SingleDataSegmentAnnouncer;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.NoopRequestLogger;
 import com.metamx.druid.http.RequestLogger;
@@ -431,13 +431,13 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       setAnnouncer(
           new MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
               Arrays.<AbstractDataSegmentAnnouncer>asList(
-                  new BatchingCuratorDataSegmentAnnouncer(
+                  new BatchingDataSegmentAnnouncer(
                       getDruidServerMetadata(),
                       getConfigFactory().build(ZkDataSegmentAnnouncerConfig.class),
                       announcer,
                       getJsonMapper()
                   ),
-                  new CuratorDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper())
+                  new SingleDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper())
               )
           )
       );

@@ -86,7 +86,7 @@ public abstract class AbstractDataSegmentAnnouncer implements DataSegmentAnnounc
         return;
       }
 
-      log.info("Stopping CuratorDataSegmentAnnouncer with config[%s]", config);
+      log.info("Stopping %s with config[%s]", getClass(), config);
       announcer.unannounce(makeAnnouncementPath());
 
       started = false;
