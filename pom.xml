@@ -65,8 +65,7 @@
             <dependency>
                 <groupId>io.d8a</groupId>
                 <artifactId>d8a-conjure</artifactId>
-                <version>1.0-SNAPSHOT</version>
-            </dependency>
+                <version>1.0-SNAPSHOT</version>            </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>

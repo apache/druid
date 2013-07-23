@@ -32,36 +32,23 @@ public class ConjurerWrapper
 {
   private static final EmittingLogger log = new EmittingLogger(ConjurerWrapper.class);
   private final Conjurer.Builder builder;
-  private Conjurer conjurer;
   private static final int QUEUE_SIZE = 10000;
-  private final Thread conjureThread;
   private final BlockingQueue<Object> queue = new ArrayBlockingQueue<Object>(QUEUE_SIZE);
-
+  private volatile Conjurer conjurer;
   public ConjurerWrapper(Conjurer.Builder conjurerBuilder)
   {
-    this.builder = conjurerBuilder;
-    builder.withPrinter(Conjurer.queuePrinter(queue));
-    conjureThread = new Thread()
-    {
-      public void run()
-      {
-        while (!isInterrupted()) {
-          conjurer.run();
-        }
-      }
-    };
-    conjureThread.setDaemon(true);
+    this.builder = conjurerBuilder.withPrinter(Conjurer.queuePrinter(queue));
   }
 
   public void start()
   {
-    this.conjurer = builder.build();
-    conjureThread.start();
+    conjurer = builder.build();
+    conjurer.start();
   }
 
   public void stop()
   {
-    conjureThread.interrupt();
+    conjurer.stop();
   }
 
   public Map<String, Object> takeFromQueue(long waitTime, TimeUnit unit)

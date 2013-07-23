@@ -41,7 +41,7 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
 {
   private static final long waitTime = 15L;
   private static final TimeUnit unit = TimeUnit.SECONDS;
-  private final ConjurerWrapper wrapperTupac;
+  private final ConjurerWrapper tupac;
 
   @JsonCreator
   public ConjurerFirehoseFactory(
@@ -67,13 +67,14 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
 
   public ConjurerFirehoseFactory(ConjurerWrapper wrapper)
   {
-    this.wrapperTupac = wrapper;
+    this.tupac = wrapper;
   }
 
   @Override
   public Firehose connect() throws IOException
   {
-    wrapperTupac.start();
+    tupac.start();
+    int x=4;
     return new Firehose()
     {
       Map<String, Object> map;
@@ -81,7 +82,7 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       @Override
       public boolean hasMore()
       {
-        map = wrapperTupac.takeFromQueue(waitTime, unit);
+        map = tupac.takeFromQueue(waitTime, unit);
         return map != null;
       }
 
