@@ -291,7 +291,7 @@ public class DruidMaster
 
       final String toLoadQueueSegPath = ZKPaths.makePath(ZKPaths.makePath(zkPaths.getLoadQueuePath(), to), segmentName);
       final String toServedSegPath = ZKPaths.makePath(
-          ZKPaths.makePath(zkPaths.getServedSegmentsPath(), to), segmentName
+          ZKPaths.makePath(serverInventoryView.getInventoryManagerConfig().getInventoryPath(), to), segmentName
       );
 
       loadPeon.loadSegment(

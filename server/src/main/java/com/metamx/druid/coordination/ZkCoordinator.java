@@ -50,13 +50,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
   private final ObjectMapper jsonMapper;
   private final ZkCoordinatorConfig config;
+  private final ZkPathsConfig zkPaths;
   private final DruidServerMetadata me;
   private final DataSegmentAnnouncer announcer;
   private final CuratorFramework curator;
   private final ServerManager serverManager;
-
-  private final String loadQueueLocation;
-  private final String servedSegmentsLocation;
 
   private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started;
@@ -73,13 +71,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
+    this.zkPaths = zkPaths;
     this.me = me;
     this.announcer = announcer;
     this.curator = curator;
     this.serverManager = serverManager;
-
-    this.loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
-    this.servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
   }
 
   @LifecycleStart
@@ -90,6 +86,10 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       if (started) {
         return;
       }
+
+      final String loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
+      final String servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
+      final String liveSegmentsLocation = ZKPaths.makePath(zkPaths.getLiveSegmentsPath(), me.getName());
 
       loadQueueCache = new PathChildrenCache(
           curator,
@@ -104,6 +104,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
         curator.newNamespaceAwareEnsurePath(loadQueueLocation).ensure(curator.getZookeeperClient());
         curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
+        curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
 
         if (config.isLoadFromSegmentCacheEnabled()) {
           loadCache();

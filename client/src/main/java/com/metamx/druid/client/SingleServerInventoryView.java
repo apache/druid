@@ -21,6 +21,7 @@ package com.metamx.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.druid.curator.inventory.InventoryManagerConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -39,9 +40,27 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment>
   )
   {
     super(
-        config, zkPaths, curator, exec, jsonMapper, new TypeReference<DataSegment>()
-    {
-    }
+        config,
+        new InventoryManagerConfig()
+        {
+          @Override
+          public String getContainerPath()
+          {
+            return zkPaths.getAnnouncementsPath();
+          }
+
+          @Override
+          public String getInventoryPath()
+          {
+            return zkPaths.getServedSegmentsPath();
+          }
+        },
+        curator,
+        exec,
+        jsonMapper,
+        new TypeReference<DataSegment>()
+        {
+        }
     );
   }
 

@@ -30,7 +30,6 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.curator.inventory.CuratorInventoryManager;
 import com.metamx.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import com.metamx.druid.curator.inventory.InventoryManagerConfig;
-import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -59,7 +58,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
 
   public ServerInventoryView(
       final ServerInventoryViewConfig config,
-      final ZkPathsConfig zkPaths,
+      final InventoryManagerConfig inventoryManagerConfig,
       final CuratorFramework curator,
       final ExecutorService exec,
       final ObjectMapper jsonMapper,
@@ -69,20 +68,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
     this.config = config;
     this.inventoryManager = new CuratorInventoryManager<DruidServer, InventoryType>(
         curator,
-        new InventoryManagerConfig()
-        {
-          @Override
-          public String getContainerPath()
-          {
-            return zkPaths.getAnnouncementsPath();
-          }
-
-          @Override
-          public String getInventoryPath()
-          {
-            return zkPaths.getServedSegmentsPath();
-          }
-        },
+        inventoryManagerConfig,
         exec,
         new CuratorInventoryManagerStrategy<DruidServer, InventoryType>()
         {
@@ -244,6 +230,11 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
   public void registerSegmentCallback(Executor exec, SegmentCallback callback)
   {
     segmentCallbacks.put(callback, exec);
+  }
+
+  public InventoryManagerConfig getInventoryManagerConfig()
+  {
+    return inventoryManager.getConfig();
   }
 
   protected void runSegmentCallbacks(

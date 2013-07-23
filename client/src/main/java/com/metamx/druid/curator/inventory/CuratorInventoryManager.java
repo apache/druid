@@ -135,6 +135,11 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     }
   }
 
+  public InventoryManagerConfig getConfig()
+  {
+    return config;
+  }
+
   public ContainerClass getInventoryValue(String containerKey)
   {
     final ContainerHolder containerHolder = containers.get(containerKey);

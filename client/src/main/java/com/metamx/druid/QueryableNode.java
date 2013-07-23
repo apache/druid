@@ -43,11 +43,11 @@ import com.metamx.druid.client.ServerView;
 import com.metamx.druid.client.SingleServerInventoryView;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.coordination.AbstractDataSegmentAnnouncer;
-import com.metamx.druid.coordination.BatchingCuratorDataSegmentAnnouncer;
-import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
+import com.metamx.druid.coordination.BatchDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.coordination.MultipleDataSegmentAnnouncerDataSegmentAnnouncer;
+import com.metamx.druid.coordination.SingleDataSegmentAnnouncer;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.http.NoopRequestLogger;
 import com.metamx.druid.http.RequestLogger;
@@ -456,7 +456,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
 
       final DataSegmentAnnouncer dataSegmentAnnouncer;
       if ("batch".equalsIgnoreCase(announcerType)) {
-        dataSegmentAnnouncer = new BatchingCuratorDataSegmentAnnouncer(
+        dataSegmentAnnouncer = new BatchDataSegmentAnnouncer(
             getDruidServerMetadata(),
             config,
             announcer,
@@ -465,13 +465,13 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       } else if ("legacy".equalsIgnoreCase(announcerType)) {
         dataSegmentAnnouncer = new MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
             Arrays.<AbstractDataSegmentAnnouncer>asList(
-                new BatchingCuratorDataSegmentAnnouncer(
+                new BatchDataSegmentAnnouncer(
                     getDruidServerMetadata(),
                     config,
                     announcer,
                     getJsonMapper()
                 ),
-                new CuratorDataSegmentAnnouncer(
+                new SingleDataSegmentAnnouncer(
                     getDruidServerMetadata(),
                     getZkPaths(),
                     announcer,

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
+import com.metamx.druid.curator.inventory.InventoryManagerConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
@@ -49,9 +50,27 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
   )
   {
     super(
-        config, zkPaths, curator, exec, jsonMapper, new TypeReference<Set<DataSegment>>()
-    {
-    }
+        config,
+        new InventoryManagerConfig()
+        {
+          @Override
+          public String getContainerPath()
+          {
+            return zkPaths.getAnnouncementsPath();
+          }
+
+          @Override
+          public String getInventoryPath()
+          {
+            return zkPaths.getLiveSegmentsPath();
+          }
+        },
+        curator,
+        exec,
+        jsonMapper,
+        new TypeReference<Set<DataSegment>>()
+        {
+        }
     );
   }
 
@@ -85,6 +104,7 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
     for (DataSegment segment : Sets.difference(existing, inventory)) {
       removeSingleInventory(container, segment.getIdentifier());
     }
+    zNodes.put(inventoryKey, inventory);
 
     return container;
   }
