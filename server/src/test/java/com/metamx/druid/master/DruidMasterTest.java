@@ -24,6 +24,7 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.SingleServerInventoryView;
+import com.metamx.druid.curator.inventory.InventoryManagerConfig;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.metrics.NoopServiceEmitter;
@@ -169,6 +170,20 @@ public class DruidMasterTest
 
     EasyMock.expect(serverInventoryView.getInventoryValue("from")).andReturn(druidServer);
     EasyMock.expect(serverInventoryView.getInventoryValue("to")).andReturn(druidServer);
+    EasyMock.expect(serverInventoryView.getInventoryManagerConfig()).andReturn(new InventoryManagerConfig()
+    {
+      @Override
+      public String getContainerPath()
+      {
+        return "";
+      }
+
+      @Override
+      public String getInventoryPath()
+      {
+        return "";
+      }
+    });
     EasyMock.replay(serverInventoryView);
 
     master.moveSegment("from", "to", "dummySegment", null);
