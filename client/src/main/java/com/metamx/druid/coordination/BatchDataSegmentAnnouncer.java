@@ -39,9 +39,9 @@ import java.util.Set;
 
 /**
  */
-public class BatchingDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
+public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
 {
-  private static final Logger log = new Logger(BatchingDataSegmentAnnouncer.class);
+  private static final Logger log = new Logger(BatchDataSegmentAnnouncer.class);
 
   private final ZkDataSegmentAnnouncerConfig config;
   private final Announcer announcer;
@@ -51,7 +51,7 @@ public class BatchingDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
   private final Set<SegmentZNode> availableZNodes = Sets.newHashSet();
   private final Map<DataSegment, SegmentZNode> segmentLookup = Maps.newHashMap();
 
-  public BatchingDataSegmentAnnouncer(
+  public BatchDataSegmentAnnouncer(
       DruidServerMetadata server,
       ZkDataSegmentAnnouncerConfig config,
       Announcer announcer,
