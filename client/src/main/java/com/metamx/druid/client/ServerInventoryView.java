@@ -27,6 +27,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.MapMaker;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.inventory.CuratorInventoryManager;
 import com.metamx.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import com.metamx.druid.curator.inventory.InventoryManagerConfig;
@@ -45,19 +46,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public abstract class ServerInventoryView<InventoryType> implements ServerView, InventoryView
 {
-  protected static final EmittingLogger log = new EmittingLogger(ServerInventoryView.class);
-
-  private ServerInventoryViewConfig config;
+  private final ServerInventoryViewConfig config;
+  private final Logger log;
   private final CuratorInventoryManager<DruidServer, InventoryType> inventoryManager;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
-  protected final ConcurrentMap<ServerCallback, Executor> serverCallbacks = new MapMaker().makeMap();
-  protected final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new MapMaker().makeMap();
+  private final ConcurrentMap<ServerCallback, Executor> serverCallbacks = new MapMaker().makeMap();
+  private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new MapMaker().makeMap();
 
-  protected static final Map<String, Integer> removedSegments = new MapMaker().makeMap();
+  private final Map<String, Integer> removedSegments = new MapMaker().makeMap();
 
   public ServerInventoryView(
       final ServerInventoryViewConfig config,
+      final Logger log,
       final InventoryManagerConfig inventoryManagerConfig,
       final CuratorFramework curator,
       final ExecutorService exec,
@@ -66,6 +67,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
   )
   {
     this.config = config;
+    this.log = log;
     this.inventoryManager = new CuratorInventoryManager<DruidServer, InventoryType>(
         curator,
         inventoryManagerConfig,

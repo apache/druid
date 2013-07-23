@@ -51,6 +51,7 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
   {
     super(
         config,
+        log,
         new InventoryManagerConfig()
         {
           @Override

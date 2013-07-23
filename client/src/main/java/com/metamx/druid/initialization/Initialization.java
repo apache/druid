@@ -197,7 +197,6 @@ public class Initialization
                                .connectString(curatorConfig.getZkHosts())
                                .sessionTimeoutMs(curatorConfig.getZkSessionTimeoutMs())
             .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
-                // Don't compress stuff written just yet, need to get code deployed first.
             .compressionProvider(new PotentiallyGzippedCompressionProvider(curatorConfig.enableCompression()))
             .build();
 

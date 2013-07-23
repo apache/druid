@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.druid.curator.inventory.InventoryManagerConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
+import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.util.concurrent.ExecutorService;
@@ -31,6 +32,8 @@ import java.util.concurrent.ExecutorService;
  */
 public class SingleServerInventoryView extends ServerInventoryView<DataSegment>
 {
+  private static final EmittingLogger log = new EmittingLogger(SingleServerInventoryView.class);
+
   public SingleServerInventoryView(
       final ServerInventoryViewConfig config,
       final ZkPathsConfig zkPaths,
@@ -41,6 +44,7 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment>
   {
     super(
         config,
+        log,
         new InventoryManagerConfig()
         {
           @Override
