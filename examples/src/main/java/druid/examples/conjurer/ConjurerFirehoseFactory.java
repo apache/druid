@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Queues;
 import com.metamx.druid.guava.Runnables;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
@@ -34,14 +35,17 @@ import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+
+import static io.d8a.conjure.Conjurer.Builder;
 
 @JsonTypeName("conjurer")
 public class ConjurerFirehoseFactory implements FirehoseFactory
 {
   private static final long waitTime = 15L;
   private static final TimeUnit unit = TimeUnit.SECONDS;
-  private final ConjurerWrapper tupac;
+  private final Builder builder;
 
   @JsonCreator
   public ConjurerFirehoseFactory(
@@ -53,7 +57,6 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
   )
   {
     this(
-        new ConjurerWrapper(
             Conjurer.getBuilder()
                     .withStartTime(startTime)
                     .withStopTime(stopTime)
@@ -61,20 +64,19 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
                     .withFilePath(filePath)
                     .withLinesPerSec(linesPerSec)
                     .withCustomSchema(true)
-        )
     );
   }
 
-  public ConjurerFirehoseFactory(ConjurerWrapper wrapper)
+  public ConjurerFirehoseFactory(Builder builder)
   {
-    this.tupac = wrapper;
+    this.builder=builder;
   }
 
   @Override
   public Firehose connect() throws IOException
   {
-    tupac.start();
-    int x=4;
+    final BlockingQueue<Object> queue=Queues.newArrayBlockingQueue((int)waitTime);
+    final Conjurer conjurer = builder.withPrinter(Conjurer.queuePrinter(queue)).build();
     return new Firehose()
     {
       Map<String, Object> map;
@@ -82,7 +84,12 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       @Override
       public boolean hasMore()
       {
-        map = tupac.takeFromQueue(waitTime, unit);
+        try {
+          map = (Map<String,Object>)queue.poll(waitTime, unit);
+        }
+        catch (InterruptedException e) {
+          e.printStackTrace();
+        }
         return map != null;
       }
 
@@ -110,7 +117,7 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       @Override
       public void close() throws IOException
       {
-         tupac.stop();
+         conjurer.stop();
       }
     };
   }
