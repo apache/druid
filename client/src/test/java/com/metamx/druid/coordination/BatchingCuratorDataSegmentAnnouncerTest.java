@@ -111,6 +111,12 @@ public class BatchingCuratorDataSegmentAnnouncerTest
           {
             return 100000;
           }
+
+          @Override
+          public String getAnnouncerType()
+          {
+            return "batch";
+          }
         },
         announcer,
         jsonMapper

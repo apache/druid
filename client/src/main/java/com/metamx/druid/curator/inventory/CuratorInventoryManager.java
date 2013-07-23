@@ -290,11 +290,18 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
         switch (event.getType()) {
           case CHILD_ADDED:
-          case CHILD_UPDATED:
-            final InventoryClass inventory = strategy.deserializeInventory(child.getData());
+            final InventoryClass addedInventory = strategy.deserializeInventory(child.getData());
 
             synchronized (holder) {
-              holder.setContainer(strategy.addInventory(holder.getContainer(), inventoryKey, inventory));
+              holder.setContainer(strategy.addInventory(holder.getContainer(), inventoryKey, addedInventory));
+            }
+
+            break;
+          case CHILD_UPDATED:
+            final InventoryClass updatedInventory = strategy.deserializeInventory(child.getData());
+
+            synchronized (holder) {
+              holder.setContainer(strategy.updateInventory(holder.getContainer(), inventoryKey, updatedInventory));
             }
 
             break;

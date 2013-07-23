@@ -27,13 +27,16 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import com.metamx.common.IAE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.BatchingServerInventoryView;
 import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
+import com.metamx.druid.client.SingleServerInventoryView;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.ConfigManager;
@@ -131,9 +134,31 @@ public class MasterMain
     final ExecutorService exec = Executors.newFixedThreadPool(
         1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryView-%s").build()
     );
-    ServerInventoryView serverInventoryView = new ServerInventoryView(
-        configFactory.build(ServerInventoryViewConfig.class), zkPaths, curatorFramework, exec, jsonMapper
-    );
+
+    final ServerInventoryViewConfig serverInventoryViewConfig = configFactory.build(ServerInventoryViewConfig.class);
+    final String announcerType = serverInventoryViewConfig.getAnnouncerType();
+
+    final ServerInventoryView serverInventoryView;
+    if ("legacy".equalsIgnoreCase(announcerType)) {
+      serverInventoryView = new SingleServerInventoryView(
+          serverInventoryViewConfig,
+          zkPaths,
+          curatorFramework,
+          exec,
+          jsonMapper
+      );
+    } else if ("batch".equalsIgnoreCase(announcerType)) {
+      serverInventoryView = new BatchingServerInventoryView(
+          serverInventoryViewConfig,
+          zkPaths,
+          curatorFramework,
+          exec,
+          jsonMapper
+      );
+    } else {
+      throw new IAE("Unknown type %s", announcerType);
+    }
+
     lifecycle.addManagedInstance(serverInventoryView);
 
     final DbConnectorConfig dbConnectorConfig = configFactory.build(DbConnectorConfig.class);

@@ -210,6 +210,14 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
     }
 
     @Override
+    public Map<String, Integer> updateInventory(
+        Map<String, Integer> container, String inventoryKey, Integer inventory
+    )
+    {
+      return addInventory(container, inventoryKey, inventory);
+    }
+
+    @Override
     public Map<String, Integer> removeInventory(Map<String, Integer> container, String inventoryKey)
     {
       container.remove(inventoryKey);

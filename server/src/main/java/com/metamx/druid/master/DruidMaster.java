@@ -85,7 +85,7 @@ public class DruidMaster
   private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
   private final DatabaseSegmentManager databaseSegmentManager;
-  private final ServerInventoryView serverInventoryView;
+  private final ServerInventoryView<Object> serverInventoryView;
   private final DatabaseRuleManager databaseRuleManager;
   private final CuratorFramework curator;
   private final ServiceEmitter emitter;

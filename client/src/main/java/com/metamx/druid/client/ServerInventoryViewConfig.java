@@ -29,4 +29,8 @@ public abstract class ServerInventoryViewConfig
   @Config("druid.master.removedSegmentLifetime")
   @Default("1")
   public abstract int getRemovedSegmentLifetime();
+
+  @Config("druid.announcer.type")
+  @Default("legacy")
+  public abstract String getAnnouncerType();
 }

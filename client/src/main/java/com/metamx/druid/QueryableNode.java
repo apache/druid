@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -33,11 +34,13 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.BatchingServerInventoryView;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.ServerView;
+import com.metamx.druid.client.SingleServerInventoryView;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.coordination.AbstractDataSegmentAnnouncer;
 import com.metamx.druid.coordination.BatchingCuratorDataSegmentAnnouncer;
@@ -343,7 +346,8 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     }
   }
 
-  private void initializeInventoryView()
+  private void
+  initializeInventoryView()
   {
     if (inventoryView == null) {
       initializeServerInventoryView();
@@ -357,13 +361,29 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       final ExecutorService exec = Executors.newFixedThreadPool(
           1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryView-%s").build()
       );
-      serverInventoryView = new ServerInventoryView(
-          getConfigFactory().build(ServerInventoryViewConfig.class),
-          getZkPaths(),
-          getCuratorFramework(),
-          exec,
-          getJsonMapper()
-      );
+
+      final ServerInventoryViewConfig serverInventoryViewConfig = getConfigFactory().build(ServerInventoryViewConfig.class);
+      final String announcerType = serverInventoryViewConfig.getAnnouncerType();
+
+      if ("legacy".equalsIgnoreCase(announcerType)) {
+        serverInventoryView = new SingleServerInventoryView(
+            serverInventoryViewConfig,
+            getZkPaths(),
+            getCuratorFramework(),
+            exec,
+            getJsonMapper()
+        );
+      } else if ("batch".equalsIgnoreCase(announcerType)) {
+        serverInventoryView = new BatchingServerInventoryView(
+            serverInventoryViewConfig,
+            getZkPaths(),
+            getCuratorFramework(),
+            exec,
+            getJsonMapper()
+        );
+      } else {
+        throw new IAE("Unknown type %s", announcerType);
+      }
       lifecycle.addManagedInstance(serverInventoryView);
     }
   }
