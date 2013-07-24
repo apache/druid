@@ -267,6 +267,7 @@ public class IndexerCoordinatorResource
               retMap.put("result", ret);
             }
             catch (IOException e) {
+              log.warn(e, "Failed to perform task action");
               return Response.serverError().build();
             }
 
