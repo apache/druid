@@ -178,7 +178,7 @@ public class BalancerCostAnalyzer
    *
    * @return A ServerHolder with the new home for a segment.
    */
-  public ServerHolder findNewSegmentHomeBalance(
+  public ServerHolder findNewSegmentHome(
       final DataSegment proposalSegment,
       final Iterable<ServerHolder> serverHolders
   )
@@ -194,21 +194,6 @@ public class BalancerCostAnalyzer
    *
    * @return A ServerHolder with the new home for a segment.
    */
-  public ServerHolder findNewSegmentHomeAssign(
-      final DataSegment proposalSegment,
-      final Iterable<ServerHolder> serverHolders
-  )
-  {
-    MinMaxPriorityQueue<Pair<Double, ServerHolder>> costsAndServers = computeCosts(proposalSegment, serverHolders);
-    while (!costsAndServers.isEmpty()) {
-      ServerHolder toServer = costsAndServers.pollFirst().rhs;
-      if (!toServer.isServingSegment(proposalSegment)) {
-        return toServer;
-      }
-    }
-
-    return null;
-  }
 
   private Pair<Double, ServerHolder> computeCosts(
       final DataSegment proposalSegment,

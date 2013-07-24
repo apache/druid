@@ -116,7 +116,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
         final BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList);
 
         if (params.getAvailableSegments().contains(segmentToMove.getSegment())) {
-          final ServerHolder holder = analyzer.findNewSegmentHomeBalance(segmentToMove.getSegment(), serverHolderList);
+          final ServerHolder holder = analyzer.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList);
 
           if (holder != null) {
             moveSegment(segmentToMove, holder.getServer(), params);
@@ -124,23 +124,23 @@ public class DruidMasterBalancer implements DruidMasterHelper
         }
       }
 
-      final double initialTotalCost = analyzer.calculateInitialTotalCost(serverHolderList);
-      final double normalization = analyzer.calculateNormalization(serverHolderList);
-      final double normalizedInitialCost = initialTotalCost / normalization;
+//      final double initialTotalCost = analyzer.calculateInitialTotalCost(serverHolderList);
+//      final double normalization = analyzer.calculateNormalization(serverHolderList);
+//      final double normalizedInitialCost = initialTotalCost / normalization;
 
-      stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
-      stats.addToTieredStat("normalization", tier, (long) normalization);
-      stats.addToTieredStat("normalizedInitialCostTimesOneThousand", tier, (long) (normalizedInitialCost * 1000));
+//      stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
+//      stats.addToTieredStat("normalization", tier, (long) normalization);
+//      stats.addToTieredStat("normalizedInitialCostTimesOneThousand", tier, (long) (normalizedInitialCost * 1000));
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
 
-      log.info(
-          "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f], Segments Moved: [%d]",
-          tier,
-          initialTotalCost,
-          normalization,
-          normalizedInitialCost,
-          currentlyMovingSegments.get(tier).size()
-      );
+//      log.info(
+//          "Segments Moved: [%d]",
+//          tier,
+////          initialTotalCost,
+////          normalization,
+////          normalizedInitialCost,
+//          currentlyMovingSegments.get(tier).size()
+//      );
     }
 
     return params.buildFromExisting()
