@@ -277,7 +277,7 @@ public class RealtimeIndexTask extends AbstractTask
     realtimePlumberSchool.setServiceEmitter(toolbox.getEmitter());
 
     if (this.rejectionPolicyFactory != null) {
-      realtimePlumberSchool.setRejectionPolicyFactory(new NoopRejectionPolicyFactory());
+      realtimePlumberSchool.setRejectionPolicyFactory(rejectionPolicyFactory);
     }
 
     final FireDepartment fireDepartment = new FireDepartment(schema, fireDepartmentConfig, null, null);
