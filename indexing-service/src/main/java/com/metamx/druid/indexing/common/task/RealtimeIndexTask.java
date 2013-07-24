@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
 import com.metamx.common.exception.FormattedException;
@@ -41,9 +42,12 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.query.FinalizeResultsQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
+import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
+import com.metamx.druid.realtime.FireDepartment;
 import com.metamx.druid.realtime.FireDepartmentConfig;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
+import com.metamx.druid.realtime.RealtimeMetricsMonitor;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.druid.realtime.firehose.Firehose;
@@ -91,7 +95,7 @@ public class RealtimeIndexTask extends AbstractTask
   private volatile Plumber plumber = null;
 
   @JsonIgnore
-  private volatile TaskToolbox toolbox = null;
+  private volatile QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate = null;
 
   @JsonCreator
   public RealtimeIndexTask(
@@ -142,7 +146,7 @@ public class RealtimeIndexTask extends AbstractTask
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
     if (plumber != null) {
-      QueryRunnerFactory<T, Query<T>> factory = toolbox.getQueryRunnerFactoryConglomerate().findFactory(query);
+      QueryRunnerFactory<T, Query<T>> factory = queryRunnerFactoryConglomerate.findFactory(query);
       QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
       return new FinalizeResultsQueryRunner<T>(plumber.getQueryRunner(query), toolChest);
@@ -166,7 +170,7 @@ public class RealtimeIndexTask extends AbstractTask
 
     boolean normalExit = true;
 
-    final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
+    // Set up firehose
     final Period intermediatePersistPeriod = fireDepartmentConfig.getIntermediatePersistPeriod();
     final Firehose firehose = firehoseFactory.connect();
 
@@ -265,12 +269,18 @@ public class RealtimeIndexTask extends AbstractTask
     realtimePlumberSchool.setServerView(toolbox.getNewSegmentServerView());
     realtimePlumberSchool.setServiceEmitter(toolbox.getEmitter());
 
-    this.toolbox = toolbox;
-    this.plumber = realtimePlumberSchool.findPlumber(schema, metrics);
+    final FireDepartment fireDepartment = new FireDepartment(schema, fireDepartmentConfig, null, null);
+    final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
+    this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
+    this.plumber = realtimePlumberSchool.findPlumber(schema, fireDepartment.getMetrics());
 
     try {
       plumber.startJob();
 
+      // Set up metrics emission
+      toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
+
+      // Time to read data!
       long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
       while (firehose.hasMore()) {
         final InputRow inputRow;
@@ -282,7 +292,7 @@ public class RealtimeIndexTask extends AbstractTask
 
           final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
           if (sink == null) {
-            metrics.incrementThrownAway();
+            fireDepartment.getMetrics().incrementThrownAway();
             log.debug("Throwing away event[%s]", inputRow);
 
             if (System.currentTimeMillis() > nextFlush) {
@@ -298,7 +308,7 @@ public class RealtimeIndexTask extends AbstractTask
           }
 
           int currCount = sink.add(inputRow);
-          metrics.incrementProcessed();
+          fireDepartment.getMetrics().incrementProcessed();
           if (currCount >= fireDepartmentConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
             plumber.persist(firehose.commit());
             nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
@@ -306,7 +316,7 @@ public class RealtimeIndexTask extends AbstractTask
         }
         catch (FormattedException e) {
           log.warn(e, "unparseable line");
-          metrics.incrementUnparseable();
+          fireDepartment.getMetrics().incrementUnparseable();
         }
       }
     }
@@ -327,6 +337,7 @@ public class RealtimeIndexTask extends AbstractTask
         }
         finally {
           Closeables.closeQuietly(firehose);
+          toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
         }
       }
     }
