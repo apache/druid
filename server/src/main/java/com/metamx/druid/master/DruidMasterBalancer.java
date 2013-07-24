@@ -124,23 +124,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
         }
       }
 
-//      final double initialTotalCost = analyzer.calculateInitialTotalCost(serverHolderList);
-//      final double normalization = analyzer.calculateNormalization(serverHolderList);
-//      final double normalizedInitialCost = initialTotalCost / normalization;
-
-//      stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
-//      stats.addToTieredStat("normalization", tier, (long) normalization);
-//      stats.addToTieredStat("normalizedInitialCostTimesOneThousand", tier, (long) (normalizedInitialCost * 1000));
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
-
-//      log.info(
-//          "Segments Moved: [%d]",
-//          tier,
-////          initialTotalCost,
-////          normalization,
-////          normalizedInitialCost,
-//          currentlyMovingSegments.get(tier).size()
-//      );
     }
 
     return params.buildFromExisting()

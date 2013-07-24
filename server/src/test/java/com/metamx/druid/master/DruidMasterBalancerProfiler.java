@@ -1,5 +1,6 @@
 package com.metamx.druid.master;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -17,6 +18,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class DruidMasterBalancerProfiler
 {
@@ -62,6 +64,8 @@ public class DruidMasterBalancerProfiler
 
   @Test
   public void profileRun(){
+  Stopwatch stopwatch = new Stopwatch();
+    stopwatch.start();
   LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
   LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
 
@@ -110,11 +114,8 @@ public class DruidMasterBalancerProfiler
                               .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                               .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                               .build();
-    for (int i=0;i<1000;i++)
-    {
     params = new DruidMasterBalancerTester(master).run(params);
-  }
-
+    System.out.println(stopwatch.elapsed(TimeUnit.MILLISECONDS));
  }
 
 }
