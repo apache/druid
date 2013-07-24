@@ -183,17 +183,7 @@ public class BalancerCostAnalyzer
       final Iterable<ServerHolder> serverHolders
   )
   {
-    MinMaxPriorityQueue<Pair<Double, ServerHolder>> costsAndServers = computeCosts(proposalSegment, serverHolders);
-    if (costsAndServers.isEmpty()) {
-      return null;
-    }
-
-    ServerHolder toServer = costsAndServers.pollFirst().rhs;
-    if (!toServer.isServingSegment(proposalSegment)) {
-      return toServer;
-    }
-
-    return null;
+    return computeCosts(proposalSegment, serverHolders).rhs;
   }
 
   /**
@@ -220,11 +210,12 @@ public class BalancerCostAnalyzer
     return null;
   }
 
-  private MinMaxPriorityQueue<Pair<Double, ServerHolder>> computeCosts(
+  private Pair<Double, ServerHolder> computeCosts(
       final DataSegment proposalSegment,
       final Iterable<ServerHolder> serverHolders
   )
   {
+    Pair<Double,ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY,null);
     MinMaxPriorityQueue<Pair<Double, ServerHolder>> costsAndServers = MinMaxPriorityQueue.orderedBy(
         new Comparator<Pair<Double, ServerHolder>>()
         {
@@ -260,10 +251,12 @@ public class BalancerCostAnalyzer
         cost += computeJointSegmentCosts(proposalSegment, segment);
       }
 
-      costsAndServers.add(Pair.of(cost, server));
+      if (cost<bestServer.lhs && !server.isServingSegment(proposalSegment)){
+        bestServer= Pair.of(cost,server);
+      }
     }
 
-    return costsAndServers;
+    return bestServer;
   }
 
 }
