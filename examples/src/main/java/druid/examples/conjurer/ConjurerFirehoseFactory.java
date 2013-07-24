@@ -57,26 +57,27 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
   )
   {
     this(
-            Conjurer.getBuilder()
-                    .withStartTime(startTime)
-                    .withStopTime(stopTime)
-                    .withMaxLines(maxLines)
-                    .withFilePath(filePath)
-                    .withLinesPerSec(linesPerSec)
-                    .withCustomSchema(true)
+        Conjurer.getBuilder()
+                .withStartTime(startTime)
+                .withStopTime(stopTime)
+                .withMaxLines(maxLines)
+                .withFilePath(filePath)
+                .withLinesPerSec(linesPerSec)
+                .withCustomSchema(true)
     );
   }
 
   public ConjurerFirehoseFactory(Builder builder)
   {
-    this.builder=builder;
+    this.builder = builder;
   }
 
   @Override
   public Firehose connect() throws IOException
   {
-    final BlockingQueue<Object> queue=Queues.newArrayBlockingQueue((int)waitTime);
+    final BlockingQueue<Map<String, Object>> queue = Queues.newArrayBlockingQueue((int) waitTime);
     final Conjurer conjurer = builder.withPrinter(Conjurer.queuePrinter(queue)).build();
+    conjurer.start();
     return new Firehose()
     {
       Map<String, Object> map;
@@ -85,7 +86,7 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       public boolean hasMore()
       {
         try {
-          map = (Map<String,Object>)queue.poll(waitTime, unit);
+          map = queue.poll(waitTime, unit);
         }
         catch (InterruptedException e) {
           e.printStackTrace();
@@ -117,7 +118,7 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       @Override
       public void close() throws IOException
       {
-         conjurer.stop();
+        conjurer.stop();
       }
     };
   }
