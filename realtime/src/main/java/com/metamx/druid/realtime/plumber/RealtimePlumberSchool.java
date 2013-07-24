@@ -105,6 +105,8 @@ public class RealtimePlumberSchool implements PlumberSchool
   private volatile SegmentPublisher segmentPublisher = null;
   private volatile ServerView serverView = null;
 
+  private volatile boolean noMoreData = false;
+
   @JsonCreator
   public RealtimePlumberSchool(
       @JsonProperty("windowPeriod") Period windowPeriod,
@@ -323,6 +325,8 @@ public class RealtimePlumberSchool implements PlumberSchool
       public void finishJob()
       {
         log.info("Shutting down...");
+
+        noMoreData = true;
 
         while (!sinks.isEmpty()) {
           try {
@@ -553,7 +557,7 @@ public class RealtimePlumberSchool implements PlumberSchool
                     List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
                     for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
                       final Long intervalStart = entry.getKey();
-                      if (intervalStart < minTimestamp) {
+                      if (noMoreData || intervalStart < minTimestamp) {
                         log.info("Adding entry[%s] for merge and push.", entry);
                         sinksToPush.add(entry);
                       }

@@ -7,7 +7,8 @@ import org.joda.time.Period;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "serverTime", value = ServerTimeRejectionPolicyFactory.class),
-    @JsonSubTypes.Type(name = "messageTime", value = MessageTimeRejectionPolicyFactory.class)
+    @JsonSubTypes.Type(name = "messageTime", value = MessageTimeRejectionPolicyFactory.class),
+    @JsonSubTypes.Type(name = "none", value = NoopRejectionPolicyFactory.class)
 })
 public interface RejectionPolicyFactory
 {
