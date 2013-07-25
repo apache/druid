@@ -16,37 +16,11 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
-
 package com.metamx.druid.master;
 
-import com.google.common.collect.Lists;
-import com.metamx.druid.client.DataSegment;
+import org.joda.time.DateTime;
 
-import java.util.List;
-
-public class RandomBalancerStrategy implements BalancerStrategy
+public interface BalancerStrategyFactory
 {
-  private final ReservoirSegmentSampler sampler = new ReservoirSegmentSampler();
-
-  @Override
-  public ServerHolder findNewSegmentHome(
-      DataSegment proposalSegment, Iterable<ServerHolder> serverHolders
-  )
-  {
-    return sampler.getRandomServerHolder(Lists.newArrayList(serverHolders));
-  }
-
-  @Override
-  public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders)
-  {
-    return sampler.getRandomBalancerSegmentHolder(serverHolders);
-  }
-
-  @Override
-  public void emitStats(
-      String tier, MasterStats stats, List<ServerHolder> serverHolderList
-  )
-  {
-    return;
-  }
+  public BalancerStrategy getBalancerStrategy(DateTime referenceTimestamp);
 }

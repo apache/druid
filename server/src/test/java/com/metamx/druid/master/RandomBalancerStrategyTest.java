@@ -16,37 +16,27 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
-
 package com.metamx.druid.master;
 
-import com.google.common.collect.Lists;
-import com.metamx.druid.client.DataSegment;
+import org.junit.Test;
 
-import java.util.List;
-
-public class RandomBalancerStrategy implements BalancerStrategy
+public class RandomBalancerStrategyTest
 {
-  private final ReservoirSegmentSampler sampler = new ReservoirSegmentSampler();
-
-  @Override
-  public ServerHolder findNewSegmentHome(
-      DataSegment proposalSegment, Iterable<ServerHolder> serverHolders
-  )
+  @Test
+  public void testFindNewSegmentHome() throws Exception
   {
-    return sampler.getRandomServerHolder(Lists.newArrayList(serverHolders));
+
   }
 
-  @Override
-  public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders)
+  @Test
+  public void testPickSegmentToMove() throws Exception
   {
-    return sampler.getRandomBalancerSegmentHolder(serverHolders);
+
   }
 
-  @Override
-  public void emitStats(
-      String tier, MasterStats stats, List<ServerHolder> serverHolderList
-  )
+  @Test
+  public void testEmitStats() throws Exception
   {
-    return;
+
   }
 }

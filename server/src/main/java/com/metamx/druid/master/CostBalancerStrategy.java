@@ -1,23 +1,45 @@
+/*
+* Druid - a distributed column store.
+* Copyright (C) 2012  Metamarkets Group Inc.
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License
+* as published by the Free Software Foundation; either version 2
+* of the License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 package com.metamx.druid.master;
 
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.Pair;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.Comparator;
 import java.util.List;
 
-public class CostBalancerStrategy extends BalancerStrategy
+public class CostBalancerStrategy implements BalancerStrategy
 {
+  private static final EmittingLogger log = new EmittingLogger(CostBalancerStrategy.class);
+  private final DateTime referenceTimestamp;
   private static final int DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
   private static final int SEVEN_DAYS_IN_MILLIS = 7 * DAY_IN_MILLIS;
   private static final int THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
 
-  public CostBalancerStrategy(DateTime referenceTimeStamp)
+  public CostBalancerStrategy(DateTime referenceTimestamp)
   {
-    super(referenceTimeStamp);
+    this.referenceTimestamp=referenceTimestamp;
   }
 
   @Override
@@ -44,7 +66,7 @@ public class CostBalancerStrategy extends BalancerStrategy
   )
   {
 
-    Pair<Double,ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY,null);
+    Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
     MinMaxPriorityQueue<Pair<Double, ServerHolder>> costsAndServers = MinMaxPriorityQueue.orderedBy(
         new Comparator<Pair<Double, ServerHolder>>()
         {
@@ -80,8 +102,8 @@ public class CostBalancerStrategy extends BalancerStrategy
         cost += computeJointSegmentCosts(proposalSegment, segment);
       }
 
-      if (cost<bestServer.lhs && !server.isServingSegment(proposalSegment)){
-        bestServer= Pair.of(cost,server);
+      if (cost < bestServer.lhs && !server.isServingSegment(proposalSegment)) {
+        bestServer = Pair.of(cost, server);
       }
     }
 
@@ -141,6 +163,71 @@ public class CostBalancerStrategy extends BalancerStrategy
   {
     ReservoirSegmentSampler sampler = new ReservoirSegmentSampler();
     return sampler.getRandomBalancerSegmentHolder(serverHolders);
+  }
+
+  /**
+   * Calculates the initial cost of the Druid segment configuration.
+   *
+   * @param serverHolders A list of ServerHolders for a particular tier.
+   *
+   * @return The initial cost of the Druid tier.
+   */
+  public double calculateInitialTotalCost(final List<ServerHolder> serverHolders)
+  {
+    double cost = 0;
+    for (ServerHolder server : serverHolders) {
+      DataSegment[] segments = server.getServer().getSegments().values().toArray(new DataSegment[]{});
+      for (int i = 0; i < segments.length; ++i) {
+        for (int j = i; j < segments.length; ++j) {
+          cost += computeJointSegmentCosts(segments[i], segments[j]);
+        }
+      }
+    }
+    return cost;
+  }
+
+  /**
+   * Calculates the cost normalization.  This is such that the normalized cost is lower bounded
+   * by 1 (e.g. when each segment gets its own compute node).
+   *
+   * @param serverHolders A list of ServerHolders for a particular tier.
+   *
+   * @return The normalization value (the sum of the diagonal entries in the
+   *         pairwise cost matrix).  This is the cost of a cluster if each
+   *         segment were to get its own compute node.
+   */
+  public double calculateNormalization(final List<ServerHolder> serverHolders)
+  {
+    double cost = 0;
+    for (ServerHolder server : serverHolders) {
+      for (DataSegment segment : server.getServer().getSegments().values()) {
+        cost += computeJointSegmentCosts(segment, segment);
+      }
+    }
+    return cost;
+  }
+
+  @Override
+  public void emitStats( String tier,
+      MasterStats stats, List<ServerHolder> serverHolderList
+  )
+  {
+          final double initialTotalCost = calculateInitialTotalCost(serverHolderList);
+          final double normalization = calculateNormalization(serverHolderList);
+          final double normalizedInitialCost = initialTotalCost / normalization;
+
+          stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
+          stats.addToTieredStat("normalization", tier, (long) normalization);
+          stats.addToTieredStat("normalizedInitialCostTimesOneThousand", tier, (long) (normalizedInitialCost * 1000));
+
+    log.info(
+                 "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f]",
+                  tier,
+                  initialTotalCost,
+                  normalization,
+                  normalizedInitialCost
+              );
+
   }
 
 

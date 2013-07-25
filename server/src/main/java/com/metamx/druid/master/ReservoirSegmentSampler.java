@@ -1,3 +1,22 @@
+/*
+* Druid - a distributed column store.
+* Copyright (C) 2012  Metamarkets Group Inc.
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License
+* as published by the Free Software Foundation; either version 2
+* of the License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 package com.metamx.druid.master;
 
 import com.metamx.druid.client.DataSegment;
@@ -7,9 +26,10 @@ import java.util.Random;
 
 public class ReservoirSegmentSampler
 {
+  private final Random rand = new Random();
+
   public BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
   {
-    Random rand = new Random(0);
     ServerHolder fromServerHolder = null;
     DataSegment proposalSegment = null;
     int numSoFar = 0;
@@ -31,17 +51,16 @@ public class ReservoirSegmentSampler
 
   public ServerHolder getRandomServerHolder(final List<ServerHolder> serverHolders)
   {
-    ServerHolder fromServerHolder = null;
-    Random rand = new Random(0);
+    ServerHolder serverHolder = null;
     int numSoFar = 0;
     for (ServerHolder server : serverHolders) {
       int randNum = rand.nextInt(numSoFar + 1);
 
-      if(randNum==numSoFar) {
-        fromServerHolder=server;
+      if (randNum == numSoFar) {
+        serverHolder = server;
       }
-    numSoFar++;
+      numSoFar++;
     }
-    return fromServerHolder;
+    return serverHolder;
   }
 }

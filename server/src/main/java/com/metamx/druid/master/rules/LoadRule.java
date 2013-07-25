@@ -60,7 +60,7 @@ public abstract class LoadRule implements Rule
 
     final List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(serverQueue);
     final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-    final BalancerStrategy strategy = params.getBalancerStrategy(referenceTimestamp);
+    final BalancerStrategy strategy = params.getBalancerStrategyFactory().getBalancerStrategy(referenceTimestamp);
     if (params.getAvailableSegments().contains(segment)) {
       stats.accumulate(
           assign(
