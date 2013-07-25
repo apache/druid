@@ -47,20 +47,4 @@ public class ReservoirSegmentSampler
     }
     return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
   }
-
-
-  public ServerHolder getRandomServerHolder(final List<ServerHolder> serverHolders)
-  {
-    ServerHolder serverHolder = null;
-    int numSoFar = 0;
-    for (ServerHolder server : serverHolders) {
-      int randNum = rand.nextInt(numSoFar + 1);
-
-      if (randNum == numSoFar) {
-        serverHolder = server;
-      }
-      numSoFar++;
-    }
-    return serverHolder;
-  }
 }

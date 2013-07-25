@@ -22,7 +22,9 @@ package com.metamx.druid.master;
 import com.google.common.collect.Lists;
 import com.metamx.druid.client.DataSegment;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class RandomBalancerStrategy implements BalancerStrategy
 {
@@ -33,7 +35,8 @@ public class RandomBalancerStrategy implements BalancerStrategy
       DataSegment proposalSegment, Iterable<ServerHolder> serverHolders
   )
   {
-    return sampler.getRandomServerHolder(Lists.newArrayList(serverHolders));
+    ArrayList<ServerHolder> serverHoldersList = Lists.newArrayList(serverHolders);
+    return serverHoldersList.get(new Random().nextInt(serverHoldersList.size()));
   }
 
   @Override

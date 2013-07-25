@@ -1,4 +1,4 @@
-package com.metamx.druid.master;
+package com.metamx.druid.utils;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
@@ -7,6 +7,14 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
+import com.metamx.druid.master.DruidCluster;
+import com.metamx.druid.master.DruidMaster;
+import com.metamx.druid.master.DruidMasterBalancerTester;
+import com.metamx.druid.master.DruidMasterRuntimeParams;
+import com.metamx.druid.master.LoadPeonCallback;
+import com.metamx.druid.master.LoadQueuePeon;
+import com.metamx.druid.master.LoadQueuePeonTester;
+import com.metamx.druid.master.ServerHolder;
 import com.metamx.druid.shard.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
