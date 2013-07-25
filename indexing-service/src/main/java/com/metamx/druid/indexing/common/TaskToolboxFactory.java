@@ -29,6 +29,7 @@ import com.metamx.druid.indexing.common.config.TaskConfig;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.metrics.MonitorScheduler;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 /**
@@ -45,6 +46,7 @@ public class TaskToolboxFactory
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
+  private final MonitorScheduler monitorScheduler;
   private final ObjectMapper objectMapper;
 
   public TaskToolboxFactory(
@@ -57,6 +59,7 @@ public class TaskToolboxFactory
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
+      MonitorScheduler monitorScheduler,
       ObjectMapper objectMapper
   )
   {
@@ -69,6 +72,7 @@ public class TaskToolboxFactory
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
+    this.monitorScheduler = monitorScheduler;
     this.objectMapper = objectMapper;
   }
 
@@ -85,6 +89,7 @@ public class TaskToolboxFactory
         segmentAnnouncer,
         newSegmentServerView,
         queryRunnerFactoryConglomerate,
+        monitorScheduler,
         objectMapper
     );
   }

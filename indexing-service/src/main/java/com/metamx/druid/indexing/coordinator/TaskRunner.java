@@ -40,8 +40,7 @@ public interface TaskRunner
   public ListenableFuture<TaskStatus> run(Task task);
 
   /**
-   * Best-effort task cancellation. May or may not do anything. Calling this multiple times may have
-   * a stronger effect.
+   * Best-effort task shutdown. May or may not do anything.
    */
   public void shutdown(String taskid);
 
