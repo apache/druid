@@ -78,7 +78,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
   {
     final MasterStats stats = new MasterStats();
     final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-    final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
+    final BalancerStrategy strategy = params.getBalancerStrategy(referenceTimestamp);
     final int maxSegmentsToMove = params.getMaxSegmentsToMove();
 
     for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry :
@@ -113,10 +113,10 @@ public class DruidMasterBalancer implements DruidMasterHelper
       }
 
       for (int iter = 0; iter < maxSegmentsToMove; iter++) {
-        final BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList);
+        final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(serverHolderList);
 
         if (params.getAvailableSegments().contains(segmentToMove.getSegment())) {
-          final ServerHolder holder = analyzer.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList);
+          final ServerHolder holder = strategy.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList);
 
           if (holder != null) {
             moveSegment(segmentToMove, holder.getServer(), params);

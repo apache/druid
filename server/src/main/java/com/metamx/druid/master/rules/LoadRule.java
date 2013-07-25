@@ -22,7 +22,7 @@ package com.metamx.druid.master.rules;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.master.BalancerCostAnalyzer;
+import com.metamx.druid.master.BalancerStrategy;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
 import com.metamx.druid.master.LoadPeonCallback;
@@ -60,15 +60,14 @@ public abstract class LoadRule implements Rule
 
     final List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(serverQueue);
     final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-    final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
-
+    final BalancerStrategy strategy = params.getBalancerStrategy(referenceTimestamp);
     if (params.getAvailableSegments().contains(segment)) {
       stats.accumulate(
           assign(
               params.getReplicationManager(),
               expectedReplicants,
               totalReplicants,
-              analyzer,
+              strategy,
               serverHolderList,
               segment
           )
@@ -84,7 +83,7 @@ public abstract class LoadRule implements Rule
       final ReplicationThrottler replicationManager,
       final int expectedReplicants,
       int totalReplicants,
-      final BalancerCostAnalyzer analyzer,
+      final BalancerStrategy strategy,
       final List<ServerHolder> serverHolderList,
       final DataSegment segment
   )
@@ -98,7 +97,7 @@ public abstract class LoadRule implements Rule
         break;
       }
 
-      final ServerHolder holder = analyzer.findNewSegmentHome(segment, serverHolderList);
+      final ServerHolder holder = strategy.findNewSegmentHome(segment, serverHolderList);
 
       if (holder == null) {
         log.warn(

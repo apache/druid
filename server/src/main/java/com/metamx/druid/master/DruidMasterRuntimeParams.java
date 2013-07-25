@@ -163,9 +163,9 @@ public class DruidMasterRuntimeParams
     return balancerReferenceTimestamp;
   }
 
-  public BalancerCostAnalyzer getBalancerCostAnalyzer(DateTime referenceTimestamp)
+  public BalancerStrategy getBalancerStrategy(DateTime referenceTimestamp)
   {
-    return new BalancerCostAnalyzer(referenceTimestamp);
+    return new CostBalancerStrategy(referenceTimestamp);
   }
 
   public boolean hasDeletionWaitTimeElapsed()
