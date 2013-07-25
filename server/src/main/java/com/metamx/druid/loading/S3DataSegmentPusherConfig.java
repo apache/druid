@@ -32,4 +32,8 @@ public abstract class S3DataSegmentPusherConfig
   @Config("druid.pusher.s3.baseKey")
   @Default("")
   public abstract String getBaseKey();
+
+  @Config("druid.pusher.s3.disableAcl")
+  @Default("false")
+  public abstract boolean getDisableAcl();
 }

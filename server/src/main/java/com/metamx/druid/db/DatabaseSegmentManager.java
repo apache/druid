@@ -20,7 +20,6 @@
 package com.metamx.druid.db;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -33,7 +32,7 @@ import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidDataSource;
-
+import com.metamx.druid.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -45,7 +44,6 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import javax.annotation.Nullable;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -175,17 +173,16 @@ public class DatabaseSegmentManager
           }
       );
 
-      final List<DataSegment> segments = Lists.transform(
-          segmentTimeline.lookup(new Interval(new DateTime(0), new DateTime("3000-01-01"))),
-          new Function<TimelineObjectHolder<String, DataSegment>, DataSegment>()
-          {
-            @Override
-            public DataSegment apply(@Nullable TimelineObjectHolder<String, DataSegment> input)
-            {
-              return input.getObject().getChunk(0).getObject();
-            }
-          }
-      );
+      final List<DataSegment> segments = Lists.newArrayList();
+      for (TimelineObjectHolder<String, DataSegment> objectHolder : segmentTimeline.lookup(
+          new Interval(
+              "0000-01-01/3000-01-01"
+          )
+      )) {
+        for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
+          segments.add(partitionChunk.getObject());
+        }
+      }
 
       if (segments.isEmpty()) {
         log.warn("No segments found in the database!");

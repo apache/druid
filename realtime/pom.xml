@@ -28,7 +28,7 @@
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.5.6-SNAPSHOT</version>
+        <version>0.5.20-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -119,6 +119,11 @@
                     <artifactId>log4j</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
+            <version>3.1.1</version>
         </dependency>
 
         <!-- Dependencies required for jets3t b/c emr pom doesn't include them -->
