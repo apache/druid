@@ -65,6 +65,8 @@ public class RemoteTaskActionClient implements TaskActionClient
 
         final String response;
 
+        log.info("Submitting action for task[%s] to coordinator[%s]: %s", task.getId(), serviceUri, taskAction);
+
         try {
           response = httpClient.post(serviceUri.toURL())
                                .setContent("application/json", dataToSend)
