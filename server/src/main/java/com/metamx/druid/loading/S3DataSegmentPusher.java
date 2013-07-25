@@ -80,7 +80,9 @@ public class S3DataSegmentPusher implements DataSegmentPusher
       final String outputBucket = config.getBucket();
       toPush.setBucketName(outputBucket);
       toPush.setKey(outputKey + "/index.zip");
-      toPush.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+      if (!config.getDisableAcl()) {
+        toPush.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+      }
 
       log.info("Pushing %s.", toPush);
       s3Client.putObject(outputBucket, toPush);
@@ -96,7 +98,9 @@ public class S3DataSegmentPusher implements DataSegmentPusher
       S3Object descriptorObject = new S3Object(descriptorFile);
       descriptorObject.setBucketName(outputBucket);
       descriptorObject.setKey(outputKey + "/descriptor.json");
-      descriptorObject.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+      if (!config.getDisableAcl()) {
+        descriptorObject.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+      }
 
       log.info("Pushing %s", descriptorObject);
       s3Client.putObject(outputBucket, descriptorObject);
