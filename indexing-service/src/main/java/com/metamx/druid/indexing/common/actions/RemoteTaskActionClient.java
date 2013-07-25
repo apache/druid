@@ -107,7 +107,7 @@ public class RemoteTaskActionClient implements TaskActionClient
     final String scheme;
     final String host;
     final int port;
-    final String path = "/mmx/merger/v1/action";
+    final String path = "/druid/indexer/v1/action";
 
     if (instance == null) {
       throw new ISE("Cannot find instance of indexer to talk to!");
