@@ -99,6 +99,7 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
       {
         try {
           DateTime date = new DateTime(map.get("time"));
+          System.out.println(map);
           return new MapBasedInputRow(date.getMillis(), Lists.newArrayList(map.keySet()), map);
         }
         catch (NullPointerException e) {
