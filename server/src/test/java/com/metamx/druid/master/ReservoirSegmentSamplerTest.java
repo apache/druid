@@ -36,7 +36,6 @@ import java.util.Map;
 
 public class ReservoirSegmentSamplerTest
 {
-  private DruidMaster master;
   private DruidServer druidServer1;
   private DruidServer druidServer2;
   private DruidServer druidServer3;
@@ -60,7 +59,7 @@ public class ReservoirSegmentSamplerTest
   @Before
   public void setUp() throws Exception
   {
-    master = EasyMock.createMock(DruidMaster.class);
+    druidServer1 = EasyMock.createMock(DruidServer.class);
     druidServer1 = EasyMock.createMock(DruidServer.class);
     druidServer2 = EasyMock.createMock(DruidServer.class);
     druidServer3 = EasyMock.createMock(DruidServer.class);
