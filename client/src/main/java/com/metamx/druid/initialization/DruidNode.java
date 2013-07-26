@@ -29,7 +29,7 @@ import javax.validation.constraints.NotNull;
 
 /**
  */
-public class DruidNodeConfig
+public class DruidNode
 {
   @NotNull
   private String serviceName = null;
@@ -41,9 +41,9 @@ public class DruidNodeConfig
   private int port = -1;
 
   @JsonCreator
-  public DruidNodeConfig(
-      @JsonProperty("host") String host,
+  public DruidNode(
       @JsonProperty("service") String serviceName,
+      @JsonProperty("host") String host,
       @JsonProperty("port") Integer port
   )
   {
@@ -98,5 +98,15 @@ public class DruidNodeConfig
   public int getPort()
   {
     return port;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DruidNode{" +
+           "serviceName='" + serviceName + '\'' +
+           ", host='" + host + '\'' +
+           ", port=" + port +
+           '}';
   }
 }

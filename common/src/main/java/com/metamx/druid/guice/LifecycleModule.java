@@ -19,6 +19,7 @@
 
 package com.metamx.druid.guice;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -26,37 +27,116 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.lifecycle.Lifecycle;
 
+import java.lang.annotation.Annotation;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 /**
  * A Module to add lifecycle management to the injector.  {@link DruidGuiceExtensions} must also be included.
  */
 public class LifecycleModule implements Module
 {
   private final LifecycleScope scope = new LifecycleScope();
-  private final Key<?>[] eagerClasses;
+  private final List<Key<?>> eagerClasses = new CopyOnWriteArrayList<Key<?>>();
+  public boolean configured = false;
 
   /**
-   * A constructor that takes a list of classes to instantiate eagerly.  Class {@link Key}s mentioned here will
-   * be pulled out of the injector with an injector.getInstance() call when the lifecycle is created.
+   * Registers a class to instantiate eagerly.  Classes mentioned here will be pulled out of
+   * the injector with an injector.getInstance() call when the lifecycle is created.
    *
    * Eagerly loaded classes will *not* be automatically added to the Lifecycle unless they are bound to the proper
-   * scope.
+   * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
+   * side-effect even if nothing actually directly depends on the instance.
    *
    * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
-   * auto-register things with the {@link Lifecycle}
+   * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
+   * is less error-prone.
    *
-   * @param eagerClasses set of classes to instantiate eagerly
+   * @param clazz, the class to instantiate
+   * @return this, for chaining.
    */
-  public LifecycleModule(
-      Key<?>... eagerClasses
-  )
+  public LifecycleModule register(Class<?> clazz)
   {
-    this.eagerClasses = eagerClasses;
+    return registerKey(Key.get(clazz));
+  }
+
+  /**
+   * Registers a class/annotation combination to instantiate eagerly.  Classes mentioned here will be pulled out of
+   * the injector with an injector.getInstance() call when the lifecycle is created.
+   *
+   * Eagerly loaded classes will *not* be automatically added to the Lifecycle unless they are bound to the proper
+   * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
+   * side-effect even if nothing actually directly depends on the instance.
+   *
+   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
+   * is less error-prone.
+   *
+   * @param clazz, the class to instantiate
+   * @param annotation The annotation instance to register with Guice, usually a Named annotation
+   * @return this, for chaining.
+   */
+  public LifecycleModule register(Class<?> clazz, Annotation annotation)
+  {
+    return registerKey(Key.get(clazz, annotation));
+  }
+
+  /**
+   * Registers a class/annotation combination to instantiate eagerly.  Classes mentioned here will be pulled out of
+   * the injector with an injector.getInstance() call when the lifecycle is created.
+   *
+   * Eagerly loaded classes will *not* be automatically added to the Lifecycle unless they are bound to the proper
+   * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
+   * side-effect even if nothing actually directly depends on the instance.
+   *
+   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
+   * is less error-prone.
+   *
+   * @param clazz, the class to instantiate
+   * @param annotation The annotation class to register with Guice
+   * @return this, for chaining
+   */
+  public LifecycleModule register(Class<?> clazz, Class<? extends Annotation> annotation)
+  {
+    return registerKey(Key.get(clazz, annotation));
+  }
+
+  /**
+   * Registers a key to instantiate eagerly.  {@link Key}s mentioned here will be pulled out of
+   * the injector with an injector.getInstance() call when the lifecycle is created.
+   *
+   * Eagerly loaded classes will *not* be automatically added to the Lifecycle unless they are bound to the proper
+   * scope.  That is, they are generally eagerly loaded because the loading operation will produce some beneficial
+   * side-effect even if nothing actually directly depends on the instance.
+   *
+   * This mechanism exists to allow the {@link Lifecycle} to be the primary entry point from the injector, not to
+   * auto-register things with the {@link Lifecycle}.  It is also possible to just bind things eagerly with Guice,
+   * it is not clear which is actually the best approach.  This is more explicit, but eager bindings inside of modules
+   * is less error-prone.
+   *
+   * @param key The key to use in finding the DruidNode instance
+   * @return this, for chaining
+   */
+  public LifecycleModule registerKey(Key<?> key)
+  {
+    synchronized (eagerClasses) {
+      Preconditions.checkState(!configured, "Cannot register key[%s] after configuration.", key);
+    }
+    eagerClasses.add(key);
+    return this;
   }
 
   @Override
   public void configure(Binder binder)
   {
-    binder.bindScope(ManageLifecycle.class, scope);
+    synchronized (eagerClasses) {
+      configured = true;
+      binder.bindScope(ManageLifecycle.class, scope);
+    }
   }
 
   @Provides @LazySingleton

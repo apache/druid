@@ -36,10 +36,8 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
-import com.metamx.druid.curator.discovery.AddressPortServiceInstanceFactory;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
-import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.guice.DruidGuiceExtensions;
 import com.metamx.druid.guice.DruidSecondaryModule;
 import com.metamx.druid.http.EmittingRequestLogger;
@@ -274,39 +272,35 @@ public class Initialization
   }
 
   public static ServiceAnnouncer makeServiceAnnouncer(
-      DruidNodeConfig config,
       ServiceDiscovery<Void> serviceDiscovery
   )
   {
-    final ServiceInstanceFactory<Void> serviceInstanceFactory = makeServiceInstanceFactory(config);
-    return new CuratorServiceAnnouncer(serviceDiscovery, serviceInstanceFactory);
+    return new CuratorServiceAnnouncer(serviceDiscovery);
   }
 
   public static void announceDefaultService(
-      final DruidNodeConfig nodeConfig,
+      final DruidNode nodeConfig,
       final ServiceAnnouncer serviceAnnouncer,
       final Lifecycle lifecycle
   ) throws Exception
   {
-    final String service = nodeConfig.getServiceName().replace('/', ':');
-
     lifecycle.addHandler(
         new Lifecycle.Handler()
         {
           @Override
           public void start() throws Exception
           {
-            serviceAnnouncer.announce(service);
+            serviceAnnouncer.announce(nodeConfig);
           }
 
           @Override
           public void stop()
           {
             try {
-              serviceAnnouncer.unannounce(service);
+              serviceAnnouncer.unannounce(nodeConfig);
             }
             catch (Exception e) {
-              log.warn(e, "Failed to unannouce default service[%s]", service);
+              log.warn(e, "Failed to unannouce default service[%s]", nodeConfig.getServiceName());
             }
           }
         }
@@ -369,20 +363,6 @@ public class Initialization
         emitter,
         PropUtils.getProperty(props, "druid.request.logging.feed")
     );
-  }
-
-  public static ServiceInstanceFactory<Void> makeServiceInstanceFactory(DruidNodeConfig config)
-  {
-    final String host = config.getHost();
-    final String address;
-    final int colon = host.indexOf(':');
-    if (colon < 0) {
-      address = host;
-    } else {
-      address = host.substring(0, colon);
-    }
-
-    return new AddressPortServiceInstanceFactory(address, config.getPort());
   }
 
   public static Injector makeInjector(final Object... modules)

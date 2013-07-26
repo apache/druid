@@ -27,6 +27,7 @@ import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.util.Types;
 
+import java.lang.annotation.Annotation;
 import java.util.Properties;
 
 /**
@@ -36,9 +37,45 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
   @SuppressWarnings("unchecked")
   public static <T> void bind(Binder binder, String propertyBase, Class<T> classToProvide)
   {
-    binder.bind(Key.get(Types.newParameterizedType(Supplier.class, classToProvide)))
-          .toProvider((Provider) of(propertyBase, classToProvide))
-          .in(LazySingleton.class);
+    bind(
+        binder,
+        propertyBase,
+        classToProvide,
+        (Key) Key.get(Types.newParameterizedType(Supplier.class, classToProvide))
+    );
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> void bind(Binder binder, String propertyBase, Class<T> classToProvide, Annotation annotation)
+  {
+    bind(
+        binder,
+        propertyBase,
+        classToProvide,
+        (Key) Key.get(Types.newParameterizedType(Supplier.class, classToProvide), annotation)
+    );
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> void bind(
+      Binder binder,
+      String propertyBase,
+      Class<T> classToProvide,
+      Class<? extends Annotation> annotation
+  )
+  {
+    bind(
+        binder,
+        propertyBase,
+        classToProvide,
+        (Key) Key.get(Types.newParameterizedType(Supplier.class, classToProvide), annotation)
+    );
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> void bind(Binder binder, String propertyBase, Class<T> clazz, Key<Supplier<T>> key)
+  {
+    binder.bind(key).toProvider((Provider) of(propertyBase, clazz)).in(LazySingleton.class);
   }
 
   public static <T> JsonConfigProvider<T> of(String propertyBase, Class<T> classToProvide)

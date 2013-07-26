@@ -94,7 +94,7 @@ public class JsonConfigurator
       );
     }
 
-    log.info("Loaded class[%s] as [%s]", clazz, config);
+    log.info("Loaded class[%s] from props[%s] as [%s]", clazz, propertyBase, config);
 
     return config;
   }

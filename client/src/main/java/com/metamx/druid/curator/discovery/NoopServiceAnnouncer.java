@@ -1,18 +1,20 @@
 package com.metamx.druid.curator.discovery;
 
+import com.metamx.druid.initialization.DruidNode;
+
 /**
  * Does nothing.
  */
 public class NoopServiceAnnouncer implements ServiceAnnouncer
 {
   @Override
-  public void unannounce(String service)
+  public void announce(DruidNode node)
   {
 
   }
 
   @Override
-  public void announce(String service)
+  public void unannounce(DruidNode node)
   {
 
   }

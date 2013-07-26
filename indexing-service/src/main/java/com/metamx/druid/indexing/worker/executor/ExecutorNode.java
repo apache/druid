@@ -39,7 +39,6 @@ import com.metamx.druid.BaseServerNode;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.NoopServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
-import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusServlet;
@@ -55,7 +54,6 @@ import com.metamx.druid.indexing.coordinator.ThreadPoolTaskRunner;
 import com.metamx.druid.indexing.worker.config.ChatHandlerProviderConfig;
 import com.metamx.druid.indexing.worker.config.WorkerConfig;
 import com.metamx.druid.initialization.CuratorDiscoveryConfig;
-import com.metamx.druid.initialization.DruidNodeConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServerInit;
@@ -399,9 +397,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
       );
     }
     if (serviceAnnouncer == null) {
-      DruidNodeConfig nodeConfig = configFactory.build(DruidNodeConfig.class);
-      final ServiceInstanceFactory<Void> instanceFactory = Initialization.makeServiceInstanceFactory(nodeConfig);
-      this.serviceAnnouncer = new CuratorServiceAnnouncer(serviceDiscovery, instanceFactory);
+      this.serviceAnnouncer = new CuratorServiceAnnouncer(serviceDiscovery);
     }
     if (coordinatorServiceProvider == null) {
       this.coordinatorServiceProvider = Initialization.makeServiceProvider(
@@ -433,16 +429,13 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     if (chatHandlerProvider == null) {
       final ChatHandlerProviderConfig config = configFactory.build(ChatHandlerProviderConfig.class);
       final ServiceAnnouncer myServiceAnnouncer;
-      if (config.getServiceFormat() == null) {
+      if (config.isPublishDiscovery()) {
+        myServiceAnnouncer = serviceAnnouncer;
+      } else {
         log.info("ChatHandlerProvider: Using NoopServiceAnnouncer. Good luck finding your firehoses!");
         myServiceAnnouncer = new NoopServiceAnnouncer();
-      } else {
-        myServiceAnnouncer = serviceAnnouncer;
       }
-      this.chatHandlerProvider = new ChatHandlerProvider(
-          config,
-          myServiceAnnouncer
-      );
+      this.chatHandlerProvider = new ChatHandlerProvider(config, myServiceAnnouncer);
     }
   }
 

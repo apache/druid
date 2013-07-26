@@ -49,7 +49,6 @@ import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
-import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.db.DbTablesConfig;
@@ -98,7 +97,7 @@ import com.metamx.druid.indexing.coordinator.scaling.SimpleResourceManagementStr
 import com.metamx.druid.indexing.coordinator.scaling.SimpleResourceManagmentConfig;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.initialization.CuratorDiscoveryConfig;
-import com.metamx.druid.initialization.DruidNodeConfig;
+import com.metamx.druid.initialization.DruidNode;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -377,7 +376,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   private void initializeTaskMasterLifecycle()
   {
     if (taskMasterLifecycle == null) {
-      final DruidNodeConfig nodeConfig = getConfigFactory().build(DruidNodeConfig.class);
+      final DruidNode nodeConfig = getConfigFactory().build(DruidNode.class);
       taskMasterLifecycle = new TaskMasterLifecycle(
           taskQueue,
           taskActionClientFactory,
@@ -588,9 +587,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
       );
     }
     if (serviceAnnouncer == null) {
-      DruidNodeConfig nodeConfig = getConfigFactory().build(DruidNodeConfig.class);
-      final ServiceInstanceFactory<Void> instanceFactory = Initialization.makeServiceInstanceFactory(nodeConfig);
-      this.serviceAnnouncer = new CuratorServiceAnnouncer(serviceDiscovery, instanceFactory);
+      this.serviceAnnouncer = new CuratorServiceAnnouncer(serviceDiscovery);
     }
   }
 

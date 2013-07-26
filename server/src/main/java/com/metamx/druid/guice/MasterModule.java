@@ -49,7 +49,7 @@ public class MasterModule implements Module
     JsonConfigProvider.bind(binder, "druid.manager.segment", DatabaseSegmentManagerConfig.class);
     JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
 
-    binder.bind(DruidMaster.class);
+    binder.bind(DruidMaster.class).asEagerSingleton();
     binder.bind(ServerInventoryView.class);
 
     binder.bind(DatabaseSegmentManager.class)

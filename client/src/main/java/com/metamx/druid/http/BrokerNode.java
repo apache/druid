@@ -45,7 +45,7 @@ import com.metamx.druid.client.cache.MemcachedCacheConfig;
 import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.initialization.CuratorDiscoveryConfig;
-import com.metamx.druid.initialization.DruidNodeConfig;
+import com.metamx.druid.initialization.DruidNode;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.query.QueryToolChestWarehouse;
@@ -234,16 +234,14 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     if (useDiscovery) {
       final Lifecycle lifecycle = getLifecycle();
       final CuratorDiscoveryConfig curatorDiscoveryConfig = getConfigFactory().build(CuratorDiscoveryConfig.class);
-      final DruidNodeConfig nodeConfig = getConfigFactory().build(DruidNodeConfig.class);
+      final DruidNode nodeConfig = getConfigFactory().build(DruidNode.class);
       final CuratorFramework curatorFramework = Initialization.makeCuratorFramework(
           getConfigFactory().build(CuratorConfig.class), lifecycle
       );
       final ServiceDiscovery<Void> serviceDiscovery = Initialization.makeServiceDiscoveryClient(
           curatorFramework, curatorDiscoveryConfig, lifecycle
       );
-      final ServiceAnnouncer serviceAnnouncer = Initialization.makeServiceAnnouncer(
-          nodeConfig, serviceDiscovery
-      );
+      final ServiceAnnouncer serviceAnnouncer = Initialization.makeServiceAnnouncer(serviceDiscovery);
       Initialization.announceDefaultService(nodeConfig, serviceAnnouncer, lifecycle);
     }
   }

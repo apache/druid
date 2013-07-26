@@ -32,7 +32,7 @@ import com.metamx.druid.indexing.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.indexing.coordinator.exec.TaskConsumer;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementSchedulerFactory;
-import com.metamx.druid.initialization.DruidNodeConfig;
+import com.metamx.druid.initialization.DruidNode;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -65,7 +65,7 @@ public class TaskMasterLifecycle
       final TaskQueue taskQueue,
       final TaskActionClientFactory taskActionClientFactory,
       final IndexerCoordinatorConfig indexerCoordinatorConfig,
-      final DruidNodeConfig nodeConfig,
+      final DruidNode nodeConfig,
       final TaskRunnerFactory runnerFactory,
       final ResourceManagementSchedulerFactory managementSchedulerFactory,
       final CuratorFramework curator,

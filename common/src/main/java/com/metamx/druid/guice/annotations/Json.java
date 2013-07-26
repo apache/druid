@@ -1,4 +1,4 @@
-package com.metamx.druid.jackson;
+package com.metamx.druid.guice.annotations;
 
 import com.google.inject.BindingAnnotation;
 

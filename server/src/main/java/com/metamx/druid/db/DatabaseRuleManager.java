@@ -33,7 +33,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.guice.ManageLifecycle;
-import com.metamx.druid.jackson.Json;
+import com.metamx.druid.guice.annotations.Json;
 import com.metamx.druid.master.rules.PeriodLoadRule;
 import com.metamx.druid.master.rules.Rule;
 import org.joda.time.DateTime;

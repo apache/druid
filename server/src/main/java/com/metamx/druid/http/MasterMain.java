@@ -19,31 +19,25 @@
 
 package com.metamx.druid.http;
 
-import com.google.common.base.Supplier;
 import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.TypeLiteral;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.CuratorModule;
 import com.metamx.druid.curator.discovery.DiscoveryModule;
-import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.guice.DbConnectorModule;
 import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.JacksonConfigManagerModule;
 import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.MasterModule;
 import com.metamx.druid.guice.ServerModule;
-import com.metamx.druid.initialization.DruidNodeConfig;
+import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.initialization.EmitterModule;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.JettyServerInitializer;
 import com.metamx.druid.initialization.JettyServerModule;
 import com.metamx.druid.log.LogLevelAdjuster;
-import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.metrics.MetricsModule;
-import com.metamx.metrics.MonitorScheduler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
@@ -62,14 +56,14 @@ public class MasterMain
     LogLevelAdjuster.register();
 
     Injector injector = Initialization.makeInjector(
-        new LifecycleModule(Key.get(MonitorScheduler.class), Key.get(DruidMaster.class)),
+        new LifecycleModule(),
         EmitterModule.class,
         HttpClientModule.class,
         DbConnectorModule.class,
         JacksonConfigManagerModule.class,
         CuratorModule.class,
         new MetricsModule(),
-        DiscoveryModule.class,
+        new DiscoveryModule().register(Self.class),
         ServerModule.class,
         new JettyServerModule(new MasterJettyServerInitializer()),
         MasterModule.class
@@ -77,13 +71,7 @@ public class MasterMain
 
     final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
 
-    final Supplier<DruidNodeConfig> nodeConfig = injector.getInstance(Key.get(new TypeLiteral<Supplier<DruidNodeConfig>>(){}));
-
-    final ServiceAnnouncer serviceAnnouncer = injector.getInstance(ServiceAnnouncer.class);
-
     try {
-      // TODO: Make the announcement work through the lifecycle
-      Initialization.announceDefaultService(nodeConfig.get(), serviceAnnouncer, lifecycle);
       lifecycle.start();
     }
     catch (Throwable t) {

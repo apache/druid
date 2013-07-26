@@ -5,8 +5,8 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.metamx.druid.jackson.Json;
-import com.metamx.druid.jackson.Smile;
+import com.metamx.druid.guice.annotations.Json;
+import com.metamx.druid.guice.annotations.Smile;
 import org.skife.config.ConfigurationObjectFactory;
 
 import javax.validation.Validator;
