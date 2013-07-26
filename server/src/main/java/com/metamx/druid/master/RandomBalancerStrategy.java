@@ -50,6 +50,5 @@ public class RandomBalancerStrategy implements BalancerStrategy
       String tier, MasterStats stats, List<ServerHolder> serverHolderList
   )
   {
-    return;
   }
 }

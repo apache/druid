@@ -659,7 +659,7 @@ public class DruidMaster
                                     .withMergeBytesLimit(config.getMergeBytesLimit())
                                     .withMergeSegmentsLimit(config.getMergeSegmentsLimit())
                                     .withMaxSegmentsToMove(config.getMaxSegmentsToMove())
-                                    .withEmitBalancingCostParams(config.getEmitBalancerCostParams())
+                                    .withEmitBalancingCostParams(config.getEmitStats())
                                     .build();
 
         for (DruidMasterHelper helper : helpers) {

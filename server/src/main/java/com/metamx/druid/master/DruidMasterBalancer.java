@@ -124,7 +124,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
         }
       }
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
-      if (params.getEmitBalancingCostParams())
+      if (params.getEmitStats())
       {
         strategy.emitStats(tier, stats, serverHolderList);
 

@@ -34,8 +34,8 @@ public abstract class DruidMasterConfig
   @Default("PT600s")
   public abstract Duration getMasterStartDelay();
 
-  @Config("druid.master.emitBalancerCostParams")
-  public  boolean getEmitBalancerCostParams(){
+  @Config("druid.master.emitStats")
+  public  boolean getEmitStats(){
     return false;
   }
 
