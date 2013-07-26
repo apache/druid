@@ -159,6 +159,7 @@ public class TaskLifecycleTest
         null, // segment announcer
         null, // new segment server view
         null, // query runner factory conglomerate corporation unionized collective
+        null, // monitor scheduler
         new DefaultObjectMapper()
     );
 

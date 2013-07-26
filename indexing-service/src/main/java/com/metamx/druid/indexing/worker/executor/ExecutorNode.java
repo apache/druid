@@ -22,6 +22,7 @@ package com.metamx.druid.indexing.worker.executor;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -107,7 +108,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private final ExecutorLifecycleFactory executorLifecycleFactory;
 
   private RestS3Service s3Service = null;
-  private List<Monitor> monitors = null;
+  private MonitorScheduler monitorScheduler = null;
   private HttpClient httpClient = null;
   private ServiceEmitter emitter = null;
   private TaskConfig taskConfig = null;
@@ -140,71 +141,22 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     this.executorLifecycleFactory = executorLifecycleFactory;
   }
 
-  public ExecutorNode setHttpClient(HttpClient httpClient)
-  {
-    this.httpClient = httpClient;
-    return this;
-  }
-
-  public ExecutorNode setEmitter(ServiceEmitter emitter)
-  {
-    this.emitter = emitter;
-    return this;
-  }
-
-  public ExecutorNode setS3Service(RestS3Service s3Service)
-  {
-    this.s3Service = s3Service;
-    return this;
-  }
-
-  public ExecutorNode setSegmentPusher(DataSegmentPusher segmentPusher)
-  {
-    this.segmentPusher = segmentPusher;
-    return this;
-  }
-
-  public ExecutorNode setTaskToolboxFactory(TaskToolboxFactory taskToolboxFactory)
-  {
-    this.taskToolboxFactory = taskToolboxFactory;
-    return this;
-  }
-
-  public ExecutorNode setCoordinatorServiceProvider(ServiceProvider coordinatorServiceProvider)
-  {
-    this.coordinatorServiceProvider = coordinatorServiceProvider;
-    return this;
-  }
-
-  public ExecutorNode setServiceDiscovery(ServiceDiscovery serviceDiscovery)
-  {
-    this.serviceDiscovery = serviceDiscovery;
-    return this;
-  }
-
   @Override
   public void doInit() throws Exception
   {
     initializeHttpClient();
     initializeEmitter();
     initializeS3Service();
-    initializeMonitors();
     initializeMergerConfig();
     initializeServiceDiscovery();
     initializeDataSegmentPusher();
+    initializeMonitorScheduler();
     initializeTaskToolbox();
     initializeTaskRunner();
     initializeChatHandlerProvider();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeServer();
-
-    final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
-    final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
-    final MonitorScheduler monitorScheduler = new MonitorScheduler(
-        configFactory.build(MonitorSchedulerConfig.class), globalScheduledExec, emitter, monitors
-    );
-    lifecycle.addManagedInstance(monitorScheduler);
 
     executorLifecycle = executorLifecycleFactory.build(taskRunner, getJsonMapper());
     lifecycle.addManagedInstance(executorLifecycle);
@@ -227,6 +179,19 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
         ),
         "/druid/v2/*"
     );
+  }
+
+  private void initializeMonitorScheduler()
+  {
+    if (monitorScheduler == null)
+    {
+      final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
+      final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
+      this.monitorScheduler = new MonitorScheduler(
+          configFactory.build(MonitorSchedulerConfig.class), globalScheduledExec, emitter, ImmutableList.<Monitor>of()
+      );
+      lifecycle.addManagedInstance(monitorScheduler);
+    }
   }
 
   @LifecycleStart
@@ -333,15 +298,6 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     }
   }
 
-  private void initializeMonitors()
-  {
-    if (monitors == null) {
-      monitors = Lists.newArrayList();
-      monitors.add(new JvmMonitor());
-      monitors.add(new SysMonitor());
-    }
-  }
-
   private void initializeMergerConfig()
   {
     if (taskConfig == null) {
@@ -384,6 +340,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
           getAnnouncer(),
           getServerView(),
           getConglomerate(),
+          monitorScheduler,
           getJsonMapper()
       );
     }
