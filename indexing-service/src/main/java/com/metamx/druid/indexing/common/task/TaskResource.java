@@ -8,16 +8,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class TaskResource
 {
   private final String availabilityGroup;
-  private final int capacity;
+  private final int requiredCapacity;
 
   @JsonCreator
   public TaskResource(
       @JsonProperty("availabilityGroup") String availabilityGroup,
-      @JsonProperty("capacity") int capacity
+      @JsonProperty("requiredCapacity") int requiredCapacity
   )
   {
     this.availabilityGroup = availabilityGroup;
-    this.capacity = capacity;
+    this.requiredCapacity = requiredCapacity;
   }
 
   /**
@@ -31,9 +31,22 @@ public class TaskResource
     return availabilityGroup;
   }
 
+
+  /**
+   * Returns the number of worker slots this task will take.
+   */
   @JsonProperty
-  public int getCapacity()
+  public int getRequiredCapacity()
   {
-    return capacity;
+    return requiredCapacity;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TaskResource{" +
+           "availabilityGroup='" + availabilityGroup + '\'' +
+           ", requiredCapacity=" + requiredCapacity +
+           '}';
   }
 }

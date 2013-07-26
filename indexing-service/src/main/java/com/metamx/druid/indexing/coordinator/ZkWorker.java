@@ -31,14 +31,11 @@ import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.worker.Worker;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,23 +46,32 @@ public class ZkWorker implements Closeable
 {
   private final Worker worker;
   private final PathChildrenCache statusCache;
+  private final Function<ChildData, TaskStatus> cacheConverter;
 
-  private final Object lock = new Object();
-  private final Map<String, Task> runningTasks = Maps.newHashMap();
-  private final Set<String> availabilityGroups = Sets.newHashSet();
-
-  private volatile int currCapacity = 0;
   private volatile DateTime lastCompletedTaskTime = new DateTime();
 
-  public ZkWorker(Worker worker, PathChildrenCache statusCache)
+  public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
     this.worker = worker;
     this.statusCache = statusCache;
+    this.cacheConverter = new Function<ChildData, TaskStatus>()
+    {
+      @Override
+      public TaskStatus apply(ChildData input)
+      {
+        try {
+          return jsonMapper.readValue(input.getData(), TaskStatus.class);
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
+      }
+    };
   }
 
-  public void start() throws Exception
+  public void start(PathChildrenCache.StartMode startMode) throws Exception
   {
-    statusCache.start();
+    statusCache.start(startMode);
   }
 
   public void addListener(PathChildrenCacheListener listener)
@@ -80,15 +86,37 @@ public class ZkWorker implements Closeable
   }
 
   @JsonProperty
-  public Collection<Task> getRunningTasks()
+  public Map<String, TaskStatus> getRunningTasks()
   {
-    return runningTasks.values();
+    Map<String, TaskStatus> retVal = Maps.newHashMap();
+    for (TaskStatus taskStatus : Lists.transform(
+        statusCache.getCurrentData(),
+        cacheConverter
+    )) {
+      retVal.put(taskStatus.getId(), taskStatus);
+    }
+
+    return retVal;
   }
 
-  @JsonProperty
+  @JsonProperty("currCapacity")
   public int getCurrCapacity()
   {
+    int currCapacity = 0;
+    for (TaskStatus taskStatus : getRunningTasks().values()) {
+      currCapacity += taskStatus.getResource().getRequiredCapacity();
+    }
     return currCapacity;
+  }
+
+  @JsonProperty("availabilityGroups")
+  public Set<String> getAvailabilityGroups()
+  {
+    Set<String> retVal = Sets.newHashSet();
+    for (TaskStatus taskStatus : getRunningTasks().values()) {
+      retVal.add(taskStatus.getResource().getAvailabilityGroup());
+    }
+    return retVal;
   }
 
   @JsonProperty
@@ -97,46 +125,21 @@ public class ZkWorker implements Closeable
     return lastCompletedTaskTime;
   }
 
-  public void addRunningTask(Task task)
-  {
-    synchronized (lock) {
-      runningTasks.put(task.getId(), task);
-      availabilityGroups.add(task.getTaskResource().getAvailabilityGroup());
-      currCapacity += task.getTaskResource().getCapacity();
-    }
-  }
-
-  public void addRunningTasks(Collection<Task> tasks)
-  {
-    for (Task task : tasks) {
-      addRunningTask(task);
-    }
-  }
-
-  public Task removeRunningTask(Task task)
-  {
-    synchronized (lock) {
-      currCapacity -= task.getTaskResource().getCapacity();
-      availabilityGroups.remove(task.getTaskResource().getAvailabilityGroup());
-      return runningTasks.remove(task.getId());
-    }
-  }
-
   public boolean isRunningTask(String taskId)
   {
-    return runningTasks.containsKey(taskId);
+    return getRunningTasks().containsKey(taskId);
   }
 
   public boolean isAtCapacity()
   {
-    return currCapacity >= worker.getCapacity();
+    return getCurrCapacity() >= worker.getCapacity();
   }
 
   public boolean canRunTask(Task task)
   {
-    return (worker.getCapacity() - currCapacity >= task.getTaskResource().getCapacity() && !availabilityGroups.contains(task.getTaskResource().getAvailabilityGroup()));
+    return (worker.getCapacity() - getCurrCapacity() >= task.getTaskResource().getRequiredCapacity()
+            && !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup()));
   }
-
 
   public void setLastCompletedTaskTime(DateTime completedTaskTime)
   {
@@ -153,10 +156,8 @@ public class ZkWorker implements Closeable
   public String toString()
   {
     return "ZkWorker{" +
-           "runningTasks=" + runningTasks +
+           "worker=" + worker +
            ", lastCompletedTaskTime=" + lastCompletedTaskTime +
-           ", currCapacity=" + currCapacity +
-           ", worker=" + worker +
            '}';
   }
 }

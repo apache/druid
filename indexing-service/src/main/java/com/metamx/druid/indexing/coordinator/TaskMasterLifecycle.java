@@ -21,12 +21,11 @@ package com.metamx.druid.indexing.coordinator;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
-import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.indexing.common.actions.TaskActionClient;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
 import com.metamx.druid.indexing.common.task.Task;
@@ -34,6 +33,8 @@ import com.metamx.druid.indexing.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.indexing.coordinator.exec.TaskConsumer;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementSchedulerFactory;
+import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
@@ -88,7 +89,6 @@ public class TaskMasterLifecycle
           log.info("By the power of Grayskull, I have the power!");
 
           taskRunner = runnerFactory.build();
-          resourceManagementScheduler = managementSchedulerFactory.build(taskRunner);
           final TaskConsumer taskConsumer = new TaskConsumer(
               taskQueue,
               taskRunner,
@@ -106,7 +106,13 @@ public class TaskMasterLifecycle
           Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, leaderLifecycle);
           leaderLifecycle.addManagedInstance(taskConsumer);
 
-          leaderLifecycle.addManagedInstance(resourceManagementScheduler);
+          if ("remote".equalsIgnoreCase(indexerCoordinatorConfig.getRunnerImpl())) {
+            if (!(taskRunner instanceof RemoteTaskRunner)) {
+              throw new ISE("WTF?! We configured a remote runner and got %s", taskRunner.getClass());
+            }
+            resourceManagementScheduler = managementSchedulerFactory.build((RemoteTaskRunner) taskRunner);
+            leaderLifecycle.addManagedInstance(resourceManagementScheduler);
+          }
 
           try {
             leaderLifecycle.start();

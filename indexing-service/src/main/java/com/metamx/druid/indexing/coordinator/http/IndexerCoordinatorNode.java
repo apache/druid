@@ -27,7 +27,6 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -47,6 +46,7 @@ import com.metamx.druid.QueryableNode;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
+import com.metamx.druid.curator.cache.SimplePathChildrenCacheFactory;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
@@ -56,12 +56,10 @@ import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
-import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionToolbox;
 import com.metamx.druid.indexing.common.config.IndexerZkConfig;
-import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
 import com.metamx.druid.indexing.common.config.TaskLogConfig;
 import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
 import com.metamx.druid.indexing.common.index.StaticS3FirehoseFactory;
@@ -115,7 +113,6 @@ import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -638,11 +635,13 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
           public TaskRunner build()
           {
             final CuratorFramework curator = getCuratorFramework();
+            final RemoteTaskRunnerConfig remoteTaskRunnerConfig = getConfigFactory().build(RemoteTaskRunnerConfig.class);
             return new RemoteTaskRunner(
                 getJsonMapper(),
-                getConfigFactory().build(RemoteTaskRunnerConfig.class),
+                remoteTaskRunnerConfig,
                 curator,
-                new PathChildrenCache(curator, indexerZkConfig.getIndexerAnnouncementPath(), true),
+                new SimplePathChildrenCacheFactory.Builder().withCompressed(remoteTaskRunnerConfig.enableCompression())
+                                                            .build(),
                 configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class),
                 httpClient
             );
@@ -678,7 +677,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
         resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
         {
           @Override
-          public ResourceManagementScheduler build(TaskRunner runner)
+          public ResourceManagementScheduler build(RemoteTaskRunner runner)
           {
             return new NoopResourceManagementScheduler();
           }
@@ -687,7 +686,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
         resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
         {
           @Override
-          public ResourceManagementScheduler build(TaskRunner runner)
+          public ResourceManagementScheduler build(RemoteTaskRunner runner)
           {
             final ScheduledExecutorService scalingScheduledExec = Executors.newScheduledThreadPool(
                 1,

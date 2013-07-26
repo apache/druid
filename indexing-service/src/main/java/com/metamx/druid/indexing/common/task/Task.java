@@ -71,6 +71,10 @@ public interface Task
    */
   public String getGroupId();
 
+  /**
+   * Returns a {@link com.metamx.druid.indexing.common.task.TaskResource} for this task. Task resources define specific
+   * worker requirements a task may require.
+   */
   public TaskResource getTaskResource();
 
   /**

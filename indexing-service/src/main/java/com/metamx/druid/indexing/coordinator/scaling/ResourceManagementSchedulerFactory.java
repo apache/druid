@@ -19,11 +19,11 @@
 
 package com.metamx.druid.indexing.coordinator.scaling;
 
-import com.metamx.druid.indexing.coordinator.TaskRunner;
+import com.metamx.druid.indexing.coordinator.RemoteTaskRunner;
 
 /**
  */
 public interface ResourceManagementSchedulerFactory
 {
-  public ResourceManagementScheduler build(TaskRunner runner);
+  public ResourceManagementScheduler build(RemoteTaskRunner runner);
 }

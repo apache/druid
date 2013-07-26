@@ -46,13 +46,11 @@ import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.realtime.FireDepartment;
 import com.metamx.druid.realtime.FireDepartmentConfig;
-import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.RealtimeMetricsMonitor;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
-import com.metamx.druid.realtime.plumber.NoopRejectionPolicyFactory;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.RealtimePlumberSchool;
 import com.metamx.druid.realtime.plumber.RejectionPolicyFactory;
@@ -115,22 +113,22 @@ public class RealtimeIndexTask extends AbstractTask
   )
   {
     super(
-        id != null
-        ? id
-        : makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString()),
+        id == null
+        ? makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString())
+        :id,
         String.format(
             "index_realtime_%s",
             schema.getDataSource()
         ),
-        taskResource != null
-        ? taskResource
-        : new TaskResource(
+        taskResource == null
+        ? new TaskResource(
             makeTaskId(
                 schema.getDataSource(),
                 schema.getShardSpec().getPartitionNum(),
                 new DateTime().toString()
             ), 1
-        ),
+        )
+        : taskResource,
         schema.getDataSource(),
         null
     );

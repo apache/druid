@@ -19,37 +19,45 @@
 
 package com.metamx.druid.indexing.coordinator;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
-
-import java.util.Collection;
-import java.util.List;
+import org.joda.time.DateTime;
 
 /**
- * Interface for handing off tasks. Used by a {@link com.metamx.druid.indexing.coordinator.exec.TaskConsumer} to
- * run tasks that have been locked.
  */
-public interface TaskRunner
+public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 {
-  public void bootstrap(List<Task> tasks);
+  private final SettableFuture<TaskStatus> result;
 
-  /**
-   * Run a task. The returned status should be some kind of completed status.
-   *
-   * @param task task to run
-   * @return task status, eventually
-   */
-  public ListenableFuture<TaskStatus> run(Task task);
+  public RemoteTaskRunnerWorkItem(
+      Task task,
+      SettableFuture<TaskStatus> result
+  )
+  {
+    super(task, result);
+    this.result = result;
+  }
 
-  /**
-   * Best-effort task shutdown. May or may not do anything.
-   */
-  public void shutdown(String taskid);
+  public RemoteTaskRunnerWorkItem(
+      Task task,
+      SettableFuture<TaskStatus> result,
+      DateTime createdTime,
+      DateTime queueInsertionTime
+  )
+  {
+    super(task, result, createdTime, queueInsertionTime);
+    this.result = result;
+  }
 
-  public Collection<? extends TaskRunnerWorkItem> getRunningTasks();
+  public void setResult(TaskStatus status)
+  {
+    result.set(status);
+  }
 
-  public Collection<? extends TaskRunnerWorkItem> getPendingTasks();
-
-  public Collection<ZkWorker> getWorkers();
+  @Override
+  public RemoteTaskRunnerWorkItem withQueueInsertionTime(DateTime time)
+  {
+    return new RemoteTaskRunnerWorkItem(getTask(), result, getCreatedTime(), time);
+  }
 }

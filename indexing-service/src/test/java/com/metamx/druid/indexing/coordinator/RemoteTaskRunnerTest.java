@@ -5,12 +5,15 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.metamx.common.ISE;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
+import com.metamx.druid.curator.cache.PathChildrenCacheFactory;
+import com.metamx.druid.curator.cache.SimplePathChildrenCacheFactory;
 import com.metamx.druid.indexing.TestTask;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.TaskStatus;
@@ -64,7 +67,7 @@ public class RemoteTaskRunnerTest
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
-  private PathChildrenCache pathChildrenCache;
+  private PathChildrenCacheFactory pathChildrenCacheFactory;
   private RemoteTaskRunner remoteTaskRunner;
   private WorkerTaskMonitor workerTaskMonitor;
 
@@ -91,7 +94,7 @@ public class RemoteTaskRunnerTest
     cf.create().forPath(statusPath);
     cf.create().forPath(String.format("%s/worker1", statusPath));
 
-    pathChildrenCache = new PathChildrenCache(cf, announcementsPath, true);
+    pathChildrenCacheFactory = new SimplePathChildrenCacheFactory.Builder().build();
 
     worker1 = new Worker(
         "worker1",
@@ -362,14 +365,11 @@ public class RemoteTaskRunnerTest
                 new TaskConfig()
                 {
                   @Override
-                  public File getBaseTaskDir()
+                  public String getBaseDir()
                   {
-                    try {
-                      return File.createTempFile("billy", "yay");
-                    }
-                    catch (Exception e) {
-                      throw Throwables.propagate(e);
-                    }
+                    File tmp = Files.createTempDir();
+                    tmp.deleteOnExit();
+                    return tmp.toString();
                   }
 
                   @Override
@@ -399,7 +399,7 @@ public class RemoteTaskRunnerTest
         jsonMapper,
         new TestRemoteTaskRunnerConfig(),
         cf,
-        pathChildrenCache,
+        pathChildrenCacheFactory,
         new AtomicReference<WorkerSetupData>(new WorkerSetupData("0", 0, 1, null, null)),
         null
     );
@@ -423,6 +423,12 @@ public class RemoteTaskRunnerTest
 
   private static class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   {
+    @Override
+    public boolean enableCompression()
+    {
+      return false;
+    }
+
     @Override
     public String getIndexerAnnouncementPath()
     {

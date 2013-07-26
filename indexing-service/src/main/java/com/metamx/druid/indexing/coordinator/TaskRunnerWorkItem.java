@@ -22,7 +22,6 @@ package com.metamx.druid.indexing.coordinator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.druid.indexing.common.RetryPolicy;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
@@ -41,13 +40,23 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 
   public TaskRunnerWorkItem(
       Task task,
+      ListenableFuture<TaskStatus> result
+  )
+  {
+    this(task, result, new DateTime(), new DateTime());
+  }
+
+  public TaskRunnerWorkItem(
+      Task task,
       ListenableFuture<TaskStatus> result,
-      DateTime createdTime
+      DateTime createdTime,
+      DateTime queueInsertionTime
   )
   {
     this.task = task;
     this.result = result;
     this.createdTime = createdTime;
+    this.queueInsertionTime = queueInsertionTime;
   }
 
   @JsonProperty
@@ -75,8 +84,7 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 
   public TaskRunnerWorkItem withQueueInsertionTime(DateTime time)
   {
-    this.queueInsertionTime = time;
-    return this;
+    return new TaskRunnerWorkItem(task, result, createdTime, time);
   }
 
   @Override

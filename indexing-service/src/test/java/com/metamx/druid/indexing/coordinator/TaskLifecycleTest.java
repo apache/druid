@@ -121,9 +121,9 @@ public class TaskLifecycleTest
         new TaskConfig()
         {
           @Override
-          public File getBaseTaskDir()
+          public String getBaseDir()
           {
-            return tmp;
+            return tmp.toString();
           }
 
           @Override

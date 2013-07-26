@@ -31,4 +31,8 @@ public abstract class RemoteTaskRunnerConfig extends IndexerZkConfig
   @Config("druid.indexer.taskAssignmentTimeoutDuration")
   @Default("PT5M")
   public abstract Duration getTaskAssignmentTimeoutDuration();
+
+  @Config("druid.curator.compression.enable")
+  @Default("false")
+  public abstract boolean enableCompression();
 }

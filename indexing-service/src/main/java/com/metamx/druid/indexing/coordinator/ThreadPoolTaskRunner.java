@@ -89,7 +89,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     final TaskToolbox toolbox = toolboxFactory.build(task);
     final ListenableFuture<TaskStatus> statusFuture = exec.submit(new ExecutorServiceTaskRunnerCallable(task, toolbox));
 
-    final TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(task, statusFuture, new DateTime());
+    final TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(task, statusFuture);
     runningItems.add(taskRunnerWorkItem);
     Futures.addCallback(
         statusFuture, new FutureCallback<TaskStatus>()
@@ -190,14 +190,10 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     private final Task task;
     private final TaskToolbox toolbox;
 
-    private final DateTime createdTime;
-
     public ExecutorServiceTaskRunnerCallable(Task task, TaskToolbox toolbox)
     {
       this.task = task;
       this.toolbox = toolbox;
-
-      this.createdTime = new DateTime();
     }
 
     @Override
@@ -249,11 +245,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
 
     public TaskRunnerWorkItem getTaskRunnerWorkItem()
     {
-      return new TaskRunnerWorkItem(
-          task,
-          null,
-          createdTime
-      );
+      return new TaskRunnerWorkItem(task, null);
     }
   }
 }
