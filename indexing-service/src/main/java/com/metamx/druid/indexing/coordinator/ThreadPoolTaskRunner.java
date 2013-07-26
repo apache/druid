@@ -116,7 +116,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   {
     for (final TaskRunnerWorkItem runningItem : runningItems) {
       if (runningItem.getTask().getId().equals(taskid)) {
-        runningItem.getTask().shutdown();
+        runningItem.getResult().cancel(true);
       }
     }
   }

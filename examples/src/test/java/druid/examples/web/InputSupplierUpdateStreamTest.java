@@ -68,6 +68,7 @@ public class InputSupplierUpdateStreamTest
     updateStream.start();
     Map<String, Object> insertedRow = updateStream.pollFromQueue(waitTime, unit);
     Assert.assertEquals(expectedAnswer, insertedRow);
+    updateStream.stop();
   }
 
   //If a timestamp is missing, we should throw away the event
@@ -85,6 +86,7 @@ public class InputSupplierUpdateStreamTest
     );
     updateStream.start();
     Assert.assertEquals(updateStream.getQueueSize(), 0);
+    updateStream.stop();
   }
 
   //If any other value is missing, we should still add the event and process it properly
@@ -105,6 +107,7 @@ public class InputSupplierUpdateStreamTest
     expectedAnswer.put("item1", "value1");
     expectedAnswer.put("time", 1372121562);
     Assert.assertEquals(expectedAnswer, insertedRow);
+    updateStream.stop();
   }
 
 

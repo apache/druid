@@ -128,12 +128,6 @@ public abstract class AbstractTask implements Task
   }
 
   @Override
-  public void shutdown()
-  {
-    // Do nothing.
-  }
-
-  @Override
   public String toString()
   {
     return Objects.toStringHelper(this)

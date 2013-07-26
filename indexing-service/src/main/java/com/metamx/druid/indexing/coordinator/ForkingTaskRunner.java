@@ -32,6 +32,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -48,6 +49,7 @@ import com.metamx.druid.indexing.worker.executor.ExecutorMain;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -121,137 +123,135 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
                         final ProcessHolder processHolder;
 
                         try {
-                          if (!attemptDir.mkdirs()) {
-                            throw new IOException(String.format("Could not create directories: %s", attemptDir));
-                          }
-
-                          final File taskFile = new File(attemptDir, "task.json");
-                          final File statusFile = new File(attemptDir, "status.json");
-                          final File logFile = new File(attemptDir, "log");
-
-                          // time to adjust process holders
-                          synchronized (tasks) {
-                            final TaskInfo taskInfo = tasks.get(task.getId());
-
-                            if (taskInfo.shutdown) {
-                              throw new IllegalStateException("Task has been shut down!");
+                          final Closer closer = Closer.create();
+                          try {
+                            if (!attemptDir.mkdirs()) {
+                              throw new IOException(String.format("Could not create directories: %s", attemptDir));
                             }
 
-                            if (taskInfo == null) {
-                              throw new ISE("WTF?! TaskInfo disappeared for task: %s", task.getId());
-                            }
+                            final File taskFile = new File(attemptDir, "task.json");
+                            final File statusFile = new File(attemptDir, "status.json");
+                            final File logFile = new File(attemptDir, "log");
 
-                            if (taskInfo.processHolder != null) {
-                              throw new ISE("WTF?! TaskInfo already has a process holder for task: %s", task.getId());
-                            }
+                            // time to adjust process holders
+                            synchronized (tasks) {
+                              final TaskInfo taskInfo = tasks.get(task.getId());
 
-                            final List<String> command = Lists.newArrayList();
-                            final int childPort = findUnusedPort();
-                            final String childHost = String.format(config.getHostPattern(), childPort);
+                              if (taskInfo.shutdown) {
+                                throw new IllegalStateException("Task has been shut down!");
+                              }
 
-                            command.add(config.getJavaCommand());
-                            command.add("-cp");
-                            command.add(config.getJavaClasspath());
+                              if (taskInfo == null) {
+                                throw new ISE("WTF?! TaskInfo disappeared for task: %s", task.getId());
+                              }
 
-                            Iterables.addAll(
-                                command,
-                                Splitter.on(CharMatcher.WHITESPACE)
-                                        .omitEmptyStrings()
-                                        .split(config.getJavaOptions())
-                            );
+                              if (taskInfo.processHolder != null) {
+                                throw new ISE("WTF?! TaskInfo already has a process holder for task: %s", task.getId());
+                              }
 
-                            for (String propName : props.stringPropertyNames()) {
-                              for (String allowedPrefix : config.getAllowedPrefixes()) {
-                                if (propName.startsWith(allowedPrefix)) {
+                              final List<String> command = Lists.newArrayList();
+                              final int childPort = findUnusedPort();
+                              final String childHost = String.format(config.getHostPattern(), childPort);
+
+                              command.add(config.getJavaCommand());
+                              command.add("-cp");
+                              command.add(config.getJavaClasspath());
+
+                              Iterables.addAll(
+                                  command,
+                                  Splitter.on(CharMatcher.WHITESPACE)
+                                          .omitEmptyStrings()
+                                          .split(config.getJavaOptions())
+                              );
+
+                              for (String propName : props.stringPropertyNames()) {
+                                for (String allowedPrefix : config.getAllowedPrefixes()) {
+                                  if (propName.startsWith(allowedPrefix)) {
+                                    command.add(
+                                        String.format(
+                                            "-D%s=%s",
+                                            propName,
+                                            props.getProperty(propName)
+                                        )
+                                    );
+                                  }
+                                }
+                              }
+
+                              // Override child JVM specific properties
+                              for (String propName : props.stringPropertyNames()) {
+                                if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
                                   command.add(
                                       String.format(
                                           "-D%s=%s",
-                                          propName,
+                                          propName.substring(CHILD_PROPERTY_PREFIX.length()),
                                           props.getProperty(propName)
                                       )
                                   );
                                 }
                               }
-                            }
 
-                            // Override child JVM specific properties
-                            for (String propName : props.stringPropertyNames()) {
-                              if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
-                                command.add(
-                                    String.format(
-                                        "-D%s=%s",
-                                        propName.substring(CHILD_PROPERTY_PREFIX.length()),
-                                        props.getProperty(propName)
-                                    )
-                                );
+                              String nodeType = task.getNodeType();
+                              if (nodeType != null) {
+                                command.add(String.format("-Ddruid.executor.nodeType=%s", nodeType));
                               }
+
+                              command.add(String.format("-Ddruid.host=%s", childHost));
+                              command.add(String.format("-Ddruid.port=%d", childPort));
+
+                              command.add(config.getMainClass());
+                              command.add(taskFile.toString());
+                              command.add(statusFile.toString());
+
+                              jsonMapper.writeValue(taskFile, task);
+
+                              log.info("Running command: %s", Joiner.on(" ").join(command));
+                              taskInfo.processHolder = new ProcessHolder(
+                                  new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
+                                  logFile,
+                                  childPort
+                              );
+
+                              processHolder = taskInfo.processHolder;
+                              processHolder.registerWithCloser(closer);
                             }
 
-                            String nodeType = task.getNodeType();
-                            if (nodeType != null) {
-                              command.add(String.format("-Ddruid.executor.nodeType=%s", nodeType));
-                            }
+                            log.info("Logging task %s output to: %s", task.getId(), logFile);
 
-                            command.add(String.format("-Ddruid.host=%s", childHost));
-                            command.add(String.format("-Ddruid.port=%d", childPort));
-
-                            command.add(config.getMainClass());
-                            command.add(taskFile.toString());
-                            command.add(statusFile.toString());
-
-                            jsonMapper.writeValue(taskFile, task);
-
-                            log.info("Running command: %s", Joiner.on(" ").join(command));
-                            taskInfo.processHolder = new ProcessHolder(
-                                new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
-                                logFile,
-                                childPort
+                            final InputStream fromProc = processHolder.process.getInputStream();
+                            final OutputStream toLogfile = closer.register(
+                                Files.newOutputStreamSupplier(logFile).getOutput()
                             );
 
-                            processHolder = taskInfo.processHolder;
-                          }
+                            boolean runFailed = true;
 
-                          log.info("Logging task %s output to: %s", task.getId(), logFile);
-
-                          final OutputStream toProc = processHolder.process.getOutputStream();
-                          final InputStream fromProc = processHolder.process.getInputStream();
-                          final OutputStream toLogfile = Files.newOutputStreamSupplier(logFile).getOutput();
-
-                          boolean runFailed = false;
-
-                          try {
                             ByteStreams.copy(fromProc, toLogfile);
                             final int statusCode = processHolder.process.waitFor();
                             log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
 
-                            if (statusCode != 0) {
-                              runFailed = true;
+                            if (statusCode == 0) {
+                              runFailed = false;
                             }
-                          }
-                          catch (Exception e) {
-                            log.warn(e, "Failed to read from process for task: %s", task.getId());
-                            runFailed = true;
-                          }
-                          finally {
-                            Closeables.closeQuietly(fromProc);
-                            Closeables.closeQuietly(toLogfile);
-                            Closeables.closeQuietly(toProc);
-                          }
 
-                          // Upload task logs
+                            // Upload task logs
 
-                          // XXX: Consider uploading periodically for very long-lived tasks to prevent
-                          // XXX: bottlenecks at the end or the possibility of losing a lot of logs all
-                          // XXX: at once.
+                            // XXX: Consider uploading periodically for very long-lived tasks to prevent
+                            // XXX: bottlenecks at the end or the possibility of losing a lot of logs all
+                            // XXX: at once.
 
-                          taskLogPusher.pushTaskLog(task.getId(), logFile);
+                            taskLogPusher.pushTaskLog(task.getId(), logFile);
 
-                          if (!runFailed) {
-                            // Process exited successfully
-                            return jsonMapper.readValue(statusFile, TaskStatus.class);
-                          } else {
-                            // Process exited unsuccessfully
-                            return TaskStatus.failure(task.getId());
+                            if (!runFailed) {
+                              // Process exited successfully
+                              return jsonMapper.readValue(statusFile, TaskStatus.class);
+                            } else {
+                              // Process exited unsuccessfully
+                              return TaskStatus.failure(task.getId());
+                            }
+                          } catch (Throwable t) {
+                            throw closer.rethrow(t);
+                          } finally {
+                            closer.close();
                           }
                         }
                         catch (Exception e) {
@@ -317,31 +317,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
     }
 
     if (taskInfo.processHolder != null) {
-      final int shutdowns = taskInfo.processHolder.shutdowns.getAndIncrement();
-      if (shutdowns == 0) {
-        log.info("Attempting to gracefully shutdown task: %s", taskid);
-        try {
-          // This is gross, but it may still be nicer than talking to the forked JVM via HTTP.
-          final OutputStream out = taskInfo.processHolder.process.getOutputStream();
-          out.write(
-              jsonMapper.writeValueAsBytes(
-                  ImmutableMap.of(
-                      "shutdown",
-                      "now"
-                  )
-              )
-          );
-          out.write('\n');
-          out.flush();
-        }
-        catch (IOException e) {
-          throw Throwables.propagate(e);
-        }
-      } else {
-        // Will trigger normal failure mechanisms due to process exit
-        log.info("Killing process for task: %s", taskid);
-        taskInfo.processHolder.process.destroy();
-      }
+      // Will trigger normal failure mechanisms due to process exit
+      log.info("Killing process for task: %s", taskid);
+      taskInfo.processHolder.process.destroy();
     }
   }
 
@@ -435,13 +413,18 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
     private final Process process;
     private final File logFile;
     private final int port;
-    private final AtomicInteger shutdowns = new AtomicInteger(0);
 
     private ProcessHolder(Process process, File logFile, int port)
     {
       this.process = process;
       this.logFile = logFile;
       this.port = port;
+    }
+
+    private void registerWithCloser(Closer closer)
+    {
+      closer.register(process.getInputStream());
+      closer.register(process.getOutputStream());
     }
   }
 }
