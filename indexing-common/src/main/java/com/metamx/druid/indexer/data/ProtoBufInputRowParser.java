@@ -22,7 +22,7 @@ import com.metamx.druid.input.InputRow;
 /**
  * @author jan.rudert
  */
-public class ProtoBufInputRowParser implements InputRowParser<ByteBuffer>
+public class ProtoBufInputRowParser implements ByteBufferInputRowParser
 {
 
 	private final MapInputRowParser inputRowCreator;

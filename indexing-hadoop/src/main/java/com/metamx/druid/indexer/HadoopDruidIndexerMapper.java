@@ -9,7 +9,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<LongWritable, Text, KEYOUT, VALUEOUT>
 {
@@ -42,7 +41,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     try {
       final InputRow inputRow;
       try {
-        inputRow = parser.parse(ByteBuffer.wrap(value.getBytes()));
+        inputRow = parser.parse(value.toString());
       }
       catch (IllegalArgumentException e) {
         if (config.isIgnoreInvalidRows()) {

@@ -280,7 +280,7 @@ public class IndexGeneratorJob implements Jobby
 
       for (final Text value : values) {
         context.progress();
-        final InputRow inputRow = index.getSpatialDimensionRowFormatter().formatRow(parser.parse(ByteBuffer.wrap(value.getBytes())));
+        final InputRow inputRow = index.getSpatialDimensionRowFormatter().formatRow(parser.parse(value.toString()));
         allDimensionNames.addAll(inputRow.getDimensions());
 
         int numRows = index.add(inputRow);

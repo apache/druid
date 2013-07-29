@@ -37,7 +37,7 @@ import com.metamx.druid.input.InputRow;
 
 /**
  */
-public class StringInputRowParser implements InputRowParser<ByteBuffer>
+public class StringInputRowParser implements ByteBufferInputRowParser
 {
 	private final InputRowParser<Map<String, Object>> inputRowCreator;
 	private final Parser<String, Object> parser;
@@ -62,10 +62,7 @@ public class StringInputRowParser implements InputRowParser<ByteBuffer>
 	@Override
 	public InputRow parse(ByteBuffer input) throws FormattedException
 	{
-
-		Map<String, Object> theMap = buildStringKeyMap(input);
-
-		return inputRowCreator.parse(theMap);
+		return parseMap(buildStringKeyMap(input));
 	}
 
 	private Map<String, Object> buildStringKeyMap(ByteBuffer input)
@@ -88,7 +85,7 @@ public class StringInputRowParser implements InputRowParser<ByteBuffer>
 			chars.flip();
 			try
 			{
-				theMap = parser.parse(chars.toString());
+				theMap = parseString(chars.toString());
 			} finally
 			{
 				chars.clear();
@@ -102,6 +99,21 @@ public class StringInputRowParser implements InputRowParser<ByteBuffer>
 			    .build();
 		}
 		return theMap;
+	}
+
+	private Map<String, Object> parseString(String inputString)
+	{
+		return parser.parse(inputString);
+	}
+
+	public InputRow parse(String input) throws FormattedException
+	{
+		return parseMap(parseString(input));
+	}
+
+	private InputRow parseMap(Map<String, Object> theMap)
+	{
+		return inputRowCreator.parse(theMap);
 	}
 
 	@JsonValue

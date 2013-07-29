@@ -36,7 +36,6 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.zip.GZIPInputStream;
 
@@ -119,7 +118,7 @@ public class FlightsFirehoseFactory implements FirehoseFactory
       @Override
       public InputRow nextRow()
       {
-        final InputRow retVal = parser.parse(ByteBuffer.wrap(line.getBytes()));
+        final InputRow retVal = parser.parse(line);
         line = null;
         return retVal;
       }

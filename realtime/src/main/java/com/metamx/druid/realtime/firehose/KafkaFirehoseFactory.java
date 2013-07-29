@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import com.metamx.druid.indexer.data.ByteBufferInputRowParser;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -54,13 +55,13 @@ public class KafkaFirehoseFactory implements FirehoseFactory
 	private final String feed;
 
 	@JsonProperty
-	private final InputRowParser<ByteBuffer> parser;
+	private final ByteBufferInputRowParser parser;
 
 	@JsonCreator
 	public KafkaFirehoseFactory(
 	    @JsonProperty("consumerProps") Properties consumerProps,
 	    @JsonProperty("feed") String feed,
-	    @JsonProperty("parser") InputRowParser<ByteBuffer> parser)
+	    @JsonProperty("parser") ByteBufferInputRowParser parser)
 	{
 		this.consumerProps = consumerProps;
 		this.feed = feed;
