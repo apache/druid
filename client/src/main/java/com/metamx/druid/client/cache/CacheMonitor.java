@@ -19,6 +19,7 @@
 
 package com.metamx.druid.client.cache;
 
+import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
@@ -31,6 +32,7 @@ public class CacheMonitor extends AbstractMonitor
 
   private volatile CacheStats prevCacheStats = null;
 
+  @Inject
   public CacheMonitor(
       Cache cache
   )

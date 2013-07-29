@@ -120,6 +120,11 @@
                 <version>0.8.4</version>
             </dependency>
             <dependency>
+                <groupId>io.airlift</groupId>
+                <artifactId>airline</artifactId>
+                <version>0.5</version>
+            </dependency>
+            <dependency>
                 <groupId>org.skife.config</groupId>
                 <artifactId>config-magic</artifactId>
                 <version>0.9</version>

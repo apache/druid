@@ -42,6 +42,10 @@
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>airline</artifactId>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
