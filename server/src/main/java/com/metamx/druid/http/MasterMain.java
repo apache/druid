@@ -19,10 +19,7 @@
 
 package com.metamx.druid.http;
 
-import com.google.common.collect.Iterables;
-import com.google.inject.ConfigurationException;
 import com.google.inject.Injector;
-import com.google.inject.ProvisionException;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -98,25 +95,20 @@ public class MasterMain
     @Override
     public void initialize(Server server, Injector injector)
     {
-      try {
-        ResourceHandler resourceHandler = new ResourceHandler();
-        resourceHandler.setResourceBase(MasterMain.class.getClassLoader().getResource("static").toExternalForm());
+      ResourceHandler resourceHandler = new ResourceHandler();
+      resourceHandler.setResourceBase(MasterMain.class.getClassLoader().getResource("static").toExternalForm());
 
-        final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
-        root.setContextPath("/");
+      final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
+      root.setContextPath("/");
 
-        HandlerList handlerList = new HandlerList();
-        handlerList.setHandlers(new Handler[]{resourceHandler, root, new DefaultHandler()});
-        server.setHandler(handlerList);
+      HandlerList handlerList = new HandlerList();
+      handlerList.setHandlers(new Handler[]{resourceHandler, root, new DefaultHandler()});
+      server.setHandler(handlerList);
 
-        root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-        root.addFilter(GzipFilter.class, "/*", null);
-        root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
-        root.addFilter(GuiceFilter.class, "/*", null);
-      }
-      catch (ConfigurationException e) {
-        throw new ProvisionException(Iterables.getFirst(e.getErrorMessages(), null).getMessage());
-      }
+      root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+      root.addFilter(GzipFilter.class, "/*", null);
+      root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+      root.addFilter(GuiceFilter.class, "/*", null);
     }
   }
 }
