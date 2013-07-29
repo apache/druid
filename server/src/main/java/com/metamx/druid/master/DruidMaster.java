@@ -30,7 +30,6 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
@@ -105,7 +104,7 @@ public class DruidMaster
       DatabaseRuleManager databaseRuleManager,
       CuratorFramework curator,
       ServiceEmitter emitter,
-      ScheduledExecutorFactory scheduledExecutorFactory,
+      ScheduledExecutorService scheduledExecutorService,
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster
   )
@@ -119,7 +118,7 @@ public class DruidMaster
         databaseRuleManager,
         curator,
         emitter,
-        scheduledExecutorFactory,
+        scheduledExecutorService,
         indexingServiceClient,
         taskMaster,
         Maps.<String, LoadQueuePeon>newConcurrentMap()
@@ -135,7 +134,7 @@ public class DruidMaster
       DatabaseRuleManager databaseRuleManager,
       CuratorFramework curator,
       ServiceEmitter emitter,
-      ScheduledExecutorFactory scheduledExecutorFactory,
+      ScheduledExecutorService scheduledExecutorService,
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap
@@ -153,7 +152,7 @@ public class DruidMaster
     this.indexingServiceClient = indexingServiceClient;
     this.taskMaster = taskMaster;
 
-    this.exec = scheduledExecutorFactory.create(1, "Master-Exec--%d");
+    this.exec = scheduledExecutorService;
 
     this.leaderLatch = new AtomicReference<LeaderLatch>(null);
     this.loadManagementPeons = loadQueuePeonMap;

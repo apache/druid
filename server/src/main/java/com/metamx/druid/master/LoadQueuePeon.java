@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+import com.metamx.common.ISE;
+import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.Comparators;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.coordination.DataSegmentChangeRequest;
@@ -42,8 +44,10 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -53,15 +57,6 @@ public class LoadQueuePeon
   private static final EmittingLogger log = new EmittingLogger(LoadQueuePeon.class);
   private static final int DROP = 0;
   private static final int LOAD = 1;
-
-  private final Object lock = new Object();
-
-  private final CuratorFramework curator;
-  private final String basePath;
-  private final ObjectMapper jsonMapper;
-  private final ExecutorService zkWritingExecutor;
-
-  private final AtomicLong queuedSize = new AtomicLong(0);
 
   private static Comparator<SegmentHolder> segmentHolderComparator = new Comparator<SegmentHolder>()
   {
@@ -74,6 +69,15 @@ public class LoadQueuePeon
     }
   };
 
+  private final CuratorFramework curator;
+  private final String basePath;
+  private final ObjectMapper jsonMapper;
+  private final ExecutorService zkWritingExecutor;
+  private final ScheduledExecutorService scheduledExecutorService;
+  private final DruidMasterConfig config;
+
+  private final AtomicLong queuedSize = new AtomicLong(0);
+
   private final ConcurrentSkipListSet<SegmentHolder> segmentsToLoad = new ConcurrentSkipListSet<SegmentHolder>(
       segmentHolderComparator
   );
@@ -81,19 +85,25 @@ public class LoadQueuePeon
       segmentHolderComparator
   );
 
+  private final Object lock = new Object();
+
   private volatile SegmentHolder currentlyLoading = null;
 
   LoadQueuePeon(
       CuratorFramework curator,
       String basePath,
       ObjectMapper jsonMapper,
-      ExecutorService zkWritingExecutor
+      ExecutorService zkWritingExecutor,
+      ScheduledExecutorService scheduledExecutorService,
+      DruidMasterConfig config
   )
   {
     this.curator = curator;
     this.basePath = basePath;
     this.jsonMapper = jsonMapper;
     this.zkWritingExecutor = zkWritingExecutor;
+    this.scheduledExecutorService = scheduledExecutorService;
+    this.config = config;
   }
 
   public Set<DataSegment> getSegmentsToLoad()
@@ -231,6 +241,22 @@ public class LoadQueuePeon
                     final String path = ZKPaths.makePath(basePath, currentlyLoading.getSegmentIdentifier());
                     final byte[] payload = jsonMapper.writeValueAsBytes(currentlyLoading.getChangeRequest());
                     curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
+
+                    ScheduledExecutors.scheduleWithFixedDelay(
+                        scheduledExecutorService,
+                        config.getLoadTimeoutDelay(),
+                        new Callable<ScheduledExecutors.Signal>()
+                        {
+                          @Override
+                          public ScheduledExecutors.Signal call() throws Exception
+                          {
+                            if (curator.checkExists().forPath(path) != null) {
+                              throw new ISE("%s was never removed! Failing this assign!", path);
+                            }
+                            return ScheduledExecutors.Signal.STOP;
+                          }
+                        }
+                    );
 
                     final Stat stat = curator.checkExists().usingWatcher(
                         new CuratorWatcher()

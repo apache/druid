@@ -49,6 +49,7 @@ import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.db.DatabaseSegmentManagerConfig;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
+import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
@@ -226,8 +227,13 @@ public class MasterMain
         new ConfigManager(dbi, configManagerConfig), jsonMapper
     );
 
+    final ScheduledExecutorService scheduledExecutorService = scheduledExecutorFactory.create(1, "Master-Exec--%d");
     final LoadQueueTaskMaster taskMaster = new LoadQueueTaskMaster(
-        curatorFramework, jsonMapper, Execs.singleThreaded("Master-PeonExec--%d")
+        curatorFramework,
+        jsonMapper,
+        Execs.singleThreaded("Master-PeonExec--%d"),
+        scheduledExecutorService,
+        druidMasterConfig
     );
 
     final DruidMaster master = new DruidMaster(
@@ -239,7 +245,7 @@ public class MasterMain
         databaseRuleManager,
         curatorFramework,
         emitter,
-        scheduledExecutorFactory,
+        scheduledExecutorService,
         indexingServiceClient,
         taskMaster
     );
