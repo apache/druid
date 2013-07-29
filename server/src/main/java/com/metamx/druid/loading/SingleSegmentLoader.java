@@ -170,6 +170,8 @@ public class SingleSegmentLoader implements SegmentLoader
       log.info("Deleting directory[%s]", cacheFile);
       FileUtils.deleteDirectory(cacheFile);
       loc.removeSegment(segment);
+
+      factory.close(cacheFile);
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, e.getMessage());

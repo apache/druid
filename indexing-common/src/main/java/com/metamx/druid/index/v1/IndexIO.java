@@ -134,6 +134,13 @@ public class IndexIO
     return handler.mapDir(inDir);
   }
 
+  @Deprecated
+  public static void unmapDir(File inDir) throws IOException
+  {
+    init();
+    handler.close(inDir);
+  }
+
   public static QueryableIndex loadIndex(File inDir) throws IOException
   {
     init();
@@ -143,6 +150,20 @@ public class IndexIO
 
     if (loader != null) {
       return loader.load(inDir);
+    } else {
+      throw new ISE("Unknown index version[%s]", version);
+    }
+  }
+
+  public static void close(File inDir) throws IOException
+  {
+    init();
+    final int version = getVersionFromDir(inDir);
+
+    final IndexLoader loader = indexLoaders.get(version);
+
+    if (loader != null) {
+      loader.close(inDir);
     } else {
       throw new ISE("Unknown index version[%s]", version);
     }
@@ -260,6 +281,8 @@ public class IndexIO
     public boolean canBeMapped(File inDir) throws IOException;
 
     public MMappedIndex mapDir(File inDir) throws IOException;
+
+    public void close(File inDir) throws IOException;
 
     /**
      * This only exists for some legacy compatibility reasons, Metamarkets is working on getting rid of it in
@@ -381,6 +404,14 @@ public class IndexIO
       log.debug("Mapped v8 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
 
       return retVal;
+    }
+
+    @Override
+    public void close(File inDir) throws IOException
+    {
+      if (canBeMapped(inDir)) {
+        Smoosh.close(inDir);
+      }
     }
 
     @Override
@@ -680,6 +711,8 @@ public class IndexIO
   static interface IndexLoader
   {
     public QueryableIndex load(File inDir) throws IOException;
+
+    public void close(File inDir) throws IOException;
   }
 
   static class LegacyIndexLoader implements IndexLoader
@@ -764,6 +797,12 @@ public class IndexIO
           columns
       );
     }
+
+    @Override
+    public void close(File inDir) throws IOException
+    {
+      IndexIO.unmapDir(inDir);
+    }
   }
 
   static class V9IndexLoader implements IndexLoader
@@ -801,6 +840,12 @@ public class IndexIO
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
 
       return index;
+    }
+
+    @Override
+    public void close(File inDir) throws IOException
+    {
+      Smoosh.close(inDir);
     }
 
     private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer) throws IOException

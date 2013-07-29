@@ -22,10 +22,13 @@ package com.metamx.druid.loading;
 import com.metamx.druid.index.QueryableIndex;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
  */
 public interface QueryableIndexFactory
 {
   public QueryableIndex factorize(File parentDir) throws SegmentLoadingException;
+
+  public void close(File parentDir) throws IOException;
 }
