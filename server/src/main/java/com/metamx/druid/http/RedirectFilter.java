@@ -71,7 +71,13 @@ public class RedirectFilter implements Filter
       chain.doFilter(request, response);
     } else {
       URL url = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());
-      log.info("Forwarding request to [%s]", url);
+      log.debug("Forwarding request to [%s]", url);
+
+      if (url == null) {
+        // We apparently have no master, so let's do a Service Unavailable
+        response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        return;
+      }
 
       response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
       response.setHeader("Location", url.toString());

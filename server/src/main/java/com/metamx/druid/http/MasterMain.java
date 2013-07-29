@@ -19,7 +19,10 @@
 
 package com.metamx.druid.http;
 
+import com.google.common.collect.Iterables;
+import com.google.inject.ConfigurationException;
 import com.google.inject.Injector;
+import com.google.inject.ProvisionException;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -37,8 +40,13 @@ import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.JettyServerInitializer;
 import com.metamx.druid.initialization.JettyServerModule;
 import com.metamx.druid.log.LogLevelAdjuster;
+import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.metrics.MetricsModule;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.DefaultHandler;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -56,7 +64,7 @@ public class MasterMain
     LogLevelAdjuster.register();
 
     Injector injector = Initialization.makeInjector(
-        new LifecycleModule(),
+        new LifecycleModule().register(DruidMaster.class),
         EmitterModule.class,
         HttpClientModule.class,
         DbConnectorModule.class,
@@ -65,7 +73,10 @@ public class MasterMain
         new MetricsModule(),
         new DiscoveryModule().register(Self.class),
         ServerModule.class,
-        new JettyServerModule(new MasterJettyServerInitializer()),
+        new JettyServerModule(new MasterJettyServerInitializer())
+            .addResource(InfoResource.class)
+            .addResource(MasterResource.class)
+            .addResource(StatusResource.class),
         MasterModule.class
     );
 
@@ -87,19 +98,25 @@ public class MasterMain
     @Override
     public void initialize(Server server, Injector injector)
     {
-      final ServletContextHandler staticContext = new ServletContextHandler(server, "/static", ServletContextHandler.SESSIONS);
-      staticContext.addServlet(new ServletHolder(injector.getInstance(RedirectServlet.class)), "/*");
+      try {
+        ResourceHandler resourceHandler = new ResourceHandler();
+        resourceHandler.setResourceBase(MasterMain.class.getClassLoader().getResource("static").toExternalForm());
 
-      staticContext.setResourceBase(ComputeMain.class.getClassLoader().getResource("static").toExternalForm());
+        final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        root.setContextPath("/");
 
-      final ServletContextHandler root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
-      root.addServlet(new ServletHolder(new StatusServlet()), "/status");
-      root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-      root.addEventListener(new GuiceServletConfig(injector));
-      root.addFilter(GzipFilter.class, "/*", null);
-      root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
-      root.addFilter(GuiceFilter.class, "/info/*", null);
-      root.addFilter(GuiceFilter.class, "/master/*", null);
+        HandlerList handlerList = new HandlerList();
+        handlerList.setHandlers(new Handler[]{resourceHandler, root, new DefaultHandler()});
+        server.setHandler(handlerList);
+
+        root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+        root.addFilter(GzipFilter.class, "/*", null);
+        root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+        root.addFilter(GuiceFilter.class, "/*", null);
+      }
+      catch (ConfigurationException e) {
+        throw new ProvisionException(Iterables.getFirst(e.getErrorMessages(), null).getMessage());
+      }
     }
   }
 }

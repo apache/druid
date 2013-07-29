@@ -8,6 +8,7 @@ import com.google.inject.TypeLiteral;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.Lifecycle;
+import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.indexing.IndexingService;
@@ -23,7 +24,9 @@ import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.db.DatabaseSegmentManagerConfig;
 import com.metamx.druid.db.DatabaseSegmentManagerProvider;
 import com.metamx.druid.http.MasterRedirectInfo;
+import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
+import com.metamx.druid.http.RedirectServlet;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterConfig;
@@ -49,8 +52,10 @@ public class MasterModule implements Module
     JsonConfigProvider.bind(binder, "druid.manager.segment", DatabaseSegmentManagerConfig.class);
     JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
 
-    binder.bind(DruidMaster.class).asEagerSingleton();
+    binder.bind(InventoryView.class).to(ServerInventoryView.class);
     binder.bind(ServerInventoryView.class);
+    binder.bind(RedirectServlet.class).in(LazySingleton.class);
+    binder.bind(RedirectFilter.class).in(LazySingleton.class);
 
     binder.bind(DatabaseSegmentManager.class)
           .toProvider(DatabaseSegmentManagerProvider.class)
@@ -67,6 +72,8 @@ public class MasterModule implements Module
     binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
 
     binder.bind(RedirectInfo.class).to(MasterRedirectInfo.class).in(LazySingleton.class);
+
+    binder.bind(DruidMaster.class);
   }
 
   @Provides @LazySingleton @IndexingService

@@ -54,6 +54,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
+import org.apache.curator.framework.recipes.leader.Participant;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -241,7 +242,17 @@ public class DruidMaster
   {
     try {
       final LeaderLatch latch = leaderLatch.get();
-      return latch == null ? null : latch.getLeader().getId();
+
+      if (latch == null) {
+        return null;
+      }
+
+      Participant participant = latch.getLeader();
+      if (participant.isLeader()) {
+        return participant.getId();
+      }
+
+      return null;
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -561,8 +572,6 @@ public class DruidMaster
     synchronized (lock) {
       try {
         log.info("I am no longer the master...");
-
-        leaderLatch.get().close();
 
         for (String server : loadManagementPeons.keySet()) {
           LoadQueuePeon peon = loadManagementPeons.remove(server);

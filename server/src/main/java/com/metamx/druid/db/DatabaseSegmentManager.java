@@ -68,11 +68,12 @@ public class DatabaseSegmentManager
   private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
-  private final ScheduledExecutorService exec;
   private final Supplier<DatabaseSegmentManagerConfig> config;
   private final Supplier<DbTablesConfig> dbTables;
   private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
   private final IDBI dbi;
+
+  private volatile ScheduledExecutorService exec;
 
   private volatile boolean started = false;
 
@@ -91,8 +92,6 @@ public class DatabaseSegmentManager
         new ConcurrentHashMap<String, DruidDataSource>()
     );
     this.dbi = dbi;
-
-    this.exec = Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d");
   }
 
   @LifecycleStart
@@ -102,6 +101,8 @@ public class DatabaseSegmentManager
       if (started) {
         return;
       }
+
+      this.exec = Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d");
 
       final Duration delay = config.get().getPollDuration().toStandardDuration();
       ScheduledExecutors.scheduleWithFixedDelay(
@@ -133,6 +134,7 @@ public class DatabaseSegmentManager
       started = false;
       dataSources.set(new ConcurrentHashMap<String, DruidDataSource>());
       exec.shutdownNow();
+      exec = null;
     }
   }
 

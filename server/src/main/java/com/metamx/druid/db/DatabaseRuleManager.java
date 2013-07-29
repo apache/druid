@@ -118,11 +118,12 @@ public class DatabaseRuleManager
   private static final Logger log = new Logger(DatabaseRuleManager.class);
 
   private final ObjectMapper jsonMapper;
-  private final ScheduledExecutorService exec;
   private final Supplier<DatabaseRuleManagerConfig> config;
   private final Supplier<DbTablesConfig> dbTables;
   private final IDBI dbi;
   private final AtomicReference<ConcurrentHashMap<String, List<Rule>>> rules;
+
+  private volatile ScheduledExecutorService exec;
 
   private final Object lock = new Object();
 
@@ -141,8 +142,6 @@ public class DatabaseRuleManager
     this.dbTables = dbTables;
     this.dbi = dbi;
 
-    this.exec = Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d");
-
     this.rules = new AtomicReference<ConcurrentHashMap<String, List<Rule>>>(
         new ConcurrentHashMap<String, List<Rule>>()
     );
@@ -155,6 +154,8 @@ public class DatabaseRuleManager
       if (started) {
         return;
       }
+
+      this.exec = Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d");
 
       createDefaultRule(dbi, getRulesTable(), config.get().getDefaultTier(), jsonMapper);
       ScheduledExecutors.scheduleWithFixedDelay(
@@ -186,6 +187,8 @@ public class DatabaseRuleManager
       rules.set(new ConcurrentHashMap<String, List<Rule>>());
 
       started = false;
+      exec.shutdownNow();
+      exec = null;
     }
   }
 
