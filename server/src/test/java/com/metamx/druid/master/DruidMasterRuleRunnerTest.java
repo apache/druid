@@ -177,7 +177,14 @@ public class DruidMasterRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withMaxSegmentsToMove(5)
+            .withDynamicConfigs(new DynamicConfigs()
+            {
+              @Override
+              public int getMaxSegmentsToMove()
+              {
+                return 5;
+              }
+            })
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
@@ -523,7 +530,14 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withMillisToWaitBeforeDeleting(0L)
+        .withDynamicConfigs( new DynamicConfigs()
+        {
+          @Override
+          public long getMillisToWaitBeforeDeleting()
+          {
+            return 0L;
+          }
+        })
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -597,7 +611,14 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withMillisToWaitBeforeDeleting(0L)
+        .withDynamicConfigs( new DynamicConfigs()
+        {
+          @Override
+          public long getMillisToWaitBeforeDeleting()
+          {
+            return 0L;
+          }
+        })
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -678,7 +699,14 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withMillisToWaitBeforeDeleting(0L)
+        .withDynamicConfigs( new DynamicConfigs()
+        {
+          @Override
+          public long getMillisToWaitBeforeDeleting()
+          {
+            return 0L;
+          }
+        })
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -755,7 +783,14 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withMillisToWaitBeforeDeleting(0L)
+        .withDynamicConfigs( new DynamicConfigs()
+        {
+          @Override
+          public long getMillisToWaitBeforeDeleting()
+          {
+            return 0L;
+          }
+        })
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -844,7 +879,14 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withMillisToWaitBeforeDeleting(0L)
+        .withDynamicConfigs( new DynamicConfigs()
+        {
+          @Override
+          public long getMillisToWaitBeforeDeleting()
+          {
+            return 0L;
+          }
+        })
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -1030,7 +1072,14 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withMillisToWaitBeforeDeleting(0L)
+        .withDynamicConfigs( new DynamicConfigs()
+        {
+          @Override
+          public long getMillisToWaitBeforeDeleting()
+          {
+            return 0L;
+          }
+        })
         .withAvailableSegments(longerAvailableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)

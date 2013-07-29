@@ -419,10 +419,21 @@ public class DruidMasterSegmentMergerTest
 
     final AtomicReference<MergerWhitelist> whitelistRef = new AtomicReference<MergerWhitelist>(null);
     final DruidMasterSegmentMerger merger = new DruidMasterSegmentMerger(indexingServiceClient, whitelistRef);
+    final DynamicConfigs dynamicConfigs = new DynamicConfigs(null,mergeBytesLimit,mergeSegmentsLimit,null);
     final DruidMasterRuntimeParams params = DruidMasterRuntimeParams.newBuilder()
                                                                     .withAvailableSegments(ImmutableSet.copyOf(segments))
-                                                                    .withMergeBytesLimit(mergeBytesLimit)
-                                                                    .withMergeSegmentsLimit(mergeSegmentsLimit)
+                                                                    .withDynamicConfigs(
+                                                                        new DynamicConfigs()
+                                                                        {
+                                                                           @Override
+                                                                           public long getMergeBytesLimit(){
+                                                                             return mergeBytesLimit;
+                                                                           }
+                                                                           @Override
+                                                                           public int getMergeSegmentsLimit(){
+                                                                             return mergeSegmentsLimit;
+                                                                          }
+                                                                        })
                                                                     .build();
 
     merger.run(params);

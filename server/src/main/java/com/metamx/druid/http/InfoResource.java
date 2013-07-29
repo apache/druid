@@ -31,9 +31,11 @@ import com.metamx.druid.client.DruidDataSource;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
+import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.master.DruidMaster;
+import com.metamx.druid.master.DynamicConfigs;
 import com.metamx.druid.master.rules.Rule;
 import org.joda.time.Interval;
 
@@ -101,6 +103,8 @@ public class InfoResource
   private final DatabaseSegmentManager databaseSegmentManager;
   private final DatabaseRuleManager databaseRuleManager;
   private final IndexingServiceClient indexingServiceClient;
+  private final JacksonConfigManager configManager;
+
 
   @Inject
   public InfoResource(
@@ -108,6 +112,7 @@ public class InfoResource
       InventoryView serverInventoryView,
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
+      JacksonConfigManager configManager,
       @Nullable
       IndexingServiceClient indexingServiceClient
   )
@@ -116,6 +121,7 @@ public class InfoResource
     this.serverInventoryView = serverInventoryView;
     this.databaseSegmentManager = databaseSegmentManager;
     this.databaseRuleManager = databaseRuleManager;
+    this.configManager=configManager;
     this.indexingServiceClient = indexingServiceClient;
   }
 
@@ -127,6 +133,15 @@ public class InfoResource
     return Response.status(Response.Status.OK)
                    .entity(master.getCurrentMaster())
                    .build();
+  }
+
+  @GET
+  @Path("/master/dynamicConfigs")
+  @Produces("application/json")
+  public Response getDynamicConfigs()
+  {
+    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    return builder.build();
   }
 
   @GET
@@ -372,6 +387,20 @@ public class InfoResource
     }
     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
   }
+
+  @POST
+  @Path("master/setDynamicConfigs")
+  @Produces("application/json")
+  public Response setDynamicConfigs(
+      final DynamicConfigs dynamicConfigs)
+  {
+    if (!configManager.set(DynamicConfigs.CONFIG_KEY, dynamicConfigs))
+    {
+      return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+    return Response.status(Response.Status.OK).build();
+  }
+
 
   @GET
   @Path("/datasources")

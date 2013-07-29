@@ -80,6 +80,7 @@ public class DruidMaster
 
   private volatile boolean started = false;
   private volatile boolean master = false;
+  private volatile boolean defaultConfigsSet=false;
 
   private final DruidMasterConfig config;
   private final ZkPathsConfig zkPaths;
@@ -465,7 +466,11 @@ public class DruidMaster
         serverInventoryView.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
-
+        if (!defaultConfigsSet)
+        {
+         configManager.set(DynamicConfigs.CONFIG_KEY, new DynamicConfigs());
+          defaultConfigsSet=true;
+        }
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
         if (indexingServiceClient != null) {
 
@@ -650,17 +655,16 @@ public class DruidMaster
         }
 
         // Do master stuff.
+        DynamicConfigs dynamicConfigs = configManager.watch(DynamicConfigs.CONFIG_KEY,DynamicConfigs.class).get();
 
         DruidMasterRuntimeParams params =
             DruidMasterRuntimeParams.newBuilder()
                                     .withStartTime(startTime)
                                     .withDatasources(databaseSegmentManager.getInventory())
-                                    .withMillisToWaitBeforeDeleting(config.getMillisToWaitBeforeDeleting())
+                                    .withDynamicConfigs(dynamicConfigs)
                                     .withEmitter(emitter)
-                                    .withMergeBytesLimit(config.getMergeBytesLimit())
-                                    .withMergeSegmentsLimit(config.getMergeSegmentsLimit())
-                                    .withMaxSegmentsToMove(config.getMaxSegmentsToMove())
                                     .build();
+
 
         for (DruidMasterHelper helper : helpers) {
           params = helper.run(params);

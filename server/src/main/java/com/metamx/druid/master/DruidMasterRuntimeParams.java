@@ -46,11 +46,8 @@ public class DruidMasterRuntimeParams
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
-  private final long millisToWaitBeforeDeleting;
+  private final DynamicConfigs dynamicConfigs;
   private final MasterStats stats;
-  private final long mergeBytesLimit;
-  private final int mergeSegmentsLimit;
-  private final int maxSegmentsToMove;
   private final DateTime balancerReferenceTimestamp;
 
   public DruidMasterRuntimeParams(
@@ -63,11 +60,8 @@ public class DruidMasterRuntimeParams
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
-      long millisToWaitBeforeDeleting,
+      DynamicConfigs dynamicConfigs,
       MasterStats stats,
-      long mergeBytesLimit,
-      int mergeSegmentsLimit,
-      int maxSegmentsToMove,
       DateTime balancerReferenceTimestamp
   )
   {
@@ -80,11 +74,8 @@ public class DruidMasterRuntimeParams
     this.loadManagementPeons = loadManagementPeons;
     this.replicationManager = replicationManager;
     this.emitter = emitter;
-    this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
+    this.dynamicConfigs = dynamicConfigs;
     this.stats = stats;
-    this.mergeBytesLimit = mergeBytesLimit;
-    this.mergeSegmentsLimit = mergeSegmentsLimit;
-    this.maxSegmentsToMove = maxSegmentsToMove;
     this.balancerReferenceTimestamp = balancerReferenceTimestamp;
   }
 
@@ -135,7 +126,7 @@ public class DruidMasterRuntimeParams
 
   public long getMillisToWaitBeforeDeleting()
   {
-    return millisToWaitBeforeDeleting;
+    return dynamicConfigs.getMillisToWaitBeforeDeleting();
   }
 
   public MasterStats getMasterStats()
@@ -145,17 +136,17 @@ public class DruidMasterRuntimeParams
 
   public long getMergeBytesLimit()
   {
-    return mergeBytesLimit;
+    return dynamicConfigs.getMergeBytesLimit();
   }
 
   public int getMergeSegmentsLimit()
   {
-    return mergeSegmentsLimit;
+    return dynamicConfigs.getMergeSegmentsLimit();
   }
 
   public int getMaxSegmentsToMove()
   {
-    return maxSegmentsToMove;
+    return dynamicConfigs.getMaxSegmentsToMove();
   }
 
   public DateTime getBalancerReferenceTimestamp()
@@ -190,11 +181,8 @@ public class DruidMasterRuntimeParams
         loadManagementPeons,
         replicationManager,
         emitter,
-        millisToWaitBeforeDeleting,
+        dynamicConfigs,
         stats,
-        mergeBytesLimit,
-        mergeSegmentsLimit,
-        maxSegmentsToMove,
         balancerReferenceTimestamp
     );
   }
@@ -210,11 +198,8 @@ public class DruidMasterRuntimeParams
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
-    private long millisToWaitBeforeDeleting;
+    private DynamicConfigs dynamicConfigs;
     private MasterStats stats;
-    private long mergeBytesLimit;
-    private int mergeSegmentsLimit;
-    private int maxSegmentsToMove;
     private DateTime balancerReferenceTimestamp;
 
     Builder()
@@ -228,11 +213,8 @@ public class DruidMasterRuntimeParams
       this.loadManagementPeons = Maps.newHashMap();
       this.replicationManager = null;
       this.emitter = null;
-      this.millisToWaitBeforeDeleting = 0;
       this.stats = new MasterStats();
-      this.mergeBytesLimit = 0;
-      this.mergeSegmentsLimit = 0;
-      this.maxSegmentsToMove = 0;
+      this.dynamicConfigs = new DynamicConfigs();
       this.balancerReferenceTimestamp = null;
     }
 
@@ -246,11 +228,8 @@ public class DruidMasterRuntimeParams
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
-        long millisToWaitBeforeDeleting,
+        DynamicConfigs dynamicConfigs,
         MasterStats stats,
-        long mergeBytesLimit,
-        int mergeSegmentsLimit,
-        int maxSegmentsToMove,
         DateTime balancerReferenceTimestamp
     )
     {
@@ -263,11 +242,8 @@ public class DruidMasterRuntimeParams
       this.loadManagementPeons = loadManagementPeons;
       this.replicationManager = replicationManager;
       this.emitter = emitter;
-      this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
+      this.dynamicConfigs=dynamicConfigs;
       this.stats = stats;
-      this.mergeBytesLimit = mergeBytesLimit;
-      this.mergeSegmentsLimit = mergeSegmentsLimit;
-      this.maxSegmentsToMove = maxSegmentsToMove;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
     }
 
@@ -283,11 +259,8 @@ public class DruidMasterRuntimeParams
           loadManagementPeons,
           replicationManager,
           emitter,
-          millisToWaitBeforeDeleting,
+          dynamicConfigs,
           stats,
-          mergeBytesLimit,
-          mergeSegmentsLimit,
-          maxSegmentsToMove,
           balancerReferenceTimestamp
       );
     }
@@ -346,33 +319,15 @@ public class DruidMasterRuntimeParams
       return this;
     }
 
-    public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
-    {
-      this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
-      return this;
-    }
-
     public Builder withMasterStats(MasterStats stats)
     {
       this.stats.accumulate(stats);
       return this;
     }
 
-    public Builder withMergeBytesLimit(long mergeBytesLimit)
+    public Builder withDynamicConfigs(DynamicConfigs configs)
     {
-      this.mergeBytesLimit = mergeBytesLimit;
-      return this;
-    }
-
-    public Builder withMergeSegmentsLimit(int mergeSegmentsLimit)
-    {
-      this.mergeSegmentsLimit = mergeSegmentsLimit;
-      return this;
-    }
-
-    public Builder withMaxSegmentsToMove(int maxSegmentsToMove)
-    {
-      this.maxSegmentsToMove = maxSegmentsToMove;
+      this.dynamicConfigs = configs;
       return this;
     }
 
