@@ -74,8 +74,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * The RemoteTaskRunner's primary responsibility is to assign tasks to worker nodes and manage retries in failure
- * scenarios. The RemoteTaskRunner keeps track of which workers are running which tasks and manages coordinator and
+ * The RemoteTaskRunner's primary responsibility is to assign tasks to worker nodes.
+ * The RemoteTaskRunner keeps track of which workers are running which tasks and manages coordinator and
  * worker interactions over Zookeeper. The RemoteTaskRunner is event driven and updates state according to ephemeral
  * node changes in ZK.
  * <p/>
@@ -83,8 +83,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * fail. The RemoteTaskRunner depends on another component to create additional worker resources.
  * For example, {@link com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler} can take care of these duties.
  * <p/>
- * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will automatically retry any tasks
- * that were associated with the node.
+ * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will fail any tasks associated with the worker.
  * <p/>
  * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
@@ -383,8 +382,6 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
 
   /**
    * Adds a task to the pending queue
-   *
-   * @param taskRunnerWorkItem
    */
   private void addPendingTask(final RemoteTaskRunnerWorkItem taskRunnerWorkItem)
   {
