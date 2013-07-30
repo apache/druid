@@ -1,0 +1,273 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>SlickGrid example 5: Collapsing</title>
+  <link rel="stylesheet" href="../slick.grid.css" type="text/css"/>
+  <link rel="stylesheet" href="../css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+  <link rel="stylesheet" href="examples.css" type="text/css"/>
+  <style>
+    .cell-title {
+      font-weight: bold;
+    }
+
+    .cell-effort-driven {
+      text-align: center;
+    }
+
+    .toggle {
+      height: 9px;
+      width: 9px;
+      display: inline-block;
+    }
+
+    .toggle.expand {
+      background: url(../images/expand.gif) no-repeat center center;
+    }
+
+    .toggle.collapse {
+      background: url(../images/collapse.gif) no-repeat center center;
+    }
+
+  </style>
+</head>
+<body>
+<table width="100%">
+  <tr>
+    <td valign="top" width="50%">
+      <div style="border:1px solid gray;background:wheat;padding:6px;">
+        <label>Show tasks with % at least: </label>
+
+        <div style="padding:4px;">
+          <div style="width:100px;" id="pcSlider"></div>
+        </div>
+        <br/>
+        <label>And title including:</label>
+        <input type=text id="txtSearch">
+      </div>
+      <br/>
+
+      <div id="myGrid" style="width:600px;height:500px;"></div>
+    </td>
+    <td valign="top">
+      <h2>Demonstrates:</h2>
+      <ul>
+        <li>implementing expand/collapse as a filter for DataView</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<script src="../lib/firebugx.js"></script>
+
+<script src="../lib/jquery-1.7.min.js"></script>
+<script src="../lib/jquery-ui-1.8.16.custom.min.js"></script>
+<script src="../lib/jquery.event.drag-2.2.js"></script>
+
+<script src="../slick.core.js"></script>
+<script src="../slick.formatters.js"></script>
+<script src="../slick.editors.js"></script>
+<script src="../slick.grid.js"></script>
+<script src="../slick.dataview.js"></script>
+
+<script>
+function requiredFieldValidator(value) {
+  if (value == null || value == undefined || !value.length) {
+    return {valid: false, msg: "This is a required field"};
+  } else {
+    return {valid: true, msg: null};
+  }
+}
+
+
+var TaskNameFormatter = function (row, cell, value, columnDef, dataContext) {
+  value = value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  var spacer = "<span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px'></span>";
+  var idx = dataView.getIdxById(dataContext.id);
+  if (data[idx + 1] && data[idx + 1].indent > data[idx].indent) {
+    if (dataContext._collapsed) {
+      return spacer + " <span class='toggle expand'></span>&nbsp;" + value;
+    } else {
+      return spacer + " <span class='toggle collapse'></span>&nbsp;" + value;
+    }
+  } else {
+    return spacer + " <span class='toggle'></span>&nbsp;" + value;
+  }
+};
+
+var dataView;
+var grid;
+var data = [];
+var columns = [
+  {id: "title", name: "Title", field: "title", width: 220, cssClass: "cell-title", formatter: TaskNameFormatter, editor: Slick.Editors.Text, validator: requiredFieldValidator},
+  {id: "duration", name: "Duration", field: "duration", editor: Slick.Editors.Text},
+  {id: "%", name: "% Complete", field: "percentComplete", width: 80, resizable: false, formatter: Slick.Formatters.PercentCompleteBar, editor: Slick.Editors.PercentComplete},
+  {id: "start", name: "Start", field: "start", minWidth: 60, editor: Slick.Editors.Date},
+  {id: "finish", name: "Finish", field: "finish", minWidth: 60, editor: Slick.Editors.Date},
+  {id: "effort-driven", name: "Effort Driven", width: 80, minWidth: 20, maxWidth: 80, cssClass: "cell-effort-driven", field: "effortDriven", formatter: Slick.Formatters.Checkmark, editor: Slick.Editors.Checkbox, cannotTriggerInsert: true}
+];
+
+var options = {
+  editable: true,
+  enableAddRow: true,
+  enableCellNavigation: true,
+  asyncEditorLoading: false
+};
+
+var percentCompleteThreshold = 0;
+var searchString = "";
+
+function myFilter(item) {
+  if (item["percentComplete"] < percentCompleteThreshold) {
+    return false;
+  }
+
+  if (searchString != "" && item["title"].indexOf(searchString) == -1) {
+    return false;
+  }
+
+  if (item.parent != null) {
+    var parent = data[item.parent];
+
+    while (parent) {
+      if (parent._collapsed || (parent["percentComplete"] < percentCompleteThreshold) || (searchString != "" && parent["title"].indexOf(searchString) == -1)) {
+        return false;
+      }
+
+      parent = data[parent.parent];
+    }
+  }
+
+  return true;
+}
+
+function percentCompleteSort(a, b) {
+  return a["percentComplete"] - b["percentComplete"];
+}
+
+$(function () {
+  var indent = 0;
+  var parents = [];
+
+  // prepare the data
+  for (var i = 0; i < 1000; i++) {
+    var d = (data[i] = {});
+    var parent;
+
+    if (Math.random() > 0.8 && i > 0) {
+      indent++;
+      parents.push(i - 1);
+    } else if (Math.random() < 0.3 && indent > 0) {
+      indent--;
+      parents.pop();
+    } 
+	
+    if (parents.length > 0) {
+      parent = parents[parents.length - 1];
+    } else {
+      parent = null;
+    }
+
+    d["id"] = "id_" + i;
+    d["indent"] = indent;
+    d["parent"] = parent;
+    d["title"] = "Task " + i;
+    d["duration"] = "5 days";
+    d["percentComplete"] = Math.round(Math.random() * 100);
+    d["start"] = "01/01/2009";
+    d["finish"] = "01/05/2009";
+    d["effortDriven"] = (i % 5 == 0);
+  }
+
+
+  // initialize the model
+  dataView = new Slick.Data.DataView({ inlineFilters: true });
+  dataView.beginUpdate();
+  dataView.setItems(data);
+  dataView.setFilter(myFilter);
+  dataView.endUpdate();
+
+
+  // initialize the grid
+  grid = new Slick.Grid("#myGrid", dataView, columns, options);
+
+  grid.onCellChange.subscribe(function (e, args) {
+    dataView.updateItem(args.item.id, args.item);
+  });
+
+  grid.onAddNewRow.subscribe(function (e, args) {
+    var item = {
+      "id": "new_" + (Math.round(Math.random() * 10000)),
+      "indent": 0,
+      "title": "New task",
+      "duration": "1 day",
+      "percentComplete": 0,
+      "start": "01/01/2009",
+      "finish": "01/01/2009",
+      "effortDriven": false};
+    $.extend(item, args.item);
+    dataView.addItem(item);
+  });
+
+  grid.onClick.subscribe(function (e, args) {
+    if ($(e.target).hasClass("toggle")) {
+      var item = dataView.getItem(args.row);
+      if (item) {
+        if (!item._collapsed) {
+          item._collapsed = true;
+        } else {
+          item._collapsed = false;
+        }
+
+        dataView.updateItem(item.id, item);
+      }
+      e.stopImmediatePropagation();
+    }
+  });
+
+
+  // wire up model events to drive the grid
+  dataView.onRowCountChanged.subscribe(function (e, args) {
+    grid.updateRowCount();
+    grid.render();
+  });
+
+  dataView.onRowsChanged.subscribe(function (e, args) {
+    grid.invalidateRows(args.rows);
+    grid.render();
+  });
+
+
+  var h_runfilters = null;
+
+  // wire up the slider to apply the filter to the model
+  $("#pcSlider").slider({
+    "range": "min",
+    "slide": function (event, ui) {
+      Slick.GlobalEditorLock.cancelCurrentEdit();
+
+      if (percentCompleteThreshold != ui.value) {
+        window.clearTimeout(h_runfilters);
+        h_runfilters = window.setTimeout(dataView.refresh, 10);
+        percentCompleteThreshold = ui.value;
+      }
+    }
+  });
+
+
+  // wire up the search textbox to apply the filter to the model
+  $("#txtSearch").keyup(function (e) {
+    Slick.GlobalEditorLock.cancelCurrentEdit();
+
+    // clear on Esc
+    if (e.which == 27) {
+      this.value = "";
+    }
+
+    searchString = this.value;
+    dataView.refresh();
+  })
+})
+</script>
+</body>
+</html>

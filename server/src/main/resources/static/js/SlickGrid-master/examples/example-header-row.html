@@ -1,0 +1,135 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <link rel="stylesheet" href="../css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+  <link rel="stylesheet" href="../slick.grid.css" type="text/css"/>
+  <link rel="stylesheet" href="examples.css" type="text/css"/>
+  <style>
+    .slick-headerrow-column {
+      background: #87ceeb;
+      text-overflow: clip;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+
+    .slick-headerrow-column input {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+<div style="position:relative">
+  <div style="width:600px;">
+    <div id="myGrid" style="width:100%;height:500px;"></div>
+  </div>
+
+  <div class="options-panel">
+    <h2>Demonstrates:</h2>
+    <ul>
+      <li>Using a fixed header row to implement column-level filters</li>
+      <li>Type numbers in textboxes to filter grid data</li>
+    </ul>
+  </div>
+</div>
+
+<script src="../lib/firebugx.js"></script>
+
+<script src="../lib/jquery-1.7.min.js"></script>
+<script src="../lib/jquery-ui-1.8.16.custom.min.js"></script>
+<script src="../lib/jquery.event.drag-2.2.js"></script>
+
+<script src="../slick.core.js"></script>
+<script src="../slick.dataview.js"></script>
+<script src="../slick.grid.js"></script>
+
+<script>
+  var dataView;
+  var grid;
+  var data = [];
+  var options = {
+    enableCellNavigation: true,
+    showHeaderRow: true,
+    headerRowHeight: 30,
+    explicitInitialization: true
+  };
+  var columns = [];
+  var columnFilters = {};
+
+  for (var i = 0; i < 10; i++) {
+    columns.push({
+      id: i,
+      name: String.fromCharCode("A".charCodeAt(0) + i),
+      field: i,
+      width: 60
+    });
+  }
+
+
+  function filter(item) {
+    for (var columnId in columnFilters) {
+      if (columnId !== undefined && columnFilters[columnId] !== "") {
+        var c = grid.getColumns()[grid.getColumnIndex(columnId)];
+        if (item[c.field] != columnFilters[columnId]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  $(function () {
+    for (var i = 0; i < 100; i++) {
+      var d = (data[i] = {});
+      d["id"] = i;
+      for (var j = 0; j < columns.length; j++) {
+        d[j] = Math.round(Math.random() * 10);
+      }
+    }
+
+    dataView = new Slick.Data.DataView();
+    grid = new Slick.Grid("#myGrid", dataView, columns, options);
+
+
+    dataView.onRowCountChanged.subscribe(function (e, args) {
+      grid.updateRowCount();
+      grid.render();
+    });
+
+    dataView.onRowsChanged.subscribe(function (e, args) {
+      grid.invalidateRows(args.rows);
+      grid.render();
+    });
+
+
+    $(grid.getHeaderRow()).delegate(":input", "change keyup", function (e) {
+      var columnId = $(this).data("columnId");
+      if (columnId != null) {
+        columnFilters[columnId] = $.trim($(this).val());
+        dataView.refresh();
+      }
+    });
+
+    grid.onHeaderRowCellRendered.subscribe(function(e, args) {
+        $(args.node).empty();
+        $("<input type='text'>")
+           .data("columnId", args.column.id)
+           .val(columnFilters[args.column.id])
+           .appendTo(args.node);
+    });
+
+    grid.init();
+
+    dataView.beginUpdate();
+    dataView.setItems(data);
+    dataView.setFilter(filter);
+    dataView.endUpdate();
+  })
+</script>
+</body>
+</html>

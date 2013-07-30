@@ -1,0 +1,130 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <link rel="stylesheet" href="../css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+  <link rel="stylesheet" href="../slick.grid.css" type="text/css"/>
+  <link rel="stylesheet" href="examples.css" type="text/css"/>
+  <style>
+  .totals {
+    font-weight: bold;
+    color: gray;
+    font-style: italic;
+  }
+  </style>
+</head>
+<body>
+<div style="position:relative">
+  <div style="width:600px;">
+    <div id="myGrid" style="width:100%;height:500px;"></div>
+  </div>
+
+  <div class="options-panel">
+    <h2>Demonstrates:</h2>
+    <ul>
+      <li>Implementing a data provider to create a totals row at the end of the grid.</li>
+      <li>This is a simplification of what the DataView does. </li>
+    </ul>
+  </div>
+</div>
+
+<script src="../lib/firebugx.js"></script>
+
+<script src="../lib/jquery-1.7.min.js"></script>
+<script src="../lib/jquery-ui-1.8.16.custom.min.js"></script>
+<script src="../lib/jquery.event.drag-2.2.js"></script>
+
+<script src="../slick.core.js"></script>
+<script src="../slick.editors.js"></script>
+<script src="../slick.grid.js"></script>
+
+<script>
+  var grid;
+  var data = [];
+  var options = {
+    enableCellNavigation: true,
+    headerRowHeight: 30,
+    editable: true
+  };
+
+  var columns = [];
+  for (var i = 0; i < 10; i++) {
+    columns.push({
+      id: i,
+      name: String.fromCharCode("A".charCodeAt(0) + i),
+      field: i,
+      width: 60,
+      editor: Slick.Editors.Integer
+    });
+  }
+
+
+
+  function TotalsDataProvider(data, columns) {
+    var totals = {};
+    var totalsMetadata = {
+      // Style the totals row differently.
+      cssClasses: "totals",
+      columns: {}
+    };
+
+    // Make the totals not editable.
+    for (var i = 0; i < columns.length; i++) {
+      totalsMetadata.columns[i] = { editor: null };
+    }
+
+
+    this.getLength = function() {
+      return data.length + 1;
+    };
+
+    this.getItem = function(index) {
+      return (index < data.length) ? data[index] : totals;
+    };
+
+    this.updateTotals = function() {
+      var columnIdx = columns.length;
+      while (columnIdx--) {
+        var columnId = columns[columnIdx].id;
+        var total = 0;
+        var i = data.length;
+        while (i--) {
+          total += (parseInt(data[i][columnId], 10) || 0);
+        }
+        totals[columnId] = "Sum:  " + total;
+      }
+    };
+
+    this.getItemMetadata = function(index) {
+      return (index != data.length) ? null : totalsMetadata;
+    };
+
+    this.updateTotals();
+  }
+
+
+
+  $(function () {
+    for (var i = 0; i < 10; i++) {
+      var d = (data[i] = {});
+      d["id"] = i;
+      for (var j = 0; j < columns.length; j++) {
+        d[j] = Math.round(Math.random() * 10);
+      }
+    }
+
+    var dataProvider = new TotalsDataProvider(data, columns);
+
+    grid = new Slick.Grid("#myGrid", dataProvider, columns, options);
+
+    grid.onCellChange.subscribe(function(e, args) {
+      // The data has changed - recalculate the totals.
+      dataProvider.updateTotals();
+
+      // Rerender the totals row (last row).
+      grid.invalidateRow(dataProvider.getLength() - 1);
+      grid.render();
+    });
+  })
+</script>
+</body>
+</html>

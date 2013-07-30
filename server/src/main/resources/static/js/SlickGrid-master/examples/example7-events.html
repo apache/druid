@@ -1,0 +1,137 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>SlickGrid example 7: Events</title>
+  <link rel="stylesheet" href="../slick.grid.css" type="text/css"/>
+  <link rel="stylesheet" href="../css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+  <link rel="stylesheet" href="examples.css" type="text/css"/>
+  <style>
+    .cell-title {
+      font-weight: bold;
+    }
+
+    #contextMenu {
+      background: #e1efc7;
+      border: 1px solid gray;
+      padding: 2px;
+      display: inline-block;
+      min-width: 100px;
+      -moz-box-shadow: 2px 2px 2px silver;
+      -webkit-box-shadow: 2px 2px 2px silver;
+      z-index: 99999;
+    }
+
+    #contextMenu li {
+      padding: 4px 4px 4px 14px;
+      list-style: none;
+      cursor: pointer;
+      background: url("../images/arrow_right_peppermint.png") no-repeat center left;
+    }
+
+    #contextMenu li:hover {
+      background-color: white;
+    }
+  </style>
+</head>
+<body>
+<table width="100%">
+  <tr>
+    <td valign="top" width="50%">
+      <div id="myGrid" style="width:600px;height:500px;"></div>
+    </td>
+    <td valign="top">
+      <h2>Demonstrates:</h2>
+      <ul>
+        <li>handling events from the grid:</li>
+        <li>Right-click the row to open the context menu</li>
+        <li>Click the priority cell to toggle values</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+<ul id="contextMenu" style="display:none;position:absolute">
+  <b>Set priority:</b>
+  <li data="Low">Low</li>
+  <li data="Medium">Medium</li>
+  <li data="High">High</li>
+</ul>
+
+<script src="../lib/firebugx.js"></script>
+
+<script src="../lib/jquery-1.7.min.js"></script>
+<script src="../lib/jquery-ui-1.8.16.custom.min.js"></script>
+<script src="../lib/jquery.event.drag-2.2.js"></script>
+
+<script src="../slick.core.js"></script>
+<script src="../slick.editors.js"></script>
+<script src="../slick.grid.js"></script>
+
+<script>
+  var grid;
+  var data = [];
+  var columns = [
+    {id: "title", name: "Title", field: "title", width: 200, cssClass: "cell-title", editor: Slick.Editors.Text},
+    {id: "priority", name: "Priority", field: "priority", width: 80, selectable: false, resizable: false}
+  ];
+
+  var options = {
+    editable: true,
+    enableAddRow: false,
+    enableCellNavigation: true,
+    asyncEditorLoading: false,
+    rowHeight: 30
+  };
+
+  $(function () {
+    for (var i = 0; i < 100; i++) {
+      var d = (data[i] = {});
+      d["title"] = "Task " + i;
+      d["priority"] = "Medium";
+    }
+
+    grid = new Slick.Grid("#myGrid", data, columns, options);
+
+    grid.onContextMenu.subscribe(function (e) {
+      e.preventDefault();
+      var cell = grid.getCellFromEvent(e);
+      $("#contextMenu")
+          .data("row", cell.row)
+          .css("top", e.pageY)
+          .css("left", e.pageX)
+          .show();
+
+      $("body").one("click", function () {
+        $("#contextMenu").hide();
+      });
+    });
+
+    grid.onClick.subscribe(function (e) {
+      var cell = grid.getCellFromEvent(e);
+      if (grid.getColumns()[cell.cell].id == "priority") {
+        if (!grid.getEditorLock().commitCurrentEdit()) {
+          return;
+        }
+
+        var states = { "Low": "Medium", "Medium": "High", "High": "Low" };
+        data[cell.row].priority = states[data[cell.row].priority];
+        grid.updateRow(cell.row);
+        e.stopPropagation();
+      }
+    });
+  });
+
+  $("#contextMenu").click(function (e) {
+    if (!$(e.target).is("li")) {
+      return;
+    }
+    if (!grid.getEditorLock().commitCurrentEdit()) {
+      return;
+    }
+    var row = $(this).data("row");
+    data[row].priority = $(e.target).attr("data");
+    grid.updateRow(row);
+  });
+</script>
+</body>
+</html>

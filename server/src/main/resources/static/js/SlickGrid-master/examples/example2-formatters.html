@@ -1,0 +1,89 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>SlickGrid example 2: Formatters</title>
+  <link rel="stylesheet" href="../slick.grid.css" type="text/css"/>
+  <link rel="stylesheet" href="../css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+  <link rel="stylesheet" href="examples.css" type="text/css"/>
+  <style>
+    .cell-title {
+      font-weight: bold;
+    }
+
+    .cell-effort-driven {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<input type=text>
+
+<table width="100%">
+  <tr>
+    <td valign="top" width="50%">
+      <div id="myGrid" style="width:600px;height:500px;"></div>
+    </td>
+    <td valign="top">
+      <h2>Demonstrates:</h2>
+      <ul>
+        <li>width, minWidth, maxWidth, resizable, cssClass column attributes</li>
+        <li>custom column formatters</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<input type=text>
+
+<script src="../lib/firebugx.js"></script>
+
+<script src="../lib/jquery-1.7.min.js"></script>
+<script src="../lib/jquery-ui-1.8.16.custom.min.js"></script>
+<script src="../lib/jquery.event.drag-2.2.js"></script>
+
+<script src="../slick.core.js"></script>
+<script src="../slick.formatters.js"></script>
+<script src="../slick.grid.js"></script>
+
+<script>
+    function formatter(row, cell, value, columnDef, dataContext) {
+        return value;
+    }
+
+
+  var grid;
+  var data = [];
+  var columns = [
+    {id: "title", name: "Title", field: "title", width: 120, cssClass: "cell-title", formatter: formatter},
+    {id: "duration", name: "Duration", field: "duration"},
+    {id: "%", name: "% Complete", field: "percentComplete", width: 80, resizable: false, formatter: Slick.Formatters.PercentCompleteBar},
+    {id: "start", name: "Start", field: "start", minWidth: 60},
+    {id: "finish", name: "Finish", field: "finish", minWidth: 60},
+    {id: "effort-driven", name: "Effort Driven", sortable: false, width: 80, minWidth: 20, maxWidth: 80, cssClass: "cell-effort-driven", field: "effortDriven", formatter: Slick.Formatters.Checkmark}
+  ];
+
+  var options = {
+    editable: false,
+    enableAddRow: false,
+    enableCellNavigation: true
+  };
+
+  $(function () {
+    for (var i = 0; i < 5; i++) {
+      var d = (data[i] = {});
+
+      d["title"] = "<a href='#' tabindex='0'>Task</a> " + i;
+      d["duration"] = "5 days";
+      d["percentComplete"] = Math.min(100, Math.round(Math.random() * 110));
+      d["start"] = "01/01/2009";
+      d["finish"] = "01/05/2009";
+      d["effortDriven"] = (i % 5 == 0);
+    }
+
+    grid = new Slick.Grid("#myGrid", data, columns, options);
+  })
+</script>
+</body>
+</html>

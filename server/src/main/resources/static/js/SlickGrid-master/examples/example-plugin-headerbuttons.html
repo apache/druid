@@ -1,0 +1,163 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <link rel="stylesheet" href="../css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+  <link rel="stylesheet" href="../slick.grid.css" type="text/css"/>
+  <link rel="stylesheet" href="examples.css" type="text/css"/>
+  <link rel="stylesheet" href="../plugins/slick.headerbuttons.css" type="text/css"/>
+  <style>
+    .icon-highlight-off,
+    .icon-highlight-on {
+      background-image: url(../images/bullet_blue.png);
+    }
+
+    .icon-highlight-off {
+      opacity: 0.2;
+    }
+
+    .negative-highlight {
+      background: red;
+    }
+  </style>
+</head>
+<body>
+<div style="position:relative">
+  <div style="width:600px;">
+    <div id="myGrid" style="width:100%;height:500px;"></div>
+  </div>
+
+  <div class="options-panel">
+    <p>
+      This example demonstrates using the <b>Slick.Plugins.HeaderButtons</b> plugin to easily add buttons to column
+      headers.  These buttons can be specified directly in the column definition, and are very easy to configure and use.
+    </p>
+  </div>
+</div>
+
+<script src="../lib/firebugx.js"></script>
+
+<script src="../lib/jquery-1.7.min.js"></script>
+<script src="../lib/jquery-ui-1.8.16.custom.min.js"></script>
+<script src="../lib/jquery.event.drag-2.2.js"></script>
+
+<script src="../slick.core.js"></script>
+<script src="../slick.grid.js"></script>
+<script src="../plugins/slick.headerbuttons.js"></script>
+
+<script>
+  var grid;
+  var data = [];
+  var options = {
+    enableCellNavigation: true
+  };
+  var columns = [];
+  var columnsWithHighlightingById = {};
+
+
+  // Set up some test columns.
+  for (var i = 0; i < 10; i++) {
+    columns.push({
+      id: i,
+      name: String.fromCharCode("A".charCodeAt(0) + i),
+      field: i,
+      width: 90,
+      sortable: true,
+      formatter: highlightingFormatter,
+      header: {
+        buttons: [
+          {
+            cssClass: "icon-highlight-off",
+            command: "toggle-highlight",
+            tooltip: "Highlight negative numbers."
+          }
+        ]
+      }
+    });
+  }
+
+  // Set multiple buttons on the first column to demonstrate overflow.
+  columns[0].name = "Resize me!";
+  columns[0].header = {
+    buttons: [
+      {
+        image: "../images/tag_red.png"
+      },
+      {
+        image: "../images/comment_yellow.gif"
+      },
+      {
+        image: "../images/info.gif"
+      },
+      {
+        image: "../images/help.png"
+      }
+    ]
+  };
+
+  // Set a button on the second column to demonstrate hover.
+  columns[1].name = "Hover me!";
+  columns[1].header = {
+    buttons: [
+      {
+        image: "../images/help.png",
+        showOnHover: true,
+        tooltip: "This button only appears on hover.",
+        handler: function(e) {
+          alert('Help');
+        }
+      }
+    ]
+  };
+
+
+
+  // Set up some test data.
+  for (var i = 0; i < 100; i++) {
+    var d = (data[i] = {});
+    d["id"] = i;
+    for (var j = 0; j < columns.length; j++) {
+      d[j] = Math.round(Math.random() * 10) - 5;
+    }
+  }
+
+
+  function highlightingFormatter(row, cell, value, columnDef, dataContext) {
+    if (columnsWithHighlightingById[columnDef.id] && value < 0) {
+      return "<div style='color:red; font-weight:bold;'>" + value + "</div>";
+    } else {
+      return value;
+    }
+  }
+
+
+
+  $(function () {
+    grid = new Slick.Grid("#myGrid", data, columns, options);
+
+    var headerButtonsPlugin = new Slick.Plugins.HeaderButtons();
+
+    headerButtonsPlugin.onCommand.subscribe(function(e, args) {
+      var column = args.column;
+      var button = args.button;
+      var command = args.command;
+
+      if (command == "toggle-highlight") {
+        if (button.cssClass == "icon-highlight-on") {
+          delete columnsWithHighlightingById[column.id];
+          button.cssClass = "icon-highlight-off";
+          button.tooltip = "Highlight negative numbers."
+        } else {
+          columnsWithHighlightingById[column.id] = true;
+          button.cssClass = "icon-highlight-on";
+          button.tooltip = "Remove highlight."
+        }
+
+        grid.invalidate();
+      }
+    });
+
+    grid.registerPlugin(headerButtonsPlugin);
+  });
+</script>
+</body>
+</html>

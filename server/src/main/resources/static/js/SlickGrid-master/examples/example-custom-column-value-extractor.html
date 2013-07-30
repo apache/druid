@@ -1,0 +1,73 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>SlickGrid example: Custom column value extractor</title>
+  <link rel="stylesheet" href="../slick.grid.css" type="text/css"/>
+  <link rel="stylesheet" href="../css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+  <link rel="stylesheet" href="examples.css" type="text/css"/>
+</head>
+<body>
+<table width="100%">
+  <tr>
+    <td valign="top" width="50%">
+      <div id="myGrid" style="width:600px;height:500px;"></div>
+    </td>
+    <td valign="top">
+      <h2>Demonstrates:</h2>
+      <ul>
+        <li>using <u>dataItemColumnValueExtractor</u> option to specify a custom column value extractor</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<script src="../lib/jquery-1.7.min.js"></script>
+<script src="../lib/jquery.event.drag-2.2.js"></script>
+
+<script src="../slick.core.js"></script>
+<script src="../slick.grid.js"></script>
+
+<script>
+  var grid;
+  var columns = [
+    {id: "title", name: "Name", field: "name"},
+    {id: "field1", name: "Field1", field: "values", fieldIdx: 0},
+    {id: "field2", name: "Field2", field: "values", fieldIdx: 1},
+    {id: "field3", name: "Field3", field: "values", fieldIdx: 2}
+  ];
+
+  var options = {
+    enableCellNavigation: true,
+    enableColumnReorder: false,
+    dataItemColumnValueExtractor: getItemColumnValue
+  };
+
+  // Get the item column value using a custom 'fieldIdx' column param
+  function getItemColumnValue(item, column) {
+    var values = item[column.field];
+    if (column.fieldIdx !== undefined) {
+      return values && values[column.fieldIdx];
+    } else {
+      return values;
+    }
+  }
+
+  $(function () {
+    var data = [];
+    for (var i = 0; i < 500; i++) {
+      data[i] = {
+        name: "Item " + i,
+        values: [
+          Math.round(Math.random() * 100),
+          Math.round(Math.random() * 100),
+          Math.round(Math.random() * 100)
+        ]
+      };
+    }
+
+    grid = new Slick.Grid("#myGrid", data, columns, options);
+  })
+</script>
+</body>
+</html>

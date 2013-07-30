@@ -1,0 +1,73 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>SlickGrid plugin example: AutoTooltips</title>
+  <link rel="stylesheet" href="../slick.grid.css" type="text/css"/>
+  <link rel="stylesheet" href="../css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+  <link rel="stylesheet" href="examples.css" type="text/css"/>
+</head>
+<body>
+<table width="100%">
+  <tr>
+    <td valign="top" width="50%">
+      <div id="myGrid" style="width:600px;height:300px;"></div>
+    </td>
+    <td valign="top">
+      <h2>Demonstrates:</h2>
+      <ul>
+        <li>AutoTooltips plugin</li>
+      </ul>
+      <h2>Instructions:</h2>
+      <p>Drag the columns until see ellipsis in column or header.  Hover over cell to see tooltip.</p>
+      <h2>Usage:</h2>
+      <pre style="background-color: white; font-size: 110%; border-radius: 5px; padding: 20px; ">plugin = new Slick.AutoTooltips(pluginOptions);
+grid.registerPlugin(plugin);
+grid.render();</pre>
+    </td>
+  </tr>
+</table>
+
+<script src="../lib/jquery-1.7.min.js"></script>
+<script src="../lib/jquery.event.drag-2.2.js"></script>
+
+<script src="../slick.core.js"></script>
+<script src="../slick.grid.js"></script>
+<script src="../plugins/slick.autotooltips.js"></script>
+
+<script>
+  var grid;
+  var columns = [
+    {id: "title", name: "Title", field: "title"},
+    {id: "duration", name: "Duration", field: "duration"},
+    {id: "%", name: "% Complete", field: "percentComplete"},
+    {id: "start", name: "Start", field: "start"},
+    {id: "finish", name: "Finish", field: "finish"},
+    {id: "effort-driven", name: "Effort Driven", field: "effortDriven"}
+  ];
+
+  var options = {
+    enableCellNavigation: true,
+    enableColumnReorder: false
+  };
+
+  $(function () {
+    var data = [];
+    for (var i = 0; i < 500; i++) {
+      data[i] = {
+        title: "Task " + i,
+        duration: "5 days",
+        percentComplete: Math.round(Math.random() * 100),
+        start: "01/01/2009",
+        finish: "01/05/2009",
+        effortDriven: (i % 5 == 0)
+      };
+    }
+
+    grid = new Slick.Grid("#myGrid", data, columns, options);
+    grid.registerPlugin( new Slick.AutoTooltips({ enableForHeaderCells: true }) );
+    grid.render();
+  })
+</script>
+</body>
+</html>

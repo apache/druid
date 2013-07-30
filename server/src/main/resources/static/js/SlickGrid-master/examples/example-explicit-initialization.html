@@ -1,0 +1,79 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>SlickGrid example: Explicit grid initialization</title>
+  <link rel="stylesheet" href="../slick.grid.css" type="text/css"/>
+  <link rel="stylesheet" href="../css/smoothness/jquery-ui-1.8.16.custom.css" type="text/css"/>
+  <link rel="stylesheet" href="examples.css" type="text/css"/>
+</head>
+<body>
+<table width="100%" cellpadding="20">
+  <tr>
+    <td valign="top" width="50%" id="myTable">
+    </td>
+    <td valign="top">
+      <h2>Demonstrates:</h2>
+      <p>
+          The container which the grid is being created in needs to be in the DOM and participate in layout
+          (can be 'visibility:hidden' but not 'display:none') in order for SlickGrid to be able to make certain
+          measurements and initialize event listeners.  Normally, this is done when a SlickGrid instance is 
+          being created.  Optionally, you can defer the initialization until the above condition is met and call
+          the <b>grid.init()</b> method explicitly.  To use explicit initialization, set the <b>explicitInitialization</b>
+          option to true.
+          <br/><br/>
+          This example demonstrates creating a SlickGrid inside a detached element and calling <b>init()</b> explicitly
+          when the element is added to the DOM.
+      </p>
+    </td>
+  </tr>
+</table>
+
+<script src="../lib/jquery-1.7.min.js"></script>
+<script src="../lib/jquery.event.drag-2.2.js"></script>
+
+<script src="../slick.core.js"></script>
+<script src="../slick.grid.js"></script>
+
+<script>
+  var grid;
+  var columns = [
+    {id: "title", name: "Title", field: "title"},
+    {id: "duration", name: "Duration", field: "duration"},
+    {id: "%", name: "% Complete", field: "percentComplete"},
+    {id: "start", name: "Start", field: "start"},
+    {id: "finish", name: "Finish", field: "finish"},
+    {id: "effort-driven", name: "Effort Driven", field: "effortDriven"}
+  ];
+
+  var options = {
+    enableCellNavigation: true,
+    enableColumnReorder: false,
+    explicitInitialization: true
+  };
+
+  $(function () {
+    var data = [];
+    for (var i = 0; i < 500; i++) {
+      data[i] = {
+        title: "Task " + i,
+        duration: "5 days",
+        percentComplete: Math.round(Math.random() * 100),
+        start: "01/01/2009",
+        finish: "01/05/2009",
+        effortDriven: (i % 5 == 0)
+      };
+    }
+
+    // create a detached container element
+    var myGrid = $("<div id='myGrid' style='width:600px;height:500px;'></div>");
+    grid = new Slick.Grid(myGrid, data, columns, options);
+
+
+    // ... later on, append the container to the DOM and initialize SlickGrid
+    myGrid.appendTo($("#myTable"));
+    grid.init();
+  })
+</script>
+</body>
+</html>
