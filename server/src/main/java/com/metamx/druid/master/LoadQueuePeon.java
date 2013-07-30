@@ -142,9 +142,9 @@ public class LoadQueuePeon
     return queuedSize.get();
   }
 
-  public int getFailedAssignCount()
+  public int getAndResetFailedAssignCount()
   {
-    return failedAssignCount.get();
+    return failedAssignCount.getAndSet(0);
   }
 
   public void loadSegment(
