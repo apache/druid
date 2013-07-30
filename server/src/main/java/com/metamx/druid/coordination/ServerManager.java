@@ -185,7 +185,7 @@ public class ServerManager implements QuerySegmentWalker
         }
 
         try {
-          oldQueryable.asQueryableIndex().close();
+          oldQueryable.close();
         }
         catch (Exception e) {
           log.error("Unable to close queryable index %s", oldQueryable.getIdentifier());

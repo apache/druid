@@ -352,6 +352,12 @@ public class ServerManagerTest
     {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void close() throws IOException
+    {
+
+    }
   }
 
   public static class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
