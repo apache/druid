@@ -19,20 +19,29 @@
 
 package com.metamx.druid.loading;
 
-import org.skife.config.Config;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.NotNull;
 import java.io.File;
 
 /**
  */
-public abstract class SegmentLoaderConfig
+public class SegmentLoaderConfig
 {
-  @Config({"druid.paths.indexCache", "druid.segmentCache.path"})
-  public abstract File getCacheDirectory();
+  @JsonProperty("path")
+  @NotNull
+  private File cacheDirectory;
 
-  @Config("druid.segmentCache.deleteOnRemove")
-  public boolean deleteOnRemove()
+  @JsonProperty("deleteOnRemove")
+  private boolean deleteOnRemove = true;
+
+  public File getCacheDirectory()
   {
-    return true;
+    return cacheDirectory;
+  }
+
+  public boolean isDeleteOnRemove()
+  {
+    return deleteOnRemove;
   }
 }

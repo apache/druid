@@ -37,7 +37,8 @@ public class DruidServerMetadata
       @JsonProperty("name") String name,
       @JsonProperty("host") String host,
       @JsonProperty("maxSize") long maxSize,
-      @JsonProperty("type") String type, @JsonProperty("tier") String tier
+      @JsonProperty("type") String type,
+      @JsonProperty("tier") String tier
   )
   {
     this.name = name;

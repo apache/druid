@@ -40,7 +40,7 @@ import java.io.IOException;
 
 /**
  */
-public class MasterModule implements Module
+public class CoordinatorModule implements Module
 {
   @Override
   public void configure(Binder binder)

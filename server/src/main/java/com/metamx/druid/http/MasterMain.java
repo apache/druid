@@ -25,11 +25,11 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.CuratorModule;
 import com.metamx.druid.curator.discovery.DiscoveryModule;
+import com.metamx.druid.guice.CoordinatorModule;
 import com.metamx.druid.guice.DbConnectorModule;
 import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.JacksonConfigManagerModule;
 import com.metamx.druid.guice.LifecycleModule;
-import com.metamx.druid.guice.MasterModule;
 import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.initialization.EmitterModule;
@@ -74,7 +74,7 @@ public class MasterMain
             .addResource(InfoResource.class)
             .addResource(MasterResource.class)
             .addResource(StatusResource.class),
-        MasterModule.class
+        CoordinatorModule.class
     );
 
     final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);

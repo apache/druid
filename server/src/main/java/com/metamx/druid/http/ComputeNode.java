@@ -31,6 +31,7 @@ import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.BaseServerNode;
+import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.druid.coordination.ZkCoordinator;
 import com.metamx.druid.coordination.ZkCoordinatorConfig;
@@ -121,7 +122,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     );
     lifecycle.addManagedInstance(coordinator);
 
-    monitors.add(new ServerMonitor(getDruidServerMetadata(), serverManager));
+    monitors.add(new ServerMonitor(getConfigFactory().build(DruidServerConfig.class), serverManager));
     startMonitoring(monitors);
 
     final ServletContextHandler root = new ServletContextHandler(getServer(), "/", ServletContextHandler.SESSIONS);

@@ -22,6 +22,7 @@ package com.metamx.druid.coordination;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Ordering;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.Query;
@@ -29,6 +30,7 @@ import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.collect.CountingMap;
+import com.metamx.druid.guice.annotations.Processing;
 import com.metamx.druid.index.Segment;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.SegmentLoadingException;
@@ -75,11 +77,12 @@ public class ServerManager implements QuerySegmentWalker
   private final CountingMap<String> dataSourceSizes = new CountingMap<String>();
   private final CountingMap<String> dataSourceCounts = new CountingMap<String>();
 
+  @Inject
   public ServerManager(
       SegmentLoader segmentLoader,
       QueryRunnerFactoryConglomerate conglomerate,
       ServiceEmitter emitter,
-      ExecutorService exec
+      @Processing ExecutorService exec
   )
   {
     this.segmentLoader = segmentLoader;

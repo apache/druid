@@ -19,9 +19,7 @@
 
 package com.metamx.druid.loading;
 
-import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.Segment;
 
@@ -31,11 +29,8 @@ import java.util.Map;
  */
 public class DelegatingSegmentLoader implements SegmentLoader
 {
-  private static final Logger log = new Logger(DelegatingSegmentLoader.class);
-
   private volatile Map<String, SegmentLoader> loaderTypes;
 
-  @Inject
   public void setLoaderTypes(
       Map<String, SegmentLoader> loaderTypes
   )

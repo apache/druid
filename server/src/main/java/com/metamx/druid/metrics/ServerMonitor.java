@@ -19,7 +19,8 @@
 
 package com.metamx.druid.metrics;
 
-import com.metamx.druid.coordination.DruidServerMetadata;
+import com.google.inject.Inject;
+import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -29,39 +30,40 @@ import java.util.Map;
 
 public class ServerMonitor extends AbstractMonitor
 {
-  private final DruidServerMetadata druidServer;
+  private final DruidServerConfig serverConfig;
   private final ServerManager serverManager;
 
+  @Inject
   public ServerMonitor(
-      DruidServerMetadata druidServer,
+      DruidServerConfig serverConfig,
       ServerManager serverManager
   )
   {
-    this.druidServer = druidServer;
+    this.serverConfig = serverConfig;
     this.serverManager = serverManager;
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    emitter.emit(new ServiceMetricEvent.Builder().build("server/segment/max", druidServer.getMaxSize()));
+    emitter.emit(new ServiceMetricEvent.Builder().build("server/segment/max", serverConfig.getMaxSize()));
     for (Map.Entry<String, Long> entry : serverManager.getDataSourceSizes().entrySet()) {
       String dataSource = entry.getKey();
       long used = entry.getValue();
-      emitter.emit(
-          new ServiceMetricEvent.Builder()
-              .setUser1(dataSource)
-              .build("server/segment/used", used)
-      );
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setUser1(dataSource)
+                                                                                 .setUser2(serverConfig.getTier());
+
+      emitter.emit(builder.build("server/segment/used", used));
+      emitter.emit(builder.build("server/segment/usedPercent", used / (double) serverConfig.getMaxSize()));
     }
+
     for (Map.Entry<String, Long> entry : serverManager.getDataSourceCounts().entrySet()) {
       String dataSource = entry.getKey();
       long count = entry.getValue();
-      emitter.emit(
-          new ServiceMetricEvent.Builder()
-              .setUser1(dataSource)
-              .build("server/segment/count", count)
-      );
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setUser1(dataSource)
+                                                                                 .setUser2(serverConfig.getTier());
+
+      emitter.emit(builder.build("server/segment/count", count));
     }
 
     return true;

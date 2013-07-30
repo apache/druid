@@ -19,7 +19,7 @@ public class Main
     builder.withGroup("server")
            .withDescription("Run one of the Druid server types.")
            .withDefaultCommand(Help.class)
-           .withCommands(Coordinator.class);
+           .withCommands(CliCoordinator.class, CliHistorical.class);
 
     builder.build().parse(args).run();
   }

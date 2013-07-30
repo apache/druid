@@ -1,5 +1,7 @@
 package com.metamx.druid.query;
 
+import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
@@ -9,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+@ManageLifecycle
 public class MetricsEmittingExecutorService extends AbstractExecutorService
 {
   private final ExecutorService base;
@@ -33,6 +36,7 @@ public class MetricsEmittingExecutorService extends AbstractExecutorService
   }
 
   @Override
+  @LifecycleStop
   public List<Runnable> shutdownNow()
   {
     return base.shutdownNow();

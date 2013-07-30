@@ -1,17 +1,15 @@
 package io.druid.cli;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
-import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.CuratorModule;
 import com.metamx.druid.curator.discovery.DiscoveryModule;
+import com.metamx.druid.guice.CoordinatorModule;
 import com.metamx.druid.guice.DbConnectorModule;
 import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.JacksonConfigManagerModule;
 import com.metamx.druid.guice.LifecycleModule;
-import com.metamx.druid.guice.MasterModule;
 import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.http.InfoResource;
@@ -23,7 +21,6 @@ import com.metamx.druid.initialization.EmitterModule;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.JettyServerInitializer;
 import com.metamx.druid.initialization.JettyServerModule;
-import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.metrics.MetricsModule;
 import io.airlift.command.Command;
@@ -44,51 +41,37 @@ import org.eclipse.jetty.servlets.GzipFilter;
     name = "coordinator",
     description = "Runs the Coordinator, see https://github.com/metamx/druid/wiki/Master for a description."
 )
-public class Coordinator implements Runnable
+public class CliCoordinator extends ServerRunnable
 {
-  private static final Logger log = new Logger(Coordinator.class);
+  private static final Logger log = new Logger(CliCoordinator.class);
 
-  @Override
-  public void run()
+  public CliCoordinator()
   {
-    try {
-      LogLevelAdjuster.register();
-
-      Injector injector = Initialization.makeInjector(
-          new LifecycleModule().register(DruidMaster.class),
-          EmitterModule.class,
-          HttpClientModule.class,
-          DbConnectorModule.class,
-          JacksonConfigManagerModule.class,
-          CuratorModule.class,
-          new MetricsModule(),
-          new DiscoveryModule().register(Self.class),
-          ServerModule.class,
-          new JettyServerModule(new MasterJettyServerInitializer())
-              .addResource(InfoResource.class)
-              .addResource(MasterResource.class)
-              .addResource(StatusResource.class),
-          MasterModule.class
-      );
-
-      final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
-
-      try {
-        lifecycle.start();
-      }
-      catch (Throwable t) {
-        log.error(t, "Error when starting up.  Failing.");
-        System.exit(1);
-      }
-
-      lifecycle.join();
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+    super(log);
   }
 
-  private static class MasterJettyServerInitializer implements JettyServerInitializer
+  @Override
+  protected Injector getInjector()
+  {
+    return Initialization.makeInjector(
+        new LifecycleModule().register(DruidMaster.class),
+        EmitterModule.class,
+        HttpClientModule.class,
+        DbConnectorModule.class,
+        JacksonConfigManagerModule.class,
+        CuratorModule.class,
+        new MetricsModule(),
+        new DiscoveryModule().register(Self.class),
+        ServerModule.class,
+        new JettyServerModule(new CoordinatorJettyServerInitializer())
+            .addResource(InfoResource.class)
+            .addResource(MasterResource.class)
+            .addResource(StatusResource.class),
+        CoordinatorModule.class
+    );
+  }
+
+  private static class CoordinatorJettyServerInitializer implements JettyServerInitializer
   {
     @Override
     public void initialize(Server server, Injector injector)
