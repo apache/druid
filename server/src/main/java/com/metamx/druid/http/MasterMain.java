@@ -49,6 +49,7 @@ import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.db.DatabaseSegmentManagerConfig;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
+import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
@@ -124,8 +125,13 @@ public class MasterMain
     final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
 
     final ServiceDiscoveryConfig serviceDiscoveryConfig = configFactory.build(ServiceDiscoveryConfig.class);
-    CuratorFramework curatorFramework = Initialization.makeCuratorFramework(
+    CuratorFramework serviceDiscoveryCuratorFramework = Initialization.makeCuratorFramework(
         serviceDiscoveryConfig,
+        lifecycle
+    );
+    final CuratorConfig curatorConfig = configFactory.build(CuratorConfig.class);
+    CuratorFramework curatorFramework = Initialization.makeCuratorFramework(
+        curatorConfig,
         lifecycle
     );
 
@@ -201,7 +207,7 @@ public class MasterMain
     final DruidMasterConfig druidMasterConfig = configFactory.build(DruidMasterConfig.class);
 
     final ServiceDiscovery serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-        curatorFramework,
+        serviceDiscoveryCuratorFramework,
         serviceDiscoveryConfig,
         lifecycle
     );
