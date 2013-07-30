@@ -39,7 +39,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
   public CostBalancerStrategy(DateTime referenceTimestamp)
   {
-    this.referenceTimestamp=referenceTimestamp;
+    this.referenceTimestamp = referenceTimestamp;
   }
 
   @Override
@@ -208,25 +208,26 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public void emitStats( String tier,
+  public void emitStats(
+      String tier,
       MasterStats stats, List<ServerHolder> serverHolderList
   )
   {
-          final double initialTotalCost = calculateInitialTotalCost(serverHolderList);
-          final double normalization = calculateNormalization(serverHolderList);
-          final double normalizedInitialCost = initialTotalCost / normalization;
+    final double initialTotalCost = calculateInitialTotalCost(serverHolderList);
+    final double normalization = calculateNormalization(serverHolderList);
+    final double normalizedInitialCost = initialTotalCost / normalization;
 
-          stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
-          stats.addToTieredStat("normalization", tier, (long) normalization);
-          stats.addToTieredStat("normalizedInitialCostTimesOneThousand", tier, (long) (normalizedInitialCost * 1000));
+    stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
+    stats.addToTieredStat("normalization", tier, (long) normalization);
+    stats.addToTieredStat("normalizedInitialCostTimesOneThousand", tier, (long) (normalizedInitialCost * 1000));
 
     log.info(
-                 "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f]",
-                  tier,
-                  initialTotalCost,
-                  normalization,
-                  normalizedInitialCost
-              );
+        "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f]",
+        tier,
+        initialTotalCost,
+        normalization,
+        normalizedInitialCost
+    );
 
   }
 

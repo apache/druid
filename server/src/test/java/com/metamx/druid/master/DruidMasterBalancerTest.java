@@ -184,7 +184,14 @@ public class DruidMasterBalancerTest
                                         )
                                     )
                                 )
-                                .withLoadManagementPeons(ImmutableMap.<String, LoadQueuePeon>of("from", fromPeon, "to", toPeon))
+                                .withLoadManagementPeons(
+                                    ImmutableMap.<String, LoadQueuePeon>of(
+                                        "from",
+                                        fromPeon,
+                                        "to",
+                                        toPeon
+                                    )
+                                )
                                 .withAvailableSegments(segments.values())
                                 .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
@@ -195,7 +202,7 @@ public class DruidMasterBalancerTest
   }
 
 
- @Test
+  @Test
   public void testRun2()
   {
     // Mock some servers of different usages
@@ -263,7 +270,18 @@ public class DruidMasterBalancerTest
                                         )
                                     )
                                 )
-                                .withLoadManagementPeons(ImmutableMap.<String, LoadQueuePeon>of("1", peon1, "2", peon2, "3", peon3, "4", peon4))
+                                .withLoadManagementPeons(
+                                    ImmutableMap.<String, LoadQueuePeon>of(
+                                        "1",
+                                        peon1,
+                                        "2",
+                                        peon2,
+                                        "3",
+                                        peon3,
+                                        "4",
+                                        peon4
+                                    )
+                                )
                                 .withAvailableSegments(segments.values())
                                 .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))

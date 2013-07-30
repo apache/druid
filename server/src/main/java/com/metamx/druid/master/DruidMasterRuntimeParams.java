@@ -90,8 +90,8 @@ public class DruidMasterRuntimeParams
     this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
     this.balancerReferenceTimestamp = balancerReferenceTimestamp;
-    this.emitStats =emitBalancingCostParams;
-    this.strategyFactory=strategyFactory;
+    this.emitStats = emitBalancingCostParams;
+    this.strategyFactory = strategyFactory;
   }
 
   public boolean getEmitStats()
@@ -248,8 +248,8 @@ public class DruidMasterRuntimeParams
       this.mergeSegmentsLimit = 0;
       this.maxSegmentsToMove = 0;
       this.balancerReferenceTimestamp = null;
-      this.emitBalancingCostParams=false;
-      this.strategyFactory=new CostBalancerStrategyFactory();
+      this.emitBalancingCostParams = false;
+      this.strategyFactory = new CostBalancerStrategyFactory();
     }
 
     Builder(
@@ -286,7 +286,7 @@ public class DruidMasterRuntimeParams
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
-      this.emitBalancingCostParams=emitBalancingCostParams;
+      this.emitBalancingCostParams = emitBalancingCostParams;
     }
 
     public DruidMasterRuntimeParams build()
@@ -312,15 +312,18 @@ public class DruidMasterRuntimeParams
       );
     }
 
-    public Builder withBalancerStrategy(BalancerStrategyFactory strategyFactory){
-      this.strategyFactory=strategyFactory;
+    public Builder withBalancerStrategy(BalancerStrategyFactory strategyFactory)
+    {
+      this.strategyFactory = strategyFactory;
       return this;
     }
 
-    public Builder withEmitBalancingCostParams(boolean param){
-      emitBalancingCostParams=param;
+    public Builder withEmitBalancingCostParams(boolean param)
+    {
+      emitBalancingCostParams = param;
       return this;
     }
+
     public Builder withStartTime(long time)
     {
       startTime = time;

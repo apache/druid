@@ -115,7 +115,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
       for (int iter = 0; iter < maxSegmentsToMove; iter++) {
         final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(serverHolderList);
 
-        if (segmentToMove!=null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
+        if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
           final ServerHolder holder = strategy.findNewSegmentHome(segmentToMove.getSegment(), serverHolderList);
 
           if (holder != null) {
@@ -124,16 +124,15 @@ public class DruidMasterBalancer implements DruidMasterHelper
         }
       }
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
-      if (params.getEmitStats())
-      {
+      if (params.getEmitStats()) {
         strategy.emitStats(tier, stats, serverHolderList);
 
       }
       log.info(
-          "[%s]: Segments Moved: [%d]",tier,currentlyMovingSegments.get(tier).size()
+          "[%s]: Segments Moved: [%d]", tier, currentlyMovingSegments.get(tier).size()
       );
 
-      }
+    }
 
     return params.buildFromExisting()
                  .withMasterStats(stats)

@@ -45,11 +45,9 @@ public class ReservoirSegmentSampler
         numSoFar++;
       }
     }
-    if (fromServerHolder!=null)
-    {
+    if (fromServerHolder != null) {
       return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
-    }
-    else{
+    } else {
       return null;
     }
   }
