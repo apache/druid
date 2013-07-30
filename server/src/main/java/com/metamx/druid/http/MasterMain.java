@@ -227,12 +227,10 @@ public class MasterMain
         new ConfigManager(dbi, configManagerConfig), jsonMapper
     );
 
-    final ScheduledExecutorService scheduledExecutorService = scheduledExecutorFactory.create(1, "Master-Exec--%d");
     final LoadQueueTaskMaster taskMaster = new LoadQueueTaskMaster(
         curatorFramework,
         jsonMapper,
-        Execs.singleThreaded("Master-PeonExec--%d"),
-        scheduledExecutorService,
+        scheduledExecutorFactory.create(1, "Master-PeonExec--%d"),
         druidMasterConfig
     );
 
@@ -245,7 +243,7 @@ public class MasterMain
         databaseRuleManager,
         curatorFramework,
         emitter,
-        scheduledExecutorService,
+        scheduledExecutorFactory,
         indexingServiceClient,
         taskMaster
     );
