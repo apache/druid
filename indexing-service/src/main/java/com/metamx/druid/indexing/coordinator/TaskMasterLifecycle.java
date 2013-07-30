@@ -101,8 +101,24 @@ public class TaskMasterLifecycle
 
           // Sensible order to start stuff:
           final Lifecycle leaderLifecycle = new Lifecycle();
-          leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addManagedInstance(taskRunner);
+          leaderLifecycle.addHandler(
+              new Lifecycle.Handler()
+              {
+                @Override
+                public void start() throws Exception
+                {
+                  taskRunner.bootstrap(taskQueue.snapshot());
+                }
+
+                @Override
+                public void stop()
+                {
+
+                }
+              }
+          );
+          leaderLifecycle.addManagedInstance(taskQueue);
           Initialization.announceDefaultService(serviceDiscoveryConfig, serviceAnnouncer, leaderLifecycle);
           leaderLifecycle.addManagedInstance(taskConsumer);
 
