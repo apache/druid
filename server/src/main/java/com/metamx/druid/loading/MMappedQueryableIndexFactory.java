@@ -69,10 +69,4 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
       throw new SegmentLoadingException(e, "%s", e.getMessage());
     }
   }
-
-  @Override
-  public void close(File parentDir) throws IOException
-  {
-    IndexIO.close(parentDir);
-  }
 }

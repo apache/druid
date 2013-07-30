@@ -23,9 +23,11 @@ import com.metamx.druid.index.column.ColumnSelector;
 import com.metamx.druid.kv.Indexed;
 import org.joda.time.Interval;
 
+import java.io.Closeable;
+
 /**
  */
-public interface QueryableIndex extends ColumnSelector
+public interface QueryableIndex extends ColumnSelector, Closeable
 {
   public Interval getDataInterval();
   public int getNumRows();

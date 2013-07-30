@@ -29,6 +29,4 @@ import java.io.IOException;
 public interface QueryableIndexFactory
 {
   public QueryableIndex factorize(File parentDir) throws SegmentLoadingException;
-
-  public void close(File parentDir) throws IOException;
 }

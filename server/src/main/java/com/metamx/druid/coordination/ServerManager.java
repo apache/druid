@@ -183,6 +183,13 @@ public class ServerManager implements QuerySegmentWalker
         synchronized (dataSourceCounts) {
           dataSourceCounts.add(dataSource, -1L);
         }
+
+        try {
+          oldQueryable.asQueryableIndex().close();
+        }
+        catch (Exception e) {
+          log.error("Unable to close queryable index %s", oldQueryable.getIdentifier());
+        }
       } else {
         log.info(
             "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
