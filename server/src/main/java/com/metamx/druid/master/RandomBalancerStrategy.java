@@ -19,10 +19,8 @@
 
 package com.metamx.druid.master;
 
-import com.google.common.collect.Lists;
 import com.metamx.druid.client.DataSegment;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -32,11 +30,10 @@ public class RandomBalancerStrategy implements BalancerStrategy
 
   @Override
   public ServerHolder findNewSegmentHome(
-      DataSegment proposalSegment, Iterable<ServerHolder> serverHolders
+      DataSegment proposalSegment, List<ServerHolder> serverHolders
   )
   {
-    ArrayList<ServerHolder> serverHoldersList = Lists.newArrayList(serverHolders);
-    return serverHoldersList.get(new Random().nextInt(serverHoldersList.size()));
+    return serverHolders.get(new Random().nextInt(serverHolders.size()));
   }
 
   @Override

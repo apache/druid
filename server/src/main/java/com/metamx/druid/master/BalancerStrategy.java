@@ -25,7 +25,7 @@ import java.util.List;
 
 public interface BalancerStrategy
 {
-  public ServerHolder findNewSegmentHome(final DataSegment proposalSegment,final Iterable<ServerHolder> serverHolders);
+  public ServerHolder findNewSegmentHome(final DataSegment proposalSegment,final List<ServerHolder> serverHolders);
   public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders);
   public void emitStats(String tier, MasterStats stats, List<ServerHolder> serverHolderList);
 }

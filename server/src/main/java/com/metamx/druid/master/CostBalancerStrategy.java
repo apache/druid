@@ -44,7 +44,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
   @Override
   public ServerHolder findNewSegmentHome(
-      DataSegment proposalSegment, Iterable<ServerHolder> serverHolders
+      DataSegment proposalSegment, List<ServerHolder> serverHolders
   )
   {
     return computeCosts(proposalSegment, serverHolders).rhs;

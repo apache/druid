@@ -14,3 +14,4 @@ examples/rand/RealtimeNode.out
 examples/twitter/RealtimeNode.out
 *.log
 *.DS_Store
+server/src/main/resources/static/js/SlickGrid-master/
