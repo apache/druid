@@ -57,7 +57,9 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.shard.ShardSpec;
 import com.metamx.druid.utils.JodaUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.mapreduce.Job;
 
 import org.joda.time.DateTime;
@@ -656,22 +658,33 @@ public class HadoopDruidIndexerConfig
     return new Path(makeDescriptorInfoDir(), String.format("%s.json", segment.getIdentifier().replace(":", "")));
   }
 
-  public Path makeSegmentOutputPath(Bucket bucket)
-  {
-    final Interval bucketInterval = getGranularitySpec().bucketInterval(bucket.time).get();
-
-    return new Path(
-        String.format(
-            "%s/%s/%s_%s/%s/%s",
-            getSegmentOutputDir(),
-            dataSource,
-            bucketInterval.getStart().toString(),
-            bucketInterval.getEnd().toString(),
-            getVersion(),
-            bucket.partitionNum
-        )
-    );
-  }
+	public Path makeSegmentOutputPath(FileSystem fileSystem, Bucket bucket)
+	{
+		final Interval bucketInterval = getGranularitySpec().bucketInterval(bucket.time).get();
+		if (fileSystem instanceof DistributedFileSystem)
+		{
+			return new Path(
+			    String.format(
+			        "%s/%s/%s_%s/%s/%s",
+			        getSegmentOutputDir().replace(":", "_"),
+			        dataSource.replace(":", "_"),
+			        bucketInterval.getStart().toString(ISODateTimeFormat.basicDateTime()),
+			        bucketInterval.getEnd().toString(ISODateTimeFormat.basicDateTime()),
+			        getVersion().replace(":", "_"),
+			        bucket.partitionNum
+			        ));
+		}
+		return new Path(
+		    String.format(
+		        "%s/%s/%s_%s/%s/%s",
+		        getSegmentOutputDir(),
+		        dataSource,
+		        bucketInterval.getStart().toString(),
+		        bucketInterval.getEnd().toString(),
+		        getVersion(),
+		        bucket.partitionNum
+		        ));
+	}
 
   public Job addInputPaths(Job job) throws IOException
   {
