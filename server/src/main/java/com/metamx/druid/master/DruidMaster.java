@@ -468,7 +468,8 @@ public class DruidMaster
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
         if (!defaultConfigsSet)
         {
-         configManager.set(DynamicConfigs.CONFIG_KEY, new DynamicConfigs());
+         configManager.watch(DynamicConfigs.CONFIG_KEY, DynamicConfigs.class);
+         configManager.set(DynamicConfigs.CONFIG_KEY, new DynamicConfigs(null,null,null,null));
           defaultConfigsSet=true;
         }
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
@@ -760,6 +761,7 @@ public class DruidMaster
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .withBalancerReferenceTimestamp(DateTime.now())
+                               .withDynamicConfigs(configManager.watch(DynamicConfigs.CONFIG_KEY,DynamicConfigs.class).get())
                                .build();
                 }
               },

@@ -193,7 +193,7 @@ public class DruidMasterBalancerTest
                                 )
                                 .withAvailableSegments(segments.values())
                                 .withDynamicConfigs(
-                                    new DynamicConfigs()
+                                    new DynamicConfigs(null,null,null,null)
                                     {
                                       @Override
                                       public int getMaxSegmentsToMove()
@@ -279,7 +279,7 @@ public class DruidMasterBalancerTest
                                 )
                                 .withLoadManagementPeons(ImmutableMap.<String, LoadQueuePeon>of("1", peon1, "2", peon2, "3", peon3, "4", peon4))
                                 .withAvailableSegments(segments.values())
-                                .withDynamicConfigs(new DynamicConfigs()
+                                .withDynamicConfigs(new DynamicConfigs(null,null,null,null)
                                 {
                                   @Override
                                   public int getMaxSegmentsToMove()

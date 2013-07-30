@@ -140,7 +140,7 @@ public class InfoResource
   @Produces("application/json")
   public Response getDynamicConfigs()
   {
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    Response.ResponseBuilder builder = Response.status(Response.Status.OK).entity(configManager.watch(DynamicConfigs.CONFIG_KEY,DynamicConfigs.class).get());
     return builder.build();
   }
 
@@ -390,7 +390,7 @@ public class InfoResource
 
   @POST
   @Path("master/setDynamicConfigs")
-  @Produces("application/json")
+  @Consumes("application/json")
   public Response setDynamicConfigs(
       final DynamicConfigs dynamicConfigs)
   {

@@ -274,7 +274,8 @@ public class MasterMain
             databaseRuleManager,
             master,
             jsonMapper,
-            indexingServiceClient
+            indexingServiceClient,
+            configManager
         )
     );
 

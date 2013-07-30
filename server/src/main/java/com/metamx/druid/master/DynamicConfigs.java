@@ -54,30 +54,31 @@ public class DynamicConfigs
     }
   }
 
-  public DynamicConfigs()
-  {
-  }
 
   public static String getConfigKey()
   {
     return CONFIG_KEY;
   }
 
+  @JsonProperty
   public long getMillisToWaitBeforeDeleting()
   {
     return millisToWaitBeforeDeleting;
   }
 
+  @JsonProperty
   public long getMergeBytesLimit()
   {
     return mergeBytesLimit;
   }
 
+  @JsonProperty
   public int getMergeSegmentsLimit()
   {
     return mergeSegmentsLimit;
   }
 
+  @JsonProperty
   public int getMaxSegmentsToMove()
   {
     return maxSegmentsToMove;

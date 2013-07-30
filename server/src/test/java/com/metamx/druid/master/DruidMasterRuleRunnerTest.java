@@ -177,7 +177,7 @@ public class DruidMasterRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withDynamicConfigs(new DynamicConfigs()
+            .withDynamicConfigs(new DynamicConfigs(null,null,null,null)
             {
               @Override
               public int getMaxSegmentsToMove()
@@ -530,7 +530,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs()
+        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
         {
           @Override
           public long getMillisToWaitBeforeDeleting()
@@ -611,7 +611,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs()
+        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
         {
           @Override
           public long getMillisToWaitBeforeDeleting()
@@ -699,7 +699,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs()
+        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
         {
           @Override
           public long getMillisToWaitBeforeDeleting()
@@ -783,7 +783,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs()
+        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
         {
           @Override
           public long getMillisToWaitBeforeDeleting()
@@ -879,7 +879,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs()
+        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
         {
           @Override
           public long getMillisToWaitBeforeDeleting()
@@ -1072,7 +1072,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs()
+        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
         {
           @Override
           public long getMillisToWaitBeforeDeleting()
