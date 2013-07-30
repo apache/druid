@@ -38,7 +38,7 @@ public abstract class ServiceDiscoveryConfig extends CuratorConfig
   public abstract String getDiscoveryPath();
 
   @Override
-  @Config("druid.service.discovery.curator.compression.enable")
+  @Config("druid.curator.discovery.compress")
   public boolean enableCompression()
   {
     return false;
