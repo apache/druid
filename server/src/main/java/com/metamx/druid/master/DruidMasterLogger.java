@@ -188,6 +188,12 @@ public class DruidMasterLogger implements DruidMasterHelper
       emitter.emit(
           new ServiceMetricEvent.Builder()
               .setUser1(serverName).build(
+              "master/loadQueue/failed", queuePeon.getAndResetFailedAssignCount()
+          )
+      );
+      emitter.emit(
+          new ServiceMetricEvent.Builder()
+              .setUser1(serverName).build(
               "master/loadQueue/count", queuePeon.getSegmentsToLoad().size()
           )
       );
