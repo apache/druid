@@ -233,7 +233,10 @@ public class MasterMain
     );
 
     final LoadQueueTaskMaster taskMaster = new LoadQueueTaskMaster(
-        curatorFramework, jsonMapper, Execs.singleThreaded("Master-PeonExec--%d")
+        curatorFramework,
+        jsonMapper,
+        scheduledExecutorFactory.create(1, "Master-PeonExec--%d"),
+        druidMasterConfig
     );
 
     final DruidMaster master = new DruidMaster(
