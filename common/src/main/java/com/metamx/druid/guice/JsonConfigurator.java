@@ -1,8 +1,12 @@
 package com.metamx.druid.guice;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotatedField;
+import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -13,8 +17,12 @@ import com.metamx.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import javax.validation.ConstraintViolation;
+import javax.validation.ElementKind;
+import javax.validation.Path;
 import javax.validation.Validator;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -26,7 +34,7 @@ public class JsonConfigurator
 {
   private static final Logger log = new Logger(JsonConfigurator.class);
 
-  private static final Joiner JOINER = Joiner.on("; ");
+  private static final Joiner JOINER = Joiner.on(".");
 
   private final ObjectMapper jsonMapper;
   private final Validator validator;
@@ -43,6 +51,8 @@ public class JsonConfigurator
 
   public <T> T configurate(Properties props, String propertyPrefix, Class<T> clazz) throws ProvisionException
   {
+    verifyClazzIsConfigurable(clazz);
+
     // Make it end with a period so we only include properties with sub-object thingies.
     final String propertyBase = propertyPrefix.endsWith(".") ? propertyPrefix : propertyPrefix + ".";
 
@@ -75,7 +85,25 @@ public class JsonConfigurator
       List<String> messages = Lists.newArrayList();
 
       for (ConstraintViolation<T> violation : violations) {
-        messages.add(String.format("%s - %s", violation.getPropertyPath().toString(), violation.getMessage()));
+        List<String> pathParts = Lists.newArrayList();
+        try {
+          Class<?> beanClazz = violation.getRootBeanClass();
+          final Iterator<Path.Node> iter = violation.getPropertyPath().iterator();
+          while (iter.hasNext()) {
+            Path.Node next = iter.next();
+            if (next.getKind() == ElementKind.PROPERTY) {
+              final String fieldName = next.getName();
+              final Field theField = beanClazz.getDeclaredField(fieldName);
+              JsonProperty annotation = theField.getAnnotation(JsonProperty.class);
+              pathParts.add(annotation == null || annotation.value() == null ? fieldName : annotation.value());
+            }
+          }
+        }
+        catch (NoSuchFieldException e) {
+          throw Throwables.propagate(e);
+        }
+
+        messages.add(String.format("%s - %s", JOINER.join(pathParts), violation.getMessage()));
       }
 
       throw new ProvisionException(
@@ -97,5 +125,23 @@ public class JsonConfigurator
     log.info("Loaded class[%s] from props[%s] as [%s]", clazz, propertyBase, config);
 
     return config;
+  }
+
+  private <T> void verifyClazzIsConfigurable(Class<T> clazz)
+  {
+    final List<BeanPropertyDefinition> beanDefs = jsonMapper.getSerializationConfig()
+                                                              .introspect(jsonMapper.constructType(clazz))
+                                                              .findProperties();
+    for (BeanPropertyDefinition beanDef : beanDefs) {
+      final AnnotatedField field = beanDef.getField();
+      if (field == null || !field.hasAnnotation(JsonProperty.class)) {
+        throw new ProvisionException(
+            String.format(
+                "JsonConfigurator requires Jackson-annotated Config objects to have field annotations. %s doesn't",
+                clazz
+            )
+        );
+      }
+    }
   }
 }
