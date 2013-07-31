@@ -23,10 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.common.MapUtils;
+import com.metamx.common.IAE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.ConcatSequence;
 import com.metamx.common.guava.Sequence;
@@ -34,31 +32,20 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Druids;
 import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.StorageAdapter;
-import com.metamx.druid.VersionedIntervalTimeline;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.QueryableIndex;
+import com.metamx.druid.index.ReferenceCountingSegment;
 import com.metamx.druid.index.Segment;
-import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.loading.SegmentLoader;
-import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.metrics.NoopServiceEmitter;
-import com.metamx.druid.partition.PartitionChunk;
-import com.metamx.druid.query.CacheStrategy;
 import com.metamx.druid.query.ConcatQueryRunner;
 import com.metamx.druid.query.MetricManipulationFn;
 import com.metamx.druid.query.NoopQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
-import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
-import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -74,10 +61,8 @@ import java.util.concurrent.ExecutorService;
  */
 public class ServerManagerTest
 {
-  ServerManager serverManager;
+  TestServerManager serverManager;
   MyQueryRunnerFactory factory;
-
-  private volatile boolean closed;
 
   @Before
   public void setUp() throws IOException
@@ -85,57 +70,21 @@ public class ServerManagerTest
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
 
     factory = new MyQueryRunnerFactory();
-    serverManager = new ServerManager(
-        new SegmentLoader()
-        {
-          @Override
-          public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
-          {
-            return false;
-          }
+    serverManager = new TestServerManager(factory);
 
-          @Override
-          public Segment getSegment(final DataSegment segment)
-          {
-            return new SegmentForTesting(
-                MapUtils.getString(segment.getLoadSpec(), "version"),
-                (Interval) segment.getLoadSpec().get("interval")
-            );
-          }
-
-          @Override
-          public void cleanup(DataSegment segment) throws SegmentLoadingException
-          {
-
-          }
-        },
-        new QueryRunnerFactoryConglomerate()
-        {
-          @Override
-          public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
-          {
-            return (QueryRunnerFactory) factory;
-          }
-        },
-        new NoopServiceEmitter(),
-        MoreExecutors.sameThreadExecutor()
-    );
-
-    loadQueryable("test", "1", new Interval("P1d/2011-04-01"));
-    loadQueryable("test", "1", new Interval("P1d/2011-04-02"));
-    loadQueryable("test", "2", new Interval("P1d/2011-04-02"));
-    loadQueryable("test", "1", new Interval("P1d/2011-04-03"));
-    loadQueryable("test", "1", new Interval("P1d/2011-04-04"));
-    loadQueryable("test", "1", new Interval("P1d/2011-04-05"));
-    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T01"));
-    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T02"));
-    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T03"));
-    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T05"));
-    loadQueryable("test", "2", new Interval("PT1h/2011-04-04T06"));
-    loadQueryable("test2", "1", new Interval("P1d/2011-04-01"));
-    loadQueryable("test2", "1", new Interval("P1d/2011-04-02"));
-
-    closed = false;
+    serverManager.loadQueryable("test", "1", new Interval("P1d/2011-04-01"));
+    serverManager.loadQueryable("test", "1", new Interval("P1d/2011-04-02"));
+    serverManager.loadQueryable("test", "2", new Interval("P1d/2011-04-02"));
+    serverManager.loadQueryable("test", "1", new Interval("P1d/2011-04-03"));
+    serverManager.loadQueryable("test", "1", new Interval("P1d/2011-04-04"));
+    serverManager.loadQueryable("test", "1", new Interval("P1d/2011-04-05"));
+    serverManager.loadQueryable("test", "2", new Interval("PT1h/2011-04-04T01"));
+    serverManager.loadQueryable("test", "2", new Interval("PT1h/2011-04-04T02"));
+    serverManager.loadQueryable("test", "2", new Interval("PT1h/2011-04-04T03"));
+    serverManager.loadQueryable("test", "2", new Interval("PT1h/2011-04-04T05"));
+    serverManager.loadQueryable("test", "2", new Interval("PT1h/2011-04-04T06"));
+    serverManager.loadQueryable("test2", "1", new Interval("P1d/2011-04-01"));
+    serverManager.loadQueryable("test2", "1", new Interval("P1d/2011-04-02"));
   }
 
   @Test
@@ -174,7 +123,7 @@ public class ServerManagerTest
         )
     );
 
-    dropQueryable(dataSouce, "2", interval);
+    serverManager.dropQueryable(dataSouce, "2", interval);
     assertQueryable(
         QueryGranularity.DAY,
         dataSouce, interval,
@@ -187,7 +136,7 @@ public class ServerManagerTest
   @Test
   public void testDelete2() throws Exception
   {
-    loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    serverManager.loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
 
     assertQueryable(
         QueryGranularity.DAY,
@@ -197,8 +146,8 @@ public class ServerManagerTest
         )
     );
 
-    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
-    dropQueryable("test", "1", new Interval("2011-04-04/2011-04-05"));
+    serverManager.dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    serverManager.dropQueryable("test", "1", new Interval("2011-04-04/2011-04-05"));
 
     assertQueryable(
         QueryGranularity.HOUR,
@@ -230,70 +179,6 @@ public class ServerManagerTest
             new Pair<String, Interval>("2", new Interval("2011-04-04T05/2011-04-04T06"))
         )
     );
-  }
-
-  @Test
-  public void testReferenceCounting() throws Exception
-  {
-    loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
-
-    assertQueryable(
-        QueryGranularity.DAY,
-        "test", new Interval("2011-04-04/2011-04-06"),
-        ImmutableList.<Pair<String, Interval>>of(
-            new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
-        )
-    );
-
-    Assert.assertFalse(closed);
-
-    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
-
-    Assert.assertTrue(closed);
-  }
-
-  private void loadQueryable(String dataSource, String version, Interval interval) throws IOException
-  {
-    try {
-      serverManager.loadSegment(
-          new DataSegment(
-              dataSource,
-              interval,
-              version,
-              ImmutableMap.<String, Object>of("version", version, "interval", interval),
-              Arrays.asList("dim1", "dim2", "dim3"),
-              Arrays.asList("metric1", "metric2"),
-              new NoneShardSpec(),
-              IndexIO.CURRENT_VERSION_ID,
-              123l
-          )
-      );
-    }
-    catch (SegmentLoadingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private void dropQueryable(String dataSource, String version, Interval interval)
-  {
-    try {
-      serverManager.dropSegment(
-          new DataSegment(
-              dataSource,
-              interval,
-              version,
-              ImmutableMap.<String, Object>of("version", version, "interval", interval),
-              Arrays.asList("dim1", "dim2", "dim3"),
-              Arrays.asList("metric1", "metric2"),
-              new NoneShardSpec(),
-              IndexIO.CURRENT_VERSION_ID,
-              123l
-          )
-      );
-    }
-    catch (SegmentLoadingException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   private <T> void assertQueryable(
@@ -331,69 +216,17 @@ public class ServerManagerTest
     factory.clearAdapters();
   }
 
-  private class SegmentForTesting implements Segment
-  {
-    private final String version;
-    private final Interval interval;
-
-    SegmentForTesting(
-        String version,
-        Interval interval
-    )
-    {
-      this.version = version;
-      this.interval = interval;
-    }
-
-    public String getVersion()
-    {
-      return version;
-    }
-
-    public Interval getInterval()
-    {
-      return interval;
-    }
-
-    @Override
-    public String getIdentifier()
-    {
-      return version;
-    }
-
-    @Override
-    public Interval getDataInterval()
-    {
-      return interval;
-    }
-
-    @Override
-    public QueryableIndex asQueryableIndex()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public StorageAdapter asStorageAdapter()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      closed = true;
-    }
-  }
-
-  public class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
+  public static class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
   {
     private List<SegmentForTesting> adapters = Lists.newArrayList();
 
     @Override
     public QueryRunner<Result<SearchResultValue>> createRunner(Segment adapter)
     {
-      adapters.add(new SegmentForTesting(adapter.getIdentifier(), adapter.getDataInterval()));
+      if (!(adapter instanceof ReferenceCountingSegment)) {
+        throw new IAE("Expected instance of ReferenceCountingSegment, got %s", adapter.getClass());
+      }
+      adapters.add((SegmentForTesting) ((ReferenceCountingSegment) adapter).getBaseSegment());
       return new NoopQueryRunner<Result<SearchResultValue>>();
     }
 

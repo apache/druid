@@ -25,16 +25,13 @@ import com.google.common.collect.Ordering;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Yielder;
-import com.metamx.common.guava.YieldingAccumulator;
-import com.metamx.common.guava.YieldingSequenceBase;
 import com.metamx.druid.Query;
-import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.collect.CountingMap;
-import com.metamx.druid.index.QueryableIndex;
+import com.metamx.druid.index.ReferenceCountingSegment;
+import com.metamx.druid.index.ReferenceCountingSequence;
 import com.metamx.druid.index.Segment;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.SegmentLoadingException;
@@ -59,12 +56,10 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -345,8 +340,6 @@ public class ServerManager implements QuerySegmentWalker
       final QuerySegmentSpec segmentSpec
   )
   {
-    adapter.increment();
-
     return new SpecificSegmentQueryRunner<T>(
         new MetricsEmittingQueryRunner<T>(
             emitter,
@@ -373,123 +366,5 @@ public class ServerManager implements QuerySegmentWalker
         ).withWaitMeasuredFromNow(),
         segmentSpec
     );
-  }
-
-  public static class ReferenceCountingSegment implements Segment
-  {
-    private final Segment baseSegment;
-
-    private final AtomicInteger references = new AtomicInteger(0);
-
-    public ReferenceCountingSegment(Segment baseSegment)
-    {
-      this.baseSegment = baseSegment;
-    }
-
-    @Override
-    public String getIdentifier()
-    {
-      return baseSegment.getIdentifier();
-    }
-
-    @Override
-    public Interval getDataInterval()
-    {
-      return baseSegment.getDataInterval();
-    }
-
-    @Override
-    public QueryableIndex asQueryableIndex()
-    {
-      return baseSegment.asQueryableIndex();
-    }
-
-    @Override
-    public StorageAdapter asStorageAdapter()
-    {
-      return baseSegment.asStorageAdapter();
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      baseSegment.close();
-    }
-
-    public void increment()
-    {
-      references.getAndIncrement();
-    }
-
-    public void decrement()
-    {
-      references.getAndDecrement();
-
-      if (references.get() < 0) {
-        try {
-          close();
-        }
-        catch (Exception e) {
-          log.error("Unable to close queryable index %s", getIdentifier());
-        }
-      }
-    }
-  }
-
-  private static class ReferenceCountingSequence<T> extends YieldingSequenceBase<T>
-  {
-    private final Sequence<T> baseSequence;
-    private final ReferenceCountingSegment segment;
-
-    public ReferenceCountingSequence(Sequence<T> baseSequence, ReferenceCountingSegment segment)
-    {
-      this.baseSequence = baseSequence;
-      this.segment = segment;
-    }
-
-    @Override
-    public <OutType> Yielder<OutType> toYielder(
-        OutType initValue, YieldingAccumulator<OutType, T> accumulator
-    )
-    {
-      return new ReferenceCountingYielder<OutType>(baseSequence.toYielder(initValue, accumulator), segment);
-    }
-  }
-
-  private static class ReferenceCountingYielder<OutType> implements Yielder<OutType>
-  {
-    private final Yielder<OutType> baseYielder;
-    private final ReferenceCountingSegment segment;
-
-    public ReferenceCountingYielder(Yielder<OutType> baseYielder, ReferenceCountingSegment segment)
-    {
-      this.baseYielder = baseYielder;
-      this.segment = segment;
-    }
-
-    @Override
-    public OutType get()
-    {
-      return baseYielder.get();
-    }
-
-    @Override
-    public Yielder<OutType> next(OutType initValue)
-    {
-      return new ReferenceCountingYielder<OutType>(baseYielder.next(initValue), segment);
-    }
-
-    @Override
-    public boolean isDone()
-    {
-      return baseYielder.isDone();
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      segment.decrement();
-      baseYielder.close();
-    }
   }
 }
