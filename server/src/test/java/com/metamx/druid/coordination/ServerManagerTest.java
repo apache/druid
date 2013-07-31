@@ -280,12 +280,12 @@ public class ServerManagerTest
     Iterator<Pair<String, Interval>> expectedIter = expected.iterator();
     final List<Interval> intervals = Arrays.asList(interval);
     final SearchQuery query = Druids.newSearchQueryBuilder()
-                                  .dataSource(dataSource)
-                                  .intervals(intervals)
-                                  .granularity(granularity)
-                                  .limit(10000)
-                                  .query("wow")
-                                  .build();
+                                    .dataSource(dataSource)
+                                    .intervals(intervals)
+                                    .granularity(granularity)
+                                    .limit(10000)
+                                    .query("wow")
+                                    .build();
     QueryRunner<Result<SearchResultValue>> runner = serverManager.getQueryRunnerForIntervals(query, intervals);
     final Sequence<Result<SearchResultValue>> seq = runner.run(query);
     Sequences.toList(seq, Lists.<Result<SearchResultValue>>newArrayList());
@@ -356,7 +356,6 @@ public class ServerManagerTest
     @Override
     public void close() throws IOException
     {
-
     }
   }
 
@@ -367,7 +366,7 @@ public class ServerManagerTest
     @Override
     public QueryRunner<Result<SearchResultValue>> createRunner(Segment adapter)
     {
-      adapters.add((SegmentForTesting) adapter);
+      adapters.add(new SegmentForTesting(adapter.getIdentifier(), adapter.getDataInterval()));
       return new NoopQueryRunner<Result<SearchResultValue>>();
     }
 
@@ -425,7 +424,9 @@ public class ServerManagerTest
     @Override
     public TypeReference<T> getResultTypeReference()
     {
-      return new TypeReference<T>(){};
+      return new TypeReference<T>()
+      {
+      };
     }
   }
 }
