@@ -35,6 +35,7 @@ import com.metamx.druid.Druids;
 import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.StorageAdapter;
+import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.Segment;
@@ -42,6 +43,7 @@ import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.metrics.NoopServiceEmitter;
+import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.query.CacheStrategy;
 import com.metamx.druid.query.ConcatQueryRunner;
 import com.metamx.druid.query.MetricManipulationFn;
@@ -74,6 +76,8 @@ public class ServerManagerTest
 {
   ServerManager serverManager;
   MyQueryRunnerFactory factory;
+
+  private volatile boolean closed;
 
   @Before
   public void setUp() throws IOException
@@ -130,6 +134,8 @@ public class ServerManagerTest
     loadQueryable("test", "2", new Interval("PT1h/2011-04-04T06"));
     loadQueryable("test2", "1", new Interval("P1d/2011-04-01"));
     loadQueryable("test2", "1", new Interval("P1d/2011-04-02"));
+
+    closed = false;
   }
 
   @Test
@@ -226,6 +232,26 @@ public class ServerManagerTest
     );
   }
 
+  @Test
+  public void testReferenceCounting() throws Exception
+  {
+    loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+
+    assertQueryable(
+        QueryGranularity.DAY,
+        "test", new Interval("2011-04-04/2011-04-06"),
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
+        )
+    );
+
+    Assert.assertFalse(closed);
+
+    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+
+    Assert.assertTrue(closed);
+  }
+
   private void loadQueryable(String dataSource, String version, Interval interval) throws IOException
   {
     try {
@@ -305,7 +331,7 @@ public class ServerManagerTest
     factory.clearAdapters();
   }
 
-  private static class SegmentForTesting implements Segment
+  private class SegmentForTesting implements Segment
   {
     private final String version;
     private final Interval interval;
@@ -356,10 +382,11 @@ public class ServerManagerTest
     @Override
     public void close() throws IOException
     {
+      closed = true;
     }
   }
 
-  public static class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
+  public class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
   {
     private List<SegmentForTesting> adapters = Lists.newArrayList();
 
