@@ -75,9 +75,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The RemoteTaskRunner's primary responsibility is to assign tasks to worker nodes.
- * The RemoteTaskRunner keeps track of which workers are running which tasks and manages coordinator and
- * worker interactions over Zookeeper. The RemoteTaskRunner is event driven and updates state according to ephemeral
- * node changes in ZK.
+ * The RemoteTaskRunner uses Zookeeper to keep track of which workers are running which tasks. Tasks are assigned by
+ * creating ephemeral nodes in ZK that workers must remove. Workers announce the statuses of the tasks they are running.
+ * Once a task completes, it is up to the RTR to remove the task status and run any necessary cleanup.
+ * The RemoteTaskRunner is event driven and updates state according to ephemeral node changes in ZK.
  * <p/>
  * The RemoteTaskRunner will assign tasks to a node until the node hits capacity. At that point, task assignment will
  * fail. The RemoteTaskRunner depends on another component to create additional worker resources.
