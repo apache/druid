@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -38,7 +37,6 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.BaseServerNode;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
-import com.metamx.druid.curator.discovery.NoopServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.http.GuiceServletConfig;
@@ -72,11 +70,10 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
-import com.metamx.metrics.JvmMonitor;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
-import com.metamx.metrics.SysMonitor;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.jets3t.service.S3ServiceException;
@@ -88,7 +85,6 @@ import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -352,8 +348,9 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   {
     final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
     if (serviceDiscovery == null) {
+      final CuratorFramework serviceDiscoveryCuratorFramework = Initialization.makeCuratorFramework(config, lifecycle);
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-          getCuratorFramework(), config, lifecycle
+          serviceDiscoveryCuratorFramework, config, lifecycle
       );
     }
     if (serviceAnnouncer == null) {
