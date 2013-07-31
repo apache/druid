@@ -389,7 +389,7 @@ public class InfoResource
   }
 
   @POST
-  @Path("master/setDynamicConfigs")
+  @Path("master/dynamicConfigs")
   @Consumes("application/json")
   public Response setDynamicConfigs(
       final DynamicConfigs dynamicConfigs)

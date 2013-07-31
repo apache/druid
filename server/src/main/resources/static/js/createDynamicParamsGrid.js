@@ -22,7 +22,7 @@
           grid.onCellChange.subscribe(function (e) {
               var paramJson = JSON.stringify(grid.getData()[0]);
               $.ajax({
-              url:'../info/master/setDynamicConfigs',
+              url:'../info/master/dynamicConfigs',
               type:"POST",
               data:paramJson,
               contentType:"application/json; charset=utf-8",
