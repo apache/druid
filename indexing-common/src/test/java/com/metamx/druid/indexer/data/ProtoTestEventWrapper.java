@@ -10,155 +10,684 @@ public final class ProtoTestEventWrapper {
   }
   public interface ProtoTestEventOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required .prototest.ProtoTestEvent.EventCategory eventType = 1;
-    /**
-     * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
-     */
     boolean hasEventType();
-    /**
-     * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
-     */
     com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory getEventType();
-
+    
     // required uint64 id = 2;
-    /**
-     * <code>required uint64 id = 2;</code>
-     */
     boolean hasId();
-    /**
-     * <code>required uint64 id = 2;</code>
-     */
     long getId();
-
+    
     // required string timestamp = 3;
-    /**
-     * <code>required string timestamp = 3;</code>
-     */
     boolean hasTimestamp();
-    /**
-     * <code>required string timestamp = 3;</code>
-     */
-    java.lang.String getTimestamp();
-    /**
-     * <code>required string timestamp = 3;</code>
-     */
-    com.google.protobuf.ByteString
-        getTimestampBytes();
-
+    String getTimestamp();
+    
     // optional uint32 someOtherId = 4;
-    /**
-     * <code>optional uint32 someOtherId = 4;</code>
-     */
     boolean hasSomeOtherId();
-    /**
-     * <code>optional uint32 someOtherId = 4;</code>
-     */
     int getSomeOtherId();
-
+    
     // optional bool isValid = 5;
-    /**
-     * <code>optional bool isValid = 5;</code>
-     */
     boolean hasIsValid();
-    /**
-     * <code>optional bool isValid = 5;</code>
-     */
     boolean getIsValid();
-
+    
     // optional string description = 6;
-    /**
-     * <code>optional string description = 6;</code>
-     */
     boolean hasDescription();
-    /**
-     * <code>optional string description = 6;</code>
-     */
-    java.lang.String getDescription();
-    /**
-     * <code>optional string description = 6;</code>
-     */
-    com.google.protobuf.ByteString
-        getDescriptionBytes();
-
+    String getDescription();
+    
     // optional float someFloatColumn = 7;
-    /**
-     * <code>optional float someFloatColumn = 7;</code>
-     */
     boolean hasSomeFloatColumn();
-    /**
-     * <code>optional float someFloatColumn = 7;</code>
-     */
     float getSomeFloatColumn();
-
+    
     // optional uint32 someIntColumn = 8;
-    /**
-     * <code>optional uint32 someIntColumn = 8;</code>
-     */
     boolean hasSomeIntColumn();
-    /**
-     * <code>optional uint32 someIntColumn = 8;</code>
-     */
     int getSomeIntColumn();
-
+    
     // optional uint64 someLongColumn = 9;
-    /**
-     * <code>optional uint64 someLongColumn = 9;</code>
-     */
     boolean hasSomeLongColumn();
-    /**
-     * <code>optional uint64 someLongColumn = 9;</code>
-     */
     long getSomeLongColumn();
   }
-  /**
-   * Protobuf type {@code prototest.ProtoTestEvent}
-   */
   public static final class ProtoTestEvent extends
       com.google.protobuf.GeneratedMessage
       implements ProtoTestEventOrBuilder {
     // Use ProtoTestEvent.newBuilder() to construct.
-    private ProtoTestEvent(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private ProtoTestEvent(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private ProtoTestEvent(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private ProtoTestEvent(boolean noInit) {}
+    
     private static final ProtoTestEvent defaultInstance;
     public static ProtoTestEvent getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public ProtoTestEvent getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.metamx.druid.indexer.data.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
     }
-    private ProtoTestEvent(
-        com.google.protobuf.CodedInputStream input,
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.metamx.druid.indexer.data.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_fieldAccessorTable;
+    }
+    
+    public enum EventCategory
+        implements com.google.protobuf.ProtocolMessageEnum {
+      CATEGORY_ZERO(0, 0),
+      CATEGORY_ONE(1, 1),
+      CATEGORY_TWO(2, 2),
+      ;
+      
+      public static final int CATEGORY_ZERO_VALUE = 0;
+      public static final int CATEGORY_ONE_VALUE = 1;
+      public static final int CATEGORY_TWO_VALUE = 2;
+      
+      
+      public final int getNumber() { return value; }
+      
+      public static EventCategory valueOf(int value) {
+        switch (value) {
+          case 0: return CATEGORY_ZERO;
+          case 1: return CATEGORY_ONE;
+          case 2: return CATEGORY_TWO;
+          default: return null;
+        }
+      }
+      
+      public static com.google.protobuf.Internal.EnumLiteMap<EventCategory>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<EventCategory>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<EventCategory>() {
+              public EventCategory findValueByNumber(int number) {
+                return EventCategory.valueOf(number);
+              }
+            };
+      
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.getDescriptor().getEnumTypes().get(0);
+      }
+      
+      private static final EventCategory[] VALUES = {
+        CATEGORY_ZERO, CATEGORY_ONE, CATEGORY_TWO, 
+      };
+      
+      public static EventCategory valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+      
+      private final int index;
+      private final int value;
+      
+      private EventCategory(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+      
+      // @@protoc_insertion_point(enum_scope:prototest.ProtoTestEvent.EventCategory)
+    }
+    
+    private int bitField0_;
+    // required .prototest.ProtoTestEvent.EventCategory eventType = 1;
+    public static final int EVENTTYPE_FIELD_NUMBER = 1;
+    private com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory eventType_;
+    public boolean hasEventType() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory getEventType() {
+      return eventType_;
+    }
+    
+    // required uint64 id = 2;
+    public static final int ID_FIELD_NUMBER = 2;
+    private long id_;
+    public boolean hasId() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public long getId() {
+      return id_;
+    }
+    
+    // required string timestamp = 3;
+    public static final int TIMESTAMP_FIELD_NUMBER = 3;
+    private java.lang.Object timestamp_;
+    public boolean hasTimestamp() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public String getTimestamp() {
+      java.lang.Object ref = timestamp_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          timestamp_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getTimestampBytes() {
+      java.lang.Object ref = timestamp_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        timestamp_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // optional uint32 someOtherId = 4;
+    public static final int SOMEOTHERID_FIELD_NUMBER = 4;
+    private int someOtherId_;
+    public boolean hasSomeOtherId() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public int getSomeOtherId() {
+      return someOtherId_;
+    }
+    
+    // optional bool isValid = 5;
+    public static final int ISVALID_FIELD_NUMBER = 5;
+    private boolean isValid_;
+    public boolean hasIsValid() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    public boolean getIsValid() {
+      return isValid_;
+    }
+    
+    // optional string description = 6;
+    public static final int DESCRIPTION_FIELD_NUMBER = 6;
+    private java.lang.Object description_;
+    public boolean hasDescription() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public String getDescription() {
+      java.lang.Object ref = description_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          description_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getDescriptionBytes() {
+      java.lang.Object ref = description_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        description_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // optional float someFloatColumn = 7;
+    public static final int SOMEFLOATCOLUMN_FIELD_NUMBER = 7;
+    private float someFloatColumn_;
+    public boolean hasSomeFloatColumn() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    public float getSomeFloatColumn() {
+      return someFloatColumn_;
+    }
+    
+    // optional uint32 someIntColumn = 8;
+    public static final int SOMEINTCOLUMN_FIELD_NUMBER = 8;
+    private int someIntColumn_;
+    public boolean hasSomeIntColumn() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    public int getSomeIntColumn() {
+      return someIntColumn_;
+    }
+    
+    // optional uint64 someLongColumn = 9;
+    public static final int SOMELONGCOLUMN_FIELD_NUMBER = 9;
+    private long someLongColumn_;
+    public boolean hasSomeLongColumn() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    public long getSomeLongColumn() {
+      return someLongColumn_;
+    }
+    
+    private void initFields() {
+      eventType_ = com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ZERO;
+      id_ = 0L;
+      timestamp_ = "";
+      someOtherId_ = 0;
+      isValid_ = false;
+      description_ = "";
+      someFloatColumn_ = 0F;
+      someIntColumn_ = 0;
+      someLongColumn_ = 0L;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      if (!hasEventType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasId()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasTimestamp()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeEnum(1, eventType_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt64(2, id_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, getTimestampBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt32(4, someOtherId_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBool(5, isValid_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBytes(6, getDescriptionBytes());
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeFloat(7, someFloatColumn_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeUInt32(8, someIntColumn_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeUInt64(9, someLongColumn_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(1, eventType_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(2, id_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, getTimestampBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(4, someOtherId_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(5, isValid_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(6, getDescriptionBytes());
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeFloatSize(7, someFloatColumn_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(8, someIntColumn_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(9, someLongColumn_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
+        com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEventOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.metamx.druid.indexer.data.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.metamx.druid.indexer.data.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_fieldAccessorTable;
+      }
+      
+      // Construct using com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        eventType_ = com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ZERO;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        id_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        timestamp_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        someOtherId_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        isValid_ = false;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        description_ = "";
+        bitField0_ = (bitField0_ & ~0x00000020);
+        someFloatColumn_ = 0F;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        someIntColumn_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000080);
+        someLongColumn_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000100);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.getDescriptor();
+      }
+      
+      public com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent getDefaultInstanceForType() {
+        return com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.getDefaultInstance();
+      }
+      
+      public com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent build() {
+        com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent buildPartial() {
+        com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent result = new com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.eventType_ = eventType_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.id_ = id_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.timestamp_ = timestamp_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.someOtherId_ = someOtherId_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.isValid_ = isValid_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.description_ = description_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.someFloatColumn_ = someFloatColumn_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.someIntColumn_ = someIntColumn_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        result.someLongColumn_ = someLongColumn_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent) {
+          return mergeFrom((com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent other) {
+        if (other == com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.getDefaultInstance()) return this;
+        if (other.hasEventType()) {
+          setEventType(other.getEventType());
+        }
+        if (other.hasId()) {
+          setId(other.getId());
+        }
+        if (other.hasTimestamp()) {
+          setTimestamp(other.getTimestamp());
+        }
+        if (other.hasSomeOtherId()) {
+          setSomeOtherId(other.getSomeOtherId());
+        }
+        if (other.hasIsValid()) {
+          setIsValid(other.getIsValid());
+        }
+        if (other.hasDescription()) {
+          setDescription(other.getDescription());
+        }
+        if (other.hasSomeFloatColumn()) {
+          setSomeFloatColumn(other.getSomeFloatColumn());
+        }
+        if (other.hasSomeIntColumn()) {
+          setSomeIntColumn(other.getSomeIntColumn());
+        }
+        if (other.hasSomeLongColumn()) {
+          setSomeLongColumn(other.getSomeLongColumn());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        if (!hasEventType()) {
+          
+          return false;
+        }
+        if (!hasId()) {
+          
+          return false;
+        }
+        if (!hasTimestamp()) {
+          
+          return false;
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              done = true;
-              break;
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                done = true;
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
               }
               break;
             }
@@ -215,741 +744,18 @@ public final class ProtoTestEventWrapper {
             }
           }
         }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
       }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return com.metamx.druid.indexer.data.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
-    }
-
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return com.metamx.druid.indexer.data.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.class, com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.Builder.class);
-    }
-
-    public static com.google.protobuf.Parser<ProtoTestEvent> PARSER =
-        new com.google.protobuf.AbstractParser<ProtoTestEvent>() {
-      public ProtoTestEvent parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ProtoTestEvent(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<ProtoTestEvent> getParserForType() {
-      return PARSER;
-    }
-
-    /**
-     * Protobuf enum {@code prototest.ProtoTestEvent.EventCategory}
-     */
-    public enum EventCategory
-        implements com.google.protobuf.ProtocolMessageEnum {
-      /**
-       * <code>CATEGORY_ZERO = 0;</code>
-       */
-      CATEGORY_ZERO(0, 0),
-      /**
-       * <code>CATEGORY_ONE = 1;</code>
-       */
-      CATEGORY_ONE(1, 1),
-      /**
-       * <code>CATEGORY_TWO = 2;</code>
-       */
-      CATEGORY_TWO(2, 2),
-      ;
-
-      /**
-       * <code>CATEGORY_ZERO = 0;</code>
-       */
-      public static final int CATEGORY_ZERO_VALUE = 0;
-      /**
-       * <code>CATEGORY_ONE = 1;</code>
-       */
-      public static final int CATEGORY_ONE_VALUE = 1;
-      /**
-       * <code>CATEGORY_TWO = 2;</code>
-       */
-      public static final int CATEGORY_TWO_VALUE = 2;
-
-
-      public final int getNumber() { return value; }
-
-      public static EventCategory valueOf(int value) {
-        switch (value) {
-          case 0: return CATEGORY_ZERO;
-          case 1: return CATEGORY_ONE;
-          case 2: return CATEGORY_TWO;
-          default: return null;
-        }
-      }
-
-      public static com.google.protobuf.Internal.EnumLiteMap<EventCategory>
-          internalGetValueMap() {
-        return internalValueMap;
-      }
-      private static com.google.protobuf.Internal.EnumLiteMap<EventCategory>
-          internalValueMap =
-            new com.google.protobuf.Internal.EnumLiteMap<EventCategory>() {
-              public EventCategory findValueByNumber(int number) {
-                return EventCategory.valueOf(number);
-              }
-            };
-
-      public final com.google.protobuf.Descriptors.EnumValueDescriptor
-          getValueDescriptor() {
-        return getDescriptor().getValues().get(index);
-      }
-      public final com.google.protobuf.Descriptors.EnumDescriptor
-          getDescriptorForType() {
-        return getDescriptor();
-      }
-      public static final com.google.protobuf.Descriptors.EnumDescriptor
-          getDescriptor() {
-        return com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.getDescriptor().getEnumTypes().get(0);
-      }
-
-      private static final EventCategory[] VALUES = values();
-
-      public static EventCategory valueOf(
-          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
-        if (desc.getType() != getDescriptor()) {
-          throw new java.lang.IllegalArgumentException(
-            "EnumValueDescriptor is not for this type.");
-        }
-        return VALUES[desc.getIndex()];
-      }
-
-      private final int index;
-      private final int value;
-
-      private EventCategory(int index, int value) {
-        this.index = index;
-        this.value = value;
-      }
-
-      // @@protoc_insertion_point(enum_scope:prototest.ProtoTestEvent.EventCategory)
-    }
-
-    private int bitField0_;
-    // required .prototest.ProtoTestEvent.EventCategory eventType = 1;
-    public static final int EVENTTYPE_FIELD_NUMBER = 1;
-    private com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory eventType_;
-    /**
-     * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
-     */
-    public boolean hasEventType() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    /**
-     * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
-     */
-    public com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory getEventType() {
-      return eventType_;
-    }
-
-    // required uint64 id = 2;
-    public static final int ID_FIELD_NUMBER = 2;
-    private long id_;
-    /**
-     * <code>required uint64 id = 2;</code>
-     */
-    public boolean hasId() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    /**
-     * <code>required uint64 id = 2;</code>
-     */
-    public long getId() {
-      return id_;
-    }
-
-    // required string timestamp = 3;
-    public static final int TIMESTAMP_FIELD_NUMBER = 3;
-    private java.lang.Object timestamp_;
-    /**
-     * <code>required string timestamp = 3;</code>
-     */
-    public boolean hasTimestamp() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
-    }
-    /**
-     * <code>required string timestamp = 3;</code>
-     */
-    public java.lang.String getTimestamp() {
-      java.lang.Object ref = timestamp_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          timestamp_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>required string timestamp = 3;</code>
-     */
-    public com.google.protobuf.ByteString
-        getTimestampBytes() {
-      java.lang.Object ref = timestamp_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        timestamp_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
-    // optional uint32 someOtherId = 4;
-    public static final int SOMEOTHERID_FIELD_NUMBER = 4;
-    private int someOtherId_;
-    /**
-     * <code>optional uint32 someOtherId = 4;</code>
-     */
-    public boolean hasSomeOtherId() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
-    }
-    /**
-     * <code>optional uint32 someOtherId = 4;</code>
-     */
-    public int getSomeOtherId() {
-      return someOtherId_;
-    }
-
-    // optional bool isValid = 5;
-    public static final int ISVALID_FIELD_NUMBER = 5;
-    private boolean isValid_;
-    /**
-     * <code>optional bool isValid = 5;</code>
-     */
-    public boolean hasIsValid() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
-    }
-    /**
-     * <code>optional bool isValid = 5;</code>
-     */
-    public boolean getIsValid() {
-      return isValid_;
-    }
-
-    // optional string description = 6;
-    public static final int DESCRIPTION_FIELD_NUMBER = 6;
-    private java.lang.Object description_;
-    /**
-     * <code>optional string description = 6;</code>
-     */
-    public boolean hasDescription() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
-    }
-    /**
-     * <code>optional string description = 6;</code>
-     */
-    public java.lang.String getDescription() {
-      java.lang.Object ref = description_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          description_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string description = 6;</code>
-     */
-    public com.google.protobuf.ByteString
-        getDescriptionBytes() {
-      java.lang.Object ref = description_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        description_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
-    // optional float someFloatColumn = 7;
-    public static final int SOMEFLOATCOLUMN_FIELD_NUMBER = 7;
-    private float someFloatColumn_;
-    /**
-     * <code>optional float someFloatColumn = 7;</code>
-     */
-    public boolean hasSomeFloatColumn() {
-      return ((bitField0_ & 0x00000040) == 0x00000040);
-    }
-    /**
-     * <code>optional float someFloatColumn = 7;</code>
-     */
-    public float getSomeFloatColumn() {
-      return someFloatColumn_;
-    }
-
-    // optional uint32 someIntColumn = 8;
-    public static final int SOMEINTCOLUMN_FIELD_NUMBER = 8;
-    private int someIntColumn_;
-    /**
-     * <code>optional uint32 someIntColumn = 8;</code>
-     */
-    public boolean hasSomeIntColumn() {
-      return ((bitField0_ & 0x00000080) == 0x00000080);
-    }
-    /**
-     * <code>optional uint32 someIntColumn = 8;</code>
-     */
-    public int getSomeIntColumn() {
-      return someIntColumn_;
-    }
-
-    // optional uint64 someLongColumn = 9;
-    public static final int SOMELONGCOLUMN_FIELD_NUMBER = 9;
-    private long someLongColumn_;
-    /**
-     * <code>optional uint64 someLongColumn = 9;</code>
-     */
-    public boolean hasSomeLongColumn() {
-      return ((bitField0_ & 0x00000100) == 0x00000100);
-    }
-    /**
-     * <code>optional uint64 someLongColumn = 9;</code>
-     */
-    public long getSomeLongColumn() {
-      return someLongColumn_;
-    }
-
-    private void initFields() {
-      eventType_ = com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ZERO;
-      id_ = 0L;
-      timestamp_ = "";
-      someOtherId_ = 0;
-      isValid_ = false;
-      description_ = "";
-      someFloatColumn_ = 0F;
-      someIntColumn_ = 0;
-      someLongColumn_ = 0L;
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-
-      if (!hasEventType()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasId()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasTimestamp()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeEnum(1, eventType_.getNumber());
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeUInt64(2, id_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeBytes(3, getTimestampBytes());
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeUInt32(4, someOtherId_);
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeBool(5, isValid_);
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeBytes(6, getDescriptionBytes());
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        output.writeFloat(7, someFloatColumn_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        output.writeUInt32(8, someIntColumn_);
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeUInt64(9, someLongColumn_);
-      }
-      getUnknownFields().writeTo(output);
-    }
-
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(1, eventType_.getNumber());
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(2, id_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, getTimestampBytes());
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(4, someOtherId_);
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(5, isValid_);
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(6, getDescriptionBytes());
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeFloatSize(7, someFloatColumn_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(8, someIntColumn_);
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(9, someLongColumn_);
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-
-    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
-    }
-    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
-    }
-    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    /**
-     * Protobuf type {@code prototest.ProtoTestEvent}
-     */
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEventOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return com.metamx.druid.indexer.data.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return com.metamx.druid.indexer.data.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.class, com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.Builder.class);
-      }
-
-      // Construct using com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-
-      public Builder clear() {
-        super.clear();
-        eventType_ = com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ZERO;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        id_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        timestamp_ = "";
-        bitField0_ = (bitField0_ & ~0x00000004);
-        someOtherId_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000008);
-        isValid_ = false;
-        bitField0_ = (bitField0_ & ~0x00000010);
-        description_ = "";
-        bitField0_ = (bitField0_ & ~0x00000020);
-        someFloatColumn_ = 0F;
-        bitField0_ = (bitField0_ & ~0x00000040);
-        someIntColumn_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000080);
-        someLongColumn_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000100);
-        return this;
-      }
-
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return com.metamx.druid.indexer.data.ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
-      }
-
-      public com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent getDefaultInstanceForType() {
-        return com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.getDefaultInstance();
-      }
-
-      public com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent build() {
-        com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent buildPartial() {
-        com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent result = new com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.eventType_ = eventType_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.id_ = id_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.timestamp_ = timestamp_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
-        }
-        result.someOtherId_ = someOtherId_;
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
-          to_bitField0_ |= 0x00000010;
-        }
-        result.isValid_ = isValid_;
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000020;
-        }
-        result.description_ = description_;
-        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
-          to_bitField0_ |= 0x00000040;
-        }
-        result.someFloatColumn_ = someFloatColumn_;
-        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
-          to_bitField0_ |= 0x00000080;
-        }
-        result.someIntColumn_ = someIntColumn_;
-        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
-          to_bitField0_ |= 0x00000100;
-        }
-        result.someLongColumn_ = someLongColumn_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent) {
-          return mergeFrom((com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent other) {
-        if (other == com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.getDefaultInstance()) return this;
-        if (other.hasEventType()) {
-          setEventType(other.getEventType());
-        }
-        if (other.hasId()) {
-          setId(other.getId());
-        }
-        if (other.hasTimestamp()) {
-          bitField0_ |= 0x00000004;
-          timestamp_ = other.timestamp_;
-          onChanged();
-        }
-        if (other.hasSomeOtherId()) {
-          setSomeOtherId(other.getSomeOtherId());
-        }
-        if (other.hasIsValid()) {
-          setIsValid(other.getIsValid());
-        }
-        if (other.hasDescription()) {
-          bitField0_ |= 0x00000020;
-          description_ = other.description_;
-          onChanged();
-        }
-        if (other.hasSomeFloatColumn()) {
-          setSomeFloatColumn(other.getSomeFloatColumn());
-        }
-        if (other.hasSomeIntColumn()) {
-          setSomeIntColumn(other.getSomeIntColumn());
-        }
-        if (other.hasSomeLongColumn()) {
-          setSomeLongColumn(other.getSomeLongColumn());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        if (!hasEventType()) {
-          
-          return false;
-        }
-        if (!hasId()) {
-          
-          return false;
-        }
-        if (!hasTimestamp()) {
-          
-          return false;
-        }
-        return true;
-      }
-
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
+      
       private int bitField0_;
-
+      
       // required .prototest.ProtoTestEvent.EventCategory eventType = 1;
       private com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory eventType_ = com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ZERO;
-      /**
-       * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
-       */
       public boolean hasEventType() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
-       */
       public com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory getEventType() {
         return eventType_;
       }
-      /**
-       * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
-       */
       public Builder setEventType(com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory value) {
         if (value == null) {
           throw new NullPointerException();
@@ -959,92 +765,50 @@ public final class ProtoTestEventWrapper {
         onChanged();
         return this;
       }
-      /**
-       * <code>required .prototest.ProtoTestEvent.EventCategory eventType = 1;</code>
-       */
       public Builder clearEventType() {
         bitField0_ = (bitField0_ & ~0x00000001);
         eventType_ = com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ZERO;
         onChanged();
         return this;
       }
-
+      
       // required uint64 id = 2;
       private long id_ ;
-      /**
-       * <code>required uint64 id = 2;</code>
-       */
       public boolean hasId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      /**
-       * <code>required uint64 id = 2;</code>
-       */
       public long getId() {
         return id_;
       }
-      /**
-       * <code>required uint64 id = 2;</code>
-       */
       public Builder setId(long value) {
         bitField0_ |= 0x00000002;
         id_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>required uint64 id = 2;</code>
-       */
       public Builder clearId() {
         bitField0_ = (bitField0_ & ~0x00000002);
         id_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // required string timestamp = 3;
       private java.lang.Object timestamp_ = "";
-      /**
-       * <code>required string timestamp = 3;</code>
-       */
       public boolean hasTimestamp() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-      /**
-       * <code>required string timestamp = 3;</code>
-       */
-      public java.lang.String getTimestamp() {
+      public String getTimestamp() {
         java.lang.Object ref = timestamp_;
-        if (!(ref instanceof java.lang.String)) {
-          java.lang.String s = ((com.google.protobuf.ByteString) ref)
-              .toStringUtf8();
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           timestamp_ = s;
           return s;
         } else {
-          return (java.lang.String) ref;
+          return (String) ref;
         }
       }
-      /**
-       * <code>required string timestamp = 3;</code>
-       */
-      public com.google.protobuf.ByteString
-          getTimestampBytes() {
-        java.lang.Object ref = timestamp_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          timestamp_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>required string timestamp = 3;</code>
-       */
-      public Builder setTimestamp(
-          java.lang.String value) {
+      public Builder setTimestamp(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -1053,138 +817,76 @@ public final class ProtoTestEventWrapper {
         onChanged();
         return this;
       }
-      /**
-       * <code>required string timestamp = 3;</code>
-       */
       public Builder clearTimestamp() {
         bitField0_ = (bitField0_ & ~0x00000004);
         timestamp_ = getDefaultInstance().getTimestamp();
         onChanged();
         return this;
       }
-      /**
-       * <code>required string timestamp = 3;</code>
-       */
-      public Builder setTimestampBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+      void setTimestamp(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000004;
         timestamp_ = value;
         onChanged();
-        return this;
       }
-
+      
       // optional uint32 someOtherId = 4;
       private int someOtherId_ ;
-      /**
-       * <code>optional uint32 someOtherId = 4;</code>
-       */
       public boolean hasSomeOtherId() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      /**
-       * <code>optional uint32 someOtherId = 4;</code>
-       */
       public int getSomeOtherId() {
         return someOtherId_;
       }
-      /**
-       * <code>optional uint32 someOtherId = 4;</code>
-       */
       public Builder setSomeOtherId(int value) {
         bitField0_ |= 0x00000008;
         someOtherId_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint32 someOtherId = 4;</code>
-       */
       public Builder clearSomeOtherId() {
         bitField0_ = (bitField0_ & ~0x00000008);
         someOtherId_ = 0;
         onChanged();
         return this;
       }
-
+      
       // optional bool isValid = 5;
       private boolean isValid_ ;
-      /**
-       * <code>optional bool isValid = 5;</code>
-       */
       public boolean hasIsValid() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-      /**
-       * <code>optional bool isValid = 5;</code>
-       */
       public boolean getIsValid() {
         return isValid_;
       }
-      /**
-       * <code>optional bool isValid = 5;</code>
-       */
       public Builder setIsValid(boolean value) {
         bitField0_ |= 0x00000010;
         isValid_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional bool isValid = 5;</code>
-       */
       public Builder clearIsValid() {
         bitField0_ = (bitField0_ & ~0x00000010);
         isValid_ = false;
         onChanged();
         return this;
       }
-
+      
       // optional string description = 6;
       private java.lang.Object description_ = "";
-      /**
-       * <code>optional string description = 6;</code>
-       */
       public boolean hasDescription() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-      /**
-       * <code>optional string description = 6;</code>
-       */
-      public java.lang.String getDescription() {
+      public String getDescription() {
         java.lang.Object ref = description_;
-        if (!(ref instanceof java.lang.String)) {
-          java.lang.String s = ((com.google.protobuf.ByteString) ref)
-              .toStringUtf8();
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           description_ = s;
           return s;
         } else {
-          return (java.lang.String) ref;
+          return (String) ref;
         }
       }
-      /**
-       * <code>optional string description = 6;</code>
-       */
-      public com.google.protobuf.ByteString
-          getDescriptionBytes() {
-        java.lang.Object ref = description_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          description_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string description = 6;</code>
-       */
-      public Builder setDescription(
-          java.lang.String value) {
+      public Builder setDescription(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -1193,145 +895,98 @@ public final class ProtoTestEventWrapper {
         onChanged();
         return this;
       }
-      /**
-       * <code>optional string description = 6;</code>
-       */
       public Builder clearDescription() {
         bitField0_ = (bitField0_ & ~0x00000020);
         description_ = getDefaultInstance().getDescription();
         onChanged();
         return this;
       }
-      /**
-       * <code>optional string description = 6;</code>
-       */
-      public Builder setDescriptionBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000020;
+      void setDescription(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000020;
         description_ = value;
         onChanged();
-        return this;
       }
-
+      
       // optional float someFloatColumn = 7;
       private float someFloatColumn_ ;
-      /**
-       * <code>optional float someFloatColumn = 7;</code>
-       */
       public boolean hasSomeFloatColumn() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
-      /**
-       * <code>optional float someFloatColumn = 7;</code>
-       */
       public float getSomeFloatColumn() {
         return someFloatColumn_;
       }
-      /**
-       * <code>optional float someFloatColumn = 7;</code>
-       */
       public Builder setSomeFloatColumn(float value) {
         bitField0_ |= 0x00000040;
         someFloatColumn_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional float someFloatColumn = 7;</code>
-       */
       public Builder clearSomeFloatColumn() {
         bitField0_ = (bitField0_ & ~0x00000040);
         someFloatColumn_ = 0F;
         onChanged();
         return this;
       }
-
+      
       // optional uint32 someIntColumn = 8;
       private int someIntColumn_ ;
-      /**
-       * <code>optional uint32 someIntColumn = 8;</code>
-       */
       public boolean hasSomeIntColumn() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
-      /**
-       * <code>optional uint32 someIntColumn = 8;</code>
-       */
       public int getSomeIntColumn() {
         return someIntColumn_;
       }
-      /**
-       * <code>optional uint32 someIntColumn = 8;</code>
-       */
       public Builder setSomeIntColumn(int value) {
         bitField0_ |= 0x00000080;
         someIntColumn_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint32 someIntColumn = 8;</code>
-       */
       public Builder clearSomeIntColumn() {
         bitField0_ = (bitField0_ & ~0x00000080);
         someIntColumn_ = 0;
         onChanged();
         return this;
       }
-
+      
       // optional uint64 someLongColumn = 9;
       private long someLongColumn_ ;
-      /**
-       * <code>optional uint64 someLongColumn = 9;</code>
-       */
       public boolean hasSomeLongColumn() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
-      /**
-       * <code>optional uint64 someLongColumn = 9;</code>
-       */
       public long getSomeLongColumn() {
         return someLongColumn_;
       }
-      /**
-       * <code>optional uint64 someLongColumn = 9;</code>
-       */
       public Builder setSomeLongColumn(long value) {
         bitField0_ |= 0x00000100;
         someLongColumn_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint64 someLongColumn = 9;</code>
-       */
       public Builder clearSomeLongColumn() {
         bitField0_ = (bitField0_ & ~0x00000100);
         someLongColumn_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:prototest.ProtoTestEvent)
     }
-
+    
     static {
       defaultInstance = new ProtoTestEvent(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:prototest.ProtoTestEvent)
   }
-
+  
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_prototest_ProtoTestEvent_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_prototest_ProtoTestEvent_fieldAccessorTable;
-
+  
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -1361,7 +1016,9 @@ public final class ProtoTestEventWrapper {
           internal_static_prototest_ProtoTestEvent_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_prototest_ProtoTestEvent_descriptor,
-              new java.lang.String[] { "EventType", "Id", "Timestamp", "SomeOtherId", "IsValid", "Description", "SomeFloatColumn", "SomeIntColumn", "SomeLongColumn", });
+              new java.lang.String[] { "EventType", "Id", "Timestamp", "SomeOtherId", "IsValid", "Description", "SomeFloatColumn", "SomeIntColumn", "SomeLongColumn", },
+              com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.class,
+              com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.Builder.class);
           return null;
         }
       };
@@ -1370,6 +1027,6 @@ public final class ProtoTestEventWrapper {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-
+  
   // @@protoc_insertion_point(outer_class_scope)
 }

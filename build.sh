@@ -16,7 +16,8 @@ VERSION=`cat pom.xml | grep version | head -4 | tail -1 | sed 's_.*<version>\([^
 echo Using Version[${VERSION}]
 
 mvn clean
-mvn package
+#mvn install -U
+mvn install -U -DskipTests
 
 if [ $? -ne "0" ]; then
     echo "mvn package failed"
