@@ -47,7 +47,7 @@ public class DruidMasterTest
   private LoadQueueTaskMaster taskMaster;
   private DatabaseSegmentManager databaseSegmentManager;
   private SingleServerInventoryView serverInventoryView;
-  private ScheduledExecutorService scheduledExecutorService;
+  private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
   private DataSegment segment;
   private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
@@ -65,8 +65,8 @@ public class DruidMasterTest
     databaseSegmentManager = EasyMock.createNiceMock(DatabaseSegmentManager.class);
     EasyMock.replay(databaseSegmentManager);
 
-    scheduledExecutorService = EasyMock.createNiceMock(ScheduledExecutorService.class);
-    EasyMock.replay(scheduledExecutorService);
+    scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
+    EasyMock.replay(scheduledExecutorFactory);
 
     master = new DruidMaster(
         new DruidMasterConfig()
@@ -139,7 +139,7 @@ public class DruidMasterTest
         null,
         curator,
         new NoopServiceEmitter(),
-        scheduledExecutorService,
+        scheduledExecutorFactory,
         null,
         taskMaster,
         loadManagementPeons
