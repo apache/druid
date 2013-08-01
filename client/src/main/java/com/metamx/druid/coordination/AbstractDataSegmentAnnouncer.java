@@ -22,33 +22,29 @@ package com.metamx.druid.coordination;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import org.apache.curator.utils.ZKPaths;
 
-import java.io.IOException;
-
-public class CuratorDataSegmentAnnouncer implements DataSegmentAnnouncer
+/**
+ */
+public abstract class AbstractDataSegmentAnnouncer implements DataSegmentAnnouncer
 {
-  private static final Logger log = new Logger(CuratorDataSegmentAnnouncer.class);
-
-  private final Object lock = new Object();
+  private static final Logger log = new Logger(AbstractDataSegmentAnnouncer.class);
 
   private final DruidServerMetadata server;
   private final ZkPathsConfig config;
   private final Announcer announcer;
   private final ObjectMapper jsonMapper;
-  private final String servedSegmentsLocation;
+
+  private final Object lock = new Object();
 
   private volatile boolean started = false;
 
-  @Inject
-  public CuratorDataSegmentAnnouncer(
+  protected AbstractDataSegmentAnnouncer(
       DruidServerMetadata server,
       ZkPathsConfig config,
       Announcer announcer,
@@ -59,7 +55,6 @@ public class CuratorDataSegmentAnnouncer implements DataSegmentAnnouncer
     this.config = config;
     this.announcer = announcer;
     this.jsonMapper = jsonMapper;
-    this.servedSegmentsLocation = ZKPaths.makePath(config.getServedSegmentsPath(), server.getName());
   }
 
   @LifecycleStart
@@ -91,33 +86,15 @@ public class CuratorDataSegmentAnnouncer implements DataSegmentAnnouncer
         return;
       }
 
-      log.info("Stopping CuratorDataSegmentAnnouncer with config[%s]", config);
+      log.info("Stopping %s with config[%s]", getClass(), config);
       announcer.unannounce(makeAnnouncementPath());
 
       started = false;
     }
   }
 
-  public void announceSegment(DataSegment segment) throws IOException
+  private String makeAnnouncementPath()
   {
-    final String path = makeServedSegmentPath(segment);
-    log.info("Announcing segment[%s] to path[%s]", segment.getIdentifier(), path);
-    announcer.announce(path, jsonMapper.writeValueAsBytes(segment));
-  }
-
-  public void unannounceSegment(DataSegment segment) throws IOException
-  {
-    final String path = makeServedSegmentPath(segment);
-    log.info("Unannouncing segment[%s] at path[%s]", segment.getIdentifier(), path);
-    announcer.unannounce(path);
-  }
-
-  private String makeAnnouncementPath() {
     return ZKPaths.makePath(config.getAnnouncementsPath(), server.getName());
-  }
-
-  private String makeServedSegmentPath(DataSegment segment)
-  {
-    return ZKPaths.makePath(servedSegmentsLocation, segment.getIdentifier());
   }
 }

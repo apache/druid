@@ -25,12 +25,15 @@ import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.common.guava.Sequence;
 import com.metamx.druid.Query;
 import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.collect.CountingMap;
 import com.metamx.druid.guice.annotations.Processing;
+import com.metamx.druid.index.ReferenceCountingSegment;
+import com.metamx.druid.index.ReferenceCountingSequence;
 import com.metamx.druid.index.Segment;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.SegmentLoadingException;
@@ -55,6 +58,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,7 +77,7 @@ public class ServerManager implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final ExecutorService exec;
 
-  private final Map<String, VersionedIntervalTimeline<String, Segment>> dataSources;
+  private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSources;
   private final CountingMap<String> dataSourceSizes = new CountingMap<String>();
   private final CountingMap<String> dataSourceCounts = new CountingMap<String>();
 
@@ -91,7 +95,7 @@ public class ServerManager implements QuerySegmentWalker
 
     this.exec = exec;
 
-    this.dataSources = new HashMap<String, VersionedIntervalTimeline<String, Segment>>();
+    this.dataSources = new HashMap<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>>();
   }
 
   public Map<String, Long> getDataSourceSizes()
@@ -135,14 +139,14 @@ public class ServerManager implements QuerySegmentWalker
 
     synchronized (lock) {
       String dataSource = segment.getDataSource();
-      VersionedIntervalTimeline<String, Segment> loadedIntervals = dataSources.get(dataSource);
+      VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals = dataSources.get(dataSource);
 
       if (loadedIntervals == null) {
-        loadedIntervals = new VersionedIntervalTimeline<String, Segment>(Ordering.natural());
+        loadedIntervals = new VersionedIntervalTimeline<String, ReferenceCountingSegment>(Ordering.natural());
         dataSources.put(dataSource, loadedIntervals);
       }
 
-      PartitionHolder<Segment> entry = loadedIntervals.findEntry(
+      PartitionHolder<ReferenceCountingSegment> entry = loadedIntervals.findEntry(
           segment.getInterval(),
           segment.getVersion()
       );
@@ -152,7 +156,9 @@ public class ServerManager implements QuerySegmentWalker
       }
 
       loadedIntervals.add(
-          segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(adapter)
+          segment.getInterval(),
+          segment.getVersion(),
+          segment.getShardSpec().createChunk(new ReferenceCountingSegment(adapter))
       );
       synchronized (dataSourceSizes) {
         dataSourceSizes.add(dataSource, segment.getSize());
@@ -167,17 +173,19 @@ public class ServerManager implements QuerySegmentWalker
   {
     String dataSource = segment.getDataSource();
     synchronized (lock) {
-      VersionedIntervalTimeline<String, Segment> loadedIntervals = dataSources.get(dataSource);
+      VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals = dataSources.get(dataSource);
 
       if (loadedIntervals == null) {
         log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSource);
         return;
       }
 
-      PartitionChunk<Segment> removed = loadedIntervals.remove(
-          segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk((Segment) null)
+      PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
+          segment.getInterval(),
+          segment.getVersion(),
+          segment.getShardSpec().createChunk((ReferenceCountingSegment) null)
       );
-      Segment oldQueryable = (removed == null) ? null : removed.getObject();
+      ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
 
       if (oldQueryable != null) {
         synchronized (dataSourceSizes) {
@@ -185,6 +193,16 @@ public class ServerManager implements QuerySegmentWalker
         }
         synchronized (dataSourceCounts) {
           dataSourceCounts.add(dataSource, -1L);
+        }
+
+        try {
+          oldQueryable.close();
+        }
+        catch (IOException e) {
+          log.makeAlert(e, "Exception closing segment")
+             .addData("dataSource", dataSource)
+             .addData("segmentId", segment.getIdentifier())
+             .emit();
         }
       } else {
         log.info(
@@ -208,7 +226,7 @@ public class ServerManager implements QuerySegmentWalker
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    final VersionedIntervalTimeline<String, Segment> timeline = dataSources.get(query.getDataSource());
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(query.getDataSource());
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();
@@ -217,20 +235,22 @@ public class ServerManager implements QuerySegmentWalker
     FunctionalIterable<QueryRunner<T>> adapters = FunctionalIterable
         .create(intervals)
         .transformCat(
-            new Function<Interval, Iterable<TimelineObjectHolder<String, Segment>>>()
+            new Function<Interval, Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>>>()
             {
               @Override
-              public Iterable<TimelineObjectHolder<String, Segment>> apply(Interval input)
+              public Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>> apply(Interval input)
               {
                 return timeline.lookup(input);
               }
             }
         )
         .transformCat(
-            new Function<TimelineObjectHolder<String, Segment>, Iterable<QueryRunner<T>>>()
+            new Function<TimelineObjectHolder<String, ReferenceCountingSegment>, Iterable<QueryRunner<T>>>()
             {
               @Override
-              public Iterable<QueryRunner<T>> apply(@Nullable final TimelineObjectHolder<String, Segment> holder)
+              public Iterable<QueryRunner<T>> apply(
+                  @Nullable final TimelineObjectHolder<String, ReferenceCountingSegment> holder
+              )
               {
                 if (holder == null) {
                   return null;
@@ -239,10 +259,10 @@ public class ServerManager implements QuerySegmentWalker
                 return FunctionalIterable
                     .create(holder.getObject())
                     .transform(
-                        new Function<PartitionChunk<Segment>, QueryRunner<T>>()
+                        new Function<PartitionChunk<ReferenceCountingSegment>, QueryRunner<T>>()
                         {
                           @Override
-                          public QueryRunner<T> apply(PartitionChunk<Segment> input)
+                          public QueryRunner<T> apply(PartitionChunk<ReferenceCountingSegment> input)
                           {
                             return buildAndDecorateQueryRunner(
                                 factory,
@@ -283,7 +303,7 @@ public class ServerManager implements QuerySegmentWalker
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    final VersionedIntervalTimeline<String, Segment> timeline = dataSources.get(query.getDataSource());
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(query.getDataSource());
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();
@@ -296,9 +316,9 @@ public class ServerManager implements QuerySegmentWalker
             {
               @Override
               @SuppressWarnings("unchecked")
-              public Iterable<QueryRunner<T>> apply(@Nullable SegmentDescriptor input)
+              public Iterable<QueryRunner<T>> apply(SegmentDescriptor input)
               {
-                final PartitionHolder<Segment> entry = timeline.findEntry(
+                final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
                     input.getInterval(), input.getVersion()
                 );
 
@@ -306,12 +326,12 @@ public class ServerManager implements QuerySegmentWalker
                   return null;
                 }
 
-                final PartitionChunk<Segment> chunk = entry.getChunk(input.getPartitionNumber());
+                final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(input.getPartitionNumber());
                 if (chunk == null) {
                   return null;
                 }
 
-                final Segment adapter = chunk.getObject();
+                final ReferenceCountingSegment adapter = chunk.getObject();
                 return Arrays.asList(
                     buildAndDecorateQueryRunner(factory, toolChest, adapter, new SpecificSegmentSpec(input))
                 );
@@ -326,10 +346,10 @@ public class ServerManager implements QuerySegmentWalker
   }
 
   private <T> QueryRunner<T> buildAndDecorateQueryRunner(
-      QueryRunnerFactory<T, Query<T>> factory,
+      final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
-      Segment adapter,
-      QuerySegmentSpec segmentSpec
+      final ReferenceCountingSegment adapter,
+      final QuerySegmentSpec segmentSpec
   )
   {
     return new SpecificSegmentQueryRunner<T>(
@@ -338,7 +358,7 @@ public class ServerManager implements QuerySegmentWalker
             new Function<Query<T>, ServiceMetricEvent.Builder>()
             {
               @Override
-              public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
+              public ServiceMetricEvent.Builder apply(@Nullable final Query<T> input)
               {
                 return toolChest.makeMetricBuilder(input);
               }
@@ -346,7 +366,14 @@ public class ServerManager implements QuerySegmentWalker
             new BySegmentQueryRunner<T>(
                 adapter.getIdentifier(),
                 adapter.getDataInterval().getStart(),
-                factory.createRunner(adapter)
+                new QueryRunner<T>()
+                {
+                  @Override
+                  public Sequence<T> run(final Query<T> query)
+                  {
+                    return new ReferenceCountingSequence<T>(factory.createRunner(adapter).run(query), adapter);
+                  }
+                }
             )
         ).withWaitMeasuredFromNow(),
         segmentSpec

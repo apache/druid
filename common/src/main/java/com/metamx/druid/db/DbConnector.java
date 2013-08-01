@@ -143,15 +143,16 @@ public class DbConnector
             @Override
             public Void withHandle(Handle handle) throws Exception
             {
-              List<Map<String, Object>> table = handle.select(String.format("SHOW tables LIKE '%s'", tableName));
+              if ( !handle.getConnection().getMetaData().getDatabaseProductName().contains("PostgreSQL") ) {
+                List<Map<String, Object>> table = handle.select(String.format("SHOW tables LIKE '%s'", tableName));
 
-              if (table.isEmpty()) {
-                log.info("Creating table[%s]", tableName);
-                handle.createStatement(sql).execute();
-              } else {
-                log.info("Table[%s] existed: [%s]", tableName, table);
+                if (table.isEmpty()) {
+                  log.info("Creating table[%s]", tableName);
+                  handle.createStatement(sql).execute();
+                } else {
+                  log.info("Table[%s] existed: [%s]", tableName, table);
+                }
               }
-
               return null;
             }
           }

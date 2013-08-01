@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Provides LoadQueuePeons
@@ -32,22 +33,25 @@ public class LoadQueueTaskMaster
 {
   private final CuratorFramework curator;
   private final ObjectMapper jsonMapper;
-  private final ExecutorService peonExec;
+  private final ScheduledExecutorService peonExec;
+  private final DruidMasterConfig config;
 
   @Inject
   public LoadQueueTaskMaster(
       CuratorFramework curator,
       ObjectMapper jsonMapper,
-      ExecutorService peonExec
+      ScheduledExecutorService peonExec,
+      DruidMasterConfig config
   )
   {
     this.curator = curator;
     this.jsonMapper = jsonMapper;
     this.peonExec = peonExec;
+    this.config = config;
   }
 
   public LoadQueuePeon giveMePeon(String basePath)
   {
-    return new LoadQueuePeon(curator, basePath, jsonMapper, peonExec);
+    return new LoadQueuePeon(curator, basePath, jsonMapper, peonExec, config);
   }
 }

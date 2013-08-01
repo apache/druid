@@ -31,7 +31,7 @@ import java.util.Map;
 */
 public class RealtimeMetricsMonitor extends AbstractMonitor
 {
-  Map<FireDepartment, FireDepartmentMetrics> previousValues;
+  private final Map<FireDepartment, FireDepartmentMetrics> previousValues;
   private final List<FireDepartment> fireDepartments;
 
   public RealtimeMetricsMonitor(List<FireDepartment> fireDepartments)

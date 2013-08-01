@@ -49,6 +49,7 @@ import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.query.CacheStrategy;
 import com.metamx.druid.query.MetricManipulationFn;
+import com.metamx.druid.query.Queries;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.QueryToolChestWarehouse;
@@ -125,12 +126,18 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                                   && strategy != null;
     final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
 
-    final Query<T> rewrittenQuery;
+
+    ImmutableMap.Builder<String, String> contextBuilder = new ImmutableMap.Builder<String, String>();
+
+    final String priority = query.getContextValue("priority", "0");
+    contextBuilder.put("priority", priority);
+
     if (populateCache) {
-      rewrittenQuery = query.withOverriddenContext(ImmutableMap.of("bySegment", "true", "intermediate", "true"));
-    } else {
-      rewrittenQuery = query.withOverriddenContext(ImmutableMap.of("intermediate", "true"));
+      contextBuilder.put("bySegment", "true");
     }
+    contextBuilder.put("intermediate", "true");
+
+    final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
 
     VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
     if (timeline == null) {

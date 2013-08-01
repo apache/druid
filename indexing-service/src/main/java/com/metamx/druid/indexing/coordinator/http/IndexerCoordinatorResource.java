@@ -76,7 +76,7 @@ public class IndexerCoordinatorResource
               .put("id", input.getTask().getId())
               .put("dataSource", input.getTask().getDataSource())
               .put("interval",
-                   input.getTask().getImplicitLockInterval().get() == null
+                   !input.getTask().getImplicitLockInterval().isPresent()
                    ? ""
                    : input.getTask().getImplicitLockInterval().get()
               )
@@ -259,6 +259,7 @@ public class IndexerCoordinatorResource
               retMap.put("result", ret);
             }
             catch (IOException e) {
+              log.warn(e, "Failed to perform task action");
               return Response.serverError().build();
             }
 

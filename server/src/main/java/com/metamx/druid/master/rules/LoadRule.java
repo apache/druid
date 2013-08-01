@@ -62,16 +62,18 @@ public abstract class LoadRule implements Rule
     final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
     final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
 
-    stats.accumulate(
-        assign(
-            params.getReplicationManager(),
-            expectedReplicants,
-            totalReplicants,
-            analyzer,
-            serverHolderList,
-            segment
-        )
-    );
+    if (params.getAvailableSegments().contains(segment)) {
+      stats.accumulate(
+          assign(
+              params.getReplicationManager(),
+              expectedReplicants,
+              totalReplicants,
+              analyzer,
+              serverHolderList,
+              segment
+          )
+      );
+    }
 
     stats.accumulate(drop(expectedReplicants, clusterReplicants, segment, params));
 
@@ -90,6 +92,12 @@ public abstract class LoadRule implements Rule
     final MasterStats stats = new MasterStats();
 
     while (totalReplicants < expectedReplicants) {
+      boolean replicate = totalReplicants > 0;
+
+      if (replicate && !replicationManager.canCreateReplicant(getTier())) {
+        break;
+      }
+
       final ServerHolder holder = analyzer.findNewSegmentHomeAssign(segment, serverHolderList);
 
       if (holder == null) {
@@ -102,15 +110,10 @@ public abstract class LoadRule implements Rule
         break;
       }
 
-      if (totalReplicants > 0) { // don't throttle if there's only 1 copy of this segment in the cluster
-        if (!replicationManager.canAddReplicant(getTier()) ||
-            !replicationManager.registerReplicantCreation(
-                getTier(),
-                segment.getIdentifier(),
-                holder.getServer().getHost()
-            )) {
-          break;
-        }
+      if (replicate) {
+        replicationManager.registerReplicantCreation(
+            getTier(), segment.getIdentifier(), holder.getServer().getHost()
+        );
       }
 
       holder.getPeon().loadSegment(
@@ -178,15 +181,16 @@ public abstract class LoadRule implements Rule
 
         if (holder.isServingSegment(segment)) {
           if (expectedNumReplicantsForType > 0) { // don't throttle unless we are removing extra replicants
-            if (!replicationManager.canDestroyReplicant(getTier()) ||
-                !replicationManager.registerReplicantTermination(
-                    getTier(),
-                    segment.getIdentifier(),
-                    holder.getServer().getHost()
-                )) {
+            if (!replicationManager.canDestroyReplicant(getTier())) {
               serverQueue.add(holder);
               break;
             }
+
+            replicationManager.registerReplicantTermination(
+                getTier(),
+                segment.getIdentifier(),
+                holder.getServer().getHost()
+            );
           }
 
           holder.getPeon().dropSegment(

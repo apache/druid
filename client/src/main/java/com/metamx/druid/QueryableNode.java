@@ -25,6 +25,8 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -32,21 +34,30 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.BatchServerInventoryView;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.ServerView;
+import com.metamx.druid.client.SingleServerInventoryView;
 import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
+import com.metamx.druid.coordination.AbstractDataSegmentAnnouncer;
+import com.metamx.druid.coordination.BatchDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.curator.CuratorConfig;
+import com.metamx.druid.coordination.MultipleDataSegmentAnnouncerDataSegmentAnnouncer;
+import com.metamx.druid.coordination.SingleDataSegmentAnnouncer;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.guice.JsonConfigurator;
 import com.metamx.druid.http.log.RequestLogger;
+import com.metamx.druid.http.NoopRequestLogger;
+import com.metamx.druid.http.RequestLogger;
+import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
+import com.metamx.druid.initialization.ZkDataSegmentAnnouncerConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
@@ -356,12 +367,32 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private void initializeServerInventoryView()
   {
     if (serverInventoryView == null) {
-      serverInventoryView = new ServerInventoryView(
-          getConfigFactory().build(ServerInventoryViewConfig.class),
-          getZkPaths(),
-          getCuratorFramework(),
-          getJsonMapper()
+      final ExecutorService exec = Executors.newFixedThreadPool(
+          1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ServerInventoryView-%s").build()
       );
+
+      final ServerInventoryViewConfig serverInventoryViewConfig = getConfigFactory().build(ServerInventoryViewConfig.class);
+      final String announcerType = serverInventoryViewConfig.getAnnouncerType();
+
+      if ("legacy".equalsIgnoreCase(announcerType)) {
+        serverInventoryView = new SingleServerInventoryView(
+            serverInventoryViewConfig,
+            getZkPaths(),
+            getCuratorFramework(),
+            exec,
+            getJsonMapper()
+        );
+      } else if ("batch".equalsIgnoreCase(announcerType)) {
+        serverInventoryView = new BatchServerInventoryView(
+            serverInventoryViewConfig,
+            getZkPaths(),
+            getCuratorFramework(),
+            exec,
+            getJsonMapper()
+        );
+      } else {
+        throw new IAE("Unknown type %s", announcerType);
+      }
       lifecycle.addManagedInstance(serverInventoryView);
     }
   }
@@ -371,13 +402,23 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
     if (requestLogger == null) {
       try {
         final String loggingType = props.getProperty("druid.request.logging.type");
-        if("emitter".equals(loggingType)) {
-          setRequestLogger(Initialization.makeEmittingRequestLogger(getProps(), getEmitter()));
-        }
-        else {
+        if ("emitter".equals(loggingType)) {
           setRequestLogger(
-              Initialization.makeFileRequestLogger(getJsonMapper(), getScheduledExecutorFactory(), getProps())
+              Initialization.makeEmittingRequestLogger(
+                  getProps(),
+                  getEmitter()
+              )
           );
+        } else if ("file".equalsIgnoreCase(loggingType)) {
+          setRequestLogger(
+              Initialization.makeFileRequestLogger(
+                  getJsonMapper(),
+                  getScheduledExecutorFactory(),
+                  getProps()
+              )
+          );
+        } else {
+          setRequestLogger(new NoopRequestLogger());
         }
       }
       catch (IOException e) {
@@ -419,7 +460,40 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       final Announcer announcer = new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s"));
       lifecycle.addManagedInstance(announcer);
 
-      setAnnouncer(new CuratorDataSegmentAnnouncer(getDruidServerMetadata(), getZkPaths(), announcer, getJsonMapper()));
+      final ZkDataSegmentAnnouncerConfig config = getConfigFactory().build(ZkDataSegmentAnnouncerConfig.class);
+      final String announcerType = config.getAnnouncerType();
+
+      final DataSegmentAnnouncer dataSegmentAnnouncer;
+      if ("batch".equalsIgnoreCase(announcerType)) {
+        dataSegmentAnnouncer = new BatchDataSegmentAnnouncer(
+            getDruidServerMetadata(),
+            config,
+            announcer,
+            getJsonMapper()
+        );
+      } else if ("legacy".equalsIgnoreCase(announcerType)) {
+        dataSegmentAnnouncer = new MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
+            Arrays.<AbstractDataSegmentAnnouncer>asList(
+                new BatchDataSegmentAnnouncer(
+                    getDruidServerMetadata(),
+                    config,
+                    announcer,
+                    getJsonMapper()
+                ),
+                new SingleDataSegmentAnnouncer(
+                    getDruidServerMetadata(),
+                    getZkPaths(),
+                    announcer,
+                    getJsonMapper()
+                )
+            )
+        );
+      } else {
+        throw new ISE("Unknown announcer type [%s]", announcerType);
+      }
+
+      setAnnouncer(dataSegmentAnnouncer);
+
       lifecycle.addManagedInstance(getAnnouncer(), Lifecycle.Stage.LAST);
     }
   }

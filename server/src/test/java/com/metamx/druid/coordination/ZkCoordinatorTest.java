@@ -94,7 +94,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       }
     };
 
-    announcer = new CuratorDataSegmentAnnouncer(
+    announcer = new SingleDataSegmentAnnouncer(
         me, zkPaths, new Announcer(curator, Execs.singleThreaded("blah")), jsonMapper
     );
 

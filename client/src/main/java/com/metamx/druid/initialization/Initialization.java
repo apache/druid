@@ -86,13 +86,13 @@ public class Initialization
   /**
    * Load properties.
    * Properties are layered:
-   *
+   * <p/>
    * # stored in zookeeper
    * # runtime.properties file,
    * # cmdLine -D
-   *
+   * <p/>
    * command line overrides runtime.properties which overrides zookeeper
-   *
+   * <p/>
    * Idempotent. Thread-safe.  Properties are only loaded once.
    * If property druid.zk.service.host is not set then do not load properties from zookeeper.
    *
@@ -210,10 +210,9 @@ public class Initialization
         CuratorFrameworkFactory.builder()
                                .connectString(curatorConfig.getZkHosts())
                                .sessionTimeoutMs(curatorConfig.getZkSessionTimeoutMs())
-                               .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
-                               // Don't compress stuff written just yet, need to get code deployed first.
-                               .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
-                               .build();
+            .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
+            .compressionProvider(new PotentiallyGzippedCompressionProvider(curatorConfig.enableCompression()))
+            .build();
 
     lifecycle.addHandler(
         new Lifecycle.Handler()
@@ -346,9 +345,9 @@ public class Initialization
   }
 
   public static RequestLogger makeFileRequestLogger(
-    ObjectMapper objectMapper,
-    ScheduledExecutorFactory factory,
-    Properties props
+      ObjectMapper objectMapper,
+      ScheduledExecutorFactory factory,
+      Properties props
   ) throws IOException
   {
     return new FileRequestLogger(

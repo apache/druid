@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ExecutorServiceConfig;
-import com.metamx.common.concurrent.ExecutorServices;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -40,6 +39,7 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.metrics.ServerMonitor;
 import com.metamx.druid.query.MetricsEmittingExecutorService;
+import com.metamx.druid.query.PrioritizedExecutorService;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -47,6 +47,8 @@ import com.metamx.metrics.Monitor;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.jets3t.service.S3ServiceException;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.List;
@@ -97,13 +99,15 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     final List<Monitor> monitors = getMonitors();
     final QueryRunnerFactoryConglomerate conglomerate = getConglomerate();
 
+    final PrioritizedExecutorService innerExecutorService = PrioritizedExecutorService.create(
+        getLifecycle(),
+        getConfigFactory().buildWithReplacements(
+            ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
+        )
+    );
+
     final ExecutorService executorService = new MetricsEmittingExecutorService(
-        ExecutorServices.create(
-            getLifecycle(),
-            getConfigFactory().buildWithReplacements(
-                ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
-            )
-        ),
+        innerExecutorService,
         emitter,
         new ServiceMetricEvent.Builder()
     );

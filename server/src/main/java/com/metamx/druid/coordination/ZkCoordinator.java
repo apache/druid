@@ -21,6 +21,7 @@ package com.metamx.druid.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -39,6 +40,7 @@ import org.apache.curator.utils.ZKPaths;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 /**
  */
@@ -50,13 +52,12 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
   private final ObjectMapper jsonMapper;
   private final SegmentLoaderConfig config;
+  private final ZkCoordinatorConfig config;
+  private final ZkPathsConfig zkPaths;
   private final DruidServerMetadata me;
   private final DataSegmentAnnouncer announcer;
   private final CuratorFramework curator;
   private final ServerManager serverManager;
-
-  private final String loadQueueLocation;
-  private final String servedSegmentsLocation;
 
   private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started;
@@ -74,13 +75,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
+    this.zkPaths = zkPaths;
     this.me = me;
     this.announcer = announcer;
     this.curator = curator;
     this.serverManager = serverManager;
-
-    this.loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
-    this.servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
   }
 
   @LifecycleStart
@@ -91,6 +90,10 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       if (started) {
         return;
       }
+
+      final String loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
+      final String servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
+      final String liveSegmentsLocation = ZKPaths.makePath(zkPaths.getLiveSegmentsPath(), me.getName());
 
       loadQueueCache = new PathChildrenCache(
           curator,
@@ -105,8 +108,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
         curator.newNamespaceAwareEnsurePath(loadQueueLocation).ensure(curator.getZookeeperClient());
         curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
+        curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
 
-        loadCache();
+        if (config.isLoadFromSegmentCacheEnabled()) {
+          loadCache();
+        }
 
         loadQueueCache.getListenable().addListener(
             new PathChildrenCacheListener()
@@ -139,9 +145,9 @@ public class ZkCoordinator implements DataSegmentChangeHandler
                       }
 
                       log.makeAlert(e, "Segment load/unload: uncaught exception.")
-                          .addData("node", path)
-                          .addData("nodeProperties", segment)
-                          .emit();
+                         .addData("node", path)
+                         .addData("nodeProperties", segment)
+                         .emit();
                     }
 
                     break;
@@ -195,12 +201,14 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       return;
     }
 
+    List<DataSegment> cachedSegments = Lists.newArrayList();
     for (File file : baseDir.listFiles()) {
       log.info("Loading segment cache file [%s]", file);
       try {
         DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
         if (serverManager.isSegmentCached(segment)) {
-          addSegment(segment);
+          cachedSegments.add(segment);
+          //addSegment(segment);
         } else {
           log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getIdentifier());
 
@@ -216,6 +224,8 @@ public class ZkCoordinator implements DataSegmentChangeHandler
            .emit();
       }
     }
+
+    addSegments(cachedSegments);
   }
 
   @Override
@@ -224,15 +234,17 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     try {
       serverManager.loadSegment(segment);
 
-      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
-      try {
-        jsonMapper.writeValue(segmentInfoCacheFile, segment);
-      }
-      catch (IOException e) {
-        removeSegment(segment);
-        throw new SegmentLoadingException(
-            e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
-        );
+      File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
+      if (!segmentInfoCacheFile.exists()) {
+        try {
+          jsonMapper.writeValue(segmentInfoCacheFile, segment);
+        }
+        catch (IOException e) {
+          removeSegment(segment);
+          throw new SegmentLoadingException(
+              e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
+          );
+        }
       }
 
       try {
@@ -242,13 +254,50 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         removeSegment(segment);
         throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
       }
+
     }
     catch (SegmentLoadingException e) {
       log.makeAlert(e, "Failed to load segment for dataSource")
-          .addData("segment", segment)
-          .emit();
+         .addData("segment", segment)
+         .emit();
     }
   }
+
+  public void addSegments(Iterable<DataSegment> segments)
+  {
+    try {
+      for (DataSegment segment : segments) {
+        serverManager.loadSegment(segment);
+
+        File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
+        if (!segmentInfoCacheFile.exists()) {
+          try {
+            jsonMapper.writeValue(segmentInfoCacheFile, segment);
+          }
+          catch (IOException e) {
+            removeSegment(segment);
+            throw new SegmentLoadingException(
+                e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
+            );
+          }
+        }
+      }
+
+      try {
+        announcer.announceSegments(segments);
+      }
+      catch (IOException e) {
+        removeSegments(segments);
+        throw new SegmentLoadingException(e, "Failed to announce segments[%s]", segments);
+      }
+    }
+    catch (SegmentLoadingException e) {
+      log.makeAlert(e, "Failed to load segments for dataSource")
+         .addData("segments", segments)
+         .emit();
+    }
+  }
+
 
   @Override
   public void removeSegment(DataSegment segment)
@@ -264,9 +313,30 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       announcer.unannounceSegment(segment);
     }
     catch (Exception e) {
-      log.makeAlert("Failed to remove segment")
-          .addData("segment", segment)
-          .emit();
+      log.makeAlert(e, "Failed to remove segment")
+         .addData("segment", segment)
+         .emit();
+    }
+  }
+
+  public void removeSegments(Iterable<DataSegment> segments)
+  {
+    try {
+      for (DataSegment segment : segments) {
+        serverManager.dropSegment(segment);
+
+        File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
+        if (!segmentInfoCacheFile.delete()) {
+          log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
+        }
+      }
+
+      announcer.unannounceSegments(segments);
+    }
+    catch (Exception e) {
+      log.makeAlert(e, "Failed to remove segments")
+         .addData("segments", segments)
+         .emit();
     }
   }
 }

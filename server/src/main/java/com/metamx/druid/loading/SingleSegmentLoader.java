@@ -19,9 +19,13 @@
 
 package com.metamx.druid.loading;
 
-import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
-import com.metamx.common.StreamUtils;
+import com.metamx.common.IAE;
+import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.QueryableIndex;
@@ -41,8 +45,8 @@ public class SingleSegmentLoader implements SegmentLoader
 
   private final DataSegmentPuller dataSegmentPuller;
   private final QueryableIndexFactory factory;
-  private final SegmentLoaderConfig config;
-  private static final Joiner JOINER = Joiner.on("/").skipNulls();
+
+  private final List<StorageLocation> locations;
 
   @Inject
   public SingleSegmentLoader(
@@ -53,7 +57,35 @@ public class SingleSegmentLoader implements SegmentLoader
   {
     this.dataSegmentPuller = dataSegmentPuller;
     this.factory = factory;
-    this.config = config;
+
+    final ImmutableList.Builder<StorageLocation> locBuilder = ImmutableList.builder();
+
+    // This is a really, really stupid way of getting this information.  Splitting on commas and bars is error-prone
+    // We should instead switch it up to be a JSON Array of JSON Object or something and cool stuff like that
+    // But, that'll have to wait for some other day.
+    for (String dirSpec : config.getCacheDirectory().split(",")) {
+      String[] dirSplit = dirSpec.split("\\|");
+      if (dirSplit.length == 1) {
+        locBuilder.add(new StorageLocation(new File(dirSplit[0]), config.getServerMaxSize()));
+      }
+      else if (dirSplit.length == 2) {
+        final Long maxSize = Longs.tryParse(dirSplit[1]);
+        if (maxSize == null) {
+          throw new IAE("Size of a local segment storage location must be an integral number, got[%s]", dirSplit[1]);
+        }
+        locBuilder.add(new StorageLocation(new File(dirSplit[0]), maxSize));
+      }
+      else {
+        throw new ISE(
+            "Unknown segment storage location[%s]=>[%s], config[%s].",
+            dirSplit.length, dirSpec, config.getCacheDirectory()
+        );
+      }
+    }
+    locations = locBuilder.build();
+
+    Preconditions.checkArgument(locations.size() > 0, "Must have at least one segment cache directory.");
+    log.info("Using storage locations[%s]", locations);
   }
 
   @Override
@@ -83,110 +115,133 @@ public class SingleSegmentLoader implements SegmentLoader
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
     File localStorageDir = new File(config.getLocations(), DataSegmentPusherUtil.getStorageDir(segment));
+    StorageLocation loc = findStorageLocationIfLoaded(segment);
 
     final String legacyDir = DataSegmentPusherUtil.getLegacyStorageDir(segment);
     if (legacyDir != null) {
       File legacyStorageDir = new File(config.getLocations(), legacyDir);
+    final File retVal;
 
-      if (legacyStorageDir.exists()) {
-        log.info("Found legacyStorageDir[%s], moving to new storage location[%s]", legacyStorageDir, localStorageDir);
-        if (localStorageDir.exists()) {
-          try {
-            FileUtils.deleteDirectory(localStorageDir);
-          }
-          catch (IOException e) {
-            throw new SegmentLoadingException(e, "Error deleting localDir[%s]", localStorageDir);
-          }
-        }
-        final File parentDir = localStorageDir.getParentFile();
-        if (!parentDir.exists()) {
-          log.info("Parent[%s] didn't exist, creating.", parentDir);
-          if (!parentDir.mkdirs()) {
-            log.warn("Unable to make parentDir[%s]", parentDir);
-          }
-        }
-
-        if (!legacyStorageDir.renameTo(localStorageDir)) {
-          log.warn("Failed moving [%s] to [%s]", legacyStorageDir, localStorageDir);
-        }
+    if (loc == null) {
+      Iterator<StorageLocation> locIter = locations.iterator();
+      loc = locIter.next();
+      while (locIter.hasNext()) {
+        loc = loc.mostEmpty(locIter.next());
       }
-    }
 
-    if (localStorageDir.exists()) {
-      long localLastModified = localStorageDir.lastModified();
-      long remoteLastModified = dataSegmentPuller.getLastModified(segment);
-      if (remoteLastModified > 0 && localLastModified >= remoteLastModified) {
-        log.info(
-            "Found localStorageDir[%s] with modified[%s], which is same or after remote[%s].  Using.",
-            localStorageDir, localLastModified, remoteLastModified
-        );
-        return localStorageDir;
-      }
-    }
-
-    if (localStorageDir.exists()) {
-      try {
-        FileUtils.deleteDirectory(localStorageDir);
-      }
-      catch (IOException e) {
-        log.warn(e, "Exception deleting previously existing local dir[%s]", localStorageDir);
-      }
-    }
-    if (!localStorageDir.mkdirs()) {
-      log.info("Unable to make parent file[%s]", localStorageDir);
-    }
-
-    dataSegmentPuller.getSegmentFiles(segment, localStorageDir);
-
-    return localStorageDir;
-  }
-
-  private File getLocalStorageDir(DataSegment segment)
-  {
-    String outputKey = JOINER.join(
-        segment.getDataSource(),
-        String.format("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),
-        segment.getVersion(),
-        segment.getShardSpec().getPartitionNum()
-    );
-
-    return new File(config.getLocations(), outputKey);
-  }
-
-  private void moveToCache(File pulledFile, File cacheFile) throws SegmentLoadingException
-  {
-    log.info("Rename pulledFile[%s] to cacheFile[%s]", pulledFile, cacheFile);
-    if (!pulledFile.renameTo(cacheFile)) {
-      log.warn("Error renaming pulledFile[%s] to cacheFile[%s].  Copying instead.", pulledFile, cacheFile);
-
-      try {
-        StreamUtils.copyToFileAndClose(new FileInputStream(pulledFile), cacheFile);
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(
-            e,
-            "Problem moving pulledFile[%s] to cache[%s]",
-            pulledFile,
-            cacheFile
+      if (!loc.canHandle(segment.getSize())) {
+        throw new ISE(
+            "Segment[%s:%,d] too large for storage[%s:%,d].",
+            segment.getIdentifier(), segment.getSize(), loc.getPath(), loc.available()
         );
       }
-      if (!pulledFile.delete()) {
-        log.error("Could not delete pulledFile[%s].", pulledFile);
+
+      File storageDir = new File(loc.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
+      if (!storageDir.mkdirs()) {
+        log.debug("Unable to make parent file[%s]", storageDir);
       }
+
+      dataSegmentPuller.getSegmentFiles(segment, storageDir);
+      loc.addSegment(segment);
+
+      retVal = storageDir;
     }
+    else {
+      retVal = new File(loc.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
+    }
+
+    loc.addSegment(segment);
+
+    return retVal;
   }
 
   @Override
   public void cleanup(DataSegment segment) throws SegmentLoadingException
   {
-    File cacheFile = getLocalStorageDir(segment);
+    StorageLocation loc = findStorageLocationIfLoaded(segment);
+
+    return new File(config.getLocations(), outputKey);
+    if (loc == null) {
+      log.info("Asked to cleanup something[%s] that didn't exist.  Skipping.", segment);
+      return;
+    }
 
     try {
+      File cacheFile = new File(loc.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
       log.info("Deleting directory[%s]", cacheFile);
       FileUtils.deleteDirectory(cacheFile);
+      loc.removeSegment(segment);
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, e.getMessage());
+    }
+  }
+
+  private static class StorageLocation
+  {
+    private final File path;
+    private final long maxSize;
+    private final Set<DataSegment> segments;
+
+    private volatile long currSize = 0;
+
+    StorageLocation(
+        File path,
+        long maxSize
+    )
+    {
+      this.path = path;
+      this.maxSize = maxSize;
+
+      this.segments = Sets.newHashSet();
+    }
+
+    private File getPath()
+    {
+      return path;
+    }
+
+    private Long getMaxSize()
+    {
+      return maxSize;
+    }
+
+    private synchronized void addSegment(DataSegment segment)
+    {
+      if (! segments.add(segment)) {
+        currSize += segment.getSize();
+      }
+    }
+
+    private synchronized void removeSegment(DataSegment segment)
+    {
+      if (segments.remove(segment)) {
+        currSize -= segment.getSize();
+      }
+    }
+
+    private boolean canHandle(long size)
+    {
+      return available() > size;
+    }
+
+    private synchronized long available()
+    {
+      return maxSize - currSize;
+    }
+
+    private StorageLocation mostEmpty(StorageLocation other)
+    {
+      return available() > other.available() ? this : other;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "StorageLocation{" +
+             "path=" + path +
+             ", maxSize=" + maxSize +
+             '}';
     }
   }
 }

@@ -35,8 +35,13 @@ import com.metamx.druid.loading.S3DataSegmentPuller;
 import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.loading.SingleSegmentLoader;
+import com.metamx.druid.indexing.common.actions.TaskActionClient;
+import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
+import com.metamx.druid.indexing.common.config.TaskConfig;
+import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.metrics.MonitorScheduler;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 import java.io.File;
@@ -58,6 +63,7 @@ public class TaskToolbox
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
+  private final MonitorScheduler monitorScheduler;
   private final ObjectMapper objectMapper;
 
   public TaskToolbox(
@@ -71,6 +77,7 @@ public class TaskToolbox
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
+      MonitorScheduler monitorScheduler,
       ObjectMapper objectMapper
   )
   {
@@ -84,6 +91,7 @@ public class TaskToolbox
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
+    this.monitorScheduler = monitorScheduler;
     this.objectMapper = objectMapper;
   }
 
@@ -127,6 +135,11 @@ public class TaskToolbox
     return queryRunnerFactoryConglomerate;
   }
 
+  public MonitorScheduler getMonitorScheduler()
+  {
+    return monitorScheduler;
+  }
+
   public ObjectMapper getObjectMapper()
   {
     return objectMapper;
@@ -143,7 +156,7 @@ public class TaskToolbox
           @Override
           public File getSegmentLocations()
           {
-            return new File(getTaskWorkDir(), "fetched_segments");
+            return new File(getTaskWorkDir(), "fetched_segments").toString();
           }
         }
     );
@@ -156,7 +169,8 @@ public class TaskToolbox
     return retVal;
   }
 
-  public File getTaskWorkDir() {
+  public File getTaskWorkDir()
+  {
     return new File(new File(config.getBaseTaskDir(), task.getId()), "work");
   }
 }

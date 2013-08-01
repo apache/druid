@@ -27,7 +27,9 @@ import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.partitions.PartitionsSpec;
 import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+
 import org.joda.time.Interval;
+import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -427,6 +429,65 @@ public class HadoopDruidIndexerConfigTest
         cfg.isCleanupOnFailure(),
         false
     );
+  }
+
+
+  @Test
+  public void shouldMakeHDFSCompliantSegmentOutputPath() {
+    final HadoopDruidIndexerConfig cfg;
+
+    try {
+      cfg = jsonReadWriteRead(
+              "{"
+                      + "\"dataSource\": \"the:data:source\","
+                      + " \"granularitySpec\":{"
+                      + "   \"type\":\"uniform\","
+                      + "   \"gran\":\"hour\","
+                      + "   \"intervals\":[\"2012-07-10/P1D\"]"
+                      + " },"
+                      + "\"segmentOutputPath\": \"/tmp/dru:id/data:test\""
+                      + "}",
+              HadoopDruidIndexerConfig.class
+      );
+    } catch(Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    cfg.setVersion("some:brand:new:version");
+
+    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
+    Path path = cfg.makeSegmentOutputPath(new DistributedFileSystem(), bucket);
+    Assert.assertEquals("/tmp/dru_id/data_test/the_data_source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version/4712", path.toString());
+
+  }
+
+  @Test
+  public void shouldMakeDefaultSegmentOutputPathIfNotHDFS() {
+    final HadoopDruidIndexerConfig cfg;
+
+    try {
+      cfg = jsonReadWriteRead(
+              "{"
+                      + "\"dataSource\": \"the:data:source\","
+                      + " \"granularitySpec\":{"
+                      + "   \"type\":\"uniform\","
+                      + "   \"gran\":\"hour\","
+                      + "   \"intervals\":[\"2012-07-10/P1D\"]"
+                      + " },"
+                      + "\"segmentOutputPath\": \"/tmp/dru:id/data:test\""
+                      + "}",
+              HadoopDruidIndexerConfig.class
+      );
+    } catch(Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+    cfg.setVersion("some:brand:new:version");
+
+    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
+    Path path = cfg.makeSegmentOutputPath(new LocalFileSystem(), bucket);
+    Assert.assertEquals("/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:version/4712", path.toString());
+
   }
 
   private <T> T jsonReadWriteRead(String s, Class<T> klass)

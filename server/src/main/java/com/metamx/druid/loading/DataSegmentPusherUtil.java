@@ -19,44 +19,46 @@
 
 package com.metamx.druid.loading;
 
-import com.google.common.base.Joiner;
-import com.metamx.common.MapUtils;
-import com.metamx.druid.client.DataSegment;
+import org.joda.time.format.ISODateTimeFormat;
 
-import java.util.Map;
+import com.google.common.base.Joiner;
+import com.metamx.druid.client.DataSegment;
 
 /**
  */
 public class DataSegmentPusherUtil
 {
-  private static final Joiner JOINER = Joiner.on("/").skipNulls();
+	private static final Joiner JOINER = Joiner.on("/").skipNulls();
 
-  public static String getLegacyStorageDir(DataSegment segment)
-  {
-    final Map<String,Object> loadSpec = segment.getLoadSpec();
+	public static String getStorageDir(DataSegment segment)
+	{
+		return JOINER.join(
+		    segment.getDataSource(),
+		    String.format(
+		        "%s_%s",
+		        segment.getInterval().getStart(),
+		        segment.getInterval().getEnd()
+		        ),
+		    segment.getVersion(),
+		    segment.getShardSpec().getPartitionNum()
+		    );
+	}
 
-    String specType = MapUtils.getString(loadSpec, "type");
-    if (specType.startsWith("s3")) {
-      String s3Bucket = MapUtils.getString(loadSpec, "bucket");
-      String s3Path = MapUtils.getString(loadSpec, "key");
-
-      return String.format("%s/%s", s3Bucket, s3Path.substring(0, s3Path.lastIndexOf("/")));
-    }
-
-    return null;
-  }
-
-  public static String getStorageDir(DataSegment segment)
-  {
-    return JOINER.join(
-        segment.getDataSource(),
-        String.format(
-            "%s_%s",
-            segment.getInterval().getStart(),
-            segment.getInterval().getEnd()
-        ),
-        segment.getVersion(),
-        segment.getShardSpec().getPartitionNum()
-    );
-  }
+	/**
+	 * Due to https://issues.apache.org/jira/browse/HDFS-13 ":" are not allowed in
+	 * path names. So we format paths differently for HDFS.
+	 */
+	public static String getHdfsStorageDir(DataSegment segment)
+	{
+		return JOINER.join(
+		    segment.getDataSource(),
+		    String.format(
+		        "%s_%s",
+		        segment.getInterval().getStart().toString(ISODateTimeFormat.basicDateTime()),
+		        segment.getInterval().getEnd().toString(ISODateTimeFormat.basicDateTime())
+		        ),
+		    segment.getVersion().replaceAll(":", "_"),
+		    segment.getShardSpec().getPartitionNum()
+		    );
+	}
 }

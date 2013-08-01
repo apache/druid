@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -37,6 +38,8 @@ import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.Query;
+import com.metamx.druid.TimelineObjectHolder;
+import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.ServerView;
@@ -50,11 +53,15 @@ import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.partition.SingleElementPartitionChunk;
 import com.metamx.druid.query.MetricsEmittingQueryRunner;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
+import com.metamx.druid.query.segment.SegmentDescriptor;
+import com.metamx.druid.query.segment.SpecificSegmentQueryRunner;
+import com.metamx.druid.query.segment.SpecificSegmentSpec;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Schema;
@@ -70,6 +77,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -182,6 +190,9 @@ public class RealtimePlumberSchool implements PlumberSchool
       private volatile ScheduledExecutorService scheduledExecutor = null;
 
       private final Map<Long, Sink> sinks = Maps.newConcurrentMap();
+      private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<String, Sink>(
+          String.CASE_INSENSITIVE_ORDER
+      );
 
       @Override
       public void startJob()
@@ -215,6 +226,7 @@ public class RealtimePlumberSchool implements PlumberSchool
           try {
             segmentAnnouncer.announceSegment(retVal.getSegment());
             sinks.put(truncatedTime, retVal);
+            sinkTimeline.add(retVal.getInterval(), retVal.getVersion(), new SingleElementPartitionChunk<Sink>(retVal));
           }
           catch (IOException e) {
             log.makeAlert(e, "Failed to announce new segment[%s]", schema.getDataSource())
@@ -243,32 +255,47 @@ public class RealtimePlumberSchool implements PlumberSchool
               }
             };
 
+        List<TimelineObjectHolder<String, Sink>> querySinks = Lists.newArrayList();
+        for (Interval interval : query.getIntervals()) {
+          querySinks.addAll(sinkTimeline.lookup(interval));
+        }
+
         return toolchest.mergeResults(
             factory.mergeRunners(
                 EXEC,
                 FunctionalIterable
-                    .create(sinks.values())
+                    .create(querySinks)
                     .transform(
-                        new Function<Sink, QueryRunner<T>>()
+                        new Function<TimelineObjectHolder<String, Sink>, QueryRunner<T>>()
                         {
                           @Override
-                          public QueryRunner<T> apply(@Nullable Sink input)
+                          public QueryRunner<T> apply(TimelineObjectHolder<String, Sink> holder)
                           {
-                            return new MetricsEmittingQueryRunner<T>(
-                                emitter,
-                                builderFn,
-                                factory.mergeRunners(
-                                    EXEC,
-                                    Iterables.transform(
-                                        input,
-                                        new Function<FireHydrant, QueryRunner<T>>()
-                                        {
-                                          @Override
-                                          public QueryRunner<T> apply(@Nullable FireHydrant input)
-                                          {
-                                            return factory.createRunner(input.getSegment());
-                                          }
-                                        }
+                            final Sink theSink = holder.getObject().getChunk(0).getObject();
+                            return new SpecificSegmentQueryRunner<T>(
+                                new MetricsEmittingQueryRunner<T>(
+                                    emitter,
+                                    builderFn,
+                                    factory.mergeRunners(
+                                        EXEC,
+                                        Iterables.transform(
+                                            theSink,
+                                            new Function<FireHydrant, QueryRunner<T>>()
+                                            {
+                                              @Override
+                                              public QueryRunner<T> apply(FireHydrant input)
+                                              {
+                                                return factory.createRunner(input.getSegment());
+                                              }
+                                            }
+                                        )
+                                    )
+                                ),
+                                new SpecificSegmentSpec(
+                                    new SegmentDescriptor(
+                                        holder.getInterval(),
+                                        theSink.getSegment().getVersion(),
+                                        theSink.getSegment().getShardSpec().getPartitionNum()
                                     )
                                 )
                             );
@@ -306,10 +333,89 @@ public class RealtimePlumberSchool implements PlumberSchool
         );
       }
 
+      // Submits persist-n-merge task for a Sink to the persistExecutor
+      private void persistAndMerge(final long truncatedTime, final Sink sink)
+      {
+        final String threadName = String.format(
+            "%s-%s-persist-n-merge", schema.getDataSource(), new DateTime(truncatedTime)
+        );
+        persistExecutor.execute(
+            new ThreadRenamingRunnable(threadName)
+            {
+              @Override
+              public void doRun()
+              {
+                final Interval interval = sink.getInterval();
+
+                for (FireHydrant hydrant : sink) {
+                  if (!hydrant.hasSwapped()) {
+                    log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
+                    final int rowCount = persistHydrant(hydrant, schema, interval);
+                    metrics.incrementRowOutputCount(rowCount);
+                  }
+                }
+
+                final File mergedTarget = new File(computePersistDir(schema, interval), "merged");
+                if (mergedTarget.exists()) {
+                  log.info("Skipping already-merged sink: %s", sink);
+                  return;
+                }
+
+                File mergedFile = null;
+                try {
+                  List<QueryableIndex> indexes = Lists.newArrayList();
+                  for (FireHydrant fireHydrant : sink) {
+                    Segment segment = fireHydrant.getSegment();
+                    final QueryableIndex queryableIndex = segment.asQueryableIndex();
+                    log.info("Adding hydrant[%s]", fireHydrant);
+                    indexes.add(queryableIndex);
+                  }
+
+                  mergedFile = IndexMerger.mergeQueryableIndex(
+                      indexes,
+                      schema.getAggregators(),
+                      mergedTarget
+                  );
+
+                  QueryableIndex index = IndexIO.loadIndex(mergedFile);
+
+                  DataSegment segment = dataSegmentPusher.push(
+                      mergedFile,
+                      sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
+                  );
+
+                  segmentPublisher.publishSegment(segment);
+                }
+                catch (IOException e) {
+                  log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
+                     .addData("interval", interval)
+                     .emit();
+                }
+
+                if (mergedFile != null) {
+                  try {
+                    if (mergedFile != null) {
+                      log.info("Deleting Index File[%s]", mergedFile);
+                      FileUtils.deleteDirectory(mergedFile);
+                    }
+                  }
+                  catch (IOException e) {
+                    log.warn(e, "Error deleting directory[%s]", mergedFile);
+                  }
+                }
+              }
+            }
+        );
+      }
+
       @Override
       public void finishJob()
       {
         log.info("Shutting down...");
+
+        for (final Map.Entry<Long, Sink> entry : sinks.entrySet()) {
+          persistAndMerge(entry.getKey(), entry.getValue());
+        }
 
         while (!sinks.isEmpty()) {
           try {
@@ -377,7 +483,18 @@ public class RealtimePlumberSchool implements PlumberSchool
         for (File sinkDir : computeBaseDir(schema).listFiles()) {
           Interval sinkInterval = new Interval(sinkDir.getName().replace("_", "/"));
 
-          final File[] sinkFiles = sinkDir.listFiles();
+          //final File[] sinkFiles = sinkDir.listFiles();
+          // To avoid reading and listing of "merged" dir
+          final File[] sinkFiles = sinkDir.listFiles(
+              new FilenameFilter()
+              {
+                @Override
+                public boolean accept(File dir, String fileName)
+                {
+                  return !(Ints.tryParse(fileName) == null);
+                }
+              }
+          );
           Arrays.sort(
               sinkFiles,
               new Comparator<File>()
@@ -400,6 +517,14 @@ public class RealtimePlumberSchool implements PlumberSchool
             List<FireHydrant> hydrants = Lists.newArrayList();
             for (File segmentDir : sinkFiles) {
               log.info("Loading previously persisted segment at [%s]", segmentDir);
+
+              // Although this has been tackled at start of this method.
+              // Just a doubly-check added to skip "merged" dir. from being added to hydrants 
+              // If 100% sure that this is not needed, this check can be removed.
+              if (Ints.tryParse(segmentDir.getName()) == null) {
+                continue;
+              }
+
               hydrants.add(
                   new FireHydrant(
                       new QueryableIndexSegment(null, IndexIO.loadIndex(segmentDir)),
@@ -410,6 +535,11 @@ public class RealtimePlumberSchool implements PlumberSchool
 
             Sink currSink = new Sink(sinkInterval, schema, versioningPolicy.getVersion(sinkInterval), hydrants);
             sinks.put(sinkInterval.getStartMillis(), currSink);
+            sinkTimeline.add(
+                currSink.getInterval(),
+                currSink.getVersion(),
+                new SingleElementPartitionChunk<Sink>(currSink)
+            );
 
             segmentAnnouncer.announceSegment(currSink.getSegment());
           }
@@ -458,6 +588,11 @@ public class RealtimePlumberSchool implements PlumberSchool
                           FileUtils.deleteDirectory(computePersistDir(schema, sink.getInterval()));
                           log.info("Removing sinkKey %d for segment %s", sinkKey, sink.getSegment().getIdentifier());
                           sinks.remove(sinkKey);
+                          sinkTimeline.remove(
+                              sink.getInterval(),
+                              sink.getVersion(),
+                              new SingleElementPartitionChunk<Sink>(sink)
+                          );
 
                           synchronized (handoffCondition) {
                             handoffCondition.notifyAll();
@@ -514,8 +649,9 @@ public class RealtimePlumberSchool implements PlumberSchool
 
                     log.info("Starting merge and push.");
 
-                    long minTimestamp = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime()).getMillis()
-                                        - windowMillis;
+                    long minTimestamp = segmentGranularity.truncate(
+                        rejectionPolicy.getCurrMaxTime().minus(windowMillis)
+                    ).getMillis();
 
                     List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
                     for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
@@ -527,72 +663,7 @@ public class RealtimePlumberSchool implements PlumberSchool
                     }
 
                     for (final Map.Entry<Long, Sink> entry : sinksToPush) {
-                      final Sink sink = entry.getValue();
-
-                      final String threadName = String.format(
-                          "%s-%s-persist-n-merge", schema.getDataSource(), new DateTime(entry.getKey())
-                      );
-                      persistExecutor.execute(
-                          new ThreadRenamingRunnable(threadName)
-                          {
-                            @Override
-                            public void doRun()
-                            {
-                              final Interval interval = sink.getInterval();
-
-                              for (FireHydrant hydrant : sink) {
-                                if (!hydrant.hasSwapped()) {
-                                  log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
-                                  final int rowCount = persistHydrant(hydrant, schema, interval);
-                                  metrics.incrementRowOutputCount(rowCount);
-                                }
-                              }
-
-                              File mergedFile = null;
-                              try {
-                                List<QueryableIndex> indexes = Lists.newArrayList();
-                                for (FireHydrant fireHydrant : sink) {
-                                  Segment segment = fireHydrant.getSegment();
-                                  final QueryableIndex queryableIndex = segment.asQueryableIndex();
-                                  log.info("Adding hydrant[%s]", fireHydrant);
-                                  indexes.add(queryableIndex);
-                                }
-
-                                mergedFile = IndexMerger.mergeQueryableIndex(
-                                    indexes,
-                                    schema.getAggregators(),
-                                    new File(computePersistDir(schema, interval), "merged")
-                                );
-
-                                QueryableIndex index = IndexIO.loadIndex(mergedFile);
-
-                                DataSegment segment = dataSegmentPusher.push(
-                                    mergedFile,
-                                    sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
-                                );
-
-                                segmentPublisher.publishSegment(segment);
-                              }
-                              catch (IOException e) {
-                                log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
-                                   .addData("interval", interval)
-                                   .emit();
-                              }
-
-                              if (mergedFile != null) {
-                                try {
-                                  if (mergedFile != null) {
-                                    log.info("Deleting Index File[%s]", mergedFile);
-                                    FileUtils.deleteDirectory(mergedFile);
-                                  }
-                                }
-                                catch (IOException e) {
-                                  log.warn(e, "Error deleting directory[%s]", mergedFile);
-                                }
-                              }
-                            }
-                          }
-                      );
+                      persistAndMerge(entry.getKey(), entry.getValue());
                     }
 
                     if (stopped) {
@@ -629,6 +700,14 @@ public class RealtimePlumberSchool implements PlumberSchool
    */
   private int persistHydrant(FireHydrant indexToPersist, Schema schema, Interval interval)
   {
+    if (indexToPersist.hasSwapped()) {
+      log.info(
+          "DataSource[%s], Interval[%s], Hydrant[%s] already swapped. Ignoring request to persist.",
+          schema.getDataSource(), interval, indexToPersist
+      );
+      return 0;
+    }
+
     log.info("DataSource[%s], Interval[%s], persisting Hydrant[%s]", schema.getDataSource(), interval, indexToPersist);
     try {
       int numRows = indexToPersist.getIndex().size();

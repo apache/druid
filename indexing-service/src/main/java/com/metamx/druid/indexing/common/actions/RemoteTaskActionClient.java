@@ -65,6 +65,8 @@ public class RemoteTaskActionClient implements TaskActionClient
 
         final String response;
 
+        log.info("Submitting action for task[%s] to coordinator[%s]: %s", task.getId(), serviceUri, taskAction);
+
         try {
           response = httpClient.post(serviceUri.toURL())
                                .setContent("application/json", dataToSend)
@@ -107,7 +109,7 @@ public class RemoteTaskActionClient implements TaskActionClient
     final String scheme;
     final String host;
     final int port;
-    final String path = "/mmx/merger/v1/action";
+    final String path = "/druid/indexer/v1/action";
 
     if (instance == null) {
       throw new ISE("Cannot find instance of indexer to talk to!");

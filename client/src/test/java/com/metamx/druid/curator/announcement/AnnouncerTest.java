@@ -27,6 +27,8 @@ import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
 import org.apache.curator.framework.api.CuratorListener;
 import org.apache.curator.test.KillSession;
+import org.apache.curator.utils.ZKPaths;
+import org.apache.zookeeper.data.Stat;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -60,7 +62,6 @@ public class AnnouncerTest extends CuratorTestBase
   public void testSanity() throws Exception
   {
     curator.start();
-    curator.create().forPath("/somewhere");
     Announcer announcer = new Announcer(curator, exec);
 
     final byte[] billy = "billy".getBytes();
@@ -161,4 +162,54 @@ public class AnnouncerTest extends CuratorTestBase
       announcer.stop();
     }
   }
+
+  @Test
+  public void testCleansUpItsLittleTurdlings() throws Exception
+  {
+    curator.start();
+    Announcer announcer = new Announcer(curator, exec);
+
+    final byte[] billy = "billy".getBytes();
+    final String testPath = "/somewhere/test2";
+    final String parent = ZKPaths.getPathAndNode(testPath).getPath();
+
+    announcer.start();
+
+    Assert.assertNull(curator.checkExists().forPath(parent));
+
+    announcer.announce(testPath, billy);
+
+    Assert.assertNotNull(curator.checkExists().forPath(parent));
+
+    announcer.stop();
+
+    Assert.assertNull(curator.checkExists().forPath(parent));
+  }
+
+  @Test
+  public void testLeavesBehindTurdlingsThatAlreadyExisted() throws Exception
+  {
+    curator.start();
+    Announcer announcer = new Announcer(curator, exec);
+
+    final byte[] billy = "billy".getBytes();
+    final String testPath = "/somewhere/test2";
+    final String parent = ZKPaths.getPathAndNode(testPath).getPath();
+
+    curator.create().forPath(parent);
+    final Stat initialStat = curator.checkExists().forPath(parent);
+
+    announcer.start();
+
+    Assert.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
+
+    announcer.announce(testPath, billy);
+
+    Assert.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
+
+    announcer.stop();
+
+    Assert.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
+  }
+
 }

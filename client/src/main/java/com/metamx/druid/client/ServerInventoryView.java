@@ -20,6 +20,7 @@
 package com.metamx.druid.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
@@ -28,6 +29,7 @@ import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.concurrent.Execs;
+import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.inventory.CuratorInventoryManager;
 import com.metamx.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import com.metamx.druid.curator.inventory.InventoryManagerConfig;
@@ -45,28 +47,32 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
-@ManageLifecycle
-public class ServerInventoryView implements ServerView, InventoryView
+public abstract class ServerInventoryView<InventoryType> implements ServerView, InventoryView
 {
-  private static final EmittingLogger log = new EmittingLogger(ServerInventoryView.class);
-
-  private final CuratorInventoryManager<DruidServer, DataSegment> inventoryManager;
+  private final ServerInventoryViewConfig config;
+  private final Logger log;
+  private final CuratorInventoryManager<DruidServer, InventoryType> inventoryManager;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   private final ConcurrentMap<ServerCallback, Executor> serverCallbacks = new MapMaker().makeMap();
   private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new MapMaker().makeMap();
 
-  private static final Map<String, Integer> removedSegments = new MapMaker().makeMap();
+  private final Map<String, Integer> removedSegments = new MapMaker().makeMap();
 
   @Inject
   public ServerInventoryView(
       final ServerInventoryViewConfig config,
-      final ZkPathsConfig zkPaths,
+      final Logger log,
+      final InventoryManagerConfig inventoryManagerConfig,
       final CuratorFramework curator,
-      final ObjectMapper jsonMapper
+      final ExecutorService exec,
+      final ObjectMapper jsonMapper,
+      final TypeReference<InventoryType> typeReference
   )
   {
-    inventoryManager = new CuratorInventoryManager<DruidServer, DataSegment>(
+    this.config = config;
+    this.log = log;
+    this.inventoryManager = new CuratorInventoryManager<DruidServer, InventoryType>(
         curator,
         new InventoryManagerConfig()
         {
@@ -108,10 +114,10 @@ public class ServerInventoryView implements ServerView, InventoryView
           }
 
           @Override
-          public DataSegment deserializeInventory(byte[] bytes)
+          public InventoryType deserializeInventory(byte[] bytes)
           {
             try {
-              return jsonMapper.readValue(bytes, DataSegment.class);
+              return jsonMapper.readValue(bytes, typeReference);
             }
             catch (IOException e) {
               throw Throwables.propagate(e);
@@ -119,7 +125,7 @@ public class ServerInventoryView implements ServerView, InventoryView
           }
 
           @Override
-          public byte[] serializeInventory(DataSegment inventory)
+          public byte[] serializeInventory(InventoryType inventory)
           {
             try {
               return jsonMapper.writeValueAsBytes(inventory);
@@ -149,67 +155,27 @@ public class ServerInventoryView implements ServerView, InventoryView
           }
 
           @Override
-          public DruidServer addInventory(final DruidServer container, String inventoryKey, final DataSegment inventory)
+          public DruidServer addInventory(
+              final DruidServer container,
+              String inventoryKey,
+              final InventoryType inventory
+          )
           {
-            log.info("Server[%s] added segment[%s]", container.getName(), inventoryKey);
+            return addInnerInventory(container, inventoryKey, inventory);
+          }
 
-            if (container.getSegment(inventoryKey) != null) {
-              log.warn(
-                  "Not adding or running callbacks for existing segment[%s] on server[%s]",
-                  inventoryKey,
-                  container.getName()
-              );
-
-              return container;
-            }
-
-            final DruidServer retVal = container.addDataSegment(inventoryKey, inventory);
-
-            runSegmentCallbacks(
-                new Function<SegmentCallback, CallbackAction>()
-                {
-                  @Override
-                  public CallbackAction apply(SegmentCallback input)
-                  {
-                    return input.segmentAdded(container, inventory);
-                  }
-                }
-            );
-
-            return retVal;
+          @Override
+          public DruidServer updateInventory(
+              DruidServer container, String inventoryKey, InventoryType inventory
+          )
+          {
+            return updateInnerInventory(container, inventoryKey, inventory);
           }
 
           @Override
           public DruidServer removeInventory(final DruidServer container, String inventoryKey)
           {
-            log.info("Server[%s] removed segment[%s]", container.getName(), inventoryKey);
-            final DataSegment segment = container.getSegment(inventoryKey);
-
-            if (segment == null) {
-              log.warn(
-                  "Not running cleanup or callbacks for non-existing segment[%s] on server[%s]",
-                  inventoryKey,
-                  container.getName()
-              );
-
-              return container;
-            }
-
-            final DruidServer retVal = container.removeDataSegment(inventoryKey);
-
-            runSegmentCallbacks(
-                new Function<SegmentCallback, CallbackAction>()
-                {
-                  @Override
-                  public CallbackAction apply(SegmentCallback input)
-                  {
-                    return input.segmentRemoved(container, segment);
-                  }
-                }
-            );
-
-            removedSegments.put(inventoryKey, config.getRemovedSegmentLifetime());
-            return retVal;
+            return removeInnerInventory(container, inventoryKey);
           }
         }
     );
@@ -285,7 +251,12 @@ public class ServerInventoryView implements ServerView, InventoryView
     segmentCallbacks.put(callback, exec);
   }
 
-  private void runSegmentCallbacks(
+  public InventoryManagerConfig getInventoryManagerConfig()
+  {
+    return inventoryManager.getConfig();
+  }
+
+  protected void runSegmentCallbacks(
       final Function<SegmentCallback, CallbackAction> fn
   )
   {
@@ -305,7 +276,7 @@ public class ServerInventoryView implements ServerView, InventoryView
     }
   }
 
-  private void runServerCallbacks(final DruidServer server)
+  protected void runServerCallbacks(final DruidServer server)
   {
     for (final Map.Entry<ServerCallback, Executor> entry : serverCallbacks.entrySet()) {
       entry.getValue().execute(
@@ -322,4 +293,83 @@ public class ServerInventoryView implements ServerView, InventoryView
       );
     }
   }
+
+  protected void addSingleInventory(
+      final DruidServer container,
+      final DataSegment inventory
+  )
+  {
+    log.info("Server[%s] added segment[%s]", container.getName(), inventory.getIdentifier());
+
+    if (container.getSegment(inventory.getIdentifier()) != null) {
+      log.warn(
+          "Not adding or running callbacks for existing segment[%s] on server[%s]",
+          inventory.getIdentifier(),
+          container.getName()
+      );
+
+      return;
+    }
+
+    container.addDataSegment(inventory.getIdentifier(), inventory);
+
+    runSegmentCallbacks(
+        new Function<SegmentCallback, CallbackAction>()
+        {
+          @Override
+          public CallbackAction apply(SegmentCallback input)
+          {
+            return input.segmentAdded(container, inventory);
+          }
+        }
+    );
+  }
+
+  protected void removeSingleInventory(final DruidServer container, String inventoryKey)
+  {
+    log.info("Server[%s] removed segment[%s]", container.getName(), inventoryKey);
+    final DataSegment segment = container.getSegment(inventoryKey);
+
+    if (segment == null) {
+      log.warn(
+          "Not running cleanup or callbacks for non-existing segment[%s] on server[%s]",
+          inventoryKey,
+          container.getName()
+      );
+
+      return;
+    }
+
+    container.removeDataSegment(inventoryKey);
+
+    runSegmentCallbacks(
+        new Function<SegmentCallback, CallbackAction>()
+        {
+          @Override
+          public CallbackAction apply(SegmentCallback input)
+          {
+            return input.segmentRemoved(container, segment);
+          }
+        }
+    );
+
+    removedSegments.put(inventoryKey, config.getRemovedSegmentLifetime());
+  }
+
+  protected abstract DruidServer addInnerInventory(
+      final DruidServer container,
+      String inventoryKey,
+      final InventoryType inventory
+  );
+
+  protected abstract DruidServer updateInnerInventory(
+      final DruidServer container,
+      String inventoryKey,
+      final InventoryType inventory
+  );
+
+  protected abstract DruidServer removeInnerInventory(
+      final DruidServer container,
+      String inventoryKey
+  );
 }

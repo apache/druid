@@ -336,6 +336,9 @@ public class WorkerNode extends QueryableNode<WorkerNode>
           config,
           getLifecycle()
       );
+      this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
+          serviceDiscoveryCuratorFramework, config, getLifecycle()
+      );
     }
     if (coordinatorServiceProvider == null) {
       this.coordinatorServiceProvider = Initialization.makeServiceProvider(
