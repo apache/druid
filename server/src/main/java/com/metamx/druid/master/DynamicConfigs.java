@@ -30,30 +30,17 @@ public class DynamicConfigs
   private int maxSegmentsToMove = 5;
 
   @JsonCreator
-  public DynamicConfigs(@JsonProperty("millisToWaitBeforeDeleting") Integer millisToWaitBeforeDeleting,
+  public DynamicConfigs(@JsonProperty("millisToWaitBeforeDeleting") Long millisToWaitBeforeDeleting,
                         @JsonProperty("mergeBytesLimit") Long mergeBytesLimit,
                         @JsonProperty("mergeSegmentsLimit") Integer mergeSegmentsLimit,
                         @JsonProperty("maxSegmentsToMove") Integer maxSegmentsToMove
   )
   {
-    if (maxSegmentsToMove!=null)
-    {
       this.maxSegmentsToMove=maxSegmentsToMove;
-    }
-    if (millisToWaitBeforeDeleting!=null)
-    {
       this.millisToWaitBeforeDeleting=millisToWaitBeforeDeleting;
-    }
-    if (mergeSegmentsLimit!=null)
-    {
       this.mergeSegmentsLimit=mergeSegmentsLimit;
-    }
-    if (mergeBytesLimit!=null)
-    {
       this.mergeBytesLimit=mergeBytesLimit;
-    }
   }
-
 
   public static String getConfigKey()
   {
@@ -82,5 +69,60 @@ public class DynamicConfigs
   public int getMaxSegmentsToMove()
   {
     return maxSegmentsToMove;
+  }
+
+
+  public static class Builder
+  {
+    public static final String CONFIG_KEY = "master.dynamicConfigs";
+    private long millisToWaitBeforeDeleting;
+    private long mergeBytesLimit;
+    private int mergeSegmentsLimit;
+    private int maxSegmentsToMove;
+
+    public Builder()
+    {
+      this.millisToWaitBeforeDeleting=15 * 60 * 1000L;
+      this.mergeBytesLimit= 100000000L;
+      this.mergeSegmentsLimit= Integer.MAX_VALUE;
+      this.maxSegmentsToMove = 5;
+    }
+
+    public Builder(long millisToWaitBeforeDeleting, long mergeBytesLimit, int mergeSegmentsLimit, int maxSegmentsToMove)
+    {
+      this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
+      this.mergeBytesLimit = mergeBytesLimit;
+      this.mergeSegmentsLimit = mergeSegmentsLimit;
+      this.maxSegmentsToMove = maxSegmentsToMove;
+    }
+
+    public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
+    {
+      this.millisToWaitBeforeDeleting=millisToWaitBeforeDeleting;
+      return this;
+    }
+
+    public Builder withMergeBytesLimit(long mergeBytesLimit)
+    {
+      this.mergeBytesLimit=mergeBytesLimit;
+      return this;
+    }
+
+    public Builder withMergeSegmentsLimit(int mergeSegmentsLimit)
+    {
+      this.mergeSegmentsLimit=mergeSegmentsLimit;
+      return this;
+    }
+
+    public Builder withMaxSegmentsToMove(int maxSegmentsToMove)
+    {
+      this.maxSegmentsToMove=maxSegmentsToMove;
+      return this;
+    }
+
+    public DynamicConfigs build()
+    {
+      return new DynamicConfigs(millisToWaitBeforeDeleting,mergeBytesLimit,mergeSegmentsLimit,maxSegmentsToMove);
+    }
   }
 }

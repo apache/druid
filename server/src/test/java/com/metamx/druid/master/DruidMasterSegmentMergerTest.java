@@ -422,19 +422,8 @@ public class DruidMasterSegmentMergerTest
     final DruidMasterRuntimeParams params = DruidMasterRuntimeParams.newBuilder()
                                                                     .withAvailableSegments(ImmutableSet.copyOf(segments))
                                                                     .withDynamicConfigs(
-                                                                        new DynamicConfigs(null,null,null,null)
-                                                                        {
-                                                                           @Override
-                                                                           public long getMergeBytesLimit(){
-                                                                             return mergeBytesLimit;
-                                                                           }
-                                                                           @Override
-                                                                           public int getMergeSegmentsLimit(){
-                                                                             return mergeSegmentsLimit;
-                                                                          }
-                                                                        })
+                                                                        new DynamicConfigs.Builder().withMergeBytesLimit(mergeBytesLimit).withMergeSegmentsLimit(mergeSegmentsLimit).build())
                                                                     .build();
-
     merger.run(params);
     return retVal;
   }

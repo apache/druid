@@ -121,7 +121,7 @@ public class InfoResource
     this.serverInventoryView = serverInventoryView;
     this.databaseSegmentManager = databaseSegmentManager;
     this.databaseRuleManager = databaseRuleManager;
-    this.configManager=configManager;
+    this.configManager = configManager;
     this.indexingServiceClient = indexingServiceClient;
   }
 
@@ -136,11 +136,17 @@ public class InfoResource
   }
 
   @GET
-  @Path("/master/dynamicConfigs")
+  @Path("/master/config")
   @Produces("application/json")
   public Response getDynamicConfigs()
   {
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK).entity(configManager.watch(DynamicConfigs.CONFIG_KEY,DynamicConfigs.class).get());
+    Response.ResponseBuilder builder = Response.status(Response.Status.OK)
+                                               .entity(
+                                                   configManager.watch(
+                                                       DynamicConfigs.CONFIG_KEY,
+                                                       DynamicConfigs.class
+                                                   ).get()
+                                               );
     return builder.build();
   }
 
@@ -389,13 +395,13 @@ public class InfoResource
   }
 
   @POST
-  @Path("master/dynamicConfigs")
+  @Path("master/config")
   @Consumes("application/json")
   public Response setDynamicConfigs(
-      final DynamicConfigs dynamicConfigs)
+      final DynamicConfigs dynamicConfigs
+  )
   {
-    if (!configManager.set(DynamicConfigs.CONFIG_KEY, dynamicConfigs))
-    {
+    if (!configManager.set(DynamicConfigs.CONFIG_KEY, dynamicConfigs)) {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
     return Response.status(Response.Status.OK).build();

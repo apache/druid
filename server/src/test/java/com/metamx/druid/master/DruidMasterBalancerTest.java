@@ -193,14 +193,7 @@ public class DruidMasterBalancerTest
                                 )
                                 .withAvailableSegments(segments.values())
                                 .withDynamicConfigs(
-                                    new DynamicConfigs(null,null,null,null)
-                                    {
-                                      @Override
-                                      public int getMaxSegmentsToMove()
-                                      {
-                                        return MAX_SEGMENTS_TO_MOVE;
-                                      }
-                                    }
+                                    new DynamicConfigs.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build()
                                 )
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
@@ -277,16 +270,20 @@ public class DruidMasterBalancerTest
                                         )
                                     )
                                 )
-                                .withLoadManagementPeons(ImmutableMap.<String, LoadQueuePeon>of("1", peon1, "2", peon2, "3", peon3, "4", peon4))
+                                .withLoadManagementPeons(
+                                    ImmutableMap.<String, LoadQueuePeon>of(
+                                        "1",
+                                        peon1,
+                                        "2",
+                                        peon2,
+                                        "3",
+                                        peon3,
+                                        "4",
+                                        peon4
+                                    )
+                                )
                                 .withAvailableSegments(segments.values())
-                                .withDynamicConfigs(new DynamicConfigs(null,null,null,null)
-                                {
-                                  @Override
-                                  public int getMaxSegmentsToMove()
-                                  {
-                                    return MAX_SEGMENTS_TO_MOVE;
-                                  }
-                                })
+                                .withDynamicConfigs(new DynamicConfigs.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 

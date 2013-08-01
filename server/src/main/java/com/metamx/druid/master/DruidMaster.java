@@ -80,7 +80,6 @@ public class DruidMaster
 
   private volatile boolean started = false;
   private volatile boolean master = false;
-  private volatile boolean defaultConfigsSet=false;
 
   private final DruidMasterConfig config;
   private final ZkPathsConfig zkPaths;
@@ -466,12 +465,8 @@ public class DruidMaster
         serverInventoryView.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
-        if (!defaultConfigsSet)
-        {
          configManager.watch(DynamicConfigs.CONFIG_KEY, DynamicConfigs.class);
-         configManager.set(DynamicConfigs.CONFIG_KEY, new DynamicConfigs(null,null,null,null));
-          defaultConfigsSet=true;
-        }
+         configManager.set(DynamicConfigs.CONFIG_KEY, (new DynamicConfigs.Builder()).build());
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
         if (indexingServiceClient != null) {
 

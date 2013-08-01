@@ -177,15 +177,7 @@ public class DruidMasterRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withDynamicConfigs(new DynamicConfigs(null,null,null,null)
-            {
-              @Override
-              public int getMaxSegmentsToMove()
-              {
-                return 5;
-              }
-            })
-            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+            .withDynamicConfigs(new DynamicConfigs.Builder().withMaxSegmentsToMove(5).build())
             .build();
 
     DruidMasterRuntimeParams afterParams = ruleRunner.run(params);
@@ -530,14 +522,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
-        {
-          @Override
-          public long getMillisToWaitBeforeDeleting()
-          {
-            return 0L;
-          }
-        })
+        .withDynamicConfigs(new DynamicConfigs.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -611,14 +596,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
-        {
-          @Override
-          public long getMillisToWaitBeforeDeleting()
-          {
-            return 0L;
-          }
-        })
+        .withDynamicConfigs(new DynamicConfigs.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -699,14 +677,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
-        {
-          @Override
-          public long getMillisToWaitBeforeDeleting()
-          {
-            return 0L;
-          }
-        })
+        .withDynamicConfigs(new DynamicConfigs.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -783,14 +754,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
-        {
-          @Override
-          public long getMillisToWaitBeforeDeleting()
-          {
-            return 0L;
-          }
-        })
+        .withDynamicConfigs(new DynamicConfigs.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -879,14 +843,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
-        {
-          @Override
-          public long getMillisToWaitBeforeDeleting()
-          {
-            return 0L;
-          }
-        })
+        .withDynamicConfigs(new DynamicConfigs.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -1072,14 +1029,7 @@ public class DruidMasterRuleRunnerTest
 
     DruidMasterRuntimeParams params = new DruidMasterRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs( new DynamicConfigs(null,null,null,null)
-        {
-          @Override
-          public long getMillisToWaitBeforeDeleting()
-          {
-            return 0L;
-          }
-        })
+        .withDynamicConfigs(new DynamicConfigs.Builder().withMillisToWaitBeforeDeleting(0L).build())
         .withAvailableSegments(longerAvailableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)

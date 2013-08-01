@@ -214,7 +214,7 @@ public class DruidMasterRuntimeParams
       this.replicationManager = null;
       this.emitter = null;
       this.stats = new MasterStats();
-      this.dynamicConfigs = new DynamicConfigs(null,null,null,null);
+      this.dynamicConfigs = new DynamicConfigs.Builder().build();
       this.balancerReferenceTimestamp = null;
     }
 
