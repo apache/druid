@@ -129,6 +129,8 @@ public class ReferenceCountingSegmentTest
     segment.increment();
     segment.increment();
     segment.increment();
+    Assert.assertTrue(segment.getNumReferences() == 0);
+
     segment.close();
     Assert.assertTrue(segment.getNumReferences() == 0);
   }

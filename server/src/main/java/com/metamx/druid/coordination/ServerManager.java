@@ -196,7 +196,10 @@ public class ServerManager implements QuerySegmentWalker
           oldQueryable.close();
         }
         catch (IOException e) {
-          log.makeAlert(e, "Unable to close segment %s", segment.getIdentifier()).emit();
+          log.makeAlert(e, "Exception closing segment")
+             .addData("dataSource", dataSource)
+             .addData("segmentId", segment.getIdentifier())
+             .emit();
         }
       } else {
         log.info(
