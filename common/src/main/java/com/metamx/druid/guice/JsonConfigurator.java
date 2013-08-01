@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedField;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -95,7 +96,7 @@ public class JsonConfigurator
               final String fieldName = next.getName();
               final Field theField = beanClazz.getDeclaredField(fieldName);
               JsonProperty annotation = theField.getAnnotation(JsonProperty.class);
-              pathParts.add(annotation == null || annotation.value() == null ? fieldName : annotation.value());
+              pathParts.add(annotation == null || Strings.isNullOrEmpty(annotation.value()) ? fieldName : annotation.value());
             }
           }
         }

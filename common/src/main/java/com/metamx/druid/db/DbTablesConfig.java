@@ -14,19 +14,26 @@ public class DbTablesConfig
     return new DbTablesConfig(base, null, null, null, null, null, null);
   }
 
+  @JsonProperty
   @NotNull
   private final String base;
 
+  @JsonProperty("segments")
   private final String segmentsTable;
 
+  @JsonProperty("rules")
   private final String rulesTable;
 
+  @JsonProperty("config")
   private final String configTable;
 
+  @JsonProperty("tasks")
   private final String tasksTable;
 
+  @JsonProperty("taskLog")
   private final String taskLogTable;
 
+  @JsonProperty("taskLock")
   private final String taskLockTable;
 
   @JsonCreator
@@ -61,43 +68,36 @@ public class DbTablesConfig
     return explicitTableName;
   }
 
-  @JsonProperty
   public String getBase()
   {
     return base;
   }
 
-  @JsonProperty("segments")
   public String getSegmentsTable()
   {
     return segmentsTable;
   }
 
-  @JsonProperty("rules")
   public String getRulesTable()
   {
     return rulesTable;
   }
 
-  @JsonProperty("config")
   public String getConfigTable()
   {
     return configTable;
   }
 
-  @JsonProperty("tasks")
   public String getTasksTable()
   {
     return tasksTable;
   }
 
-  @JsonProperty("taskLog")
   public String getTaskLogTable()
   {
     return taskLogTable;
   }
 
-  @JsonProperty("taskLock")
   public String getTaskLockTable()
   {
     return taskLockTable;

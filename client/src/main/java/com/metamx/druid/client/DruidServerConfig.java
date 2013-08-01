@@ -19,23 +19,28 @@
 
 package com.metamx.druid.client;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import javax.validation.constraints.Min;
 
 /**
  */
-public abstract class DruidServerConfig
+public class DruidServerConfig
 {
-  @Config("druid.host")
-  public abstract String getServerName();
+  @JsonProperty
+  @Min(0)
+  private long maxSize = -1;
 
-  @Config("druid.host")
-  public abstract String getHost();
+  @JsonProperty
+  private String tier = "_default_tier";
 
-  @Config("druid.server.maxSize")
-  public abstract long getMaxSize();
+  public long getMaxSize()
+  {
+    return maxSize;
+  }
 
-  @Config("druid.server.tier")
-  @Default("_default_tier")
-  public abstract String getTier();
+  public String getTier()
+  {
+    return tier;
+  }
 }

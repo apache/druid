@@ -36,7 +36,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class LifecycleModule implements Module
 {
-  private final LifecycleScope scope = new LifecycleScope();
+  private final LifecycleScope scope = new LifecycleScope(Lifecycle.Stage.NORMAL);
+  private final LifecycleScope lastScope = new LifecycleScope(Lifecycle.Stage.LAST);
   private final List<Key<?>> eagerClasses = new CopyOnWriteArrayList<Key<?>>();
   public boolean configured = false;
 
@@ -136,6 +137,7 @@ public class LifecycleModule implements Module
     synchronized (eagerClasses) {
       configured = true;
       binder.bindScope(ManageLifecycle.class, scope);
+      binder.bindScope(ManageLifecycleLast.class, lastScope);
     }
   }
 
@@ -153,6 +155,7 @@ public class LifecycleModule implements Module
       }
     };
     scope.setLifecycle(lifecycle);
+    lastScope.setLifecycle(lifecycle);
 
     return lifecycle;
   }

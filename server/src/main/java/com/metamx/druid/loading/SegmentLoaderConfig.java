@@ -28,25 +28,29 @@ import java.io.File;
  */
 public class SegmentLoaderConfig
 {
-  @JsonProperty("path")
+  @JsonProperty
   @NotNull
-  private File cacheDirectory;
+  private String locations;
 
   @JsonProperty("deleteOnRemove")
   private boolean deleteOnRemove = true;
 
-  public File getCacheDirectory()
-  {
-    return cacheDirectory;
-  }
+  @JsonProperty
+  @NotNull
+  private File infoDir = null;
 
-  public void setCacheDirectory(File cacheDirectory)
+  public String getLocations()
   {
-    this.cacheDirectory = cacheDirectory;
+    return locations;
   }
 
   public boolean isDeleteOnRemove()
   {
     return deleteOnRemove;
+  }
+
+  public File getInfoDir()
+  {
+    return infoDir;
   }
 }

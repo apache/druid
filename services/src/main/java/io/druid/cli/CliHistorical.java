@@ -20,7 +20,10 @@ import com.metamx.druid.initialization.JettyServerModule;
 import com.metamx.druid.metrics.MetricsModule;
 import com.metamx.druid.metrics.ServerMonitor;
 import io.airlift.command.Command;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.DefaultHandler;
+import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
@@ -66,6 +69,10 @@ public class CliHistorical extends ServerRunnable
 
       root.addServlet(new ServletHolder(new StatusServlet()), "/status");
       root.addServlet(new ServletHolder(injector.getInstance(QueryServlet.class)), "/druid/v2/*");
+
+      final HandlerList handlerList = new HandlerList();
+      handlerList.setHandlers(new Handler[]{root, new DefaultHandler()});
+      server.setHandler(handlerList);
     }
   }
 }

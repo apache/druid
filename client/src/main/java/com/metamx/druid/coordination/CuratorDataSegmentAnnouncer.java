@@ -22,6 +22,7 @@ package com.metamx.druid.coordination;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
@@ -46,6 +47,7 @@ public class CuratorDataSegmentAnnouncer implements DataSegmentAnnouncer
 
   private volatile boolean started = false;
 
+  @Inject
   public CuratorDataSegmentAnnouncer(
       DruidServerMetadata server,
       ZkPathsConfig config,

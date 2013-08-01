@@ -29,7 +29,9 @@ import com.metamx.druid.index.QueryableIndexSegment;
 import com.metamx.druid.index.Segment;
 import org.apache.commons.io.FileUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 /**
  */
@@ -57,13 +59,13 @@ public class SingleSegmentLoader implements SegmentLoader
   @Override
   public boolean isSegmentLoaded(final DataSegment segment)
   {
-    File localStorageDir = new File(config.getCacheDirectory(), DataSegmentPusherUtil.getStorageDir(segment));
+    File localStorageDir = new File(config.getLocations(), DataSegmentPusherUtil.getStorageDir(segment));
     if (localStorageDir.exists()) {
       return true;
     }
 
     final File legacyStorageDir = new File(
-        config.getCacheDirectory(),
+        config.getLocations(),
         DataSegmentPusherUtil.getLegacyStorageDir(segment)
     );
     return legacyStorageDir.exists();
@@ -80,11 +82,11 @@ public class SingleSegmentLoader implements SegmentLoader
 
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
-    File localStorageDir = new File(config.getCacheDirectory(), DataSegmentPusherUtil.getStorageDir(segment));
+    File localStorageDir = new File(config.getLocations(), DataSegmentPusherUtil.getStorageDir(segment));
 
     final String legacyDir = DataSegmentPusherUtil.getLegacyStorageDir(segment);
     if (legacyDir != null) {
-      File legacyStorageDir = new File(config.getCacheDirectory(), legacyDir);
+      File legacyStorageDir = new File(config.getLocations(), legacyDir);
 
       if (legacyStorageDir.exists()) {
         log.info("Found legacyStorageDir[%s], moving to new storage location[%s]", legacyStorageDir, localStorageDir);
@@ -148,7 +150,7 @@ public class SingleSegmentLoader implements SegmentLoader
         segment.getShardSpec().getPartitionNum()
     );
 
-    return new File(config.getCacheDirectory(), outputKey);
+    return new File(config.getLocations(), outputKey);
   }
 
   private void moveToCache(File pulledFile, File cacheFile) throws SegmentLoadingException

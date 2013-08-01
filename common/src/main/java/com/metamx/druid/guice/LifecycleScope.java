@@ -15,9 +15,15 @@ import java.util.List;
 public class LifecycleScope implements Scope
 {
   private static final Logger log = new Logger(LifecycleScope.class);
+  private final Lifecycle.Stage stage;
 
   private Lifecycle lifecycle;
   private List<Object> instances = Lists.newLinkedList();
+
+  public LifecycleScope(Lifecycle.Stage stage)
+  {
+    this.stage = stage;
+  }
 
   public void setLifecycle(Lifecycle lifecycle)
   {
@@ -48,7 +54,7 @@ public class LifecycleScope implements Scope
             }
             else {
               try {
-                lifecycle.addMaybeStartManagedInstance(retVal);
+                lifecycle.addMaybeStartManagedInstance(retVal, stage);
               }
               catch (Exception e) {
                 log.warn(e, "Caught exception when trying to create a[%s]", key);

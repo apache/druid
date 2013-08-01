@@ -34,7 +34,6 @@ import com.metamx.druid.BaseServerNode;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.druid.coordination.ZkCoordinator;
-import com.metamx.druid.coordination.ZkCoordinatorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -113,7 +112,7 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
 
     final ZkCoordinator coordinator = new ZkCoordinator(
         getJsonMapper(),
-        getConfigFactory().build(ZkCoordinatorConfig.class),
+        null, // TODO: getConfigFactory().build(ZkCoordinatorConfig.class),
         getZkPaths(),
         getDruidServerMetadata(),
         getAnnouncer(),

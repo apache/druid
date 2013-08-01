@@ -24,6 +24,10 @@ import com.google.common.collect.Maps;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.ServerView;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
+import com.metamx.druid.indexing.common.actions.TaskActionClient;
+import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
+import com.metamx.druid.indexing.common.config.TaskConfig;
+import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
@@ -31,10 +35,6 @@ import com.metamx.druid.loading.S3DataSegmentPuller;
 import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.loading.SingleSegmentLoader;
-import com.metamx.druid.indexing.common.actions.TaskActionClient;
-import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
-import com.metamx.druid.indexing.common.config.TaskConfig;
-import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -141,7 +141,7 @@ public class TaskToolbox
         new SegmentLoaderConfig()
         {
           @Override
-          public File getCacheDirectory()
+          public File getSegmentLocations()
           {
             return new File(getTaskWorkDir(), "fetched_segments");
           }

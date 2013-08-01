@@ -113,8 +113,6 @@ public class AnnouncerTest extends CuratorTestBase
   @Test
   public void testSessionKilled() throws Exception
   {
-    final ExecutorService exec = Execs.singleThreaded("test-announcer-sanity-%s");
-
     curator.start();
     Announcer announcer = new Announcer(curator, exec);
     try {

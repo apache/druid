@@ -15,9 +15,16 @@ import com.metamx.druid.Query;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
+import com.metamx.druid.coordination.DataSegmentAnnouncer;
+import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.coordination.ServerManager;
+import com.metamx.druid.coordination.ZkCoordinator;
+import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.guice.annotations.Global;
 import com.metamx.druid.guice.annotations.Processing;
+import com.metamx.druid.guice.annotations.Self;
+import com.metamx.druid.initialization.DruidNode;
 import com.metamx.druid.loading.BaseSegmentLoader;
 import com.metamx.druid.loading.DataSegmentPuller;
 import com.metamx.druid.loading.HdfsDataSegmentPuller;
@@ -48,6 +55,7 @@ import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.conf.Configuration;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -68,17 +76,16 @@ public class HistoricalModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    ConfigProvider.bind(binder, DruidServerConfig.class);
     ConfigProvider.bind(binder, DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing"));
     binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
 
+    JsonConfigProvider.bind(binder, "druid.server", DruidServerConfig.class);
     JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
 
     binder.bind(ServerManager.class).in(LazySingleton.class);
 
     binder.bind(SegmentLoader.class).to(BaseSegmentLoader.class).in(LazySingleton.class);
     binder.bind(QueryableIndexFactory.class).to(MMappedQueryableIndexFactory.class).in(LazySingleton.class);
-
 
     final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
         binder, String.class, DataSegmentPuller.class
@@ -96,14 +103,24 @@ public class HistoricalModule implements Module
 
     queryFactoryBinder.addBinding(TimeseriesQuery.class).to(TimeseriesQueryRunnerFactory.class).in(LazySingleton.class);
     queryFactoryBinder.addBinding(SearchQuery.class).to(SearchQueryRunnerFactory.class).in(LazySingleton.class);
-    queryFactoryBinder.addBinding(TimeBoundaryQuery.class).to(TimeBoundaryQueryRunnerFactory.class).in(LazySingleton.class);
-    queryFactoryBinder.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryRunnerFactory.class).in(LazySingleton.class);
+    queryFactoryBinder.addBinding(TimeBoundaryQuery.class)
+                      .to(TimeBoundaryQueryRunnerFactory.class)
+                      .in(LazySingleton.class);
+    queryFactoryBinder.addBinding(SegmentMetadataQuery.class)
+                      .to(SegmentMetadataQueryRunnerFactory.class)
+                      .in(LazySingleton.class);
 
     queryFactoryBinder.addBinding(GroupByQuery.class).to(GroupByQueryRunnerFactory.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
     binder.bind(GroupByQueryEngine.class).in(LazySingleton.class);
 
-    binder.bind(QueryRunnerFactoryConglomerate.class).to(DefaultQueryRunnerFactoryConglomerate.class).in(LazySingleton.class);
+    binder.bind(QueryRunnerFactoryConglomerate.class)
+          .to(DefaultQueryRunnerFactoryConglomerate.class)
+          .in(LazySingleton.class);
+
+    binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+
+    binder.bind(DataSegmentAnnouncer.class).to(CuratorDataSegmentAnnouncer.class).in(ManageLifecycleLast.class);
   }
 
   private void bindDeepStorageS3(Binder binder)
@@ -133,6 +150,18 @@ public class HistoricalModule implements Module
     ConfigProvider.bind(binder, CassandraDataSegmentConfig.class);
   }
 
+  @Provides @LazySingleton
+  public DruidServerMetadata getMetadata(@Self DruidNode node, DruidServerConfig config)
+  {
+    return new DruidServerMetadata(node.getHost(), node.getHost(), config.getMaxSize(), "historical", config.getTier());
+  }
+
+  @Provides @ManageLifecycle
+  public Announcer getAnnouncer(CuratorFramework curator)
+  {
+    return new Announcer(curator, Execs.singleThreaded("Announcer-%s"));
+  }
+
   @Provides @Processing @ManageLifecycle
   public ExecutorService getProcessingExecutorService(ExecutorServiceConfig config, ServiceEmitter emitter)
   {
@@ -144,10 +173,10 @@ public class HistoricalModule implements Module
   }
 
   @Provides @LazySingleton
-  public RestS3Service getRestS3Service(Supplier<S3CredentialsConfig> config)
+  public RestS3Service getRestS3Service(S3CredentialsConfig config)
   {
     try {
-      return new RestS3Service(new AWSCredentials(config.get().getAccessKey(), config.get().getSecretKey()));
+      return new RestS3Service(new AWSCredentials(config.getAccessKey(), config.getSecretKey()));
     }
     catch (S3ServiceException e) {
       throw new ProvisionException("Unable to create a RestS3Service", e);

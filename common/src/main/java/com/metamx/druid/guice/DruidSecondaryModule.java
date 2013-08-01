@@ -1,6 +1,8 @@
 package com.metamx.druid.guice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
+import com.fasterxml.jackson.databind.introspect.GuiceAnnotationIntrospector;
 import com.fasterxml.jackson.databind.introspect.GuiceInjectableValues;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -58,14 +60,28 @@ public class DruidSecondaryModule implements Module
   @Provides @LazySingleton @Json
   public ObjectMapper getJsonMapper(final Injector injector)
   {
-    jsonMapper.setInjectableValues(new GuiceInjectableValues(injector));
+    setupJackson(injector, jsonMapper);
     return jsonMapper;
   }
 
   @Provides @LazySingleton @Smile
   public ObjectMapper getSmileMapper(Injector injector)
   {
-    smileMapper.setInjectableValues(new GuiceInjectableValues(injector));
+    setupJackson(injector, smileMapper);
     return smileMapper;
+  }
+
+  private void setupJackson(Injector injector, final ObjectMapper mapper) {
+    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
+
+    mapper.setInjectableValues(new GuiceInjectableValues(injector));
+    mapper.setAnnotationIntrospectors(
+        new AnnotationIntrospectorPair(
+            guiceIntrospector, mapper.getSerializationConfig().getAnnotationIntrospector()
+        ),
+        new AnnotationIntrospectorPair(
+            guiceIntrospector, mapper.getDeserializationConfig().getAnnotationIntrospector()
+        )
+    );
   }
 }

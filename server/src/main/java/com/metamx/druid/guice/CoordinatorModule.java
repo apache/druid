@@ -5,9 +5,6 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
@@ -27,7 +24,6 @@ import com.metamx.druid.http.MasterRedirectInfo;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.RedirectServlet;
-import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterConfig;
 import com.metamx.druid.master.LoadQueueTaskMaster;
@@ -46,7 +42,6 @@ public class CoordinatorModule implements Module
   public void configure(Binder binder)
   {
     ConfigProvider.bind(binder, DruidMasterConfig.class);
-    ConfigProvider.bind(binder, ZkPathsConfig.class);
     ConfigProvider.bind(binder, ServerInventoryViewConfig.class);
 
     JsonConfigProvider.bind(binder, "druid.manager.segment", DatabaseSegmentManagerConfig.class);
@@ -109,11 +104,5 @@ public class CoordinatorModule implements Module
   public LoadQueueTaskMaster getLoadQueueTaskMaster(CuratorFramework curator, ObjectMapper jsonMapper)
   {
     return new LoadQueueTaskMaster(curator, jsonMapper, Execs.singleThreaded("Master-PeonExec--%d"));
-  }
-
-  @Provides @LazySingleton
-  public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
-  {
-    return ScheduledExecutors.createFactory(lifecycle);
   }
 }

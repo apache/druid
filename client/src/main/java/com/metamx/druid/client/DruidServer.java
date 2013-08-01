@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.coordination.DruidServerMetadata;
+import com.metamx.druid.initialization.DruidNode;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,13 +46,14 @@ public class DruidServer implements Comparable
   private volatile long currSize;
 
   public DruidServer(
+      DruidNode node,
       DruidServerConfig config,
       String type
   )
   {
     this(
-        config.getServerName(),
-        config.getHost(),
+        node.getHost(),
+        node.getHost(),
         config.getMaxSize(),
         type,
         config.getTier()

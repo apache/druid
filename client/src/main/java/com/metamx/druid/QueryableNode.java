@@ -327,8 +327,8 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       final DruidServerConfig serverConfig = getConfigFactory().build(DruidServerConfig.class);
       setDruidServerMetadata(
           new DruidServerMetadata(
-              serverConfig.getServerName(),
-              serverConfig.getHost(),
+              null, // TODO: serverConfig.getServerName(),
+              null, // TODO: serverConfig.getHost(),
               serverConfig.getMaxSize(),
               nodeType,
               serverConfig.getTier()

@@ -22,10 +22,12 @@ package com.metamx.druid.coordination;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.initialization.ZkPathsConfig;
+import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
@@ -47,7 +49,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
-  private final ZkCoordinatorConfig config;
+  private final SegmentLoaderConfig config;
   private final DruidServerMetadata me;
   private final DataSegmentAnnouncer announcer;
   private final CuratorFramework curator;
@@ -59,9 +61,10 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started;
 
+  @Inject
   public ZkCoordinator(
       ObjectMapper jsonMapper,
-      ZkCoordinatorConfig config,
+      SegmentLoaderConfig config,
       ZkPathsConfig zkPaths,
       DruidServerMetadata me,
       DataSegmentAnnouncer announcer,
@@ -98,7 +101,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       );
 
       try {
-        config.getSegmentInfoCacheDirectory().mkdirs();
+        config.getInfoDir().mkdirs();
 
         curator.newNamespaceAwareEnsurePath(loadQueueLocation).ensure(curator.getZookeeperClient());
         curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
@@ -187,7 +190,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
   private void loadCache()
   {
-    File baseDir = config.getSegmentInfoCacheDirectory();
+    File baseDir = config.getInfoDir();
     if (!baseDir.exists()) {
       return;
     }
@@ -201,7 +204,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         } else {
           log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getIdentifier());
 
-          File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
+          File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
           if (!segmentInfoCacheFile.delete()) {
             log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
           }
@@ -221,7 +224,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     try {
       serverManager.loadSegment(segment);
 
-      File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
+      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
       try {
         jsonMapper.writeValue(segmentInfoCacheFile, segment);
       }
@@ -253,7 +256,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     try {
       serverManager.dropSegment(segment);
 
-      File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
+      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
       if (!segmentInfoCacheFile.delete()) {
         log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
       }
