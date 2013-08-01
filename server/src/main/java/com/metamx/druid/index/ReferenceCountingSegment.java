@@ -112,8 +112,12 @@ public class ReferenceCountingSegment implements Segment
   {
     synchronized (lock) {
       if (!isClosed) {
-        baseSegment.close();
-        isClosed = true;
+        if (numReferences > 0) {
+          decrement();
+        } else {
+          baseSegment.close();
+          isClosed = true;
+        }
       }
     }
   }
@@ -140,7 +144,7 @@ public class ReferenceCountingSegment implements Segment
     }
   }
 
-  public void decrement()
+  private void decrement()
   {
     synchronized (lock) {
       if (!isClosed) {

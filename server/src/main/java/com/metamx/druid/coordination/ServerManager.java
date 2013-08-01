@@ -56,6 +56,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -191,7 +192,12 @@ public class ServerManager implements QuerySegmentWalker
           dataSourceCounts.add(dataSource, -1L);
         }
 
-        oldQueryable.decrement();
+        try {
+          oldQueryable.close();
+        }
+        catch (IOException e) {
+          throw new SegmentLoadingException(e, "Unable to close segment %s", segment.getIdentifier());
+        }
       } else {
         log.info(
             "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
