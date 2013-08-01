@@ -19,12 +19,11 @@
 
 package com.metamx.druid.index;
 
+import com.metamx.common.guava.ResourceClosingYielder;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
-
-import java.io.IOException;
 
 /**
  */
@@ -44,44 +43,6 @@ public class ReferenceCountingSequence<T> extends YieldingSequenceBase<T>
       OutType initValue, YieldingAccumulator<OutType, T> accumulator
   )
   {
-    segment.increment();
-    return new ReferenceCountingYielder<OutType>(baseSequence.toYielder(initValue, accumulator), segment);
-  }
-
-  private static class ReferenceCountingYielder<OutType> implements Yielder<OutType>
-  {
-    private final Yielder<OutType> baseYielder;
-    private final ReferenceCountingSegment segment;
-
-    public ReferenceCountingYielder(Yielder<OutType> baseYielder, ReferenceCountingSegment segment)
-    {
-      this.baseYielder = baseYielder;
-      this.segment = segment;
-    }
-
-    @Override
-    public OutType get()
-    {
-      return baseYielder.get();
-    }
-
-    @Override
-    public Yielder<OutType> next(OutType initValue)
-    {
-      return new ReferenceCountingYielder<OutType>(baseYielder.next(initValue), segment);
-    }
-
-    @Override
-    public boolean isDone()
-    {
-      return baseYielder.isDone();
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      segment.decrement();
-      baseYielder.close();
-    }
+    return new ResourceClosingYielder<OutType>(baseSequence.toYielder(initValue, accumulator), segment.increment());
   }
 }

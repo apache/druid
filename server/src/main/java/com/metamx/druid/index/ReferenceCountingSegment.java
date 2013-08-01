@@ -23,7 +23,9 @@ import com.metamx.druid.StorageAdapter;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.Interval;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ReferenceCountingSegment implements Segment
 {
@@ -43,7 +45,13 @@ public class ReferenceCountingSegment implements Segment
 
   public Segment getBaseSegment()
   {
-    return baseSegment;
+    synchronized (lock) {
+      if (!isClosed) {
+        return baseSegment;
+      }
+
+      return null;
+    }
   }
 
   public boolean isClosed()
@@ -54,39 +62,81 @@ public class ReferenceCountingSegment implements Segment
   @Override
   public String getIdentifier()
   {
-    return baseSegment.getIdentifier();
+    synchronized (lock) {
+      if (!isClosed) {
+        return baseSegment.getIdentifier();
+      }
+
+      return null;
+    }
   }
 
   @Override
   public Interval getDataInterval()
   {
-    return baseSegment.getDataInterval();
+    synchronized (lock) {
+      if (!isClosed) {
+        return baseSegment.getDataInterval();
+      }
+
+      return null;
+    }
   }
 
   @Override
   public QueryableIndex asQueryableIndex()
   {
-    return baseSegment.asQueryableIndex();
+    synchronized (lock) {
+      if (!isClosed) {
+        return baseSegment.asQueryableIndex();
+      }
+
+      return null;
+    }
   }
 
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    return baseSegment.asStorageAdapter();
+    synchronized (lock) {
+      if (!isClosed) {
+        return baseSegment.asStorageAdapter();
+      }
+
+      return null;
+    }
   }
 
   @Override
   public void close() throws IOException
   {
-    baseSegment.close();
+    synchronized (lock) {
+      if (!isClosed) {
+        baseSegment.close();
+        isClosed = true;
+      }
+    }
   }
 
-  public void increment()
+  public Closeable increment()
   {
     synchronized (lock) {
       if (!isClosed) {
         numReferences++;
+        final AtomicBoolean decrementOnce = new AtomicBoolean(false);
+        return new Closeable()
+        {
+          @Override
+          public void close() throws IOException
+          {
+            if (decrementOnce.compareAndSet(false, true)) {
+              decrement();
+            }
+          }
+        };
       }
+
+      return null;
     }
   }
 
@@ -100,9 +150,6 @@ public class ReferenceCountingSegment implements Segment
           }
           catch (Exception e) {
             log.error("Unable to close queryable index %s", getIdentifier());
-          }
-          finally {
-            isClosed = true;
           }
         }
       }
