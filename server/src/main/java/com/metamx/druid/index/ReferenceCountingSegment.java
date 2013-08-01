@@ -54,6 +54,11 @@ public class ReferenceCountingSegment implements Segment
     }
   }
 
+  public int getNumReferences()
+  {
+    return numReferences;
+  }
+
   public boolean isClosed()
   {
     return isClosed;

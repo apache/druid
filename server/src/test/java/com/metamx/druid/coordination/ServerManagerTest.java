@@ -313,6 +313,42 @@ public class ServerManagerTest
     }
   }
 
+  @Test
+  public void testMultipleDrops() throws Exception
+  {
+    loadQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+
+    Future future = assertQueryable(
+        QueryGranularity.DAY,
+        "test", new Interval("2011-04-04/2011-04-06"),
+        ImmutableList.<Pair<String, Interval>>of(
+            new Pair<String, Interval>("3", new Interval("2011-04-04/2011-04-05"))
+        )
+    );
+
+    queryNotifyLatch.await();
+
+    Assert.assertTrue(factory.getAdapters().size() == 1);
+
+    for (SegmentForTesting segmentForTesting : factory.getAdapters()) {
+      Assert.assertFalse(segmentForTesting.isClosed());
+    }
+
+    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+    dropQueryable("test", "3", new Interval("2011-04-04/2011-04-05"));
+
+    for (SegmentForTesting segmentForTesting : factory.getAdapters()) {
+      Assert.assertFalse(segmentForTesting.isClosed());
+    }
+
+    queryWaitLatch.countDown();
+    future.get();
+
+    for (SegmentForTesting segmentForTesting : factory.getAdapters()) {
+      Assert.assertTrue(segmentForTesting.isClosed());
+    }
+  }
+
   private void waitForTestVerificationAndCleanup(Future future)
   {
     try {
