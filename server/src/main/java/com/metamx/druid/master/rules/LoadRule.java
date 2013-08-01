@@ -94,7 +94,7 @@ public abstract class LoadRule implements Rule
     while (totalReplicants < expectedReplicants) {
       boolean replicate = totalReplicants > 0;
 
-      if (replicate && !replicationManager.canAddReplicant(getTier())) {
+      if (replicate && !replicationManager.canCreateReplicant(getTier())) {
         break;
       }
 
@@ -110,10 +110,10 @@ public abstract class LoadRule implements Rule
         break;
       }
 
-      if (replicate && !replicationManager.registerReplicantCreation(
-          getTier(), segment.getIdentifier(), holder.getServer().getHost()
-      )) {
-        break;
+      if (replicate) {
+        replicationManager.registerReplicantCreation(
+            getTier(), segment.getIdentifier(), holder.getServer().getHost()
+        );
       }
 
       holder.getPeon().loadSegment(
@@ -181,15 +181,16 @@ public abstract class LoadRule implements Rule
 
         if (holder.isServingSegment(segment)) {
           if (expectedNumReplicantsForType > 0) { // don't throttle unless we are removing extra replicants
-            if (!replicationManager.canDestroyReplicant(getTier()) ||
-                !replicationManager.registerReplicantTermination(
-                    getTier(),
-                    segment.getIdentifier(),
-                    holder.getServer().getHost()
-                )) {
+            if (!replicationManager.canDestroyReplicant(getTier())) {
               serverQueue.add(holder);
               break;
             }
+
+            replicationManager.registerReplicantTermination(
+                getTier(),
+                segment.getIdentifier(),
+                holder.getServer().getHost()
+            );
           }
 
           holder.getPeon().dropSegment(

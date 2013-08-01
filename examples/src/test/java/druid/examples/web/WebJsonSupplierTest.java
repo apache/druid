@@ -21,11 +21,11 @@ package druid.examples.web;
 
 import org.junit.Test;
 
-import java.net.UnknownHostException;
+import java.io.IOException;
 
 public class WebJsonSupplierTest
 {
-  @Test(expected = UnknownHostException.class)
+  @Test(expected = IOException.class)
   public void checkInvalidUrl() throws Exception
   {
 

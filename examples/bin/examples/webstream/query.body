@@ -1,12 +1,27 @@
 {
-    "queryType": "groupBy",
-    "dataSource": "webstream",
-    "granularity": "all",
-    "dimensions": ["country"],
-    "aggregations":[
-      { "type": "count", "name": "rows"},
-      { "type": "doubleSum", "fieldName": "known_users", "name": "known_users"}
-    ],
-    "filter": { "type": "selector", "dimension": "geo_region", "value": "CA" },
-    "intervals":["2012-10-01T00:00/2020-01-01T00"]
+   "queryType":"groupBy",
+   "dataSource":"webstream",
+   "granularity":"minute",
+   "dimensions":[
+      "timezone"
+   ],
+   "aggregations":[
+      {
+         "type":"count",
+         "name":"rows"
+      },
+      {
+         "type":"doubleSum",
+         "fieldName":"known_users",
+         "name":"known_users"
+      }
+   ],
+   "filter":{
+      "type":"selector",
+      "dimension":"country",
+      "value":"US"
+   },
+   "intervals":[
+      "2013-06-01T00:00/2020-01-01T00"
+   ]
 }

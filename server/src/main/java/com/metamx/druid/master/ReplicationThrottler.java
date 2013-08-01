@@ -84,19 +84,19 @@ public class ReplicationThrottler
     }
   }
 
-  public boolean canAddReplicant(String tier)
+  public boolean canCreateReplicant(String tier)
   {
-    return replicatingLookup.get(tier);
+    return replicatingLookup.get(tier) && !currentlyReplicating.isAtMaxReplicants(tier);
   }
 
   public boolean canDestroyReplicant(String tier)
   {
-    return terminatingLookup.get(tier);
+    return terminatingLookup.get(tier) && !currentlyTerminating.isAtMaxReplicants(tier);
   }
 
-  public boolean registerReplicantCreation(String tier, String segmentId, String serverId)
+  public void registerReplicantCreation(String tier, String segmentId, String serverId)
   {
-    return currentlyReplicating.addSegment(tier, segmentId, serverId);
+    currentlyReplicating.addSegment(tier, segmentId, serverId);
   }
 
   public void unregisterReplicantCreation(String tier, String segmentId, String serverId)
@@ -104,9 +104,9 @@ public class ReplicationThrottler
     currentlyReplicating.removeSegment(tier, segmentId, serverId);
   }
 
-  public boolean registerReplicantTermination(String tier, String segmentId, String serverId)
+  public void registerReplicantTermination(String tier, String segmentId, String serverId)
   {
-    return currentlyTerminating.addSegment(tier, segmentId, serverId);
+    currentlyTerminating.addSegment(tier, segmentId, serverId);
   }
 
   public void unregisterReplicantTermination(String tier, String segmentId, String serverId)
@@ -119,19 +119,23 @@ public class ReplicationThrottler
     private final Map<String, ConcurrentHashMap<String, String>> currentlyProcessingSegments = Maps.newHashMap();
     private final Map<String, Integer> lifetimes = Maps.newHashMap();
 
-    public boolean addSegment(String tier, String segmentId, String serverId)
+    public boolean isAtMaxReplicants(String tier)
+    {
+      final ConcurrentHashMap<String, String> segments = currentlyProcessingSegments.get(tier);
+      return (segments != null && segments.size() >= maxReplicants);
+    }
+
+    public void addSegment(String tier, String segmentId, String serverId)
     {
       ConcurrentHashMap<String, String> segments = currentlyProcessingSegments.get(tier);
       if (segments == null) {
         segments = new ConcurrentHashMap<String, String>();
         currentlyProcessingSegments.put(tier, segments);
       }
-      if (segments.size() < maxReplicants) {
-        segments.put(segmentId, serverId);
-        return true;
-      }
 
-      return false;
+      if (!isAtMaxReplicants(tier)) {
+        segments.put(segmentId, serverId);
+      }
     }
 
     public void removeSegment(String tier, String segmentId, String serverId)

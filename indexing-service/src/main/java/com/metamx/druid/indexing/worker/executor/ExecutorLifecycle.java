@@ -78,7 +78,6 @@ public class ExecutorLifecycle
     }
 
     // Spawn monitor thread to keep a watch on parent's stdin
-    // If a message comes over stdin, we want to handle it
     // If stdin reaches eof, the parent is gone, and we should shut down
     parentMonitorExec.submit(
         new Runnable()
@@ -87,25 +86,8 @@ public class ExecutorLifecycle
           public void run()
           {
             try {
-              final BufferedReader parentReader = new BufferedReader(new InputStreamReader(parentStream));
-              String messageString;
-              while ((messageString = parentReader.readLine()) != null) {
-                final Map<String, Object> message = jsonMapper
-                    .readValue(
-                        messageString,
-                        new TypeReference<Map<String, Object>>()
-                        {
-                        }
-                    );
-
-                if (message == null) {
-                  break;
-                } else if (message.get("shutdown") != null && message.get("shutdown").equals("now")) {
-                  log.info("Shutting down!");
-                  task.shutdown();
-                } else {
-                  throw new ISE("Unrecognized message from parent: %s", message);
-                }
+              while (parentStream.read() != -1) {
+                // Toss the byte
               }
             }
             catch (Exception e) {

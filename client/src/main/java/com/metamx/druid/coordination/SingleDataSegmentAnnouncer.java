@@ -28,15 +28,15 @@ import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
 
-public class CuratorDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
+public class SingleDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
 {
-  private static final Logger log = new Logger(CuratorDataSegmentAnnouncer.class);
+  private static final Logger log = new Logger(SingleDataSegmentAnnouncer.class);
 
   private final Announcer announcer;
   private final ObjectMapper jsonMapper;
   private final String servedSegmentsLocation;
 
-  public CuratorDataSegmentAnnouncer(
+  public SingleDataSegmentAnnouncer(
       DruidServerMetadata server,
       ZkPathsConfig config,
       Announcer announcer,
