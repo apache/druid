@@ -22,9 +22,11 @@ package com.metamx.druid.index;
 import com.metamx.druid.StorageAdapter;
 import org.joda.time.Interval;
 
+import java.io.Closeable;
+
 /**
  */
-public interface Segment
+public interface Segment extends Closeable
 {
   public String getIdentifier();
   public Interval getDataInterval();
