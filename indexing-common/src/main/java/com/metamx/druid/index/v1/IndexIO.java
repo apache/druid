@@ -375,7 +375,8 @@ public class IndexIO
           dimValueLookups,
           dimColumns,
           invertedIndexed,
-          spatialIndexed
+          spatialIndexed,
+          smooshedFiles
       );
 
       log.debug("Mapped v8 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
@@ -761,7 +762,8 @@ public class IndexIO
               .setType(ValueType.LONG)
               .setGenericColumn(new LongGenericColumnSupplier(index.timestamps))
               .build(),
-          columns
+          columns,
+          index.getFileMapper()
       );
     }
   }
@@ -795,7 +797,7 @@ public class IndexIO
       }
 
       final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval, cols, dims, deserializeColumn(mapper, smooshedFiles.mapFile("__time")), columns
+          dataInterval, cols, dims, deserializeColumn(mapper, smooshedFiles.mapFile("__time")), columns, smooshedFiles
       );
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
