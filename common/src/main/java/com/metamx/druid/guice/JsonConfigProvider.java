@@ -41,6 +41,7 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
         binder,
         propertyBase,
         classToProvide,
+        Key.get(classToProvide),
         (Key) Key.get(Types.newParameterizedType(Supplier.class, classToProvide))
     );
   }
@@ -52,6 +53,7 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
         binder,
         propertyBase,
         classToProvide,
+        Key.get(classToProvide, annotation),
         (Key) Key.get(Types.newParameterizedType(Supplier.class, classToProvide), annotation)
     );
   }
@@ -68,14 +70,22 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
         binder,
         propertyBase,
         classToProvide,
+        Key.get(classToProvide, annotation),
         (Key) Key.get(Types.newParameterizedType(Supplier.class, classToProvide), annotation)
     );
   }
 
   @SuppressWarnings("unchecked")
-  public static <T> void bind(Binder binder, String propertyBase, Class<T> clazz, Key<Supplier<T>> key)
+  public static <T> void bind(
+      Binder binder,
+      String propertyBase,
+      Class<T> clazz,
+      Key<T> instanceKey,
+      Key<Supplier<T>> supplierKey
+  )
   {
-    binder.bind(key).toProvider((Provider) of(propertyBase, clazz)).in(LazySingleton.class);
+    binder.bind(supplierKey).toProvider((Provider) of(propertyBase, clazz)).in(LazySingleton.class);
+    binder.bind(instanceKey).toProvider(new SupplierProvider<T>(supplierKey));
   }
 
   public static <T> JsonConfigProvider<T> of(String propertyBase, Class<T> classToProvide)

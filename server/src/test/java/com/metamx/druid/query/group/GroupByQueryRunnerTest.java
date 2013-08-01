@@ -22,6 +22,7 @@ package com.metamx.druid.query.group;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -77,16 +78,12 @@ public class GroupByQueryRunnerTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
+    GroupByQueryConfig config = new GroupByQueryConfig();
+    config.setMaxIntermediateRows(10000);
+
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         new GroupByQueryEngine(
-            new GroupByQueryEngineConfig()
-            {
-              @Override
-              public int getMaxIntermediateRows()
-              {
-                return 10000;
-              }
-            },
+            Suppliers.ofInstance(config),
             new StupidPool<ByteBuffer>(
                 new Supplier<ByteBuffer>()
                 {
@@ -98,9 +95,7 @@ public class GroupByQueryRunnerTest
                 }
             )
         ),
-        new GroupByQueryRunnerFactoryConfig()
-        {
-        }
+        Suppliers.ofInstance(config)
     );
 
     return Lists.newArrayList(

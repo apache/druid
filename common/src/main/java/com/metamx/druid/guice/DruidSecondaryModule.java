@@ -1,10 +1,13 @@
 package com.metamx.druid.guice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.GuiceInjectableValues;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.metamx.druid.guice.annotations.Json;
 import com.metamx.druid.guice.annotations.Smile;
 import org.skife.config.ConfigurationObjectFactory;
@@ -48,9 +51,21 @@ public class DruidSecondaryModule implements Module
     binder.bind(Properties.class).toInstance(properties);
     binder.bind(ConfigurationObjectFactory.class).toInstance(factory);
     binder.bind(ObjectMapper.class).to(Key.get(ObjectMapper.class, Json.class));
-    binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(jsonMapper);
-    binder.bind(ObjectMapper.class).annotatedWith(Smile.class).toInstance(smileMapper);
     binder.bind(Validator.class).toInstance(validator);
     binder.bind(JsonConfigurator.class).toInstance(jsonConfigurator);
+  }
+
+  @Provides @LazySingleton @Json
+  public ObjectMapper getJsonMapper(final Injector injector)
+  {
+    jsonMapper.setInjectableValues(new GuiceInjectableValues(injector));
+    return jsonMapper;
+  }
+
+  @Provides @LazySingleton @Smile
+  public ObjectMapper getSmileMapper(Injector injector)
+  {
+    smileMapper.setInjectableValues(new GuiceInjectableValues(injector));
+    return smileMapper;
   }
 }

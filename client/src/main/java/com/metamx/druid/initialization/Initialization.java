@@ -28,6 +28,7 @@ import com.google.common.io.Closeables;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
@@ -40,12 +41,14 @@ import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.guice.DruidGuiceExtensions;
 import com.metamx.druid.guice.DruidSecondaryModule;
-import com.metamx.druid.http.EmittingRequestLogger;
-import com.metamx.druid.http.FileRequestLogger;
-import com.metamx.druid.http.RequestLogger;
+import com.metamx.druid.guice.annotations.Json;
+import com.metamx.druid.guice.annotations.Smile;
+import com.metamx.druid.http.log.EmittingRequestLogger;
+import com.metamx.druid.http.log.FileRequestLogger;
+import com.metamx.druid.http.log.RequestLogger;
 import com.metamx.druid.jackson.JacksonModule;
 import com.metamx.druid.utils.PropUtils;
-import com.metamx.emitter.core.Emitter;
+import com.metamx.emitter.service.ServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
@@ -355,14 +358,9 @@ public class Initialization
     );
   }
 
-  public static RequestLogger makeEmittingRequestLogger(Properties props, Emitter emitter)
+  public static RequestLogger makeEmittingRequestLogger(Properties props, ServiceEmitter emitter)
   {
-    return new EmittingRequestLogger(
-        PropUtils.getProperty(props, "druid.service"),
-        PropUtils.getProperty(props, "druid.host"),
-        emitter,
-        PropUtils.getProperty(props, "druid.request.logging.feed")
-    );
+    return new EmittingRequestLogger(emitter, PropUtils.getProperty(props, "druid.request.logging.feed"));
   }
 
   public static Injector makeInjector(final Object... modules)
@@ -398,15 +396,27 @@ public class Initialization
             actualModules,
             new Function<Object, Module>()
             {
+              ObjectMapper jsonMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
+              ObjectMapper smileMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Smile.class));
+
               @Override
               @SuppressWarnings("unchecked")
               public Module apply(@Nullable Object input)
               {
+                if (input instanceof DruidModule) {
+                  baseInjector.injectMembers(input);
+                  return registerJacksonModules(((DruidModule) input));
+                }
+
                 if (input instanceof Module) {
                   baseInjector.injectMembers(input);
                   return (Module) input;
                 }
+
                 if (input instanceof Class) {
+                  if (DruidModule.class.isAssignableFrom((Class) input)) {
+                    return registerJacksonModules(baseInjector.getInstance((Class<? extends DruidModule>) input));
+                  }
                   if (Module.class.isAssignableFrom((Class) input)) {
                     return baseInjector.getInstance((Class<? extends Module>) input);
                   }
@@ -414,7 +424,17 @@ public class Initialization
                     throw new ISE("Class[%s] does not implement %s", input.getClass(), Module.class);
                   }
                 }
+
                 throw new ISE("Unknown module type[%s]", input.getClass());
+              }
+
+              private DruidModule registerJacksonModules(DruidModule module)
+              {
+                for (com.fasterxml.jackson.databind.Module jacksonModule : module.getJacksonModules()) {
+                  jsonMapper.registerModule(jacksonModule);
+                  smileMapper.registerModule(jacksonModule);
+                }
+                return module;
               }
             }
         )

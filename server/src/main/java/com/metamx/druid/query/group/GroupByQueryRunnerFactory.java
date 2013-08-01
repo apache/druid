@@ -20,9 +20,11 @@
 package com.metamx.druid.query.group;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
@@ -49,11 +51,12 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   private static final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest();
 
   private final GroupByQueryEngine engine;
-  private final GroupByQueryRunnerFactoryConfig config;
+  private final Supplier<GroupByQueryConfig> config;
 
+  @Inject
   public GroupByQueryRunnerFactory(
       GroupByQueryEngine engine,
-      GroupByQueryRunnerFactoryConfig config
+      Supplier<GroupByQueryConfig> config
   )
   {
     this.engine = engine;
@@ -69,7 +72,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   @Override
   public QueryRunner<Row> mergeRunners(final ExecutorService queryExecutor, Iterable<QueryRunner<Row>> queryRunners)
   {
-    if (config.isSingleThreaded()) {
+    if (config.get().isSingleThreaded()) {
       return new ConcatQueryRunner<Row>(
           Sequences.map(
               Sequences.simple(queryRunners),

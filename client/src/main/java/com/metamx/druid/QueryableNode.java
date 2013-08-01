@@ -44,7 +44,7 @@ import com.metamx.druid.coordination.DruidServerMetadata;
 import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.guice.JsonConfigurator;
-import com.metamx.druid.http.RequestLogger;
+import com.metamx.druid.http.log.RequestLogger;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
@@ -372,17 +372,12 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       try {
         final String loggingType = props.getProperty("druid.request.logging.type");
         if("emitter".equals(loggingType)) {
-          setRequestLogger(Initialization.makeEmittingRequestLogger(
-            getProps(),
-            getEmitter()
-          ));
+          setRequestLogger(Initialization.makeEmittingRequestLogger(getProps(), getEmitter()));
         }
         else {
-          setRequestLogger(Initialization.makeFileRequestLogger(
-            getJsonMapper(),
-            getScheduledExecutorFactory(),
-            getProps()
-          ));
+          setRequestLogger(
+              Initialization.makeFileRequestLogger(getJsonMapper(), getScheduledExecutorFactory(), getProps())
+          );
         }
       }
       catch (IOException e) {

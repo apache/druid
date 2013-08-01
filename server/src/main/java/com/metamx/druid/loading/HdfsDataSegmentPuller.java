@@ -1,6 +1,7 @@
 package com.metamx.druid.loading;
 
 import com.google.common.io.Closeables;
+import com.google.inject.Inject;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -17,6 +18,7 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller
 {
   private final Configuration config;
 
+  @Inject
   public HdfsDataSegmentPuller(final Configuration config)
   {
     this.config = config;

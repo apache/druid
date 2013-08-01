@@ -19,6 +19,7 @@
 
 package com.metamx.druid.query;
 
+import com.google.inject.Inject;
 import com.metamx.druid.Query;
 
 import java.util.Map;
@@ -29,6 +30,7 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
 
+  @Inject
   public DefaultQueryRunnerFactoryConglomerate(
       Map<Class<? extends Query>, QueryRunnerFactory> factories
   )

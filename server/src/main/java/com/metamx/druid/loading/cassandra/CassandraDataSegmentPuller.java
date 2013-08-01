@@ -19,12 +19,8 @@
 
 package com.metamx.druid.loading.cassandra;
 
-import java.io.File;
-import java.io.OutputStream;
-
-import org.apache.commons.io.FileUtils;
-
 import com.google.common.io.Files;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
@@ -36,6 +32,10 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
 import com.netflix.astyanax.recipes.storage.ObjectMetadata;
+import org.apache.commons.io.FileUtils;
+
+import java.io.File;
+import java.io.OutputStream;
 
 /**
  * Cassandra Segment Puller
@@ -48,6 +48,7 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
 	private static final int CONCURRENCY = 10;
 	private static final int BATCH_SIZE = 10;
 
+  @Inject
 	public CassandraDataSegmentPuller(CassandraDataSegmentConfig config)
 	{
 		super(config);

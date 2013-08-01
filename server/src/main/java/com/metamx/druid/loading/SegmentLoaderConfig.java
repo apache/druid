@@ -40,6 +40,11 @@ public class SegmentLoaderConfig
     return cacheDirectory;
   }
 
+  public void setCacheDirectory(File cacheDirectory)
+  {
+    this.cacheDirectory = cacheDirectory;
+  }
+
   public boolean isDeleteOnRemove()
   {
     return deleteOnRemove;

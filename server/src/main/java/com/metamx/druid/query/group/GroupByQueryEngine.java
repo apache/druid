@@ -20,12 +20,14 @@
 package com.metamx.druid.query.group;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
+import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
@@ -39,6 +41,7 @@ import com.metamx.druid.aggregation.BufferAggregator;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.collect.StupidPool;
+import com.metamx.druid.guice.annotations.Global;
 import com.metamx.druid.index.brita.Filters;
 import com.metamx.druid.index.v1.processing.Cursor;
 import com.metamx.druid.index.v1.processing.DimensionSelector;
@@ -60,12 +63,13 @@ import java.util.TreeMap;
  */
 public class GroupByQueryEngine
 {
-  private final GroupByQueryEngineConfig config;
+  private final Supplier<GroupByQueryConfig> config;
   private final StupidPool<ByteBuffer> intermediateResultsBufferPool;
 
+  @Inject
   public GroupByQueryEngine (
-      GroupByQueryEngineConfig config,
-      StupidPool<ByteBuffer> intermediateResultsBufferPool
+      Supplier<GroupByQueryConfig> config,
+      @Global StupidPool<ByteBuffer> intermediateResultsBufferPool
   )
   {
     this.config = config;
@@ -106,7 +110,7 @@ public class GroupByQueryEngine
                                   @Override
                                   public  CloseableIterator<Row> make()
                                   {
-                                    return new RowIterator(query, cursor, bufferHolder.get());
+                                    return new RowIterator(query, cursor, bufferHolder.get(), config.get());
                                   }
 
                                   @Override
@@ -269,6 +273,7 @@ public class GroupByQueryEngine
     private final GroupByQuery query;
     private final Cursor cursor;
     private final ByteBuffer metricsBuffer;
+    private final GroupByQueryConfig config;
 
     private final List<DimensionSpec> dimensionSpecs;
     private final List<DimensionSelector> dimensions;
@@ -281,11 +286,12 @@ public class GroupByQueryEngine
     private List<ByteBuffer> unprocessedKeys;
     private Iterator<Row> delegate;
 
-    public RowIterator(GroupByQuery query, Cursor cursor, ByteBuffer metricsBuffer)
+    public RowIterator(GroupByQuery query, Cursor cursor, ByteBuffer metricsBuffer, GroupByQueryConfig config)
     {
       this.query = query;
       this.cursor = cursor;
       this.metricsBuffer = metricsBuffer;
+      this.config = config;
 
       unprocessedKeys = null;
       delegate = Iterators.emptyIterator();

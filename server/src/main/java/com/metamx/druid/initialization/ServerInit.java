@@ -19,20 +19,9 @@
 
 package com.metamx.druid.initialization;
 
-import java.lang.reflect.InvocationTargetException;
-import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.hadoop.conf.Configuration;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.security.AWSCredentials;
-import org.skife.config.ConfigurationObjectFactory;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -62,10 +51,9 @@ import com.metamx.druid.loading.cassandra.CassandraDataSegmentPuller;
 import com.metamx.druid.loading.cassandra.CassandraDataSegmentPusher;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
+import com.metamx.druid.query.group.GroupByQueryConfig;
 import com.metamx.druid.query.group.GroupByQueryEngine;
-import com.metamx.druid.query.group.GroupByQueryEngineConfig;
 import com.metamx.druid.query.group.GroupByQueryRunnerFactory;
-import com.metamx.druid.query.group.GroupByQueryRunnerFactoryConfig;
 import com.metamx.druid.query.metadata.SegmentMetadataQuery;
 import com.metamx.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import com.metamx.druid.query.search.SearchQuery;
@@ -75,6 +63,17 @@ import com.metamx.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import com.metamx.druid.utils.PropUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.security.AWSCredentials;
+import org.skife.config.ConfigurationObjectFactory;
+
+import java.lang.reflect.InvocationTargetException;
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -160,10 +159,10 @@ public class ServerInit
         GroupByQuery.class,
         new GroupByQueryRunnerFactory(
             new GroupByQueryEngine(
-                configFactory.build(GroupByQueryEngineConfig.class),
+                Suppliers.ofInstance(new GroupByQueryConfig()), // TODO: Get rid of this
                 computationBufferPool
             ),
-            configFactory.build(GroupByQueryRunnerFactoryConfig.class)
+            Suppliers.ofInstance(new GroupByQueryConfig())
         )
     );
     queryRunners.put(SearchQuery.class, new SearchQueryRunnerFactory());

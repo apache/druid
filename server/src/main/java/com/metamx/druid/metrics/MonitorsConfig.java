@@ -13,7 +13,7 @@ import java.util.List;
  */
 public class MonitorsConfig
 {
-  @JsonProperty("monitors")
+  @JsonProperty("monitorExclusions")
   @NotNull
   private List<Class<? extends Monitor>> monitors = ImmutableList.<Class<? extends Monitor>>builder()
                                                                  .add(JvmMonitor.class)

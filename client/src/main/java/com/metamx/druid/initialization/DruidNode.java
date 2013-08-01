@@ -31,12 +31,15 @@ import javax.validation.constraints.NotNull;
  */
 public class DruidNode
 {
+  @JsonProperty("service")
   @NotNull
   private String serviceName = null;
 
+  @JsonProperty
   @NotNull
   private String host = null;
 
+  @JsonProperty
   @Min(0) @Max(0xffff)
   private int port = -1;
 
@@ -82,19 +85,16 @@ public class DruidNode
     this.port = port;
   }
 
-  @JsonProperty("service")
   public String getServiceName()
   {
     return serviceName;
   }
 
-  @JsonProperty
   public String getHost()
   {
     return host;
   }
 
-  @JsonProperty
   public int getPort()
   {
     return port;

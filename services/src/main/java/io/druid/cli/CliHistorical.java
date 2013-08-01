@@ -2,11 +2,13 @@ package io.druid.cli;
 
 import com.google.inject.Injector;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.coordination.ServerManager;
 import com.metamx.druid.coordination.ZkCoordinator;
 import com.metamx.druid.curator.CuratorModule;
 import com.metamx.druid.guice.HistoricalModule;
 import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.LifecycleModule;
+import com.metamx.druid.guice.QueryableModule;
 import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusResource;
@@ -49,6 +51,7 @@ public class CliHistorical extends ServerRunnable
         ServerModule.class,
         new JettyServerModule(new HistoricalJettyServerInitializer())
             .addResource(StatusResource.class),
+        new QueryableModule(ServerManager.class),
         HistoricalModule.class
     );
   }

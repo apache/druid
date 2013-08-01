@@ -17,38 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.http;
+package com.metamx.druid.http.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.druid.Query;
-import com.metamx.emitter.core.Emitter;
+import com.metamx.druid.http.RequestLogLine;
 import com.metamx.emitter.core.Event;
+import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.emitter.service.ServiceEventBuilder;
 import org.joda.time.DateTime;
 
 import java.util.Map;
 
 public class EmittingRequestLogger implements RequestLogger
 {
-
-  final String service;
-  final String host;
-  final Emitter emitter;
+  final ServiceEmitter emitter;
   final String feed;
 
-  public EmittingRequestLogger(String service, String host, Emitter emitter, String feed)
+  public EmittingRequestLogger(ServiceEmitter emitter, String feed)
   {
     this.emitter = emitter;
-    this.host = host;
-    this.service = service;
     this.feed = feed;
   }
 
   @Override
   public void log(final RequestLogLine requestLogLine) throws Exception
   {
-    emitter.emit(new RequestLogEvent(service, host, feed, requestLogLine));
+    emitter.emit(new RequestLogEventBuilder(feed, requestLogLine));
   }
 
   public static class RequestLogEvent implements Event
@@ -117,6 +114,28 @@ public class EmittingRequestLogger implements RequestLogger
     public boolean isSafeToBuffer()
     {
       return true;
+    }
+  }
+
+  private class RequestLogEventBuilder implements ServiceEventBuilder
+  {
+    private final String feed;
+    private final RequestLogLine requestLogLine;
+
+    public RequestLogEventBuilder(
+        String feed,
+        RequestLogLine requestLogLine
+    )
+    {
+      this.feed = feed;
+      this.requestLogLine = requestLogLine;
+    }
+
+
+    @Override
+    public Event build(String service, String host)
+    {
+      return new RequestLogEvent(service, host, feed, requestLogLine);
     }
   }
 }

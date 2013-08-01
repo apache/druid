@@ -25,10 +25,14 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.Query;
+import com.metamx.druid.guice.annotations.Json;
+import com.metamx.druid.guice.annotations.Smile;
+import com.metamx.druid.http.log.RequestLogger;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -57,9 +61,10 @@ public class QueryServlet extends HttpServlet
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
 
+  @Inject
   public QueryServlet(
-      ObjectMapper jsonMapper,
-      ObjectMapper smileMapper,
+      @Json ObjectMapper jsonMapper,
+      @Smile ObjectMapper smileMapper,
       QuerySegmentWalker texasRanger,
       ServiceEmitter emitter,
       RequestLogger requestLogger
