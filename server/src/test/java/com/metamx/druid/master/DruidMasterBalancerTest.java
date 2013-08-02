@@ -133,7 +133,7 @@ public class DruidMasterBalancerTest
   }
 
   @Test
-  public void testMoveToEmptyServer()
+  public void testMoveToEmptyServerBalancer()
   {
     EasyMock.expect(druidServer1.getName()).andReturn("from").atLeastOnce();
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
@@ -199,6 +199,9 @@ public class DruidMasterBalancerTest
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
     Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() < segments.size());
   }
+
+
+
 
   @Test
   public void testRun1()

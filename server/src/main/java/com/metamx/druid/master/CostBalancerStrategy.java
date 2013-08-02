@@ -52,10 +52,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     {
       return holder;
     }
-    else
-    {
-      return null;
-    }
+    return null;
   }
 
 
