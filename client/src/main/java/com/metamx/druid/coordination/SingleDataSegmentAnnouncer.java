@@ -37,8 +37,6 @@ public class SingleDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
   private final ObjectMapper jsonMapper;
   private final String servedSegmentsLocation;
 
-  private volatile boolean started = false;
-
   @Inject
   public SingleDataSegmentAnnouncer(
       DruidServerMetadata server,
