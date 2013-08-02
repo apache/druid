@@ -21,6 +21,7 @@ package com.metamx.druid.indexing.coordinator.config;
 
 import org.skife.config.Config;
 import org.skife.config.Default;
+import org.skife.config.DefaultNull;
 
 /**
  */
@@ -29,4 +30,8 @@ public abstract class EC2AutoScalingStrategyConfig
   @Config("druid.indexer.worker.port")
   @Default("8080")
   public abstract String getWorkerPort();
+
+  @Config("druid.indexer.worker.version")
+  @DefaultNull
+  public abstract String getWorkerVersion();
 }

@@ -348,7 +348,7 @@ public class TaskQueueTest
 
   private static Task newTask(final String id, final String groupId, final String dataSource, final Interval interval)
   {
-    return new AbstractTask(id, groupId, id, dataSource, interval)
+    return new AbstractTask(id, groupId, dataSource, interval)
     {
       @Override
       public TaskStatus run(TaskToolbox toolbox) throws Exception
@@ -372,7 +372,7 @@ public class TaskQueueTest
       final List<Task> nextTasks
   )
   {
-    return new AbstractTask(id, groupId, id, dataSource, interval)
+    return new AbstractTask(id, groupId, dataSource, interval)
     {
       @Override
       public String getType()

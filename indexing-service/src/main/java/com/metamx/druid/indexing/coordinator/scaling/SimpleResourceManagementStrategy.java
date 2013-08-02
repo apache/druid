@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.druid.indexing.coordinator.RemoteTaskRunnerWorkItem;
 import com.metamx.druid.indexing.coordinator.TaskRunnerWorkItem;
 import com.metamx.druid.indexing.coordinator.ZkWorker;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
@@ -68,7 +69,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   @Override
-  public boolean doProvision(Collection<TaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
+  public boolean doProvision(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
     if (zkWorkers.size() >= workerSetupdDataRef.get().getMaxNumWorkers()) {
       log.info(
@@ -135,7 +136,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   @Override
-  public boolean doTerminate(Collection<TaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
+  public boolean doTerminate(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
     Set<String> workerNodeIds = Sets.newHashSet(
         autoScalingStrategy.ipToIdLookup(
@@ -244,7 +245,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     return scalingStats;
   }
 
-  private boolean hasTaskPendingBeyondThreshold(Collection<TaskRunnerWorkItem> pendingTasks)
+  private boolean hasTaskPendingBeyondThreshold(Collection<RemoteTaskRunnerWorkItem> pendingTasks)
   {
     long now = System.currentTimeMillis();
     for (TaskRunnerWorkItem pendingTask : pendingTasks) {

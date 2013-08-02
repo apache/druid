@@ -394,7 +394,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
   public void initializeWorkerTaskMonitor()
   {
     if (workerTaskMonitor == null) {
-      final ExecutorService workerExec = Executors.newFixedThreadPool(workerConfig.getNumThreads());
+      final ExecutorService workerExec = Executors.newFixedThreadPool(workerConfig.getCapacity());
       final CuratorFramework curatorFramework = getCuratorFramework();
 
       final PathChildrenCache pathChildrenCache = new PathChildrenCache(
