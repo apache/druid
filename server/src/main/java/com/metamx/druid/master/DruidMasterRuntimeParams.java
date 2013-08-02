@@ -207,7 +207,8 @@ public class DruidMasterRuntimeParams
         mergeSegmentsLimit,
         maxSegmentsToMove,
         balancerReferenceTimestamp,
-        emitStats
+        emitStats,
+        strategyFactory
     );
   }
 
@@ -268,7 +269,8 @@ public class DruidMasterRuntimeParams
         int mergeSegmentsLimit,
         int maxSegmentsToMove,
         DateTime balancerReferenceTimestamp,
-        boolean emitBalancingCostParams
+        boolean emitBalancingCostParams,
+        BalancerStrategyFactory strategyFactory
     )
     {
       this.startTime = startTime;
@@ -287,6 +289,7 @@ public class DruidMasterRuntimeParams
       this.maxSegmentsToMove = maxSegmentsToMove;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
       this.emitBalancingCostParams = emitBalancingCostParams;
+      this.strategyFactory=strategyFactory;
     }
 
     public DruidMasterRuntimeParams build()
@@ -411,6 +414,12 @@ public class DruidMasterRuntimeParams
     public Builder withBalancerReferenceTimestamp(DateTime balancerReferenceTimestamp)
     {
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
+      return this;
+    }
+
+    public Builder withBalancerStrategyFactory(BalancerStrategyFactory strategyFactory)
+    {
+      this.strategyFactory=strategyFactory;
       return this;
     }
   }
