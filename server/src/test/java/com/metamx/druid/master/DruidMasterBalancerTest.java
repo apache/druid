@@ -133,6 +133,74 @@ public class DruidMasterBalancerTest
   }
 
   @Test
+  public void testMoveToEmptyServer()
+  {
+    EasyMock.expect(druidServer1.getName()).andReturn("from").atLeastOnce();
+    EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
+    EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
+    EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
+    EasyMock.expect(druidServer1.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.replay(druidServer1);
+
+    EasyMock.expect(druidServer2.getName()).andReturn("to").atLeastOnce();
+    EasyMock.expect(druidServer2.getTier()).andReturn("normal").anyTimes();
+    EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
+    EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
+    EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
+    EasyMock.expect(druidServer2.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.replay(druidServer2);
+
+    EasyMock.replay(druidServer3);
+    EasyMock.replay(druidServer4);
+
+    // Mock stuff that the master needs
+    master.moveSegment(
+        EasyMock.<String>anyObject(),
+        EasyMock.<String>anyObject(),
+        EasyMock.<String>anyObject(),
+        EasyMock.<LoadPeonCallback>anyObject()
+    );
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.replay(master);
+
+    LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
+    LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
+
+    DruidMasterRuntimeParams params =
+        DruidMasterRuntimeParams.newBuilder()
+                                .withDruidCluster(
+                                    new DruidCluster(
+                                        ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
+                                            "normal",
+                                            MinMaxPriorityQueue.orderedBy(DruidMasterBalancerTester.percentUsedComparator)
+                                                               .create(
+                                                                   Arrays.asList(
+                                                                       new ServerHolder(druidServer1, fromPeon),
+                                                                       new ServerHolder(druidServer2, toPeon)
+                                                                   )
+                                                               )
+                                        )
+                                    )
+                                )
+                                .withLoadManagementPeons(
+                                    ImmutableMap.<String, LoadQueuePeon>of(
+                                        "from",
+                                        fromPeon,
+                                        "to",
+                                        toPeon
+                                    )
+                                )
+                                .withAvailableSegments(segments.values())
+                                .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                .build();
+
+    params = new DruidMasterBalancerTester(master).run(params);
+    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
+    Assert.assertTrue(params.getMasterStats().getPerTierStats().get("movedCount").get("normal").get() < segments.size());
+  }
+
+  @Test
   public void testRun1()
   {
     // Mock some servers of different usages

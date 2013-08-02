@@ -47,7 +47,15 @@ public class CostBalancerStrategy implements BalancerStrategy
       DataSegment proposalSegment, List<ServerHolder> serverHolders
   )
   {
-    return chooseBestServer(proposalSegment, serverHolders, false).rhs;
+    ServerHolder holder= chooseBestServer(proposalSegment, serverHolders, false).rhs;
+    if (!holder.isServingSegment(proposalSegment))
+    {
+      return holder;
+    }
+    else
+    {
+      return null;
+    }
   }
 
 
