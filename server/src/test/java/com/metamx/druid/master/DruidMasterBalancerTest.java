@@ -132,6 +132,7 @@ public class DruidMasterBalancerTest
     EasyMock.verify(druidServer4);
   }
 
+
   @Test
   public void testMoveToEmptyServerBalancer()
   {
