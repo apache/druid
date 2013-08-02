@@ -21,7 +21,6 @@ package com.metamx.druid.indexing.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -136,11 +135,55 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   @LifecycleStart
   public void start()
   {
-    if (started) {
-      return;
-    }
+    try {
+      if (started) {
+        return;
+      }
 
-    started = true;
+      // Add listener for creation/deletion of workers
+      workerPathCache.getListenable().addListener(
+          new PathChildrenCacheListener()
+          {
+            @Override
+            public void childEvent(CuratorFramework client, final PathChildrenCacheEvent event) throws Exception
+            {
+              Worker worker;
+              switch (event.getType()) {
+                case CHILD_ADDED:
+                  worker = jsonMapper.readValue(
+                      event.getData().getData(),
+                      Worker.class
+                  );
+                  addWorker(worker, PathChildrenCache.StartMode.NORMAL);
+                  break;
+                case CHILD_REMOVED:
+                  worker = jsonMapper.readValue(
+                      event.getData().getData(),
+                      Worker.class
+                  );
+                  removeWorker(worker);
+                  break;
+                default:
+                  break;
+              }
+            }
+          }
+      );
+      workerPathCache.start(PathChildrenCache.StartMode.BUILD_INITIAL_CACHE);
+
+      for (ChildData childData : workerPathCache.getCurrentData()) {
+        final Worker worker = jsonMapper.readValue(
+            childData.getData(),
+            Worker.class
+        );
+        addWorker(worker, PathChildrenCache.StartMode.BUILD_INITIAL_CACHE);
+      }
+
+      started = true;
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   @LifecycleStop
@@ -203,68 +246,26 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   public void bootstrap(List<Task> tasks)
   {
     try {
-      // Add listener for creation/deletion of workers
-      workerPathCache.getListenable().addListener(
-          new PathChildrenCacheListener()
-          {
-            @Override
-            public void childEvent(CuratorFramework client, final PathChildrenCacheEvent event) throws Exception
-            {
-              Worker worker;
-              switch (event.getType()) {
-                case CHILD_ADDED:
-                  worker = jsonMapper.readValue(
-                      event.getData().getData(),
-                      Worker.class
-                  );
-                  log.info("Worker[%s] reportin' for duty!", worker.getHost());
-                  addWorker(worker, PathChildrenCache.StartMode.NORMAL);
-                  break;
-                case CHILD_REMOVED:
-                  worker = jsonMapper.readValue(
-                      event.getData().getData(),
-                      Worker.class
-                  );
-                  log.info("Kaboom! Worker[%s] removed!", worker.getHost());
-                  removeWorker(worker);
-                  break;
-                default:
-                  break;
-              }
-            }
-          }
-      );
-      workerPathCache.start(PathChildrenCache.StartMode.BUILD_INITIAL_CACHE);
+      if (!started) {
+        throw new ISE("Must start RTR first before calling bootstrap!");
+      }
 
       Set<String> existingTasks = Sets.newHashSet();
-      for (ChildData childData : workerPathCache.getCurrentData()) {
-        final Worker worker = jsonMapper.readValue(
-            childData.getData(),
-            Worker.class
-        );
-        log.info("Worker[%s] reportin' for duty!", worker.getHost());
-        final ZkWorker zkWorker = addWorker(worker, PathChildrenCache.StartMode.BUILD_INITIAL_CACHE);
-
+      for (ZkWorker zkWorker : zkWorkers.values()) {
         existingTasks.addAll(zkWorker.getRunningTasks().keySet());
       }
 
-      Set<String> bootstrappedTasks = Sets.newHashSet(
-          Lists.transform(
-              tasks,
-              new Function<Task, String>()
-              {
-                @Override
-                public String apply(Task input)
-                {
-                  return input.getId();
-                }
-              }
-          )
-      );
-
-      // shutdown any tasks that we don't know about
-      for (String taskId : Sets.difference(existingTasks, bootstrappedTasks)) {
-        shutdown(taskId);
+      for (Task task : tasks) {
+        if (existingTasks.contains(task.getId())) {
+          log.info("Bootstrap found %s running.", task.getId());
+          runningTasks.put(
+              task.getId(),
+              new RemoteTaskRunnerWorkItem(task, SettableFuture.<TaskStatus>create())
+          );
+        } else {
+          log.info("Bootstrap didn't find %s running. Running it again", task.getId());
+          run(task);
+        }
       }
     }
     catch (Exception e) {
@@ -530,6 +531,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
    */
   private ZkWorker addWorker(final Worker worker, PathChildrenCache.StartMode startMode)
   {
+    log.info("Worker[%s] reportin' for duty!", worker.getHost());
+
     try {
       final String workerStatusPath = JOINER.join(config.getIndexerStatusPath(), worker.getHost());
       final PathChildrenCache statusCache = pathChildrenCacheFactory.make(cf, workerStatusPath);
@@ -631,6 +634,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
    */
   private void removeWorker(final Worker worker)
   {
+    log.info("Kaboom! Worker[%s] removed!", worker.getHost());
+
     ZkWorker zkWorker = zkWorkers.get(worker.getHost());
     if (zkWorker != null) {
       try {
