@@ -3,7 +3,6 @@ package com.metamx.druid.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rabbitmq.client.ConnectionFactory;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;

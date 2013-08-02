@@ -23,7 +23,6 @@ import com.metamx.druid.index.column.ColumnSelector;
 import com.metamx.druid.kv.Indexed;
 import org.joda.time.Interval;
 
-import java.io.Closeable;
 import java.io.IOException;
 
 /**

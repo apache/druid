@@ -15,9 +15,9 @@ import com.metamx.druid.Query;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.coordination.CuratorDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
+import com.metamx.druid.coordination.MultipleDataSegmentAnnouncerDataSegmentAnnouncer;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.druid.coordination.ZkCoordinator;
 import com.metamx.druid.curator.announcement.Announcer;
@@ -120,7 +120,9 @@ public class HistoricalModule implements Module
 
     binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
 
-    binder.bind(DataSegmentAnnouncer.class).to(CuratorDataSegmentAnnouncer.class).in(ManageLifecycleLast.class);
+    binder.bind(DataSegmentAnnouncer.class)
+          .to(MultipleDataSegmentAnnouncerDataSegmentAnnouncer.class)
+          .in(ManageLifecycleLast.class);
   }
 
   private void bindDeepStorageS3(Binder binder)

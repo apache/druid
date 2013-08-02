@@ -26,12 +26,10 @@ import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.io.InputSupplier;
@@ -49,7 +47,6 @@ import com.metamx.druid.indexing.worker.executor.ExecutorMain;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -63,7 +60,6 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Runs tasks in separate processes using {@link ExecutorMain}.

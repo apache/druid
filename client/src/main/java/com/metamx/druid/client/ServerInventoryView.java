@@ -25,15 +25,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.MapMaker;
-import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.concurrent.Execs;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.inventory.CuratorInventoryManager;
 import com.metamx.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import com.metamx.druid.curator.inventory.InventoryManagerConfig;
-import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
@@ -49,8 +46,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public abstract class ServerInventoryView<InventoryType> implements ServerView, InventoryView
 {
-  private final ServerInventoryViewConfig config;
-  private final Logger log;
+
+  private final EmittingLogger log;
   private final CuratorInventoryManager<DruidServer, InventoryType> inventoryManager;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
@@ -59,18 +56,14 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
 
   private final Map<String, Integer> removedSegments = new MapMaker().makeMap();
 
-  @Inject
   public ServerInventoryView(
-      final ServerInventoryViewConfig config,
-      final Logger log,
-      final InventoryManagerConfig inventoryManagerConfig,
+      final EmittingLogger log,
+      final ZkPathsConfig zkPaths,
       final CuratorFramework curator,
-      final ExecutorService exec,
       final ObjectMapper jsonMapper,
       final TypeReference<InventoryType> typeReference
   )
   {
-    this.config = config;
     this.log = log;
     this.inventoryManager = new CuratorInventoryManager<DruidServer, InventoryType>(
         curator,
@@ -89,7 +82,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           }
         },
         Execs.singleThreaded("ServerInventoryView-%s"),
-        new CuratorInventoryManagerStrategy<DruidServer, DataSegment>()
+        new CuratorInventoryManagerStrategy<DruidServer, InventoryType>()
         {
           @Override
           public DruidServer deserializeContainer(byte[] bytes)
@@ -299,6 +292,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
       final DataSegment inventory
   )
   {
+/* TODO
     log.info("Server[%s] added segment[%s]", container.getName(), inventory.getIdentifier());
 
     if (container.getSegment(inventory.getIdentifier()) != null) {
@@ -323,10 +317,12 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           }
         }
     );
+*/
   }
 
   protected void removeSingleInventory(final DruidServer container, String inventoryKey)
   {
+/* TODO
     log.info("Server[%s] removed segment[%s]", container.getName(), inventoryKey);
     final DataSegment segment = container.getSegment(inventoryKey);
 
@@ -354,6 +350,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
     );
 
     removedSegments.put(inventoryKey, config.getRemovedSegmentLifetime());
+*/
   }
 
   protected abstract DruidServer addInnerInventory(

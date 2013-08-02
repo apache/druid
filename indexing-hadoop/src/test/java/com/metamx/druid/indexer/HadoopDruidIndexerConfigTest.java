@@ -27,9 +27,11 @@ import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.partitions.PartitionsSpec;
 import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Assert;
 import org.junit.Test;
 

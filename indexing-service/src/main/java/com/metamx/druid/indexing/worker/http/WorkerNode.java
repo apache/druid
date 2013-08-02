@@ -34,7 +34,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.QueryableNode;
-import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.indexing.common.config.IndexerZkConfig;
@@ -103,7 +103,6 @@ public class WorkerNode extends QueryableNode<WorkerNode>
   private ServiceEmitter emitter = null;
   private WorkerConfig workerConfig = null;
   private ServiceDiscovery serviceDiscovery = null;
-  private ServiceAnnouncer serviceAnnouncer = null;
   private ServiceProvider coordinatorServiceProvider = null;
   private WorkerCuratorCoordinator workerCuratorCoordinator = null;
   private WorkerTaskMonitor workerTaskMonitor = null;
@@ -330,14 +329,12 @@ public class WorkerNode extends QueryableNode<WorkerNode>
   public void initializeServiceDiscovery() throws Exception
   {
     if (serviceDiscovery == null) {
-      final CuratorDiscoveryConfig config = getConfigFactory().build(CuratorDiscoveryConfig.class);
+      final CuratorDiscoveryConfig config = getJsonConfigurator()
+          .configurate(getProps(), "druid.discovery.curator", CuratorDiscoveryConfig.class);
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-          getCuratorFramework(),
+          Initialization.makeCuratorFramework(getConfigFactory().build(CuratorConfig.class), getLifecycle()),
           config,
           getLifecycle()
-      );
-      this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-          serviceDiscoveryCuratorFramework, config, getLifecycle()
       );
     }
     if (coordinatorServiceProvider == null) {

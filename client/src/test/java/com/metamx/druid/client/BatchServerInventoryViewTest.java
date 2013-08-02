@@ -45,7 +45,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -130,20 +129,6 @@ public class BatchServerInventoryViewTest
     }
 
     batchServerInventoryView = new BatchServerInventoryView(
-        new ServerInventoryViewConfig()
-        {
-          @Override
-          public int getRemovedSegmentLifetime()
-          {
-            return 0;
-          }
-
-          @Override
-          public String getAnnouncerType()
-          {
-            return "batch";
-          }
-        },
         new ZkPathsConfig()
         {
           @Override
@@ -153,7 +138,6 @@ public class BatchServerInventoryViewTest
           }
         },
         cf,
-        Executors.newSingleThreadExecutor(),
         jsonMapper
     );
 

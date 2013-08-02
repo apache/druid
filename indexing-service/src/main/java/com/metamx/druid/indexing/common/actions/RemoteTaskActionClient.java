@@ -1,6 +1,7 @@
 package com.metamx.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
@@ -10,7 +11,6 @@ import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.ToStringResponseHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.joda.time.Duration;

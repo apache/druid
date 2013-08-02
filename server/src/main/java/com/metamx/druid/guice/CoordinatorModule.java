@@ -5,6 +5,7 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
@@ -13,7 +14,6 @@ import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.client.indexing.IndexingServiceSelector;
 import com.metamx.druid.client.selector.DiscoverySelector;
 import com.metamx.druid.client.selector.Server;
-import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseRuleManagerConfig;
 import com.metamx.druid.db.DatabaseRuleManagerProvider;
@@ -101,8 +101,10 @@ public class CoordinatorModule implements Module
   }
 
   @Provides @LazySingleton
-  public LoadQueueTaskMaster getLoadQueueTaskMaster(CuratorFramework curator, ObjectMapper jsonMapper)
+  public LoadQueueTaskMaster getLoadQueueTaskMaster(
+      CuratorFramework curator, ObjectMapper jsonMapper, ScheduledExecutorFactory factory, DruidMasterConfig config
+  )
   {
-    return new LoadQueueTaskMaster(curator, jsonMapper, Execs.singleThreaded("Master-PeonExec--%d"));
+    return new LoadQueueTaskMaster(curator, jsonMapper, factory.create(1, "Master-PeonExec--%d"), config);
   }
 }

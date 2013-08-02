@@ -35,10 +35,6 @@ import com.metamx.druid.loading.S3DataSegmentPuller;
 import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.loading.SingleSegmentLoader;
-import com.metamx.druid.indexing.common.actions.TaskActionClient;
-import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
-import com.metamx.druid.indexing.common.config.TaskConfig;
-import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
@@ -154,7 +150,7 @@ public class TaskToolbox
         new SegmentLoaderConfig()
         {
           @Override
-          public File getSegmentLocations()
+          public String getLocations()
           {
             return new File(getTaskWorkDir(), "fetched_segments").toString();
           }

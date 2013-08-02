@@ -40,13 +40,11 @@ import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.ResultMergeQueryRunner;
 import com.metamx.druid.utils.JodaUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

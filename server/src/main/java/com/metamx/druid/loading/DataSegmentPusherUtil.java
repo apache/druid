@@ -19,10 +19,9 @@
 
 package com.metamx.druid.loading;
 
-import org.joda.time.format.ISODateTimeFormat;
-
 import com.google.common.base.Joiner;
 import com.metamx.druid.client.DataSegment;
+import org.joda.time.format.ISODateTimeFormat;
 
 /**
  */

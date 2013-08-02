@@ -19,22 +19,11 @@
 
 package com.metamx.druid.query;
 
-import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.AbstractExecutorService;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class MetricsEmittingExecutorService extends DelegatingExecutorService
 {

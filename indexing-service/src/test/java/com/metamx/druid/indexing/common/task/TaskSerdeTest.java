@@ -1,5 +1,6 @@
 package com.metamx.druid.indexing.common.task;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.Granularity;
@@ -18,7 +19,6 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
 import junit.framework.Assert;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Test;

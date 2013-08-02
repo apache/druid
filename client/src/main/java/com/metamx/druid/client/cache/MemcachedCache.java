@@ -32,7 +32,6 @@ import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.internal.BulkFuture;
-import net.spy.memcached.transcoders.SerializingTranscoder;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.annotation.Nullable;

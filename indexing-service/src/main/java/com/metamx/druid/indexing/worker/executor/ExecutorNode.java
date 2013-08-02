@@ -36,6 +36,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.BaseServerNode;
+import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.NoopServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
@@ -49,7 +50,6 @@ import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
 import com.metamx.druid.indexing.common.config.TaskConfig;
 import com.metamx.druid.indexing.common.index.ChatHandlerProvider;
 import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
-import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
 import com.metamx.druid.indexing.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.indexing.coordinator.ThreadPoolTaskRunner;
 import com.metamx.druid.indexing.worker.config.ChatHandlerProviderConfig;
@@ -58,14 +58,6 @@ import com.metamx.druid.initialization.CuratorDiscoveryConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServerInit;
-import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.loading.DataSegmentKiller;
-import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.loading.S3DataSegmentKiller;
-import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ServerInit;
-import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
@@ -353,11 +345,14 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
 
   public void initializeServiceDiscovery() throws Exception
   {
-    final CuratorDiscoveryConfig config = configFactory.build(CuratorDiscoveryConfig.class);
+    final CuratorConfig config = configFactory.build(CuratorConfig.class);
     if (serviceDiscovery == null) {
       final CuratorFramework serviceDiscoveryCuratorFramework = Initialization.makeCuratorFramework(config, lifecycle);
+      CuratorDiscoveryConfig discoveryConfig = getJsonConfigurator()
+          .configurate(getProps(), "druid.discovery.curator", CuratorDiscoveryConfig.class);
+
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-          serviceDiscoveryCuratorFramework, config, lifecycle
+          serviceDiscoveryCuratorFramework, discoveryConfig, lifecycle
       );
     }
     if (serviceAnnouncer == null) {

@@ -11,13 +11,13 @@ import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import twitter4j.ConnectionLifeCycleListener;
 import twitter4j.HashtagEntity;
+import twitter4j.StallWarning;
 import twitter4j.Status;
 import twitter4j.StatusDeletionNotice;
 import twitter4j.StatusListener;
 import twitter4j.TwitterStream;
 import twitter4j.TwitterStreamFactory;
 import twitter4j.User;
-import twitter4j.StallWarning;
 
 import java.io.IOException;
 import java.util.Arrays;

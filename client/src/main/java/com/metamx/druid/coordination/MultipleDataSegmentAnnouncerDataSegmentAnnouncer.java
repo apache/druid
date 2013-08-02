@@ -19,12 +19,9 @@
 
 package com.metamx.druid.coordination;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.curator.announcement.Announcer;
-import com.metamx.druid.initialization.ZkPathsConfig;
 
 import java.io.IOException;
 

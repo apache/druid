@@ -21,7 +21,6 @@ package com.metamx.druid.initialization;
 
 import org.apache.curator.utils.ZKPaths;
 import org.skife.config.Config;
-import org.skife.config.Default;
 
 public abstract class ZkPathsConfig
 {

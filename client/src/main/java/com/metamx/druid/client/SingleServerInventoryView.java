@@ -21,50 +21,32 @@ package com.metamx.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.druid.curator.inventory.InventoryManagerConfig;
+import com.google.inject.Inject;
+import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
 
-import java.util.concurrent.ExecutorService;
-
 /**
  */
+@ManageLifecycle
 public class SingleServerInventoryView extends ServerInventoryView<DataSegment>
 {
   private static final EmittingLogger log = new EmittingLogger(SingleServerInventoryView.class);
 
+  @Inject
   public SingleServerInventoryView(
-      final ServerInventoryViewConfig config,
       final ZkPathsConfig zkPaths,
       final CuratorFramework curator,
-      final ExecutorService exec,
       final ObjectMapper jsonMapper
   )
   {
     super(
-        config,
         log,
-        new InventoryManagerConfig()
-        {
-          @Override
-          public String getContainerPath()
-          {
-            return zkPaths.getAnnouncementsPath();
-          }
-
-          @Override
-          public String getInventoryPath()
-          {
-            return zkPaths.getServedSegmentsPath();
-          }
-        },
+        zkPaths,
         curator,
-        exec,
         jsonMapper,
-        new TypeReference<DataSegment>()
-        {
-        }
+        new TypeReference<DataSegment>(){}
     );
   }
 

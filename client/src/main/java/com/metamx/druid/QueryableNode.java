@@ -46,15 +46,13 @@ import com.metamx.druid.coordination.AbstractDataSegmentAnnouncer;
 import com.metamx.druid.coordination.BatchDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
-import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.coordination.MultipleDataSegmentAnnouncerDataSegmentAnnouncer;
 import com.metamx.druid.coordination.SingleDataSegmentAnnouncer;
+import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.guice.JsonConfigurator;
+import com.metamx.druid.http.log.NoopRequestLogger;
 import com.metamx.druid.http.log.RequestLogger;
-import com.metamx.druid.http.NoopRequestLogger;
-import com.metamx.druid.http.RequestLogger;
-import com.metamx.druid.initialization.CuratorConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ZkDataSegmentAnnouncerConfig;
@@ -82,6 +80,8 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -376,18 +376,14 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
 
       if ("legacy".equalsIgnoreCase(announcerType)) {
         serverInventoryView = new SingleServerInventoryView(
-            serverInventoryViewConfig,
             getZkPaths(),
             getCuratorFramework(),
-            exec,
             getJsonMapper()
         );
       } else if ("batch".equalsIgnoreCase(announcerType)) {
         serverInventoryView = new BatchServerInventoryView(
-            serverInventoryViewConfig,
             getZkPaths(),
             getCuratorFramework(),
-            exec,
             getJsonMapper()
         );
       } else {

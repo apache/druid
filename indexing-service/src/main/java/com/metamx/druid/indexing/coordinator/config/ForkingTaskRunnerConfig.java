@@ -1,14 +1,12 @@
 package com.metamx.druid.indexing.coordinator.config;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.metamx.druid.indexing.worker.executor.ExecutorMain;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
 import java.io.File;
 import java.util.List;
-import java.util.Set;
 
 public abstract class ForkingTaskRunnerConfig
 {

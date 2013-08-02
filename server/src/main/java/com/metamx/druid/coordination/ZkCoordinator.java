@@ -52,7 +52,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
 
   private final ObjectMapper jsonMapper;
   private final SegmentLoaderConfig config;
-  private final ZkCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
   private final DruidServerMetadata me;
   private final DataSegmentAnnouncer announcer;
@@ -110,9 +109,12 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
         curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
 
+/* TODO
         if (config.isLoadFromSegmentCacheEnabled()) {
           loadCache();
         }
+*/
+        loadCache();
 
         loadQueueCache.getListenable().addListener(
             new PathChildrenCacheListener()
@@ -234,7 +236,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     try {
       serverManager.loadSegment(segment);
 
-      File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
+      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
       if (!segmentInfoCacheFile.exists()) {
         try {
           jsonMapper.writeValue(segmentInfoCacheFile, segment);
@@ -269,7 +271,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       for (DataSegment segment : segments) {
         serverManager.loadSegment(segment);
 
-        File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
+        File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
         if (!segmentInfoCacheFile.exists()) {
           try {
             jsonMapper.writeValue(segmentInfoCacheFile, segment);
@@ -325,7 +327,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       for (DataSegment segment : segments) {
         serverManager.dropSegment(segment);
 
-        File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
+        File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
         if (!segmentInfoCacheFile.delete()) {
           log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
         }

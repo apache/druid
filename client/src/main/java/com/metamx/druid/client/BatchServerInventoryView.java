@@ -23,55 +23,38 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
-import com.metamx.druid.curator.inventory.InventoryManagerConfig;
+import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
 
 /**
  */
+@ManageLifecycle
 public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegment>>
 {
   private static final EmittingLogger log = new EmittingLogger(BatchServerInventoryView.class);
 
   final ConcurrentMap<String, Set<DataSegment>> zNodes = new MapMaker().makeMap();
 
+  @Inject
   public BatchServerInventoryView(
-      final ServerInventoryViewConfig config,
       final ZkPathsConfig zkPaths,
       final CuratorFramework curator,
-      final ExecutorService exec,
       final ObjectMapper jsonMapper
   )
   {
     super(
-        config,
         log,
-        new InventoryManagerConfig()
-        {
-          @Override
-          public String getContainerPath()
-          {
-            return zkPaths.getAnnouncementsPath();
-          }
-
-          @Override
-          public String getInventoryPath()
-          {
-            return zkPaths.getLiveSegmentsPath();
-          }
-        },
+        zkPaths,
         curator,
-        exec,
         jsonMapper,
-        new TypeReference<Set<DataSegment>>()
-        {
-        }
+        new TypeReference<Set<DataSegment>>(){}
     );
   }
 

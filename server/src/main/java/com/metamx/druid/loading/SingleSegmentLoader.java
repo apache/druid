@@ -34,8 +34,10 @@ import com.metamx.druid.index.Segment;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -60,13 +62,14 @@ public class SingleSegmentLoader implements SegmentLoader
 
     final ImmutableList.Builder<StorageLocation> locBuilder = ImmutableList.builder();
 
+    // TODO
     // This is a really, really stupid way of getting this information.  Splitting on commas and bars is error-prone
     // We should instead switch it up to be a JSON Array of JSON Object or something and cool stuff like that
     // But, that'll have to wait for some other day.
-    for (String dirSpec : config.getCacheDirectory().split(",")) {
+    for (String dirSpec : config.getLocations().split(",")) {
       String[] dirSplit = dirSpec.split("\\|");
       if (dirSplit.length == 1) {
-        locBuilder.add(new StorageLocation(new File(dirSplit[0]), config.getServerMaxSize()));
+        locBuilder.add(new StorageLocation(new File(dirSplit[0]), Integer.MAX_VALUE));
       }
       else if (dirSplit.length == 2) {
         final Long maxSize = Longs.tryParse(dirSplit[1]);
@@ -78,7 +81,7 @@ public class SingleSegmentLoader implements SegmentLoader
       else {
         throw new ISE(
             "Unknown segment storage location[%s]=>[%s], config[%s].",
-            dirSplit.length, dirSpec, config.getCacheDirectory()
+            dirSplit.length, dirSpec, config.getLocations()
         );
       }
     }
@@ -89,19 +92,21 @@ public class SingleSegmentLoader implements SegmentLoader
   }
 
   @Override
-  public boolean isSegmentLoaded(final DataSegment segment)
-  {
-    File localStorageDir = new File(config.getLocations(), DataSegmentPusherUtil.getStorageDir(segment));
-    if (localStorageDir.exists()) {
-      return true;
+    public boolean isSegmentLoaded(final DataSegment segment)
+    {
+      return findStorageLocationIfLoaded(segment) != null;
     }
 
-    final File legacyStorageDir = new File(
-        config.getLocations(),
-        DataSegmentPusherUtil.getLegacyStorageDir(segment)
-    );
-    return legacyStorageDir.exists();
-  }
+    public StorageLocation findStorageLocationIfLoaded(final DataSegment segment)
+    {
+      for (StorageLocation location : locations) {
+        File localStorageDir = new File(location.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
+        if (localStorageDir.exists()) {
+          return location;
+        }
+      }
+      return null;
+    }
 
   @Override
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException
@@ -114,12 +119,8 @@ public class SingleSegmentLoader implements SegmentLoader
 
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
-    File localStorageDir = new File(config.getLocations(), DataSegmentPusherUtil.getStorageDir(segment));
     StorageLocation loc = findStorageLocationIfLoaded(segment);
 
-    final String legacyDir = DataSegmentPusherUtil.getLegacyStorageDir(segment);
-    if (legacyDir != null) {
-      File legacyStorageDir = new File(config.getLocations(), legacyDir);
     final File retVal;
 
     if (loc == null) {
@@ -160,7 +161,6 @@ public class SingleSegmentLoader implements SegmentLoader
   {
     StorageLocation loc = findStorageLocationIfLoaded(segment);
 
-    return new File(config.getLocations(), outputKey);
     if (loc == null) {
       log.info("Asked to cleanup something[%s] that didn't exist.  Skipping.", segment);
       return;
