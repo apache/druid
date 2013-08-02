@@ -25,7 +25,9 @@ import java.util.List;
 
 public interface BalancerStrategy
 {
-  public ServerHolder findNewSegmentHome(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
+  public ServerHolder findNewSegmentHomeBalancer(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
+
+  public ServerHolder findNewSegmentHomeReplicator(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
 
   public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders);
 

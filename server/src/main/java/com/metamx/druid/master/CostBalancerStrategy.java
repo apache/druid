@@ -43,12 +43,22 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public ServerHolder findNewSegmentHome(
+  public ServerHolder findNewSegmentHomeReplicator(
       DataSegment proposalSegment, List<ServerHolder> serverHolders
   )
   {
-    return computeCosts(proposalSegment, serverHolders).rhs;
+    return chooseBestServer(proposalSegment, serverHolders, false).rhs;
   }
+
+
+  @Override
+  public ServerHolder findNewSegmentHomeBalancer(
+      DataSegment proposalSegment, List<ServerHolder> serverHolders
+  )
+  {
+    return chooseBestServer(proposalSegment, serverHolders, true).rhs;
+  }
+
 
 
   /**
@@ -60,9 +70,10 @@ public class CostBalancerStrategy implements BalancerStrategy
    * @return A ServerHolder with the new home for a segment.
    */
 
-  private Pair<Double, ServerHolder> computeCosts(
+  private Pair<Double, ServerHolder> chooseBestServer(
       final DataSegment proposalSegment,
-      final Iterable<ServerHolder> serverHolders
+      final Iterable<ServerHolder> serverHolders,
+      boolean includeCurrentServer
   )
   {
 
@@ -84,26 +95,29 @@ public class CostBalancerStrategy implements BalancerStrategy
     final long proposalSegmentSize = proposalSegment.getSize();
 
     for (ServerHolder server : serverHolders) {
-      /** Don't calculate cost if the server doesn't have enough space or is loading the segment */
-      if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
-        continue;
-      }
+      if (includeCurrentServer || !server.isServingSegment(proposalSegment))
+      {
+        /** Don't calculate cost if the server doesn't have enough space or is loading the segment */
+        if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
+          continue;
+        }
 
-      /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
-      double cost = 0f;
-      /**  the sum of the costs of other (exclusive of the proposalSegment) segments on the server */
-      for (DataSegment segment : server.getServer().getSegments().values()) {
-        if (!proposalSegment.equals(segment)) {
+        /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
+        double cost = 0f;
+        /**  the sum of the costs of other (exclusive of the proposalSegment) segments on the server */
+        for (DataSegment segment : server.getServer().getSegments().values()) {
+          if (!proposalSegment.equals(segment)) {
+            cost += computeJointSegmentCosts(proposalSegment, segment);
+          }
+        }
+        /**  plus the costs of segments that will be loaded */
+        for (DataSegment segment : server.getPeon().getSegmentsToLoad()) {
           cost += computeJointSegmentCosts(proposalSegment, segment);
         }
-      }
-      /**  plus the costs of segments that will be loaded */
-      for (DataSegment segment : server.getPeon().getSegmentsToLoad()) {
-        cost += computeJointSegmentCosts(proposalSegment, segment);
-      }
 
-      if (cost < bestServer.lhs && !server.isServingSegment(proposalSegment)) {
-        bestServer = Pair.of(cost, server);
+        if (cost < bestServer.lhs) {
+          bestServer = Pair.of(cost, server);
+        }
       }
     }
 
