@@ -92,6 +92,6 @@ public abstract class DruidMasterConfig
   public abstract int getReplicantLifetime();
 
   @Config("druid.master.replicant.throttleLimit")
-  @Default("10")
+  @Default("1")
   public abstract int getReplicantThrottleLimit();
 }
