@@ -15,21 +15,24 @@ import com.metamx.druid.Query;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.coordination.BatchDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
+import com.metamx.druid.coordination.DataSegmentAnnouncerProvider;
 import com.metamx.druid.coordination.DruidServerMetadata;
-import com.metamx.druid.coordination.MultipleDataSegmentAnnouncerDataSegmentAnnouncer;
 import com.metamx.druid.coordination.ServerManager;
+import com.metamx.druid.coordination.SingleDataSegmentAnnouncer;
 import com.metamx.druid.coordination.ZkCoordinator;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.guice.annotations.Global;
 import com.metamx.druid.guice.annotations.Processing;
 import com.metamx.druid.guice.annotations.Self;
+import com.metamx.druid.initialization.BatchDataSegmentAnnouncerConfig;
 import com.metamx.druid.initialization.DruidNode;
-import com.metamx.druid.loading.BaseSegmentLoader;
 import com.metamx.druid.loading.DataSegmentPuller;
 import com.metamx.druid.loading.HdfsDataSegmentPuller;
 import com.metamx.druid.loading.LocalDataSegmentPuller;
 import com.metamx.druid.loading.MMappedQueryableIndexFactory;
+import com.metamx.druid.loading.OmniSegmentLoader;
 import com.metamx.druid.loading.QueryableIndexFactory;
 import com.metamx.druid.loading.S3CredentialsConfig;
 import com.metamx.druid.loading.S3DataSegmentPuller;
@@ -84,7 +87,7 @@ public class HistoricalModule implements Module
 
     binder.bind(ServerManager.class).in(LazySingleton.class);
 
-    binder.bind(SegmentLoader.class).to(BaseSegmentLoader.class).in(LazySingleton.class);
+    binder.bind(SegmentLoader.class).to(OmniSegmentLoader.class).in(LazySingleton.class);
     binder.bind(QueryableIndexFactory.class).to(MMappedQueryableIndexFactory.class).in(LazySingleton.class);
 
     final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
@@ -120,36 +123,11 @@ public class HistoricalModule implements Module
 
     binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
 
-    binder.bind(DataSegmentAnnouncer.class)
-          .to(MultipleDataSegmentAnnouncerDataSegmentAnnouncer.class)
-          .in(ManageLifecycleLast.class);
-  }
-
-  private void bindDeepStorageS3(Binder binder)
-  {
-    final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
-        binder, String.class, DataSegmentPuller.class
-    );
-    segmentPullerBinder.addBinding("s3_zip").to(S3DataSegmentPuller.class).in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.s3", S3CredentialsConfig.class);
-  }
-
-  private void bindDeepStorageHdfs(Binder binder)
-  {
-    final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
-        binder, String.class, DataSegmentPuller.class
-    );
-    segmentPullerBinder.addBinding("hdfs").to(HdfsDataSegmentPuller.class).in(LazySingleton.class);
-    binder.bind(Configuration.class).toInstance(new Configuration());
-  }
-
-  private void bindDeepStorageCassandra(Binder binder)
-  {
-    final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
-        binder, String.class, DataSegmentPuller.class
-    );
-    segmentPullerBinder.addBinding("c*").to(CassandraDataSegmentPuller.class).in(LazySingleton.class);
-    ConfigProvider.bind(binder, CassandraDataSegmentConfig.class);
+    JsonConfigProvider.bind(binder, "druid.announcer", BatchDataSegmentAnnouncerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.announcer", DataSegmentAnnouncerProvider.class);
+    binder.bind(DataSegmentAnnouncer.class).toProvider(DataSegmentAnnouncerProvider.class);
+    binder.bind(BatchDataSegmentAnnouncer.class).in(ManageLifecycleLast.class);
+    binder.bind(SingleDataSegmentAnnouncer.class).in(ManageLifecycleLast.class);
   }
 
   @Provides @LazySingleton
@@ -223,6 +201,33 @@ public class HistoricalModule implements Module
     }
 
     return new IntermediateProcessingBufferPool(config.intermediateComputeSizeBytes());
+  }
+
+  private static void bindDeepStorageS3(Binder binder)
+  {
+    final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
+        binder, String.class, DataSegmentPuller.class
+    );
+    segmentPullerBinder.addBinding("s3_zip").to(S3DataSegmentPuller.class).in(LazySingleton.class);
+    JsonConfigProvider.bind(binder, "druid.s3", S3CredentialsConfig.class);
+  }
+
+  private static void bindDeepStorageHdfs(Binder binder)
+  {
+    final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
+        binder, String.class, DataSegmentPuller.class
+    );
+    segmentPullerBinder.addBinding("hdfs").to(HdfsDataSegmentPuller.class).in(LazySingleton.class);
+    binder.bind(Configuration.class).toInstance(new Configuration());
+  }
+
+  private static void bindDeepStorageCassandra(Binder binder)
+  {
+    final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
+        binder, String.class, DataSegmentPuller.class
+    );
+    segmentPullerBinder.addBinding("c*").to(CassandraDataSegmentPuller.class).in(LazySingleton.class);
+    ConfigProvider.bind(binder, CassandraDataSegmentConfig.class);
   }
 
   private static class IntermediateProcessingBufferPool extends StupidPool<ByteBuffer>

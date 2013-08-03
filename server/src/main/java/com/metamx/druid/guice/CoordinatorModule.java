@@ -9,6 +9,7 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.ServerInventoryView;
 import com.metamx.druid.client.ServerInventoryViewConfig;
+import com.metamx.druid.client.ServerInventoryViewProvider;
 import com.metamx.druid.client.indexing.IndexingService;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.client.indexing.IndexingServiceSelector;
@@ -48,9 +49,11 @@ public class CoordinatorModule implements Module
     JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
 
     binder.bind(InventoryView.class).to(ServerInventoryView.class);
-    binder.bind(ServerInventoryView.class);
     binder.bind(RedirectServlet.class).in(LazySingleton.class);
     binder.bind(RedirectFilter.class).in(LazySingleton.class);
+
+    JsonConfigProvider.bind(binder, "druid.announcer", ServerInventoryViewProvider.class);
+    binder.bind(ServerInventoryView.class).toProvider(ServerInventoryViewProvider.class).in(ManageLifecycle.class);
 
     binder.bind(DatabaseSegmentManager.class)
           .toProvider(DatabaseSegmentManagerProvider.class)

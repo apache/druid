@@ -24,11 +24,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.announcement.Announcer;
-import com.metamx.druid.initialization.ZkDataSegmentAnnouncerConfig;
+import com.metamx.druid.initialization.BatchDataSegmentAnnouncerConfig;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 
@@ -43,7 +45,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
 {
   private static final Logger log = new Logger(BatchDataSegmentAnnouncer.class);
 
-  private final ZkDataSegmentAnnouncerConfig config;
+  private final BatchDataSegmentAnnouncerConfig config;
   private final Announcer announcer;
   private final ObjectMapper jsonMapper;
   private final String liveSegmentLocation;
@@ -51,27 +53,29 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
   private final Set<SegmentZNode> availableZNodes = Sets.newHashSet();
   private final Map<DataSegment, SegmentZNode> segmentLookup = Maps.newHashMap();
 
+  @Inject
   public BatchDataSegmentAnnouncer(
       DruidServerMetadata server,
-      ZkDataSegmentAnnouncerConfig config,
+      BatchDataSegmentAnnouncerConfig config,
+      ZkPathsConfig zkPaths,
       Announcer announcer,
       ObjectMapper jsonMapper
   )
   {
-    super(server, config, announcer, jsonMapper);
-
+    super(server, zkPaths, announcer, jsonMapper);
     this.config = config;
     this.announcer = announcer;
     this.jsonMapper = jsonMapper;
-    this.liveSegmentLocation = ZKPaths.makePath(config.getLiveSegmentsPath(), server.getName());
+
+    this.liveSegmentLocation = ZKPaths.makePath(zkPaths.getLiveSegmentsPath(), server.getName());
   }
 
   @Override
   public void announceSegment(DataSegment segment) throws IOException
   {
     int newBytesLen = jsonMapper.writeValueAsBytes(segment).length;
-    if (newBytesLen > config.getMaxNumBytes()) {
-      throw new ISE("byte size %,d exceeds %,d", newBytesLen, config.getMaxNumBytes());
+    if (newBytesLen > config.getMaxBytesPerNode()) {
+      throw new ISE("byte size %,d exceeds %,d", newBytesLen, config.getMaxBytesPerNode());
     }
 
     // create new batch
@@ -88,7 +92,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
       boolean done = false;
       while (iter.hasNext() && !done) {
         SegmentZNode availableZNode = iter.next();
-        if (availableZNode.getBytes().length + newBytesLen < config.getMaxNumBytes()) {
+        if (availableZNode.getBytes().length + newBytesLen < config.getMaxBytesPerNode()) {
           availableZNode.addSegment(segment);
 
           log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), availableZNode.getPath());
@@ -132,11 +136,11 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
     for (DataSegment segment : segments) {
       int newBytesLen = jsonMapper.writeValueAsBytes(segment).length;
 
-      if (newBytesLen > config.getMaxNumBytes()) {
-        throw new ISE("byte size %,d exceeds %,d", newBytesLen, config.getMaxNumBytes());
+      if (newBytesLen > config.getMaxBytesPerNode()) {
+        throw new ISE("byte size %,d exceeds %,d", newBytesLen, config.getMaxBytesPerNode());
       }
 
-      if (count >= config.getSegmentsPerNode() || byteSize + newBytesLen > config.getMaxNumBytes()) {
+      if (count >= config.getSegmentsPerNode() || byteSize + newBytesLen > config.getMaxBytesPerNode()) {
         segmentZNode.addSegments(batch);
         announcer.announce(segmentZNode.getPath(), segmentZNode.getBytes());
 

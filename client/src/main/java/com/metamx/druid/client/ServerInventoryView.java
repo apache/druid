@@ -31,12 +31,10 @@ import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.curator.inventory.CuratorInventoryManager;
 import com.metamx.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import com.metamx.druid.curator.inventory.InventoryManagerConfig;
-import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -54,11 +52,10 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
   private final ConcurrentMap<ServerCallback, Executor> serverCallbacks = new MapMaker().makeMap();
   private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new MapMaker().makeMap();
 
-  private final Map<String, Integer> removedSegments = new MapMaker().makeMap();
-
   public ServerInventoryView(
       final EmittingLogger log,
-      final ZkPathsConfig zkPaths,
+      final String announcementsPath,
+      final String inventoryPath,
       final CuratorFramework curator,
       final ObjectMapper jsonMapper,
       final TypeReference<InventoryType> typeReference
@@ -72,13 +69,13 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           @Override
           public String getContainerPath()
           {
-            return zkPaths.getAnnouncementsPath();
+            return announcementsPath;
           }
 
           @Override
           public String getInventoryPath()
           {
-            return zkPaths.getServedSegmentsPath();
+            return inventoryPath;
           }
         },
         Execs.singleThreaded("ServerInventoryView-%s"),
@@ -172,26 +169,6 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           }
         }
     );
-  }
-
-  public int lookupSegmentLifetime(DataSegment segment)
-  {
-    Integer lifetime = removedSegments.get(segment.getIdentifier());
-    return (lifetime == null) ? 0 : lifetime;
-  }
-
-  public void decrementRemovedSegmentsLifetime()
-  {
-    for (Iterator<Map.Entry<String, Integer>> mapIter = removedSegments.entrySet().iterator(); mapIter.hasNext(); ) {
-      Map.Entry<String, Integer> segment = mapIter.next();
-      int lifetime = segment.getValue() - 1;
-
-      if (lifetime < 0) {
-        mapIter.remove();
-      } else {
-        segment.setValue(lifetime);
-      }
-    }
   }
 
   @LifecycleStart
@@ -292,7 +269,6 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
       final DataSegment inventory
   )
   {
-/* TODO
     log.info("Server[%s] added segment[%s]", container.getName(), inventory.getIdentifier());
 
     if (container.getSegment(inventory.getIdentifier()) != null) {
@@ -317,12 +293,10 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           }
         }
     );
-*/
   }
 
   protected void removeSingleInventory(final DruidServer container, String inventoryKey)
   {
-/* TODO
     log.info("Server[%s] removed segment[%s]", container.getName(), inventoryKey);
     final DataSegment segment = container.getSegment(inventoryKey);
 
@@ -348,9 +322,6 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           }
         }
     );
-
-    removedSegments.put(inventoryKey, config.getRemovedSegmentLifetime());
-*/
   }
 
   protected abstract DruidServer addInnerInventory(

@@ -30,7 +30,7 @@ public class SegmentLoaderConfig
 {
   @JsonProperty
   @NotNull
-  private String locations;
+  private String locations = null;
 
   @JsonProperty("deleteOnRemove")
   private boolean deleteOnRemove = true;

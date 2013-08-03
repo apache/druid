@@ -1,22 +1,3 @@
-/*
- * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- */
-
 package com.metamx.druid.loading;
 
 import com.google.common.base.Preconditions;
@@ -26,6 +7,7 @@ import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.QueryableIndex;
@@ -37,30 +19,31 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
- * TODO: Kill this along with the Guicification of the IndexingService stuff
  */
-@Deprecated
-public class SingleSegmentLoader implements SegmentLoader
+public class OmniSegmentLoader implements SegmentLoader
 {
-  private static final Logger log = new Logger(SingleSegmentLoader.class);
+  private static final Logger log = new Logger(OmniSegmentLoader.class);
 
-  private final DataSegmentPuller dataSegmentPuller;
+  private final Map<String, DataSegmentPuller> pullers;
   private final QueryableIndexFactory factory;
+  private final SegmentLoaderConfig config;
 
   private final List<StorageLocation> locations;
 
   @Inject
-  public SingleSegmentLoader(
-      DataSegmentPuller dataSegmentPuller,
+  public OmniSegmentLoader(
+      Map<String, DataSegmentPuller> pullers,
       QueryableIndexFactory factory,
       SegmentLoaderConfig config
   )
   {
-    this.dataSegmentPuller = dataSegmentPuller;
+    this.pullers = pullers;
     this.factory = factory;
+    this.config = config;
 
     final ImmutableList.Builder<StorageLocation> locBuilder = ImmutableList.builder();
 
@@ -91,6 +74,7 @@ public class SingleSegmentLoader implements SegmentLoader
 
     Preconditions.checkArgument(locations.size() > 0, "Must have at least one segment cache directory.");
     log.info("Using storage locations[%s]", locations);
+
   }
 
   @Override
@@ -113,13 +97,13 @@ public class SingleSegmentLoader implements SegmentLoader
   @Override
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException
   {
-    File segmentFiles = getSegmentFiles(segment);
+    File segmentFiles = loadSegmentFiles(segment);
     final QueryableIndex index = factory.factorize(segmentFiles);
 
     return new QueryableIndexSegment(segment.getIdentifier(), index);
   }
 
-  public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+  public File loadSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
     StorageLocation loc = findStorageLocationIfLoaded(segment);
 
@@ -144,7 +128,7 @@ public class SingleSegmentLoader implements SegmentLoader
         log.debug("Unable to make parent file[%s]", storageDir);
       }
 
-      dataSegmentPuller.getSegmentFiles(segment, storageDir);
+      getPuller(segment.getLoadSpec()).getSegmentFiles(segment, storageDir);
       loc.addSegment(segment);
 
       retVal = storageDir;
@@ -161,6 +145,10 @@ public class SingleSegmentLoader implements SegmentLoader
   @Override
   public void cleanup(DataSegment segment) throws SegmentLoadingException
   {
+    if (!config.isDeleteOnRemove()) {
+      return;
+    }
+
     StorageLocation loc = findStorageLocationIfLoaded(segment);
 
     if (loc == null) {
@@ -178,6 +166,19 @@ public class SingleSegmentLoader implements SegmentLoader
       throw new SegmentLoadingException(e, e.getMessage());
     }
   }
+
+  private DataSegmentPuller getPuller(Map<String, Object> loadSpec) throws SegmentLoadingException
+  {
+    String type = MapUtils.getString(loadSpec, "type");
+    DataSegmentPuller loader = pullers.get(type);
+
+    if (loader == null) {
+      throw new SegmentLoadingException("Unknown loader type[%s].  Known types are %s", type, pullers.keySet());
+    }
+
+    return loader;
+  }
+
 
   private static class StorageLocation
   {

@@ -19,8 +19,6 @@
 
 package com.metamx.druid.coordination;
 
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.client.DataSegment;
 
 import java.io.IOException;
@@ -30,29 +28,13 @@ import java.io.IOException;
  */
 public class MultipleDataSegmentAnnouncerDataSegmentAnnouncer implements DataSegmentAnnouncer
 {
-  private final Iterable<AbstractDataSegmentAnnouncer> dataSegmentAnnouncers;
+  private final Iterable<DataSegmentAnnouncer> dataSegmentAnnouncers;
 
   public MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
-      Iterable<AbstractDataSegmentAnnouncer> dataSegmentAnnouncers
+      Iterable<DataSegmentAnnouncer> dataSegmentAnnouncers
   )
   {
     this.dataSegmentAnnouncers = dataSegmentAnnouncers;
-  }
-
-  @LifecycleStart
-  public void start()
-  {
-    for (AbstractDataSegmentAnnouncer dataSegmentAnnouncer : dataSegmentAnnouncers) {
-      dataSegmentAnnouncer.start();
-    }
-  }
-
-  @LifecycleStop
-  public void stop()
-  {
-    for (AbstractDataSegmentAnnouncer dataSegmentAnnouncer : dataSegmentAnnouncers) {
-      dataSegmentAnnouncer.stop();
-    }
   }
 
   @Override

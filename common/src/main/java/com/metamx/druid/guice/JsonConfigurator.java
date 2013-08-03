@@ -1,11 +1,11 @@
 package com.metamx.druid.guice;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotatedField;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -34,8 +34,6 @@ import java.util.Set;
 public class JsonConfigurator
 {
   private static final Logger log = new Logger(JsonConfigurator.class);
-
-  private static final Joiner JOINER = Joiner.on(".");
 
   private final ObjectMapper jsonMapper;
   private final Validator validator;
@@ -86,7 +84,7 @@ public class JsonConfigurator
       List<String> messages = Lists.newArrayList();
 
       for (ConstraintViolation<T> violation : violations) {
-        List<String> pathParts = Lists.newArrayList();
+        String path = "";
         try {
           Class<?> beanClazz = violation.getRootBeanClass();
           final Iterator<Path.Node> iter = violation.getPropertyPath().iterator();
@@ -95,8 +93,21 @@ public class JsonConfigurator
             if (next.getKind() == ElementKind.PROPERTY) {
               final String fieldName = next.getName();
               final Field theField = beanClazz.getDeclaredField(fieldName);
+
+              if (theField.getAnnotation(JacksonInject.class) != null) {
+                path = String.format(" -- Injected field[%s] not bound!?", fieldName);
+                break;
+              }
+
               JsonProperty annotation = theField.getAnnotation(JsonProperty.class);
-              pathParts.add(annotation == null || Strings.isNullOrEmpty(annotation.value()) ? fieldName : annotation.value());
+              final boolean noAnnotationValue = annotation == null || Strings.isNullOrEmpty(annotation.value());
+              final String pathPart = noAnnotationValue ? fieldName : annotation.value();
+              if (path.isEmpty()) {
+                path += pathPart;
+              }
+              else {
+                path += "." + pathPart;
+              }
             }
           }
         }
@@ -104,7 +115,7 @@ public class JsonConfigurator
           throw Throwables.propagate(e);
         }
 
-        messages.add(String.format("%s - %s", JOINER.join(pathParts), violation.getMessage()));
+        messages.add(String.format("%s - %s", path, violation.getMessage()));
       }
 
       throw new ProvisionException(

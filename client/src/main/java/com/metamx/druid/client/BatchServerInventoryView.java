@@ -51,7 +51,8 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
   {
     super(
         log,
-        zkPaths,
+        zkPaths.getAnnouncementsPath(),
+        zkPaths.getLiveSegmentsPath(),
         curator,
         jsonMapper,
         new TypeReference<Set<DataSegment>>(){}

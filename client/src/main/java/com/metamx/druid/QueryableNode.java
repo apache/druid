@@ -42,7 +42,6 @@ import com.metamx.druid.client.ServerInventoryViewConfig;
 import com.metamx.druid.client.ServerView;
 import com.metamx.druid.client.SingleServerInventoryView;
 import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.coordination.AbstractDataSegmentAnnouncer;
 import com.metamx.druid.coordination.BatchDataSegmentAnnouncer;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.coordination.DruidServerMetadata;
@@ -53,9 +52,9 @@ import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.guice.JsonConfigurator;
 import com.metamx.druid.http.log.NoopRequestLogger;
 import com.metamx.druid.http.log.RequestLogger;
+import com.metamx.druid.initialization.BatchDataSegmentAnnouncerConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
-import com.metamx.druid.initialization.ZkDataSegmentAnnouncerConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
@@ -456,23 +455,25 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       final Announcer announcer = new Announcer(getCuratorFramework(), Execs.singleThreaded("Announcer-%s"));
       lifecycle.addManagedInstance(announcer);
 
-      final ZkDataSegmentAnnouncerConfig config = getConfigFactory().build(ZkDataSegmentAnnouncerConfig.class);
-      final String announcerType = config.getAnnouncerType();
+      final BatchDataSegmentAnnouncerConfig config = getConfigFactory().build(BatchDataSegmentAnnouncerConfig.class);
+      final String announcerType = "legacy";
 
       final DataSegmentAnnouncer dataSegmentAnnouncer;
       if ("batch".equalsIgnoreCase(announcerType)) {
         dataSegmentAnnouncer = new BatchDataSegmentAnnouncer(
             getDruidServerMetadata(),
             config,
+            getZkPaths(),
             announcer,
             getJsonMapper()
         );
       } else if ("legacy".equalsIgnoreCase(announcerType)) {
         dataSegmentAnnouncer = new MultipleDataSegmentAnnouncerDataSegmentAnnouncer(
-            Arrays.<AbstractDataSegmentAnnouncer>asList(
+            Arrays.<DataSegmentAnnouncer>asList(
                 new BatchDataSegmentAnnouncer(
                     getDruidServerMetadata(),
                     config,
+                    getZkPaths(),
                     announcer,
                     getJsonMapper()
                 ),

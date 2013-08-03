@@ -28,7 +28,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
 import com.metamx.druid.curator.announcement.Announcer;
-import com.metamx.druid.initialization.ZkDataSegmentAnnouncerConfig;
+import com.metamx.druid.initialization.BatchDataSegmentAnnouncerConfig;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import junit.framework.Assert;
 import org.apache.curator.framework.CuratorFramework;
@@ -92,30 +93,20 @@ public class BatchDataSegmentAnnouncerTest
             "type",
             "tier"
         ),
-        new ZkDataSegmentAnnouncerConfig()
+        new BatchDataSegmentAnnouncerConfig()
         {
-          @Override
-          public String getZkBasePath()
-          {
-            return testBasePath;
-          }
-
           @Override
           public int getSegmentsPerNode()
           {
             return 50;
           }
-
+        },
+        new ZkPathsConfig()
+        {
           @Override
-          public long getMaxNumBytes()
+          public String getZkBasePath()
           {
-            return 100000;
-          }
-
-          @Override
-          public String getAnnouncerType()
-          {
-            return "batch";
+            return testBasePath;
           }
         },
         announcer,

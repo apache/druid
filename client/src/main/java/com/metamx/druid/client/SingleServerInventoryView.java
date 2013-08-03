@@ -43,7 +43,8 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment>
   {
     super(
         log,
-        zkPaths,
+        zkPaths.getAnnouncementsPath(),
+        zkPaths.getServedSegmentsPath(),
         curator,
         jsonMapper,
         new TypeReference<DataSegment>(){}

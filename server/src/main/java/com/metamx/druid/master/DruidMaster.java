@@ -214,16 +214,6 @@ public class DruidMaster
     return loadStatus;
   }
 
-  public int lookupSegmentLifetime(DataSegment segment)
-  {
-    return serverInventoryView.lookupSegmentLifetime(segment);
-  }
-
-  public void decrementRemovedSegmentsLifetime()
-  {
-    serverInventoryView.decrementRemovedSegmentsLifetime();
-  }
-
   public void removeSegment(DataSegment segment)
   {
     log.info("Removing Segment[%s]", segment);
@@ -763,7 +753,7 @@ public class DruidMaster
                     peon.stop();
                   }
 
-                  decrementRemovedSegmentsLifetime();
+                  // TODO: decrementRemovedSegmentsLifetime();
 
                   return params.buildFromExisting()
                                .withDruidCluster(cluster)
