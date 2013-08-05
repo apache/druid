@@ -109,17 +109,6 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner.run(task);
   }
 
-  @Test(expected = ISE.class)
-  public void testExceptionThrownWithExistingTask() throws Exception
-  {
-    doSetup();
-
-    remoteTaskRunner.run(makeTask(TaskStatus.running("task")));
-    remoteTaskRunner.run(
-        makeTask(TaskStatus.running("task"))
-    );
-  }
-
   @Test
   public void testRunTooMuchZKData() throws Exception
   {
@@ -414,6 +403,12 @@ public class RemoteTaskRunnerTest
     public long getMaxNumBytes()
     {
       return 1000;
+    }
+
+    @Override
+    public String getWorkerVersion()
+    {
+      return "";
     }
   }
 }

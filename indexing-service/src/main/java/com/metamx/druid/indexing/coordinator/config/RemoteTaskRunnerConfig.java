@@ -23,6 +23,7 @@ import com.metamx.druid.indexing.common.config.IndexerZkConfig;
 import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
+import org.skife.config.DefaultNull;
 
 /**
  */
@@ -35,4 +36,8 @@ public abstract class RemoteTaskRunnerConfig extends IndexerZkConfig
   @Config("druid.curator.compression.enable")
   @Default("false")
   public abstract boolean enableCompression();
+
+  @Config("druid.indexer.worker.version")
+  @DefaultNull
+  public abstract String getWorkerVersion();
 }

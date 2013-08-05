@@ -265,9 +265,6 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
               task.getId(),
               new RemoteTaskRunnerWorkItem(task, SettableFuture.<TaskStatus>create())
           );
-        } else {
-          log.info("Bootstrap didn't find %s running. Running it again", task.getId());
-          run(task);
         }
       }
     }
@@ -284,8 +281,15 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
-    if (runningTasks.containsKey(task.getId()) || pendingTasks.containsKey(task.getId())) {
-      throw new ISE("Assigned a task[%s] that is already running or pending, WTF is happening?!", task.getId());
+    RemoteTaskRunnerWorkItem runningTask = runningTasks.get(task.getId());
+    if (runningTask != null) {
+      log.info("Assigned a task[%s] that is already running, not doing anything", task.getId());
+      return runningTask.getResult();
+    }
+    RemoteTaskRunnerWorkItem pendingTask = pendingTasks.get(task.getId());
+    if (pendingTask != null) {
+      log.info("Assigned a task[%s] that is already pending, not doing anything", task.getId());
+      return pendingTask.getResult();
     }
     RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
         task,
@@ -686,9 +690,12 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
         }
     );
     sortedWorkers.addAll(zkWorkers.values());
+    final String configMinWorkerVer = workerSetupData.get().getMinVersion();
+    final String minWorkerVer = configMinWorkerVer == null ? config.getWorkerVersion() : configMinWorkerVer;
+
     for (ZkWorker zkWorker : sortedWorkers) {
       if (zkWorker.canRunTask(task) &&
-          zkWorker.getWorker().getVersion().compareTo(workerSetupData.get().getMinVersion()) >= 0) {
+          zkWorker.getWorker().getVersion().compareTo(minWorkerVer) >= 0) {
         return zkWorker;
       }
     }
