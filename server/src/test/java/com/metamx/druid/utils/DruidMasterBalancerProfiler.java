@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 public class DruidMasterBalancerProfiler
 {
@@ -61,6 +60,7 @@ public class DruidMasterBalancerProfiler
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );
+
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(master);
 
@@ -86,7 +86,7 @@ public class DruidMasterBalancerProfiler
       );
     }
 
-    for (int i=0;i<numServers;i++)
+    for (int i=0;i<50;i++)
     {
       DruidServer server =EasyMock.createMock(DruidServer.class);
       EasyMock.expect(server.getMetadata()).andReturn(null).anyTimes();
@@ -132,9 +132,8 @@ public class DruidMasterBalancerProfiler
                                 .build();
 
     DruidMasterBalancerTester tester = new DruidMasterBalancerTester(master);
-
     watch.start();
-    for (int i=0;i<numServers;i++)
+    while (!tester.isBalanced(20,50))
     {
       params = tester.run(params);
     }
@@ -195,8 +194,8 @@ public class DruidMasterBalancerProfiler
                               .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                               .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                               .build();
-    params = new DruidMasterBalancerTester(master).run(params);
-    System.out.println(stopwatch.elapsed(TimeUnit.MILLISECONDS));
+    DruidMasterBalancerTester tester = new DruidMasterBalancerTester(master);
+
  }
 
 }

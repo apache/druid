@@ -48,7 +48,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   )
   {
     ServerHolder holder= chooseBestServer(proposalSegment, serverHolders, false).rhs;
-    if (!holder.isServingSegment(proposalSegment))
+    if (holder!=null && !holder.isServingSegment(proposalSegment))
     {
       return holder;
     }
