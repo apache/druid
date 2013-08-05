@@ -33,9 +33,10 @@ import java.util.List;
 public interface TaskRunner
 {
   /**
-   * Provide a new task runner with a list of tasks that should already be running. Will be called once shortly
+   * Provide a new task runner with a list of tasks that may already be running. Will be called once shortly
    * after instantiation and before any calls to {@link #run}. Bootstrapping should not be construed as a command
-   * to run the tasks; they will be passed to {@link #run} one-by-one when this is desired.
+   * to run the tasks; they will be passed to {@link #run} one-by-one when this is desired. Some bootstrapped tasks
+   * may not actually be running (for example, if they are currently held back due to not having a lock).
    *
    * @param tasks the tasks
    */
