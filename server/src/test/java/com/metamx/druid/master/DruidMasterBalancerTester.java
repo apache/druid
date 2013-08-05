@@ -57,7 +57,7 @@ public class DruidMasterBalancerTester extends DruidMasterBalancer
         {
           serverMap.put(toServerName,0);
         }
-        serverMap.put(fromServerName,serverMap.get(fromServerName)-1);
+//        serverMap.put(fromServerName,serverMap.get(fromServerName)-1);
         serverMap.put(toServerName, serverMap.get(toServerName)+1);
       }
       catch (Exception e) {
