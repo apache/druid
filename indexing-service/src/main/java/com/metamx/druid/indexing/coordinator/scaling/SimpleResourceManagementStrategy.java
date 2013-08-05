@@ -72,7 +72,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   public boolean doProvision(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
     if (zkWorkers.size() >= workerSetupdDataRef.get().getMaxNumWorkers()) {
-      log.info(
+      log.debug(
           "Cannot scale anymore. Num workers = %d, Max num workers = %d",
           zkWorkers.size(),
           workerSetupdDataRef.get().getMaxNumWorkers()

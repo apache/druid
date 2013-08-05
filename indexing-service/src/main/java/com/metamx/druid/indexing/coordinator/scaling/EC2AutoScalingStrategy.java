@@ -218,7 +218,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
         }
     );
 
-    log.info("Performing lookup: %s --> %s", ips, retVal);
+    log.debug("Performing lookup: %s --> %s", ips, retVal);
 
     return retVal;
   }
@@ -250,7 +250,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
         }
     );
 
-    log.info("Performing lookup: %s --> %s", nodeIds, retVal);
+    log.debug("Performing lookup: %s --> %s", nodeIds, retVal);
 
     return retVal;
   }

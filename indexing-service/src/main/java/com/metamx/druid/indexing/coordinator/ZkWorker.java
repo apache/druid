@@ -85,7 +85,7 @@ public class ZkWorker implements Closeable
     return worker;
   }
 
-  @JsonProperty
+  @JsonProperty("runningTasks")
   public Map<String, TaskStatus> getRunningTasks()
   {
     Map<String, TaskStatus> retVal = Maps.newHashMap();
@@ -99,8 +99,8 @@ public class ZkWorker implements Closeable
     return retVal;
   }
 
-  @JsonProperty("currCapacity")
-  public int getCurrCapacity()
+  @JsonProperty("currCapacityUsed")
+  public int getCurrCapacityUsed()
   {
     int currCapacity = 0;
     for (TaskStatus taskStatus : getRunningTasks().values()) {
@@ -132,12 +132,12 @@ public class ZkWorker implements Closeable
 
   public boolean isAtCapacity()
   {
-    return getCurrCapacity() >= worker.getCapacity();
+    return getCurrCapacityUsed() >= worker.getCapacity();
   }
 
   public boolean canRunTask(Task task)
   {
-    return (worker.getCapacity() - getCurrCapacity() >= task.getTaskResource().getRequiredCapacity()
+    return (worker.getCapacity() - getCurrCapacityUsed() >= task.getTaskResource().getRequiredCapacity()
             && !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup()));
   }
 
