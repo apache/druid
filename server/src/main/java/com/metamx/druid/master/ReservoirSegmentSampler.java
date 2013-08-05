@@ -26,10 +26,10 @@ import java.util.Random;
 
 public class ReservoirSegmentSampler
 {
-  private final Random rand = new Random();
 
   public BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
   {
+    final Random rand = new Random();
     ServerHolder fromServerHolder = null;
     DataSegment proposalSegment = null;
     int numSoFar = 0;
