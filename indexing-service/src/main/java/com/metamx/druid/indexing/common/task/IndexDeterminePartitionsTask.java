@@ -88,7 +88,6 @@ public class IndexDeterminePartitionsTask extends AbstractTask
     super(
         id != null ? id : makeTaskId(groupId, interval.getStart(), interval.getEnd()),
         groupId,
-        makeTaskId(groupId, interval.getStart(), interval.getEnd()),
         schema.getDataSource(),
         Preconditions.checkNotNull(interval, "interval")
     );

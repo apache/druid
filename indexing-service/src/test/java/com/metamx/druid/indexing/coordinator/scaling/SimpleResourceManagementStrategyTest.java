@@ -19,17 +19,20 @@
 
 package com.metamx.druid.indexing.coordinator.scaling;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.indexing.TestTask;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
-import com.metamx.druid.indexing.coordinator.TaskRunnerWorkItem;
+import com.metamx.druid.indexing.coordinator.RemoteTaskRunnerWorkItem;
 import com.metamx.druid.indexing.coordinator.ZkWorker;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.indexing.worker.Worker;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
@@ -42,7 +45,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -127,8 +132,8 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.replay(autoScalingStrategy);
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
-        Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -155,8 +160,8 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.replay(autoScalingStrategy);
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
-        Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -171,8 +176,8 @@ public class SimpleResourceManagementStrategyTest
     );
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
-        Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -212,8 +217,8 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.replay(autoScalingStrategy);
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
-        Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -230,8 +235,8 @@ public class SimpleResourceManagementStrategyTest
     Thread.sleep(2000);
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
-        Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -264,8 +269,8 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.replay(autoScalingStrategy);
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
-        Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -294,8 +299,8 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.replay(autoScalingStrategy);
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
-        Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -309,8 +314,8 @@ public class SimpleResourceManagementStrategyTest
     );
 
     terminatedSomething = simpleResourceManagementStrategy.doTerminate(
-        Arrays.<TaskRunnerWorkItem>asList(
-            new TaskRunnerWorkItem(testTask, null, null, null).withQueueInsertionTime(new DateTime())
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -334,18 +339,18 @@ public class SimpleResourceManagementStrategyTest
         Task testTask
     )
     {
-      super(new Worker("host", "ip", 3, "version"), null, null);
+      super(new Worker("host", "ip", 3, "version"), null, new DefaultObjectMapper());
 
       this.testTask = testTask;
     }
 
     @Override
-    public Set<String> getRunningTasks()
+    public Map<String, TaskStatus> getRunningTasks()
     {
       if (testTask == null) {
-        return Sets.newHashSet();
+        return Maps.newHashMap();
       }
-      return Sets.newHashSet(testTask.getId());
+      return ImmutableMap.of(testTask.getId(), TaskStatus.running(testTask.getId()));
     }
   }
 }

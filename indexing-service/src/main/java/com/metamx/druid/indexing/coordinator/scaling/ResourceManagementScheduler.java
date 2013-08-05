@@ -24,6 +24,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.PeriodGranularity;
+import com.metamx.druid.indexing.coordinator.RemoteTaskRunner;
 import com.metamx.druid.indexing.coordinator.TaskRunner;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -42,7 +43,7 @@ public class ResourceManagementScheduler
 {
   private static final Logger log = new Logger(ResourceManagementScheduler.class);
 
-  private final TaskRunner taskRunner;
+  private final RemoteTaskRunner taskRunner;
   private final ResourceManagementStrategy resourceManagementStrategy;
   private final ResourceManagementSchedulerConfig config;
   private final ScheduledExecutorService exec;
@@ -51,7 +52,7 @@ public class ResourceManagementScheduler
   private volatile boolean started = false;
 
   public ResourceManagementScheduler(
-      TaskRunner taskRunner,
+      RemoteTaskRunner taskRunner,
       ResourceManagementStrategy resourceManagementStrategy,
       ResourceManagementSchedulerConfig config,
       ScheduledExecutorService exec

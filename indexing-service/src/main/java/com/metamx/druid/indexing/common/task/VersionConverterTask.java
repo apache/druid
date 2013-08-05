@@ -104,7 +104,7 @@ public class VersionConverterTask extends AbstractTask
       DataSegment segment
   )
   {
-    super(id, groupId, id, dataSource, interval);
+    super(id, groupId, dataSource, interval);
 
     this.segment = segment;
   }
@@ -205,13 +205,6 @@ public class VersionConverterTask extends AbstractTask
               segment.getShardSpec().getPartitionNum()
           ),
           groupId,
-          joinId(
-              groupId,
-              "sub",
-              segment.getInterval().getStart(),
-              segment.getInterval().getEnd(),
-              segment.getShardSpec().getPartitionNum()
-          ),
           segment.getDataSource(),
           segment.getInterval()
       );
