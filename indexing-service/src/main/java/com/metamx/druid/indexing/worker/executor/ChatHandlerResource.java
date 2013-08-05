@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.metamx.druid.indexing.common.index.ChatHandler;
-import com.metamx.druid.indexing.common.index.ChatHandlerProvider;
+import com.metamx.druid.indexing.common.index.EventReceivingChatHandlerProvider;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -14,10 +14,10 @@ import javax.ws.rs.core.Response;
 public class ChatHandlerResource
 {
   private final ObjectMapper jsonMapper;
-  private final ChatHandlerProvider handlers;
+  private final EventReceivingChatHandlerProvider handlers;
 
   @Inject
-  public ChatHandlerResource(ObjectMapper jsonMapper, ChatHandlerProvider handlers)
+  public ChatHandlerResource(ObjectMapper jsonMapper, EventReceivingChatHandlerProvider handlers)
   {
     this.jsonMapper = jsonMapper;
     this.handlers = handlers;

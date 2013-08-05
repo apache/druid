@@ -24,6 +24,7 @@ import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Interface for handing off tasks. Used by a {@link com.metamx.druid.indexing.coordinator.exec.TaskConsumer} to
@@ -31,6 +32,15 @@ import java.util.Collection;
  */
 public interface TaskRunner
 {
+  /**
+   * Provide a new task runner with a list of tasks that should already be running. Will be called once shortly
+   * after instantiation and before any calls to {@link #run}. Bootstrapping should not be construed as a command
+   * to run the tasks; they will be passed to {@link #run} one-by-one when this is desired.
+   *
+   * @param tasks the tasks
+   */
+  public void bootstrap(List<Task> tasks);
+
   /**
    * Run a task. The returned status should be some kind of completed status.
    *
@@ -44,9 +54,9 @@ public interface TaskRunner
    */
   public void shutdown(String taskid);
 
-  public Collection<TaskRunnerWorkItem> getRunningTasks();
+  public Collection<? extends TaskRunnerWorkItem> getRunningTasks();
 
-  public Collection<TaskRunnerWorkItem> getPendingTasks();
+  public Collection<? extends TaskRunnerWorkItem> getPendingTasks();
 
   public Collection<ZkWorker> getWorkers();
 }

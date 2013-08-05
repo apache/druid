@@ -60,6 +60,11 @@ public class GalaxyUserData
     return type;
   }
 
+  public GalaxyUserData withVersion(String ver)
+  {
+    return new GalaxyUserData(env, ver, type);
+  }
+
   @Override
   public String toString()
   {
