@@ -62,9 +62,7 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment>
         curator,
         exec,
         jsonMapper,
-        new TypeReference<DataSegment>()
-        {
-        }
+        new TypeReference<DataSegment>(){}
     );
   }
 
