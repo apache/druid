@@ -13,7 +13,6 @@ import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.http.InfoResource;
-import com.metamx.druid.http.MasterMain;
 import com.metamx.druid.http.MasterResource;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.StatusResource;
@@ -77,7 +76,7 @@ public class CliCoordinator extends ServerRunnable
     public void initialize(Server server, Injector injector)
     {
       ResourceHandler resourceHandler = new ResourceHandler();
-      resourceHandler.setResourceBase(MasterMain.class.getClassLoader().getResource("static").toExternalForm());
+      resourceHandler.setResourceBase(DruidMaster.class.getClassLoader().getResource("static").toExternalForm());
 
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.setContextPath("/");

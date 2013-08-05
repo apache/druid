@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
@@ -31,23 +30,13 @@ import com.metamx.druid.DruidProcessingConfig;
 import com.metamx.druid.Query;
 import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.loading.DelegatingSegmentLoader;
-import com.metamx.druid.loading.HdfsDataSegmentPuller;
 import com.metamx.druid.loading.HdfsDataSegmentPusher;
 import com.metamx.druid.loading.HdfsDataSegmentPusherConfig;
-import com.metamx.druid.loading.LocalDataSegmentPuller;
 import com.metamx.druid.loading.LocalDataSegmentPusher;
 import com.metamx.druid.loading.LocalDataSegmentPusherConfig;
-import com.metamx.druid.loading.MMappedQueryableIndexFactory;
-import com.metamx.druid.loading.QueryableIndexFactory;
-import com.metamx.druid.loading.S3DataSegmentPuller;
 import com.metamx.druid.loading.S3DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentPusherConfig;
-import com.metamx.druid.loading.SegmentLoader;
-import com.metamx.druid.loading.SegmentLoaderConfig;
-import com.metamx.druid.loading.SingleSegmentLoader;
 import com.metamx.druid.loading.cassandra.CassandraDataSegmentConfig;
-import com.metamx.druid.loading.cassandra.CassandraDataSegmentPuller;
 import com.metamx.druid.loading.cassandra.CassandraDataSegmentPusher;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
@@ -80,36 +69,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ServerInit
 {
   private static Logger log = new Logger(ServerInit.class);
-
-  public static SegmentLoader makeDefaultQueryableLoader(
-  		final ConfigurationObjectFactory configFactory,
-  		final Properties props
-  ) throws S3ServiceException
-  {
-  	SegmentLoaderConfig config = configFactory.build(SegmentLoaderConfig.class);
-    DelegatingSegmentLoader delegateLoader = new DelegatingSegmentLoader();
-    final QueryableIndexFactory factory = new MMappedQueryableIndexFactory();
-
-    final RestS3Service s3Client = new RestS3Service(
-        new AWSCredentials(
-            props.getProperty("com.metamx.aws.accessKey", ""),
-            props.getProperty("com.metamx.aws.secretKey", "")
-        )
-    );
-    final S3DataSegmentPuller segmentGetter = new S3DataSegmentPuller(s3Client);
-    final SingleSegmentLoader s3segmentLoader = new SingleSegmentLoader(segmentGetter, factory, config);
-    
-    delegateLoader.setLoaderTypes(
-        ImmutableMap.<String, SegmentLoader>builder()
-        .put("local", new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config))
-        .put("hdfs", new SingleSegmentLoader(new HdfsDataSegmentPuller(new Configuration()), factory, config))
-        .put("s3", s3segmentLoader)
-        .put("s3_zip", s3segmentLoader)
-        .put("c*",new SingleSegmentLoader(new CassandraDataSegmentPuller(configFactory.build(CassandraDataSegmentConfig.class)), factory, config))
-        .build()
-    );
-    return delegateLoader;
-  }
 
   public static StupidPool<ByteBuffer> makeComputeScratchPool(DruidProcessingConfig config)
   {
