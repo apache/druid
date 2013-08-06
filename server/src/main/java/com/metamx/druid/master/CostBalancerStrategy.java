@@ -159,8 +159,10 @@ public class CostBalancerStrategy implements BalancerStrategy
         referenceTimestamp.getMillis() - segment1.getInterval().getEndMillis(),
         referenceTimestamp.getMillis() - segment2.getInterval().getEndMillis()
     );
-    if (maxDiff < SEVEN_DAYS_IN_MILLIS) {
-      recencyPenalty = 2 - maxDiff / SEVEN_DAYS_IN_MILLIS;
+    double segment1diff=referenceTimestamp.getMillis()-segment1.getInterval().getEndMillis();
+    double segment2diff=referenceTimestamp.getMillis()-segment2.getInterval().getEndMillis();
+    if (segment1diff < SEVEN_DAYS_IN_MILLIS && segment2diff <SEVEN_DAYS_IN_MILLIS) {
+      recencyPenalty = (2 - segment1diff / SEVEN_DAYS_IN_MILLIS)*(2-segment2diff /SEVEN_DAYS_IN_MILLIS);
     }
 
     /** gap is null if the two segment intervals overlap or if they're adjacent */

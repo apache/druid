@@ -65,7 +65,7 @@ public class DruidMasterBalancerProfiler
   public void bigProfiler()
   {
     Stopwatch watch = new Stopwatch();
-    int numServers = 1000;
+    int numServers = 10000;
 
     EasyMock.expect(manager.getAllRules()).andReturn(ImmutableMap.<String, List<Rule>>of("test", rules)).anyTimes();
     EasyMock.expect(manager.getRules(EasyMock.<String>anyObject())).andReturn(rules).anyTimes();
@@ -167,11 +167,8 @@ public class DruidMasterBalancerProfiler
     DruidMasterBalancerTester tester = new DruidMasterBalancerTester(master);
     DruidMasterRuleRunner runner = new DruidMasterRuleRunner(master,500,5);
     watch.start();
-    while (!tester.isBalanced(40,50))
-    {
-      params = tester.run(params);
-      params = runner.run(params);
-    }
+    params = tester.run(params);
+    params = runner.run(params);
     System.out.println(watch.stop());
   }
 
