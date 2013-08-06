@@ -1,14 +1,10 @@
 package com.metamx.druid.master;
 
-import com.google.common.collect.Maps;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 
-import java.util.Map;
-
 public class DruidMasterBalancerTester extends DruidMasterBalancer
 {
-  private final Map<String,Integer> serverMap = Maps.newHashMap();
   public DruidMasterBalancerTester(DruidMaster master)
   {
     super(master);
@@ -49,16 +45,7 @@ public class DruidMasterBalancerTester extends DruidMasterBalancer
           }
         });
 
-        if (serverMap.get(fromServerName)==null)
-        {
-          serverMap.put(fromServerName,segment.getFromServer().getSegments().size());
-        }
-        if (serverMap.get(toServerName)==null)
-        {
-          serverMap.put(toServerName,0);
-        }
-//        serverMap.put(fromServerName,serverMap.get(fromServerName)-1);
-        serverMap.put(toServerName, serverMap.get(toServerName)+1);
+        currentlyMovingSegments.get("normal").put(segmentName, segment);
       }
       catch (Exception e) {
         log.info(e, String.format("[%s] : Moving exception", segmentName));
@@ -66,26 +53,5 @@ public class DruidMasterBalancerTester extends DruidMasterBalancer
     } else {
       currentlyMovingSegments.get("normal").remove(segment);
     }
-  }
-
-  public Map<String,Integer> getServerMap()
-  {
-    return this.serverMap;
-  }
-
-  public boolean isBalanced(int min, int numServers)
-  {
-    if (serverMap.size()==numServers)
-    {
-      for (int numSegments: serverMap.values())
-      {
-        if (numSegments<min)
-        {
-          return false;
-        }
-      }
-      return true;
-    }
-    return false;
   }
 }
