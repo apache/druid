@@ -65,7 +65,7 @@ public class DruidMasterBalancerProfiler
   public void bigProfiler()
   {
     Stopwatch watch = new Stopwatch();
-    int numServers = 10000;
+    int numServers = 55000;
 
     EasyMock.expect(manager.getAllRules()).andReturn(ImmutableMap.<String, List<Rule>>of("test", rules)).anyTimes();
     EasyMock.expect(manager.getRules(EasyMock.<String>anyObject())).andReturn(rules).anyTimes();
