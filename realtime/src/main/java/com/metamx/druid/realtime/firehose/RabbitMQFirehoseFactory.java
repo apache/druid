@@ -100,28 +100,10 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
     boolean autoDelete = config.isAutoDelete();
 
     final Connection connection = connectionFactory.newConnection();
-    connection.addShutdownListener(new ShutdownListener()
-    {
-      @Override
-      public void shutdownCompleted(ShutdownSignalException cause)
-      {
-        log.warn(cause, "Connection closed!");
-        //FUTURE: we could try to re-establish the connection here. Not done in this version though.
-      }
-    });
 
     final Channel channel = connection.createChannel();
     channel.queueDeclare(queue, durable, exclusive, autoDelete, null);
     channel.queueBind(queue, exchange, routingKey);
-    channel.addShutdownListener(new ShutdownListener()
-    {
-      @Override
-      public void shutdownCompleted(ShutdownSignalException cause)
-      {
-        log.warn(cause, "Channel closed!");
-        //FUTURE: we could try to re-establish the connection here. Not done in this version though.
-      }
-    });
 
 
     return new RabbitMqFirehose(connection, channel, queue);
@@ -161,6 +143,17 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
           } catch (IOException e) { 
               log.error(e, "issue while trying to consume");
           }
+
+        ShutdownListener rabbitMqShutdownListener = new ShutdownListener()
+        {
+          @Override
+          public void shutdownCompleted(ShutdownSignalException cause)
+          {
+              restart();
+          }
+        };
+        channel.addShutdownListener(rabbitMqShutdownListener);
+        connection.addShutdownListener(rabbitMqShutdownListener);
       }
 
       @Override
