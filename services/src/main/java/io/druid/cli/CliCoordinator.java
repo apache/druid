@@ -11,6 +11,7 @@ import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.JacksonConfigManagerModule;
 import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.ServerModule;
+import com.metamx.druid.guice.ServerViewModule;
 import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.http.InfoResource;
 import com.metamx.druid.http.MasterResource;
@@ -55,7 +56,7 @@ public class CliCoordinator extends ServerRunnable
     return Initialization.makeInjector(
         new LifecycleModule().register(DruidMaster.class),
         EmitterModule.class,
-        HttpClientModule.class,
+        HttpClientModule.global(),
         DbConnectorModule.class,
         JacksonConfigManagerModule.class,
         CuratorModule.class,
@@ -66,6 +67,7 @@ public class CliCoordinator extends ServerRunnable
             .addResource(InfoResource.class)
             .addResource(MasterResource.class)
             .addResource(StatusResource.class),
+        new ServerViewModule(),
         CoordinatorModule.class
     );
   }

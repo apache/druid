@@ -49,7 +49,7 @@ public class MemcachedCache implements Cache
 {
   private static final Logger log = new Logger(MemcachedCache.class);
 
-  public static MemcachedCache create(final MemcachedCacheConfig config)
+  public static MemcachedCache create(final MemcachedCacheConfiger config)
   {
     try {
       LZ4Transcoder transcoder = new LZ4Transcoder(config.getMaxObjectSize());

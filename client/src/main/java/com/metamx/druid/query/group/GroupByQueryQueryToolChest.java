@@ -22,9 +22,11 @@ package com.metamx.druid.query.group;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.ConcatSequence;
@@ -34,7 +36,6 @@ import com.metamx.druid.Query;
 import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.index.v1.IncrementalIndex;
-import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.input.Rows;
@@ -42,7 +43,6 @@ import com.metamx.druid.query.MetricManipulationFn;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.dimension.DimensionSpec;
-import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
@@ -50,7 +50,6 @@ import org.joda.time.Minutes;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 /**
  */
@@ -62,13 +61,14 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private static final String GROUP_BY_MERGE_KEY = "groupByMerge";
   private static final Map<String, String> NO_MERGE_CONTEXT = ImmutableMap.of(GROUP_BY_MERGE_KEY, "false");
 
-  private static final int maxRows;
+  private final Supplier<GroupByQueryConfig> configSupplier;
 
-  static {
-    // I dislike this static loading of properies, but it's the only mechanism available right now.
-    Properties props = Initialization.loadProperties();
-
-    maxRows = PropUtils.getPropertyAsInt(props, "com.metamx.query.groupBy.maxResults", 500000);
+  @Inject
+  public GroupByQueryQueryToolChest(
+      Supplier<GroupByQueryConfig> configSupplier
+  )
+  {
+    this.configSupplier = configSupplier;
   }
 
   @Override
@@ -90,6 +90,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
   private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
   {
+    final GroupByQueryConfig config = configSupplier.get();
     final QueryGranularity gran = query.getGranularity();
     final long timeStart = query.getIntervals().get(0).getStartMillis();
 
@@ -133,8 +134,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           @Override
           public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
           {
-            if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions)) > maxRows) {
-              throw new ISE("Computation exceeds maxRows limit[%s]", maxRows);
+            if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions)) > config.getMaxResults()) {
+              throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
             }
 
             return accumulated;

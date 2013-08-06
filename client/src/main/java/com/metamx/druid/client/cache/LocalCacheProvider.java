@@ -19,26 +19,30 @@
 
 package com.metamx.druid.client.cache;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import javax.validation.constraints.Min;
 
 /**
  */
-public abstract class MapCacheConfig
+public class LocalCacheProvider implements CacheProvider
 {
-  @Config("${prefix}.sizeInBytes")
-  @Default("0")
-  public abstract long getSizeInBytes();
+  @JsonProperty
+  @Min(0)
+  private long sizeInBytes = 0;
 
-  @Config("${prefix}.initialSize")
-  public int getInitialSize()
-  {
-    return 500000;
-  }
+  @JsonProperty
+  @Min(0)
+  private int initialSize = 500000;
 
-  @Config("${prefix}.logEvictionCount")
-  public int getLogEvictionCount()
+  @JsonProperty
+  @Min(0)
+  private int logEvictionCount = 0;
+
+
+  @Override
+  public Cache get()
   {
-    return 0;
+    return new MapCache(new ByteCountingLRUMap(initialSize, logEvictionCount, sizeInBytes));
   }
 }

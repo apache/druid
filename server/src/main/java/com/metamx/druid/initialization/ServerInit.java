@@ -42,6 +42,7 @@ import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.query.group.GroupByQueryConfig;
 import com.metamx.druid.query.group.GroupByQueryEngine;
+import com.metamx.druid.query.group.GroupByQueryQueryToolChest;
 import com.metamx.druid.query.group.GroupByQueryRunnerFactory;
 import com.metamx.druid.query.metadata.SegmentMetadataQuery;
 import com.metamx.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
@@ -107,6 +108,7 @@ public class ServerInit
     return new ComputeScratchPool(config.intermediateComputeSizeBytes());
   }
 
+  // TODO: Get rid of this method
   public static Map<Class<? extends Query>, QueryRunnerFactory> initDefaultQueryTypes(
       ConfigurationObjectFactory configFactory,
       StupidPool<ByteBuffer> computationBufferPool
@@ -114,14 +116,13 @@ public class ServerInit
   {
     Map<Class<? extends Query>, QueryRunnerFactory> queryRunners = Maps.newLinkedHashMap();
     queryRunners.put(TimeseriesQuery.class, new TimeseriesQueryRunnerFactory());
+    final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(new GroupByQueryConfig());
     queryRunners.put(
         GroupByQuery.class,
         new GroupByQueryRunnerFactory(
-            new GroupByQueryEngine(
-                Suppliers.ofInstance(new GroupByQueryConfig()), // TODO: Get rid of this
-                computationBufferPool
-            ),
-            Suppliers.ofInstance(new GroupByQueryConfig())
+            new GroupByQueryEngine(configSupplier, computationBufferPool),
+            configSupplier,
+            new GroupByQueryQueryToolChest(configSupplier)
         )
     );
     queryRunners.put(SearchQuery.class, new SearchQueryRunnerFactory());

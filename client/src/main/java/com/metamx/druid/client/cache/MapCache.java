@@ -44,17 +44,6 @@ public class MapCache implements Cache
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
 
-  public static com.metamx.druid.client.cache.Cache create(final MapCacheConfig config)
-  {
-    return new MapCache(
-        new ByteCountingLRUMap(
-            config.getInitialSize(),
-            config.getLogEvictionCount(),
-            config.getSizeInBytes()
-        )
-    );
-  }
-
   MapCache(
       ByteCountingLRUMap byteCountingLRUMap
   )

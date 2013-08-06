@@ -81,9 +81,10 @@ public class GroupByQueryRunnerTest
     GroupByQueryConfig config = new GroupByQueryConfig();
     config.setMaxIntermediateRows(10000);
 
+    final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         new GroupByQueryEngine(
-            Suppliers.ofInstance(config),
+            configSupplier,
             new StupidPool<ByteBuffer>(
                 new Supplier<ByteBuffer>()
                 {
@@ -95,7 +96,8 @@ public class GroupByQueryRunnerTest
                 }
             )
         ),
-        Suppliers.ofInstance(config)
+        configSupplier,
+        new GroupByQueryQueryToolChest(configSupplier)
     );
 
     return Lists.newArrayList(
@@ -245,7 +247,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery fullQuery = builder.build();
     final GroupByQuery allGranQuery = builder.copy().setGranularity(QueryGranularity.ALL).build();
 
-    QueryRunner mergedRunner = new GroupByQueryQueryToolChest().mergeResults(
+    QueryRunner mergedRunner = factory.getToolchest().mergeResults(
         new QueryRunner<Row>()
         {
           @Override
@@ -332,7 +334,7 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery), String.format("limit: %d", limit)
@@ -437,7 +439,7 @@ public class GroupByQueryRunnerTest
 
     final GroupByQuery fullQuery = builder.build();
 
-    QueryRunner mergedRunner = new GroupByQueryQueryToolChest().mergeResults(
+    QueryRunner mergedRunner = factory.getToolchest().mergeResults(
         new QueryRunner<Row>()
         {
           @Override
@@ -490,7 +492,7 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
 
     TestHelper.assertExpectedObjects(
@@ -530,7 +532,7 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L)
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build()), "limited"
@@ -569,7 +571,7 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 178.24917602539062D)
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build()), "limited"
@@ -608,7 +610,7 @@ public class GroupByQueryRunnerTest
 
     final GroupByQuery fullQuery = builder.build();
 
-    QueryRunner mergedRunner = new GroupByQueryQueryToolChest().mergeResults(
+    QueryRunner mergedRunner = factory.getToolchest().mergeResults(
         new QueryRunner<Row>()
         {
           @Override
@@ -651,7 +653,7 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-01", "quality", "automotive", "rows", 2L)
   );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 

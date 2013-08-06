@@ -22,10 +22,13 @@ package com.metamx.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.selector.QueryableDruidServer;
 import com.metamx.druid.client.selector.ServerSelector;
+import com.metamx.druid.concurrent.Execs;
+import com.metamx.druid.guice.annotations.Client;
 import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChestWarehouse;
@@ -54,12 +57,12 @@ public class BrokerServerView implements TimelineServerView
   private final HttpClient httpClient;
   private final ServerView baseView;
 
+  @Inject
   public BrokerServerView(
       QueryToolChestWarehouse warehose,
       ObjectMapper smileMapper,
-      HttpClient httpClient,
-      ServerView baseView,
-      ExecutorService exec
+      @Client HttpClient httpClient,
+      ServerView baseView
   )
   {
     this.warehose = warehose;
@@ -71,6 +74,7 @@ public class BrokerServerView implements TimelineServerView
     this.selectors = Maps.newHashMap();
     this.timelines = Maps.newHashMap();
 
+    ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
     baseView.registerSegmentCallback(
         exec,
         new ServerView.SegmentCallback()

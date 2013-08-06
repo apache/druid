@@ -20,6 +20,7 @@
 package com.metamx.druid.http;
 
 import com.google.common.base.Function;
+import com.google.inject.Inject;
 import com.metamx.druid.Query;
 import com.metamx.druid.client.CachingClusteredClient;
 import com.metamx.druid.query.FinalizeResultsQueryRunner;
@@ -43,6 +44,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final CachingClusteredClient baseClient;
 
+  @Inject
   public ClientQuerySegmentWalker(
       QueryToolChestWarehouse warehouse,
       ServiceEmitter emitter,

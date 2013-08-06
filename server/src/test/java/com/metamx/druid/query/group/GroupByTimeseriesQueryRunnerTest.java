@@ -55,9 +55,10 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     GroupByQueryConfig config = new GroupByQueryConfig();
     config.setMaxIntermediateRows(10000);
 
+    final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         new GroupByQueryEngine(
-            Suppliers.ofInstance(config),
+            configSupplier,
             new StupidPool<ByteBuffer>(
                 new Supplier<ByteBuffer>()
                 {
@@ -69,7 +70,8 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                 }
             )
         ),
-        Suppliers.ofInstance(config)
+        configSupplier,
+        new GroupByQueryQueryToolChest(configSupplier)
     );
 
     final Collection<?> objects = QueryRunnerTestHelper.makeQueryRunners(factory);

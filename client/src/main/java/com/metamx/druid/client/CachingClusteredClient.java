@@ -32,6 +32,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.Inject;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.LazySequence;
@@ -79,6 +80,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   private final Cache cache;
   private final ObjectMapper objectMapper;
 
+  @Inject
   public CachingClusteredClient(
       QueryToolChestWarehouse warehouse,
       TimelineServerView serverView,

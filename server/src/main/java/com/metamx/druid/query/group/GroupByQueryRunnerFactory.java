@@ -48,19 +48,20 @@ import java.util.concurrent.Future;
  */
 public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupByQuery>
 {
-  private static final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest();
-
   private final GroupByQueryEngine engine;
   private final Supplier<GroupByQueryConfig> config;
+  private final GroupByQueryQueryToolChest toolChest;
 
   @Inject
   public GroupByQueryRunnerFactory(
       GroupByQueryEngine engine,
-      Supplier<GroupByQueryConfig> config
+      Supplier<GroupByQueryConfig> config,
+      GroupByQueryQueryToolChest toolChest
   )
   {
     this.engine = engine;
     this.config = config;
+    this.toolChest = toolChest;
   }
 
   @Override
@@ -122,7 +123,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   }
 
   @Override
-  public QueryToolChest getToolchest()
+  public QueryToolChest<Row, GroupByQuery> getToolchest()
   {
     return toolChest;
   }

@@ -6,12 +6,10 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.metamx.common.concurrent.ExecutorServiceConfig;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.DruidProcessingConfig;
-import com.metamx.druid.Query;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.concurrent.Execs;
@@ -42,20 +40,7 @@ import com.metamx.druid.loading.cassandra.CassandraDataSegmentConfig;
 import com.metamx.druid.loading.cassandra.CassandraDataSegmentPuller;
 import com.metamx.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.MetricsEmittingExecutorService;
-import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
-import com.metamx.druid.query.group.GroupByQuery;
-import com.metamx.druid.query.group.GroupByQueryConfig;
-import com.metamx.druid.query.group.GroupByQueryEngine;
-import com.metamx.druid.query.group.GroupByQueryRunnerFactory;
-import com.metamx.druid.query.metadata.SegmentMetadataQuery;
-import com.metamx.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
-import com.metamx.druid.query.search.SearchQuery;
-import com.metamx.druid.query.search.SearchQueryRunnerFactory;
-import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
-import com.metamx.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
-import com.metamx.druid.query.timeseries.TimeseriesQuery;
-import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.apache.curator.framework.CuratorFramework;
@@ -98,24 +83,6 @@ public class HistoricalModule implements Module
     bindDeepStorageS3(binder);
     bindDeepStorageHdfs(binder);
     bindDeepStorageCassandra(binder);
-
-
-    final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = MapBinder.newMapBinder(
-        binder, new TypeLiteral<Class<? extends Query>>(){}, new TypeLiteral<QueryRunnerFactory>(){}
-    );
-
-    queryFactoryBinder.addBinding(TimeseriesQuery.class).to(TimeseriesQueryRunnerFactory.class).in(LazySingleton.class);
-    queryFactoryBinder.addBinding(SearchQuery.class).to(SearchQueryRunnerFactory.class).in(LazySingleton.class);
-    queryFactoryBinder.addBinding(TimeBoundaryQuery.class)
-                      .to(TimeBoundaryQueryRunnerFactory.class)
-                      .in(LazySingleton.class);
-    queryFactoryBinder.addBinding(SegmentMetadataQuery.class)
-                      .to(SegmentMetadataQueryRunnerFactory.class)
-                      .in(LazySingleton.class);
-
-    queryFactoryBinder.addBinding(GroupByQuery.class).to(GroupByQueryRunnerFactory.class).in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
-    binder.bind(GroupByQueryEngine.class).in(LazySingleton.class);
 
     binder.bind(QueryRunnerFactoryConglomerate.class)
           .to(DefaultQueryRunnerFactoryConglomerate.class)

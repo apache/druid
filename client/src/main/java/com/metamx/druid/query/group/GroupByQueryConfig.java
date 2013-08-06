@@ -12,14 +12,12 @@ public class GroupByQueryConfig
   @JsonProperty
   private int maxIntermediateRows = 50000;
 
+  @JsonProperty
+  private int maxResults = 500000;
+
   public boolean isSingleThreaded()
   {
     return singleThreaded;
-  }
-
-  public void setSingleThreaded(boolean singleThreaded)
-  {
-    this.singleThreaded = singleThreaded;
   }
 
   public int getMaxIntermediateRows()
@@ -30,5 +28,10 @@ public class GroupByQueryConfig
   public void setMaxIntermediateRows(int maxIntermediateRows)
   {
     this.maxIntermediateRows = maxIntermediateRows;
+  }
+
+  public int getMaxResults()
+  {
+    return maxResults;
   }
 }
