@@ -472,7 +472,9 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
       }
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      log.makeAlert("Exception while trying to run task")
+      .addData("taskId", taskRunnerWorkItem.getTask().getId())
+      .emit();
     }
   }
 
