@@ -8,7 +8,7 @@ import com.metamx.druid.curator.CuratorModule;
 import com.metamx.druid.guice.HistoricalModule;
 import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.LifecycleModule;
-import com.metamx.druid.guice.QueryRunnerFactoryModuleStupidCase;
+import com.metamx.druid.guice.QueryRunnerFactoryModule;
 import com.metamx.druid.guice.QueryableModule;
 import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.http.StatusResource;
@@ -47,7 +47,7 @@ public class CliHistorical extends ServerRunnable
         new JettyServerModule(new QueryJettyServerInitializer())
             .addResource(StatusResource.class),
         new QueryableModule(ServerManager.class),
-        new QueryRunnerFactoryModuleStupidCase(),
+        new QueryRunnerFactoryModule(),
         HistoricalModule.class
     );
   }

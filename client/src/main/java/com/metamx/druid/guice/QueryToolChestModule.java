@@ -23,7 +23,7 @@ import java.util.Map;
 
 /**
  */
-public class QueryToolChestModuleStupidCase implements Module
+public class QueryToolChestModule implements Module
 {
   final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryToolChest>>builder()
