@@ -25,6 +25,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.indexing.worker.config.ChatHandlerProviderConfig;
+import com.metamx.druid.initialization.DruidNode;
 
 import java.util.concurrent.ConcurrentMap;
 
@@ -52,44 +53,43 @@ public class EventReceivingChatHandlerProvider implements ChatHandlerProvider
   }
 
   @Override
-  public void register(final String key, ChatHandler handler)
+  public void register(final String service, ChatHandler handler)
   {
-    final String service = serviceName(key);
-    log.info("Registering Eventhandler: %s", key);
+    final DruidNode node = makeDruidNode(service);
+    log.info("Registering Eventhandler[%s]", service);
 
-    if (handlers.putIfAbsent(key, handler) != null) {
-      throw new ISE("handler already registered for key: %s", key);
+    if (handlers.putIfAbsent(service, handler) != null) {
+      throw new ISE("handler already registered for service[%s]", service);
     }
 
     try {
-      serviceAnnouncer.announce(service);
+      serviceAnnouncer.announce(node);
     }
     catch (Exception e) {
-      log.warn(e, "Failed to register service: %s", service);
-      handlers.remove(key, handler);
+      log.warn(e, "Failed to register service[%s]", service);
+      handlers.remove(service, handler);
     }
   }
 
   @Override
-  public void unregister(final String key)
+  public void unregister(final String service)
   {
-    final String service = serviceName(key);
 
-    log.info("Unregistering chat handler: %s", key);
+    log.info("Unregistering chat handler[%s]", service);
 
-    final ChatHandler handler = handlers.get(key);
+    final ChatHandler handler = handlers.get(service);
     if (handler == null) {
-      log.warn("handler not currently registered, ignoring: %s", key);
+      log.warn("handler[%s] not currently registered, ignoring.", service);
     }
 
     try {
-      serviceAnnouncer.unannounce(service);
+      serviceAnnouncer.unannounce(makeDruidNode(service));
     }
     catch (Exception e) {
-      log.warn(e, "Failed to unregister service: %s", service);
+      log.warn(e, "Failed to unregister service[%s]", service);
     }
 
-    handlers.remove(key, handler);
+    handlers.remove(service, handler);
   }
 
   @Override
@@ -98,8 +98,8 @@ public class EventReceivingChatHandlerProvider implements ChatHandlerProvider
     return Optional.fromNullable(handlers.get(key));
   }
 
-  private String serviceName(String key)
+  private DruidNode makeDruidNode(String key)
   {
-    return String.format(config.getServiceFormat(), key);
+    return new DruidNode(key, config.getHost(), config.getPort());
   }
 }

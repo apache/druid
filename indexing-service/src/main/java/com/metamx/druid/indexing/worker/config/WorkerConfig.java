@@ -20,7 +20,6 @@
 package com.metamx.druid.indexing.worker.config;
 
 import org.skife.config.Config;
-import org.skife.config.Default;
 
 /**
  */

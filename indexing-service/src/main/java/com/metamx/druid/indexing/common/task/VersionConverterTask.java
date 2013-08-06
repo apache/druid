@@ -30,13 +30,13 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
 import com.metamx.druid.indexing.common.actions.SegmentInsertAction;
 import com.metamx.druid.indexing.common.actions.SegmentListUsedAction;
 import com.metamx.druid.indexing.common.actions.SpawnTasksAction;
 import com.metamx.druid.indexing.common.actions.TaskActionClient;
+import com.metamx.druid.loading.SegmentLoadingException;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

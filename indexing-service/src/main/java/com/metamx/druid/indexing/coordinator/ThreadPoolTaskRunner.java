@@ -40,7 +40,6 @@ import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.File;

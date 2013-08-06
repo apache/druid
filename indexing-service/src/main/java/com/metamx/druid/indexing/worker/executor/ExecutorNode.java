@@ -388,14 +388,12 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   {
     if (chatHandlerProvider == null) {
       final ChatHandlerProviderConfig config = configFactory.build(ChatHandlerProviderConfig.class);
-      final ServiceAnnouncer myServiceAnnouncer;
       if (config.isPublishDiscovery()) {
-        myServiceAnnouncer = serviceAnnouncer;
+        this.chatHandlerProvider = new EventReceivingChatHandlerProvider(config, serviceAnnouncer);
       } else {
         log.info("ChatHandlerProvider: Using NoopServiceAnnouncer. Good luck finding your firehoses!");
-        myServiceAnnouncer = new NoopServiceAnnouncer();
+        this.chatHandlerProvider = new NoopChatHandlerProvider();
       }
-      this.chatHandlerProvider = new ChatHandlerProvider(config, myServiceAnnouncer);
     }
   }
 
