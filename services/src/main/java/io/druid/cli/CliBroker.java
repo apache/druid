@@ -6,7 +6,7 @@ import com.metamx.druid.curator.CuratorModule;
 import com.metamx.druid.guice.BrokerModule;
 import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.LifecycleModule;
-import com.metamx.druid.guice.QueryToolChestModule;
+import com.metamx.druid.guice.QueryToolChestModuleStupidCase;
 import com.metamx.druid.guice.QueryableModule;
 import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.guice.ServerViewModule;
@@ -47,7 +47,7 @@ public class CliBroker extends ServerRunnable
             new JettyServerModule(new QueryJettyServerInitializer())
                 .addResource(StatusResource.class),
             new QueryableModule(ClientQuerySegmentWalker.class),
-            new QueryToolChestModule(),
+            new QueryToolChestModuleStupidCase(),
             new ServerViewModule(),
             new HttpClientModule("druid.broker.http", Client.class),
             new BrokerModule()
