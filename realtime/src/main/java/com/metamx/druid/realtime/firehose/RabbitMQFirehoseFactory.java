@@ -107,147 +107,165 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
 
 
     return new RabbitMqFirehose(connection, channel, queue);
-    }
-    public class RabbitMqFirehose implements Firehose
-    {
-      /**
-       * Storing the latest delivery as a member variable should be safe since this will only be run
-       * by a single thread.
-       */
-      private QueueingConsumer.Delivery delivery;
+  }
 
-      /**
-       * Store the latest delivery tag to be able to commit (acknowledge) the message delivery up to
-       * and including this tag. See commit() for more detail.
-       */
-      private long lastDeliveryTag;
+  public class RabbitMqFirehose implements Firehose
+  {
+    /**
+     * Storing the latest delivery as a member variable should be safe since this will only be run
+     * by a single thread.
+     */
+    private QueueingConsumer.Delivery delivery;
 
-      private Connection connection;
-
-      private Channel channel;
-
-      final private QueueingConsumer consumer;
-
-      private String queue;
-
-      public RabbitMqFirehose(Connection connection, Channel channel, String queue) {
-          super();
-          this.connection = connection;
-          this.channel = channel;
-          this.queue = queue;
-          // We create a QueueingConsumer that will not auto-acknowledge messages since that
-          // happens on commit().
-          consumer = new QueueingConsumer(channel);
-          try {
-              channel.basicConsume(queue, false, consumer);
-          } catch (IOException e) { 
-              log.error(e, "issue while trying to consume");
-          }
-
-        ShutdownListener rabbitMqShutdownListener = new ShutdownListener()
-        {
-          @Override
-          public void shutdownCompleted(ShutdownSignalException cause)
-          {
-              restart();
-          }
-        };
-        channel.addShutdownListener(rabbitMqShutdownListener);
-        connection.addShutdownListener(rabbitMqShutdownListener);
-      }
-
-      @Override
-      public boolean hasMore()
-      {
-        delivery = null;
-        try {
-          // Wait for the next delivery. This will block until something is available.
-          delivery = consumer.nextDelivery();
-          if (delivery != null) {
-            lastDeliveryTag = delivery.getEnvelope().getDeliveryTag();
-            // If delivery is non-null, we report that there is something more to process.
-            return true;
-          }
-        }
-        catch (InterruptedException e) {
-          // A little unclear on how we should handle this.
-
-          // At any rate, we're in an unknown state now so let's log something and return false.
-          log.wtf(e, "Got interrupted while waiting for next delivery. Doubt this should ever happen.");
-        }
-
-        // This means that delivery is null or we caught the exception above so we report that we have
-        // nothing more to process.
-        return false;
-      }
-
-      @Override
-      public InputRow nextRow()
-      {
-        if (delivery == null) {
-          //Just making sure.
-          log.wtf("I have nothing in delivery. Method hasMore() should have returned false.");
-          return null;
-        }
-
-        return parser.parse(new String(delivery.getBody()));
-      }
-
-      @Override
-      public Runnable commit()
-      {
-        // This method will be called from the same thread that calls the other methods of
-        // this Firehose. However, the returned Runnable will be called by a different thread.
-        //
-        // It should be (thread) safe to copy the lastDeliveryTag like we do below and then
-        // acknowledge values up to and including that value.
-        return new Runnable()
-        {
-          // Store (copy) the last delivery tag to "become" thread safe.
-          final long deliveryTag = lastDeliveryTag;
-
-          @Override
-          public void run()
-          {
-            try {
-              log.info("Acknowledging delivery of messages up to tag: " + deliveryTag);
-
-              // Acknowledge all messages up to and including the stored delivery tag.
-              channel.basicAck(deliveryTag, true);
-            }
-            catch (IOException e) {
-              log.error(e, "Unable to acknowledge message reception to message queue.");
-            }
-          }
-        };
-      }
+    /**
+     * Store the latest delivery tag to be able to commit (acknowledge) the message delivery up to
+     * and including this tag. See commit() for more detail.
+     */
+    private long lastDeliveryTag;
     
-      private void restart() {
-          //channel restart 
-          if (channel.isOpen()) {
-            try {
-                channel.close();
-            } catch (IOException e) {
-                log.warn(e, "failure to close the queue");
-            }
-          }
-          //connection  restart
-         if (connection.isOpen()) {
-            try {
-                connection = connectionFactory.newConnection();
-                channel.basicRecover();
-            } catch (IOException e) {
-                log.error(e, "failure to open a new connection the the queue");
-            }
-          }
+    /**
+     * Store the current connection used by this firehose.
+     */
+    private Connection connection;
+
+    /**
+     * Store the current channel used by this firehos.
+     */
+    private Channel channel;
+    
+    /**
+     * Store the consumer.
+     */
+    final private QueueingConsumer consumer;
+
+    /**
+     * Store the name of the queue
+     */
+    private String queue;
+
+    public RabbitMqFirehose(Connection connection, Channel channel, String queue) {
+        this.connection = connection;
+        this.channel = channel;
+        this.queue = queue;
+        // We create a QueueingConsumer that will not auto-acknowledge messages since that
+        // happens on commit().
+        consumer = new QueueingConsumer(channel);
+        try {
+            channel.basicConsume(queue, false, consumer);
+        } 
+        catch (IOException e) { 
+            log.error(e, "issue while trying to consume");
+        }
+
+      ShutdownListener rabbitMqShutdownListener = new ShutdownListener()
+      {
+        @Override
+        public void shutdownCompleted(ShutdownSignalException cause)
+        {
+            restart();
+        }
+      };
+      channel.addShutdownListener(rabbitMqShutdownListener);
+      connection.addShutdownListener(rabbitMqShutdownListener);
+    }
+
+    @Override
+    public boolean hasMore()
+    {
+      delivery = null;
+      try {
+        // Wait for the next delivery. This will block until something is available.
+        delivery = consumer.nextDelivery();
+        if (delivery != null) {
+          lastDeliveryTag = delivery.getEnvelope().getDeliveryTag();
+          // If delivery is non-null, we report that there is something more to process.
+          return true;
+        }
+      }
+      catch (InterruptedException e) {
+        // A little unclear on how we should handle this.
+
+        // At any rate, we're in an unknown state now so let's log something and return false.
+        log.wtf(e, "Got interrupted while waiting for next delivery. Doubt this should ever happen.");
       }
 
-      @Override
-      public void close() throws IOException
-      {
-        log.info("Closing connection to RabbitMQ");
-        channel.close();
-        connection.close();
+      // This means that delivery is null or we caught the exception above so we report that we have
+      // nothing more to process.
+      return false;
+    }
+
+    @Override
+    public InputRow nextRow()
+    {
+      if (delivery == null) {
+        //Just making sure.
+        log.wtf("I have nothing in delivery. Method hasMore() should have returned false.");
+        return null;
       }
-    };
+
+      return parser.parse(new String(delivery.getBody()));
+    }
+
+    @Override
+    public Runnable commit()
+    {
+      // This method will be called from the same thread that calls the other methods of
+      // this Firehose. However, the returned Runnable will be called by a different thread.
+      //
+      // It should be (thread) safe to copy the lastDeliveryTag like we do below and then
+      // acknowledge values up to and including that value.
+      return new Runnable()
+      {
+        // Store (copy) the last delivery tag to "become" thread safe.
+        final long deliveryTag = lastDeliveryTag;
+
+        @Override
+        public void run()
+        {
+          try {
+            log.info("Acknowledging delivery of messages up to tag: " + deliveryTag);
+
+            // Acknowledge all messages up to and including the stored delivery tag.
+            channel.basicAck(deliveryTag, true);
+          }
+          catch (IOException e) {
+            log.error(e, "Unable to acknowledge message reception to message queue.");
+          }
+        }
+      };
+    }
+  
+    private void restart() {
+        /**
+         * Restart the connection, will also recover the corresponding channel.
+         */
+        //channel restart 
+        if (channel.isOpen()) {
+          try {
+              channel.close();
+          } 
+          catch (IOException e) {
+              log.warn(e, "failure to close the queue");
+          }
+        }
+        //connection  restart
+       if (connection.isOpen()) {
+          try {
+              connection = connectionFactory.newConnection();
+              channel.basicRecover();
+          } 
+          catch (IOException e) {
+              log.error(e, "failure to open a new connection the the queue");
+          }
+        }
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      log.info("Closing connection to RabbitMQ");
+      channel.close();
+      connection.close();
+    }
+  };
   }
