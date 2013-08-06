@@ -1,6 +1,6 @@
 package com.metamx.druid.client.cache;
 
-public class MemcachedCacheProvider extends MemcachedCacheConfiger implements CacheProvider
+public class MemcachedCacheProvider extends MemcachedCacheConfig implements CacheProvider
 {
   @Override
   public Cache get()
