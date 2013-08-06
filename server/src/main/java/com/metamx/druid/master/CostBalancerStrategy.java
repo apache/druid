@@ -19,15 +19,15 @@
 
 package com.metamx.druid.master;
 
-import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.ImmutableList;
 import com.metamx.common.Pair;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 public class CostBalancerStrategy implements BalancerStrategy
 {
@@ -83,19 +83,6 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
 
     Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
-    MinMaxPriorityQueue<Pair<Double, ServerHolder>> costsAndServers = MinMaxPriorityQueue.orderedBy(
-        new Comparator<Pair<Double, ServerHolder>>()
-        {
-          @Override
-          public int compare(
-              Pair<Double, ServerHolder> o,
-              Pair<Double, ServerHolder> o1
-          )
-          {
-            return Double.compare(o.lhs, o1.lhs);
-          }
-        }
-    ).create();
 
     final long proposalSegmentSize = proposalSegment.getSize();
 
@@ -108,13 +95,7 @@ public class CostBalancerStrategy implements BalancerStrategy
         }
 
         /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
-        double cost = 0f;
-        /**  the sum of the costs of other (exclusive of the proposalSegment) segments on the server */
-        for (DataSegment segment : server.getServer().getSegments().values()) {
-          if (!proposalSegment.equals(segment)) {
-            cost += computeJointSegmentCosts(proposalSegment, segment);
-          }
-        }
+        double cost = computeServerCostFast(proposalSegment,server);
         /**  plus the costs of segments that will be loaded */
         for (DataSegment segment : server.getPeon().getSegmentsToLoad()) {
           cost += computeJointSegmentCosts(proposalSegment, segment);
@@ -127,6 +108,49 @@ public class CostBalancerStrategy implements BalancerStrategy
     }
 
     return bestServer;
+  }
+
+  public double computeServerCostFast(final DataSegment segment, ServerHolder server)
+  {
+    double baseCost=1;
+    double dataSourcePenalty = 0;
+    Integer dataSourceOccurences = server.getServer().getDataSourceCount().get(segment.getDataSource());
+    if (dataSourceOccurences!=null)
+    {
+      dataSourcePenalty = dataSourceOccurences*2;
+    }
+    double gapPenalty=0;
+    double recencyPenalty=1;
+    if (referenceTimestamp.getMillis()-segment.getInterval().getEndMillis() < SEVEN_DAYS_IN_MILLIS) {
+      recencyPenalty = 2 - referenceTimestamp.getMillis()-segment.getInterval().getEndMillis() / SEVEN_DAYS_IN_MILLIS;
+    }
+    DateTime originalMonth= segment.getInterval().getStart().toDateTime().withDayOfMonth(1);
+    List<DateTime> relevantMonths = ImmutableList.<DateTime>of(originalMonth.minusMonths(1),originalMonth,originalMonth.plusMonths(1));
+    for (DateTime date: relevantMonths)
+    {
+      Map<Interval,Integer> intervals = server.getServer().getIntervalMap().get(date);
+      if (intervals!=null)
+      {
+        for(Interval interval:intervals.keySet())
+        {
+          Interval intervalGap = segment.getInterval().gap(interval);
+          if (intervalGap==null)
+          {
+            gapPenalty+=2;
+          }
+          else
+          {
+            long gapMillis = intervalGap.toDurationMillis();
+            if (gapMillis < THIRTY_DAYS_IN_MILLIS) {
+              gapPenalty += 2 - gapMillis / THIRTY_DAYS_IN_MILLIS;
+            }
+
+          }
+        }
+      }
+    }
+    final double cost = recencyPenalty + dataSourcePenalty + gapPenalty;
+    return cost;
   }
 
   /**
@@ -155,14 +179,6 @@ public class CostBalancerStrategy implements BalancerStrategy
       dataSourcePenalty = 2;
     }
 
-    double maxDiff = Math.max(
-        referenceTimestamp.getMillis() - segment1.getInterval().getEndMillis(),
-        referenceTimestamp.getMillis() - segment2.getInterval().getEndMillis()
-    );
-    if (maxDiff < SEVEN_DAYS_IN_MILLIS) {
-      recencyPenalty = 2 - maxDiff / SEVEN_DAYS_IN_MILLIS;
-    }
-
     /** gap is null if the two segment intervals overlap or if they're adjacent */
     if (gap == null) {
       gapPenalty = 2;
@@ -173,7 +189,7 @@ public class CostBalancerStrategy implements BalancerStrategy
       }
     }
 
-    final double cost = baseCost * recencyPenalty * dataSourcePenalty * gapPenalty;
+    final double cost = recencyPenalty + dataSourcePenalty + gapPenalty;
 
     return cost;
   }

@@ -12,13 +12,10 @@ import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.master.DruidCluster;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterBalancerTester;
-import com.metamx.druid.master.DruidMasterRuleRunner;
 import com.metamx.druid.master.DruidMasterRuntimeParams;
 import com.metamx.druid.master.LoadPeonCallback;
 import com.metamx.druid.master.LoadQueuePeon;
 import com.metamx.druid.master.LoadQueuePeonTester;
-import com.metamx.druid.master.ReplicationThrottler;
-import com.metamx.druid.master.SegmentReplicantLookup;
 import com.metamx.druid.master.ServerHolder;
 import com.metamx.druid.master.rules.PeriodLoadRule;
 import com.metamx.druid.master.rules.Rule;
@@ -65,7 +62,7 @@ public class DruidMasterBalancerProfiler
   public void bigProfiler()
   {
     Stopwatch watch = new Stopwatch();
-    int numServers = 1000;
+    int numSegments = 40000;
 
     EasyMock.expect(manager.getAllRules()).andReturn(ImmutableMap.<String, List<Rule>>of("test", rules)).anyTimes();
     EasyMock.expect(manager.getRules(EasyMock.<String>anyObject())).andReturn(rules).anyTimes();
@@ -85,13 +82,13 @@ public class DruidMasterBalancerProfiler
     Map<String, LoadQueuePeon> peonMap = Maps.newHashMap();
     List<ServerHolder> serverHolderList = Lists.newArrayList();
     Map<String,DataSegment> segmentMap = Maps.newHashMap();
-    for (int i=0;i<numServers;i++)
+    for (int i=0;i<numSegments;i++)
     {
       segmentMap.put(
           "segment" + i,
           new DataSegment(
               "datasource" + i,
-              new Interval(new DateTime("2012-01-01"), (new DateTime("2012-01-01")).plusHours(1)),
+              new Interval(new DateTime("2012-01-01").plusDays(i), (new DateTime("2012-01-01")).plusDays(i+1)),
               (new DateTime("2012-03-01")).toString(),
               Maps.<String, Object>newHashMap(),
               Lists.<String>newArrayList(),
@@ -105,28 +102,18 @@ public class DruidMasterBalancerProfiler
 
     for (int i=0;i<50;i++)
     {
-      DruidServer server =EasyMock.createMock(DruidServer.class);
-      EasyMock.expect(server.getMetadata()).andReturn(null).anyTimes();
-      EasyMock.expect(server.getCurrSize()).andReturn(30L).atLeastOnce();
-      EasyMock.expect(server.getMaxSize()).andReturn(100L).atLeastOnce();
-      EasyMock.expect(server.getTier()).andReturn("normal").anyTimes();
-      EasyMock.expect(server.getName()).andReturn(Integer.toString(i)).atLeastOnce();
-      EasyMock.expect(server.getHost()).andReturn(Integer.toString(i)).anyTimes();
+      DruidServer server = new DruidServer(Integer.toString(i),Integer.toString(i),100L, "compute", "normal");
       if (i==0)
       {
-        EasyMock.expect(server.getSegments()).andReturn(segmentMap).anyTimes();
+        for (String id:segmentMap.keySet())
+        {
+          server.addDataSegment(id,segmentMap.get(id));
+        }
       }
-      else
-      {
-        EasyMock.expect(server.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
-      }
-      EasyMock.expect(server.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
-      EasyMock.replay(server);
-
       LoadQueuePeon peon = new LoadQueuePeonTester();
       peonMap.put(Integer.toString(i),peon);
       serverHolderList.add(new ServerHolder(server, peon));
-          }
+    }
 
     DruidMasterRuntimeParams params =
         DruidMasterRuntimeParams.newBuilder()
@@ -148,29 +135,29 @@ public class DruidMasterBalancerProfiler
                                 .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .withEmitter(emitter)
-                                .withDatabaseRuleManager(manager)
-                                .withReplicationManager(new ReplicationThrottler(2, 500))
-                                .withSegmentReplicantLookup(
-                                    SegmentReplicantLookup.make(new DruidCluster(
-                                        ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
-                                            "normal",
-                                            MinMaxPriorityQueue.orderedBy(DruidMasterBalancerTester.percentUsedComparator)
-                                                               .create(
-                                                                   serverHolderList
-                                                               )
-                                        )
-                                    )
-                                    )
-                                )
+//                                .withDatabaseRuleManager(manager)
+//                                .withReplicationManager(new ReplicationThrottler(2, 500))
+//                                .withSegmentReplicantLookup(
+//                                    SegmentReplicantLookup.make(new DruidCluster(
+//                                        ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
+//                                            "normal",
+//                                            MinMaxPriorityQueue.orderedBy(DruidMasterBalancerTester.percentUsedComparator)
+//                                                               .create(
+//                                                                   serverHolderList
+//                                                               )
+//                                        )
+//                                    )
+//                                    )
+//                                )
                                 .build();
 
     DruidMasterBalancerTester tester = new DruidMasterBalancerTester(master);
-    DruidMasterRuleRunner runner = new DruidMasterRuleRunner(master,500,5);
+//    DruidMasterRuleRunner runner = new DruidMasterRuleRunner(master,500,5);
     watch.start();
-    while (!tester.isBalanced(40,50))
+    while (!tester.isBalanced(5000/50,50))
     {
       params = tester.run(params);
-      params = runner.run(params);
+//      params = runner.run(params);
     }
     System.out.println(watch.stop());
   }
