@@ -123,12 +123,10 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
       }
     });
 
-    // We create a QueueingConsumer that will not auto-acknowledge messages since that
-    // happens on commit().
-    final QueueingConsumer consumer = new QueueingConsumer(channel);
-    channel.basicConsume(queue, false, consumer);
 
-    return new Firehose()
+    return new RabbitMqFirehose(connection, channel, queue);
+    }
+    public class RabbitMqFirehose implements Firehose
     {
       /**
        * Storing the latest delivery as a member variable should be safe since this will only be run
@@ -141,6 +139,29 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
        * and including this tag. See commit() for more detail.
        */
       private long lastDeliveryTag;
+
+      private Connection connection;
+
+      private Channel channel;
+
+      final private QueueingConsumer consumer;
+
+      private String queue;
+
+      public RabbitMqFirehose(Connection connection, Channel channel, String queue) {
+          super();
+          this.connection = connection;
+          this.channel = channel;
+          this.queue = queue;
+          // We create a QueueingConsumer that will not auto-acknowledge messages since that
+          // happens on commit().
+          consumer = new QueueingConsumer(channel);
+          try {
+              channel.basicConsume(queue, false, consumer);
+          } catch (IOException e) { 
+              log.error(e, "issue while trying to consume");
+          }
+      }
 
       @Override
       public boolean hasMore()
@@ -207,6 +228,26 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
           }
         };
       }
+    
+      private void restart() {
+          //channel restart 
+          if (channel.isOpen()) {
+            try {
+                channel.close();
+            } catch (IOException e) {
+                log.warn(e, "failure to close the queue");
+            }
+          }
+          //connection  restart
+         if (connection.isOpen()) {
+            try {
+                connection = connectionFactory.newConnection();
+                channel.basicRecover();
+            } catch (IOException e) {
+                log.error(e, "failure to open a new connection the the queue");
+            }
+          }
+      }
 
       @Override
       public void close() throws IOException
@@ -217,4 +258,3 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
       }
     };
   }
-}
