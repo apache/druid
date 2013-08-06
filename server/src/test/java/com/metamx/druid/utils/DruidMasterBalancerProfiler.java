@@ -1,3 +1,22 @@
+/*
+* Druid - a distributed column store.
+* Copyright (C) 2012  Metamarkets Group Inc.
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License
+* as published by the Free Software Foundation; either version 2
+* of the License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 package com.metamx.druid.utils;
 
 import com.google.common.base.Stopwatch;
@@ -44,8 +63,6 @@ public class DruidMasterBalancerProfiler
   private DruidServer druidServer1;
   private DruidServer druidServer2;
   Map<String, DataSegment> segments = Maps.newHashMap();
-  DateTime start1 = new DateTime("2012-01-01");
-  DateTime version = new DateTime("2012-03-01");
   ServiceEmitter emitter;
   DatabaseRuleManager manager;
   PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"),3,"normal");
@@ -65,8 +82,8 @@ public class DruidMasterBalancerProfiler
   public void bigProfiler()
   {
     Stopwatch watch = new Stopwatch();
-    int numServers = 55000;
-
+    int numSegments = 55000;
+    int numServers=50;
     EasyMock.expect(manager.getAllRules()).andReturn(ImmutableMap.<String, List<Rule>>of("test", rules)).anyTimes();
     EasyMock.expect(manager.getRules(EasyMock.<String>anyObject())).andReturn(rules).anyTimes();
     EasyMock.expect(manager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(rules).anyTimes();
@@ -85,7 +102,7 @@ public class DruidMasterBalancerProfiler
     Map<String, LoadQueuePeon> peonMap = Maps.newHashMap();
     List<ServerHolder> serverHolderList = Lists.newArrayList();
     Map<String,DataSegment> segmentMap = Maps.newHashMap();
-    for (int i=0;i<numServers;i++)
+    for (int i=0;i<numSegments;i++)
     {
       segmentMap.put(
           "segment" + i,
@@ -103,7 +120,7 @@ public class DruidMasterBalancerProfiler
       );
     }
 
-    for (int i=0;i<50;i++)
+    for (int i=0;i<numServers;i++)
     {
       DruidServer server =EasyMock.createMock(DruidServer.class);
       EasyMock.expect(server.getMetadata()).andReturn(null).anyTimes();
@@ -167,8 +184,8 @@ public class DruidMasterBalancerProfiler
     DruidMasterBalancerTester tester = new DruidMasterBalancerTester(master);
     DruidMasterRuleRunner runner = new DruidMasterRuleRunner(master,500,5);
     watch.start();
-    params = tester.run(params);
-    params = runner.run(params);
+    DruidMasterRuntimeParams balanceParams = tester.run(params);
+    DruidMasterRuntimeParams assignParams = runner.run(params);
     System.out.println(watch.stop());
   }
 
@@ -176,8 +193,7 @@ public class DruidMasterBalancerProfiler
 
   @Test
   public void profileRun(){
-  Stopwatch stopwatch = new Stopwatch();
-    stopwatch.start();
+  Stopwatch watch = new Stopwatch();
   LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
   LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
 
@@ -227,7 +243,9 @@ public class DruidMasterBalancerProfiler
                               .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                               .build();
     DruidMasterBalancerTester tester = new DruidMasterBalancerTester(master);
-
- }
+    watch.start();
+    DruidMasterRuntimeParams balanceParams = tester.run(params);
+    System.out.println(watch.stop());
+  }
 
 }
