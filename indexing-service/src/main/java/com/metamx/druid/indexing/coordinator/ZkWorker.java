@@ -36,6 +36,7 @@ import org.joda.time.DateTime;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -79,13 +80,18 @@ public class ZkWorker implements Closeable
     statusCache.getListenable().addListener(listener);
   }
 
-  @JsonProperty
+  @JsonProperty("worker")
   public Worker getWorker()
   {
     return worker;
   }
 
   @JsonProperty("runningTasks")
+  public Collection<String> getRunningTaskIds()
+  {
+    return getRunningTasks().keySet();
+  }
+
   public Map<String, TaskStatus> getRunningTasks()
   {
     Map<String, TaskStatus> retVal = Maps.newHashMap();
