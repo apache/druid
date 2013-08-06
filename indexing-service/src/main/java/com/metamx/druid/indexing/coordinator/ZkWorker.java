@@ -135,6 +135,11 @@ public class ZkWorker implements Closeable
     return getCurrCapacityUsed() >= worker.getCapacity();
   }
 
+  public boolean isValidVersion(String minVersion)
+  {
+    return worker.getVersion().compareTo(minVersion) >= 0;
+  }
+
   public boolean canRunTask(Task task)
   {
     return (worker.getCapacity() - getCurrCapacityUsed() >= task.getTaskResource().getRequiredCapacity()

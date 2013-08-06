@@ -71,7 +71,21 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   @Override
   public boolean doProvision(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
-    if (zkWorkers.size() >= workerSetupdDataRef.get().getMaxNumWorkers()) {
+    final WorkerSetupData workerSetupData = workerSetupdDataRef.get();
+
+    final String minVersion = workerSetupData.getMinVersion() == null
+                        ? config.getWorkerVersion()
+                        : workerSetupData.getMinVersion();
+    int maxNumWorkers = workerSetupData.getMaxNumWorkers();
+
+    int currValidWorkers = 0;
+    for (ZkWorker zkWorker : zkWorkers) {
+      if (zkWorker.isValidVersion(minVersion)) {
+        currValidWorkers++;
+      }
+    }
+
+    if (currValidWorkers >= maxNumWorkers) {
       log.debug(
           "Cannot scale anymore. Num workers = %d, Max num workers = %d",
           zkWorkers.size(),

@@ -22,6 +22,7 @@ package com.metamx.druid.indexing.coordinator.scaling;
 import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
+import org.skife.config.DefaultNull;
 
 /**
  */
@@ -42,4 +43,8 @@ public abstract class SimpleResourceManagmentConfig
   @Config("druid.indexer.maxPendingTaskDuration")
   @Default("PT30S")
   public abstract Duration getMaxPendingTaskDuration();
+
+  @Config("druid.indexer.worker.version")
+  @DefaultNull
+  public abstract String getWorkerVersion();
 }

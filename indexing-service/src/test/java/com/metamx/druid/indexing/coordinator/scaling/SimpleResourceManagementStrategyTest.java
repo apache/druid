@@ -116,6 +116,12 @@ public class SimpleResourceManagementStrategyTest
           {
             return new Duration(0);
           }
+
+          @Override
+          public String getWorkerVersion()
+          {
+            return "";
+          }
         },
         workerSetupData
     );

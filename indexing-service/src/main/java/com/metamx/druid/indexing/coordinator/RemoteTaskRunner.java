@@ -625,6 +625,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
       zkWorker.start(startMode);
       zkWorkers.put(worker.getHost(), zkWorker);
 
+      runPendingTasks();
+
       return zkWorker;
     }
     catch (Exception e) {
@@ -694,8 +696,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     final String minWorkerVer = configMinWorkerVer == null ? config.getWorkerVersion() : configMinWorkerVer;
 
     for (ZkWorker zkWorker : sortedWorkers) {
-      if (zkWorker.canRunTask(task) &&
-          zkWorker.getWorker().getVersion().compareTo(minWorkerVer) >= 0) {
+      if (zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)) {
         return zkWorker;
       }
     }
