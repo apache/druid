@@ -68,7 +68,6 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
     DatabaseRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
     for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
-
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {

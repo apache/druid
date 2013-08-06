@@ -24,8 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.coordination.DruidServerMetadata;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -40,9 +43,12 @@ public class DruidServer implements Comparable
   private final Object lock = new Object();
 
   private final ConcurrentMap<String, DruidDataSource> dataSources;
+  private final ConcurrentMap<String, Integer> dataSourceCount;
   private final ConcurrentMap<String, DataSegment> segments;
 
   private final DruidServerMetadata metadata;
+
+  private final ConcurrentMap<DateTime,Map<Interval,Integer>> intervalMap;
 
   private volatile long currSize;
 
@@ -73,6 +79,8 @@ public class DruidServer implements Comparable
 
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
     this.segments = new ConcurrentHashMap<String, DataSegment>();
+    this.intervalMap = new ConcurrentHashMap<DateTime,Map<Interval,Integer>>();
+    this.dataSourceCount = new ConcurrentHashMap<String, Integer>();
   }
 
   public String getName()
@@ -148,9 +156,24 @@ public class DruidServer implements Comparable
         dataSources.put(dataSourceName, dataSource);
       }
 
-      dataSource.addSegment(segmentId, segment);
+      if(dataSourceCount.get(dataSourceName)==null)
+      {
+        dataSourceCount.put(dataSourceName,1);
+      }
+      else{
+        dataSourceCount.put(dataSourceName,dataSourceCount.get(dataSourceName)+1);
+      }
 
+      dataSource.addSegment(segmentId, segment);
       segments.put(segmentId, segment);
+      Interval segmentInterval = segment.getInterval();
+      DateTime intervalMonth = segmentInterval.getStart().toDateTime().withDayOfMonth(1);
+      Map<Interval,Integer> monthMap = intervalMap.get(intervalMonth);
+      if (monthMap==null)
+      {
+        intervalMap.put(intervalMonth,new HashMap<Interval, Integer>());
+      }
+      intervalMap.get(intervalMonth).put(segmentInterval,1);
       currSize += segment.getSize();
     }
     return this;
@@ -187,10 +210,26 @@ public class DruidServer implements Comparable
         );
         return this;
       }
+      Integer dataSourceCountValue = dataSourceCount.get(segment.getDataSource());
+      if (dataSourceCountValue==null)
+      {
+        log.warn("Datasource not in DatasourceCount for some weird reason.");
+      }
+      else{
+        if (dataSourceCountValue.equals(1))
+        {
+          dataSourceCount.remove(segment.getDataSource());
+        }
+        else
+        {
+          dataSourceCount.put(segment.getDataSource(),dataSourceCountValue-1);
+        }
+      }
 
       dataSource.removePartition(segmentId);
 
       segments.remove(segmentId);
+      intervalMap.get(segment.getInterval().getStart().withDayOfMonth(1)).remove(segment.getInterval());
       currSize -= segment.getSize();
 
       if (dataSource.isEmpty()) {
@@ -199,6 +238,16 @@ public class DruidServer implements Comparable
     }
 
     return this;
+  }
+
+  public Map<String, Integer> getDataSourceCount()
+  {
+    return Collections.unmodifiableMap(dataSourceCount);
+  }
+
+  public Map<DateTime, Map<Interval, Integer>> getIntervalMap()
+  {
+    return Collections.unmodifiableMap(intervalMap);
   }
 
   public DruidDataSource getDataSource(String dataSource)

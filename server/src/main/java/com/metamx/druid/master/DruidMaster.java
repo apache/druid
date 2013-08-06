@@ -92,7 +92,6 @@ public class DruidMaster
   private final IndexingServiceClient indexingServiceClient;
   private final ScheduledExecutorService exec;
   private final LoadQueueTaskMaster taskMaster;
-
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final AtomicReference<LeaderLatch> leaderLatch;
 
@@ -660,6 +659,7 @@ public class DruidMaster
                                     .withMergeBytesLimit(config.getMergeBytesLimit())
                                     .withMergeSegmentsLimit(config.getMergeSegmentsLimit())
                                     .withMaxSegmentsToMove(config.getMaxSegmentsToMove())
+                                    .withEmitBalancingCostParams(config.getEmitStats())
                                     .build();
 
         for (DruidMasterHelper helper : helpers) {

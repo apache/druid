@@ -34,6 +34,11 @@ public abstract class DruidMasterConfig
   @Default("PT600s")
   public abstract Duration getMasterStartDelay();
 
+  @Config("druid.master.emitStats")
+  public  boolean getEmitStats(){
+    return false;
+  }
+
   @Config("druid.master.period")
   @Default("PT60s")
   public abstract Duration getMasterPeriod();
@@ -87,7 +92,7 @@ public abstract class DruidMasterConfig
   public abstract int getReplicantLifetime();
 
   @Config("druid.master.replicant.throttleLimit")
-  @Default("10")
+  @Default("1")
   public abstract int getReplicantThrottleLimit();
 
   @Config("druid.master.load.timeout")
