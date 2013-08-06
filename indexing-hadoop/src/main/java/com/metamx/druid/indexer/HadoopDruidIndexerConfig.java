@@ -665,13 +665,14 @@ public class HadoopDruidIndexerConfig
 			return new Path(
 			    String.format(
 			        "%s/%s/%s_%s/%s/%s",
-			        getSegmentOutputDir().replace(":", "_"),
-			        dataSource.replace(":", "_"),
+			        getSegmentOutputDir(),
+			        dataSource,
 			        bucketInterval.getStart().toString(ISODateTimeFormat.basicDateTime()),
 			        bucketInterval.getEnd().toString(ISODateTimeFormat.basicDateTime()),
 			        getVersion().replace(":", "_"),
 			        bucket.partitionNum
-			        ));
+			        )
+      );
 		}
 		return new Path(
 		    String.format(

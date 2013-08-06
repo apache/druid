@@ -28,13 +28,13 @@ import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -47,6 +47,7 @@ import com.metamx.druid.QueryableNode;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
+import com.metamx.druid.curator.cache.SimplePathChildrenCacheFactory;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.db.DbConnector;
@@ -56,12 +57,10 @@ import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
-import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionToolbox;
 import com.metamx.druid.indexing.common.config.IndexerZkConfig;
-import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
 import com.metamx.druid.indexing.common.config.TaskLogConfig;
 import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
 import com.metamx.druid.indexing.common.index.StaticS3FirehoseFactory;
@@ -115,7 +114,6 @@ import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
@@ -397,15 +395,17 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   {
     if (persistentTaskLogs == null) {
       final TaskLogConfig taskLogConfig = getConfigFactory().build(TaskLogConfig.class);
-      if (taskLogConfig.getLogStorageBucket() != null) {
+      if (taskLogConfig.getLogType().equalsIgnoreCase("s3")) {
         initializeS3Service();
         persistentTaskLogs = new S3TaskLogs(
             taskLogConfig.getLogStorageBucket(),
             taskLogConfig.getLogStoragePrefix(),
             s3Service
         );
-      } else {
+      } else if (taskLogConfig.getLogType().equalsIgnoreCase("noop")) {
         persistentTaskLogs = new NoopTaskLogs();
+      } else {
+        throw new IAE("Unknown log type %s", taskLogConfig.getLogType());
       }
     }
   }
@@ -639,29 +639,14 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
           @Override
           public TaskRunner build()
           {
-            // Don't use scheduledExecutorFactory, since it's linked to the wrong lifecycle (global lifecycle instead
-            // of leadership lifecycle)
-            final ScheduledExecutorService retryScheduledExec = Executors.newScheduledThreadPool(
-                1,
-                new ThreadFactoryBuilder()
-                    .setDaemon(true)
-                    .setNameFormat("RemoteRunnerRetryExec--%d")
-                    .build()
-            );
-
             final CuratorFramework curator = getCuratorFramework();
+            final RemoteTaskRunnerConfig remoteTaskRunnerConfig = getConfigFactory().build(RemoteTaskRunnerConfig.class);
             return new RemoteTaskRunner(
                 getJsonMapper(),
-                getConfigFactory().build(RemoteTaskRunnerConfig.class),
+                remoteTaskRunnerConfig,
                 curator,
-                new PathChildrenCache(curator, indexerZkConfig.getIndexerAnnouncementPath(), true),
-                retryScheduledExec,
-                new RetryPolicyFactory(
-                    getConfigFactory().buildWithReplacements(
-                        RetryPolicyConfig.class,
-                        ImmutableMap.of("base_path", "druid.indexing")
-                    )
-                ),
+                new SimplePathChildrenCacheFactory.Builder().withCompressed(remoteTaskRunnerConfig.enableCompression())
+                                                            .build(),
                 configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class),
                 httpClient
             );
@@ -697,7 +682,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
         resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
         {
           @Override
-          public ResourceManagementScheduler build(TaskRunner runner)
+          public ResourceManagementScheduler build(RemoteTaskRunner runner)
           {
             return new NoopResourceManagementScheduler();
           }
@@ -706,7 +691,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
         resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
         {
           @Override
-          public ResourceManagementScheduler build(TaskRunner runner)
+          public ResourceManagementScheduler build(RemoteTaskRunner runner)
           {
             final ScheduledExecutorService scalingScheduledExec = Executors.newScheduledThreadPool(
                 1,

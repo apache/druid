@@ -26,15 +26,22 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.indexing.worker.config.ChatHandlerProviderConfig;
 
+import java.util.concurrent.ConcurrentMap;
+
 /**
+ * Provides a way for the outside world to talk to objects in the indexing service. The {@link #get(String)} method
+ * allows anyone with a reference to this object to obtain a particular {@link ChatHandler}. An embedded
+ * {@link ServiceAnnouncer} will be used to advertise handlers on this host.
  */
-public interface ChatHandlerProvider
+public class EventReceivingChatHandlerProvider implements ChatHandlerProvider
 {
-  public void register(final String key, ChatHandler handler);
+  private static final Logger log = new Logger(EventReceivingChatHandlerProvider.class);
 
-  public void unregister(final String key);
+  private final ChatHandlerProviderConfig config;
+  private final ServiceAnnouncer serviceAnnouncer;
+  private final ConcurrentMap<String, ChatHandler> handlers;
 
-  public ChatHandlerProvider(
+  public EventReceivingChatHandlerProvider(
       ChatHandlerProviderConfig config,
       ServiceAnnouncer serviceAnnouncer
   )
@@ -44,6 +51,7 @@ public interface ChatHandlerProvider
     this.handlers = Maps.newConcurrentMap();
   }
 
+  @Override
   public void register(final String key, ChatHandler handler)
   {
     final String service = serviceName(key);
@@ -62,6 +70,7 @@ public interface ChatHandlerProvider
     }
   }
 
+  @Override
   public void unregister(final String key)
   {
     final String service = serviceName(key);
@@ -83,6 +92,7 @@ public interface ChatHandlerProvider
     handlers.remove(key, handler);
   }
 
+  @Override
   public Optional<ChatHandler> get(final String key)
   {
     return Optional.fromNullable(handlers.get(key));

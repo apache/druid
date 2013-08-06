@@ -38,7 +38,6 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.BaseServerNode;
 import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
-import com.metamx.druid.curator.discovery.NoopServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
@@ -50,6 +49,8 @@ import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
 import com.metamx.druid.indexing.common.config.TaskConfig;
 import com.metamx.druid.indexing.common.index.ChatHandlerProvider;
 import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
+import com.metamx.druid.indexing.common.index.EventReceivingChatHandlerProvider;
+import com.metamx.druid.indexing.common.index.NoopChatHandlerProvider;
 import com.metamx.druid.indexing.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.indexing.coordinator.ThreadPoolTaskRunner;
 import com.metamx.druid.indexing.worker.config.ChatHandlerProviderConfig;
@@ -285,7 +286,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
 
   private void initializeS3Service() throws S3ServiceException
   {
-    if(s3Service == null) {
+    if (s3Service == null) {
       s3Service = new RestS3Service(
           new AWSCredentials(
               PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
@@ -436,9 +437,12 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
         jsonMapper = new DefaultObjectMapper();
         smileMapper = new DefaultObjectMapper(new SmileFactory());
         smileMapper.getJsonFactory().setCodec(smileMapper);
-      }
-      else if (jsonMapper == null || smileMapper == null) {
-        throw new ISE("Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.", jsonMapper, smileMapper);
+      } else if (jsonMapper == null || smileMapper == null) {
+        throw new ISE(
+            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
+            jsonMapper,
+            smileMapper
+        );
       }
 
       if (lifecycle == null) {
@@ -453,7 +457,15 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
         configFactory = Config.createFactory(props);
       }
 
-      return new ExecutorNode(nodeType, props, lifecycle, jsonMapper, smileMapper, configFactory, executorLifecycleFactory);
+      return new ExecutorNode(
+          nodeType,
+          props,
+          lifecycle,
+          jsonMapper,
+          smileMapper,
+          configFactory,
+          executorLifecycleFactory
+      );
     }
   }
 }

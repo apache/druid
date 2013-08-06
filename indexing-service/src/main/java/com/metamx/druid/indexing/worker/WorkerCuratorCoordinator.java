@@ -130,6 +130,7 @@ public class WorkerCuratorCoordinator
         }
 
         curatorFramework.create()
+                        .creatingParentsIfNeeded()
                         .withMode(mode)
                         .forPath(path, rawBytes);
       }

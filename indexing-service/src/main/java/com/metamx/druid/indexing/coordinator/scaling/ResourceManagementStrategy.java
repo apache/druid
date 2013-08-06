@@ -19,7 +19,7 @@
 
 package com.metamx.druid.indexing.coordinator.scaling;
 
-import com.metamx.druid.indexing.coordinator.TaskRunnerWorkItem;
+import com.metamx.druid.indexing.coordinator.RemoteTaskRunnerWorkItem;
 import com.metamx.druid.indexing.coordinator.ZkWorker;
 
 import java.util.Collection;
@@ -30,9 +30,9 @@ import java.util.Collection;
  */
 public interface ResourceManagementStrategy
 {
-  public boolean doProvision(Collection<TaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
+  public boolean doProvision(Collection<RemoteTaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
 
-  public boolean doTerminate(Collection<TaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
+  public boolean doTerminate(Collection<RemoteTaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
 
   public ScalingStats getStats();
 }

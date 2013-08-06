@@ -103,7 +103,7 @@ public class RealtimeIndexTask extends AbstractTask
   @JsonCreator
   public RealtimeIndexTask(
       @JsonProperty("id") String id,
-      @JsonProperty("availabilityGroup") String availabilityGroup,
+      @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("schema") Schema schema,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
@@ -113,16 +113,22 @@ public class RealtimeIndexTask extends AbstractTask
   )
   {
     super(
-        id != null
-        ? id
-        : makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString()),
+        id == null
+        ? makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString())
+        :id,
         String.format(
             "index_realtime_%s",
             schema.getDataSource()
         ),
-        availabilityGroup != null
-        ? availabilityGroup
-        : makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString()),
+        taskResource == null
+        ? new TaskResource(
+            makeTaskId(
+                schema.getDataSource(),
+                schema.getShardSpec().getPartitionNum(),
+                new DateTime().toString()
+            ), 1
+        )
+        : taskResource,
         schema.getDataSource(),
         null
     );

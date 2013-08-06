@@ -17,13 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.indexing.coordinator.scaling;
+package com.metamx.druid.indexing.common.index;
 
-import com.metamx.druid.indexing.coordinator.RemoteTaskRunner;
+import com.google.common.base.Optional;
 
 /**
  */
-public interface ResourceManagementSchedulerFactory
+public class NoopChatHandlerProvider implements ChatHandlerProvider
 {
-  public ResourceManagementScheduler build(RemoteTaskRunner runner);
+  @Override
+  public void register(String key, ChatHandler handler)
+  {
+    // do nothing
+  }
+
+  @Override
+  public void unregister(String key)
+  {
+    // do nothing
+  }
+
+  @Override
+  public Optional<ChatHandler> get(String key)
+  {
+    return Optional.absent();
+  }
 }

@@ -441,13 +441,13 @@ public class HadoopDruidIndexerConfigTest
     try {
       cfg = jsonReadWriteRead(
               "{"
-                      + "\"dataSource\": \"the:data:source\","
+                      + "\"dataSource\": \"source\","
                       + " \"granularitySpec\":{"
                       + "   \"type\":\"uniform\","
                       + "   \"gran\":\"hour\","
                       + "   \"intervals\":[\"2012-07-10/P1D\"]"
                       + " },"
-                      + "\"segmentOutputPath\": \"/tmp/dru:id/data:test\""
+                      + "\"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\""
                       + "}",
               HadoopDruidIndexerConfig.class
       );
@@ -459,8 +459,10 @@ public class HadoopDruidIndexerConfigTest
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
     Path path = cfg.makeSegmentOutputPath(new DistributedFileSystem(), bucket);
-    Assert.assertEquals("/tmp/dru_id/data_test/the_data_source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version/4712", path.toString());
-
+    Assert.assertEquals(
+        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version/4712",
+        path.toString()
+    );
   }
 
   @Test
