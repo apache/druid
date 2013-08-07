@@ -332,6 +332,7 @@ public class MasterMain
     );
     root.addFilter(GuiceFilter.class, "/info/*", 0);
     root.addFilter(GuiceFilter.class, "/master/*", 0);
+    root.addFilter(GuiceFilter.class, "/masterSegmentSettings/*",0);
 
     server.start();
     server.join();

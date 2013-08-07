@@ -192,8 +192,9 @@ public class DruidMasterBalancerTest
                                     )
                                 )
                                 .withAvailableSegments(segments.values())
-                                .withDynamicConfigs(
-                                    new DynamicConfigs.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build()
+                                .withMasterSegmentSettings(
+                                    new MasterSegmentSettings.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                                                                       .build()
                                 )
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
@@ -283,7 +284,11 @@ public class DruidMasterBalancerTest
                                     )
                                 )
                                 .withAvailableSegments(segments.values())
-                                .withDynamicConfigs(new DynamicConfigs.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
+                                .withMasterSegmentSettings(
+                                    new MasterSegmentSettings.Builder().withMaxSegmentsToMove(
+                                        MAX_SEGMENTS_TO_MOVE
+                                    ).build()
+                                )
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 

@@ -46,7 +46,7 @@ public class DruidMasterRuntimeParams
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
-  private final DynamicConfigs dynamicConfigs;
+  private final MasterSegmentSettings masterSegmentSettings;
   private final MasterStats stats;
   private final DateTime balancerReferenceTimestamp;
 
@@ -60,7 +60,7 @@ public class DruidMasterRuntimeParams
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
-      DynamicConfigs dynamicConfigs,
+      MasterSegmentSettings masterSegmentSettings,
       MasterStats stats,
       DateTime balancerReferenceTimestamp
   )
@@ -74,7 +74,7 @@ public class DruidMasterRuntimeParams
     this.loadManagementPeons = loadManagementPeons;
     this.replicationManager = replicationManager;
     this.emitter = emitter;
-    this.dynamicConfigs = dynamicConfigs;
+    this.masterSegmentSettings = masterSegmentSettings;
     this.stats = stats;
     this.balancerReferenceTimestamp = balancerReferenceTimestamp;
   }
@@ -124,29 +124,14 @@ public class DruidMasterRuntimeParams
     return emitter;
   }
 
-  public long getMillisToWaitBeforeDeleting()
+  public MasterSegmentSettings getMasterSegmentSettings()
   {
-    return dynamicConfigs.getMillisToWaitBeforeDeleting();
+    return masterSegmentSettings;
   }
 
   public MasterStats getMasterStats()
   {
     return stats;
-  }
-
-  public long getMergeBytesLimit()
-  {
-    return dynamicConfigs.getMergeBytesLimit();
-  }
-
-  public int getMergeSegmentsLimit()
-  {
-    return dynamicConfigs.getMergeSegmentsLimit();
-  }
-
-  public int getMaxSegmentsToMove()
-  {
-    return dynamicConfigs.getMaxSegmentsToMove();
   }
 
   public DateTime getBalancerReferenceTimestamp()
@@ -161,7 +146,7 @@ public class DruidMasterRuntimeParams
 
   public boolean hasDeletionWaitTimeElapsed()
   {
-    return (System.currentTimeMillis() - getStartTime() > getMillisToWaitBeforeDeleting());
+    return (System.currentTimeMillis() - getStartTime() > masterSegmentSettings.getMillisToWaitBeforeDeleting());
   }
 
   public static Builder newBuilder()
@@ -181,7 +166,7 @@ public class DruidMasterRuntimeParams
         loadManagementPeons,
         replicationManager,
         emitter,
-        dynamicConfigs,
+        masterSegmentSettings,
         stats,
         balancerReferenceTimestamp
     );
@@ -198,7 +183,7 @@ public class DruidMasterRuntimeParams
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
-    private DynamicConfigs dynamicConfigs;
+    private MasterSegmentSettings masterSegmentSettings;
     private MasterStats stats;
     private DateTime balancerReferenceTimestamp;
 
@@ -214,7 +199,7 @@ public class DruidMasterRuntimeParams
       this.replicationManager = null;
       this.emitter = null;
       this.stats = new MasterStats();
-      this.dynamicConfigs = new DynamicConfigs.Builder().build();
+      this.masterSegmentSettings = new MasterSegmentSettings.Builder().build();
       this.balancerReferenceTimestamp = null;
     }
 
@@ -228,7 +213,7 @@ public class DruidMasterRuntimeParams
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
-        DynamicConfigs dynamicConfigs,
+        MasterSegmentSettings masterSegmentSettings,
         MasterStats stats,
         DateTime balancerReferenceTimestamp
     )
@@ -242,7 +227,7 @@ public class DruidMasterRuntimeParams
       this.loadManagementPeons = loadManagementPeons;
       this.replicationManager = replicationManager;
       this.emitter = emitter;
-      this.dynamicConfigs=dynamicConfigs;
+      this.masterSegmentSettings = masterSegmentSettings;
       this.stats = stats;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
     }
@@ -259,7 +244,7 @@ public class DruidMasterRuntimeParams
           loadManagementPeons,
           replicationManager,
           emitter,
-          dynamicConfigs,
+          masterSegmentSettings,
           stats,
           balancerReferenceTimestamp
       );
@@ -325,9 +310,9 @@ public class DruidMasterRuntimeParams
       return this;
     }
 
-    public Builder withDynamicConfigs(DynamicConfigs configs)
+    public Builder withMasterSegmentSettings(MasterSegmentSettings configs)
     {
-      this.dynamicConfigs = configs;
+      this.masterSegmentSettings = configs;
       return this;
     }
 

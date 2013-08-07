@@ -21,7 +21,7 @@ package com.metamx.druid.master;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class DynamicConfigs
+public class MasterSegmentSettings
 {
   public static final String CONFIG_KEY = "master.dynamicConfigs";
   private long millisToWaitBeforeDeleting=15 * 60 * 1000L;
@@ -30,10 +30,11 @@ public class DynamicConfigs
   private int maxSegmentsToMove = 5;
 
   @JsonCreator
-  public DynamicConfigs(@JsonProperty("millisToWaitBeforeDeleting") Long millisToWaitBeforeDeleting,
-                        @JsonProperty("mergeBytesLimit") Long mergeBytesLimit,
-                        @JsonProperty("mergeSegmentsLimit") Integer mergeSegmentsLimit,
-                        @JsonProperty("maxSegmentsToMove") Integer maxSegmentsToMove
+  public MasterSegmentSettings(
+      @JsonProperty("millisToWaitBeforeDeleting") Long millisToWaitBeforeDeleting,
+      @JsonProperty("mergeBytesLimit") Long mergeBytesLimit,
+      @JsonProperty("mergeSegmentsLimit") Integer mergeSegmentsLimit,
+      @JsonProperty("maxSegmentsToMove") Integer maxSegmentsToMove
   )
   {
       this.maxSegmentsToMove=maxSegmentsToMove;
@@ -120,9 +121,9 @@ public class DynamicConfigs
       return this;
     }
 
-    public DynamicConfigs build()
+    public MasterSegmentSettings build()
     {
-      return new DynamicConfigs(millisToWaitBeforeDeleting,mergeBytesLimit,mergeSegmentsLimit,maxSegmentsToMove);
+      return new MasterSegmentSettings(millisToWaitBeforeDeleting,mergeBytesLimit,mergeSegmentsLimit,maxSegmentsToMove);
     }
   }
 }

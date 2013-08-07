@@ -1,5 +1,5 @@
 $(function () {
-    $.get('../info/master/config', function (data) {
+    $.get('../masterSegmentSettings/config', function (data) {
         document.getElementById("millis").value=data["millisToWaitBeforeDeleting"];
         document.getElementById("mergeBytes").value = data["mergeBytesLimit"];
         document.getElementById("mergeSegments").value = data["mergeSegmentsLimit"];
@@ -15,7 +15,7 @@ $(function () {
             values[list[i]["name"]]=list[i]["value"];
         }
         $.ajax({
-            url:'../info/master/config',
+            url:'../masterSegmentSettings/config',
             type:"POST",
             data: JSON.stringify(values),
             contentType:"application/json; charset=utf-8",

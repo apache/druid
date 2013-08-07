@@ -95,6 +95,7 @@ public class DruidMaster
 
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final AtomicReference<LeaderLatch> leaderLatch;
+  private AtomicReference<MasterSegmentSettings> segmentSettingsAtomicReference;
 
   public DruidMaster(
       DruidMasterConfig config,
@@ -156,6 +157,7 @@ public class DruidMaster
     this.exec = scheduledExecutorFactory.create(1, "Master-Exec--%d");
 
     this.leaderLatch = new AtomicReference<LeaderLatch>(null);
+    this.segmentSettingsAtomicReference= new AtomicReference<MasterSegmentSettings>(null);
     this.loadManagementPeons = loadQueuePeonMap;
   }
 
@@ -465,8 +467,7 @@ public class DruidMaster
         serverInventoryView.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
-         configManager.watch(DynamicConfigs.CONFIG_KEY, DynamicConfigs.class);
-         configManager.set(DynamicConfigs.CONFIG_KEY, (new DynamicConfigs.Builder()).build());
+        segmentSettingsAtomicReference = configManager.watch(MasterSegmentSettings.CONFIG_KEY, MasterSegmentSettings.class,(new MasterSegmentSettings.Builder()).build());
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
         if (indexingServiceClient != null) {
 
@@ -651,13 +652,11 @@ public class DruidMaster
         }
 
         // Do master stuff.
-        DynamicConfigs dynamicConfigs = configManager.watch(DynamicConfigs.CONFIG_KEY,DynamicConfigs.class).get();
-
         DruidMasterRuntimeParams params =
             DruidMasterRuntimeParams.newBuilder()
                                     .withStartTime(startTime)
                                     .withDatasources(databaseSegmentManager.getInventory())
-                                    .withDynamicConfigs(dynamicConfigs)
+                                    .withMasterSegmentSettings(segmentSettingsAtomicReference.get())
                                     .withEmitter(emitter)
                                     .build();
 
@@ -756,7 +755,9 @@ public class DruidMaster
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .withBalancerReferenceTimestamp(DateTime.now())
-                               .withDynamicConfigs(configManager.watch(DynamicConfigs.CONFIG_KEY,DynamicConfigs.class).get())
+                               .withMasterSegmentSettings(
+                                   segmentSettingsAtomicReference.get()
+                               )
                                .build();
                 }
               },

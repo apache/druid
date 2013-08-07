@@ -46,6 +46,7 @@ public class MasterServletModule extends JerseyServletModule
   private final IndexingServiceClient indexingServiceClient;
   private final JacksonConfigManager configManager;
 
+
   public MasterServletModule(
       InventoryView serverInventoryView,
       DatabaseSegmentManager segmentInventoryManager,
@@ -68,6 +69,7 @@ public class MasterServletModule extends JerseyServletModule
   @Override
   protected void configureServlets()
   {
+    bind(MasterSegmentSettingsResource.class);
     bind(InfoResource.class);
     bind(MasterResource.class);
     bind(InventoryView.class).toInstance(serverInventoryView);
