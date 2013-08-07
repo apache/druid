@@ -691,7 +691,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
           {
             int retVal = -Ints.compare(zkWorker.getCurrCapacityUsed(), zkWorker2.getCurrCapacityUsed());
             if (retVal == 0) {
-              retVal = zkWorker.getWorker().getHost().compareTo(zkWorker.getWorker().getHost());
+              retVal = zkWorker.getWorker().getHost().compareTo(zkWorker2.getWorker().getHost());
             }
 
             return retVal;
