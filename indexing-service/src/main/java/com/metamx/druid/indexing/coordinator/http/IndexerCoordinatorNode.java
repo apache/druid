@@ -525,6 +525,18 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     if (monitors == null) {
       monitors = Lists.newArrayList();
       monitors.add(new JvmMonitor());
+      SysMonitor sysMonitor = new SysMonitor();
+      if (Boolean.parseBoolean(getProps().getProperty("druid.monitoring.monitorDirs", "false"))) {
+        String csv = getProps().getProperty("druid.monitoring.dirs");
+        if (csv != null) {
+          sysMonitor.addDirectoriesToMonitor(csv.split(","));
+        } else {
+          log.warn(
+              "druid.monitoring.monitorDirs is set to true but no directory path is set to monitor."
+              + " Please set it using druid.monitoring.dirs."
+          );
+        }
+      }
       monitors.add(new SysMonitor());
     }
   }
