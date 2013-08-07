@@ -424,11 +424,10 @@ public class DruidMasterSegmentMergerTest
                                                                     .withMasterSegmentSettings(
                                                                         new MasterSegmentSettings.Builder().withMergeBytesLimit(
                                                                             mergeBytesLimit
+                                                                        ).withMergeSegmentsLimit(
+                                                                            mergeSegmentsLimit
                                                                         )
-                                                                                                           .withMergeSegmentsLimit(
-                                                                                                               mergeSegmentsLimit
-                                                                                                           )
-                                                                                                           .build()
+                                                                        .build()
                                                                     )
                                                                     .build();
     merger.run(params);

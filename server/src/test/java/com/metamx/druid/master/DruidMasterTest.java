@@ -188,5 +188,4 @@ public class DruidMasterTest
 
     master.moveSegment("from", "to", "dummySegment", null);
   }
-
 }
