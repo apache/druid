@@ -95,7 +95,7 @@ public class DruidMaster
 
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final AtomicReference<LeaderLatch> leaderLatch;
-  private AtomicReference<MasterSegmentSettings> segmentSettingsAtomicReference;
+  private volatile AtomicReference<MasterSegmentSettings> segmentSettingsAtomicReference;
 
   public DruidMaster(
       DruidMasterConfig config,
@@ -467,7 +467,7 @@ public class DruidMaster
         serverInventoryView.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
-        segmentSettingsAtomicReference = configManager.watch(MasterSegmentSettings.CONFIG_KEY, MasterSegmentSettings.class,(new MasterSegmentSettings.Builder()).build());
+        segmentSettingsAtomicReference = configManager.watch(MasterSegmentSettings.CONFIG_KEY, MasterSegmentSettings.class,new MasterSegmentSettings.Builder().build());
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
         if (indexingServiceClient != null) {
 
