@@ -459,10 +459,15 @@ public class DruidMasterSegmentMergerTest
     final DruidMasterSegmentMerger merger = new DruidMasterSegmentMerger(indexingServiceClient, whitelistRef);
     final DruidMasterRuntimeParams params = DruidMasterRuntimeParams.newBuilder()
                                                                     .withAvailableSegments(ImmutableSet.copyOf(segments))
-                                                                    .withMergeBytesLimit(mergeBytesLimit)
-                                                                    .withMergeSegmentsLimit(mergeSegmentsLimit)
+                                                                    .withMasterSegmentSettings(
+                                                                        new MasterSegmentSettings.Builder().withMergeBytesLimit(
+                                                                            mergeBytesLimit
+                                                                        ).withMergeSegmentsLimit(
+                                                                            mergeSegmentsLimit
+                                                                        )
+                                                                        .build()
+                                                                    )
                                                                     .build();
-
     merger.run(params);
     return retVal;
   }
