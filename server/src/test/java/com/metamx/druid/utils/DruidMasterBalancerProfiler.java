@@ -49,7 +49,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Before;
-import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -67,6 +66,7 @@ public class DruidMasterBalancerProfiler
   DatabaseRuleManager manager;
   PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"),3,"normal");
   List<Rule> rules = ImmutableList.<Rule>of(loadRule);
+
   @Before
   public void setUp() throws Exception
   {
@@ -78,7 +78,6 @@ public class DruidMasterBalancerProfiler
     manager = EasyMock.createMock(DatabaseRuleManager.class);
   }
 
-  @Test
   public void bigProfiler()
   {
     Stopwatch watch = new Stopwatch();
@@ -190,8 +189,6 @@ public class DruidMasterBalancerProfiler
   }
 
 
-
-  @Test
   public void profileRun(){
   Stopwatch watch = new Stopwatch();
   LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
