@@ -240,24 +240,42 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
          * Restart the connection, will also recover the corresponding channel.
          */
         //channel restart 
+        log.warn("Trying to reconnect to rabbitmq");
+        try {
+            Thread.sleep(5000);
+        }
+        catch (InterruptedException e) {
+        }
         if (channel.isOpen()) {
           try {
-              channel.close();
+            channel.close();
           } 
           catch (IOException e) {
-              log.warn(e, "failure to close the queue");
+            log.warn(e, "Failure to close the queue.");
           }
         }
         //connection  restart
        if (connection.isOpen()) {
-          try {
-              connection = connectionFactory.newConnection();
-              channel.basicRecover();
-          } 
-          catch (IOException e) {
-              log.error(e, "failure to open a new connection the the queue");
-          }
+         try {
+           connection.close();
+         }
+         catch (IOException e) {
+             log.warn(e, "Failure to close the connection.");
+         }
+       }
+      try {
+        connection = connectionFactory.newConnection();
+        channel.basicRecover();
+      } 
+      catch (IOException e) {
+        log.error(e, "Failure to open a new connection the the queue, try again in 5 second.");
+        try {
+          Thread.sleep(5000);
         }
+        catch (InterruptedException err) {
+        }
+        restart();
+      }
     }
 
     @Override
