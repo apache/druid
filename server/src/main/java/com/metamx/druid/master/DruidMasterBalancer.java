@@ -79,7 +79,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
     final MasterStats stats = new MasterStats();
     final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
     final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
-    final int maxSegmentsToMove = params.getMaxSegmentsToMove();
+    final int maxSegmentsToMove = params.getMasterSegmentSettings().getMaxSegmentsToMove();
 
     for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry :
         params.getDruidCluster().getCluster().entrySet()) {
