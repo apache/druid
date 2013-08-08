@@ -31,7 +31,7 @@ import javax.ws.rs.core.Response;
 
 /**
  */
-@Path("/masterSegmentSettings")
+@Path("/master/config")
 public class MasterSegmentSettingsResource
 {
   private final JacksonConfigManager manager;
@@ -44,7 +44,6 @@ public class MasterSegmentSettingsResource
     this.manager=manager;
   }
   @GET
-  @Path("/config")
   @Produces("application/json")
   public Response getDynamicConfigs()
   {
@@ -56,7 +55,6 @@ public class MasterSegmentSettingsResource
   }
 
   @POST
-  @Path("/config")
   @Consumes("application/json")
   public Response setDynamicConfigs(
       final MasterSegmentSettings masterSegmentSettings
