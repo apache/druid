@@ -13,6 +13,7 @@ import java.util.Set;
 public abstract class ForkingTaskRunnerConfig
 {
   @Config("druid.indexer.taskDir")
+  @Default("/tmp/persistent")
   public abstract File getBaseTaskDir();
 
   @Config("druid.indexer.fork.java")

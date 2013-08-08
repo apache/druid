@@ -33,7 +33,7 @@ public abstract class CuratorConfig
   @Default("30000")
   public abstract int getZkSessionTimeoutMs();
 
-  @Config("druid.curator.compression.enable")
+  @Config("druid.curator.compress")
   @Default("false")
   public abstract boolean enableCompression();
 }

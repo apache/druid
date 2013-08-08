@@ -25,10 +25,10 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  */
-public class TaskRunnerWorkQueue extends ConcurrentSkipListMap<String, TaskRunnerWorkItem>
+public class RemoteTaskRunnerWorkQueue extends ConcurrentSkipListMap<String, RemoteTaskRunnerWorkItem>
 {
   @Override
-  public TaskRunnerWorkItem put(String s, TaskRunnerWorkItem taskRunnerWorkItem)
+  public RemoteTaskRunnerWorkItem put(String s, RemoteTaskRunnerWorkItem taskRunnerWorkItem)
   {
     return super.put(s, taskRunnerWorkItem.withQueueInsertionTime(new DateTime()));
   }

@@ -19,6 +19,7 @@
 
 package com.metamx.druid.indexing.common.config;
 
+import com.google.common.base.Joiner;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
@@ -26,13 +27,30 @@ import java.io.File;
 
 public abstract class TaskConfig
 {
+  private static Joiner joiner = Joiner.on("/");
+
+  @Config("druid.indexer.baseDir")
+  @Default("/tmp/")
+  public abstract String getBaseDir();
+
   @Config("druid.indexer.taskDir")
-  public abstract File getBaseTaskDir();
+  public File getBaseTaskDir()
+  {
+    return new File(defaultPath("persistent/task"));
+  }
+
+  @Config("druid.indexer.hadoopWorkingPath")
+  public String getHadoopWorkingPath()
+  {
+    return defaultPath("druid-indexing");
+  }
 
   @Config("druid.indexer.rowFlushBoundary")
   @Default("500000")
   public abstract int getDefaultRowFlushBoundary();
 
-  @Config("druid.indexer.hadoopWorkingPath")
-  public abstract String getHadoopWorkingPath();
+  private String defaultPath(String subPath)
+  {
+    return joiner.join(getBaseDir(), subPath);
+  }
 }

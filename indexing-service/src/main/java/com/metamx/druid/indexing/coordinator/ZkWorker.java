@@ -24,17 +24,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.druid.indexing.common.TaskStatus;
+import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.worker.Worker;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -44,7 +47,7 @@ public class ZkWorker implements Closeable
 {
   private final Worker worker;
   private final PathChildrenCache statusCache;
-  private final Function<ChildData, String> cacheConverter;
+  private final Function<ChildData, TaskStatus> cacheConverter;
 
   private volatile DateTime lastCompletedTaskTime = new DateTime();
 
@@ -52,13 +55,13 @@ public class ZkWorker implements Closeable
   {
     this.worker = worker;
     this.statusCache = statusCache;
-    this.cacheConverter = new Function<ChildData, String>()
+    this.cacheConverter = new Function<ChildData, TaskStatus>()
     {
       @Override
-      public String apply(@Nullable ChildData input)
+      public TaskStatus apply(ChildData input)
       {
         try {
-          return jsonMapper.readValue(input.getData(), TaskStatus.class).getId();
+          return jsonMapper.readValue(input.getData(), TaskStatus.class);
         }
         catch (Exception e) {
           throw Throwables.propagate(e);
@@ -67,21 +70,59 @@ public class ZkWorker implements Closeable
     };
   }
 
-  @JsonProperty
+  public void start(PathChildrenCache.StartMode startMode) throws Exception
+  {
+    statusCache.start(startMode);
+  }
+
+  public void addListener(PathChildrenCacheListener listener)
+  {
+    statusCache.getListenable().addListener(listener);
+  }
+
+  @JsonProperty("worker")
   public Worker getWorker()
   {
     return worker;
   }
 
-  @JsonProperty
-  public Set<String> getRunningTasks()
+  @JsonProperty("runningTasks")
+  public Collection<String> getRunningTaskIds()
   {
-    return Sets.newHashSet(
-        Lists.transform(
-            statusCache.getCurrentData(),
-            cacheConverter
-        )
-    );
+    return getRunningTasks().keySet();
+  }
+
+  public Map<String, TaskStatus> getRunningTasks()
+  {
+    Map<String, TaskStatus> retVal = Maps.newHashMap();
+    for (TaskStatus taskStatus : Lists.transform(
+        statusCache.getCurrentData(),
+        cacheConverter
+    )) {
+      retVal.put(taskStatus.getId(), taskStatus);
+    }
+
+    return retVal;
+  }
+
+  @JsonProperty("currCapacityUsed")
+  public int getCurrCapacityUsed()
+  {
+    int currCapacity = 0;
+    for (TaskStatus taskStatus : getRunningTasks().values()) {
+      currCapacity += taskStatus.getResource().getRequiredCapacity();
+    }
+    return currCapacity;
+  }
+
+  @JsonProperty("availabilityGroups")
+  public Set<String> getAvailabilityGroups()
+  {
+    Set<String> retVal = Sets.newHashSet();
+    for (TaskStatus taskStatus : getRunningTasks().values()) {
+      retVal.add(taskStatus.getResource().getAvailabilityGroup());
+    }
+    return retVal;
   }
 
   @JsonProperty
@@ -90,10 +131,25 @@ public class ZkWorker implements Closeable
     return lastCompletedTaskTime;
   }
 
-  @JsonProperty
+  public boolean isRunningTask(String taskId)
+  {
+    return getRunningTasks().containsKey(taskId);
+  }
+
   public boolean isAtCapacity()
   {
-    return statusCache.getCurrentData().size() >= worker.getCapacity();
+    return getCurrCapacityUsed() >= worker.getCapacity();
+  }
+
+  public boolean isValidVersion(String minVersion)
+  {
+    return worker.getVersion().compareTo(minVersion) >= 0;
+  }
+
+  public boolean canRunTask(Task task)
+  {
+    return (worker.getCapacity() - getCurrCapacityUsed() >= task.getTaskResource().getRequiredCapacity()
+            && !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup()));
   }
 
   public void setLastCompletedTaskTime(DateTime completedTaskTime)

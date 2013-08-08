@@ -29,10 +29,6 @@ public abstract class WorkerConfig
   @Config("druid.host")
   public abstract String getHost();
 
-  @Config("druid.worker.threads")
-  @Default("1")
-  public abstract int getNumThreads();
-
   @Config("druid.worker.ip")
   public abstract String getIp();
 

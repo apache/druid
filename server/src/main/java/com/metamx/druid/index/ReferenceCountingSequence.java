@@ -19,53 +19,30 @@
 
 package com.metamx.druid.index;
 
-import com.metamx.druid.StorageAdapter;
-import com.metamx.druid.index.v1.IncrementalIndex;
-import com.metamx.druid.index.v1.IncrementalIndexStorageAdapter;
-import org.joda.time.Interval;
-
-import java.io.IOException;
+import com.metamx.common.guava.ResourceClosingYielder;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Yielder;
+import com.metamx.common.guava.YieldingAccumulator;
+import com.metamx.common.guava.YieldingSequenceBase;
 
 /**
  */
-public class IncrementalIndexSegment implements Segment
+public class ReferenceCountingSequence<T> extends YieldingSequenceBase<T>
 {
-  private final IncrementalIndex index;
+  private final Sequence<T> baseSequence;
+  private final ReferenceCountingSegment segment;
 
-  public IncrementalIndexSegment(
-      IncrementalIndex index
+  public ReferenceCountingSequence(Sequence<T> baseSequence, ReferenceCountingSegment segment)
+  {
+    this.baseSequence = baseSequence;
+    this.segment = segment;
+  }
+
+  @Override
+  public <OutType> Yielder<OutType> toYielder(
+      OutType initValue, YieldingAccumulator<OutType, T> accumulator
   )
   {
-    this.index = index;
-  }
-
-  @Override
-  public String getIdentifier()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Interval getDataInterval()
-  {
-    return index.getInterval();
-  }
-
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return null;
-  }
-
-  @Override
-  public StorageAdapter asStorageAdapter()
-  {
-    return new IncrementalIndexStorageAdapter(index);
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-    // do nothing
+    return new ResourceClosingYielder<OutType>(baseSequence.toYielder(initValue, accumulator), segment.increment());
   }
 }

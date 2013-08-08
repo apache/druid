@@ -24,18 +24,19 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.metamx.collections.spatial.ImmutableRTree;
+import com.metamx.common.io.smoosh.SmooshedFileMapper;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedList;
 import com.metamx.druid.kv.IndexedLongs;
-import com.metamx.druid.kv.IndexedRTree;
 import com.metamx.druid.kv.VSizeIndexed;
 import com.metamx.druid.kv.VSizeIndexedInts;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.Interval;
 
+import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.LongBuffer;
 import java.util.Arrays;
@@ -57,6 +58,7 @@ public class MMappedIndex
   final Map<String, VSizeIndexed> dimColumns;
   final Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexes;
   final Map<String, ImmutableRTree> spatialIndexes;
+  final SmooshedFileMapper fileMapper;
 
   private final Map<String, Integer> metricIndexes = Maps.newHashMap();
 
@@ -69,7 +71,8 @@ public class MMappedIndex
       Map<String, GenericIndexed<String>> dimValueLookups,
       Map<String, VSizeIndexed> dimColumns,
       Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexes,
-      Map<String, ImmutableRTree> spatialIndexes
+      Map<String, ImmutableRTree> spatialIndexes,
+      SmooshedFileMapper fileMapper
   )
   {
     this.availableDimensions = availableDimensions;
@@ -81,6 +84,7 @@ public class MMappedIndex
     this.dimColumns = dimColumns;
     this.invertedIndexes = invertedIndexes;
     this.spatialIndexes = spatialIndexes;
+    this.fileMapper = fileMapper;
 
     for (int i = 0; i < availableMetrics.size(); i++) {
       metricIndexes.put(availableMetrics.get(i), i);
@@ -167,6 +171,18 @@ public class MMappedIndex
 
     ImmutableConciseSet retVal = invertedIndexes.get(dimension).get(indexOf);
     return (retVal == null) ? emptySet : retVal;
+  }
+
+  public SmooshedFileMapper getFileMapper()
+  {
+    return fileMapper;
+  }
+
+  public void close() throws IOException
+  {
+    if (fileMapper != null) {
+      fileMapper.close();
+    }
   }
 
   public static MMappedIndex fromIndex(Index index)
@@ -273,7 +289,8 @@ public class MMappedIndex
         dimValueLookups,
         dimColumns,
         invertedIndexes,
-        spatialIndexes
+        spatialIndexes,
+        null
     );
   }
 }
