@@ -21,7 +21,6 @@ package com.metamx.druid.master;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -99,16 +98,8 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
       SegmentsToMerge segmentsToMerge = new SegmentsToMerge();
 
       for (int i = 0; i < timelineObjects.size(); i++) {
-
-        try {
-          segmentsToMerge.add(timelineObjects.get(i));
-        }
-        catch (Exception e) {
-          log.error("Unable to merge segments for %s", entry.getKey());
-          throw Throwables.propagate(e);
-        }
-
-        if (segmentsToMerge.getByteCount() > params.getMasterSegmentSettings().getMergeBytesLimit()
+        if (!segmentsToMerge.add(timelineObjects.get(i))
+            || segmentsToMerge.getByteCount() > params.getMasterSegmentSettings().getMergeBytesLimit()
             || segmentsToMerge.getSegmentCount() >= params.getMasterSegmentSettings().getMergeSegmentsLimit()) {
           i -= segmentsToMerge.backtrack(params.getMasterSegmentSettings().getMergeBytesLimit());
 
