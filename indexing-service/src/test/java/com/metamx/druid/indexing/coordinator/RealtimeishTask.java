@@ -30,6 +30,7 @@ import com.metamx.druid.indexing.common.actions.LockListAction;
 import com.metamx.druid.indexing.common.actions.LockReleaseAction;
 import com.metamx.druid.indexing.common.actions.SegmentInsertAction;
 import com.metamx.druid.indexing.common.task.AbstractTask;
+import com.metamx.druid.indexing.common.task.TaskResource;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
@@ -41,12 +42,12 @@ public class RealtimeishTask extends AbstractTask
 {
   public RealtimeishTask()
   {
-    super("rt1", "rt", "rt1", "foo", null);
+    super("rt1", "rt", new TaskResource("rt1", 1), "foo", null);
   }
 
-  public RealtimeishTask(String id, String groupId, String availGroup, String dataSource, Interval interval)
+  public RealtimeishTask(String id, String groupId, TaskResource taskResource, String dataSource, Interval interval)
   {
-    super(id, groupId, availGroup, dataSource, interval);
+    super(id, groupId, taskResource, dataSource, interval);
   }
 
   @Override

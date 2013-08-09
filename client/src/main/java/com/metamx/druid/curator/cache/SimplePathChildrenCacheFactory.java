@@ -21,8 +21,11 @@ package com.metamx.druid.curator.cache;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.utils.ThreadUtils;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 /**
  */
@@ -47,5 +50,44 @@ public class SimplePathChildrenCacheFactory implements PathChildrenCacheFactory
   public PathChildrenCache make(CuratorFramework curator, String path)
   {
     return new PathChildrenCache(curator, path, cacheData, compressed, exec);
+  }
+
+  public static class Builder
+  {
+    private static final ThreadFactory defaultThreadFactory = ThreadUtils.newThreadFactory("PathChildrenCache");
+
+    private boolean cacheData;
+    private boolean compressed;
+    private ExecutorService exec;
+
+    public Builder()
+    {
+      cacheData = true;
+      compressed = false;
+      exec = Executors.newSingleThreadExecutor(defaultThreadFactory);
+    }
+
+    public Builder withCacheData(boolean cacheData)
+    {
+      this.cacheData = cacheData;
+      return this;
+    }
+
+    public Builder withCompressed(boolean compressed)
+    {
+      this.compressed = compressed;
+      return this;
+    }
+
+    public Builder withExecutorService(ExecutorService exec)
+    {
+      this.exec = exec;
+      return this;
+    }
+
+    public SimplePathChildrenCacheFactory build()
+    {
+      return new SimplePathChildrenCacheFactory(cacheData, compressed, exec);
+    }
   }
 }

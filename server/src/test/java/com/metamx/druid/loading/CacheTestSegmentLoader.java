@@ -27,6 +27,7 @@ import com.metamx.druid.index.Segment;
 import org.joda.time.Interval;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -67,6 +68,11 @@ public class CacheTestSegmentLoader implements SegmentLoader
       public StorageAdapter asStorageAdapter()
       {
         throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void close() throws IOException
+      {
       }
     };
   }

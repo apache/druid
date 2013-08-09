@@ -90,6 +90,11 @@ public class Sink implements Iterable<FireHydrant>
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
 
+  public String getVersion()
+  {
+    return version;
+  }
+
   public Interval getInterval()
   {
     return interval;

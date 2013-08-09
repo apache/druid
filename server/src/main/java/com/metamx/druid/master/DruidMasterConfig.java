@@ -94,4 +94,10 @@ public abstract class DruidMasterConfig
   @Config("druid.master.replicant.throttleLimit")
   @Default("10")
   public abstract int getReplicantThrottleLimit();
+
+  @Config("druid.master.load.timeout")
+  public Duration getLoadTimeoutDelay()
+  {
+    return new Duration(15 * 60 * 1000);
+  }
 }

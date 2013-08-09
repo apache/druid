@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.Comparators;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.coordination.DataSegmentChangeRequest;
@@ -43,7 +44,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -53,15 +56,6 @@ public class LoadQueuePeon
   private static final EmittingLogger log = new EmittingLogger(LoadQueuePeon.class);
   private static final int DROP = 0;
   private static final int LOAD = 1;
-
-  private final Object lock = new Object();
-
-  private final CuratorFramework curator;
-  private final String basePath;
-  private final ObjectMapper jsonMapper;
-  private final ExecutorService zkWritingExecutor;
-
-  private final AtomicLong queuedSize = new AtomicLong(0);
 
   private static Comparator<SegmentHolder> segmentHolderComparator = new Comparator<SegmentHolder>()
   {
@@ -74,6 +68,15 @@ public class LoadQueuePeon
     }
   };
 
+  private final CuratorFramework curator;
+  private final String basePath;
+  private final ObjectMapper jsonMapper;
+  private final ScheduledExecutorService zkWritingExecutor;
+  private final DruidMasterConfig config;
+
+  private final AtomicLong queuedSize = new AtomicLong(0);
+  private final AtomicInteger failedAssignCount = new AtomicInteger(0);
+
   private final ConcurrentSkipListSet<SegmentHolder> segmentsToLoad = new ConcurrentSkipListSet<SegmentHolder>(
       segmentHolderComparator
   );
@@ -81,19 +84,23 @@ public class LoadQueuePeon
       segmentHolderComparator
   );
 
+  private final Object lock = new Object();
+
   private volatile SegmentHolder currentlyLoading = null;
 
   LoadQueuePeon(
       CuratorFramework curator,
       String basePath,
       ObjectMapper jsonMapper,
-      ExecutorService zkWritingExecutor
+      ScheduledExecutorService zkWritingExecutor,
+      DruidMasterConfig config
   )
   {
     this.curator = curator;
     this.basePath = basePath;
     this.jsonMapper = jsonMapper;
     this.zkWritingExecutor = zkWritingExecutor;
+    this.config = config;
   }
 
   public Set<DataSegment> getSegmentsToLoad()
@@ -133,6 +140,11 @@ public class LoadQueuePeon
   public long getLoadQueueSize()
   {
     return queuedSize.get();
+  }
+
+  public int getAndResetFailedAssignCount()
+  {
+    return failedAssignCount.getAndSet(0);
   }
 
   public void loadSegment(
@@ -232,6 +244,26 @@ public class LoadQueuePeon
                     final byte[] payload = jsonMapper.writeValueAsBytes(currentlyLoading.getChangeRequest());
                     curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
 
+                    zkWritingExecutor.schedule(
+                        new Runnable()
+                        {
+                          @Override
+                          public void run()
+                          {
+                            try {
+                              if (curator.checkExists().forPath(path) != null) {
+                                failAssign(new ISE("%s was never removed! Failing this assign!", path));
+                              }
+                            }
+                            catch (Exception e) {
+                              failAssign(e);
+                            }
+                          }
+                        },
+                        config.getLoadTimeoutDelay().getMillis(),
+                        TimeUnit.MILLISECONDS
+                    );
+
                     final Stat stat = curator.checkExists().usingWatcher(
                         new CuratorWatcher()
                         {
@@ -268,10 +300,7 @@ public class LoadQueuePeon
                     }
                   }
                   catch (Exception e) {
-                    log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, currentlyLoading);
-                    // Act like it was completed so that the master gives it to someone else
-                    actionCompleted();
-                    doNext();
+                    failAssign(e);
                   }
                 }
               }
@@ -327,6 +356,7 @@ public class LoadQueuePeon
       segmentsToLoad.clear();
 
       queuedSize.set(0L);
+      failedAssignCount.set(0);
     }
   }
 
@@ -349,6 +379,17 @@ public class LoadQueuePeon
     }
 
     doNext();
+  }
+
+  private void failAssign(Exception e)
+  {
+    synchronized (lock) {
+      log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, currentlyLoading);
+      failedAssignCount.getAndIncrement();
+      // Act like it was completed so that the master gives it to someone else
+      actionCompleted();
+      doNext();
+    }
   }
 
   private class SegmentHolder

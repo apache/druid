@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.metamx.common.exception.FormattedException;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import org.joda.time.DateTime;
@@ -37,21 +38,30 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   }
 
   @Override
-  public InputRow parse(Map<String, Object> theMap)
+  public InputRow parse(Map<String, Object> theMap) throws FormattedException
   {
     final List<String> dimensions = dataSpec.hasCustomDimensions()
                                     ? dataSpec.getDimensions()
                                     : Lists.newArrayList(Sets.difference(theMap.keySet(), dimensionExclusions));
 
-    final DateTime timestamp = timestampSpec.extractTimestamp(theMap);
-    if (timestamp == null) {
-      final String input = theMap.toString();
-      throw new NullPointerException(
-          String.format(
-              "Null timestamp in input: %s",
-              input.length() < 100 ? input : input.substring(0, 100) + "..."
-          )
-      );
+    final DateTime timestamp;
+    try {
+      timestamp = timestampSpec.extractTimestamp(theMap);
+      if (timestamp == null) {
+        final String input = theMap.toString();
+        throw new NullPointerException(
+            String.format(
+                "Null timestamp in input: %s",
+                input.length() < 100 ? input : input.substring(0, 100) + "..."
+            )
+        );
+      }
+    }
+    catch (Exception e) {
+      throw new FormattedException.Builder()
+          .withErrorCode(FormattedException.ErrorCode.UNPARSABLE_TIMESTAMP)
+          .withMessage(e.toString())
+          .build();
     }
 
     return new MapBasedInputRow(timestamp.getMillis(), dimensions, theMap);

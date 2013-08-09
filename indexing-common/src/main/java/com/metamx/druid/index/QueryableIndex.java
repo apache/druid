@@ -23,6 +23,9 @@ import com.metamx.druid.index.column.ColumnSelector;
 import com.metamx.druid.kv.Indexed;
 import org.joda.time.Interval;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 /**
  */
 public interface QueryableIndex extends ColumnSelector
@@ -31,4 +34,11 @@ public interface QueryableIndex extends ColumnSelector
   public int getNumRows();
   public Indexed<String> getColumnNames();
   public Indexed<String> getAvailableDimensions();
+
+  /**
+   * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.
+   * @throws IOException
+   */
+  @Deprecated
+  public void close() throws IOException;
 }

@@ -331,10 +331,12 @@ public class WorkerNode extends QueryableNode<WorkerNode>
   {
     if (serviceDiscovery == null) {
       final ServiceDiscoveryConfig config = getConfigFactory().build(ServiceDiscoveryConfig.class);
-      this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-          getCuratorFramework(),
+      final CuratorFramework serviceDiscoveryCuratorFramework = Initialization.makeCuratorFramework(
           config,
           getLifecycle()
+      );
+      this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
+          serviceDiscoveryCuratorFramework, config, getLifecycle()
       );
     }
     if (coordinatorServiceProvider == null) {
@@ -392,7 +394,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
   public void initializeWorkerTaskMonitor()
   {
     if (workerTaskMonitor == null) {
-      final ExecutorService workerExec = Executors.newFixedThreadPool(workerConfig.getNumThreads());
+      final ExecutorService workerExec = Executors.newFixedThreadPool(workerConfig.getCapacity());
       final CuratorFramework curatorFramework = getCuratorFramework();
 
       final PathChildrenCache pathChildrenCache = new PathChildrenCache(

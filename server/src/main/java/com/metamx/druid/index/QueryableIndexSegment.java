@@ -23,6 +23,8 @@ import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.index.v1.QueryableIndexStorageAdapter;
 import org.joda.time.Interval;
 
+import java.io.IOException;
+
 /**
 */
 public class QueryableIndexSegment implements Segment
@@ -58,5 +60,12 @@ public class QueryableIndexSegment implements Segment
   public StorageAdapter asStorageAdapter()
   {
     return new QueryableIndexStorageAdapter(index);
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    // this is kinda nasty
+    index.close();
   }
 }
