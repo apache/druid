@@ -728,6 +728,7 @@ public class DruidMaster
 
                   // Stop peons for servers that aren't there anymore.
                   for (String name : Sets.difference(
+                      loadManagementPeons.keySet(),
                       Sets.newHashSet(
                           Iterables.transform(
                               servers,
@@ -740,7 +741,7 @@ public class DruidMaster
                                 }
                               }
                           )
-                      ), loadManagementPeons.keySet()
+                      )
                   )) {
                     log.info("Removing listener for server[%s] which is no longer there.", name);
                     LoadQueuePeon peon = loadManagementPeons.remove(name);
