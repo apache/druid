@@ -192,7 +192,7 @@ public class DruidMasterBalancerTest
                                     )
                                 )
                                 .withAvailableSegments(segments.values())
-                                .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                                .withMasterSegmentSettings(new MasterSegmentSettings.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
@@ -239,7 +239,6 @@ public class DruidMasterBalancerTest
 
     LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
     LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
-
     DruidMasterRuntimeParams params =
         DruidMasterRuntimeParams.newBuilder()
                                 .withDruidCluster(
@@ -265,7 +264,10 @@ public class DruidMasterBalancerTest
                                     )
                                 )
                                 .withAvailableSegments(segments.values())
-                                .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                                .withMasterSegmentSettings(
+                                    new MasterSegmentSettings.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                                                                       .build()
+                                )
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
@@ -355,7 +357,11 @@ public class DruidMasterBalancerTest
                                     )
                                 )
                                 .withAvailableSegments(segments.values())
-                                .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                                .withMasterSegmentSettings(
+                                    new MasterSegmentSettings.Builder().withMaxSegmentsToMove(
+                                        MAX_SEGMENTS_TO_MOVE
+                                    ).build()
+                                )
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 

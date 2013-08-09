@@ -78,4 +78,4 @@ function initDataTable(el) {
       this.value = asInitVals[$("thead input").index(this)];
     }
   });
-}
+  }

@@ -21,7 +21,6 @@ package com.metamx.druid.master;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -100,9 +99,9 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
 
       for (int i = 0; i < timelineObjects.size(); i++) {
         if (!segmentsToMerge.add(timelineObjects.get(i))
-            || segmentsToMerge.getByteCount() > params.getMergeBytesLimit()
-            || segmentsToMerge.getSegmentCount() >= params.getMergeSegmentsLimit()) {
-          i -= segmentsToMerge.backtrack(params.getMergeBytesLimit());
+            || segmentsToMerge.getByteCount() > params.getMasterSegmentSettings().getMergeBytesLimit()
+            || segmentsToMerge.getSegmentCount() >= params.getMasterSegmentSettings().getMergeSegmentsLimit()) {
+          i -= segmentsToMerge.backtrack(params.getMasterSegmentSettings().getMergeBytesLimit());
 
           if (segmentsToMerge.getSegmentCount() > 1) {
             stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
@@ -118,7 +117,7 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
       }
 
       // Finish any timelineObjects to merge that may have not hit threshold
-      segmentsToMerge.backtrack(params.getMergeBytesLimit());
+      segmentsToMerge.backtrack(params.getMasterSegmentSettings().getMergeBytesLimit());
       if (segmentsToMerge.getSegmentCount() > 1) {
         stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
       }

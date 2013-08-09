@@ -94,6 +94,7 @@ public class DruidMaster
   private final LoadQueueTaskMaster taskMaster;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final AtomicReference<LeaderLatch> leaderLatch;
+  private volatile AtomicReference<MasterSegmentSettings> segmentSettingsAtomicReference;
 
   public DruidMaster(
       DruidMasterConfig config,
@@ -155,6 +156,7 @@ public class DruidMaster
     this.exec = scheduledExecutorFactory.create(1, "Master-Exec--%d");
 
     this.leaderLatch = new AtomicReference<LeaderLatch>(null);
+    this.segmentSettingsAtomicReference= new AtomicReference<MasterSegmentSettings>(null);
     this.loadManagementPeons = loadQueuePeonMap;
   }
 
@@ -464,7 +466,7 @@ public class DruidMaster
         serverInventoryView.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
-
+        segmentSettingsAtomicReference = configManager.watch(MasterSegmentSettings.CONFIG_KEY, MasterSegmentSettings.class,new MasterSegmentSettings.Builder().build());
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
         if (indexingServiceClient != null) {
 
@@ -649,18 +651,14 @@ public class DruidMaster
         }
 
         // Do master stuff.
-
         DruidMasterRuntimeParams params =
             DruidMasterRuntimeParams.newBuilder()
                                     .withStartTime(startTime)
                                     .withDatasources(databaseSegmentManager.getInventory())
-                                    .withMillisToWaitBeforeDeleting(config.getMillisToWaitBeforeDeleting())
+                                    .withMasterSegmentSettings(segmentSettingsAtomicReference.get())
                                     .withEmitter(emitter)
-                                    .withMergeBytesLimit(config.getMergeBytesLimit())
-                                    .withMergeSegmentsLimit(config.getMergeSegmentsLimit())
-                                    .withMaxSegmentsToMove(config.getMaxSegmentsToMove())
-                                    .withEmitBalancingCostParams(config.getEmitStats())
                                     .build();
+
 
         for (DruidMasterHelper helper : helpers) {
           params = helper.run(params);
@@ -756,6 +754,9 @@ public class DruidMaster
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .withBalancerReferenceTimestamp(DateTime.now())
+                               .withMasterSegmentSettings(
+                                   segmentSettingsAtomicReference.get()
+                               )
                                .build();
                 }
               },

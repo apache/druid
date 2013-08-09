@@ -79,7 +79,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
     final MasterStats stats = new MasterStats();
     final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
     final BalancerStrategy strategy = params.getBalancerStrategyFactory().getBalancerStrategy(referenceTimestamp);
-    final int maxSegmentsToMove = params.getMaxSegmentsToMove();
+    final int maxSegmentsToMove = params.getMasterSegmentSettings().getMaxSegmentsToMove();
 
     for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry :
         params.getDruidCluster().getCluster().entrySet()) {
@@ -124,7 +124,7 @@ public class DruidMasterBalancer implements DruidMasterHelper
         }
       }
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
-      if (params.getEmitStats()) {
+      if (params.getMasterSegmentSettings().isEmitBalancingStats()) {
         strategy.emitStats(tier, stats, serverHolderList);
 
       }

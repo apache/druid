@@ -36,6 +36,7 @@ import com.metamx.druid.master.DruidMasterRuntimeParams;
 import com.metamx.druid.master.LoadPeonCallback;
 import com.metamx.druid.master.LoadQueuePeon;
 import com.metamx.druid.master.LoadQueuePeonTester;
+import com.metamx.druid.master.MasterSegmentSettings;
 import com.metamx.druid.master.ReplicationThrottler;
 import com.metamx.druid.master.SegmentReplicantLookup;
 import com.metamx.druid.master.ServerHolder;
@@ -161,7 +162,7 @@ public class DruidMasterBalancerProfiler
                                     peonMap
                                 )
                                 .withAvailableSegments(segmentMap.values())
-                                .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                                .withMasterSegmentSettings(new MasterSegmentSettings.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .withEmitter(emitter)
                                 .withDatabaseRuleManager(manager)
@@ -236,7 +237,7 @@ public class DruidMasterBalancerProfiler
                               )
                               .withLoadManagementPeons(ImmutableMap.<String, LoadQueuePeon>of("from", fromPeon, "to", toPeon))
                               .withAvailableSegments(segments.values())
-                              .withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                              .withMasterSegmentSettings(new MasterSegmentSettings.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
                               .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                               .build();
     DruidMasterBalancerTester tester = new DruidMasterBalancerTester(master);

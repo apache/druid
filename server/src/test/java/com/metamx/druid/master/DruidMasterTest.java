@@ -36,7 +36,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -96,21 +95,15 @@ public class DruidMasterTest
           }
 
           @Override
-          public long getMillisToWaitBeforeDeleting()
-          {
-            return super.getMillisToWaitBeforeDeleting();
-          }
-
-          @Override
           public String getMergerServiceName()
           {
             return "";
           }
 
           @Override
-          public int getMaxSegmentsToMove()
+          public MasterSegmentSettings getMasterSegmentSettings()
           {
-            return 0;
+            return new MasterSegmentSettings.Builder().withMillisToWaitBeforeDeleting(super.getMasterSegmentSettings().getMillisToWaitBeforeDeleting()).withMaxSegmentsToMove(0).build();
           }
 
           @Override
