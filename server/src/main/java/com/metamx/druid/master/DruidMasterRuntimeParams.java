@@ -190,7 +190,6 @@ public class DruidMasterRuntimeParams
     private MasterSegmentSettings masterSegmentSettings;
     private MasterStats stats;
     private DateTime balancerReferenceTimestamp;
-    private boolean emitBalancingCostParams;
     private BalancerStrategyFactory strategyFactory;
 
     Builder()
@@ -207,7 +206,6 @@ public class DruidMasterRuntimeParams
       this.stats = new MasterStats();
       this.masterSegmentSettings = new MasterSegmentSettings.Builder().build();
       this.balancerReferenceTimestamp = null;
-      this.emitBalancingCostParams = false;
       this.strategyFactory = new CostBalancerStrategyFactory();
     }
 
@@ -239,7 +237,6 @@ public class DruidMasterRuntimeParams
       this.masterSegmentSettings = masterSegmentSettings;
       this.stats = stats;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
-      this.emitBalancingCostParams = emitBalancingCostParams;
       this.strategyFactory=strategyFactory;
     }
 
@@ -260,18 +257,6 @@ public class DruidMasterRuntimeParams
           balancerReferenceTimestamp,
           strategyFactory
       );
-    }
-
-    public Builder withBalancerStrategy(BalancerStrategyFactory strategyFactory)
-    {
-      this.strategyFactory = strategyFactory;
-      return this;
-    }
-
-    public Builder withEmitBalancingCostParams(boolean param)
-    {
-      emitBalancingCostParams = param;
-      return this;
     }
 
     public Builder withStartTime(long time)

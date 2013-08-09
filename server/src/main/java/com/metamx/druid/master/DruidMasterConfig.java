@@ -64,12 +64,6 @@ public abstract class DruidMasterConfig
   @Default("15")
   public abstract int getReplicantLifetime();
 
-  @Config("druid.master.masterSegmentSettings")
-  public MasterSegmentSettings getMasterSegmentSettings()
-  {
-    return new MasterSegmentSettings.Builder().build();
-  }
-
   @Config("druid.master.replicant.throttleLimit")
   @Default("10")
   public abstract int getReplicantThrottleLimit();

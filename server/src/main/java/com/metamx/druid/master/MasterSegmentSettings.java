@@ -63,6 +63,7 @@ public class MasterSegmentSettings
     return mergeBytesLimit;
   }
 
+  @JsonProperty
   public boolean isEmitBalancingStats()
   {
     return emitBalancingStats;

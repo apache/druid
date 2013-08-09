@@ -22,5 +22,5 @@ import org.joda.time.DateTime;
 
 public interface BalancerStrategyFactory
 {
-  public BalancerStrategy getBalancerStrategy(DateTime referenceTimestamp);
+  public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp);
 }

@@ -101,12 +101,6 @@ public class DruidMasterTest
           }
 
           @Override
-          public MasterSegmentSettings getMasterSegmentSettings()
-          {
-            return new MasterSegmentSettings.Builder().withMillisToWaitBeforeDeleting(super.getMasterSegmentSettings().getMillisToWaitBeforeDeleting()).withMaxSegmentsToMove(0).build();
-          }
-
-          @Override
           public int getReplicantLifetime()
           {
             return 0;

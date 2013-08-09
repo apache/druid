@@ -23,7 +23,7 @@ import org.joda.time.DateTime;
 public class RandomBalancerStrategyFactory implements BalancerStrategyFactory
 {
   @Override
-  public BalancerStrategy getBalancerStrategy(DateTime referenceTimestamp)
+  public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
   {
     return new RandomBalancerStrategy();
   }

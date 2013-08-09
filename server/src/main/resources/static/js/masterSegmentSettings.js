@@ -4,6 +4,7 @@ $(function () {
         document.getElementById("mergeBytes").value = data["mergeBytesLimit"];
         document.getElementById("mergeSegments").value = data["mergeSegmentsLimit"];
         document.getElementById("maxSegments").value = data["maxSegmentsToMove"];
+        document.getElementById("emitBalancingStats").value = data["emitBalancingStats"];
     });
 
     $("#submit").click( function ()
