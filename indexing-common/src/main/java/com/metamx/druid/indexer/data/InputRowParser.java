@@ -7,7 +7,7 @@ import com.metamx.druid.input.InputRow;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringInputRowParser.class)
 @JsonSubTypes({
         @JsonSubTypes.Type(name = "string", value = StringInputRowParser.class),
-        @JsonSubTypes.Type(name = "protobuf", value = ProtoBufInputRowParser.class),
+        @JsonSubTypes.Type(name = "protobuf", value = ProtoBufInputRowParser.class)
 })
 public interface InputRowParser<T>
 {
