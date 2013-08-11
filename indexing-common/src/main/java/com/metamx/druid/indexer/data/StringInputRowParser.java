@@ -67,7 +67,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
 
 	private Map<String, Object> buildStringKeyMap(ByteBuffer input)
 	{
-		int payloadSize = input.limit();
+		int payloadSize = input.remaining();
 
 		if (chars == null || chars.remaining() < payloadSize)
 		{
