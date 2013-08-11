@@ -41,7 +41,8 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
 	@Override
 	public InputRow parse(ByteBuffer input)
 	{
-
+        // TODO there should be a ProtoBufBasedInputRow that does not need an intermediate map but accesses
+        // the DynamicMessage directly
 		Map<String, Object> theMap = buildStringKeyMap(input);
 
 		return inputRowCreator.parse(theMap);
