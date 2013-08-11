@@ -2,13 +2,13 @@ package com.metamx.druid.indexer.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import org.joda.time.DateTime;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,7 +28,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   {
     this.timestampSpec = timestampSpec;
     if (dimensions != null) {
-      this.dimensions = Collections.unmodifiableList(Lists.newArrayList(dimensions));
+       this.dimensions = ImmutableList.copyOf(dimensions);
     }
     this.dimensionExclusions = Sets.newHashSet();
     if (dimensionExclusions != null) {
