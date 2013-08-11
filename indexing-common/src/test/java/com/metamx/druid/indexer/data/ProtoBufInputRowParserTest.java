@@ -14,9 +14,6 @@ import org.junit.Test;
 
 import com.metamx.druid.input.InputRow;
 
-/**
- * @author jan.rudert
- */
 public class ProtoBufInputRowParserTest {
 
   public static final String[] DIMENSIONS = new String[]{"eventType", "id", "someOtherId", "isValid"};

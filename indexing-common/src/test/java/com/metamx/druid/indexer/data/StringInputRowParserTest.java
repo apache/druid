@@ -5,9 +5,6 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-/**
- * @author jan.rudert
- */
 public class StringInputRowParserTest {
 
 

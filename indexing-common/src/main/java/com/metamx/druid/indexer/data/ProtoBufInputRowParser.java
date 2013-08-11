@@ -19,9 +19,6 @@ import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.metamx.druid.input.InputRow;
 
-/**
- * @author jan.rudert
- */
 public class ProtoBufInputRowParser implements ByteBufferInputRowParser
 {
 
