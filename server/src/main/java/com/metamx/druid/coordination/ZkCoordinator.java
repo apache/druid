@@ -204,7 +204,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
         if (serverManager.isSegmentCached(segment)) {
           cachedSegments.add(segment);
-          //addSegment(segment);
         } else {
           log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getIdentifier());
 
@@ -228,7 +227,15 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   public void addSegment(DataSegment segment)
   {
     try {
-      serverManager.loadSegment(segment);
+      log.info("Loading segment %s", segment.getIdentifier());
+
+      try {
+        serverManager.loadSegment(segment);
+      }
+      catch (Exception e) {
+        removeSegment(segment);
+        throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getIdentifier());
+      }
 
       File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
       if (!segmentInfoCacheFile.exists()) {
@@ -263,7 +270,15 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   {
     try {
       for (DataSegment segment : segments) {
-        serverManager.loadSegment(segment);
+        log.info("Loading segment %s", segment.getIdentifier());
+
+        try {
+          serverManager.loadSegment(segment);
+        }
+        catch (Exception e) {
+          removeSegment(segment);
+          throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getIdentifier());
+        }
 
         File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
         if (!segmentInfoCacheFile.exists()) {
