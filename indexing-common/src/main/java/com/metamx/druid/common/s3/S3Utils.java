@@ -53,7 +53,7 @@ public class S3Utils
    * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
    * found, etc) are not retried.
    */
-  public static <T> T retryS3Operation(Callable<T> f) throws ServiceException, InterruptedException
+  public static <T> T retryS3Operation(Callable<T> f) throws IOException, ServiceException, InterruptedException
   {
     int nTry = 0;
     final int maxTries = 3;
@@ -66,7 +66,7 @@ public class S3Utils
         if (nTry <= maxTries) {
           awaitNextRetry(e, nTry);
         } else {
-          throw Throwables.propagate(e);
+          throw e;
         }
       }
       catch (ServiceException e) {
