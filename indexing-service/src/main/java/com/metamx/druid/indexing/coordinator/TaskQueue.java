@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
@@ -160,6 +161,20 @@ public class TaskQueue
       }
 
       log.info("Bootstrapped %,d tasks with %,d locks. Ready to go!", queue.size(), tasksByLock.keySet().size());
+    } finally {
+      giant.unlock();
+    }
+  }
+
+  /**
+   * Returns an immutable snapshot of the current status of this queue.
+   */
+  public List<Task> snapshot()
+  {
+    giant.lock();
+
+    try {
+      return ImmutableList.copyOf(queue);
     } finally {
       giant.unlock();
     }

@@ -97,6 +97,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
   }
 
   @Override
+  public void bootstrap(List<Task> tasks)
+  {
+    // do nothing
+  }
+
+  @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     synchronized (tasks) {

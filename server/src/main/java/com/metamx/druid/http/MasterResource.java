@@ -24,13 +24,10 @@ import com.metamx.druid.master.LoadPeonCallback;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -110,11 +107,5 @@ public class MasterResource
     return resp;
   }
 
-  @GET
-  @Path("/loadstatus")
-  @Produces("application/json")
-  public Map<String, Double> getLoadStatus()
-  {
-    return master.getLoadStatus();
-  }
+
 }

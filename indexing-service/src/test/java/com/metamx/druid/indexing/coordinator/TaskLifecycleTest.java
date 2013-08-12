@@ -36,6 +36,7 @@ import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
+import com.metamx.druid.indexing.common.task.TaskResource;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -120,9 +121,9 @@ public class TaskLifecycleTest
         new TaskConfig()
         {
           @Override
-          public File getBaseTaskDir()
+          public String getBaseDir()
           {
-            return tmp;
+            return tmp.toString();
           }
 
           @Override
@@ -285,7 +286,7 @@ public class TaskLifecycleTest
   @Test
   public void testSimple() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractTask("id1", "id1", new TaskResource("id1", 1), "ds", new Interval("2012-01-01/P1D"))
     {
       @Override
       public String getType()
@@ -322,7 +323,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadInterval() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
       @Override
       public String getType()
@@ -356,7 +357,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadVersion() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
       @Override
       public String getType()

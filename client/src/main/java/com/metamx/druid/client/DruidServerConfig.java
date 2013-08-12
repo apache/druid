@@ -33,9 +33,10 @@ public abstract class DruidServerConfig
   public abstract String getHost();
 
   @Config("druid.server.maxSize")
+  @Default("0")
   public abstract long getMaxSize();
 
   @Config("druid.server.tier")
-  @Default("_default_tier")
+  @Default(DruidServer.DEFAULT_TIER)
   public abstract String getTier();
 }
