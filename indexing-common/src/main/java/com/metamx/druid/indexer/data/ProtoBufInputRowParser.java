@@ -17,6 +17,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.metamx.common.exception.FormattedException;
 import com.metamx.druid.input.InputRow;
 
 public class ProtoBufInputRowParser implements ByteBufferInputRowParser
@@ -39,7 +40,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
 	}
 
 	@Override
-	public InputRow parse(ByteBuffer input)
+	public InputRow parse(ByteBuffer input) throws FormattedException
 	{
         // TODO there should be a ProtoBufBasedInputRow that does not need an intermediate map but accesses
         // the DynamicMessage directly
