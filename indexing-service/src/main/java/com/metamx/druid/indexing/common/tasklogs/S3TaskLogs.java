@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.io.InputSupplier;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.common.s3.S3Utils;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.StorageService;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -13,6 +14,7 @@ import org.jets3t.service.model.StorageObject;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.Callable;
 
 /**
  * Provides task logs archived on S3.
@@ -86,16 +88,25 @@ public class S3TaskLogs implements TaskLogs
     }
   }
 
-  public void pushTaskLog(String taskid, File logFile) throws IOException
+  public void pushTaskLog(final String taskid, final File logFile) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid);
+    log.info("Pushing task log %s to: %s", logFile, taskKey);
 
     try {
-      log.info("Pushing task log %s to: %s", logFile, taskKey);
-
-      final StorageObject object = new StorageObject(logFile);
-      object.setKey(taskKey);
-      service.putObject(bucket, object);
+      S3Utils.retryS3Operation(
+          new Callable<Void>()
+          {
+            @Override
+            public Void call() throws Exception
+            {
+              final StorageObject object = new StorageObject(logFile);
+              object.setKey(taskKey);
+              service.putObject(bucket, object);
+              return null;
+            }
+          }
+      );
     }
     catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, IOException.class);

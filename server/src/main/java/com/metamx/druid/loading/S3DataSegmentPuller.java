@@ -40,7 +40,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.zip.GZIPInputStream;
 
@@ -154,6 +153,9 @@ public class S3DataSegmentPuller implements DataSegmentPuller
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
     }
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, "S3 fail! Key[%s]", coords);
+    }
     catch (ServiceException e) {
       throw new SegmentLoadingException(e, "S3 fail! Key[%s]", coords);
     }
@@ -178,6 +180,9 @@ public class S3DataSegmentPuller implements DataSegmentPuller
     }
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
+    }
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, e.getMessage());
     }
     catch (ServiceException e) {
       throw new SegmentLoadingException(e, e.getMessage());
