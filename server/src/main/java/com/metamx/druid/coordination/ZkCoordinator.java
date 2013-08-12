@@ -314,7 +314,9 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       }
 
       if (!segmentFailures.isEmpty()) {
-        log.error("Exception loading segments: %s", segmentFailures);
+        for (String segmentFailure : segmentFailures) {
+          log.error("%s failed to load", segmentFailure);
+        }
         throw new SegmentLoadingException("%,d errors seen while loading segments", segmentFailures.size());
       }
     }
