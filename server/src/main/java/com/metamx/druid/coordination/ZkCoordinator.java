@@ -287,6 +287,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
           log.error(e, "Exception loading segment[%s]", segment.getIdentifier());
           removeSegment(segment);
           segmentFailures.add(segment.getIdentifier());
+          continue;
         }
 
         File segmentInfoCacheFile = new File(config.getSegmentInfoCacheDirectory(), segment.getIdentifier());
@@ -298,6 +299,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
             log.error(e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile);
             removeSegment(segment);
             segmentFailures.add(segment.getIdentifier());
+            continue;
           }
         }
 
