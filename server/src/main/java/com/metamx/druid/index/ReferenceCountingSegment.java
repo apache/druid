@@ -116,13 +116,24 @@ public class ReferenceCountingSegment implements Segment
   public void close() throws IOException
   {
     synchronized (lock) {
+      log.info("Trying to close %s", baseSegment.getIdentifier());
       if (!isClosed) {
         if (numReferences > 0) {
+          log.info(
+              "%d references to %s still exist. Decrementing instead.",
+              numReferences,
+              baseSegment.getIdentifier()
+          );
+
           decrement();
         } else {
+          log.info("Closing %s, numReferences: %d", baseSegment.getIdentifier(), numReferences);
+
           baseSegment.close();
           isClosed = true;
         }
+      } else {
+        log.info("Failed to close, %s is closed already", baseSegment.getIdentifier());
       }
     }
   }
