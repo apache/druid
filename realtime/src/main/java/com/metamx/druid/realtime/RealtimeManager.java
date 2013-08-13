@@ -163,37 +163,39 @@ public class RealtimeManager implements QuerySegmentWalker
         while (firehose.hasMore()) {
           final InputRow inputRow;
           try {
-            inputRow = firehose.nextRow();
+            try {
+              inputRow = firehose.nextRow();
+            }
+            catch (Exception e) {
+              log.info(e, "thrown away line due to exception");
+              metrics.incrementThrownAway();
+              continue;
+            }
+
+            final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
+            if (sink == null) {
+              metrics.incrementThrownAway();
+              log.debug("Throwing away event[%s]", inputRow);
+
+              if (System.currentTimeMillis() > nextFlush) {
+                plumber.persist(firehose.commit());
+                nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+              }
+
+              continue;
+            }
+
+            int currCount = sink.add(inputRow);
+            metrics.incrementProcessed();
+            if (currCount >= config.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
+              plumber.persist(firehose.commit());
+              nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+            }
           }
           catch (FormattedException e) {
             log.info(e, "unparseable line: %s", e.getDetails());
             metrics.incrementUnparseable();
             continue;
-          }
-          catch (Exception e) {
-            log.info(e, "thrown away line due to exception");
-            metrics.incrementThrownAway();
-            continue;
-          }
-
-          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-          if (sink == null) {
-            metrics.incrementThrownAway();
-            log.debug("Throwing away event[%s]", inputRow);
-
-            if (System.currentTimeMillis() > nextFlush) {
-              plumber.persist(firehose.commit());
-              nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
-            }
-
-            continue;
-          }
-
-          int currCount = sink.add(inputRow);
-          metrics.incrementProcessed();
-          if (currCount >= config.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
-            plumber.persist(firehose.commit());
-            nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }
         }
       } catch (RuntimeException e) {
