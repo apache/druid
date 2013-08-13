@@ -267,7 +267,7 @@ public class ServerManagerTest
     Assert.assertEquals(1, factory.getSegmentReferences().size());
 
     for (ReferenceCountingSegment referenceCountingSegment : factory.getSegmentReferences()) {
-      Assert.assertEquals(0, referenceCountingSegment.getNumReferences());
+      Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
     }
 
     queryWaitYieldLatch.countDown();
@@ -311,7 +311,7 @@ public class ServerManagerTest
 
     queryWaitYieldLatch.countDown();
 
-    Assert.assertTrue(factory.getAdapters().size() == 1);
+    Assert.assertEquals(1, factory.getAdapters().size());
 
     for (SegmentForTesting segmentForTesting : factory.getAdapters()) {
       Assert.assertFalse(segmentForTesting.isClosed());
@@ -346,7 +346,15 @@ public class ServerManagerTest
 
     queryNotifyLatch.await();
 
-    Assert.assertTrue(factory.getAdapters().size() == 1);
+    Assert.assertEquals(1, factory.getSegmentReferences().size());
+
+    for (ReferenceCountingSegment referenceCountingSegment : factory.getSegmentReferences()) {
+      Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
+    }
+
+    queryWaitYieldLatch.countDown();
+
+    Assert.assertEquals(1, factory.getAdapters().size());
 
     for (SegmentForTesting segmentForTesting : factory.getAdapters()) {
       Assert.assertFalse(segmentForTesting.isClosed());
