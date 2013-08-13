@@ -38,7 +38,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.22.6</metamx.java-util.version>
+        <metamx.java-util.version>0.23.0</metamx.java-util.version>
         <apache.curator.version>2.1.0-incubating</apache.curator.version>
     </properties>
 
