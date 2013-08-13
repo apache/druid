@@ -22,6 +22,8 @@ package com.metamx.druid.index;
 import com.google.common.base.Throwables;
 import com.metamx.druid.StorageAdapter;
 import junit.framework.Assert;
+import org.joda.time.DateTime;
+import org.joda.time.Days;
 import org.joda.time.Interval;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,25 +49,25 @@ public class ReferenceCountingSegmentTest
           @Override
           public String getIdentifier()
           {
-            throw new UnsupportedOperationException();
+            return "test_segment";
           }
 
           @Override
           public Interval getDataInterval()
           {
-            throw new UnsupportedOperationException();
+            return new Interval(DateTime.now().minus(Days.days(1)), DateTime.now());
           }
 
           @Override
           public QueryableIndex asQueryableIndex()
           {
-            throw new UnsupportedOperationException();
+            return null;
           }
 
           @Override
           public StorageAdapter asStorageAdapter()
           {
-            throw new UnsupportedOperationException();
+            return null;
           }
 
           @Override
