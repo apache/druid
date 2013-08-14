@@ -296,6 +296,7 @@ public class DruidSetup
     createPath(curator, zkPaths.getMasterPath(), out);
     createPath(curator, zkPaths.getLoadQueuePath(), out);
     createPath(curator, zkPaths.getServedSegmentsPath(), out);
+    createPath(curator, zkPaths.getLiveSegmentsPath(), out);
     createPath(curator, zkPaths.getPropertiesPath(), out);
   }
 

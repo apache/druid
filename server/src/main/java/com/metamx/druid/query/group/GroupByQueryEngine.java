@@ -88,44 +88,48 @@ public class GroupByQueryEngine
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
     return Sequences.concat(
-        new BaseSequence<Sequence<Row>, Iterator<Sequence<Row>>>(new BaseSequence.IteratorMaker<Sequence<Row>, Iterator<Sequence<Row>>>()
-        {
-          @Override
-          public Iterator<Sequence<Row>> make()
-          {
-            return FunctionalIterator
-              .create(cursors.iterator())
-              .transform(new Function<Cursor, Sequence<Row>>()
+        new BaseSequence<Sequence<Row>, Iterator<Sequence<Row>>>(
+            new BaseSequence.IteratorMaker<Sequence<Row>, Iterator<Sequence<Row>>>()
+            {
+              @Override
+              public Iterator<Sequence<Row>> make()
+              {
+                return FunctionalIterator
+                    .create(cursors.iterator())
+                    .transform(
+                        new Function<Cursor, Sequence<Row>>()
                         {
                           @Override
                           public Sequence<Row> apply(@Nullable final Cursor cursor)
                           {
-                            return new BaseSequence<Row, CloseableIterator<Row>>(
-                                new BaseSequence.IteratorMaker<Row, CloseableIterator<Row>>()
+                            return new BaseSequence<Row, RowIterator>(
+                                new BaseSequence.IteratorMaker<Row, RowIterator>()
                                 {
                                   @Override
-                                  public  CloseableIterator<Row> make()
+                                  public RowIterator make()
                                   {
                                     return new RowIterator(query, cursor, bufferHolder.get());
                                   }
 
                                   @Override
-                                  public void cleanup(CloseableIterator iterFromMake)
+                                  public void cleanup(RowIterator iterFromMake)
                                   {
                                     Closeables.closeQuietly(iterFromMake);
                                   }
                                 }
                             );
                           }
-              });
-          }
+                        }
+                    );
+              }
 
-          @Override
-          public void cleanup(Iterator<Sequence<Row>> iterFromMake)
-          {
-            Closeables.closeQuietly(bufferHolder);
-          }
-        })
+              @Override
+              public void cleanup(Iterator<Sequence<Row>> iterFromMake)
+              {
+                Closeables.closeQuietly(bufferHolder);
+              }
+            }
+        )
     );
 
   }

@@ -19,10 +19,12 @@
 
 package com.metamx.druid.index;
 
+import com.metamx.common.io.smoosh.SmooshedFileMapper;
 import com.metamx.druid.index.column.Column;
 import com.metamx.druid.kv.Indexed;
 import org.joda.time.Interval;
 
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -34,13 +36,15 @@ public class SimpleQueryableIndex implements QueryableIndex
   private final Indexed<String> availableDimensions;
   private final Column timeColumn;
   private final Map<String, Column> otherColumns;
+  private final SmooshedFileMapper fileMapper;
 
   public SimpleQueryableIndex(
       Interval dataInterval,
       Indexed<String> columnNames,
       Indexed<String> dimNames,
       Column timeColumn,
-      Map<String, Column> otherColumns
+      Map<String, Column> otherColumns,
+      SmooshedFileMapper fileMapper
   )
   {
     this.dataInterval = dataInterval;
@@ -48,6 +52,7 @@ public class SimpleQueryableIndex implements QueryableIndex
     this.availableDimensions = dimNames;
     this.timeColumn = timeColumn;
     this.otherColumns = otherColumns;
+    this.fileMapper = fileMapper;
   }
 
   @Override
@@ -84,5 +89,11 @@ public class SimpleQueryableIndex implements QueryableIndex
   public Column getColumn(String columnName)
   {
     return otherColumns.get(columnName);
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    fileMapper.close();
   }
 }

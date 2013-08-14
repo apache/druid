@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import com.metamx.druid.indexing.common.task.TaskResource;
 
 /**
  * Represents the status of a task. The task may be ongoing ({@link #isComplete()} false) or it may be
@@ -42,33 +43,36 @@ public class TaskStatus
 
   public static TaskStatus running(String taskId)
   {
-    return new TaskStatus(taskId, Status.RUNNING, -1);
+    return new TaskStatus(taskId, Status.RUNNING, -1, null);
   }
 
   public static TaskStatus success(String taskId)
   {
-    return new TaskStatus(taskId, Status.SUCCESS, -1);
+    return new TaskStatus(taskId, Status.SUCCESS, -1, null);
   }
 
   public static TaskStatus failure(String taskId)
   {
-    return new TaskStatus(taskId, Status.FAILED, -1);
+    return new TaskStatus(taskId, Status.FAILED, -1, null);
   }
 
   private final String id;
   private final Status status;
   private final long duration;
+  private final TaskResource resource;
 
   @JsonCreator
   private TaskStatus(
       @JsonProperty("id") String id,
       @JsonProperty("status") Status status,
-      @JsonProperty("duration") long duration
+      @JsonProperty("duration") long duration,
+      @JsonProperty("resource") TaskResource resource
   )
   {
     this.id = id;
     this.status = status;
     this.duration = duration;
+    this.resource = resource == null ? new TaskResource(id, 1) : resource;
 
     // Check class invariants.
     Preconditions.checkNotNull(id, "id");
@@ -91,6 +95,12 @@ public class TaskStatus
   public long getDuration()
   {
     return duration;
+  }
+
+  @JsonProperty("resource")
+  public TaskResource getResource()
+  {
+    return resource;
   }
 
   /**
@@ -134,7 +144,7 @@ public class TaskStatus
 
   public TaskStatus withDuration(long _duration)
   {
-    return new TaskStatus(id, status, _duration);
+    return new TaskStatus(id, status, _duration, resource);
   }
 
   @Override
@@ -144,6 +154,7 @@ public class TaskStatus
                   .add("id", id)
                   .add("status", status)
                   .add("duration", duration)
+                  .add("resource", resource)
                   .toString();
   }
 }

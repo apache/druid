@@ -60,13 +60,22 @@ public class DbSegmentPublisher implements SegmentPublisher
             @Override
             public Void withHandle(Handle handle) throws Exception
             {
-              handle.createStatement(
-                  String.format(
-                      "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
-                      + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                      config.getSegmentTable()
-                  )
-              )
+              String statement;
+              if (!handle.getConnection().getMetaData().getDatabaseProductName().contains("PostgreSQL")) {
+                statement = String.format(
+                    "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                    config.getSegmentTable()
+                );
+              } else {
+                statement = String.format(
+                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                    config.getSegmentTable()
+                );
+              }
+
+              handle.createStatement(statement)
                     .bind("id", segment.getIdentifier())
                     .bind("dataSource", segment.getDataSource())
                     .bind("created_date", new DateTime().toString())

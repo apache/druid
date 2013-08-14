@@ -78,8 +78,8 @@ public class DruidMasterBalancer implements DruidMasterHelper
   {
     final MasterStats stats = new MasterStats();
     final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-    final BalancerCostAnalyzer analyzer = params.getBalancerCostAnalyzer(referenceTimestamp);
-    final int maxSegmentsToMove = params.getMaxSegmentsToMove();
+    final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
+    final int maxSegmentsToMove = params.getMasterSegmentSettings().getMaxSegmentsToMove();
 
     for (Map.Entry<String, MinMaxPriorityQueue<ServerHolder>> entry :
         params.getDruidCluster().getCluster().entrySet()) {
@@ -113,34 +113,25 @@ public class DruidMasterBalancer implements DruidMasterHelper
       }
 
       for (int iter = 0; iter < maxSegmentsToMove; iter++) {
-        final BalancerSegmentHolder segmentToMove = analyzer.pickSegmentToMove(serverHolderList);
+        final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(serverHolderList);
 
-        if (params.getAvailableSegments().contains(segmentToMove.getSegment())) {
-          final ServerHolder holder = analyzer.findNewSegmentHomeBalance(segmentToMove.getSegment(), serverHolderList);
+        if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
+          final ServerHolder holder = strategy.findNewSegmentHomeBalancer(segmentToMove.getSegment(), serverHolderList);
 
           if (holder != null) {
             moveSegment(segmentToMove, holder.getServer(), params);
           }
         }
       }
-
-      final double initialTotalCost = analyzer.calculateInitialTotalCost(serverHolderList);
-      final double normalization = analyzer.calculateNormalization(serverHolderList);
-      final double normalizedInitialCost = initialTotalCost / normalization;
-
-      stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
-      stats.addToTieredStat("normalization", tier, (long) normalization);
-      stats.addToTieredStat("normalizedInitialCostTimesOneThousand", tier, (long) (normalizedInitialCost * 1000));
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
+      if (params.getMasterSegmentSettings().isEmitBalancingStats()) {
+        strategy.emitStats(tier, stats, serverHolderList);
 
+      }
       log.info(
-          "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f], Segments Moved: [%d]",
-          tier,
-          initialTotalCost,
-          normalization,
-          normalizedInitialCost,
-          currentlyMovingSegments.get(tier).size()
+          "[%s]: Segments Moved: [%d]", tier, currentlyMovingSegments.get(tier).size()
       );
+
     }
 
     return params.buildFromExisting()

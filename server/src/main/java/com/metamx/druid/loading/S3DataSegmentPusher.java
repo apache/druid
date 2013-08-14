@@ -21,21 +21,23 @@ package com.metamx.druid.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.common.s3.S3Utils;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.utils.CompressionUtils;
 import com.metamx.emitter.EmittingLogger;
-import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.ServiceException;
 import org.jets3t.service.acl.gs.GSAccessControlList;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
 import java.io.File;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.Callable;
 
 public class S3DataSegmentPusher implements DataSegmentPusher
 {
@@ -63,57 +65,76 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, DataSegment segment) throws IOException
+  public DataSegment push(final File indexFilesDir, final DataSegment inSegment) throws IOException
   {
     log.info("Uploading [%s] to S3", indexFilesDir);
-    String outputKey = JOINER.join(
+    final String outputKey = JOINER.join(
         config.getBaseKey().isEmpty() ? null : config.getBaseKey(),
-        DataSegmentPusherUtil.getStorageDir(segment)
+        DataSegmentPusherUtil.getStorageDir(inSegment)
     );
-
     final File zipOutFile = File.createTempFile("druid", "index.zip");
-    long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
+    final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
     try {
-      S3Object toPush = new S3Object(zipOutFile);
+      return S3Utils.retryS3Operation(
+          new Callable<DataSegment>()
+          {
+            @Override
+            public DataSegment call() throws Exception
+            {
+              S3Object toPush = new S3Object(zipOutFile);
 
-      final String outputBucket = config.getBucket();
-      toPush.setBucketName(outputBucket);
-      toPush.setKey(outputKey + "/index.zip");
-      toPush.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+              final String outputBucket = config.getBucket();
+              toPush.setBucketName(outputBucket);
+              toPush.setKey(outputKey + "/index.zip");
+              if (!config.getDisableAcl()) {
+                toPush.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+              }
 
-      log.info("Pushing %s.", toPush);
-      s3Client.putObject(outputBucket, toPush);
+              log.info("Pushing %s.", toPush);
+              s3Client.putObject(outputBucket, toPush);
 
-      segment = segment.withSize(indexSize)
-                       .withLoadSpec(
-                           ImmutableMap.<String, Object>of("type", "s3_zip", "bucket", outputBucket, "key", toPush.getKey())
-                       )
-                       .withBinaryVersion(IndexIO.getVersionFromDir(indexFilesDir));
+              final DataSegment outSegment = inSegment.withSize(indexSize)
+                                                      .withLoadSpec(
+                                                          ImmutableMap.<String, Object>of(
+                                                              "type",
+                                                              "s3_zip",
+                                                              "bucket",
+                                                              outputBucket,
+                                                              "key",
+                                                              toPush.getKey()
+                                                          )
+                                                      )
+                                                      .withBinaryVersion(IndexIO.getVersionFromDir(indexFilesDir));
 
-      File descriptorFile = File.createTempFile("druid", "descriptor.json");
-      Files.copy(ByteStreams.newInputStreamSupplier(jsonMapper.writeValueAsBytes(segment)), descriptorFile);
-      S3Object descriptorObject = new S3Object(descriptorFile);
-      descriptorObject.setBucketName(outputBucket);
-      descriptorObject.setKey(outputKey + "/descriptor.json");
-      descriptorObject.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+              File descriptorFile = File.createTempFile("druid", "descriptor.json");
+              Files.copy(ByteStreams.newInputStreamSupplier(jsonMapper.writeValueAsBytes(inSegment)), descriptorFile);
+              S3Object descriptorObject = new S3Object(descriptorFile);
+              descriptorObject.setBucketName(outputBucket);
+              descriptorObject.setKey(outputKey + "/descriptor.json");
+              if (!config.getDisableAcl()) {
+                descriptorObject.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+              }
 
-      log.info("Pushing %s", descriptorObject);
-      s3Client.putObject(outputBucket, descriptorObject);
+              log.info("Pushing %s", descriptorObject);
+              s3Client.putObject(outputBucket, descriptorObject);
 
-      log.info("Deleting zipped index File[%s]", zipOutFile);
-      zipOutFile.delete();
+              log.info("Deleting zipped index File[%s]", zipOutFile);
+              zipOutFile.delete();
 
-      log.info("Deleting descriptor file[%s]", descriptorFile);
-      descriptorFile.delete();
+              log.info("Deleting descriptor file[%s]", descriptorFile);
+              descriptorFile.delete();
 
-      return segment;
+              return outSegment;
+            }
+          }
+      );
     }
-    catch (NoSuchAlgorithmException e) {
+    catch (ServiceException e) {
       throw new IOException(e);
     }
-    catch (S3ServiceException e) {
-      throw new IOException(e);
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
     }
   }
 }

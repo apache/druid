@@ -24,6 +24,8 @@ import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.index.v1.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
 
+import java.io.IOException;
+
 /**
  */
 public class IncrementalIndexSegment implements Segment
@@ -59,5 +61,11 @@ public class IncrementalIndexSegment implements Segment
   public StorageAdapter asStorageAdapter()
   {
     return new IncrementalIndexStorageAdapter(index);
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    // do nothing
   }
 }

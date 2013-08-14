@@ -23,6 +23,7 @@ import com.metamx.druid.indexing.common.config.IndexerZkConfig;
 import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
+import org.skife.config.DefaultNull;
 
 /**
  */
@@ -31,4 +32,12 @@ public abstract class RemoteTaskRunnerConfig extends IndexerZkConfig
   @Config("druid.indexer.taskAssignmentTimeoutDuration")
   @Default("PT5M")
   public abstract Duration getTaskAssignmentTimeoutDuration();
+
+  @Config("druid.curator.compress")
+  @Default("false")
+  public abstract boolean enableCompression();
+
+  @Config("druid.indexer.worker.version")
+  @DefaultNull
+  public abstract String getWorkerVersion();
 }

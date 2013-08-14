@@ -47,7 +47,7 @@ public class RenamingKeysUpdateStreamTest
   }
 
   @Test
-  public void testPollFromQueue() throws Exception
+  public void testPolFromQueue() throws Exception
   {
     InputSupplierUpdateStream updateStream = new InputSupplierUpdateStream(testCaseSupplier, timeDimension);
     Map<String, String> renamedKeys = new HashMap<String, String>();
@@ -61,8 +61,6 @@ public class RenamingKeysUpdateStreamTest
     expectedAnswer.put("i1", "value1");
     expectedAnswer.put("i2", 2);
     expectedAnswer.put("t", 1372121562);
-
-
     Assert.assertEquals(expectedAnswer, renamer.pollFromQueue(waitTime, unit));
   }
 
@@ -88,7 +86,6 @@ public class RenamingKeysUpdateStreamTest
     renamedKeys.put("item2", "i2");
     RenamingKeysUpdateStream renamer = new RenamingKeysUpdateStream(updateStream, renamedKeys);
     Assert.assertEquals("time", renamer.getTimeDimension());
-
   }
 
 }

@@ -27,6 +27,7 @@ import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
 import com.metamx.druid.indexing.common.task.RealtimeIndexTask;
+import com.metamx.druid.indexing.common.task.TaskResource;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
 
@@ -40,15 +41,16 @@ public class TestRealtimeTask extends RealtimeIndexTask
   @JsonCreator
   public TestRealtimeTask(
       @JsonProperty("id") String id,
-      @JsonProperty("availabilityGroup") String availGroup,
+      @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("taskStatus") TaskStatus status
   )
   {
     super(
         id,
-        availGroup,
+        taskResource,
         new Schema(dataSource, null, new AggregatorFactory[]{}, QueryGranularity.NONE, new NoneShardSpec()),
+        null,
         null,
         null,
         null,

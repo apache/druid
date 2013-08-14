@@ -33,6 +33,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.druid.indexing.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.druid.indexing.coordinator.setup.EC2NodeData;
+import com.metamx.druid.indexing.coordinator.setup.GalaxyUserData;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.codec.binary.Base64;
@@ -72,6 +73,11 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
       WorkerSetupData setupData = workerSetupDataRef.get();
       EC2NodeData workerConfig = setupData.getNodeData();
 
+      GalaxyUserData userData = setupData.getUserData();
+      if (config.getWorkerVersion() != null) {
+        userData = userData.withVersion(config.getWorkerVersion());
+      }
+
       RunInstancesResult result = amazonEC2Client.runInstances(
           new RunInstancesRequest(
               workerConfig.getAmiId(),
@@ -84,7 +90,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
               .withUserData(
                   Base64.encodeBase64String(
                       jsonMapper.writeValueAsBytes(
-                          setupData.getUserData()
+                          userData
                       )
                   )
               )
@@ -212,7 +218,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
         }
     );
 
-    log.info("Performing lookup: %s --> %s", ips, retVal);
+    log.debug("Performing lookup: %s --> %s", ips, retVal);
 
     return retVal;
   }
@@ -244,7 +250,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
         }
     );
 
-    log.info("Performing lookup: %s --> %s", nodeIds, retVal);
+    log.debug("Performing lookup: %s --> %s", nodeIds, retVal);
 
     return retVal;
   }

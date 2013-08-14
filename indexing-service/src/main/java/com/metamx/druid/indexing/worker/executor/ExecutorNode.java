@@ -22,8 +22,8 @@ package com.metamx.druid.indexing.worker.executor;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -37,12 +37,24 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.BaseServerNode;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
-import com.metamx.druid.curator.discovery.NoopServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusServlet;
+import com.metamx.druid.indexing.common.RetryPolicyFactory;
+import com.metamx.druid.indexing.common.TaskToolboxFactory;
+import com.metamx.druid.indexing.common.actions.RemoteTaskActionClientFactory;
+import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
+import com.metamx.druid.indexing.common.config.TaskConfig;
+import com.metamx.druid.indexing.common.index.ChatHandlerProvider;
+import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
+import com.metamx.druid.indexing.common.index.EventReceivingChatHandlerProvider;
+import com.metamx.druid.indexing.common.index.NoopChatHandlerProvider;
+import com.metamx.druid.indexing.common.index.StaticS3FirehoseFactory;
+import com.metamx.druid.indexing.coordinator.ThreadPoolTaskRunner;
+import com.metamx.druid.indexing.worker.config.ChatHandlerProviderConfig;
+import com.metamx.druid.indexing.worker.config.WorkerConfig;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServerInit;
@@ -51,17 +63,6 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentKiller;
-import com.metamx.druid.indexing.common.RetryPolicyFactory;
-import com.metamx.druid.indexing.common.TaskToolboxFactory;
-import com.metamx.druid.indexing.common.actions.RemoteTaskActionClientFactory;
-import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
-import com.metamx.druid.indexing.common.config.TaskConfig;
-import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
-import com.metamx.druid.indexing.common.index.ChatHandlerProvider;
-import com.metamx.druid.indexing.common.index.StaticS3FirehoseFactory;
-import com.metamx.druid.indexing.coordinator.ThreadPoolTaskRunner;
-import com.metamx.druid.indexing.worker.config.ChatHandlerProviderConfig;
-import com.metamx.druid.indexing.worker.config.WorkerConfig;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitters;
@@ -69,11 +70,10 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
-import com.metamx.metrics.JvmMonitor;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
-import com.metamx.metrics.SysMonitor;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.jets3t.service.S3ServiceException;
@@ -85,7 +85,6 @@ import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.skife.config.ConfigurationObjectFactory;
 
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -107,7 +106,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private final ExecutorLifecycleFactory executorLifecycleFactory;
 
   private RestS3Service s3Service = null;
-  private List<Monitor> monitors = null;
+  private MonitorScheduler monitorScheduler = null;
   private HttpClient httpClient = null;
   private ServiceEmitter emitter = null;
   private TaskConfig taskConfig = null;
@@ -140,71 +139,22 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     this.executorLifecycleFactory = executorLifecycleFactory;
   }
 
-  public ExecutorNode setHttpClient(HttpClient httpClient)
-  {
-    this.httpClient = httpClient;
-    return this;
-  }
-
-  public ExecutorNode setEmitter(ServiceEmitter emitter)
-  {
-    this.emitter = emitter;
-    return this;
-  }
-
-  public ExecutorNode setS3Service(RestS3Service s3Service)
-  {
-    this.s3Service = s3Service;
-    return this;
-  }
-
-  public ExecutorNode setSegmentPusher(DataSegmentPusher segmentPusher)
-  {
-    this.segmentPusher = segmentPusher;
-    return this;
-  }
-
-  public ExecutorNode setTaskToolboxFactory(TaskToolboxFactory taskToolboxFactory)
-  {
-    this.taskToolboxFactory = taskToolboxFactory;
-    return this;
-  }
-
-  public ExecutorNode setCoordinatorServiceProvider(ServiceProvider coordinatorServiceProvider)
-  {
-    this.coordinatorServiceProvider = coordinatorServiceProvider;
-    return this;
-  }
-
-  public ExecutorNode setServiceDiscovery(ServiceDiscovery serviceDiscovery)
-  {
-    this.serviceDiscovery = serviceDiscovery;
-    return this;
-  }
-
   @Override
   public void doInit() throws Exception
   {
     initializeHttpClient();
     initializeEmitter();
     initializeS3Service();
-    initializeMonitors();
     initializeMergerConfig();
     initializeServiceDiscovery();
     initializeDataSegmentPusher();
+    initializeMonitorScheduler();
     initializeTaskToolbox();
     initializeTaskRunner();
     initializeChatHandlerProvider();
     initializeJacksonInjections();
     initializeJacksonSubtypes();
     initializeServer();
-
-    final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
-    final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
-    final MonitorScheduler monitorScheduler = new MonitorScheduler(
-        configFactory.build(MonitorSchedulerConfig.class), globalScheduledExec, emitter, monitors
-    );
-    lifecycle.addManagedInstance(monitorScheduler);
 
     executorLifecycle = executorLifecycleFactory.build(taskRunner, getJsonMapper());
     lifecycle.addManagedInstance(executorLifecycle);
@@ -227,6 +177,19 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
         ),
         "/druid/v2/*"
     );
+  }
+
+  private void initializeMonitorScheduler()
+  {
+    if (monitorScheduler == null)
+    {
+      final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
+      final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
+      this.monitorScheduler = new MonitorScheduler(
+          configFactory.build(MonitorSchedulerConfig.class), globalScheduledExec, emitter, ImmutableList.<Monitor>of()
+      );
+      lifecycle.addManagedInstance(monitorScheduler);
+    }
   }
 
   @LifecycleStart
@@ -323,22 +286,13 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
 
   private void initializeS3Service() throws S3ServiceException
   {
-    if(s3Service == null) {
+    if (s3Service == null) {
       s3Service = new RestS3Service(
           new AWSCredentials(
               PropUtils.getProperty(props, "com.metamx.aws.accessKey"),
               PropUtils.getProperty(props, "com.metamx.aws.secretKey")
           )
       );
-    }
-  }
-
-  private void initializeMonitors()
-  {
-    if (monitors == null) {
-      monitors = Lists.newArrayList();
-      monitors.add(new JvmMonitor());
-      monitors.add(new SysMonitor());
     }
   }
 
@@ -384,6 +338,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
           getAnnouncer(),
           getServerView(),
           getConglomerate(),
+          monitorScheduler,
           getJsonMapper()
       );
     }
@@ -393,8 +348,9 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   {
     final ServiceDiscoveryConfig config = configFactory.build(ServiceDiscoveryConfig.class);
     if (serviceDiscovery == null) {
+      final CuratorFramework serviceDiscoveryCuratorFramework = Initialization.makeCuratorFramework(config, lifecycle);
       this.serviceDiscovery = Initialization.makeServiceDiscoveryClient(
-          getCuratorFramework(), config, lifecycle
+          serviceDiscoveryCuratorFramework, config, lifecycle
       );
     }
     if (serviceAnnouncer == null) {
@@ -430,17 +386,15 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   {
     if (chatHandlerProvider == null) {
       final ChatHandlerProviderConfig config = configFactory.build(ChatHandlerProviderConfig.class);
-      final ServiceAnnouncer myServiceAnnouncer;
       if (config.getServiceFormat() == null) {
-        log.info("ChatHandlerProvider: Using NoopServiceAnnouncer. Good luck finding your firehoses!");
-        myServiceAnnouncer = new NoopServiceAnnouncer();
+        log.info("ChatHandlerProvider: Using NoopChatHandlerProvider. Good luck finding your firehoses!");
+        this.chatHandlerProvider = new NoopChatHandlerProvider();
       } else {
-        myServiceAnnouncer = serviceAnnouncer;
+        this.chatHandlerProvider = new EventReceivingChatHandlerProvider(
+            config,
+            serviceAnnouncer
+        );
       }
-      this.chatHandlerProvider = new ChatHandlerProvider(
-          config,
-          myServiceAnnouncer
-      );
     }
   }
 
@@ -482,9 +436,12 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
         jsonMapper = new DefaultObjectMapper();
         smileMapper = new DefaultObjectMapper(new SmileFactory());
         smileMapper.getJsonFactory().setCodec(smileMapper);
-      }
-      else if (jsonMapper == null || smileMapper == null) {
-        throw new ISE("Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.", jsonMapper, smileMapper);
+      } else if (jsonMapper == null || smileMapper == null) {
+        throw new ISE(
+            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
+            jsonMapper,
+            smileMapper
+        );
       }
 
       if (lifecycle == null) {
@@ -499,7 +456,15 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
         configFactory = Config.createFactory(props);
       }
 
-      return new ExecutorNode(nodeType, props, lifecycle, jsonMapper, smileMapper, configFactory, executorLifecycleFactory);
+      return new ExecutorNode(
+          nodeType,
+          props,
+          lifecycle,
+          jsonMapper,
+          smileMapper,
+          configFactory,
+          executorLifecycleFactory
+      );
     }
   }
 }

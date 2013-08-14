@@ -25,6 +25,7 @@ import com.google.inject.Provides;
 import com.google.inject.util.Providers;
 import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
+import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
 import com.metamx.druid.master.DruidMaster;
@@ -43,6 +44,8 @@ public class MasterServletModule extends JerseyServletModule
   private final DruidMaster master;
   private final ObjectMapper jsonMapper;
   private final IndexingServiceClient indexingServiceClient;
+  private final JacksonConfigManager configManager;
+
 
   public MasterServletModule(
       InventoryView serverInventoryView,
@@ -50,7 +53,8 @@ public class MasterServletModule extends JerseyServletModule
       DatabaseRuleManager databaseRuleManager,
       DruidMaster master,
       ObjectMapper jsonMapper,
-      IndexingServiceClient indexingServiceClient
+      IndexingServiceClient indexingServiceClient,
+      JacksonConfigManager configManager
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -59,17 +63,20 @@ public class MasterServletModule extends JerseyServletModule
     this.master = master;
     this.jsonMapper = jsonMapper;
     this.indexingServiceClient = indexingServiceClient;
+    this.configManager = configManager;
   }
 
   @Override
   protected void configureServlets()
   {
+    bind(MasterSegmentSettingsResource.class);
     bind(InfoResource.class);
     bind(MasterResource.class);
     bind(InventoryView.class).toInstance(serverInventoryView);
     bind(DatabaseSegmentManager.class).toInstance(segmentInventoryManager);
     bind(DatabaseRuleManager.class).toInstance(databaseRuleManager);
     bind(DruidMaster.class).toInstance(master);
+    bind(JacksonConfigManager.class).toInstance(configManager);
     if (indexingServiceClient == null) {
       bind(IndexingServiceClient.class).toProvider(Providers.<IndexingServiceClient>of(null));
     }

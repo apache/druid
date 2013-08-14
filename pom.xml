@@ -23,7 +23,7 @@
     <groupId>com.metamx</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.5.6-SNAPSHOT</version>
+    <version>0.5.39-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -38,7 +38,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.22.3</metamx.java-util.version>
+        <metamx.java-util.version>0.24.0</metamx.java-util.version>
         <apache.curator.version>2.1.0-incubating</apache.curator.version>
     </properties>
 
@@ -65,7 +65,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>0.7.1</version>
+                <version>0.8.1</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -80,7 +80,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>server-metrics</artifactId>
-                <version>0.0.2</version>
+                <version>0.0.3</version>
             </dependency>
 
             <dependency>
@@ -325,6 +325,12 @@
                 <artifactId>lz4</artifactId>
                 <version>1.1.2</version>
             </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>2.4.0a</version>
+            </dependency>
+
 
 
             <!-- Test Scope -->

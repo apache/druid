@@ -163,7 +163,14 @@ public class RealtimeManager implements QuerySegmentWalker
         while (firehose.hasMore()) {
           final InputRow inputRow;
           try {
-            inputRow = firehose.nextRow();
+            try {
+              inputRow = firehose.nextRow();
+            }
+            catch (Exception e) {
+              log.info(e, "thrown away line due to exception");
+              metrics.incrementThrownAway();
+              continue;
+            }
 
             final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
             if (sink == null) {
