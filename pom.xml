@@ -364,6 +364,11 @@
               <artifactId>irc-api</artifactId>
               <version>1.0-0011</version>
             </dependency>
+            <dependency>
+              <groupId>com.maxmind.geoip2</groupId>
+              <artifactId>geoip2</artifactId>
+              <version>0.4.0</version>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>
