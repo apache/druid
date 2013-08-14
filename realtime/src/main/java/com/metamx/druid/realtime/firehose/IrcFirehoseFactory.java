@@ -3,7 +3,6 @@ package com.metamx.druid.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.ircclouds.irc.api.Callback;
 import com.ircclouds.irc.api.IRCApi;
 import com.ircclouds.irc.api.IRCApiImpl;
@@ -90,7 +89,7 @@ public class IrcFirehoseFactory implements FirehoseFactory
       public void onChannelMessage(ChannelPrivMsg aMsg)
       {
         try {
-          queue.put(Pair.of(new DateTime(), aMsg));
+          queue.put(Pair.of(DateTime.now(), aMsg));
         } catch(InterruptedException e) {
           throw new RuntimeException("interrupted adding message to queue", e);
         }

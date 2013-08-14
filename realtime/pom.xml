@@ -151,6 +151,11 @@
           <groupId>com.ircclouds.irc</groupId>
           <artifactId>irc-api</artifactId>
         </dependency>
+        <dependency>
+          <groupId>com.maxmind.geoip2</groupId>
+          <artifactId>geoip2</artifactId>
+          <version>0.4.0</version>
+        </dependency>
         <!-- Dependencies required for jets3t -->
 
         <!-- Tests -->
