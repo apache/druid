@@ -359,6 +359,11 @@
                 <version>${apache.curator.version}</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+              <groupId>com.ircclouds.irc</groupId>
+              <artifactId>irc-api</artifactId>
+              <version>1.0-0011</version>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>
