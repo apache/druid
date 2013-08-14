@@ -1,7 +1,9 @@
 package com.metamx.druid.coordination;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.lifecycle.Lifecycle;
+import com.metamx.druid.guice.annotations.Json;
 
 import javax.validation.constraints.NotNull;
 import java.util.Arrays;
@@ -17,10 +19,6 @@ public class LegacyDataSegmentAnnouncerProvider implements DataSegmentAnnouncerP
   @JacksonInject
   @NotNull
   private BatchDataSegmentAnnouncer batchAnnouncer = null;
-
-  @JacksonInject
-  @NotNull
-  private Lifecycle lifecycle = null;
 
   @Override
   public DataSegmentAnnouncer get()

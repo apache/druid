@@ -17,38 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client;
+package com.metamx.druid.guice;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusher;
+import com.metamx.druid.loading.S3DataSegmentPusherConfig;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
-import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 
 /**
  */
-public class DruidServerConfig
+public class S3DataSegmentPusherProvider implements DataSegmentPusherProvider
 {
-  @JsonProperty
-  @Min(0)
-  private long maxSize = -1;
+  @JacksonInject
+  @NotNull
+  private RestS3Service restS3Service = null;
 
-  @JsonProperty
-  private String tier = "_default_tier";
+  @JacksonInject
+  @NotNull
+  private S3DataSegmentPusherConfig config = null;
 
-  @JsonProperty
-  private String type = "historical";
+  @JacksonInject
+  @NotNull
+  private ObjectMapper jsonMapper = null;
 
-  public long getMaxSize()
+  @Override
+  public DataSegmentPusher get()
   {
-    return maxSize;
-  }
-
-  public String getType()
-  {
-    return type;
-  }
-
-  public String getTier()
-  {
-    return tier;
+    return new S3DataSegmentPusher(restS3Service, config, jsonMapper);
   }
 }

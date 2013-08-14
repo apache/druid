@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
+import com.google.inject.Inject;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -60,6 +61,7 @@ public class RealtimeManager implements QuerySegmentWalker
 
   private final Map<String, FireChief> chiefs;
 
+  @Inject
   public RealtimeManager(
       List<FireDepartment> fireDepartments,
       QueryRunnerFactoryConglomerate conglomerate

@@ -21,35 +21,41 @@ package io.druid.cli;
 
 import com.google.inject.Injector;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.cache.CacheMonitor;
+import com.metamx.druid.DruidProcessingConfig;
 import com.metamx.druid.curator.CuratorModule;
-import com.metamx.druid.guice.BrokerModule;
+import com.metamx.druid.guice.AnnouncerModule;
+import com.metamx.druid.guice.DataSegmentPusherModule;
+import com.metamx.druid.guice.DbConnectorModule;
+import com.metamx.druid.guice.DruidProcessingModule;
 import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.LifecycleModule;
-import com.metamx.druid.guice.QueryToolChestModule;
+import com.metamx.druid.guice.QueryRunnerFactoryModule;
 import com.metamx.druid.guice.QueryableModule;
+import com.metamx.druid.guice.RealtimeModule;
+import com.metamx.druid.guice.S3Module;
 import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.guice.ServerViewModule;
-import com.metamx.druid.guice.annotations.Client;
-import com.metamx.druid.http.ClientQuerySegmentWalker;
+import com.metamx.druid.guice.StorageNodeModule;
 import com.metamx.druid.http.StatusResource;
 import com.metamx.druid.initialization.EmitterModule;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.JettyServerModule;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.metrics.MetricsModule;
+import com.metamx.druid.realtime.RealtimeManager;
 import io.airlift.command.Command;
 
 /**
  */
 @Command(
-    name = "broker",
-    description = "Runs a broker node, see https://github.com/metamx/druid/wiki/Broker for a description"
+    name = "realtime",
+    description = "Runs a realtime node, see https://github.com/metamx/druid/wiki/Realtime for a description"
 )
-public class CliBroker extends ServerRunnable
+public class CliRealtime extends ServerRunnable
 {
   private static final Logger log = new Logger(CliBroker.class);
 
-  public CliBroker()
+  public CliRealtime()
   {
     super(log);
   }
@@ -58,19 +64,23 @@ public class CliBroker extends ServerRunnable
   protected Injector getInjector()
   {
     return Initialization.makeInjector(
-            new LifecycleModule(),
-            EmitterModule.class,
-            HttpClientModule.global(),
-            CuratorModule.class,
-            new MetricsModule().register(CacheMonitor.class),
-            ServerModule.class,
-            new JettyServerModule(new QueryJettyServerInitializer())
-                .addResource(StatusResource.class),
-            new QueryableModule(ClientQuerySegmentWalker.class),
-            new QueryToolChestModule(),
-            new ServerViewModule(),
-            new HttpClientModule("druid.broker.http", Client.class),
-            new BrokerModule()
+        new LifecycleModule(),
+        EmitterModule.class,
+        DbConnectorModule.class,
+        HttpClientModule.global(),
+        CuratorModule.class,
+        AnnouncerModule.class,
+        DruidProcessingModule.class,
+        S3Module.class,
+        DataSegmentPusherModule.class,
+        new MetricsModule(),
+        StorageNodeModule.class,
+        new JettyServerModule(new QueryJettyServerInitializer())
+            .addResource(StatusResource.class),
+        new ServerViewModule(),
+        new QueryableModule(RealtimeManager.class),
+        new QueryRunnerFactoryModule(),
+        RealtimeModule.class
     );
   }
 }

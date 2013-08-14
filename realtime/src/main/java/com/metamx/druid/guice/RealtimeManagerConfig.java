@@ -17,38 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client;
+package com.metamx.druid.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.Min;
+import java.io.File;
 
 /**
  */
-public class DruidServerConfig
+public class RealtimeManagerConfig
 {
   @JsonProperty
-  @Min(0)
-  private long maxSize = -1;
+  private File specFile;
 
-  @JsonProperty
-  private String tier = "_default_tier";
-
-  @JsonProperty
-  private String type = "historical";
-
-  public long getMaxSize()
+  public File getSpecFile()
   {
-    return maxSize;
-  }
-
-  public String getType()
-  {
-    return type;
-  }
-
-  public String getTier()
-  {
-    return tier;
+    return specFile;
   }
 }

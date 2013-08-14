@@ -17,38 +17,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client;
+package com.metamx.druid.realtime;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.metamx.druid.client.DataSegment;
 
-import javax.validation.constraints.Min;
+import java.io.IOException;
 
 /**
  */
-public class DruidServerConfig
+public class NoopSegmentPublisher implements SegmentPublisher
 {
-  @JsonProperty
-  @Min(0)
-  private long maxSize = -1;
-
-  @JsonProperty
-  private String tier = "_default_tier";
-
-  @JsonProperty
-  private String type = "historical";
-
-  public long getMaxSize()
+  @Override
+  public void publishSegment(DataSegment segment) throws IOException
   {
-    return maxSize;
-  }
-
-  public String getType()
-  {
-    return type;
-  }
-
-  public String getTier()
-  {
-    return tier;
+    // do nothing
   }
 }

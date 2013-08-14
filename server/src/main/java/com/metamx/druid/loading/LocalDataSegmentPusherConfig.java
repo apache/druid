@@ -19,14 +19,20 @@
 
 package com.metamx.druid.loading;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.skife.config.Config;
 
 import java.io.File;
 
 /**
  */
-public abstract class LocalDataSegmentPusherConfig
+public class LocalDataSegmentPusherConfig
 {
-  @Config("druid.pusher.local.storageDirectory")
-  public abstract File getStorageDirectory();
+  @JsonProperty
+  public File storageDirectory;
+
+  public File getStorageDirectory()
+  {
+    return storageDirectory;
+  }
 }

@@ -1,12 +1,28 @@
-package com.metamx.druid.loading.cassandra;
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+package com.metamx.druid.loading.cassandra;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IndexIO;
@@ -15,6 +31,10 @@ import com.metamx.druid.loading.DataSegmentPusherUtil;
 import com.metamx.druid.utils.CompressionUtils;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 /**
  * Cassandra Segment Pusher
@@ -28,6 +48,7 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
 	private static final Joiner JOINER = Joiner.on("/").skipNulls();  
 	private final ObjectMapper jsonMapper;
 
+  @Inject
 	public CassandraDataSegmentPusher(
 	    CassandraDataSegmentConfig config,
 	    ObjectMapper jsonMapper)

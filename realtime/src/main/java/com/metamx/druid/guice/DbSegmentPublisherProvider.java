@@ -17,38 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client;
+package com.metamx.druid.guice;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.druid.realtime.DbSegmentPublisher;
+import com.metamx.druid.realtime.DbSegmentPublisherConfig;
+import com.metamx.druid.realtime.SegmentPublisher;
+import org.skife.jdbi.v2.IDBI;
 
-import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 
 /**
  */
-public class DruidServerConfig
+public class DbSegmentPublisherProvider implements SegmentPublisherProvider
 {
-  @JsonProperty
-  @Min(0)
-  private long maxSize = -1;
+  @JacksonInject
+  @NotNull
+  private IDBI idbi = null;
 
-  @JsonProperty
-  private String tier = "_default_tier";
+  @JacksonInject
+  @NotNull
+  private DbSegmentPublisherConfig config = null;
 
-  @JsonProperty
-  private String type = "historical";
+  @JacksonInject
+  @NotNull
+  private ObjectMapper jsonMapper = null;
 
-  public long getMaxSize()
+  @Override
+  public SegmentPublisher get()
   {
-    return maxSize;
-  }
-
-  public String getType()
-  {
-    return type;
-  }
-
-  public String getTier()
-  {
-    return tier;
+    return new DbSegmentPublisher(jsonMapper, config, idbi);
   }
 }

@@ -17,38 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.client;
+package com.metamx.druid.guice;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
+import com.metamx.druid.loading.DataSegmentPusher;
 
 /**
  */
-public class DruidServerConfig
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LocalDataSegmentPusherProvider.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "s3_zip", value = S3DataSegmentPusherProvider.class),
+    @JsonSubTypes.Type(name = "hdfs", value = HdfsDataSegmentPusherProvider.class),
+    @JsonSubTypes.Type(name = "c*", value = CassandraDataSegmentPusherProvider.class)
+})
+public interface DataSegmentPusherProvider extends Provider<DataSegmentPusher>
 {
-  @JsonProperty
-  @Min(0)
-  private long maxSize = -1;
-
-  @JsonProperty
-  private String tier = "_default_tier";
-
-  @JsonProperty
-  private String type = "historical";
-
-  public long getMaxSize()
-  {
-    return maxSize;
-  }
-
-  public String getType()
-  {
-    return type;
-  }
-
-  public String getTier()
-  {
-    return tier;
-  }
 }

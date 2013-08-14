@@ -24,6 +24,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
+import com.google.inject.Inject;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.utils.CompressionUtils;
@@ -46,6 +47,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   private final S3DataSegmentPusherConfig config;
   private final ObjectMapper jsonMapper;
 
+  @Inject
   public S3DataSegmentPusher(
       RestS3Service s3Client,
       S3DataSegmentPusherConfig config,
