@@ -63,7 +63,6 @@ public class ConjurerFirehoseFactory implements FirehoseFactory
                 .withMaxLines(maxLines)
                 .withFilePath(filePath)
                 .withLinesPerSec(linesPerSec)
-                .withCustomSchema(true)
     );
   }
 
