@@ -49,6 +49,7 @@ public class DruidMasterRuntimeParams
   private final MasterSegmentSettings masterSegmentSettings;
   private final MasterStats stats;
   private final DateTime balancerReferenceTimestamp;
+  private final BalancerStrategyFactory strategyFactory;
 
   public DruidMasterRuntimeParams(
       long startTime,
@@ -62,7 +63,8 @@ public class DruidMasterRuntimeParams
       ServiceEmitter emitter,
       MasterSegmentSettings masterSegmentSettings,
       MasterStats stats,
-      DateTime balancerReferenceTimestamp
+      DateTime balancerReferenceTimestamp,
+      BalancerStrategyFactory strategyFactory
   )
   {
     this.startTime = startTime;
@@ -77,6 +79,7 @@ public class DruidMasterRuntimeParams
     this.masterSegmentSettings = masterSegmentSettings;
     this.stats = stats;
     this.balancerReferenceTimestamp = balancerReferenceTimestamp;
+    this.strategyFactory = strategyFactory;
   }
 
   public long getStartTime()
@@ -139,9 +142,9 @@ public class DruidMasterRuntimeParams
     return balancerReferenceTimestamp;
   }
 
-  public BalancerCostAnalyzer getBalancerCostAnalyzer(DateTime referenceTimestamp)
+  public BalancerStrategyFactory getBalancerStrategyFactory()
   {
-    return new BalancerCostAnalyzer(referenceTimestamp);
+    return strategyFactory;
   }
 
   public boolean hasDeletionWaitTimeElapsed()
@@ -168,7 +171,8 @@ public class DruidMasterRuntimeParams
         emitter,
         masterSegmentSettings,
         stats,
-        balancerReferenceTimestamp
+        balancerReferenceTimestamp,
+        strategyFactory
     );
   }
 
@@ -186,6 +190,7 @@ public class DruidMasterRuntimeParams
     private MasterSegmentSettings masterSegmentSettings;
     private MasterStats stats;
     private DateTime balancerReferenceTimestamp;
+    private BalancerStrategyFactory strategyFactory;
 
     Builder()
     {
@@ -201,6 +206,7 @@ public class DruidMasterRuntimeParams
       this.stats = new MasterStats();
       this.masterSegmentSettings = new MasterSegmentSettings.Builder().build();
       this.balancerReferenceTimestamp = null;
+      this.strategyFactory = new CostBalancerStrategyFactory();
     }
 
     Builder(
@@ -215,7 +221,8 @@ public class DruidMasterRuntimeParams
         ServiceEmitter emitter,
         MasterSegmentSettings masterSegmentSettings,
         MasterStats stats,
-        DateTime balancerReferenceTimestamp
+        DateTime balancerReferenceTimestamp,
+        BalancerStrategyFactory strategyFactory
     )
     {
       this.startTime = startTime;
@@ -230,6 +237,7 @@ public class DruidMasterRuntimeParams
       this.masterSegmentSettings = masterSegmentSettings;
       this.stats = stats;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
+      this.strategyFactory=strategyFactory;
     }
 
     public DruidMasterRuntimeParams build()
@@ -246,7 +254,8 @@ public class DruidMasterRuntimeParams
           emitter,
           masterSegmentSettings,
           stats,
-          balancerReferenceTimestamp
+          balancerReferenceTimestamp,
+          strategyFactory
       );
     }
 
@@ -319,6 +328,12 @@ public class DruidMasterRuntimeParams
     public Builder withBalancerReferenceTimestamp(DateTime balancerReferenceTimestamp)
     {
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
+      return this;
+    }
+
+    public Builder withBalancerStrategyFactory(BalancerStrategyFactory strategyFactory)
+    {
+      this.strategyFactory=strategyFactory;
       return this;
     }
   }
