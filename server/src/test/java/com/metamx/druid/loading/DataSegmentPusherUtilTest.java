@@ -10,9 +10,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 
-/**
- * @author jan.rudert
- */
 public class DataSegmentPusherUtilTest {
     @Test
     public void shouldNotHaveColonsInHdfsStorageDir() throws Exception {
