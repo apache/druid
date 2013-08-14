@@ -2,6 +2,7 @@ package com.metamx.druid.indexer.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.exception.FormattedException;
@@ -16,18 +17,20 @@ import java.util.Set;
 public class MapInputRowParser implements InputRowParser<Map<String, Object>>
 {
   private final TimestampSpec timestampSpec;
-  private final DataSpec dataSpec;
+  private List<String> dimensions;
   private final Set<String> dimensionExclusions;
 
   @JsonCreator
   public MapInputRowParser(
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
-      @JsonProperty("data") DataSpec dataSpec,
+      @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("dimensionExclusions") List<String> dimensionExclusions
   )
   {
     this.timestampSpec = timestampSpec;
-    this.dataSpec = dataSpec;
+    if (dimensions != null) {
+       this.dimensions = ImmutableList.copyOf(dimensions);
+    }
     this.dimensionExclusions = Sets.newHashSet();
     if (dimensionExclusions != null) {
       for (String dimensionExclusion : dimensionExclusions) {
@@ -40,8 +43,8 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   @Override
   public InputRow parse(Map<String, Object> theMap) throws FormattedException
   {
-    final List<String> dimensions = dataSpec.hasCustomDimensions()
-                                    ? dataSpec.getDimensions()
+    final List<String> dimensions = hasCustomDimensions()
+                                    ? this.dimensions
                                     : Lists.newArrayList(Sets.difference(theMap.keySet(), dimensionExclusions));
 
     final DateTime timestamp;
@@ -67,6 +70,10 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return new MapBasedInputRow(timestamp.getMillis(), dimensions, theMap);
   }
 
+  private boolean hasCustomDimensions() {
+    return dimensions != null;
+  }
+
   @Override
   public void addDimensionExclusion(String dimension)
   {
@@ -79,10 +86,10 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return timestampSpec;
   }
 
-  @JsonProperty("data")
-  public DataSpec getDataSpec()
+  @JsonProperty
+  public List<String> getDimensions()
   {
-    return dataSpec;
+    return dimensions;
   }
 
   @JsonProperty

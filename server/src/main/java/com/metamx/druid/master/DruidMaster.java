@@ -92,7 +92,6 @@ public class DruidMaster
   private final IndexingServiceClient indexingServiceClient;
   private final ScheduledExecutorService exec;
   private final LoadQueueTaskMaster taskMaster;
-
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final AtomicReference<LeaderLatch> leaderLatch;
   private volatile AtomicReference<MasterSegmentSettings> segmentSettingsAtomicReference;

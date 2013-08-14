@@ -28,19 +28,22 @@ public class MasterSegmentSettings
   private long mergeBytesLimit= 100000000L;
   private int mergeSegmentsLimit = Integer.MAX_VALUE;
   private int maxSegmentsToMove = 5;
+  private boolean emitBalancingStats = false;
 
   @JsonCreator
   public MasterSegmentSettings(
       @JsonProperty("millisToWaitBeforeDeleting") Long millisToWaitBeforeDeleting,
       @JsonProperty("mergeBytesLimit") Long mergeBytesLimit,
       @JsonProperty("mergeSegmentsLimit") Integer mergeSegmentsLimit,
-      @JsonProperty("maxSegmentsToMove") Integer maxSegmentsToMove
+      @JsonProperty("maxSegmentsToMove") Integer maxSegmentsToMove,
+      @JsonProperty("emitBalancingStats") Boolean emitBalancingStats
   )
   {
       this.maxSegmentsToMove=maxSegmentsToMove;
       this.millisToWaitBeforeDeleting=millisToWaitBeforeDeleting;
       this.mergeSegmentsLimit=mergeSegmentsLimit;
       this.mergeBytesLimit=mergeBytesLimit;
+      this.emitBalancingStats = emitBalancingStats;
   }
 
   public static String getConfigKey()
@@ -58,6 +61,12 @@ public class MasterSegmentSettings
   public long getMergeBytesLimit()
   {
     return mergeBytesLimit;
+  }
+
+  @JsonProperty
+  public boolean isEmitBalancingStats()
+  {
+    return emitBalancingStats;
   }
 
   @JsonProperty
@@ -80,6 +89,7 @@ public class MasterSegmentSettings
     private long mergeBytesLimit;
     private int mergeSegmentsLimit;
     private int maxSegmentsToMove;
+    private boolean emitBalancingStats;
 
     public Builder()
     {
@@ -87,14 +97,16 @@ public class MasterSegmentSettings
       this.mergeBytesLimit= 100000000L;
       this.mergeSegmentsLimit= Integer.MAX_VALUE;
       this.maxSegmentsToMove = 5;
+      this.emitBalancingStats = false;
     }
 
-    public Builder(long millisToWaitBeforeDeleting, long mergeBytesLimit, int mergeSegmentsLimit, int maxSegmentsToMove)
+    public Builder(long millisToWaitBeforeDeleting, long mergeBytesLimit, int mergeSegmentsLimit, int maxSegmentsToMove, boolean emitBalancingStats)
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
+      this.emitBalancingStats = emitBalancingStats;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -123,7 +135,7 @@ public class MasterSegmentSettings
 
     public MasterSegmentSettings build()
     {
-      return new MasterSegmentSettings(millisToWaitBeforeDeleting,mergeBytesLimit,mergeSegmentsLimit,maxSegmentsToMove);
+      return new MasterSegmentSettings(millisToWaitBeforeDeleting,mergeBytesLimit,mergeSegmentsLimit,maxSegmentsToMove, emitBalancingStats);
     }
   }
 }
