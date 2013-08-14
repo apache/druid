@@ -19,6 +19,15 @@
 
 package com.metamx.druid.indexer.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import com.metamx.common.exception.FormattedException;
+import com.metamx.common.parsers.Parser;
+import com.metamx.common.parsers.ToLowerCaseParser;
+import com.metamx.druid.input.InputRow;
+
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CoderResult;
@@ -26,21 +35,13 @@ import java.nio.charset.CodingErrorAction;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Charsets;
-import com.metamx.common.exception.FormattedException;
-import com.metamx.common.parsers.Parser;
-import com.metamx.common.parsers.ToLowerCaseParser;
-import com.metamx.druid.input.InputRow;
-
 /**
  */
 public class StringInputRowParser implements ByteBufferInputRowParser
 {
-	private final InputRowParser<Map<String, Object>> inputRowCreator;
+	private final MapInputRowParser inputRowCreator;
 	private final Parser<String, Object> parser;
+  private final DataSpec dataSpec;
 
 	private CharBuffer chars = null;
 
@@ -50,6 +51,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
 	    @JsonProperty("data") DataSpec dataSpec,
 	    @JsonProperty("dimensionExclusions") List<String> dimensionExclusions)
 	{
+    this.dataSpec = dataSpec;
 		this.inputRowCreator = new MapInputRowParser(timestampSpec, dataSpec.getDimensions(), dimensionExclusions);
 		this.parser = new ToLowerCaseParser(dataSpec.getParser());
 	}
@@ -116,9 +118,21 @@ public class StringInputRowParser implements ByteBufferInputRowParser
 		return inputRowCreator.parse(theMap);
 	}
 
-	@JsonValue
-	public InputRowParser<Map<String, Object>> getInputRowCreator()
-	{
-		return inputRowCreator;
-	}
+  @JsonProperty
+  public TimestampSpec getTimestampSpec()
+  {
+    return inputRowCreator.getTimestampSpec();
+  }
+
+  @JsonProperty("data")
+  public DataSpec getDataSpec()
+  {
+    return dataSpec;
+  }
+
+  @JsonProperty
+  public List<String> getDimensionExclusions()
+  {
+    return ImmutableList.copyOf(inputRowCreator.getDimensionExclusions());
+  }
 }
