@@ -19,11 +19,43 @@ import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 
+/**
+ * Example usage
+ * <pre>
+    Map<String, String> namespaces = Maps.newHashMap();
+    namespaces.put("", "main");
+    namespaces.put("Category", "category");
+    namespaces.put("Media", "media");
+    namespaces.put("MediaWiki", "mediawiki");
+    namespaces.put("Template", "template");
+    namespaces.put("$1 talk", "project talk");
+    namespaces.put("Help talk", "help talk");
+    namespaces.put("User", "user");
+    namespaces.put("Template talk", "template talk");
+    namespaces.put("MediaWiki talk", "mediawiki talk");
+    namespaces.put("Talk", "talk");
+    namespaces.put("Help", "help");
+    namespaces.put("File talk", "file talk");
+    namespaces.put("File", "file");
+    namespaces.put("User talk", "user talk");
+    namespaces.put("Special", "special");
+    namespaces.put("Category talk", "category talk");
 
+    IrcFirehoseFactory factory = new IrcFirehoseFactory(
+        "wiki-druid-123",
+        "irc.wikimedia.org",
+        Lists.newArrayList(
+            "#en.wikipedia",
+            "#fr.wikipedia",
+            "#de.wikipedia",
+            "#ja.wikipedia"
+        ),
+        new WikipediaIrcDecoder(namespaces)
+    );
+   </pre>
+ */
 public class IrcFirehoseFactory implements FirehoseFactory
 {
   private static final Logger log = new Logger(IrcFirehoseFactory.class);
@@ -173,45 +205,6 @@ public class IrcFirehoseFactory implements FirehoseFactory
         irc.disconnect("");
       }
     };
-  }
-
-  public static void main(String[] args) throws IOException {
-
-    Map<String, String> namespaces = Maps.newHashMap();
-    namespaces.put("", "main");
-    namespaces.put("Category", "category");
-    namespaces.put("Media", "media");
-    namespaces.put("MediaWiki", "mediawiki");
-    namespaces.put("Template", "template");
-    namespaces.put("$1 talk", "project talk");
-    namespaces.put("Help talk", "help talk");
-    namespaces.put("User", "user");
-    namespaces.put("Template talk", "template talk");
-    namespaces.put("MediaWiki talk", "mediawiki talk");
-    namespaces.put("Talk", "talk");
-    namespaces.put("Help", "help");
-    namespaces.put("File talk", "file talk");
-    namespaces.put("File", "file");
-    namespaces.put("User talk", "user talk");
-    namespaces.put("Special", "special");
-    namespaces.put("Category talk", "category talk");
-
-    IrcFirehoseFactory factory = new IrcFirehoseFactory(
-        UUID.randomUUID().toString(),
-        "irc.wikimedia.org",
-        Lists.newArrayList(
-            "#en.wikipedia",
-            "#fr.wikipedia",
-            "#de.wikipedia",
-            "#ja.wikipedia"
-        ),
-        new WikipediaIrcDecoder(namespaces)
-    );
-
-    Firehose f = factory.connect();
-    while(f.hasMore()) {
-      System.out.println(f.nextRow());
-    }
   }
 }
 
