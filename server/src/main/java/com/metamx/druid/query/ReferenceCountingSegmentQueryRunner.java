@@ -12,7 +12,7 @@ import java.io.Closeable;
 */
 public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
 {
-  private final QueryRunner<T> runner;
+  private final QueryRunnerFactory<T, Query<T>> factory;
   private final ReferenceCountingSegment adapter;
 
   public ReferenceCountingSegmentQueryRunner(
@@ -20,9 +20,8 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
       ReferenceCountingSegment adapter
   )
   {
+    this.factory = factory;
     this.adapter = adapter;
-
-    this.runner = factory.createRunner(adapter);
   }
 
   @Override
@@ -30,7 +29,7 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
   {
     final Closeable closeable = adapter.increment();
     try {
-      final Sequence<T> baseSequence = runner.run(query);
+      final Sequence<T> baseSequence = factory.createRunner(adapter).run(query);
 
       return new ResourceClosingSequence<T>(baseSequence, closeable);
     }
