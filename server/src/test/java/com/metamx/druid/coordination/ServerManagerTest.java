@@ -73,6 +73,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -262,7 +263,7 @@ public class ServerManagerTest
         )
     );
 
-    queryNotifyLatch.await();
+    queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(1, factory.getSegmentReferences().size());
 
@@ -301,7 +302,7 @@ public class ServerManagerTest
         )
     );
 
-    queryNotifyLatch.await();
+    queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(1, factory.getSegmentReferences().size());
 
@@ -344,7 +345,7 @@ public class ServerManagerTest
         )
     );
 
-    queryNotifyLatch.await();
+    queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(1, factory.getSegmentReferences().size());
 
@@ -378,7 +379,7 @@ public class ServerManagerTest
   private void waitForTestVerificationAndCleanup(Future future)
   {
     try {
-      queryNotifyLatch.await();
+      queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
       queryWaitYieldLatch.countDown();
       queryWaitLatch.countDown();
       future.get();
@@ -505,13 +506,13 @@ public class ServerManagerTest
       if (!(adapter instanceof ReferenceCountingSegment)) {
         throw new IAE("Expected instance of ReferenceCountingSegment, got %s", adapter.getClass());
       }
-      segmentReferences.add((ReferenceCountingSegment) adapter);
-      adapters.add((SegmentForTesting) ((ReferenceCountingSegment) adapter).getBaseSegment());
+      final ReferenceCountingSegment segment = (ReferenceCountingSegment) adapter;
+
+      Assert.assertTrue(segment.getNumReferences() > 0);
+      segmentReferences.add(segment);
+      adapters.add((SegmentForTesting) segment.getBaseSegment());
       return new BlockingQueryRunner<Result<SearchResultValue>>(
-          new NoopQueryRunner<Result<SearchResultValue>>(),
-          waitLatch,
-          waitYieldLatch,
-          notifyLatch
+          new NoopQueryRunner<Result<SearchResultValue>>(), waitLatch, waitYieldLatch, notifyLatch
       );
     }
 
@@ -702,7 +703,7 @@ public class ServerManagerTest
       notifyLatch.countDown();
 
       try {
-        waitYieldLatch.await();
+        waitYieldLatch.await(25, TimeUnit.MILLISECONDS);
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -715,7 +716,7 @@ public class ServerManagerTest
         public OutType get()
         {
           try {
-            waitLatch.await();
+            waitLatch.await(25, TimeUnit.MILLISECONDS);
           }
           catch (Exception e) {
             throw Throwables.propagate(e);
