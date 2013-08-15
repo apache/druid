@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Holds information about a worker and a listener for task status changes associated with the worker.
@@ -49,7 +50,7 @@ public class ZkWorker implements Closeable
   private final PathChildrenCache statusCache;
   private final Function<ChildData, TaskStatus> cacheConverter;
 
-  private volatile DateTime lastCompletedTaskTime = new DateTime();
+  private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(new DateTime());
 
   public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
@@ -128,7 +129,7 @@ public class ZkWorker implements Closeable
   @JsonProperty
   public DateTime getLastCompletedTaskTime()
   {
-    return lastCompletedTaskTime;
+    return lastCompletedTaskTime.get();
   }
 
   public boolean isRunningTask(String taskId)
@@ -154,7 +155,7 @@ public class ZkWorker implements Closeable
 
   public void setLastCompletedTaskTime(DateTime completedTaskTime)
   {
-    lastCompletedTaskTime = completedTaskTime;
+    lastCompletedTaskTime.getAndSet(completedTaskTime);
   }
 
   @Override

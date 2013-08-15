@@ -258,6 +258,25 @@ public class RemoteTaskRunnerTest
     Assert.assertFalse(runningTasks.contains("first"));
   }
 
+  @Test
+  public void testRunWithTaskComplete() throws Exception
+  {
+    cf.create()
+      .creatingParentsIfNeeded()
+      .withMode(CreateMode.EPHEMERAL)
+      .forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(TaskStatus.success(task.getId())));
+
+    doSetup();
+
+    remoteTaskRunner.bootstrap(Arrays.<Task>asList(task));
+
+    ListenableFuture<TaskStatus> future = remoteTaskRunner.run(task);
+
+    TaskStatus status = future.get();
+
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, status.getStatusCode());
+  }
+
   private void doSetup() throws Exception
   {
     makeWorker();

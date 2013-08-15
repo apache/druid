@@ -283,14 +283,28 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   {
     RemoteTaskRunnerWorkItem runningTask = runningTasks.get(task.getId());
     if (runningTask != null) {
-      log.info("Assigned a task[%s] that is already running, not doing anything", task.getId());
-      return runningTask.getResult();
+      ZkWorker zkWorker = findWorkerRunningTask(task.getId());
+      if (zkWorker == null) {
+        log.makeAlert("Told to run task that is in the running queue but no worker is actually running it?!")
+           .addData("taskId", task.getId())
+           .emit();
+        runningTasks.remove(task.getId());
+      } else {
+        log.info("Task[%s] already running on %s.", task.getId(), zkWorker.getWorker().getHost());
+        TaskStatus status = zkWorker.getRunningTasks().get(task.getId());
+        if (status.isComplete()) {
+          taskComplete(runningTask, zkWorker, task.getId(), status);
+        }
+        return runningTask.getResult();
+      }
     }
+
     RemoteTaskRunnerWorkItem pendingTask = pendingTasks.get(task.getId());
     if (pendingTask != null) {
       log.info("Assigned a task[%s] that is already pending, not doing anything", task.getId());
       return pendingTask.getResult();
     }
+
     RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
         task,
         SettableFuture.<TaskStatus>create()
@@ -473,8 +487,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     }
     catch (Exception e) {
       log.makeAlert("Exception while trying to run task")
-      .addData("taskId", taskRunnerWorkItem.getTask().getId())
-      .emit();
+         .addData("taskId", taskRunnerWorkItem.getTask().getId())
+         .emit();
     }
   }
 
@@ -590,16 +604,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                       }
 
                       if (taskStatus.isComplete()) {
-                        if (taskRunnerWorkItem != null) {
-                          final ListenableFuture<TaskStatus> result = taskRunnerWorkItem.getResult();
-                          if (result != null) {
-                            ((SettableFuture<TaskStatus>) result).set(taskStatus);
-                          }
-                        }
-
-                        // Worker is done with this task
-                        zkWorker.setLastCompletedTaskTime(new DateTime());
-                        cleanup(zkWorker.getWorker().getHost(), taskId);
+                        taskComplete(taskRunnerWorkItem, zkWorker, taskId, taskStatus);
                         runPendingTasks();
                       }
                       break;
@@ -709,5 +714,24 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     }
     log.debug("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
     return null;
+  }
+
+  private void taskComplete(
+      RemoteTaskRunnerWorkItem taskRunnerWorkItem,
+      ZkWorker zkWorker,
+      String taskId,
+      TaskStatus taskStatus
+  )
+  {
+    if (taskRunnerWorkItem != null) {
+      final ListenableFuture<TaskStatus> result = taskRunnerWorkItem.getResult();
+      if (result != null) {
+        ((SettableFuture<TaskStatus>) result).set(taskStatus);
+      }
+    }
+
+    // Worker is done with this task
+    zkWorker.setLastCompletedTaskTime(new DateTime());
+    cleanup(zkWorker.getWorker().getHost(), taskId);
   }
 }

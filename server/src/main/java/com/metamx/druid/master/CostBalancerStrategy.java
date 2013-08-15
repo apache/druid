@@ -47,9 +47,8 @@ public class CostBalancerStrategy implements BalancerStrategy
       DataSegment proposalSegment, List<ServerHolder> serverHolders
   )
   {
-    ServerHolder holder= chooseBestServer(proposalSegment, serverHolders, false).rhs;
-    if (holder!=null && !holder.isServingSegment(proposalSegment))
-    {
+    ServerHolder holder = chooseBestServer(proposalSegment, serverHolders, false).rhs;
+    if (holder != null && !holder.isServingSegment(proposalSegment)) {
       return holder;
     }
     return null;
@@ -63,7 +62,6 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     return chooseBestServer(proposalSegment, serverHolders, true).rhs;
   }
-
 
 
   /**
@@ -83,25 +81,10 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
 
     Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
-    MinMaxPriorityQueue<Pair<Double, ServerHolder>> costsAndServers = MinMaxPriorityQueue.orderedBy(
-        new Comparator<Pair<Double, ServerHolder>>()
-        {
-          @Override
-          public int compare(
-              Pair<Double, ServerHolder> o,
-              Pair<Double, ServerHolder> o1
-          )
-          {
-            return Double.compare(o.lhs, o1.lhs);
-          }
-        }
-    ).create();
-
     final long proposalSegmentSize = proposalSegment.getSize();
 
     for (ServerHolder server : serverHolders) {
-      if (includeCurrentServer || !server.isServingSegment(proposalSegment))
-      {
+      if (includeCurrentServer || !server.isServingSegment(proposalSegment)) {
         /** Don't calculate cost if the server doesn't have enough space or is loading the segment */
         if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
           continue;
@@ -159,10 +142,10 @@ public class CostBalancerStrategy implements BalancerStrategy
         referenceTimestamp.getMillis() - segment1.getInterval().getEndMillis(),
         referenceTimestamp.getMillis() - segment2.getInterval().getEndMillis()
     );
-    double segment1diff=referenceTimestamp.getMillis()-segment1.getInterval().getEndMillis();
-    double segment2diff=referenceTimestamp.getMillis()-segment2.getInterval().getEndMillis();
-    if (segment1diff < SEVEN_DAYS_IN_MILLIS && segment2diff <SEVEN_DAYS_IN_MILLIS) {
-      recencyPenalty = (2 - segment1diff / SEVEN_DAYS_IN_MILLIS)*(2-segment2diff /SEVEN_DAYS_IN_MILLIS);
+    double segment1diff = referenceTimestamp.getMillis() - segment1.getInterval().getEndMillis();
+    double segment2diff = referenceTimestamp.getMillis() - segment2.getInterval().getEndMillis();
+    if (segment1diff < SEVEN_DAYS_IN_MILLIS && segment2diff < SEVEN_DAYS_IN_MILLIS) {
+      recencyPenalty = (2 - segment1diff / SEVEN_DAYS_IN_MILLIS) * (2 - segment2diff / SEVEN_DAYS_IN_MILLIS);
     }
 
     /** gap is null if the two segment intervals overlap or if they're adjacent */
@@ -251,6 +234,4 @@ public class CostBalancerStrategy implements BalancerStrategy
     );
 
   }
-
-
 }
