@@ -19,14 +19,13 @@
 
 package com.metamx.druid.realtime.firehose;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
+import com.metamx.common.exception.FormattedException;
+import com.metamx.common.logger.Logger;
 import com.metamx.druid.indexer.data.ByteBufferInputRowParser;
+import com.metamx.druid.input.InputRow;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
@@ -34,13 +33,11 @@ import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.Message;
 import kafka.message.MessageAndMetadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
-import com.metamx.common.exception.FormattedException;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.indexer.data.InputRowParser;
-import com.metamx.druid.input.InputRow;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  */
@@ -92,9 +89,9 @@ public class KafkaFirehoseFactory implements FirehoseFactory
 	{
 		private final ConsumerConnector connector;
 		private final Iterator<MessageAndMetadata<Message>> iter;
-		private final InputRowParser<ByteBuffer> parser;
+		private final ByteBufferInputRowParser parser;
 
-		public DefaultFirehose(ConsumerConnector connector, KafkaStream<Message> stream, InputRowParser<ByteBuffer> parser)
+		public DefaultFirehose(ConsumerConnector connector, KafkaStream<Message> stream, ByteBufferInputRowParser parser)
 		{
 			iter = stream.iterator();
 			this.connector = connector;
