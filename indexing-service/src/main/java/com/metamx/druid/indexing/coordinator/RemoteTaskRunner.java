@@ -286,15 +286,15 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
       ZkWorker zkWorker = findWorkerRunningTask(task.getId());
       if (zkWorker == null) {
         log.error("Got task %s that is running but no worker is actually running it?", task.getId());
+        runningTasks.remove(task.getId());
       } else {
         log.info("Task[%s] already running on %s.", task.getId(), zkWorker.getWorker().getHost());
         TaskStatus status = zkWorker.getRunningTasks().get(task.getId());
         if (status.isComplete()) {
           taskComplete(runningTask, zkWorker, task.getId(), status);
         }
+        return runningTask.getResult();
       }
-
-      return runningTask.getResult();
     }
 
     RemoteTaskRunnerWorkItem pendingTask = pendingTasks.get(task.getId());
