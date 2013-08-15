@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -50,23 +69,23 @@ class WikipediaIrcDecoder implements IrcDecoder
       "city"
   );
 
-  final Map<String, String> namespaces;
+  final Map<String, Map<String, String>> namespaces;
 
-  public WikipediaIrcDecoder(Map<String, String> namespaces) {
+  public WikipediaIrcDecoder( Map<String, Map<String, String>> namespaces) {
     this(namespaces, null);
   }
 
   @JsonCreator
-  public WikipediaIrcDecoder(@JsonProperty Map<String, String> namespaces,
-                             @JsonProperty String geoDbFile)
+  public WikipediaIrcDecoder(@JsonProperty("namespaces") Map<String, Map<String, String>> namespaces,
+                             @JsonProperty("geoIpDatabase") String geoIpDatabase)
   {
     if(namespaces == null) namespaces = Maps.newHashMap();
     this.namespaces = namespaces;
 
 
     File geoDb;
-    if(geoDbFile != null) {
-      geoDb = new File(geoDbFile);
+    if(geoIpDatabase != null) {
+      geoDb = new File(geoIpDatabase);
     } else {
       try {
         geoDb = File.createTempFile("geoip", null);
@@ -143,8 +162,9 @@ class WikipediaIrcDecoder implements IrcDecoder
 
     String[] parts = page.split(":");
     if(parts.length > 1 && !parts[1].startsWith(" ")) {
-      if(namespaces.containsKey(parts[0])) {
-        dimensions.put("namespace", namespaces.get(parts[0]));
+      Map<String, String> channelNamespaces = namespaces.get(channel);
+      if(channelNamespaces != null && channelNamespaces.containsKey(parts[0])) {
+        dimensions.put("namespace", channelNamespaces.get(parts[0]));
       } else {
         dimensions.put("namespace", "wikipedia");
       }

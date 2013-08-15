@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -16,44 +35,60 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.input.InputRow;
 import org.joda.time.DateTime;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Example usage
- * <pre>
-    Map<String, String> namespaces = Maps.newHashMap();
-    namespaces.put("", "main");
-    namespaces.put("Category", "category");
-    namespaces.put("Media", "media");
-    namespaces.put("MediaWiki", "mediawiki");
-    namespaces.put("Template", "template");
-    namespaces.put("$1 talk", "project talk");
-    namespaces.put("Help talk", "help talk");
-    namespaces.put("User", "user");
-    namespaces.put("Template talk", "template talk");
-    namespaces.put("MediaWiki talk", "mediawiki talk");
-    namespaces.put("Talk", "talk");
-    namespaces.put("Help", "help");
-    namespaces.put("File talk", "file talk");
-    namespaces.put("File", "file");
-    namespaces.put("User talk", "user talk");
-    namespaces.put("Special", "special");
-    namespaces.put("Category talk", "category talk");
-
-    IrcFirehoseFactory factory = new IrcFirehoseFactory(
-        "wiki-druid-123",
-        "irc.wikimedia.org",
-        Lists.newArrayList(
-            "#en.wikipedia",
-            "#fr.wikipedia",
-            "#de.wikipedia",
-            "#ja.wikipedia"
-        ),
-        new WikipediaIrcDecoder(namespaces)
-    );
-   </pre>
+ *
+ * Decoder definition <code>wikipedia-decoder.json</code>
+ * <pre>{@code
+ * {
+ *   "type": "wikipedia",
+ *   "namespaces": {
+ *     "#en.wikipedia": {
+ *       "": "main",
+ *       "Category": "category",
+ *       "Template talk": "template talk",
+ *       "Help talk": "help talk",
+ *       "Media": "media",
+ *       "MediaWiki talk": "mediawiki talk",
+ *       "File talk": "file talk",
+ *       "MediaWiki": "mediawiki",
+ *       "User": "user",
+ *       "File": "file",
+ *       "User talk": "user talk",
+ *       "Template": "template",
+ *       "Help": "help",
+ *       "Special": "special",
+ *       "Talk": "talk",
+ *       "Category talk": "category talk"
+ *     }
+ *   },
+ *   "geoIpDatabase": "path/to/GeoLite2-City.mmdb"
+ * }
+ * }</pre>
+ *
+ * <pre>{@code
+ * IrcDecoder wikipediaDecoder = new ObjectMapper().readValue(
+ *   new File("wikipedia-decoder.json"),
+ *   IrcDecoder.class
+ * );
+ *
+ * IrcFirehoseFactory factory = new IrcFirehoseFactory(
+ *     "wiki123",
+ *     "irc.wikimedia.org",
+ *     Lists.newArrayList(
+ *         "#en.wikipedia",
+ *         "#fr.wikipedia",
+ *         "#de.wikipedia",
+ *         "#ja.wikipedia"
+ *     ),
+ *     wikipediaDecoder
+ * );
+ * }</pre>
  */
 public class IrcFirehoseFactory implements FirehoseFactory
 {
