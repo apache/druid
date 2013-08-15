@@ -41,10 +41,11 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * Example usage
+ * <p><b>Example Usage</b></p>
  *
- * Decoder definition <code>wikipedia-decoder.json</code>
+ * <p>Decoder definition: <code>wikipedia-decoder.json</code></p>
  * <pre>{@code
+ *
  * {
  *   "type": "wikipedia",
  *   "namespaces": {
@@ -71,6 +72,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * }
  * }</pre>
  *
+ * <p><b>Example code:</b></p>
  * <pre>{@code
  * IrcDecoder wikipediaDecoder = new ObjectMapper().readValue(
  *   new File("wikipedia-decoder.json"),
