@@ -285,7 +285,9 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     if (runningTask != null) {
       ZkWorker zkWorker = findWorkerRunningTask(task.getId());
       if (zkWorker == null) {
-        log.error("Got task %s that is running but no worker is actually running it?", task.getId());
+        log.makeAlert("Told to run task that is in the running queue but no worker is actually running it?!")
+           .addData("taskId", task.getId())
+           .emit();
         runningTasks.remove(task.getId());
       } else {
         log.info("Task[%s] already running on %s.", task.getId(), zkWorker.getWorker().getHost());
