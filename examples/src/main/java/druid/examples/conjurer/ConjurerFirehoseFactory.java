@@ -19,11 +19,11 @@
 
 package druid.examples.conjurer;
 
-import com.beust.jcommander.internal.Lists;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.metamx.druid.guava.Runnables;
 import com.metamx.druid.input.InputRow;
