@@ -176,7 +176,10 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         }
 
         final ByteBuffer queryCacheKey = ByteBuffer
-            .allocate(1 + granularityBytes.length + filterBytes.length + querySpecBytes.length + dimensionsBytesSize)
+            .allocate(
+                1 + 4 + granularityBytes.length + filterBytes.length +
+                querySpecBytes.length + dimensionsBytesSize
+            )
             .put(SEARCH_QUERY)
             .put(Ints.toByteArray(query.getLimit()))
             .put(granularityBytes)
