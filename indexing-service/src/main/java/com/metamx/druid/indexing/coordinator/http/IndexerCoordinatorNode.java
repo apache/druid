@@ -55,7 +55,6 @@ import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
 import com.metamx.druid.http.RedirectInfo;
-import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionToolbox;
@@ -309,7 +308,6 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     // If we want to support querying tasks (e.g. for realtime in local mode), we need a QueryServlet here.
 
     final Context root = new Context(server, "/", Context.SESSIONS);
-    root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/druid/*");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/mmx/*"); // backwards compatibility
     root.addEventListener(new GuiceServletConfig(injector));
@@ -347,6 +345,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     );
     root.addFilter(GuiceFilter.class, "/druid/indexer/v1/*", 0);
     root.addFilter(GuiceFilter.class, "/mmx/merger/v1/*", 0); //backwards compatibility, soon to be removed
+    root.addFilter(GuiceFilter.class, "/status/*", 0);
 
     initialized = true;
   }

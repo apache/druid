@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
 import com.metamx.druid.config.JacksonConfigManager;
+import com.metamx.druid.http.StatusResource;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogProvider;
 import com.metamx.druid.indexing.coordinator.TaskMasterLifecycle;
 import com.metamx.druid.indexing.coordinator.TaskStorageQueryAdapter;
@@ -67,6 +68,7 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
   @Override
   protected void configureServlets()
   {
+    bind(StatusResource.class);
     bind(IndexerCoordinatorResource.class);
     bind(OldIndexerCoordinatorResource.class);
     bind(ObjectMapper.class).toInstance(jsonMapper);

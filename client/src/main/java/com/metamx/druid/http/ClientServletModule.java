@@ -51,6 +51,7 @@ public class ClientServletModule extends JerseyServletModule
   @Override
   protected void configureServlets()
   {
+    bind(StatusResource.class);
     bind(ClientInfoResource.class);
     bind(QuerySegmentWalker.class).toInstance(texasRanger);
     bind(InventoryView.class).toInstance(serverInventoryView);

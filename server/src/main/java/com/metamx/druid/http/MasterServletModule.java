@@ -69,6 +69,7 @@ public class MasterServletModule extends JerseyServletModule
   @Override
   protected void configureServlets()
   {
+    bind(StatusResource.class);
     bind(MasterSegmentSettingsResource.class);
     bind(InfoResource.class);
     bind(MasterResource.class);

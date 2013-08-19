@@ -327,7 +327,6 @@ public class MasterMain
     staticContext.setResourceBase(ComputeMain.class.getClassLoader().getResource("static").toExternalForm());
 
     final Context root = new Context(server, "/", Context.SESSIONS);
-    root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     root.addEventListener(new GuiceServletConfig(injector));
     root.addFilter(GzipFilter.class, "/*", 0);
@@ -341,6 +340,7 @@ public class MasterMain
     );
     root.addFilter(GuiceFilter.class, "/info/*", 0);
     root.addFilter(GuiceFilter.class, "/master/*", 0);
+    root.addFilter(GuiceFilter.class, "/status/*", 0);
 
     server.start();
     server.join();
