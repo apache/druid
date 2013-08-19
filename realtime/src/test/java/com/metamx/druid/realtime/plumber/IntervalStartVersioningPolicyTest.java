@@ -19,27 +19,19 @@
 
 package com.metamx.druid.realtime.plumber;
 
-import org.joda.time.DateTime;
-import org.joda.time.Period;
+import junit.framework.Assert;
+import org.joda.time.Interval;
+import org.junit.Test;
 
-public class NoopRejectionPolicyFactory implements RejectionPolicyFactory
+/**
+ */
+public class IntervalStartVersioningPolicyTest
 {
-  @Override
-  public RejectionPolicy create(Period windowPeriod)
+  @Test
+  public void testGetVersion() throws Exception
   {
-    return new RejectionPolicy()
-    {
-      @Override
-      public DateTime getCurrMaxTime()
-      {
-        return new DateTime(0);
-      }
-
-      @Override
-      public boolean accept(long timestamp)
-      {
-        return true;
-      }
-    };
+    IntervalStartVersioningPolicy policy = new IntervalStartVersioningPolicy();
+    String version = policy.getVersion(new Interval("2013-01-01/2013-01-02"));
+    Assert.assertEquals("2013-01-01T00:00:00.000Z", version);
   }
 }

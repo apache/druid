@@ -19,27 +19,23 @@
 
 package com.metamx.druid.realtime.plumber;
 
+import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
+import org.junit.Test;
 
-public class NoopRejectionPolicyFactory implements RejectionPolicyFactory
+/**
+ */
+public class ServerTimeRejectionPolicyFactoryTest
 {
-  @Override
-  public RejectionPolicy create(Period windowPeriod)
+  @Test
+  public void testAccept() throws Exception
   {
-    return new RejectionPolicy()
-    {
-      @Override
-      public DateTime getCurrMaxTime()
-      {
-        return new DateTime(0);
-      }
+    RejectionPolicy rejectionPolicy = new ServerTimeRejectionPolicyFactory().create(
+        new Period("PT10M")
+    );
 
-      @Override
-      public boolean accept(long timestamp)
-      {
-        return true;
-      }
-    };
+    Assert.assertTrue(rejectionPolicy.accept(new DateTime().getMillis()));
+    Assert.assertFalse(rejectionPolicy.accept(new DateTime("2000").getMillis()));
   }
 }

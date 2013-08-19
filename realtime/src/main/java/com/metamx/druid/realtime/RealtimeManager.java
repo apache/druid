@@ -94,6 +94,10 @@ public class RealtimeManager implements QuerySegmentWalker
       Closeables.closeQuietly(chief);
     }
   }
+  public FireDepartmentMetrics getMetrics(String datasource)
+  {
+    return chiefs.get(datasource).getMetrics();
+  }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
@@ -149,6 +153,11 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
+    public FireDepartmentMetrics getMetrics()
+    {
+      return metrics;
+    }
+
     @Override
     public void run()
     {
@@ -186,11 +195,11 @@ public class RealtimeManager implements QuerySegmentWalker
             }
 
             int currCount = sink.add(inputRow);
-            metrics.incrementProcessed();
             if (currCount >= config.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
               plumber.persist(firehose.commit());
               nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
             }
+            metrics.incrementProcessed();
           }
           catch (FormattedException e) {
             log.info(e, "unparseable line: %s", e.getDetails());
