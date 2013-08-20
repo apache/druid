@@ -202,7 +202,7 @@ public class TaskSerdeTest
   {
     final Task task = new RealtimeIndexTask(
         null,
-        null,
+        new TaskResource("rofl", 2),
         new Schema("foo", null, new AggregatorFactory[0], QueryGranularity.NONE, new NoneShardSpec()),
         null,
         null,
@@ -221,6 +221,8 @@ public class TaskSerdeTest
     Assert.assertEquals(Optional.<Interval>absent(), task.getImplicitLockInterval());
     Assert.assertEquals(new Period("PT10M"), ((RealtimeIndexTask) task).getWindowPeriod());
     Assert.assertEquals(IndexGranularity.HOUR, ((RealtimeIndexTask) task).getSegmentGranularity());
+    Assert.assertEquals(2, task.getTaskResource().getRequiredCapacity());
+    Assert.assertEquals("rofl", task.getTaskResource().getAvailabilityGroup());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());

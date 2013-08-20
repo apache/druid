@@ -88,7 +88,7 @@ public abstract class AbstractTask implements Task
     return groupId;
   }
 
-  @JsonProperty
+  @JsonProperty("resource")
   @Override
   public TaskResource getTaskResource()
   {
