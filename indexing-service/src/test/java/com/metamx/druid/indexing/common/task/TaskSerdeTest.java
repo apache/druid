@@ -219,19 +219,21 @@ public class TaskSerdeTest
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals(Optional.<Interval>absent(), task.getImplicitLockInterval());
-    Assert.assertEquals(new Period("PT10M"), ((RealtimeIndexTask) task).getWindowPeriod());
-    Assert.assertEquals(IndexGranularity.HOUR, ((RealtimeIndexTask) task).getSegmentGranularity());
     Assert.assertEquals(2, task.getTaskResource().getRequiredCapacity());
     Assert.assertEquals("rofl", task.getTaskResource().getAvailabilityGroup());
+    Assert.assertEquals(new Period("PT10M"), ((RealtimeIndexTask) task).getWindowPeriod());
+    Assert.assertEquals(IndexGranularity.HOUR, ((RealtimeIndexTask) task).getSegmentGranularity());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getImplicitLockInterval(), task2.getImplicitLockInterval());
-    Assert.assertEquals(((RealtimeIndexTask) task).getWindowPeriod(), ((RealtimeIndexTask) task).getWindowPeriod());
+    Assert.assertEquals(task.getTaskResource().getRequiredCapacity(), task2.getTaskResource().getRequiredCapacity());
+    Assert.assertEquals(task.getTaskResource().getAvailabilityGroup(), task2.getTaskResource().getAvailabilityGroup());
+    Assert.assertEquals(((RealtimeIndexTask) task).getWindowPeriod(), ((RealtimeIndexTask) task2).getWindowPeriod());
     Assert.assertEquals(
         ((RealtimeIndexTask) task).getSegmentGranularity(),
-        ((RealtimeIndexTask) task).getSegmentGranularity()
+        ((RealtimeIndexTask) task2).getSegmentGranularity()
     );
   }
 
