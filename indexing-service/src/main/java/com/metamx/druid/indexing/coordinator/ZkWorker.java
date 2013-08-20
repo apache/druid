@@ -28,6 +28,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
+import com.metamx.druid.indexing.worker.TaskAnnouncement;
 import com.metamx.druid.indexing.worker.Worker;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -48,7 +49,7 @@ public class ZkWorker implements Closeable
 {
   private final Worker worker;
   private final PathChildrenCache statusCache;
-  private final Function<ChildData, TaskStatus> cacheConverter;
+  private final Function<ChildData, TaskAnnouncement> cacheConverter;
 
   private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(new DateTime());
 
@@ -56,13 +57,13 @@ public class ZkWorker implements Closeable
   {
     this.worker = worker;
     this.statusCache = statusCache;
-    this.cacheConverter = new Function<ChildData, TaskStatus>()
+    this.cacheConverter = new Function<ChildData, TaskAnnouncement>()
     {
       @Override
-      public TaskStatus apply(ChildData input)
+      public TaskAnnouncement apply(ChildData input)
       {
         try {
-          return jsonMapper.readValue(input.getData(), TaskStatus.class);
+          return jsonMapper.readValue(input.getData(), TaskAnnouncement.class);
         }
         catch (Exception e) {
           throw Throwables.propagate(e);
@@ -93,14 +94,14 @@ public class ZkWorker implements Closeable
     return getRunningTasks().keySet();
   }
 
-  public Map<String, TaskStatus> getRunningTasks()
+  public Map<String, TaskAnnouncement> getRunningTasks()
   {
-    Map<String, TaskStatus> retVal = Maps.newHashMap();
-    for (TaskStatus taskStatus : Lists.transform(
+    Map<String, TaskAnnouncement> retVal = Maps.newHashMap();
+    for (TaskAnnouncement taskAnnouncement : Lists.transform(
         statusCache.getCurrentData(),
         cacheConverter
     )) {
-      retVal.put(taskStatus.getId(), taskStatus);
+      retVal.put(taskAnnouncement.getTaskStatus().getId(), taskAnnouncement);
     }
 
     return retVal;
@@ -110,8 +111,8 @@ public class ZkWorker implements Closeable
   public int getCurrCapacityUsed()
   {
     int currCapacity = 0;
-    for (TaskStatus taskStatus : getRunningTasks().values()) {
-      currCapacity += taskStatus.getResource().getRequiredCapacity();
+    for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
+      currCapacity += taskAnnouncement.getTaskResource().getRequiredCapacity();
     }
     return currCapacity;
   }
@@ -120,8 +121,8 @@ public class ZkWorker implements Closeable
   public Set<String> getAvailabilityGroups()
   {
     Set<String> retVal = Sets.newHashSet();
-    for (TaskStatus taskStatus : getRunningTasks().values()) {
-      retVal.add(taskStatus.getResource().getAvailabilityGroup());
+    for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
+      retVal.add(taskAnnouncement.getTaskResource().getAvailabilityGroup());
     }
     return retVal;
   }
