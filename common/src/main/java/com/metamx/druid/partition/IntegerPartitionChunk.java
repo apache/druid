@@ -103,8 +103,9 @@ public class IntegerPartitionChunk<T> implements PartitionChunk<T>
       }
 
       return retVal;
+    } else {
+      throw new IllegalArgumentException("Cannot compare against something that is not an IntegerPartitionChunk.");
     }
-    throw new IllegalArgumentException("Cannot compare against something that is not a StringPartitionChunk.");
   }
 
   @Override
@@ -139,3 +140,4 @@ public class IntegerPartitionChunk<T> implements PartitionChunk<T>
            '}';
   }
 }
+
