@@ -41,6 +41,7 @@ import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
+import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.TaskToolboxFactory;
 import com.metamx.druid.indexing.common.actions.RemoteTaskActionClientFactory;
@@ -166,9 +167,9 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     );
     final ServletContextHandler root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
 
+    root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     root.addEventListener(new GuiceServletConfig(injector));
-    root.addFilter(GuiceFilter.class, "/status", null);
     root.addFilter(GuiceFilter.class, "/druid/worker/v1/*", null);
     root.addServlet(
         new ServletHolder(
