@@ -33,12 +33,26 @@ import java.util.List;
 public class NumberedShardSpecTest
 {
   @Test
-  public void testSerde() throws Exception
+  public void testSerdeRoundTrip() throws Exception
   {
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
-    final ShardSpec spec = new NumberedShardSpec(1, 2);
-    final ShardSpec spec2 = jsonMapper.readValue(jsonMapper.writeValueAsBytes(spec), ShardSpec.class);
-    Assert.assertEquals(1, spec2.getPartitionNum());
+    final ShardSpec spec = jsonMapper.readValue(
+        jsonMapper.writeValueAsBytes(new NumberedShardSpec(1, 2)),
+        ShardSpec.class
+    );
+    Assert.assertEquals(1, spec.getPartitionNum());
+    Assert.assertEquals(2, ((NumberedShardSpec) spec).getPartitions());
+  }
+
+  @Test
+  public void testSerdeBackwardsCompat() throws Exception
+  {
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final ShardSpec spec = jsonMapper.readValue(
+        "{\"type\": \"numbered\", \"partition\": 1, \"partitionNum\": 2}",
+        ShardSpec.class
+    );
+    Assert.assertEquals(1, spec.getPartitionNum());
     Assert.assertEquals(2, ((NumberedShardSpec) spec).getPartitions());
   }
 
