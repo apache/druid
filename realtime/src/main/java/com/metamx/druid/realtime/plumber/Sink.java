@@ -100,6 +100,11 @@ public class Sink implements Iterable<FireHydrant>
     return interval;
   }
 
+  public FireHydrant getCurrIndex()
+  {
+    return currIndex;
+  }
+
   public int add(InputRow row)
   {
     if (currIndex == null) {
