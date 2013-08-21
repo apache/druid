@@ -3,6 +3,7 @@ package com.metamx.druid.indexing.worker.executor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
+import com.metamx.druid.http.StatusResource;
 import com.metamx.druid.indexing.common.index.ChatHandlerProvider;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -26,6 +27,7 @@ public class ExecutorServletModule extends JerseyServletModule
   @Override
   protected void configureServlets()
   {
+    bind(StatusResource.class);
     bind(ChatHandlerResource.class);
     bind(ObjectMapper.class).toInstance(jsonMapper);
     bind(ChatHandlerProvider.class).toInstance(receivers);

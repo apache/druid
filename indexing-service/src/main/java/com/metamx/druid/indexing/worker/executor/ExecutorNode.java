@@ -41,7 +41,6 @@ import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
-import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.TaskToolboxFactory;
 import com.metamx.druid.indexing.common.actions.RemoteTaskActionClientFactory;
@@ -167,10 +166,10 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     );
     final Context root = new Context(server, "/", Context.SESSIONS);
 
-    root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     root.addEventListener(new GuiceServletConfig(injector));
     root.addFilter(GuiceFilter.class, "/druid/worker/v1/*", 0);
+    root.addFilter(GuiceFilter.class, "/status/*", 0);
     root.addServlet(
         new ServletHolder(
             new QueryServlet(getJsonMapper(), getSmileMapper(), taskRunner, emitter, getRequestLogger())

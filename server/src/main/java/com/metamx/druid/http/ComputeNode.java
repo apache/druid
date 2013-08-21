@@ -24,6 +24,9 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ExecutorServiceConfig;
 import com.metamx.common.config.Config;
@@ -126,8 +129,13 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     monitors.add(new ServerMonitor(getDruidServerMetadata(), serverManager));
     startMonitoring(monitors);
 
+    final Injector injector = Guice.createInjector(
+        new ComputeServletModule(getJsonMapper())
+    );
+
     final Context root = new Context(getServer(), "/", Context.SESSIONS);
-    root.addServlet(new ServletHolder(new StatusServlet()), "/status");
+    root.addEventListener(new GuiceServletConfig(injector));
+    root.addFilter(GuiceFilter.class, "/status/*", 0);
     root.addServlet(
         new ServletHolder(
             new QueryServlet(getJsonMapper(), getSmileMapper(), serverManager, emitter, getRequestLogger())

@@ -210,7 +210,6 @@ public class BrokerNode extends QueryableNode<BrokerNode>
 
     final Injector injector = Guice.createInjector(theModules);
     final Context root = new Context(getServer(), "/", Context.SESSIONS);
-    root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(
         new ServletHolder(new QueryServlet(getJsonMapper(), getSmileMapper(), texasRanger, getEmitter(), getRequestLogger())),
         "/druid/v2/*"
@@ -219,6 +218,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
 
     root.addEventListener(new GuiceServletConfig(injector));
     root.addFilter(GuiceFilter.class, "/druid/v2/datasources/*", 0);
+    root.addFilter(GuiceFilter.class, "/status/*", 0);
 
     for (String path : pathsForGuiceFilter) {
       root.addFilter(GuiceFilter.class, path, 0);

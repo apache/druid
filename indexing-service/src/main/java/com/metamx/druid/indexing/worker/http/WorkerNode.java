@@ -36,7 +36,6 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.QueryableNode;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.http.GuiceServletConfig;
-import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerConfig;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
@@ -206,10 +205,11 @@ public class WorkerNode extends QueryableNode<WorkerNode>
     );
     final Context root = new Context(server, "/", Context.SESSIONS);
 
-    root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     root.addEventListener(new GuiceServletConfig(injector));
     root.addFilter(GuiceFilter.class, "/druid/worker/v1/*", 0);
+    root.addFilter(GuiceFilter.class, "/status/*", 0);
+
   }
 
   @LifecycleStart

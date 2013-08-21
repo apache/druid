@@ -28,6 +28,9 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.ISE;
 import com.metamx.common.config.Config;
 import com.metamx.common.lifecycle.Lifecycle;
@@ -37,13 +40,14 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.BaseServerNode;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
+import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
-import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
+import com.metamx.druid.realtime.http.RealtimeServletModule;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.Monitor;
@@ -147,8 +151,13 @@ public class RealtimeNode extends BaseServerNode<RealtimeNode>
 
     startMonitoring(monitors);
 
+    final Injector injector = Guice.createInjector(
+        new RealtimeServletModule(getJsonMapper())
+    );
+
     final Context root = new Context(getServer(), "/", Context.SESSIONS);
-    root.addServlet(new ServletHolder(new StatusServlet()), "/status");
+    root.addEventListener(new GuiceServletConfig(injector));
+    root.addFilter(GuiceFilter.class, "/status/*", 0);
     root.addServlet(
         new ServletHolder(
             new QueryServlet(getJsonMapper(), getSmileMapper(), realtimeManager, emitter, getRequestLogger())
