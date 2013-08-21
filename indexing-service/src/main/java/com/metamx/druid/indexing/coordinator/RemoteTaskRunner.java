@@ -521,7 +521,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
         );
     }
 
-    runningTasks.put(task.getId(), pendingTasks.remove(task.getId()));
+    runningTasks.put(task.getId(), pendingTasks.remove(task.getId()).withWorker(theWorker));
     log.info("Task %s switched from pending to running", task.getId());
 
     // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
@@ -615,6 +615,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                       if (taskRunnerWorkItem != null) {
                         log.info("Task %s just disappeared!", taskId);
                         taskRunnerWorkItem.setResult(TaskStatus.failure(taskRunnerWorkItem.getTask().getId()));
+                      } else {
+                        log.warn("Task %s just disappeared but I didn't know about it?!", taskId);
                       }
                       break;
                   }
@@ -653,13 +655,21 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   {
     log.info("Kaboom! Worker[%s] removed!", worker.getHost());
 
-    ZkWorker zkWorker = zkWorkers.get(worker.getHost());
+    final ZkWorker zkWorker = zkWorkers.get(worker.getHost());
     if (zkWorker != null) {
       try {
         List<String> tasksToFail = Lists.newArrayList(
             cf.getChildren().forPath(JOINER.join(config.getIndexerTaskPath(), worker.getHost()))
         );
-        tasksToFail.addAll(zkWorker.getRunningTaskIds());
+        log.info("%s: Found %d tasks assigned", worker.getHost(), tasksToFail.size());
+
+        for (Map.Entry<String, RemoteTaskRunnerWorkItem> entry : runningTasks.entrySet()) {
+          if (entry.getValue().getWorker().getHost().equalsIgnoreCase(worker.getHost())) {
+            log.info("%s: Found %s running", worker.getHost(), entry.getKey());
+            tasksToFail.add(entry.getKey());
+          }
+        }
+
         for (String assignedTask : tasksToFail) {
           RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
           if (taskRunnerWorkItem != null) {
