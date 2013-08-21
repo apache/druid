@@ -96,7 +96,11 @@ public class RealtimeManager implements QuerySegmentWalker
   }
   public FireDepartmentMetrics getMetrics(String datasource)
   {
-    return chiefs.get(datasource).getMetrics();
+    FireChief chief = chiefs.get(datasource);
+    if (chief == null) {
+      return null;
+    }
+    return chief.getMetrics();
   }
 
   @Override

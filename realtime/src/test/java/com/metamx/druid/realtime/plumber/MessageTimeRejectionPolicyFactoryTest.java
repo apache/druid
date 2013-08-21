@@ -31,10 +31,16 @@ public class MessageTimeRejectionPolicyFactoryTest
   @Test
   public void testAccept() throws Exception
   {
-    RejectionPolicy rejectionPolicy = new MessageTimeRejectionPolicyFactory().create(
-        new Period("PT10M")
-    );
+    Period period = new Period("PT10M");
+    RejectionPolicy rejectionPolicy = new MessageTimeRejectionPolicyFactory().create(period);
 
-    Assert.assertTrue(rejectionPolicy.accept(new DateTime().getMillis()));
+    DateTime now = new DateTime();
+    DateTime past = now.minus(period).minus(1);
+    DateTime future = now.plus(period).plus(1);
+
+    Assert.assertTrue(rejectionPolicy.accept(now.getMillis()));
+    Assert.assertFalse(rejectionPolicy.accept(past.getMillis()));
+    Assert.assertTrue(rejectionPolicy.accept(future.getMillis()));
+    Assert.assertFalse(rejectionPolicy.accept(now.getMillis()));
   }
 }
