@@ -41,6 +41,7 @@ import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogProvider;
 import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
+import com.metamx.druid.indexing.worker.TaskAnnouncement;
 import com.metamx.druid.indexing.worker.Worker;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
@@ -291,9 +292,9 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
         runningTasks.remove(task.getId());
       } else {
         log.info("Task[%s] already running on %s.", task.getId(), zkWorker.getWorker().getHost());
-        TaskStatus status = zkWorker.getRunningTasks().get(task.getId());
-        if (status.isComplete()) {
-          taskComplete(runningTask, zkWorker, task.getId(), status);
+        TaskAnnouncement announcement = zkWorker.getRunningTasks().get(task.getId());
+        if (announcement.getTaskStatus().isComplete()) {
+          taskComplete(runningTask, zkWorker, task.getId(), announcement.getTaskStatus());
         }
         return runningTask.getResult();
       }

@@ -180,7 +180,7 @@ public class WorkerCuratorCoordinator
     }
   }
 
-  public void announceStatus(TaskStatus status)
+  public void announceTask(TaskAnnouncement announcement)
   {
     synchronized (lock) {
       if (!started) {
@@ -188,7 +188,7 @@ public class WorkerCuratorCoordinator
       }
 
       try {
-        byte[] rawBytes = jsonMapper.writeValueAsBytes(status);
+        byte[] rawBytes = jsonMapper.writeValueAsBytes(announcement);
         if (rawBytes.length > config.getMaxNumBytes()) {
           throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
         }
@@ -196,7 +196,7 @@ public class WorkerCuratorCoordinator
         curatorFramework.create()
                         .withMode(CreateMode.EPHEMERAL)
                         .forPath(
-                            getStatusPathForId(status.getId()), rawBytes
+                            getStatusPathForId(announcement.getTaskStatus().getId()), rawBytes
                         );
       }
       catch (Exception e) {
@@ -205,7 +205,7 @@ public class WorkerCuratorCoordinator
     }
   }
 
-  public void updateStatus(TaskStatus status)
+  public void updateAnnouncement(TaskAnnouncement announcement)
   {
     synchronized (lock) {
       if (!started) {
@@ -213,18 +213,18 @@ public class WorkerCuratorCoordinator
       }
 
       try {
-        if (curatorFramework.checkExists().forPath(getStatusPathForId(status.getId())) == null) {
-          announceStatus(status);
+        if (curatorFramework.checkExists().forPath(getStatusPathForId(announcement.getTaskStatus().getId())) == null) {
+          announceTask(announcement);
           return;
         }
-        byte[] rawBytes = jsonMapper.writeValueAsBytes(status);
+        byte[] rawBytes = jsonMapper.writeValueAsBytes(announcement);
         if (rawBytes.length > config.getMaxNumBytes()) {
           throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
         }
 
         curatorFramework.setData()
                         .forPath(
-                            getStatusPathForId(status.getId()), rawBytes
+                            getStatusPathForId(announcement.getTaskStatus().getId()), rawBytes
                         );
       }
       catch (Exception e) {

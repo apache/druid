@@ -27,8 +27,8 @@ import com.google.common.base.Preconditions;
 import com.metamx.druid.indexing.common.task.TaskResource;
 
 /**
- * Represents the status of a task. The task may be ongoing ({@link #isComplete()} false) or it may be
- * complete ({@link #isComplete()} true).
+ * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
+ * ({@link #isComplete()} false) or it may be complete ({@link #isComplete()} true).
  * <p/>
  * TaskStatus objects are immutable.
  */
@@ -43,36 +43,38 @@ public class TaskStatus
 
   public static TaskStatus running(String taskId)
   {
-    return new TaskStatus(taskId, Status.RUNNING, -1, null);
+    return new TaskStatus(taskId, Status.RUNNING, -1);
   }
 
   public static TaskStatus success(String taskId)
   {
-    return new TaskStatus(taskId, Status.SUCCESS, -1, null);
+    return new TaskStatus(taskId, Status.SUCCESS, -1);
   }
 
   public static TaskStatus failure(String taskId)
   {
-    return new TaskStatus(taskId, Status.FAILED, -1, null);
+    return new TaskStatus(taskId, Status.FAILED, -1);
+  }
+
+  public static TaskStatus fromCode(String taskId, Status code)
+  {
+    return new TaskStatus(taskId, code, -1);
   }
 
   private final String id;
   private final Status status;
   private final long duration;
-  private final TaskResource resource;
 
   @JsonCreator
   private TaskStatus(
       @JsonProperty("id") String id,
       @JsonProperty("status") Status status,
-      @JsonProperty("duration") long duration,
-      @JsonProperty("resource") TaskResource resource
+      @JsonProperty("duration") long duration
   )
   {
     this.id = id;
     this.status = status;
     this.duration = duration;
-    this.resource = resource == null ? new TaskResource(id, 1) : resource;
 
     // Check class invariants.
     Preconditions.checkNotNull(id, "id");
@@ -95,12 +97,6 @@ public class TaskStatus
   public long getDuration()
   {
     return duration;
-  }
-
-  @JsonProperty("resource")
-  public TaskResource getResource()
-  {
-    return resource;
   }
 
   /**
@@ -144,7 +140,7 @@ public class TaskStatus
 
   public TaskStatus withDuration(long _duration)
   {
-    return new TaskStatus(id, status, _duration, resource);
+    return new TaskStatus(id, status, _duration);
   }
 
   @Override
@@ -154,7 +150,6 @@ public class TaskStatus
                   .add("id", id)
                   .add("status", status)
                   .add("duration", duration)
-                  .add("resource", resource)
                   .toString();
   }
 }
