@@ -35,8 +35,7 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
   private final Task task;
   private final ListenableFuture<TaskStatus> result;
   private final DateTime createdTime;
-
-  private volatile DateTime queueInsertionTime;
+  private final DateTime queueInsertionTime;
 
   public TaskRunnerWorkItem(
       Task task,
