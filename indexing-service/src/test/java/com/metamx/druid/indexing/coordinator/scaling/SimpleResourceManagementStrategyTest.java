@@ -31,6 +31,7 @@ import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.coordinator.RemoteTaskRunnerWorkItem;
 import com.metamx.druid.indexing.coordinator.ZkWorker;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
+import com.metamx.druid.indexing.worker.TaskAnnouncement;
 import com.metamx.druid.indexing.worker.Worker;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.emitter.EmittingLogger;
@@ -351,12 +352,12 @@ public class SimpleResourceManagementStrategyTest
     }
 
     @Override
-    public Map<String, TaskStatus> getRunningTasks()
+    public Map<String, TaskAnnouncement> getRunningTasks()
     {
       if (testTask == null) {
         return Maps.newHashMap();
       }
-      return ImmutableMap.of(testTask.getId(), TaskStatus.running(testTask.getId()));
+      return ImmutableMap.of(testTask.getId(), TaskAnnouncement.create(testTask, TaskStatus.running(testTask.getId())));
     }
   }
 }
