@@ -21,6 +21,7 @@ package com.metamx.druid.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.maxmind.geoip2.DatabaseReader;
@@ -79,7 +80,9 @@ class WikipediaIrcDecoder implements IrcDecoder
   public WikipediaIrcDecoder(@JsonProperty("namespaces") Map<String, Map<String, String>> namespaces,
                              @JsonProperty("geoIpDatabase") String geoIpDatabase)
   {
-    if(namespaces == null) namespaces = Maps.newHashMap();
+    if(namespaces == null) {
+      namespaces = Maps.newHashMap();
+    }
     this.namespaces = namespaces;
 
 
@@ -195,7 +198,7 @@ class WikipediaIrcDecoder implements IrcDecoder
       @Override
       public List<String> getDimension(String dimension)
       {
-        return Lists.newArrayList(dimensions.get(dimension));
+        return ImmutableList.of(dimensions.get(dimension));
       }
 
       @Override
