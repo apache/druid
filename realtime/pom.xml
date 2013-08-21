@@ -28,7 +28,7 @@
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.5.42-SNAPSHOT</version>
+        <version>0.5.45-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -146,6 +146,14 @@
             <groupId>com.jamesmurty.utils</groupId>
             <artifactId>java-xmlbuilder</artifactId>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>com.ircclouds.irc</groupId>
+          <artifactId>irc-api</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>com.maxmind.geoip2</groupId>
+          <artifactId>geoip2</artifactId>
         </dependency>
         <!-- Dependencies required for jets3t -->
 

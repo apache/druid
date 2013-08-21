@@ -27,6 +27,7 @@ import com.google.common.collect.Sets;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 /**
@@ -68,11 +69,16 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
 
   public PartitionChunk<T> remove(PartitionChunk<T> chunk)
   {
-    // Somewhat funky implementation in order to return the removed object as it exists in the set
-    PartitionChunk<T> element = holderSet.tailSet(chunk, true).first();
-    if (chunk.equals(element)) {
-      holderSet.remove(element);
-      return element;
+    if (!holderSet.isEmpty()) {
+      // Somewhat funky implementation in order to return the removed object as it exists in the set
+      SortedSet<PartitionChunk<T>> tailSet = holderSet.tailSet(chunk, true);
+      if (!tailSet.isEmpty()) {
+        PartitionChunk<T> element = tailSet.first();
+        if (chunk.equals(element)) {
+          holderSet.remove(element);
+          return element;
+        }
+      }
     }
     return null;
   }
@@ -110,16 +116,17 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
     return true;
   }
 
-  public PartitionChunk<T> getChunk(final int partitionNum) {
+  public PartitionChunk<T> getChunk(final int partitionNum)
+  {
     final Iterator<PartitionChunk<T>> retVal = Iterators.filter(
         holderSet.iterator(), new Predicate<PartitionChunk<T>>()
-        {
-          @Override
-          public boolean apply(PartitionChunk<T> input)
-          {
-            return input.getChunkNumber() == partitionNum;
-          }
-        }
+    {
+      @Override
+      public boolean apply(PartitionChunk<T> input)
+      {
+        return input.getChunkNumber() == partitionNum;
+      }
+    }
     );
 
     return retVal.hasNext() ? retVal.next() : null;

@@ -521,7 +521,15 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
         );
     }
 
-    runningTasks.put(task.getId(), pendingTasks.remove(task.getId()));
+    RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(task.getId());
+    if (workItem == null) {
+      log.makeAlert("WTF?! Got a null work item from pending tasks?! How can this be?!")
+         .addData("taskId", task.getId())
+         .emit();
+      return;
+    }
+
+    runningTasks.put(task.getId(), workItem.withWorker(theWorker));
     log.info("Task %s switched from pending to running", task.getId());
 
     // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
@@ -613,8 +621,10 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
                       taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
                       taskRunnerWorkItem = runningTasks.get(taskId);
                       if (taskRunnerWorkItem != null) {
-                        log.info("Task %s just disappeared!", taskId);
+                        log.info("Task[%s] just disappeared!", taskId);
                         taskRunnerWorkItem.setResult(TaskStatus.failure(taskRunnerWorkItem.getTask().getId()));
+                      } else {
+                        log.warn("Task[%s] just disappeared but I didn't know about it?!", taskId);
                       }
                       break;
                   }
@@ -653,20 +663,33 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   {
     log.info("Kaboom! Worker[%s] removed!", worker.getHost());
 
-    ZkWorker zkWorker = zkWorkers.get(worker.getHost());
+    final ZkWorker zkWorker = zkWorkers.get(worker.getHost());
     if (zkWorker != null) {
       try {
-        for (String assignedTask : cf.getChildren()
-                                     .forPath(JOINER.join(config.getIndexerTaskPath(), worker.getHost()))) {
-          RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.get(assignedTask);
+        List<String> tasksToFail = Lists.newArrayList(
+            cf.getChildren().forPath(JOINER.join(config.getIndexerTaskPath(), worker.getHost()))
+        );
+        log.info("[%s]: Found %d tasks assigned", worker.getHost(), tasksToFail.size());
+
+        for (Map.Entry<String, RemoteTaskRunnerWorkItem> entry : runningTasks.entrySet()) {
+          if (entry.getValue().getWorker().getHost().equalsIgnoreCase(worker.getHost())) {
+            log.info("[%s]: Found [%s] running", worker.getHost(), entry.getKey());
+            tasksToFail.add(entry.getKey());
+          }
+        }
+
+        for (String assignedTask : tasksToFail) {
+          RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
           if (taskRunnerWorkItem != null) {
             String taskPath = JOINER.join(config.getIndexerTaskPath(), worker.getHost(), assignedTask);
             if (cf.checkExists().forPath(taskPath) != null) {
               cf.delete().guaranteed().forPath(taskPath);
             }
+
+            log.info("Failing task[%s]", assignedTask);
             taskRunnerWorkItem.setResult(TaskStatus.failure(taskRunnerWorkItem.getTask().getId()));
           } else {
-            log.warn("RemoteTaskRunner has no knowledge of task %s", assignedTask);
+            log.warn("RemoteTaskRunner has no knowledge of task[%s]", assignedTask);
           }
         }
       }
@@ -678,7 +701,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
           zkWorker.close();
         }
         catch (Exception e) {
-          log.error(e, "Exception closing worker %s!", worker.getHost());
+          log.error(e, "Exception closing worker[%s]!", worker.getHost());
         }
         zkWorkers.remove(worker.getHost());
       }
