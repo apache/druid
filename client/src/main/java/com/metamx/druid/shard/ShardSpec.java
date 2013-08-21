@@ -33,7 +33,8 @@ import java.util.Map;
 @JsonSubTypes({
     @JsonSubTypes.Type(name="single", value=SingleDimensionShardSpec.class),
     @JsonSubTypes.Type(name="none", value=NoneShardSpec.class),
-    @JsonSubTypes.Type(name="linear", value=LinearShardSpec.class)
+    @JsonSubTypes.Type(name="linear", value=LinearShardSpec.class),
+    @JsonSubTypes.Type(name="numbered", value=NumberedShardSpec.class)
 })
 public interface ShardSpec
 {
