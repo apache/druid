@@ -661,7 +661,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
         );
         tasksToFail.addAll(zkWorker.getRunningTaskIds());
         for (String assignedTask : tasksToFail) {
-          RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.get(assignedTask);
+          RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
           if (taskRunnerWorkItem != null) {
             String taskPath = JOINER.join(config.getIndexerTaskPath(), worker.getHost(), assignedTask);
             if (cf.checkExists().forPath(taskPath) != null) {
