@@ -22,6 +22,7 @@ package com.metamx.druid.indexing.worker.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
+import com.metamx.druid.http.StatusResource;
 import com.metamx.druid.indexing.coordinator.ForkingTaskRunner;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.guice.JerseyServletModule;
@@ -51,6 +52,7 @@ public class WorkerServletModule extends JerseyServletModule
   @Override
   protected void configureServlets()
   {
+    bind(StatusResource.class);
     bind(WorkerResource.class);
     bind(ObjectMapper.class).toInstance(jsonMapper);
     bind(ServiceEmitter.class).toInstance(emitter);
