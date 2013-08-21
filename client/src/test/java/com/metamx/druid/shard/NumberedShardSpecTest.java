@@ -49,7 +49,7 @@ public class NumberedShardSpecTest
   {
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final ShardSpec spec = jsonMapper.readValue(
-        "{\"type\": \"numbered\", \"partition\": 1, \"partitionNum\": 2}",
+        "{\"type\": \"numbered\", \"partitions\": 2, \"partitionNum\": 2}",
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
