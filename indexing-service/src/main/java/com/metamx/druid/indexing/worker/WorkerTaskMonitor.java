@@ -118,7 +118,12 @@ public class WorkerTaskMonitor
                         TaskStatus taskStatus;
                         try {
                           workerCuratorCoordinator.unannounceTask(task.getId());
-                          workerCuratorCoordinator.announceStatus(TaskStatus.running(task.getId()));
+                          workerCuratorCoordinator.announceTask(
+                              TaskAnnouncement.create(
+                                  task,
+                                  TaskStatus.running(task.getId())
+                              )
+                          );
                           taskStatus = taskRunner.run(task).get();
                         }
                         catch (Exception e) {
@@ -134,7 +139,7 @@ public class WorkerTaskMonitor
                         taskStatus = taskStatus.withDuration(System.currentTimeMillis() - startTime);
 
                         try {
-                          workerCuratorCoordinator.updateStatus(taskStatus);
+                          workerCuratorCoordinator.updateAnnouncement(TaskAnnouncement.create(task, taskStatus));
                           log.info(
                               "Job's finished. Completed [%s] with status [%s]",
                               task.getId(),
