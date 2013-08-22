@@ -19,6 +19,7 @@ import com.metamx.druid.guice.RealtimeManagerConfig;
 import com.metamx.druid.initialization.DruidModule;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.realtime.FireDepartment;
+import com.metamx.druid.realtime.RealtimeManager;
 import com.metamx.druid.realtime.SegmentPublisher;
 import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
@@ -51,7 +52,8 @@ public class RealtimeExampleModule implements DruidModule
         new TypeLiteral<List<FireDepartment>>()
         {
         }
-    ).toProvider(FireDepartmentsProvider.class).in(ManageLifecycle.class);
+    ).toProvider(FireDepartmentsProvider.class);
+    binder.bind(RealtimeManager.class).in(ManageLifecycle.class);
   }
 
   @Override

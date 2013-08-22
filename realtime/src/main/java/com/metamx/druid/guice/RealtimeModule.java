@@ -47,7 +47,7 @@ public class RealtimeModule implements Module
         new TypeLiteral<List<FireDepartment>>()
         {
         }
-    ).toProvider(FireDepartmentsProvider.class).in(ManageLifecycle.class);
+    ).toProvider(FireDepartmentsProvider.class);
     binder.bind(RealtimeManager.class).in(ManageLifecycle.class);
   }
 }
