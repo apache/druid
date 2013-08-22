@@ -19,31 +19,35 @@
 
 package com.metamx.druid.guice;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.druid.guice.annotations.Self;
-import com.metamx.druid.initialization.DruidNode;
-import com.metamx.druid.initialization.ZkPathsConfig;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.druid.db.DbTablesConfig;
+import com.metamx.druid.realtime.DbSegmentPublisher;
+import com.metamx.druid.realtime.DbSegmentPublisherConfig;
+import com.metamx.druid.realtime.SegmentPublisher;
+import org.skife.jdbi.v2.IDBI;
+
+import javax.validation.constraints.NotNull;
 
 /**
  */
-public class ServerModule implements Module
+public class DbSegmentPublisherProvider implements SegmentPublisherProvider
 {
+  @JacksonInject
+  @NotNull
+  private IDBI idbi = null;
+
+  @JacksonInject
+  @NotNull
+  private DbTablesConfig config = null;
+
+  @JacksonInject
+  @NotNull
+  private ObjectMapper jsonMapper = null;
+
   @Override
-  public void configure(Binder binder)
+  public SegmentPublisher get()
   {
-    ConfigProvider.bind(binder, ZkPathsConfig.class);
-
-    JsonConfigProvider.bind(binder, "druid", DruidNode.class, Self.class);
-  }
-
-  @Provides @LazySingleton
-  public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
-  {
-    return ScheduledExecutors.createFactory(lifecycle);
+    return new DbSegmentPublisher(jsonMapper, config, idbi);
   }
 }

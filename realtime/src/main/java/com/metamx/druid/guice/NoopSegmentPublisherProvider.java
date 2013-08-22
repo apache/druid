@@ -17,36 +17,18 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.guice;
 
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.log.LogLevelAdjuster;
+import com.metamx.druid.realtime.NoopSegmentPublisher;
+import com.metamx.druid.realtime.SegmentPublisher;
 
 /**
  */
-public class RealtimeMain
+public class NoopSegmentPublisherProvider implements SegmentPublisherProvider
 {
-  private static final Logger log = new Logger(RealtimeMain.class);
-
-  public static void main(String[] args) throws Exception
+  @Override
+  public SegmentPublisher get()
   {
-    LogLevelAdjuster.register();
-
-    Lifecycle lifecycle = new Lifecycle();
-
-    lifecycle.addManagedInstance(
-        RealtimeNode.builder().build()
-    );
-
-    try {
-      lifecycle.start();
-    }
-    catch (Throwable t) {
-      log.info(t, "Throwable caught at startup, committing seppuku");
-      System.exit(2);
-    }
-
-    lifecycle.join();
+    return new NoopSegmentPublisher();
   }
 }

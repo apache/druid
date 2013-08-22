@@ -19,31 +19,19 @@
 
 package com.metamx.druid.guice;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.druid.guice.annotations.Self;
-import com.metamx.druid.initialization.DruidNode;
-import com.metamx.druid.initialization.ZkPathsConfig;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
+import com.metamx.druid.loading.DataSegmentPusher;
 
 /**
  */
-public class ServerModule implements Module
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LocalDataSegmentPusherProvider.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "s3_zip", value = S3DataSegmentPusherProvider.class),
+    @JsonSubTypes.Type(name = "hdfs", value = HdfsDataSegmentPusherProvider.class),
+    @JsonSubTypes.Type(name = "c*", value = CassandraDataSegmentPusherProvider.class)
+})
+public interface DataSegmentPusherProvider extends Provider<DataSegmentPusher>
 {
-  @Override
-  public void configure(Binder binder)
-  {
-    ConfigProvider.bind(binder, ZkPathsConfig.class);
-
-    JsonConfigProvider.bind(binder, "druid", DruidNode.class, Self.class);
-  }
-
-  @Provides @LazySingleton
-  public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
-  {
-    return ScheduledExecutors.createFactory(lifecycle);
-  }
 }

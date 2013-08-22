@@ -17,33 +17,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.guice;
+package com.metamx.druid.realtime;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.druid.guice.annotations.Self;
-import com.metamx.druid.initialization.DruidNode;
-import com.metamx.druid.initialization.ZkPathsConfig;
+import com.metamx.druid.client.DataSegment;
+
+import java.io.IOException;
 
 /**
  */
-public class ServerModule implements Module
+public class NoopSegmentPublisher implements SegmentPublisher
 {
   @Override
-  public void configure(Binder binder)
+  public void publishSegment(DataSegment segment) throws IOException
   {
-    ConfigProvider.bind(binder, ZkPathsConfig.class);
-
-    JsonConfigProvider.bind(binder, "druid", DruidNode.class, Self.class);
-  }
-
-  @Provides @LazySingleton
-  public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
-  {
-    return ScheduledExecutors.createFactory(lifecycle);
+    // do nothing
   }
 }

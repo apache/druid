@@ -19,12 +19,17 @@
 
 package com.metamx.druid.loading;
 
-import org.skife.config.Config;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
 public abstract class HdfsDataSegmentPusherConfig
 {
-  @Config("druid.pusher.hdfs.storageDirectory")
-  public abstract String getStorageDirectory();
+  @JsonProperty
+  public String storageDirectory = "";
+
+  public String getStorageDirectory()
+  {
+    return storageDirectory;
+  }
 }

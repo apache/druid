@@ -19,31 +19,34 @@
 
 package com.metamx.druid.guice;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.druid.guice.annotations.Self;
-import com.metamx.druid.initialization.DruidNode;
-import com.metamx.druid.initialization.ZkPathsConfig;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.druid.loading.DataSegmentPusher;
+import com.metamx.druid.loading.HdfsDataSegmentPusher;
+import com.metamx.druid.loading.HdfsDataSegmentPusherConfig;
+import org.apache.hadoop.conf.Configuration;
+
+import javax.validation.constraints.NotNull;
 
 /**
  */
-public class ServerModule implements Module
+public class HdfsDataSegmentPusherProvider implements DataSegmentPusherProvider
 {
+  @JacksonInject
+  @NotNull
+  private HdfsDataSegmentPusherConfig hdfsDataSegmentPusherConfig = null;
+
+  @JacksonInject
+  @NotNull
+  private Configuration config = null;
+
+  @JacksonInject
+  @NotNull
+  private ObjectMapper jsonMapper = null;
+
   @Override
-  public void configure(Binder binder)
+  public DataSegmentPusher get()
   {
-    ConfigProvider.bind(binder, ZkPathsConfig.class);
-
-    JsonConfigProvider.bind(binder, "druid", DruidNode.class, Self.class);
-  }
-
-  @Provides @LazySingleton
-  public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
-  {
-    return ScheduledExecutors.createFactory(lifecycle);
+    return new HdfsDataSegmentPusher(hdfsDataSegmentPusherConfig, config, jsonMapper);
   }
 }

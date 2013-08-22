@@ -1,17 +1,25 @@
-package druid.examples;
+package druid.examples.guice;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
-import com.metamx.common.lifecycle.Lifecycle;
+import com.google.inject.Binder;
+import com.google.inject.TypeLiteral;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.client.InventoryView;
 import com.metamx.druid.client.ServerView;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
+import com.metamx.druid.guice.FireDepartmentsProvider;
+import com.metamx.druid.guice.JsonConfigProvider;
+import com.metamx.druid.guice.ManageLifecycle;
+import com.metamx.druid.guice.NoopSegmentPublisherProvider;
+import com.metamx.druid.guice.RealtimeManagerConfig;
+import com.metamx.druid.initialization.DruidModule;
 import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.log.LogLevelAdjuster;
-import com.metamx.druid.realtime.RealtimeNode;
+import com.metamx.druid.realtime.FireDepartment;
+import com.metamx.druid.realtime.RealtimeManager;
 import com.metamx.druid.realtime.SegmentPublisher;
 import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
@@ -20,64 +28,46 @@ import druid.examples.web.WebFirehoseFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
- * Standalone Demo Realtime process.
  */
-public class RealtimeStandaloneMain
+public class RealtimeExampleModule implements DruidModule
 {
-  private static final Logger log = new Logger(RealtimeStandaloneMain.class);
+  private static final Logger log = new Logger(RealtimeExampleModule.class);
 
-  public static void main(String[] args) throws Exception
+  @Override
+  public void configure(Binder binder)
   {
-    LogLevelAdjuster.register();
+    binder.bind(SegmentPublisher.class).toProvider(NoopSegmentPublisherProvider.class);
+    binder.bind(DataSegmentPusher.class).to(NoopDataSegmentPusher.class);
+    binder.bind(DataSegmentAnnouncer.class).to(NoopDataSegmentAnnouncer.class);
+    binder.bind(InventoryView.class).to(NoopInventoryView.class);
+    binder.bind(ServerView.class).to(NoopServerView.class);
 
-    final Lifecycle lifecycle = new Lifecycle();
+    JsonConfigProvider.bind(binder, "druid.realtime", RealtimeManagerConfig.class);
+    binder.bind(
+        new TypeLiteral<List<FireDepartment>>()
+        {
+        }
+    ).toProvider(FireDepartmentsProvider.class);
+    binder.bind(RealtimeManager.class).in(ManageLifecycle.class);
+  }
 
-    RealtimeNode rn = RealtimeNode.builder().build();
-    lifecycle.addManagedInstance(rn);
-
-    // register the Firehoses
-    rn.registerJacksonSubtype(
-        new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
-        new NamedType(FlightsFirehoseFactory.class, "flights"),
-        new NamedType(RandomFirehoseFactory.class, "rand"),
-        new NamedType(WebFirehoseFactory.class, "webstream")
-
+  @Override
+  public List<com.fasterxml.jackson.databind.Module> getJacksonModules()
+  {
+    return Arrays.<com.fasterxml.jackson.databind.Module>asList(
+        new SimpleModule("RealtimeExampleModule")
+            .registerSubtypes(
+                new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
+                new NamedType(FlightsFirehoseFactory.class, "flights"),
+                new NamedType(RandomFirehoseFactory.class, "rand"),
+                new NamedType(WebFirehoseFactory.class, "webstream")
+            )
     );
-
-    // Create dummy objects for the various interfaces that interact with the DB, ZK and deep storage
-    rn.setSegmentPublisher(new NoopSegmentPublisher());
-    rn.setAnnouncer(new NoopDataSegmentAnnouncer());
-    rn.setDataSegmentPusher(new NoopDataSegmentPusher());
-    rn.setServerView(new NoopServerView());
-    rn.setInventoryView(new NoopInventoryView());
-
-    Runtime.getRuntime().addShutdownHook(
-        new Thread(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                log.info("Running shutdown hook");
-                lifecycle.stop();
-              }
-            }
-        )
-    );
-
-    try {
-      lifecycle.start();
-    }
-    catch (Throwable t) {
-      log.info(t, "Throwable caught at startup, committing seppuku");
-      t.printStackTrace();
-      System.exit(2);
-    }
-
-    lifecycle.join();
   }
 
   private static class NoopServerView implements ServerView
@@ -87,7 +77,7 @@ public class RealtimeStandaloneMain
         Executor exec, ServerCallback callback
     )
     {
-
+      // do nothing
     }
 
     @Override
@@ -95,7 +85,7 @@ public class RealtimeStandaloneMain
         Executor exec, SegmentCallback callback
     )
     {
-
+      // do nothing
     }
   }
 
@@ -120,15 +110,6 @@ public class RealtimeStandaloneMain
     public DataSegment push(File file, DataSegment segment) throws IOException
     {
       return segment;
-    }
-  }
-
-  private static class NoopSegmentPublisher implements SegmentPublisher
-  {
-    @Override
-    public void publishSegment(DataSegment segment) throws IOException
-    {
-      // do nothing
     }
   }
 
