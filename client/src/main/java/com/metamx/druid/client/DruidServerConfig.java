@@ -34,17 +34,9 @@ public class DruidServerConfig
   @JsonProperty
   private String tier = "_default_tier";
 
-  @JsonProperty
-  private String type = "historical";
-
   public long getMaxSize()
   {
     return maxSize;
-  }
-
-  public String getType()
-  {
-    return type;
   }
 
   public String getTier()

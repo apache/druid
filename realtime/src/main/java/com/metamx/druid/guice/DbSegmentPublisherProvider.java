@@ -21,6 +21,7 @@ package com.metamx.druid.guice;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.druid.db.DbTablesConfig;
 import com.metamx.druid.realtime.DbSegmentPublisher;
 import com.metamx.druid.realtime.DbSegmentPublisherConfig;
 import com.metamx.druid.realtime.SegmentPublisher;
@@ -38,7 +39,7 @@ public class DbSegmentPublisherProvider implements SegmentPublisherProvider
 
   @JacksonInject
   @NotNull
-  private DbSegmentPublisherConfig config = null;
+  private DbTablesConfig config = null;
 
   @JacksonInject
   @NotNull

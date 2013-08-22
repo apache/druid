@@ -35,6 +35,13 @@ import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
  */
 public class StorageNodeModule extends ServerModule
 {
+  private final String nodeType;
+
+  public StorageNodeModule(String nodeType)
+  {
+    this.nodeType = nodeType;
+  }
+
   @Override
   public void configure(Binder binder)
   {
@@ -58,7 +65,7 @@ public class StorageNodeModule extends ServerModule
         node.getHost(),
         node.getHost(),
         config.getMaxSize(),
-        config.getType(),
+        nodeType,
         config.getTier()
     );
   }

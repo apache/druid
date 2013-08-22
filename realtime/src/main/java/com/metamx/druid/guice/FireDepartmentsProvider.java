@@ -21,33 +21,26 @@ package com.metamx.druid.guice;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.realtime.FireDepartment;
-import com.metamx.druid.realtime.RealtimeManager;
 
 import java.util.List;
 
 /**
  */
-public class RealtimeManagerProvider implements Provider<RealtimeManager>
+public class FireDepartmentsProvider implements Provider<List<FireDepartment>>
 {
-  private static final Logger log = new Logger(RealtimeManagerProvider.class);
-
-  private final QueryRunnerFactoryConglomerate conglomerate;
   private final List<FireDepartment> fireDepartments = Lists.newArrayList();
 
   @Inject
-  public RealtimeManagerProvider(
+  public FireDepartmentsProvider(
       ObjectMapper jsonMapper,
-      RealtimeManagerConfig config,
-      QueryRunnerFactoryConglomerate conglomerate
+      RealtimeManagerConfig config
   )
   {
-    this.conglomerate = conglomerate;
     try {
       this.fireDepartments.addAll(
           (List<FireDepartment>) jsonMapper.readValue(
@@ -58,14 +51,14 @@ public class RealtimeManagerProvider implements Provider<RealtimeManager>
       );
     }
     catch (Exception e) {
-      log.error(e, "Unable to read fireDepartments from config");
+      throw Throwables.propagate(e);
     }
   }
 
 
   @Override
-  public RealtimeManager get()
+  public List<FireDepartment> get()
   {
-    return new RealtimeManager(fireDepartments, conglomerate);
+    return fireDepartments;
   }
 }

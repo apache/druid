@@ -17,11 +17,14 @@ public class DataSegmentPusherModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.pusher", DataSegmentPusherProvider.class);
-    JsonConfigProvider.bind(binder, "druid.pusher.local", LocalDataSegmentPusherConfig.class);
+
     JsonConfigProvider.bind(binder, "druid.pusher.s3", S3DataSegmentPusherConfig.class);
     binder.bind(Configuration.class).toInstance(new Configuration());
+
     JsonConfigProvider.bind(binder, "druid.pusher.hdfs", HdfsDataSegmentPusherConfig.class);
+
     JsonConfigProvider.bind(binder, "druid.pusher.cassandra", CassandraDataSegmentConfig.class);
+
     binder.bind(DataSegmentPusher.class).toProvider(DataSegmentPusherProvider.class);
   }
 }

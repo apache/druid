@@ -21,10 +21,14 @@ package com.metamx.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.realtime.DbSegmentPublisherConfig;
+import com.metamx.druid.realtime.FireDepartment;
 import com.metamx.druid.realtime.RealtimeManager;
 import com.metamx.druid.realtime.SegmentPublisher;
+
+import java.util.List;
 
 /**
  */
@@ -36,10 +40,14 @@ public class RealtimeModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.publish", SegmentPublisherProvider.class);
-    JsonConfigProvider.bind(binder, "druid.db.tables", DbSegmentPublisherConfig.class);
     binder.bind(SegmentPublisher.class).toProvider(SegmentPublisherProvider.class);
 
     JsonConfigProvider.bind(binder, "druid.realtime", RealtimeManagerConfig.class);
-    binder.bind(RealtimeManager.class).toProvider(RealtimeManagerProvider.class).in(ManageLifecycle.class);
+    binder.bind(
+        new TypeLiteral<List<FireDepartment>>()
+        {
+        }
+    ).toProvider(FireDepartmentsProvider.class).in(ManageLifecycle.class);
+    binder.bind(RealtimeManager.class).in(ManageLifecycle.class);
   }
 }

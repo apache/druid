@@ -31,20 +31,20 @@ import com.metamx.druid.initialization.EmitterModule;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.JettyServerModule;
 import com.metamx.druid.realtime.RealtimeManager;
-import druid.examples.guice.RealtimeStandaloneModule;
+import druid.examples.guice.RealtimeExampleModule;
 import io.airlift.command.Command;
 
 /**
  */
 @Command(
-    name = "realtimeStandalone",
+    name = "example realtime",
     description = "Runs a standalone realtime node for examples, see https://github.com/metamx/druid/wiki/Realtime for a description"
 )
-public class CliRealtimeStandalone extends ServerRunnable
+public class CliRealtimeExample extends ServerRunnable
 {
   private static final Logger log = new Logger(CliBroker.class);
 
-  public CliRealtimeStandalone()
+  public CliRealtimeExample()
   {
     super(log);
   }
@@ -56,12 +56,12 @@ public class CliRealtimeStandalone extends ServerRunnable
         new LifecycleModule(),
         EmitterModule.class,
         DruidProcessingModule.class,
-        StorageNodeModule.class,
+        new StorageNodeModule("realtime"),
         new JettyServerModule(new QueryJettyServerInitializer())
             .addResource(StatusResource.class),
         new QueryableModule(RealtimeManager.class),
         new QueryRunnerFactoryModule(),
-        RealtimeStandaloneModule.class
+        RealtimeExampleModule.class
     );
   }
 }

@@ -29,12 +29,8 @@ import javax.validation.constraints.NotNull;
 
 /**
  */
-public class LocalDataSegmentPusherProvider implements DataSegmentPusherProvider
+public class LocalDataSegmentPusherProvider extends LocalDataSegmentPusherConfig implements DataSegmentPusherProvider
 {
-  @JacksonInject
-  @NotNull
-  private LocalDataSegmentPusherConfig config = null;
-
   @JacksonInject
   @NotNull
   private ObjectMapper jsonMapper = null;
@@ -42,6 +38,6 @@ public class LocalDataSegmentPusherProvider implements DataSegmentPusherProvider
   @Override
   public DataSegmentPusher get()
   {
-    return new LocalDataSegmentPusher(config, jsonMapper);
+    return new LocalDataSegmentPusher(this, jsonMapper);
   }
 }

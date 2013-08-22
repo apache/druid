@@ -72,7 +72,7 @@ public class CliHistorical extends ServerRunnable
         S3Module.class,
         DataSegmentPullerModule.class,
         new MetricsModule().register(ServerMonitor.class),
-        StorageNodeModule.class,
+        new StorageNodeModule("historical"),
         new JettyServerModule(new QueryJettyServerInitializer())
             .addResource(StatusResource.class),
         new QueryableModule(ServerManager.class),

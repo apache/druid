@@ -3,6 +3,7 @@ package com.metamx.druid.realtime;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.db.DbTablesConfig;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -17,12 +18,12 @@ public class DbSegmentPublisher implements SegmentPublisher
   private static final Logger log = new Logger(DbSegmentPublisher.class);
 
   private final ObjectMapper jsonMapper;
-  private final DbSegmentPublisherConfig config;
+  private final DbTablesConfig config;
   private final IDBI dbi;
 
   public DbSegmentPublisher(
       ObjectMapper jsonMapper,
-      DbSegmentPublisherConfig config,
+      DbTablesConfig config,
       IDBI dbi
   )
   {
@@ -41,7 +42,7 @@ public class DbSegmentPublisher implements SegmentPublisher
             public List<Map<String, Object>> withHandle(Handle handle) throws Exception
             {
               return handle.createQuery(
-                  String.format("SELECT id FROM %s WHERE id=:id", config.getSegmentTable())
+                  String.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
               )
                            .bind("id", segment.getIdentifier())
                            .list();
@@ -65,13 +66,13 @@ public class DbSegmentPublisher implements SegmentPublisher
                 statement = String.format(
                     "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                    config.getSegmentTable()
+                    config.getSegmentsTable()
                 );
               } else {
                 statement = String.format(
                     "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                    config.getSegmentTable()
+                    config.getSegmentsTable()
                 );
               }
 

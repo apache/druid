@@ -38,7 +38,7 @@ public class Main
     builder.withGroup("server")
            .withDescription("Run one of the Druid server types.")
            .withDefaultCommand(Help.class)
-           .withCommands(CliCoordinator.class, CliHistorical.class, CliBroker.class, CliRealtime.class, CliRealtimeStandalone.class);
+           .withCommands(CliCoordinator.class, CliHistorical.class, CliBroker.class, CliRealtime.class, CliRealtimeExample.class);
 
     builder.build().parse(args).run();
   }

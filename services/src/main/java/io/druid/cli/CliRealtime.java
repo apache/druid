@@ -74,7 +74,7 @@ public class CliRealtime extends ServerRunnable
         S3Module.class,
         DataSegmentPusherModule.class,
         new MetricsModule(),
-        StorageNodeModule.class,
+        new StorageNodeModule("realtime"),
         new JettyServerModule(new QueryJettyServerInitializer())
             .addResource(StatusResource.class),
         new ServerViewModule(),
