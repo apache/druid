@@ -199,7 +199,12 @@ class WikipediaIrcDecoder implements IrcDecoder
       @Override
       public List<String> getDimension(String dimension)
       {
-        return ImmutableList.of(dimensions.get(dimension));
+        final String value = dimensions.get(dimension);
+        if(value != null) {
+          return ImmutableList.of(value);
+        } else {
+          return ImmutableList.of();
+        }
       }
 
       @Override
