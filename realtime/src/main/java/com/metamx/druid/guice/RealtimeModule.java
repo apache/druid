@@ -21,29 +21,33 @@ package com.metamx.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.druid.guice.annotations.Self;
-import com.metamx.druid.initialization.DruidNode;
-import com.metamx.druid.initialization.ZkPathsConfig;
+import com.google.inject.TypeLiteral;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.realtime.DbSegmentPublisherConfig;
+import com.metamx.druid.realtime.FireDepartment;
+import com.metamx.druid.realtime.RealtimeManager;
+import com.metamx.druid.realtime.SegmentPublisher;
+
+import java.util.List;
 
 /**
  */
-public class ServerModule implements Module
+public class RealtimeModule implements Module
 {
+  private static final Logger log = new Logger(RealtimeModule.class);
+
   @Override
   public void configure(Binder binder)
   {
-    ConfigProvider.bind(binder, ZkPathsConfig.class);
+    JsonConfigProvider.bind(binder, "druid.publish", SegmentPublisherProvider.class);
+    binder.bind(SegmentPublisher.class).toProvider(SegmentPublisherProvider.class);
 
-    JsonConfigProvider.bind(binder, "druid", DruidNode.class, Self.class);
-  }
-
-  @Provides @LazySingleton
-  public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
-  {
-    return ScheduledExecutors.createFactory(lifecycle);
+    JsonConfigProvider.bind(binder, "druid.realtime", RealtimeManagerConfig.class);
+    binder.bind(
+        new TypeLiteral<List<FireDepartment>>()
+        {
+        }
+    ).toProvider(FireDepartmentsProvider.class);
+    binder.bind(RealtimeManager.class).in(ManageLifecycle.class);
   }
 }

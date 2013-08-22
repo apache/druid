@@ -19,21 +19,35 @@
 
 package com.metamx.druid.loading;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
 /**
  */
-public abstract class S3DataSegmentPusherConfig
+public class S3DataSegmentPusherConfig
 {
-  @Config("druid.pusher.s3.bucket")
-  public abstract String getBucket();
+  @JsonProperty
+  public String bucket = "";
 
-  @Config("druid.pusher.s3.baseKey")
-  @Default("")
-  public abstract String getBaseKey();
+  @JsonProperty
+  public String baseKey = "";
 
-  @Config("druid.pusher.s3.disableAcl")
-  @Default("false")
-  public abstract boolean getDisableAcl();
+  @JsonProperty
+  public boolean disableAcl = false;
+
+  public String getBucket()
+  {
+    return bucket;
+  }
+
+  public String getBaseKey()
+  {
+    return baseKey;
+  }
+
+  public boolean getDisableAcl()
+  {
+    return disableAcl;
+  }
 }

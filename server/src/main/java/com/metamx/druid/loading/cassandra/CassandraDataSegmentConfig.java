@@ -19,8 +19,7 @@
 
 package com.metamx.druid.loading.cassandra;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Cassandra Config
@@ -29,11 +28,19 @@ import org.skife.config.Default;
  */
 public abstract class CassandraDataSegmentConfig
 {
-  @Config("druid.pusher.cassandra.host")
-  @Default("")
-  public abstract String getHost();
+  @JsonProperty
+  public String host = "";
 
-  @Config("druid.pusher.cassandra.keyspace")
-  @Default("")
-  public abstract String getKeyspace();
+  @JsonProperty
+  public String keyspace = "";
+
+  public String getKeyspace()
+  {
+    return keyspace;
+  }
+
+  public String getHost()
+  {
+    return host;
+  }
 }

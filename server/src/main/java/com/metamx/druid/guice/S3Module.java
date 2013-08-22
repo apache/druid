@@ -22,28 +22,31 @@ package com.metamx.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.druid.guice.annotations.Self;
-import com.metamx.druid.initialization.DruidNode;
-import com.metamx.druid.initialization.ZkPathsConfig;
+import com.google.inject.ProvisionException;
+import com.metamx.druid.loading.S3CredentialsConfig;
+import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.security.AWSCredentials;
 
 /**
  */
-public class ServerModule implements Module
+public class S3Module implements Module
 {
   @Override
   public void configure(Binder binder)
   {
-    ConfigProvider.bind(binder, ZkPathsConfig.class);
-
-    JsonConfigProvider.bind(binder, "druid", DruidNode.class, Self.class);
+    JsonConfigProvider.bind(binder, "druid.s3", S3CredentialsConfig.class);
   }
 
-  @Provides @LazySingleton
-  public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
+  @Provides
+  @LazySingleton
+  public RestS3Service getRestS3Service(S3CredentialsConfig config)
   {
-    return ScheduledExecutors.createFactory(lifecycle);
+    try {
+      return new RestS3Service(new AWSCredentials(config.getAccessKey(), config.getSecretKey()));
+    }
+    catch (S3ServiceException e) {
+      throw new ProvisionException("Unable to create a RestS3Service", e);
+    }
   }
 }

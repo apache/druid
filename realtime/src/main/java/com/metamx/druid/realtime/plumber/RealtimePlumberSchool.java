@@ -68,6 +68,7 @@ import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import com.sun.istack.internal.NotNull;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -98,14 +99,31 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final IndexGranularity segmentGranularity;
   private final Object handoffCondition = new Object();
 
+  @JacksonInject
+  @NotNull
   private ServiceEmitter emitter;
 
   private volatile VersioningPolicy versioningPolicy = null;
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
+
+  @JacksonInject
+  @NotNull
   private volatile QueryRunnerFactoryConglomerate conglomerate = null;
+
+  @JacksonInject
+  @NotNull
   private volatile DataSegmentPusher dataSegmentPusher = null;
+
+  @JacksonInject
+  @NotNull
   private volatile DataSegmentAnnouncer segmentAnnouncer = null;
+
+  @JacksonInject
+  @NotNull
   private volatile SegmentPublisher segmentPublisher = null;
+
+  @JacksonInject
+  @NotNull
   private volatile ServerView serverView = null;
 
   @JsonCreator
@@ -136,42 +154,6 @@ public class RealtimePlumberSchool implements PlumberSchool
   public void setRejectionPolicyFactory(RejectionPolicyFactory factory)
   {
     this.rejectionPolicyFactory = factory;
-  }
-
-  @JacksonInject("queryRunnerFactoryConglomerate")
-  public void setConglomerate(QueryRunnerFactoryConglomerate conglomerate)
-  {
-    this.conglomerate = conglomerate;
-  }
-
-  @JacksonInject("segmentPusher")
-  public void setDataSegmentPusher(DataSegmentPusher dataSegmentPusher)
-  {
-    this.dataSegmentPusher = dataSegmentPusher;
-  }
-
-  @JacksonInject("segmentAnnouncer")
-  public void setSegmentAnnouncer(DataSegmentAnnouncer segmentAnnouncer)
-  {
-    this.segmentAnnouncer = segmentAnnouncer;
-  }
-
-  @JacksonInject("segmentPublisher")
-  public void setSegmentPublisher(SegmentPublisher segmentPublisher)
-  {
-    this.segmentPublisher = segmentPublisher;
-  }
-
-  @JacksonInject("serverView")
-  public void setServerView(ServerView serverView)
-  {
-    this.serverView = serverView;
-  }
-
-  @JacksonInject("serviceEmitter")
-  public void setServiceEmitter(ServiceEmitter emitter)
-  {
-    this.emitter = emitter;
   }
 
   @Override
