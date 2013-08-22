@@ -34,12 +34,13 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 
   public RemoteTaskRunnerWorkItem(
       Task task,
-      SettableFuture<TaskStatus> result
+      SettableFuture<TaskStatus> result,
+      Worker worker
   )
   {
     super(task, result);
     this.result = result;
-    this.worker = null;
+    this.worker = worker;
   }
 
   public RemoteTaskRunnerWorkItem(
@@ -71,8 +72,8 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
     return new RemoteTaskRunnerWorkItem(getTask(), result, getCreatedTime(), time, worker);
   }
 
-  public RemoteTaskRunnerWorkItem withWorker(Worker worker)
+  public RemoteTaskRunnerWorkItem withWorker(Worker theWorker)
   {
-    return new RemoteTaskRunnerWorkItem(getTask(), result, getCreatedTime(), getQueueInsertionTime(), worker);
+    return new RemoteTaskRunnerWorkItem(getTask(), result, getCreatedTime(), getQueueInsertionTime(), theWorker);
   }
 }
