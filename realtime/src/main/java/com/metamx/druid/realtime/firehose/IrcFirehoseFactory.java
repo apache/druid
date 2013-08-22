@@ -103,10 +103,10 @@ public class IrcFirehoseFactory implements FirehoseFactory
 
   @JsonCreator
   public IrcFirehoseFactory(
-      @JsonProperty String nick,
-      @JsonProperty String host,
-      @JsonProperty List<String> channels,
-      @JsonProperty IrcDecoder decoder
+      @JsonProperty("name") String nick,
+      @JsonProperty("host") String host,
+      @JsonProperty("channels") List<String> channels,
+      @JsonProperty("decoder") IrcDecoder decoder
   )
   {
     this.nick = nick;
