@@ -121,6 +121,10 @@ public class IndexMerger
       final IncrementalIndex index, final Interval dataInterval, File outDir, ProgressIndicator progress
   ) throws IOException
   {
+    if (index.isEmpty()) {
+      throw new IAE("Trying to persist an empty index!");
+    }
+
     final long firstTimestamp = index.getMinTime().getMillis();
     final long lastTimestamp = index.getMaxTime().getMillis();
     if (!(dataInterval.contains(firstTimestamp) && dataInterval.contains(lastTimestamp))) {
