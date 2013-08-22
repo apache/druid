@@ -211,7 +211,7 @@ public class OmniSegmentLoader implements SegmentLoader
 
     private synchronized void addSegment(DataSegment segment)
     {
-      if (! segments.add(segment)) {
+      if (segments.add(segment)) {
         currSize += segment.getSize();
       }
     }
