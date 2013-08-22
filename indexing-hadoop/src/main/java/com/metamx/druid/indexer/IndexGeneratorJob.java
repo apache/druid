@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Longs;
+import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.aggregation.AggregatorFactory;
@@ -321,7 +322,11 @@ public class IndexGeneratorJob implements Jobby
       List<QueryableIndex> indexes = Lists.newArrayListWithCapacity(indexCount);
       final File mergedBase;
 
-      if (toMerge.size() == 0 && !index.isEmpty()) {
+      if (toMerge.size() == 0) {
+        if (index.isEmpty()) {
+          throw new IAE("If you try to persist empty indexes you are going to have a bad time");
+        }
+
         mergedBase = new File(baseFlushFile, "merged");
         IndexMerger.persist(
             index, interval, mergedBase, new IndexMerger.ProgressIndicator()
