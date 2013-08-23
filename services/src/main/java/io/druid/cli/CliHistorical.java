@@ -24,17 +24,15 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.druid.coordination.ZkCoordinator;
 import com.metamx.druid.curator.CuratorModule;
+import com.metamx.druid.guice.AWSModule;
 import com.metamx.druid.guice.AnnouncerModule;
 import com.metamx.druid.guice.DataSegmentPullerModule;
-import com.metamx.druid.guice.DataSegmentPusherModule;
 import com.metamx.druid.guice.DruidProcessingModule;
 import com.metamx.druid.guice.HistoricalModule;
 import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.QueryRunnerFactoryModule;
 import com.metamx.druid.guice.QueryableModule;
-import com.metamx.druid.guice.S3Module;
-import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.guice.StorageNodeModule;
 import com.metamx.druid.http.StatusResource;
 import com.metamx.druid.initialization.EmitterModule;
@@ -69,7 +67,7 @@ public class CliHistorical extends ServerRunnable
         CuratorModule.class,
         AnnouncerModule.class,
         DruidProcessingModule.class,
-        S3Module.class,
+        AWSModule.class,
         DataSegmentPullerModule.class,
         new MetricsModule().register(ServerMonitor.class),
         new StorageNodeModule("historical"),

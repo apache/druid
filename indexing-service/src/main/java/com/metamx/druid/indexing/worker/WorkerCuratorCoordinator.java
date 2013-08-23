@@ -24,13 +24,15 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.indexing.common.TaskStatus;
-import com.metamx.druid.indexing.common.config.IndexerZkConfig;
+import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.joda.time.DateTime;
@@ -48,9 +50,9 @@ public class WorkerCuratorCoordinator
   private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
+  private final RemoteTaskRunnerConfig config;
   private final CuratorFramework curatorFramework;
   private final Worker worker;
-  private final IndexerZkConfig config;
   private final Announcer announcer;
 
   private final String baseAnnouncementsPath;
@@ -59,23 +61,25 @@ public class WorkerCuratorCoordinator
 
   private volatile boolean started;
 
+  @Inject
   public WorkerCuratorCoordinator(
       ObjectMapper jsonMapper,
-      IndexerZkConfig config,
+      ZkPathsConfig zkPaths,
+      RemoteTaskRunnerConfig config,
       CuratorFramework curatorFramework,
       Worker worker
   )
   {
     this.jsonMapper = jsonMapper;
+    this.config = config;
     this.curatorFramework = curatorFramework;
     this.worker = worker;
-    this.config = config;
 
     this.announcer = new Announcer(curatorFramework, MoreExecutors.sameThreadExecutor());
 
-    this.baseAnnouncementsPath = getPath(Arrays.asList(config.getIndexerAnnouncementPath(), worker.getHost()));
-    this.baseTaskPath = getPath(Arrays.asList(config.getIndexerTaskPath(), worker.getHost()));
-    this.baseStatusPath = getPath(Arrays.asList(config.getIndexerStatusPath(), worker.getHost()));
+    this.baseAnnouncementsPath = getPath(Arrays.asList(zkPaths.getIndexerAnnouncementPath(), worker.getHost()));
+    this.baseTaskPath = getPath(Arrays.asList(zkPaths.getIndexerTaskPath(), worker.getHost()));
+    this.baseStatusPath = getPath(Arrays.asList(zkPaths.getIndexerStatusPath(), worker.getHost()));
   }
 
   @LifecycleStart
@@ -125,8 +129,8 @@ public class WorkerCuratorCoordinator
     if (curatorFramework.checkExists().forPath(path) == null) {
       try {
         byte[] rawBytes = jsonMapper.writeValueAsBytes(data);
-        if (rawBytes.length > config.getMaxNumBytes()) {
-          throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
+        if (rawBytes.length > config.getMaxZnodeBytes()) {
+          throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes());
         }
 
         curatorFramework.create()
@@ -189,15 +193,13 @@ public class WorkerCuratorCoordinator
 
       try {
         byte[] rawBytes = jsonMapper.writeValueAsBytes(status);
-        if (rawBytes.length > config.getMaxNumBytes()) {
-          throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
+        if (rawBytes.length > config.getMaxZnodeBytes()) {
+          throw new ISE(
+              "Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes()
+          );
         }
 
-        curatorFramework.create()
-                        .withMode(CreateMode.EPHEMERAL)
-                        .forPath(
-                            getStatusPathForId(status.getId()), rawBytes
-                        );
+        curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(getStatusPathForId(status.getId()), rawBytes);
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -218,14 +220,13 @@ public class WorkerCuratorCoordinator
           return;
         }
         byte[] rawBytes = jsonMapper.writeValueAsBytes(status);
-        if (rawBytes.length > config.getMaxNumBytes()) {
-          throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
+        if (rawBytes.length > config.getMaxZnodeBytes()) {
+          throw new ISE(
+              "Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes()
+          );
         }
 
-        curatorFramework.setData()
-                        .forPath(
-                            getStatusPathForId(status.getId()), rawBytes
-                        );
+        curatorFramework.setData().forPath(getStatusPathForId(status.getId()), rawBytes);
       }
       catch (Exception e) {
         throw Throwables.propagate(e);

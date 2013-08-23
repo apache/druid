@@ -20,11 +20,14 @@
 package com.metamx.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.coordinator.TaskRunner;
+import com.metamx.druid.indexing.worker.config.WorkerConfig;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
@@ -55,21 +58,24 @@ public class WorkerTaskMonitor
   private final ExecutorService exec;
   private final List<Task> running = new CopyOnWriteArrayList<Task>();
 
+  @Inject
   public WorkerTaskMonitor(
       ObjectMapper jsonMapper,
-      PathChildrenCache pathChildrenCache,
       CuratorFramework cf,
       WorkerCuratorCoordinator workerCuratorCoordinator,
       TaskRunner taskRunner,
-      ExecutorService exec
+      WorkerConfig workerConfig
   )
   {
     this.jsonMapper = jsonMapper;
-    this.pathChildrenCache = pathChildrenCache;
+    this.pathChildrenCache = new PathChildrenCache(
+        cf, workerCuratorCoordinator.getTaskPathForWorker(), false, true, Execs.makeThreadFactory("TaskMonitorCache-%s")
+    );
     this.cf = cf;
     this.workerCuratorCoordinator = workerCuratorCoordinator;
     this.taskRunner = taskRunner;
-    this.exec = exec;
+
+    this.exec = Execs.multiThreaded(workerConfig.getCapacity(), "WorkerTaskMonitor-%d");
   }
 
   /**
@@ -81,7 +87,6 @@ public class WorkerTaskMonitor
   public void start()
   {
     try {
-      pathChildrenCache.start();
       pathChildrenCache.getListenable().addListener(
           new PathChildrenCacheListener()
           {
@@ -153,6 +158,7 @@ public class WorkerTaskMonitor
             }
           }
       );
+      pathChildrenCache.start();
     }
     catch (Exception e) {
       log.makeAlert(e, "Exception starting WorkerTaskMonitor")

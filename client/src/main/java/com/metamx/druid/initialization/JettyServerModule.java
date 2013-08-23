@@ -17,8 +17,9 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.guice.ConfigProvider;
+import com.metamx.druid.guice.JsonConfigProvider;
 import com.metamx.druid.guice.LazySingleton;
+import com.metamx.druid.guice.annotations.Self;
 import com.sun.jersey.api.core.DefaultResourceConfig;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.JerseyServletModule;
@@ -58,7 +59,7 @@ public class JettyServerModule extends JerseyServletModule
   {
     Binder binder = binder();
 
-    ConfigProvider.bind(binder, ServerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.server.http", ServerConfig.class);
 
     // The Guice servlet extension doesn't actually like requiring explicit bindings, so we do its job for it here.
     try {
@@ -110,9 +111,9 @@ public class JettyServerModule extends JerseyServletModule
   }
 
   @Provides @LazySingleton
-  public Server getServer(Injector injector, Lifecycle lifecycle, ServerConfig config)
+  public Server getServer(Injector injector, Lifecycle lifecycle, @Self DruidNode node, ServerConfig config)
   {
-    final Server server = Initialization.makeJettyServer(config);
+    final Server server = Initialization.makeJettyServer(node, config);
     try {
       initializer.initialize(server, injector);
     }

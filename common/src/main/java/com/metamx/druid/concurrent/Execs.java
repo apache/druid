@@ -37,6 +37,11 @@ public class Execs
     );
   }
 
+  public static ExecutorService multiThreaded(int threads, String nameFormat)
+  {
+    return Executors.newFixedThreadPool(threads, makeThreadFactory(nameFormat));
+  }
+
   public static ScheduledExecutorService scheduledSingleThreaded(String nameFormat)
   {
     return Executors.newSingleThreadScheduledExecutor(

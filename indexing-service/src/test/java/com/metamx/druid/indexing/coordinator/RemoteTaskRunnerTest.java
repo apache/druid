@@ -19,7 +19,6 @@ import com.metamx.druid.guava.DSuppliers;
 import com.metamx.druid.indexing.TestTask;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolboxFactory;
-import com.metamx.druid.indexing.common.config.IndexerZkConfig;
 import com.metamx.druid.indexing.common.config.TaskConfig;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.common.task.TaskResource;
@@ -28,20 +27,20 @@ import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.indexing.worker.Worker;
 import com.metamx.druid.indexing.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.indexing.worker.WorkerTaskMonitor;
+import com.metamx.druid.indexing.worker.config.WorkerConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -293,20 +292,15 @@ public class RemoteTaskRunnerTest
   {
     workerCuratorCoordinator = new WorkerCuratorCoordinator(
         jsonMapper,
-        new IndexerZkConfig()
+        new ZkPathsConfig()
         {
           @Override
           public String getZkBasePath()
           {
             return basePath;
           }
-
-          @Override
-          public long getMaxNumBytes()
-          {
-            return 1000;
-          }
         },
+        new TestRemoteTaskRunnerConfig(),
         cf,
         worker
     );
@@ -315,7 +309,6 @@ public class RemoteTaskRunnerTest
     // Start a task monitor
     workerTaskMonitor = new WorkerTaskMonitor(
         jsonMapper,
-        new PathChildrenCache(cf, tasksPath, true),
         cf,
         workerCuratorCoordinator,
         new ThreadPoolTaskRunner(
@@ -344,7 +337,7 @@ public class RemoteTaskRunnerTest
                 }, null, null, null, null, null, null, null, null, null, jsonMapper
             ), Executors.newSingleThreadExecutor()
         ),
-        Executors.newSingleThreadExecutor()
+        new WorkerConfig().setCapacity(1)
     );
     jsonMapper.registerSubtypes(new NamedType(TestTask.class, "test"));
     jsonMapper.registerSubtypes(new NamedType(TestRealtimeTask.class, "test_realtime"));
@@ -397,9 +390,9 @@ public class RemoteTaskRunnerTest
     }
 
     @Override
-    public Duration getTaskAssignmentTimeoutDuration()
+    public Period getTaskAssignmentTimeout()
     {
-      return new Duration(60000);
+      return new Period(60000);
     }
 
     @Override

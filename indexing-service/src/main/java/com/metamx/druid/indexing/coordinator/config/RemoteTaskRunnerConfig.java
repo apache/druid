@@ -20,7 +20,7 @@
 package com.metamx.druid.indexing.coordinator.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Duration;
+import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -31,7 +31,7 @@ public class RemoteTaskRunnerConfig
 {
   @JsonProperty
   @NotNull
-  private Duration taskAssignmentTimeoutDuration = new Duration("PT5M");
+  private Period taskAssignmentTimeout = new Period("PT5M");
 
   @JsonProperty
   private boolean compressZnodes = false;
@@ -43,9 +43,9 @@ public class RemoteTaskRunnerConfig
   @Min(10 * 1024)
   private long maxZnodeBytes = 512 * 1024;
 
-  public Duration getTaskAssignmentTimeoutDuration()
+  public Period getTaskAssignmentTimeout()
   {
-    return taskAssignmentTimeoutDuration;
+    return taskAssignmentTimeout;
   }
 
   public boolean isCompressZnodes()

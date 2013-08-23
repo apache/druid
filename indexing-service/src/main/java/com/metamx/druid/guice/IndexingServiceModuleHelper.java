@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,33 +17,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.initialization;
+package com.metamx.druid.guice;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
-
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
+import com.google.inject.Binder;
+import com.metamx.druid.indexing.coordinator.config.ForkingTaskRunnerConfig;
+import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 
 /**
  */
-public class ServerConfig
+public class IndexingServiceModuleHelper
 {
-  @JsonProperty
-  @Min(1)
-  private int numThreads = 10;
-
-  @JsonProperty
-  @NotNull
-  private Period maxIdleTime = new Period("PT5m");
-
-  public int getNumThreads()
+  public static void configureTaskRunnerConfigs(Binder binder)
   {
-    return numThreads;
-  }
-
-  public Period getMaxIdleTime()
-  {
-    return maxIdleTime;
+    JsonConfigProvider.bind(binder, "druid.indexer.runner", ForkingTaskRunnerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.indexer.runner", RemoteTaskRunnerConfig.class);
   }
 }

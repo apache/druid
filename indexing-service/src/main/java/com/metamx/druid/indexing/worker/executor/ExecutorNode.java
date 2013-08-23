@@ -218,7 +218,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private void initializeServer()
   {
     if (server == null) {
-      server = Initialization.makeJettyServer(configFactory.build(ServerConfig.class));
+      server = Initialization.makeJettyServer(null, configFactory.build(ServerConfig.class));
 
       lifecycle.addHandler(
           new Lifecycle.Handler()
@@ -361,7 +361,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     }
     if (coordinatorServiceProvider == null) {
       this.coordinatorServiceProvider = Initialization.makeServiceProvider(
-          workerConfig.getMasterService(),
+          workerConfig.getOverlordService(),
           serviceDiscovery,
           lifecycle
       );

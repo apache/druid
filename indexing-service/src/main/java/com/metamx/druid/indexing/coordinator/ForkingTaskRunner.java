@@ -36,6 +36,7 @@ import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.guice.annotations.Self;
@@ -80,6 +81,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
   private final Map<String, TaskInfo> tasks = Maps.newHashMap();
 
+  @Inject
   public ForkingTaskRunner(
       ForkingTaskRunnerConfig config,
       Properties props,

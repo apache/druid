@@ -24,14 +24,16 @@ import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.CuratorModule;
 import com.metamx.druid.curator.discovery.DiscoveryModule;
+import com.metamx.druid.guice.AWSModule;
 import com.metamx.druid.guice.DbConnectorModule;
 import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.JacksonConfigManagerModule;
 import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.OverlordModule;
-import com.metamx.druid.guice.S3Module;
 import com.metamx.druid.guice.ServerModule;
+import com.metamx.druid.guice.TaskLogsModule;
 import com.metamx.druid.http.RedirectFilter;
+import com.metamx.druid.http.StatusResource;
 import com.metamx.druid.indexing.coordinator.TaskMaster;
 import com.metamx.druid.indexing.coordinator.http.IndexerCoordinatorResource;
 import com.metamx.druid.initialization.EmitterModule;
@@ -77,12 +79,14 @@ public class CliOverlord extends ServerRunnable
         CuratorModule.class,
         new MetricsModule(),
         ServerModule.class,
-        new S3Module(),
+        new AWSModule(),
         new DbConnectorModule(),
         new JacksonConfigManagerModule(),
         new JettyServerModule(new OverlordJettyServerInitializer())
-            .addResource(IndexerCoordinatorResource.class),
+            .addResource(IndexerCoordinatorResource.class)
+            .addResource(StatusResource.class),
         new DiscoveryModule(),
+        new TaskLogsModule(),
         new OverlordModule()
     );
   }

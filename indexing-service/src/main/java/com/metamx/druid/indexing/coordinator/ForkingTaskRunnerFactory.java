@@ -22,7 +22,7 @@ package com.metamx.druid.indexing.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.druid.guice.annotations.Self;
-import com.metamx.druid.indexing.common.tasklogs.TaskLogs;
+import com.metamx.druid.indexing.common.tasklogs.TaskLogPusher;
 import com.metamx.druid.indexing.coordinator.config.ForkingTaskRunnerConfig;
 import com.metamx.druid.initialization.DruidNode;
 
@@ -35,7 +35,7 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory
   private final ForkingTaskRunnerConfig config;
   private final Properties props;
   private final ObjectMapper jsonMapper;
-  private final TaskLogs persistentTaskLogs;
+  private final TaskLogPusher persistentTaskLogs;
   private final DruidNode node;
 
   @Inject
@@ -43,7 +43,7 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory
       final ForkingTaskRunnerConfig config,
       final Properties props,
       final ObjectMapper jsonMapper,
-      final TaskLogs persistentTaskLogs,
+      final TaskLogPusher persistentTaskLogs,
       @Self DruidNode node
   ) {
     this.config = config;

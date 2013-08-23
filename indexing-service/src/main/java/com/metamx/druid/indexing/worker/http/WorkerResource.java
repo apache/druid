@@ -19,7 +19,6 @@
 
 package com.metamx.druid.indexing.worker.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.InputSupplier;
@@ -44,17 +43,14 @@ public class WorkerResource
 {
   private static final Logger log = new Logger(WorkerResource.class);
 
-  private final ObjectMapper jsonMapper;
   private final ForkingTaskRunner taskRunner;
 
   @Inject
   public WorkerResource(
-      ObjectMapper jsonMapper,
       ForkingTaskRunner taskRunner
 
   ) throws Exception
   {
-    this.jsonMapper = jsonMapper;
     this.taskRunner = taskRunner;
   }
 

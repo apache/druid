@@ -21,8 +21,8 @@ package io.druid.cli;
 
 import com.google.inject.Injector;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.DruidProcessingConfig;
 import com.metamx.druid.curator.CuratorModule;
+import com.metamx.druid.guice.AWSModule;
 import com.metamx.druid.guice.AnnouncerModule;
 import com.metamx.druid.guice.DataSegmentPusherModule;
 import com.metamx.druid.guice.DbConnectorModule;
@@ -32,15 +32,12 @@ import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.QueryRunnerFactoryModule;
 import com.metamx.druid.guice.QueryableModule;
 import com.metamx.druid.guice.RealtimeModule;
-import com.metamx.druid.guice.S3Module;
-import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.guice.ServerViewModule;
 import com.metamx.druid.guice.StorageNodeModule;
 import com.metamx.druid.http.StatusResource;
 import com.metamx.druid.initialization.EmitterModule;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.JettyServerModule;
-import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.metrics.MetricsModule;
 import com.metamx.druid.realtime.RealtimeManager;
 import io.airlift.command.Command;
@@ -71,7 +68,7 @@ public class CliRealtime extends ServerRunnable
         CuratorModule.class,
         AnnouncerModule.class,
         DruidProcessingModule.class,
-        S3Module.class,
+        AWSModule.class,
         DataSegmentPusherModule.class,
         new MetricsModule(),
         new StorageNodeModule("realtime"),

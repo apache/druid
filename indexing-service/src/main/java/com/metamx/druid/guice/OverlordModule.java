@@ -29,9 +29,6 @@ import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionToolbox;
-import com.metamx.druid.indexing.common.tasklogs.NoopTaskLogs;
-import com.metamx.druid.indexing.common.tasklogs.S3TaskLogs;
-import com.metamx.druid.indexing.common.tasklogs.S3TaskLogsConfig;
 import com.metamx.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogStreamer;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogs;
@@ -47,8 +44,6 @@ import com.metamx.druid.indexing.coordinator.TaskQueue;
 import com.metamx.druid.indexing.coordinator.TaskRunnerFactory;
 import com.metamx.druid.indexing.coordinator.TaskStorage;
 import com.metamx.druid.indexing.coordinator.TaskStorageQueryAdapter;
-import com.metamx.druid.indexing.coordinator.config.ForkingTaskRunnerConfig;
-import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.indexing.coordinator.http.OverlordRedirectInfo;
 import com.metamx.druid.indexing.coordinator.scaling.AutoScalingStrategy;
 import com.metamx.druid.indexing.coordinator.scaling.EC2AutoScalingStrategy;
@@ -111,17 +106,6 @@ public class OverlordModule implements Module
 
     storageBinder.addBinding("db").to(DbTaskStorage.class);
     binder.bind(DbTaskStorage.class).in(LazySingleton.class);
-
-    PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(NoopTaskLogs.class));
-    final MapBinder<String, TaskLogs> taskLogBinder = PolyBind.optionBinder(binder, Key.get(TaskLogs.class));
-
-    JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);
-    taskLogBinder.addBinding("s3").to(S3TaskLogs.class);
-    binder.bind(S3TaskLogs.class).in(LazySingleton.class);
-
-    taskLogBinder.addBinding("noop").to(NoopTaskLogs.class).in(LazySingleton.class);
-    binder.bind(NoopTaskLogs.class).in(LazySingleton.class);
-
   }
 
   private void configureRunners(Binder binder)
@@ -131,11 +115,10 @@ public class OverlordModule implements Module
     );
     final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(binder, Key.get(TaskRunnerFactory.class));
 
-    JsonConfigProvider.bind(binder, "druid.indexer.runner", ForkingTaskRunnerConfig.class);
+    IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
     biddy.addBinding("local").to(ForkingTaskRunnerFactory.class);
     binder.bind(ForkingTaskRunnerFactory.class).in(LazySingleton.class);
 
-    JsonConfigProvider.bind(binder, "druid.indexer.runner", RemoteTaskRunnerConfig.class);
     biddy.addBinding("remote").to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
     binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
   }

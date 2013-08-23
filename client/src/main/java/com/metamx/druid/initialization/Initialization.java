@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
+import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -181,7 +182,7 @@ public class Initialization
     return props;
   }
 
-  public static Server makeJettyServer(ServerConfig config)
+  public static Server makeJettyServer(DruidNode node, ServerConfig config)
   {
     final QueuedThreadPool threadPool = new QueuedThreadPool();
     threadPool.setMinThreads(config.getNumThreads());
@@ -191,8 +192,8 @@ public class Initialization
     server.setThreadPool(threadPool);
 
     SelectChannelConnector connector = new SelectChannelConnector();
-    connector.setPort(config.getPort());
-    connector.setMaxIdleTime(config.getMaxIdleTimeMillis());
+    connector.setPort(node.getPort());
+    connector.setMaxIdleTime(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
     connector.setStatsOn(true);
 
     server.setConnectors(new Connector[]{connector});

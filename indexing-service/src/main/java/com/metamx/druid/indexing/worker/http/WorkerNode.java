@@ -37,7 +37,6 @@ import com.metamx.druid.QueryableNode;
 import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.StatusServlet;
-import com.metamx.druid.indexing.common.config.IndexerZkConfig;
 import com.metamx.druid.indexing.common.config.TaskLogConfig;
 import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
 import com.metamx.druid.indexing.common.index.StaticS3FirehoseFactory;
@@ -46,7 +45,6 @@ import com.metamx.druid.indexing.common.tasklogs.S3TaskLogs;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogs;
 import com.metamx.druid.indexing.coordinator.ForkingTaskRunner;
 import com.metamx.druid.indexing.coordinator.config.ForkingTaskRunnerConfig;
-import com.metamx.druid.indexing.worker.Worker;
 import com.metamx.druid.indexing.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.indexing.worker.WorkerTaskMonitor;
 import com.metamx.druid.indexing.worker.config.WorkerConfig;
@@ -67,7 +65,6 @@ import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.eclipse.jetty.server.Server;
@@ -82,8 +79,6 @@ import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -230,7 +225,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
   private void initializeServer()
   {
     if (server == null) {
-      server = Initialization.makeJettyServer(getConfigFactory().build(ServerConfig.class));
+      server = Initialization.makeJettyServer(null, getConfigFactory().build(ServerConfig.class));
 
       getLifecycle().addHandler(
           new Lifecycle.Handler()
@@ -339,7 +334,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
     }
     if (coordinatorServiceProvider == null) {
       this.coordinatorServiceProvider = Initialization.makeServiceProvider(
-          workerConfig.getMasterService(),
+          workerConfig.getOverlordService(),
           serviceDiscovery,
           getLifecycle()
       );
@@ -351,9 +346,10 @@ public class WorkerNode extends QueryableNode<WorkerNode>
     if (workerCuratorCoordinator == null) {
       workerCuratorCoordinator = new WorkerCuratorCoordinator(
           getJsonMapper(),
-          getConfigFactory().build(IndexerZkConfig.class),
+          getZkPaths(),
+          null, // TODO: eliminate
           getCuratorFramework(),
-          new Worker(workerConfig)
+          null // TODO: eliminate
       );
       getLifecycle().addManagedInstance(workerCuratorCoordinator);
     }
@@ -391,21 +387,14 @@ public class WorkerNode extends QueryableNode<WorkerNode>
   public void initializeWorkerTaskMonitor()
   {
     if (workerTaskMonitor == null) {
-      final ExecutorService workerExec = Executors.newFixedThreadPool(workerConfig.getCapacity());
       final CuratorFramework curatorFramework = getCuratorFramework();
 
-      final PathChildrenCache pathChildrenCache = new PathChildrenCache(
-          curatorFramework,
-          workerCuratorCoordinator.getTaskPathForWorker(),
-          false
-      );
       workerTaskMonitor = new WorkerTaskMonitor(
           getJsonMapper(),
-          pathChildrenCache,
           curatorFramework,
           workerCuratorCoordinator,
           forkingTaskRunner,
-          workerExec
+          workerConfig
       );
       getLifecycle().addManagedInstance(workerTaskMonitor);
     }

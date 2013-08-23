@@ -21,7 +21,6 @@ package com.metamx.druid.indexing.worker;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.indexing.worker.config.WorkerConfig;
 
 /**
  * A container for worker metadata.
@@ -32,18 +31,6 @@ public class Worker
   private final String ip;
   private final int capacity;
   private final String version;
-
-  public Worker(
-      WorkerConfig config
-  )
-  {
-    this(
-        config.getHost(),
-        config.getIp(),
-        config.getCapacity(),
-        config.getVersion()
-    );
-  }
 
   @JsonCreator
   public Worker(

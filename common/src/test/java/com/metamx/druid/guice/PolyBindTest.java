@@ -89,16 +89,16 @@ public class PolyBindTest
 
     Assert.assertEquals("A", injector.getInstance(Gogo.class).go());
     Assert.assertEquals("B", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
-    props.setProperty("billy.type", "b");
+    props.setProperty("billy", "b");
     Assert.assertEquals("B", injector.getInstance(Gogo.class).go());
     Assert.assertEquals("A", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
-    props.setProperty("billy.type", "a");
+    props.setProperty("billy", "a");
     Assert.assertEquals("A", injector.getInstance(Gogo.class).go());
     Assert.assertEquals("B", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
-    props.setProperty("billy.type", "b");
+    props.setProperty("billy", "b");
     Assert.assertEquals("B", injector.getInstance(Gogo.class).go());
     Assert.assertEquals("A", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
-    props.setProperty("billy.type", "c");
+    props.setProperty("billy", "c");
     Assert.assertEquals("A", injector.getInstance(Gogo.class).go());
     Assert.assertEquals("B", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
   }

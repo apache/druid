@@ -33,7 +33,7 @@ import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 /**
  */
-public class S3Module implements Module
+public class AWSModule implements Module
 {
   @Override
   public void configure(Binder binder)

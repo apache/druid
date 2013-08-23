@@ -19,27 +19,54 @@
 
 package com.metamx.druid.indexing.worker.config;
 
-import org.skife.config.Config;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 
 /**
  */
-public abstract class WorkerConfig
+public class WorkerConfig
 {
-  @Config("druid.host")
-  public abstract String getHost();
+  @JsonProperty
+  @NotNull
+  private String ip = null;
 
-  @Config("druid.worker.ip")
-  public abstract String getIp();
+  @JsonProperty
+  @NotNull
+  private String version = null;
 
-  @Config("druid.worker.version")
-  public abstract String getVersion();
+  @JsonProperty
+  @NotNull
+  private String overlordService = null;
 
-  @Config("druid.worker.masterService")
-  public abstract String getMasterService();
+  @JsonProperty
+  @Min(1)
+  private int capacity = Runtime.getRuntime().availableProcessors() - 1;
 
-  @Config("druid.worker.capacity")
+  public String getIp()
+  {
+    return ip;
+  }
+
+  public String getVersion()
+  {
+    return version;
+  }
+
+  public String getOverlordService()
+  {
+    return overlordService;
+  }
+
   public int getCapacity()
   {
-    return Runtime.getRuntime().availableProcessors() - 1;
+    return capacity;
+  }
+
+  public WorkerConfig setCapacity(int capacity)
+  {
+    this.capacity = capacity;
+    return this;
   }
 }

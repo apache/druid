@@ -517,13 +517,13 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     timeoutStopwatch.start();
     synchronized (statusLock) {
       while (!isWorkerRunningTask(theWorker, task)) {
-        statusLock.wait(config.getTaskAssignmentTimeoutDuration().getMillis());
-        if (timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS) >= config.getTaskAssignmentTimeoutDuration().getMillis()) {
+        statusLock.wait(config.getTaskAssignmentTimeout().getMillis());
+        if (timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS) >= config.getTaskAssignmentTimeout().getMillis()) {
           log.error(
               "Something went wrong! %s never ran task %s after %s!",
               theWorker.getHost(),
               task.getId(),
-              config.getTaskAssignmentTimeoutDuration()
+              config.getTaskAssignmentTimeout()
           );
 
           taskRunnerWorkItem.setResult(TaskStatus.failure(taskRunnerWorkItem.getTask().getId()));

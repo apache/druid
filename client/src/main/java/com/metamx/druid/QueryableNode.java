@@ -498,7 +498,7 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
   private void initializeServer()
   {
     if (server == null) {
-      setServer(Initialization.makeJettyServer(configFactory.build(ServerConfig.class)));
+      setServer(Initialization.makeJettyServer(null, configFactory.build(ServerConfig.class))); // TODO: eliminate
 
       lifecycle.addHandler(
           new Lifecycle.Handler()
