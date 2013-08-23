@@ -44,7 +44,7 @@ public class SegmentNukeAction implements TaskAction<Void>
       throw new ISE("Segments not covered by locks for task: %s", task.getId());
     }
 
-    toolbox.getMergerDBCoordinator().deleteSegments(segments);
+    toolbox.getIndexerDBCoordinator().deleteSegments(segments);
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()

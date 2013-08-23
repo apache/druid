@@ -24,12 +24,9 @@ import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -47,15 +44,14 @@ import com.metamx.druid.QueryableNode;
 import com.metamx.druid.config.ConfigManager;
 import com.metamx.druid.config.ConfigManagerConfig;
 import com.metamx.druid.config.JacksonConfigManager;
-import com.metamx.druid.curator.cache.SimplePathChildrenCacheFactory;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.db.DbConnector;
 import com.metamx.druid.db.DbConnectorConfig;
 import com.metamx.druid.db.DbTablesConfig;
+import com.metamx.druid.guava.DSuppliers;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.RedirectFilter;
-import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.http.StatusServlet;
 import com.metamx.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
@@ -66,22 +62,22 @@ import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
 import com.metamx.druid.indexing.common.index.StaticS3FirehoseFactory;
 import com.metamx.druid.indexing.common.tasklogs.NoopTaskLogs;
 import com.metamx.druid.indexing.common.tasklogs.S3TaskLogs;
-import com.metamx.druid.indexing.common.tasklogs.SwitchingTaskLogProvider;
-import com.metamx.druid.indexing.common.tasklogs.TaskLogProvider;
+import com.metamx.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
+import com.metamx.druid.indexing.common.tasklogs.TaskLogStreamer;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogs;
+import com.metamx.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import com.metamx.druid.indexing.coordinator.DbTaskStorage;
-import com.metamx.druid.indexing.coordinator.ForkingTaskRunner;
+import com.metamx.druid.indexing.coordinator.ForkingTaskRunnerFactory;
 import com.metamx.druid.indexing.coordinator.HeapMemoryTaskStorage;
-import com.metamx.druid.indexing.coordinator.MergerDBCoordinator;
+import com.metamx.druid.indexing.coordinator.IndexerDBCoordinator;
 import com.metamx.druid.indexing.coordinator.RemoteTaskRunner;
+import com.metamx.druid.indexing.coordinator.RemoteTaskRunnerFactory;
 import com.metamx.druid.indexing.coordinator.TaskLockbox;
-import com.metamx.druid.indexing.coordinator.TaskMasterLifecycle;
+import com.metamx.druid.indexing.coordinator.TaskMaster;
 import com.metamx.druid.indexing.coordinator.TaskQueue;
-import com.metamx.druid.indexing.coordinator.TaskRunner;
 import com.metamx.druid.indexing.coordinator.TaskRunnerFactory;
 import com.metamx.druid.indexing.coordinator.TaskStorage;
 import com.metamx.druid.indexing.coordinator.TaskStorageQueryAdapter;
-import com.metamx.druid.indexing.coordinator.config.EC2AutoScalingStrategyConfig;
 import com.metamx.druid.indexing.coordinator.config.ForkingTaskRunnerConfig;
 import com.metamx.druid.indexing.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.indexing.coordinator.config.IndexerDbConnectorConfig;
@@ -93,8 +89,8 @@ import com.metamx.druid.indexing.coordinator.scaling.NoopResourceManagementSched
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementSchedulerConfig;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementSchedulerFactory;
+import com.metamx.druid.indexing.coordinator.scaling.SimpleResourceManagementConfig;
 import com.metamx.druid.indexing.coordinator.scaling.SimpleResourceManagementStrategy;
-import com.metamx.druid.indexing.coordinator.scaling.SimpleResourceManagmentConfig;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.initialization.CuratorDiscoveryConfig;
 import com.metamx.druid.initialization.DruidNode;
@@ -113,7 +109,6 @@ import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import com.metamx.metrics.MonitorSchedulerConfig;
 import com.metamx.metrics.SysMonitor;
-import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
@@ -127,12 +122,8 @@ import org.jets3t.service.security.AWSCredentials;
 import org.joda.time.Duration;
 import org.skife.config.ConfigurationObjectFactory;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
@@ -155,7 +146,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   private DbConnector dbi = null;
   private Supplier<DbTablesConfig> dbTables = null;
   private IndexerCoordinatorConfig config = null;
-  private MergerDBCoordinator mergerDBCoordinator = null;
+  private IndexerDBCoordinator indexerDBCoordinator = null;
   private ServiceDiscovery<Void> serviceDiscovery = null;
   private ServiceAnnouncer serviceAnnouncer = null;
   private TaskStorage taskStorage = null;
@@ -166,9 +157,9 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   private ResourceManagementSchedulerFactory resourceManagementSchedulerFactory = null;
   private HttpClient httpClient = null;
   private TaskActionClientFactory taskActionClientFactory = null;
-  private TaskMasterLifecycle taskMasterLifecycle = null;
+  private TaskMaster taskMaster = null;
   private TaskLogs persistentTaskLogs = null;
-  private TaskLogProvider taskLogProvider = null;
+  private TaskLogStreamer taskLogStreamer = null;
   private Server server = null;
 
   private boolean initialized = false;
@@ -190,9 +181,9 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     return this;
   }
 
-  public IndexerCoordinatorNode setMergerDBCoordinator(MergerDBCoordinator mergerDBCoordinator)
+  public IndexerCoordinatorNode setIndexerDBCoordinator(IndexerDBCoordinator indexerDBCoordinator)
   {
-    this.mergerDBCoordinator = mergerDBCoordinator;
+    this.indexerDBCoordinator = indexerDBCoordinator;
     return this;
   }
 
@@ -214,9 +205,9 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     return this;
   }
 
-  public IndexerCoordinatorNode setMergeDbCoordinator(MergerDBCoordinator mergeDbCoordinator)
+  public IndexerCoordinatorNode setMergeDbCoordinator(IndexerDBCoordinator mergeDbCoordinator)
   {
-    this.mergerDBCoordinator = mergeDbCoordinator;
+    this.indexerDBCoordinator = mergeDbCoordinator;
     return this;
   }
 
@@ -300,9 +291,9 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
             getJsonMapper(),
             config,
             emitter,
-            taskMasterLifecycle,
+            taskMaster,
             new TaskStorageQueryAdapter(taskStorage),
-            taskLogProvider,
+            taskLogStreamer,
             configManager
         )
     );
@@ -325,37 +316,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     root.addServlet(new ServletHolder(new DefaultServlet()), "/druid/*");
     root.addServlet(new ServletHolder(new DefaultServlet()), "/mmx/*"); // backwards compatibility
     root.addEventListener(new GuiceServletConfig(injector));
-    root.addFilter(
-        new FilterHolder(
-            new RedirectFilter(
-                new RedirectInfo()
-                {
-                  @Override
-                  public boolean doLocal()
-                  {
-                    return taskMasterLifecycle.isLeading();
-                  }
-
-                  @Override
-                  public URL getRedirectURL(String queryString, String requestURI)
-                  {
-                    try {
-                      return new URL(
-                          String.format(
-                              "http://%s%s",
-                              taskMasterLifecycle.getLeader(),
-                              requestURI
-                          )
-                      );
-                    }
-                    catch (Exception e) {
-                      throw Throwables.propagate(e);
-                    }
-                  }
-                }
-            )
-        ), "/*", null
-    );
+    root.addFilter(new FilterHolder(new RedirectFilter(new OverlordRedirectInfo(taskMaster))), "/*", null);
     root.addFilter(GuiceFilter.class, "/druid/indexer/v1/*", null);
     root.addFilter(GuiceFilter.class, "/mmx/merger/v1/*", null); //backwards compatibility, soon to be removed
 
@@ -367,27 +328,27 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
     if (taskActionClientFactory == null) {
       taskActionClientFactory = new LocalTaskActionClientFactory(
           taskStorage,
-          new TaskActionToolbox(taskQueue, taskLockbox, mergerDBCoordinator, emitter)
+          new TaskActionToolbox(taskQueue, taskLockbox, indexerDBCoordinator, emitter)
       );
     }
   }
 
   private void initializeTaskMasterLifecycle()
   {
-    if (taskMasterLifecycle == null) {
+    if (taskMaster == null) {
       final DruidNode nodeConfig = getConfigFactory().build(DruidNode.class);
-      taskMasterLifecycle = new TaskMasterLifecycle(
+      taskMaster = new TaskMaster(
           taskQueue,
           taskActionClientFactory,
-          config,
           nodeConfig,
+          getZkPaths(),
           taskRunnerFactory,
           resourceManagementSchedulerFactory,
           getCuratorFramework(),
           serviceAnnouncer,
           emitter
       );
-      getLifecycle().addManagedInstance(taskMasterLifecycle);
+      getLifecycle().addManagedInstance(taskMaster);
     }
   }
 
@@ -398,8 +359,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
       if (taskLogConfig.getLogType().equalsIgnoreCase("s3")) {
         initializeS3Service();
         persistentTaskLogs = new S3TaskLogs(
-            taskLogConfig.getLogStorageBucket(),
-            taskLogConfig.getLogStoragePrefix(),
+            null, // TODO: eliminate
             s3Service
         );
       } else if (taskLogConfig.getLogType().equalsIgnoreCase("noop")) {
@@ -412,30 +372,16 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
 
   private void initializeTaskLogProvider()
   {
-    if (taskLogProvider == null) {
-      final List<TaskLogProvider> providers = Lists.newArrayList();
+    if (taskLogStreamer == null) {
+      final List<TaskLogStreamer> providers = Lists.newArrayList();
 
-      // Use our TaskRunner if it is also a TaskLogProvider
-      providers.add(
-          new TaskLogProvider()
-          {
-            @Override
-            public Optional<InputSupplier<InputStream>> streamTaskLog(String taskid, long offset) throws IOException
-            {
-              final TaskRunner runner = taskMasterLifecycle.getTaskRunner().orNull();
-              if (runner instanceof TaskLogProvider) {
-                return ((TaskLogProvider) runner).streamTaskLog(taskid, offset);
-              } else {
-                return Optional.absent();
-              }
-            }
-          }
-      );
+      // Use our TaskRunner if it is also a TaskLogStreamer
+      providers.add(new TaskRunnerTaskLogStreamer(IndexerCoordinatorNode.this.taskMaster));
 
       // Use our persistent log storage
       providers.add(persistentTaskLogs);
 
-      taskLogProvider = new SwitchingTaskLogProvider(providers);
+      taskLogStreamer = new SwitchingTaskLogStreamer(providers);
     }
   }
 
@@ -569,8 +515,8 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
 
   public void initializeMergeDBCoordinator()
   {
-    if (mergerDBCoordinator == null) {
-      mergerDBCoordinator = new MergerDBCoordinator(
+    if (indexerDBCoordinator == null) {
+      indexerDBCoordinator = new IndexerDBCoordinator(
           getJsonMapper(),
           dbConnectorConfig,
           getDbTables().get(),
@@ -595,7 +541,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   public void initializeTaskQueue()
   {
     if (taskQueue == null) {
-      // Don't start it here. The TaskMasterLifecycle will handle that when it feels like it.
+      // Don't start it here. The TaskMaster will handle that when it feels like it.
       taskQueue = new TaskQueue(taskStorage, taskLockbox);
     }
   }
@@ -623,7 +569,7 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
         final IndexerDbConnectorConfig dbConnectorConfig = getConfigFactory().build(IndexerDbConnectorConfig.class);
         dbi.createTaskTables();
 
-        taskStorage = new DbTaskStorage(getJsonMapper(), dbConnectorConfig, dbi.getDBI());
+        taskStorage = new DbTaskStorage(getJsonMapper(), null, dbi.getDBI()); // TODO: eliminate
       } else {
         throw new ISE("Invalid storage implementation: %s", config.getStorageImpl());
       }
@@ -634,41 +580,23 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   {
     if (taskRunnerFactory == null) {
       if (config.getRunnerImpl().equals("remote")) {
-        taskRunnerFactory = new TaskRunnerFactory()
-        {
-          @Override
-          public TaskRunner build()
-          {
-            final CuratorFramework curator = getCuratorFramework();
-            final RemoteTaskRunnerConfig remoteTaskRunnerConfig = getConfigFactory().build(RemoteTaskRunnerConfig.class);
-            return new RemoteTaskRunner(
-                getJsonMapper(),
-                remoteTaskRunnerConfig,
-                curator,
-                new SimplePathChildrenCacheFactory.Builder().withCompressed(remoteTaskRunnerConfig.enableCompression())
-                                                            .build(),
-                configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class),
-                httpClient
-            );
-          }
-        };
+        taskRunnerFactory = new RemoteTaskRunnerFactory(
+            getCuratorFramework(),
+            getConfigFactory().build(RemoteTaskRunnerConfig.class),
+            getZkPaths(),
+            getJsonMapper(),
+            DSuppliers.of(configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class)),
+            httpClient
+        );
 
       } else if (config.getRunnerImpl().equals("local")) {
-        taskRunnerFactory = new TaskRunnerFactory()
-        {
-          @Override
-          public TaskRunner build()
-          {
-            final ExecutorService runnerExec = Executors.newFixedThreadPool(config.getNumLocalThreads());
-            return new ForkingTaskRunner(
-                getConfigFactory().build(ForkingTaskRunnerConfig.class),
-                getProps(),
-                persistentTaskLogs,
-                runnerExec,
-                getJsonMapper()
-            );
-          }
-        };
+        taskRunnerFactory = new ForkingTaskRunnerFactory(
+            getConfigFactory().build(ForkingTaskRunnerConfig.class),
+            getProps(),
+            getJsonMapper(),
+            persistentTaskLogs,
+            null // TODO: eliminate
+        );
       } else {
         throw new ISE("Invalid runner implementation: %s", config.getRunnerImpl());
       }
@@ -679,62 +607,9 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
   {
     if (resourceManagementSchedulerFactory == null) {
       if (!config.isAutoScalingEnabled()) {
-        resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
-        {
-          @Override
-          public ResourceManagementScheduler build(RemoteTaskRunner runner)
-          {
-            return new NoopResourceManagementScheduler();
-          }
-        };
+        resourceManagementSchedulerFactory = new NoopResourceManagementSchedulerFactory();
       } else {
-        resourceManagementSchedulerFactory = new ResourceManagementSchedulerFactory()
-        {
-          @Override
-          public ResourceManagementScheduler build(RemoteTaskRunner runner)
-          {
-            final ScheduledExecutorService scalingScheduledExec = Executors.newScheduledThreadPool(
-                1,
-                new ThreadFactoryBuilder()
-                    .setDaemon(true)
-                    .setNameFormat("ScalingExec--%d")
-                    .build()
-            );
-            final AtomicReference<WorkerSetupData> workerSetupData = configManager.watch(
-                WorkerSetupData.CONFIG_KEY, WorkerSetupData.class
-            );
-
-            AutoScalingStrategy strategy;
-            if (config.getAutoScalingImpl().equalsIgnoreCase("ec2")) {
-              strategy = new EC2AutoScalingStrategy(
-                  getJsonMapper(),
-                  new AmazonEC2Client(
-                      new BasicAWSCredentials(
-                          PropUtils.getProperty(getProps(), "com.metamx.aws.accessKey"),
-                          PropUtils.getProperty(getProps(), "com.metamx.aws.secretKey")
-                      )
-                  ),
-                  getConfigFactory().build(EC2AutoScalingStrategyConfig.class),
-                  workerSetupData
-              );
-            } else if (config.getAutoScalingImpl().equalsIgnoreCase("noop")) {
-              strategy = new NoopAutoScalingStrategy();
-            } else {
-              throw new ISE("Invalid strategy implementation: %s", config.getAutoScalingImpl());
-            }
-
-            return new ResourceManagementScheduler(
-                runner,
-                new SimpleResourceManagementStrategy(
-                    strategy,
-                    getConfigFactory().build(SimpleResourceManagmentConfig.class),
-                    workerSetupData
-                ),
-                getConfigFactory().build(ResourceManagementSchedulerConfig.class),
-                scalingScheduledExec
-            );
-          }
-        };
+        resourceManagementSchedulerFactory = new WithOpResourceManagementSchedulerFactory(configManager);
       }
     }
   }
@@ -798,6 +673,70 @@ public class IndexerCoordinatorNode extends QueryableNode<IndexerCoordinatorNode
       }
 
       return new IndexerCoordinatorNode(props, lifecycle, jsonMapper, smileMapper, configFactory);
+    }
+  }
+
+  private static class NoopResourceManagementSchedulerFactory implements ResourceManagementSchedulerFactory
+  {
+    @Override
+    public ResourceManagementScheduler build(RemoteTaskRunner runner)
+    {
+      return new NoopResourceManagementScheduler();
+    }
+  }
+
+  private class WithOpResourceManagementSchedulerFactory implements ResourceManagementSchedulerFactory
+  {
+    private final JacksonConfigManager configManager;
+
+    public WithOpResourceManagementSchedulerFactory(JacksonConfigManager configManager)
+    {
+      this.configManager = configManager;
+    }
+
+    @Override
+    public ResourceManagementScheduler build(RemoteTaskRunner runner)
+    {
+      final ScheduledExecutorService scalingScheduledExec = Executors.newScheduledThreadPool(
+          1,
+          new ThreadFactoryBuilder()
+              .setDaemon(true)
+              .setNameFormat("ScalingExec--%d")
+              .build()
+      );
+      final AtomicReference<WorkerSetupData> workerSetupData = configManager.watch(
+          WorkerSetupData.CONFIG_KEY, WorkerSetupData.class
+      );
+
+      AutoScalingStrategy strategy;
+      if (config.getAutoScalingImpl().equalsIgnoreCase("ec2")) {
+        strategy = new EC2AutoScalingStrategy(
+            getJsonMapper(),
+            new AmazonEC2Client(
+                new BasicAWSCredentials(
+                    PropUtils.getProperty(getProps(), "com.metamx.aws.accessKey"),
+                    PropUtils.getProperty(getProps(), "com.metamx.aws.secretKey")
+                )
+            ),
+            null, // TODO: eliminate
+            DSuppliers.of(workerSetupData)
+        );
+      } else if (config.getAutoScalingImpl().equalsIgnoreCase("noop")) {
+        strategy = new NoopAutoScalingStrategy();
+      } else {
+        throw new ISE("Invalid strategy implementation: %s", config.getAutoScalingImpl());
+      }
+
+      return new ResourceManagementScheduler(
+          runner,
+          new SimpleResourceManagementStrategy(
+              strategy,
+              getConfigFactory().build(SimpleResourceManagementConfig.class),
+              DSuppliers.of(workerSetupData)
+          ),
+          getConfigFactory().build(ResourceManagementSchedulerConfig.class),
+          scalingScheduledExec
+      );
     }
   }
 }

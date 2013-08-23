@@ -36,10 +36,6 @@ public abstract class IndexerCoordinatorConfig extends ZkPathsConfig
   @Config("druid.host")
   public abstract String getServerName();
 
-  @Config("druid.indexer.threads")
-  @Default("1")
-  public abstract int getNumLocalThreads();
-
   @Config("druid.indexer.runner")
   @Default("local")
   public abstract String getRunnerImpl();

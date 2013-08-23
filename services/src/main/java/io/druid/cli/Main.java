@@ -21,6 +21,7 @@ package io.druid.cli;
 
 import io.airlift.command.Cli;
 import io.airlift.command.Help;
+import io.airlift.command.ParseException;
 
 /**
  */
@@ -38,8 +39,22 @@ public class Main
     builder.withGroup("server")
            .withDescription("Run one of the Druid server types.")
            .withDefaultCommand(Help.class)
-           .withCommands(CliCoordinator.class, CliHistorical.class, CliBroker.class, CliRealtime.class, CliRealtimeExample.class);
+           .withCommands(CliCoordinator.class, CliHistorical.class, CliBroker.class, CliRealtime.class, CliOverlord.class);
 
-    builder.build().parse(args).run();
+    builder.withGroup("example")
+           .withDescription("Run an example")
+           .withDefaultCommand(Help.class)
+           .withCommands(CliRealtimeExample.class);
+
+    final Cli<Runnable> cli = builder.build();
+    try {
+      cli.parse(args).run();
+    }
+    catch (ParseException e) {
+      System.out.println("ERROR!!!!");
+      System.out.println(e.getMessage());
+      System.out.println("===");
+      cli.parse(new String[]{"help"}).run();
+    }
   }
 }

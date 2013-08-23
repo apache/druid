@@ -19,14 +19,17 @@
 
 package com.metamx.druid.guice;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.ec2.AmazonEC2;
+import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
-import com.metamx.druid.loading.S3CredentialsConfig;
+import com.metamx.druid.loading.AWSCredentialsConfig;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.security.AWSCredentials;
 
 /**
  */
@@ -35,18 +38,39 @@ public class S3Module implements Module
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.s3", S3CredentialsConfig.class);
+    JsonConfigProvider.bind(binder, "druid.s3", AWSCredentialsConfig.class);
   }
 
   @Provides
   @LazySingleton
-  public RestS3Service getRestS3Service(S3CredentialsConfig config)
+  public AWSCredentials getAWSCredentials(AWSCredentialsConfig config)
+  {
+    return new BasicAWSCredentials(config.getAccessKey(), config.getSecretKey());
+  }
+
+  @Provides
+  @LazySingleton
+  public org.jets3t.service.security.AWSCredentials  getJets3tAWSCredentials(AWSCredentialsConfig config)
+  {
+    return new org.jets3t.service.security.AWSCredentials(config.getAccessKey(), config.getSecretKey());
+  }
+
+  @Provides
+  @LazySingleton
+  public RestS3Service getRestS3Service(org.jets3t.service.security.AWSCredentials credentials)
   {
     try {
-      return new RestS3Service(new AWSCredentials(config.getAccessKey(), config.getSecretKey()));
+      return new RestS3Service(credentials);
     }
     catch (S3ServiceException e) {
       throw new ProvisionException("Unable to create a RestS3Service", e);
     }
+  }
+
+  @Provides
+  @LazySingleton
+  public AmazonEC2 getEc2Client(AWSCredentials credentials)
+  {
+    return new AmazonEC2Client(credentials);
   }
 }

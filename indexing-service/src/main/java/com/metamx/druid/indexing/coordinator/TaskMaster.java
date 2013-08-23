@@ -21,20 +21,21 @@ package com.metamx.druid.indexing.coordinator;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.metamx.common.ISE;
+import com.google.inject.Inject;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
+import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.indexing.common.actions.TaskActionClient;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
 import com.metamx.druid.indexing.common.task.Task;
-import com.metamx.druid.indexing.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.druid.indexing.coordinator.exec.TaskConsumer;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementSchedulerFactory;
 import com.metamx.druid.initialization.DruidNode;
 import com.metamx.druid.initialization.Initialization;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
@@ -42,13 +43,14 @@ import org.apache.curator.framework.recipes.leader.LeaderSelector;
 import org.apache.curator.framework.recipes.leader.LeaderSelectorListener;
 import org.apache.curator.framework.state.ConnectionState;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Encapsulates the indexer leadership lifecycle.
  */
-public class TaskMasterLifecycle
+public class TaskMaster
 {
   private final LeaderSelector leaderSelector;
   private final ReentrantLock giant = new ReentrantLock();
@@ -56,17 +58,20 @@ public class TaskMasterLifecycle
   private final TaskQueue taskQueue;
   private final TaskActionClientFactory taskActionClientFactory;
 
+  private final AtomicReference<Lifecycle> leaderLifecycleRef = new AtomicReference<Lifecycle>(null);
+
   private volatile boolean leading = false;
   private volatile TaskRunner taskRunner;
   private volatile ResourceManagementScheduler resourceManagementScheduler;
 
-  private static final EmittingLogger log = new EmittingLogger(TaskMasterLifecycle.class);
+  private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
-  public TaskMasterLifecycle(
+  @Inject
+  public TaskMaster(
       final TaskQueue taskQueue,
       final TaskActionClientFactory taskActionClientFactory,
-      final IndexerCoordinatorConfig indexerCoordinatorConfig,
-      final DruidNode node,
+      @Self final DruidNode node,
+      final ZkPathsConfig zkPaths,
       final TaskRunnerFactory runnerFactory,
       final ResourceManagementSchedulerFactory managementSchedulerFactory,
       final CuratorFramework curator,
@@ -78,7 +83,7 @@ public class TaskMasterLifecycle
     this.taskActionClientFactory = taskActionClientFactory;
 
     this.leaderSelector = new LeaderSelector(
-        curator, indexerCoordinatorConfig.getIndexerLeaderLatchPath(), new LeaderSelectorListener()
+        curator, zkPaths.getIndexerLeaderLatchPath(), new LeaderSelectorListener()
     {
       @Override
       public void takeLeadership(CuratorFramework client) throws Exception
@@ -101,6 +106,11 @@ public class TaskMasterLifecycle
 
           // Sensible order to start stuff:
           final Lifecycle leaderLifecycle = new Lifecycle();
+          if (leaderLifecycleRef.getAndSet(leaderLifecycle) != null) {
+            log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
+               .emit();
+          }
+
           leaderLifecycle.addManagedInstance(taskRunner);
           leaderLifecycle.addHandler(
               new Lifecycle.Handler()
@@ -122,10 +132,7 @@ public class TaskMasterLifecycle
           Initialization.announceDefaultService(node, serviceAnnouncer, leaderLifecycle);
           leaderLifecycle.addManagedInstance(taskConsumer);
 
-          if ("remote".equalsIgnoreCase(indexerCoordinatorConfig.getRunnerImpl())) {
-            if (!(taskRunner instanceof RemoteTaskRunner)) {
-              throw new ISE("WTF?! We configured a remote runner and got %s", taskRunner.getClass());
-            }
+          if (taskRunner instanceof RemoteTaskRunner) {
             resourceManagementScheduler = managementSchedulerFactory.build((RemoteTaskRunner) taskRunner);
             leaderLifecycle.addManagedInstance(resourceManagementScheduler);
           }
@@ -144,7 +151,6 @@ public class TaskMasterLifecycle
           finally {
             log.info("Bowing out!");
             stopLeading();
-            leaderLifecycle.stop();
           }
         }
         catch (Exception e) {
@@ -167,7 +173,7 @@ public class TaskMasterLifecycle
     }
     );
 
-    leaderSelector.setId(indexerCoordinatorConfig.getServerName());
+    leaderSelector.setId(node.getHost());
     leaderSelector.autoRequeue();
   }
 
@@ -216,6 +222,10 @@ public class TaskMasterLifecycle
       if (leading) {
         leading = false;
         mayBeStopped.signalAll();
+        final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
+        if (leaderLifecycle != null) {
+          leaderLifecycle.stop();
+        }
       }
     }
     finally {

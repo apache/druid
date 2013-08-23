@@ -28,11 +28,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
+import com.metamx.druid.db.DbTablesConfig;
 import com.metamx.druid.indexing.common.TaskLock;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.actions.TaskAction;
 import com.metamx.druid.indexing.common.task.Task;
-import com.metamx.druid.indexing.coordinator.config.IndexerDbConnectorConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
@@ -46,15 +47,16 @@ import java.util.Map;
 public class DbTaskStorage implements TaskStorage
 {
   private final ObjectMapper jsonMapper;
-  private final IndexerDbConnectorConfig dbConnectorConfig;
+  private final DbTablesConfig dbTables;
   private final IDBI dbi;
 
   private static final EmittingLogger log = new EmittingLogger(DbTaskStorage.class);
 
-  public DbTaskStorage(ObjectMapper jsonMapper, IndexerDbConnectorConfig dbConnectorConfig, IDBI dbi)
+  @Inject
+  public DbTaskStorage(ObjectMapper jsonMapper, DbTablesConfig dbTables, IDBI dbi)
   {
     this.jsonMapper = jsonMapper;
-    this.dbConnectorConfig = dbConnectorConfig;
+    this.dbTables = dbTables;
     this.dbi = dbi;
   }
 
@@ -82,7 +84,7 @@ public class DbTaskStorage implements TaskStorage
               handle.createStatement(
                   String.format(
                       "INSERT INTO %s (id, created_date, datasource, payload, active, status_payload) VALUES (:id, :created_date, :datasource, :payload, :active, :status_payload)",
-                      dbConnectorConfig.getTaskTable()
+                      dbTables.getTasksTable()
                   )
               )
                     .bind("id", task.getId())
@@ -123,7 +125,7 @@ public class DbTaskStorage implements TaskStorage
             return handle.createStatement(
                 String.format(
                     "UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = 1",
-                    dbConnectorConfig.getTaskTable()
+                    dbTables.getTasksTable()
                 )
             )
                   .bind("id", status.getId())
@@ -152,7 +154,7 @@ public class DbTaskStorage implements TaskStorage
                 handle.createQuery(
                     String.format(
                         "SELECT payload FROM %s WHERE id = :id",
-                        dbConnectorConfig.getTaskTable()
+                        dbTables.getTasksTable()
                     )
                 )
                       .bind("id", taskid)
@@ -182,7 +184,7 @@ public class DbTaskStorage implements TaskStorage
                 handle.createQuery(
                     String.format(
                         "SELECT status_payload FROM %s WHERE id = :id",
-                        dbConnectorConfig.getTaskTable()
+                        dbTables.getTasksTable()
                     )
                 )
                       .bind("id", taskid)
@@ -212,7 +214,7 @@ public class DbTaskStorage implements TaskStorage
                 handle.createQuery(
                     String.format(
                         "SELECT id, payload, status_payload FROM %s WHERE active = 1",
-                        dbConnectorConfig.getTaskTable()
+                        dbTables.getTasksTable()
                     )
                 )
                       .list();
@@ -261,7 +263,7 @@ public class DbTaskStorage implements TaskStorage
             return handle.createStatement(
                 String.format(
                     "INSERT INTO %s (task_id, lock_payload) VALUES (:task_id, :lock_payload)",
-                    dbConnectorConfig.getTaskLockTable()
+                    dbTables.getTaskLockTable()
                 )
             )
                          .bind("task_id", taskid)
@@ -296,7 +298,7 @@ public class DbTaskStorage implements TaskStorage
                 return handle.createStatement(
                     String.format(
                         "DELETE FROM %s WHERE id = :id",
-                        dbConnectorConfig.getTaskLockTable()
+                        dbTables.getTaskLockTable()
                     )
                 )
                              .bind("id", id)
@@ -341,7 +343,7 @@ public class DbTaskStorage implements TaskStorage
             return handle.createStatement(
                 String.format(
                     "INSERT INTO %s (task_id, log_payload) VALUES (:task_id, :log_payload)",
-                    dbConnectorConfig.getTaskLogTable()
+                    dbTables.getTaskLogTable()
                 )
             )
                          .bind("task_id", task.getId())
@@ -365,7 +367,7 @@ public class DbTaskStorage implements TaskStorage
                 handle.createQuery(
                     String.format(
                         "SELECT log_payload FROM %s WHERE task_id = :task_id",
-                        dbConnectorConfig.getTaskLogTable()
+                        dbTables.getTaskLogTable()
                     )
                 )
                       .bind("task_id", taskid)
@@ -402,7 +404,7 @@ public class DbTaskStorage implements TaskStorage
                 handle.createQuery(
                     String.format(
                         "SELECT id, lock_payload FROM %s WHERE task_id = :task_id",
-                        dbConnectorConfig.getTaskLockTable()
+                        dbTables.getTaskLockTable()
                     )
                 )
                       .bind("task_id", taskid)

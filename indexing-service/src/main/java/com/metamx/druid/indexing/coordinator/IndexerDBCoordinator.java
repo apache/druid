@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
@@ -52,16 +53,17 @@ import java.util.Set;
 
 /**
  */
-public class MergerDBCoordinator
+public class IndexerDBCoordinator
 {
-  private static final Logger log = new Logger(MergerDBCoordinator.class);
+  private static final Logger log = new Logger(IndexerDBCoordinator.class);
 
   private final ObjectMapper jsonMapper;
   private final DbConnectorConfig dbConnectorConfig;
   private final DbTablesConfig dbTables;
   private final IDBI dbi;
 
-  public MergerDBCoordinator(
+  @Inject
+  public IndexerDBCoordinator(
       ObjectMapper jsonMapper,
       DbConnectorConfig dbConnectorConfig,
       DbTablesConfig dbTables,

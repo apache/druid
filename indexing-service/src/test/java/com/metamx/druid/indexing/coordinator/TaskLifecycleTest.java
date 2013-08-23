@@ -87,7 +87,7 @@ public class TaskLifecycleTest
   private TaskLockbox tl = null;
   private TaskQueue tq = null;
   private TaskRunner tr = null;
-  private MockMergerDBCoordinator mdc = null;
+  private MockIndexerDBCoordinator mdc = null;
   private TaskActionClientFactory tac = null;
   private TaskToolboxFactory tb = null;
   private TaskConsumer tc = null;
@@ -410,12 +410,12 @@ public class TaskLifecycleTest
     return status;
   }
 
-  private static class MockMergerDBCoordinator extends MergerDBCoordinator
+  private static class MockIndexerDBCoordinator extends IndexerDBCoordinator
   {
     final private Set<DataSegment> published = Sets.newHashSet();
     final private Set<DataSegment> nuked = Sets.newHashSet();
 
-    private MockMergerDBCoordinator()
+    private MockIndexerDBCoordinator()
     {
       super(null, null, null, null);
     }
@@ -462,9 +462,9 @@ public class TaskLifecycleTest
     }
   }
 
-  private static MockMergerDBCoordinator newMockMDC()
+  private static MockIndexerDBCoordinator newMockMDC()
   {
-    return new MockMergerDBCoordinator();
+    return new MockIndexerDBCoordinator();
   }
 
   private static ServiceEmitter newMockEmitter()

@@ -366,8 +366,7 @@ public class WorkerNode extends QueryableNode<WorkerNode>
       if (taskLogConfig.getLogStorageBucket() != null) {
         initializeS3Service();
         persistentTaskLogs = new S3TaskLogs(
-            taskLogConfig.getLogStorageBucket(),
-            taskLogConfig.getLogStoragePrefix(),
+            null, // TODO: eliminate
             s3Service
         );
       } else {
@@ -383,8 +382,8 @@ public class WorkerNode extends QueryableNode<WorkerNode>
           getConfigFactory().build(ForkingTaskRunnerConfig.class),
           getProps(),
           persistentTaskLogs,
-          Executors.newFixedThreadPool(workerConfig.getCapacity()),
-          getJsonMapper()
+          getJsonMapper(),
+          null // todo: eliminate
       );
     }
   }

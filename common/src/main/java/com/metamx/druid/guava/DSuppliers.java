@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,42 +17,25 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.indexing.coordinator.scaling;
+package com.metamx.druid.guava;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
 
-import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class AutoScalingData
+public class DSuppliers
 {
-  private final List<String> nodeIds;
-  private final List nodes;
-
-  public AutoScalingData(List<String> nodeIds, List nodes)
+  public static <T> Supplier<T> of(final AtomicReference<T> ref)
   {
-    this.nodeIds = nodeIds;
-    this.nodes = nodes;
-  }
-
-  @JsonProperty
-  public List<String> getNodeIds()
-  {
-    return nodeIds;
-  }
-
-  public List getNodes()
-  {
-    return nodes;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "AutoScalingData{" +
-           "nodeIds=" + nodeIds +
-           ", nodes=" + nodes +
-           '}';
+    return new Supplier<T>()
+    {
+      @Override
+      public T get()
+      {
+        return ref.get();
+      }
+    };
   }
 }

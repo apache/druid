@@ -21,9 +21,11 @@ package com.metamx.druid.indexing.coordinator.scaling;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.indexing.coordinator.RemoteTaskRunnerWorkItem;
 import com.metamx.druid.indexing.coordinator.TaskRunnerWorkItem;
@@ -37,7 +39,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -46,8 +47,8 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   private static final EmittingLogger log = new EmittingLogger(SimpleResourceManagementStrategy.class);
 
   private final AutoScalingStrategy autoScalingStrategy;
-  private final SimpleResourceManagmentConfig config;
-  private final AtomicReference<WorkerSetupData> workerSetupdDataRef;
+  private final SimpleResourceManagementConfig config;
+  private final Supplier<WorkerSetupData> workerSetupdDataRef;
   private final ScalingStats scalingStats;
 
   private final ConcurrentSkipListSet<String> currentlyProvisioning = new ConcurrentSkipListSet<String>();
@@ -56,10 +57,11 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   private volatile DateTime lastProvisionTime = new DateTime();
   private volatile DateTime lastTerminateTime = new DateTime();
 
+  @Inject
   public SimpleResourceManagementStrategy(
       AutoScalingStrategy autoScalingStrategy,
-      SimpleResourceManagmentConfig config,
-      AtomicReference<WorkerSetupData> workerSetupdDataRef
+      SimpleResourceManagementConfig config,
+      Supplier<WorkerSetupData> workerSetupdDataRef
   )
   {
     this.autoScalingStrategy = autoScalingStrategy;
@@ -96,7 +98,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
 
     List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
         Lists.newArrayList(
-            Iterables.transform(
+            Iterables.<ZkWorker, String>transform(
                 zkWorkers,
                 new Function<ZkWorker, String>()
                 {
@@ -134,7 +136,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
           durSinceLastProvision
       );
 
-      if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration())) {
+      if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
         log.makeAlert("Worker node provisioning taking too long!")
            .addData("millisSinceLastProvision", durSinceLastProvision.getMillis())
            .addData("provisioningCount", currentlyProvisioning.size())
@@ -198,7 +200,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
                     {
                       return input.getRunningTasks().isEmpty()
                              && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
-                                >= config.getMaxWorkerIdleTimeMillisBeforeDeletion();
+                                >= config.getWorkerIdleTimeout().getMillis();
                     }
                   }
               )
@@ -240,7 +242,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
           currentlyTerminating
       );
 
-      if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration())) {
+      if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
         log.makeAlert("Worker node termination taking too long!")
            .addData("millisSinceLastTerminate", durSinceLastTerminate.getMillis())
            .addData("terminatingCount", currentlyTerminating.size())
@@ -263,11 +265,9 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   {
     long now = System.currentTimeMillis();
     for (TaskRunnerWorkItem pendingTask : pendingTasks) {
-      if (new Duration(pendingTask.getQueueInsertionTime().getMillis(), now).isEqual(config.getMaxPendingTaskDuration())
-          ||
-          new Duration(
-              pendingTask.getQueueInsertionTime().getMillis(), now
-          ).isLongerThan(config.getMaxPendingTaskDuration())) {
+      final Duration durationSinceInsertion = new Duration(pendingTask.getQueueInsertionTime().getMillis(), now);
+      final Duration timeoutDuration = config.getPendingTaskTimeout().toStandardDuration();
+      if (durationSinceInsertion.isEqual(timeoutDuration) || durationSinceInsertion.isLongerThan(timeoutDuration)) {
         return true;
       }
     }

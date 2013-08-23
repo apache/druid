@@ -65,7 +65,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
       throw new ISE("Segments not covered by locks for task[%s]: %s", task.getId(), segments);
     }
 
-    final Set<DataSegment> retVal = toolbox.getMergerDBCoordinator().announceHistoricalSegments(segments);
+    final Set<DataSegment> retVal = toolbox.getIndexerDBCoordinator().announceHistoricalSegments(segments);
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()

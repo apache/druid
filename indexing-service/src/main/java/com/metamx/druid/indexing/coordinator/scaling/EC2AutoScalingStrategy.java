@@ -19,7 +19,7 @@
 
 package com.metamx.druid.indexing.coordinator.scaling;
 
-import com.amazonaws.services.ec2.AmazonEC2Client;
+import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Filter;
@@ -30,8 +30,9 @@ import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import com.metamx.druid.indexing.coordinator.config.EC2AutoScalingStrategyConfig;
+import com.google.inject.Inject;
 import com.metamx.druid.indexing.coordinator.setup.EC2NodeData;
 import com.metamx.druid.indexing.coordinator.setup.GalaxyUserData;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
@@ -40,24 +41,24 @@ import org.apache.commons.codec.binary.Base64;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
+public class EC2AutoScalingStrategy implements AutoScalingStrategy
 {
   private static final EmittingLogger log = new EmittingLogger(EC2AutoScalingStrategy.class);
 
   private final ObjectMapper jsonMapper;
-  private final AmazonEC2Client amazonEC2Client;
-  private final EC2AutoScalingStrategyConfig config;
-  private final AtomicReference<WorkerSetupData> workerSetupDataRef;
+  private final AmazonEC2 amazonEC2Client;
+  private final SimpleResourceManagementConfig config;
+  private final Supplier<WorkerSetupData> workerSetupDataRef;
 
+  @Inject
   public EC2AutoScalingStrategy(
       ObjectMapper jsonMapper,
-      AmazonEC2Client amazonEC2Client,
-      EC2AutoScalingStrategyConfig config,
-      AtomicReference<WorkerSetupData> workerSetupDataRef
+      AmazonEC2 amazonEC2Client,
+      SimpleResourceManagementConfig config,
+      Supplier<WorkerSetupData> workerSetupDataRef
   )
   {
     this.jsonMapper = jsonMapper;
@@ -67,7 +68,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
   }
 
   @Override
-  public AutoScalingData<Instance> provision()
+  public AutoScalingData provision()
   {
     try {
       WorkerSetupData setupData = workerSetupDataRef.get();
@@ -110,7 +111,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
 
       log.info("Created instances: %s", instanceIds);
 
-      return new AutoScalingData<Instance>(
+      return new AutoScalingData(
           Lists.transform(
               result.getReservation().getInstances(),
               new Function<Instance, String>()
@@ -133,10 +134,10 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
   }
 
   @Override
-  public AutoScalingData<Instance> terminate(List<String> ips)
+  public AutoScalingData terminate(List<String> ips)
   {
     if (ips.isEmpty()) {
-      return new AutoScalingData<Instance>(Lists.<String>newArrayList(), Lists.<Instance>newArrayList());
+      return new AutoScalingData(Lists.<String>newArrayList(), Lists.<Instance>newArrayList());
     }
 
     DescribeInstancesResult result = amazonEC2Client.describeInstances(
@@ -169,7 +170,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy<Instance>
           )
       );
 
-      return new AutoScalingData<Instance>(
+      return new AutoScalingData(
           Lists.transform(
               ips,
               new Function<String, String>()

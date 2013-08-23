@@ -35,8 +35,8 @@ import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.actions.TaskActionClient;
 import com.metamx.druid.indexing.common.actions.TaskActionHolder;
 import com.metamx.druid.indexing.common.task.Task;
-import com.metamx.druid.indexing.common.tasklogs.TaskLogProvider;
-import com.metamx.druid.indexing.coordinator.TaskMasterLifecycle;
+import com.metamx.druid.indexing.common.tasklogs.TaskLogStreamer;
+import com.metamx.druid.indexing.coordinator.TaskMaster;
 import com.metamx.druid.indexing.coordinator.TaskQueue;
 import com.metamx.druid.indexing.coordinator.TaskRunner;
 import com.metamx.druid.indexing.coordinator.TaskRunnerWorkItem;
@@ -87,9 +87,9 @@ public class IndexerCoordinatorResource
         }
       };
 
-  private final TaskMasterLifecycle taskMasterLifecycle;
+  private final TaskMaster taskMaster;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
-  private final TaskLogProvider taskLogProvider;
+  private final TaskLogStreamer taskLogStreamer;
   private final JacksonConfigManager configManager;
   private final ObjectMapper jsonMapper;
 
@@ -97,16 +97,16 @@ public class IndexerCoordinatorResource
 
   @Inject
   public IndexerCoordinatorResource(
-      TaskMasterLifecycle taskMasterLifecycle,
+      TaskMaster taskMaster,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
-      TaskLogProvider taskLogProvider,
+      TaskLogStreamer taskLogStreamer,
       JacksonConfigManager configManager,
       ObjectMapper jsonMapper
   ) throws Exception
   {
-    this.taskMasterLifecycle = taskMasterLifecycle;
+    this.taskMaster = taskMaster;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
-    this.taskLogProvider = taskLogProvider;
+    this.taskLogStreamer = taskLogStreamer;
     this.configManager = configManager;
     this.jsonMapper = jsonMapper;
   }
@@ -137,7 +137,7 @@ public class IndexerCoordinatorResource
   public Response taskPost(final Task task)
   {
     return asLeaderWith(
-        taskMasterLifecycle.getTaskQueue(),
+        taskMaster.getTaskQueue(),
         new Function<TaskQueue, Response>()
         {
           @Override
@@ -173,7 +173,7 @@ public class IndexerCoordinatorResource
   public Response doShutdown(@PathParam("taskid") final String taskid)
   {
     return asLeaderWith(
-        taskMasterLifecycle.getTaskRunner(),
+        taskMaster.getTaskRunner(),
         new Function<TaskRunner, Response>()
         {
           @Override
@@ -241,7 +241,7 @@ public class IndexerCoordinatorResource
   public <T> Response doAction(final TaskActionHolder<T> holder)
   {
     return asLeaderWith(
-        taskMasterLifecycle.getTaskActionClient(holder.getTask()),
+        taskMaster.getTaskActionClient(holder.getTask()),
         new Function<TaskActionClient, Response>()
         {
           @Override
@@ -278,7 +278,7 @@ public class IndexerCoordinatorResource
   {
     if (full != null) {
       return asLeaderWith(
-          taskMasterLifecycle.getTaskRunner(),
+          taskMaster.getTaskRunner(),
           new Function<TaskRunner, Response>()
           {
             @Override
@@ -291,7 +291,7 @@ public class IndexerCoordinatorResource
     }
 
     return asLeaderWith(
-        taskMasterLifecycle.getTaskRunner(),
+        taskMaster.getTaskRunner(),
         new Function<TaskRunner, Response>()
         {
           @Override
@@ -317,7 +317,7 @@ public class IndexerCoordinatorResource
   {
     if (full != null) {
       return asLeaderWith(
-          taskMasterLifecycle.getTaskRunner(),
+          taskMaster.getTaskRunner(),
           new Function<TaskRunner, Response>()
           {
             @Override
@@ -330,7 +330,7 @@ public class IndexerCoordinatorResource
     }
 
     return asLeaderWith(
-        taskMasterLifecycle.getTaskRunner(),
+        taskMaster.getTaskRunner(),
         new Function<TaskRunner, Response>()
         {
           @Override
@@ -353,7 +353,7 @@ public class IndexerCoordinatorResource
   public Response getWorkers()
   {
     return asLeaderWith(
-        taskMasterLifecycle.getTaskRunner(),
+        taskMaster.getTaskRunner(),
         new Function<TaskRunner, Response>()
         {
           @Override
@@ -371,7 +371,7 @@ public class IndexerCoordinatorResource
   public Response getScalingState()
   {
     return asLeaderWith(
-        taskMasterLifecycle.getResourceManagementScheduler(),
+        taskMaster.getResourceManagementScheduler(),
         new Function<ResourceManagementScheduler, Response>()
         {
           @Override
@@ -392,7 +392,7 @@ public class IndexerCoordinatorResource
   )
   {
     try {
-      final Optional<InputSupplier<InputStream>> stream = taskLogProvider.streamTaskLog(taskid, offset);
+      final Optional<InputSupplier<InputStream>> stream = taskLogStreamer.streamTaskLog(taskid, offset);
       if (stream.isPresent()) {
         return Response.ok(stream.get().getInput()).build();
       } else {

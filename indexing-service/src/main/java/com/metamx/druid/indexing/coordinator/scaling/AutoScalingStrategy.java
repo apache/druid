@@ -24,11 +24,11 @@ import java.util.List;
 /**
  * The AutoScalingStrategy has the actual methods to provision and terminate worker nodes.
  */
-public interface AutoScalingStrategy<T>
+public interface AutoScalingStrategy
 {
-  public AutoScalingData<T> provision();
+  public AutoScalingData provision();
 
-  public AutoScalingData<T> terminate(List<String> ips);
+  public AutoScalingData terminate(List<String> ips);
 
   /**
    * Provides a lookup of ip addresses to node ids

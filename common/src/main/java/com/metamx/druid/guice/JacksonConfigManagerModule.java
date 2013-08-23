@@ -19,7 +19,7 @@ public class JacksonConfigManagerModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.manager.config", ConfigManagerConfig.class);
-    binder.bind(JacksonConfigManager.class);
+    binder.bind(JacksonConfigManager.class).in(LazySingleton.class);
   }
 
   @Provides @ManageLifecycle

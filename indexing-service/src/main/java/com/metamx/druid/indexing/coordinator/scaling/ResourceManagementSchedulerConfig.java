@@ -19,24 +19,43 @@
 
 package com.metamx.druid.indexing.coordinator.scaling;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import org.joda.time.Period;
 
 /**
  */
-public abstract class ResourceManagementSchedulerConfig
+public class ResourceManagementSchedulerConfig
 {
-  @Config("druid.indexer.provisionResources.duration")
-  @Default("PT1M")
-  public abstract Duration getProvisionResourcesDuration();
+  @JsonProperty
+  private boolean doAutoscale = false;
 
-  @Config("druid.indexer.terminateResources.duration")
-  @Default("PT1H")
-  public abstract Duration getTerminateResourcesDuration();
+  @JsonProperty
+  private Period provisionPeriod = new Period("PT1M");
 
-  @Config("druid.indexer.terminateResources.originDateTime")
-  @Default("2012-01-01T00:55:00.000Z")
-  public abstract DateTime getTerminateResourcesOriginDateTime();
+  @JsonProperty
+  private Period terminatePeriod = new Period("PT1H");
+
+  @JsonProperty
+  private DateTime originTime = new DateTime("2012-01-01T00:55:00.000Z");
+
+  public boolean isDoAutoscale()
+  {
+    return doAutoscale;
+  }
+
+  public Period getProvisionPeriod()
+  {
+    return provisionPeriod;
+  }
+
+  public Period getTerminatePeriod()
+  {
+    return terminatePeriod;
+  }
+
+  public DateTime getOriginTime()
+  {
+    return originTime;
+  }
 }

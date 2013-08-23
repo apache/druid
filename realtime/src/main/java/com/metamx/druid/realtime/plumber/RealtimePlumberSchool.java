@@ -68,7 +68,6 @@ import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import com.sun.istack.internal.NotNull;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -99,32 +98,16 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final IndexGranularity segmentGranularity;
   private final Object handoffCondition = new Object();
 
-  @JacksonInject
-  @NotNull
-  private ServiceEmitter emitter;
+  private volatile ServiceEmitter emitter;
+  private volatile QueryRunnerFactoryConglomerate conglomerate = null;
+  private volatile DataSegmentPusher dataSegmentPusher = null;
+  private volatile DataSegmentAnnouncer segmentAnnouncer = null;
+  private volatile SegmentPublisher segmentPublisher = null;
+  private volatile ServerView serverView = null;
 
   private volatile VersioningPolicy versioningPolicy = null;
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
 
-  @JacksonInject
-  @NotNull
-  private volatile QueryRunnerFactoryConglomerate conglomerate = null;
-
-  @JacksonInject
-  @NotNull
-  private volatile DataSegmentPusher dataSegmentPusher = null;
-
-  @JacksonInject
-  @NotNull
-  private volatile DataSegmentAnnouncer segmentAnnouncer = null;
-
-  @JacksonInject
-  @NotNull
-  private volatile SegmentPublisher segmentPublisher = null;
-
-  @JacksonInject
-  @NotNull
-  private volatile ServerView serverView = null;
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -154,6 +137,42 @@ public class RealtimePlumberSchool implements PlumberSchool
   public void setRejectionPolicyFactory(RejectionPolicyFactory factory)
   {
     this.rejectionPolicyFactory = factory;
+  }
+
+  @JacksonInject
+  public void setEmitter(ServiceEmitter emitter)
+  {
+    this.emitter = emitter;
+  }
+
+  @JacksonInject
+  public void setConglomerate(QueryRunnerFactoryConglomerate conglomerate)
+  {
+    this.conglomerate = conglomerate;
+  }
+
+  @JacksonInject
+  public void setDataSegmentPusher(DataSegmentPusher dataSegmentPusher)
+  {
+    this.dataSegmentPusher = dataSegmentPusher;
+  }
+
+  @JacksonInject
+  public void setSegmentAnnouncer(DataSegmentAnnouncer segmentAnnouncer)
+  {
+    this.segmentAnnouncer = segmentAnnouncer;
+  }
+
+  @JacksonInject
+  public void setSegmentPublisher(SegmentPublisher segmentPublisher)
+  {
+    this.segmentPublisher = segmentPublisher;
+  }
+
+  @JacksonInject
+  public void setServerView(ServerView serverView)
+  {
+    this.serverView = serverView;
   }
 
   @Override

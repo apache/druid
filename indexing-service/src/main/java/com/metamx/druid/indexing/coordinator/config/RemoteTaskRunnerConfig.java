@@ -19,25 +19,47 @@
 
 package com.metamx.druid.indexing.coordinator.config;
 
-import com.metamx.druid.indexing.common.config.IndexerZkConfig;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
-import org.skife.config.DefaultNull;
+
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 
 /**
  */
-public abstract class RemoteTaskRunnerConfig extends IndexerZkConfig
+public class RemoteTaskRunnerConfig
 {
-  @Config("druid.indexer.taskAssignmentTimeoutDuration")
-  @Default("PT5M")
-  public abstract Duration getTaskAssignmentTimeoutDuration();
+  @JsonProperty
+  @NotNull
+  private Duration taskAssignmentTimeoutDuration = new Duration("PT5M");
 
-  @Config("druid.curator.compress")
-  @Default("false")
-  public abstract boolean enableCompression();
+  @JsonProperty
+  private boolean compressZnodes = false;
 
-  @Config("druid.indexer.worker.version")
-  @DefaultNull
-  public abstract String getWorkerVersion();
+  @JsonProperty
+  private String workerVersion = null;
+
+  @JsonProperty
+  @Min(10 * 1024)
+  private long maxZnodeBytes = 512 * 1024;
+
+  public Duration getTaskAssignmentTimeoutDuration()
+  {
+    return taskAssignmentTimeoutDuration;
+  }
+
+  public boolean isCompressZnodes()
+  {
+    return compressZnodes;
+  }
+
+  public String getWorkerVersion()
+  {
+    return workerVersion;
+  }
+
+  public long getMaxZnodeBytes()
+  {
+    return maxZnodeBytes;
+  }
 }

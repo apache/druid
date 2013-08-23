@@ -1,9 +1,9 @@
 package com.metamx.druid.indexing.common.tasklogs;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.io.InputSupplier;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.StorageService;
@@ -21,15 +21,14 @@ public class S3TaskLogs implements TaskLogs
 {
   private static final Logger log = new Logger(S3TaskLogs.class);
 
-  private final String bucket;
-  private final String prefix;
   private final StorageService service;
+  private final S3TaskLogsConfig config;
 
-  public S3TaskLogs(String bucket, String prefix, RestS3Service service)
+  @Inject
+  public S3TaskLogs(S3TaskLogsConfig config, RestS3Service service)
   {
-    this.bucket = Preconditions.checkNotNull(bucket, "bucket");
-    this.prefix = Preconditions.checkNotNull(prefix, "prefix");
-    this.service = Preconditions.checkNotNull(service, "service");
+    this.config = config;
+    this.service = service;
   }
 
   @Override
@@ -38,7 +37,7 @@ public class S3TaskLogs implements TaskLogs
     final String taskKey = getTaskLogKey(taskid);
 
     try {
-      final StorageObject objectDetails = service.getObjectDetails(bucket, taskKey, null, null, null, null);
+      final StorageObject objectDetails = service.getObjectDetails(config.getS3Bucket(), taskKey, null, null, null, null);
 
       return Optional.<InputSupplier<InputStream>>of(
           new InputSupplier<InputStream>()
@@ -59,7 +58,7 @@ public class S3TaskLogs implements TaskLogs
                 }
 
                 return service.getObject(
-                    bucket,
+                    config.getS3Bucket(),
                     taskKey,
                     null,
                     null,
@@ -95,7 +94,7 @@ public class S3TaskLogs implements TaskLogs
 
       final StorageObject object = new StorageObject(logFile);
       object.setKey(taskKey);
-      service.putObject(bucket, object);
+      service.putObject(config.getS3Bucket(), object);
     }
     catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, IOException.class);
@@ -105,6 +104,6 @@ public class S3TaskLogs implements TaskLogs
 
   private String getTaskLogKey(String taskid)
   {
-    return String.format("%s/%s/log", prefix, taskid);
+    return String.format("%s/%s/log", config.getS3Prefix(), taskid);
   }
 }

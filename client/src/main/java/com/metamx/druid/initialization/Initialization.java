@@ -220,12 +220,14 @@ public class Initialization
           @Override
           public void start() throws Exception
           {
+            log.info("Starting Curator");
             framework.start();
           }
 
           @Override
           public void stop()
           {
+            log.info("Stopping Curator");
             framework.close();
           }
         }

@@ -76,41 +76,32 @@ public class ResourceManagementScheduler
 
       ScheduledExecutors.scheduleAtFixedRate(
           exec,
-          config.getProvisionResourcesDuration(),
+          config.getProvisionPeriod().toStandardDuration(),
           new Runnable()
           {
             @Override
             public void run()
             {
-              resourceManagementStrategy.doProvision(
-                  taskRunner.getPendingTasks(),
-                  taskRunner.getWorkers()
-              );
+              resourceManagementStrategy.doProvision(taskRunner.getPendingTasks(), taskRunner.getWorkers());
             }
           }
       );
 
       // Schedule termination of worker nodes periodically
-      Period period = new Period(config.getTerminateResourcesDuration());
-      PeriodGranularity granularity = new PeriodGranularity(period, config.getTerminateResourcesOriginDateTime(), null);
+      Period period = config.getTerminatePeriod();
+      PeriodGranularity granularity = new PeriodGranularity(period, config.getOriginTime(), null);
       final long startTime = granularity.next(granularity.truncate(new DateTime().getMillis()));
 
       ScheduledExecutors.scheduleAtFixedRate(
           exec,
-          new Duration(
-              System.currentTimeMillis(),
-              startTime
-          ),
-          config.getTerminateResourcesDuration(),
+          new Duration(System.currentTimeMillis(), startTime),
+          config.getTerminatePeriod().toStandardDuration(),
           new Runnable()
           {
             @Override
             public void run()
             {
-              resourceManagementStrategy.doTerminate(
-                  taskRunner.getPendingTasks(),
-                  taskRunner.getWorkers()
-              );
+              resourceManagementStrategy.doTerminate(taskRunner.getPendingTasks(), taskRunner.getWorkers());
             }
           }
       );

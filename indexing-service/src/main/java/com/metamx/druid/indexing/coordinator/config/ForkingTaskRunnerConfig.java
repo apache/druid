@@ -1,47 +1,85 @@
 package com.metamx.druid.indexing.coordinator.config;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.metamx.druid.indexing.worker.executor.ExecutorMain;
-import org.skife.config.Config;
-import org.skife.config.Default;
 
-import java.io.File;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 
-public abstract class ForkingTaskRunnerConfig
+public class ForkingTaskRunnerConfig
 {
-  @Config("druid.indexer.taskDir")
-  @Default("/tmp/persistent")
-  public abstract File getBaseTaskDir();
+  @JsonProperty
+  @Min(1)
+  private int maxForks = 1;
 
-  @Config("druid.indexer.fork.java")
-  @Default("java")
-  public abstract String getJavaCommand();
+  @JsonProperty
+  @NotNull
+  private String taskDir = "/tmp/persistent";
 
-  @Config("druid.indexer.fork.opts")
-  @Default("")
-  public abstract String getJavaOptions();
+  @JsonProperty
+  @NotNull
+  private String javaCommand = "java";
 
-  @Config("druid.indexer.fork.classpath")
-  public String getJavaClasspath() {
-    return System.getProperty("java.class.path");
+  @JsonProperty
+  @NotNull
+  private String javaOpts = "";
+
+  @JsonProperty
+  @NotNull
+  private String classpath = System.getProperty("java.class.path");
+
+  @JsonProperty
+  @NotNull
+  private String mainClass = ExecutorMain.class.getName();
+
+  @JsonProperty
+  @Min(1024) @Max(65535)
+  private int startPort = 8080;
+
+  @JsonProperty
+  @NotNull
+  List<String> allowedPrefixes = Lists.newArrayList("com.metamx", "druid", "io.druid");
+
+  public int maxForks()
+  {
+    return maxForks;
   }
 
-  @Config("druid.indexer.fork.main")
+  public String getTaskDir()
+  {
+    return taskDir;
+  }
+
+  public String getJavaCommand()
+  {
+    return javaCommand;
+  }
+
+  public String getJavaOpts()
+  {
+    return javaOpts;
+  }
+
+  public String getClasspath()
+  {
+    return classpath;
+  }
+
   public String getMainClass()
   {
-    return ExecutorMain.class.getName();
+    return mainClass;
   }
 
-  @Config("druid.indexer.fork.hostpattern")
-  public abstract String getHostPattern();
+  public int getStartPort()
+  {
+    return startPort;
+  }
 
-  @Config("druid.indexer.fork.startport")
-  public abstract int getStartPort();
-
-  @Config("druid.indexer.properties.prefixes")
   public List<String> getAllowedPrefixes()
   {
-    return Lists.newArrayList("com.metamx", "druid");
+    return allowedPrefixes;
   }
 }

@@ -2,10 +2,11 @@ package com.metamx.druid.indexing.common.actions;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.inject.Inject;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.indexing.common.TaskLock;
 import com.metamx.druid.indexing.common.task.Task;
-import com.metamx.druid.indexing.coordinator.MergerDBCoordinator;
+import com.metamx.druid.indexing.coordinator.IndexerDBCoordinator;
 import com.metamx.druid.indexing.coordinator.TaskLockbox;
 import com.metamx.druid.indexing.coordinator.TaskQueue;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -17,19 +18,20 @@ public class TaskActionToolbox
 {
   private final TaskQueue taskQueue;
   private final TaskLockbox taskLockbox;
-  private final MergerDBCoordinator mergerDBCoordinator;
+  private final IndexerDBCoordinator indexerDBCoordinator;
   private final ServiceEmitter emitter;
 
+  @Inject
   public TaskActionToolbox(
       TaskQueue taskQueue,
       TaskLockbox taskLockbox,
-      MergerDBCoordinator mergerDBCoordinator,
+      IndexerDBCoordinator indexerDBCoordinator,
       ServiceEmitter emitter
   )
   {
     this.taskQueue = taskQueue;
     this.taskLockbox = taskLockbox;
-    this.mergerDBCoordinator = mergerDBCoordinator;
+    this.indexerDBCoordinator = indexerDBCoordinator;
     this.emitter = emitter;
   }
 
@@ -43,9 +45,9 @@ public class TaskActionToolbox
     return taskLockbox;
   }
 
-  public MergerDBCoordinator getMergerDBCoordinator()
+  public IndexerDBCoordinator getIndexerDBCoordinator()
   {
-    return mergerDBCoordinator;
+    return indexerDBCoordinator;
   }
 
   public ServiceEmitter getEmitter()

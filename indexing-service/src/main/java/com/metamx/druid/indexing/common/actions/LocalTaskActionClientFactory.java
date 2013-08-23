@@ -19,6 +19,7 @@
 
 package com.metamx.druid.indexing.common.actions;
 
+import com.google.inject.Inject;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.coordinator.TaskStorage;
 
@@ -29,6 +30,7 @@ public class LocalTaskActionClientFactory implements TaskActionClientFactory
   private final TaskStorage storage;
   private final TaskActionToolbox toolbox;
 
+  @Inject
   public LocalTaskActionClientFactory(TaskStorage storage, TaskActionToolbox toolbox)
   {
     this.storage = storage;

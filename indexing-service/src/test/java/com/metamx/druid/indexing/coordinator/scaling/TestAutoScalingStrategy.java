@@ -23,16 +23,16 @@ import java.util.List;
 
 /**
  */
-public class TestAutoScalingStrategy<T> implements AutoScalingStrategy<T>
+public class TestAutoScalingStrategy<T> implements AutoScalingStrategy
 {
   @Override
-  public AutoScalingData<T> provision()
+  public AutoScalingData provision()
   {
     return null;
   }
 
   @Override
-  public AutoScalingData<T> terminate(List<String> ips)
+  public AutoScalingData terminate(List<String> ips)
   {
     return null;
   }

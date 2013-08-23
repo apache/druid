@@ -1,5 +1,5 @@
 package com.metamx.druid.indexing.common.tasklogs;
 
-public interface TaskLogs extends TaskLogProvider, TaskLogPusher
+public interface TaskLogs extends TaskLogStreamer, TaskLogPusher
 {
 }

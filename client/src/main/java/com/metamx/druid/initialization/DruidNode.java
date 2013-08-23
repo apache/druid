@@ -31,6 +31,8 @@ import javax.validation.constraints.NotNull;
  */
 public class DruidNode
 {
+  private String hostNoPort;
+
   @JsonProperty("service")
   @NotNull
   private String serviceName = null;
@@ -54,35 +56,37 @@ public class DruidNode
 
     if (port == null) {
       if (host == null) {
-        setHostAndPort(null, -1);
+        setHostAndPort(null, -1, null);
       }
       else if (host.contains(":")) {
+        final String[] hostParts = host.split(":");
         try {
-          setHostAndPort(host, Integer.parseInt(host.split(":")[1]));
+          setHostAndPort(host, Integer.parseInt(hostParts[1]), hostParts[0]);
         }
-        catch (Exception e) {
-          setHostAndPort(host, -1);
+        catch (NumberFormatException e) {
+          setHostAndPort(host, -1, hostParts[0]);
         }
       }
       else {
         final int openPort = SocketUtil.findOpenPort(8080);
-        setHostAndPort(String.format("%s:%d", host, openPort), openPort);
+        setHostAndPort(String.format("%s:%d", host, openPort), openPort, host);
       }
     }
     else {
       if (host == null || host.contains(":")) {
-        setHostAndPort(host, port);
+        setHostAndPort(host, port, host == null ? null : host.split(":")[0]);
       }
       else {
-        setHostAndPort(String.format("%s:%d", host, port), port);
+        setHostAndPort(String.format("%s:%d", host, port), port, host);
       }
     }
   }
 
-  private void setHostAndPort(String host, int port)
+  private void setHostAndPort(String host, int port, String hostNoPort)
   {
     this.host = host;
     this.port = port;
+    this.hostNoPort = hostNoPort;
   }
 
   public String getServiceName()
@@ -98,6 +102,11 @@ public class DruidNode
   public int getPort()
   {
     return port;
+  }
+
+  public String getHostNoPort()
+  {
+    return hostNoPort;
   }
 
   @Override

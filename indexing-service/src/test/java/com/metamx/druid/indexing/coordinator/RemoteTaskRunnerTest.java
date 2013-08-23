@@ -15,6 +15,7 @@ import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
 import com.metamx.druid.curator.cache.SimplePathChildrenCacheFactory;
+import com.metamx.druid.guava.DSuppliers;
 import com.metamx.druid.indexing.TestTask;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolboxFactory;
@@ -27,6 +28,7 @@ import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.indexing.worker.Worker;
 import com.metamx.druid.indexing.worker.WorkerCuratorCoordinator;
 import com.metamx.druid.indexing.worker.WorkerTaskMonitor;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -354,9 +356,17 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
         new TestRemoteTaskRunnerConfig(),
+        new ZkPathsConfig()
+        {
+          @Override
+          public String getZkBasePath()
+          {
+            return basePath;
+          }
+        },
         cf,
         new SimplePathChildrenCacheFactory.Builder().build(),
-        new AtomicReference<WorkerSetupData>(new WorkerSetupData("0", 0, 1, null, null)),
+        DSuppliers.of(new AtomicReference<WorkerSetupData>(new WorkerSetupData("0", 0, 1, null, null))),
         null
     );
 
@@ -381,15 +391,9 @@ public class RemoteTaskRunnerTest
   private static class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   {
     @Override
-    public boolean enableCompression()
+    public boolean isCompressZnodes()
     {
       return false;
-    }
-
-    @Override
-    public String getZkBasePath()
-    {
-      return basePath;
     }
 
     @Override
@@ -399,7 +403,7 @@ public class RemoteTaskRunnerTest
     }
 
     @Override
-    public long getMaxNumBytes()
+    public long getMaxZnodeBytes()
     {
       return 1000;
     }

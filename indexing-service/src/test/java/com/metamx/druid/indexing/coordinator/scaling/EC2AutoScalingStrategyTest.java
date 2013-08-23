@@ -28,7 +28,7 @@ import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.google.common.collect.Lists;
-import com.metamx.druid.indexing.coordinator.config.EC2AutoScalingStrategyConfig;
+import com.metamx.druid.guava.DSuppliers;
 import com.metamx.druid.indexing.coordinator.setup.EC2NodeData;
 import com.metamx.druid.indexing.coordinator.setup.GalaxyUserData;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
@@ -77,21 +77,8 @@ public class EC2AutoScalingStrategyTest
     strategy = new EC2AutoScalingStrategy(
         new DefaultObjectMapper(),
         amazonEC2Client,
-        new EC2AutoScalingStrategyConfig()
-        {
-          @Override
-          public String getWorkerPort()
-          {
-            return "8080";
-          }
-
-          @Override
-          public String getWorkerVersion()
-          {
-            return "";
-          }
-        },
-        workerSetupData
+        new SimpleResourceManagementConfig().setWorkerPort(8080).setWorkerVersion(""),
+        DSuppliers.of(workerSetupData)
     );
   }
 

@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
+import com.metamx.druid.guava.DSuppliers;
 import com.metamx.druid.indexing.TestTask;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
@@ -38,8 +39,8 @@ import com.metamx.emitter.service.ServiceEventBuilder;
 import junit.framework.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -88,39 +89,13 @@ public class SimpleResourceManagementStrategyTest
     );
     simpleResourceManagementStrategy = new SimpleResourceManagementStrategy(
         autoScalingStrategy,
-        new SimpleResourceManagmentConfig()
-        {
-          @Override
-          public int getMaxWorkerIdleTimeMillisBeforeDeletion()
-          {
-            return 0;
-          }
-
-          @Override
-          public Duration getMaxScalingDuration()
-          {
-            return new Duration(1000);
-          }
-
-          @Override
-          public int getNumEventsToTrack()
-          {
-            return 1;
-          }
-
-          @Override
-          public Duration getMaxPendingTaskDuration()
-          {
-            return new Duration(0);
-          }
-
-          @Override
-          public String getWorkerVersion()
-          {
-            return "";
-          }
-        },
-        workerSetupData
+        new SimpleResourceManagementConfig()
+            .setWorkerIdleTimeout(new Period(0))
+            .setMaxScalingDuration(new Period(1000))
+            .setNumEventsToTrack(1)
+            .setPendingTaskTimeout(new Period(0))
+            .setWorkerVersion(""),
+        DSuppliers.of(workerSetupData)
     );
   }
 

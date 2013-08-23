@@ -38,12 +38,14 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
-import com.metamx.druid.indexing.common.tasklogs.TaskLogProvider;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogPusher;
+import com.metamx.druid.indexing.common.tasklogs.TaskLogStreamer;
 import com.metamx.druid.indexing.coordinator.config.ForkingTaskRunnerConfig;
 import com.metamx.druid.indexing.worker.executor.ExecutorMain;
+import com.metamx.druid.initialization.DruidNode;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
 
@@ -59,12 +61,12 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Runs tasks in separate processes using {@link ExecutorMain}.
  */
-public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
+public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 {
   private static final EmittingLogger log = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
@@ -72,6 +74,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
   private final ForkingTaskRunnerConfig config;
   private final Properties props;
   private final TaskLogPusher taskLogPusher;
+  private final DruidNode node;
   private final ListeningExecutorService exec;
   private final ObjectMapper jsonMapper;
 
@@ -81,15 +84,17 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
       ForkingTaskRunnerConfig config,
       Properties props,
       TaskLogPusher taskLogPusher,
-      ExecutorService exec,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      @Self DruidNode node
   )
   {
     this.config = config;
     this.props = props;
     this.taskLogPusher = taskLogPusher;
-    this.exec = MoreExecutors.listeningDecorator(exec);
     this.jsonMapper = jsonMapper;
+    this.node = node;
+
+    this.exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(config.maxForks()));
   }
 
   @Override
@@ -113,7 +118,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
                       public TaskStatus call()
                       {
                         final String attemptUUID = UUID.randomUUID().toString();
-                        final File taskDir = new File(config.getBaseTaskDir(), task.getId());
+                        final File taskDir = new File(config.getTaskDir(), task.getId());
                         final File attemptDir = new File(taskDir, attemptUUID);
 
                         final ProcessHolder processHolder;
@@ -147,17 +152,17 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogProvider
 
                               final List<String> command = Lists.newArrayList();
                               final int childPort = findUnusedPort();
-                              final String childHost = String.format(config.getHostPattern(), childPort);
+                              final String childHost = String.format("%s:%d", node.getHostNoPort(), childPort);
 
                               command.add(config.getJavaCommand());
                               command.add("-cp");
-                              command.add(config.getJavaClasspath());
+                              command.add(config.getClasspath());
 
                               Iterables.addAll(
                                   command,
                                   Splitter.on(CharMatcher.WHITESPACE)
                                           .omitEmptyStrings()
-                                          .split(config.getJavaOptions())
+                                          .split(config.getJavaOpts())
                               );
 
                               for (String propName : props.stringPropertyNames()) {

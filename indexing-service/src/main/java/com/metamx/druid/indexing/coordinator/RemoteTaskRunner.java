@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -38,10 +39,11 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.curator.cache.PathChildrenCacheFactory;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
-import com.metamx.druid.indexing.common.tasklogs.TaskLogProvider;
+import com.metamx.druid.indexing.common.tasklogs.TaskLogStreamer;
 import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.indexing.worker.Worker;
+import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.InputStreamResponseHandler;
@@ -73,7 +75,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The RemoteTaskRunner's primary responsibility is to assign tasks to worker nodes.
@@ -90,7 +91,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p/>
  * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
-public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
+public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
 {
   private static final EmittingLogger log = new EmittingLogger(RemoteTaskRunner.class);
   private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(Charsets.UTF_8);
@@ -98,10 +99,11 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
 
   private final ObjectMapper jsonMapper;
   private final RemoteTaskRunnerConfig config;
+  private final ZkPathsConfig zkPaths;
   private final CuratorFramework cf;
   private final PathChildrenCacheFactory pathChildrenCacheFactory;
   private final PathChildrenCache workerPathCache;
-  private final AtomicReference<WorkerSetupData> workerSetupData;
+  private final Supplier<WorkerSetupData> workerSetupData;
   private final HttpClient httpClient;
 
   // all workers that exist in ZK
@@ -120,17 +122,19 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   public RemoteTaskRunner(
       ObjectMapper jsonMapper,
       RemoteTaskRunnerConfig config,
+      ZkPathsConfig zkPaths,
       CuratorFramework cf,
       PathChildrenCacheFactory pathChildrenCacheFactory,
-      AtomicReference<WorkerSetupData> workerSetupData,
+      Supplier<WorkerSetupData> workerSetupData,
       HttpClient httpClient
   )
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
+    this.zkPaths = zkPaths;
     this.cf = cf;
     this.pathChildrenCacheFactory = pathChildrenCacheFactory;
-    this.workerPathCache = pathChildrenCacheFactory.make(cf, config.getIndexerAnnouncementPath());
+    this.workerPathCache = pathChildrenCacheFactory.make(cf, zkPaths.getIndexerAnnouncementPath());
     this.workerSetupData = workerSetupData;
     this.httpClient = httpClient;
   }
@@ -440,7 +444,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
   private void cleanup(final String workerId, final String taskId)
   {
     runningTasks.remove(taskId);
-    final String statusPath = JOINER.join(config.getIndexerStatusPath(), workerId, taskId);
+    final String statusPath = JOINER.join(zkPaths.getIndexerStatusPath(), workerId, taskId);
     try {
       cf.delete().guaranteed().forPath(statusPath);
     }
@@ -490,11 +494,11 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     log.info("Coordinator asking Worker[%s] to add task[%s]", theWorker.getHost(), task.getId());
 
     byte[] rawBytes = jsonMapper.writeValueAsBytes(task);
-    if (rawBytes.length > config.getMaxNumBytes()) {
-      throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxNumBytes());
+    if (rawBytes.length > config.getMaxZnodeBytes()) {
+      throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes());
     }
 
-    String taskPath = JOINER.join(config.getIndexerTaskPath(), theWorker.getHost(), task.getId());
+    String taskPath = JOINER.join(zkPaths.getIndexerTaskPath(), theWorker.getHost(), task.getId());
 
     if (cf.checkExists().forPath(taskPath) == null) {
       cf.create()
@@ -541,7 +545,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     log.info("Worker[%s] reportin' for duty!", worker.getHost());
 
     try {
-      final String workerStatusPath = JOINER.join(config.getIndexerStatusPath(), worker.getHost());
+      final String workerStatusPath = JOINER.join(zkPaths.getIndexerStatusPath(), worker.getHost());
       final PathChildrenCache statusCache = pathChildrenCacheFactory.make(cf, workerStatusPath);
       final ZkWorker zkWorker = new ZkWorker(
           worker,
@@ -649,10 +653,10 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogProvider
     if (zkWorker != null) {
       try {
         for (String assignedTask : cf.getChildren()
-                                     .forPath(JOINER.join(config.getIndexerTaskPath(), worker.getHost()))) {
+                                     .forPath(JOINER.join(zkPaths.getIndexerTaskPath(), worker.getHost()))) {
           RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.get(assignedTask);
           if (taskRunnerWorkItem != null) {
-            String taskPath = JOINER.join(config.getIndexerTaskPath(), worker.getHost(), assignedTask);
+            String taskPath = JOINER.join(zkPaths.getIndexerTaskPath(), worker.getHost(), assignedTask);
             if (cf.checkExists().forPath(taskPath) != null) {
               cf.delete().guaranteed().forPath(taskPath);
             }

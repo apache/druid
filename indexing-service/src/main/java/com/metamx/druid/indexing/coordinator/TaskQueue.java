@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
+import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.indexing.common.TaskLock;
@@ -68,6 +69,7 @@ public class TaskQueue
 
   private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
 
+  @Inject
   public TaskQueue(TaskStorage taskStorage, TaskLockbox taskLockbox)
   {
     this.taskStorage = Preconditions.checkNotNull(taskStorage, "taskStorage");

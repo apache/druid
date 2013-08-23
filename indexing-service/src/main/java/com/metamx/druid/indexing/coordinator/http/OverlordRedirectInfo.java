@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,42 +17,41 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.indexing.coordinator.scaling;
+package com.metamx.druid.indexing.coordinator.http;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Throwables;
+import com.google.inject.Inject;
+import com.metamx.druid.http.RedirectInfo;
+import com.metamx.druid.indexing.coordinator.TaskMaster;
 
-import java.util.List;
+import java.net.URL;
 
 /**
- */
-public class AutoScalingData
+*/
+public class OverlordRedirectInfo implements RedirectInfo
 {
-  private final List<String> nodeIds;
-  private final List nodes;
+  private final TaskMaster taskMaster;
 
-  public AutoScalingData(List<String> nodeIds, List nodes)
+  @Inject
+  public OverlordRedirectInfo(TaskMaster taskMaster)
   {
-    this.nodeIds = nodeIds;
-    this.nodes = nodes;
-  }
-
-  @JsonProperty
-  public List<String> getNodeIds()
-  {
-    return nodeIds;
-  }
-
-  public List getNodes()
-  {
-    return nodes;
+    this.taskMaster = taskMaster;
   }
 
   @Override
-  public String toString()
+  public boolean doLocal()
   {
-    return "AutoScalingData{" +
-           "nodeIds=" + nodeIds +
-           ", nodes=" + nodes +
-           '}';
+    return taskMaster.isLeading();
+  }
+
+  @Override
+  public URL getRedirectURL(String queryString, String requestURI)
+  {
+    try {
+      return new URL(String.format("http://%s%s", taskMaster.getLeader(), requestURI));
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 }

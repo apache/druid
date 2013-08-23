@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,42 +17,31 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.indexing.coordinator.scaling;
+package com.metamx.druid.indexing.common.tasklogs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
+import javax.validation.constraints.NotNull;
 
 /**
  */
-public class AutoScalingData
+public class S3TaskLogsConfig
 {
-  private final List<String> nodeIds;
-  private final List nodes;
-
-  public AutoScalingData(List<String> nodeIds, List nodes)
-  {
-    this.nodeIds = nodeIds;
-    this.nodes = nodes;
-  }
+  @JsonProperty
+  @NotNull
+  private String s3Bucket = null;
 
   @JsonProperty
-  public List<String> getNodeIds()
+  @NotNull
+  private String s3Prefix = null;
+
+  public String getS3Bucket()
   {
-    return nodeIds;
+    return s3Bucket;
   }
 
-  public List getNodes()
+  public String getS3Prefix()
   {
-    return nodes;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "AutoScalingData{" +
-           "nodeIds=" + nodeIds +
-           ", nodes=" + nodes +
-           '}';
+    return s3Prefix;
   }
 }

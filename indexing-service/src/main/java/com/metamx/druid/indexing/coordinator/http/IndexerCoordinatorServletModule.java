@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Provides;
 import com.metamx.druid.config.JacksonConfigManager;
-import com.metamx.druid.indexing.common.tasklogs.TaskLogProvider;
-import com.metamx.druid.indexing.coordinator.TaskMasterLifecycle;
+import com.metamx.druid.indexing.common.tasklogs.TaskLogStreamer;
+import com.metamx.druid.indexing.coordinator.TaskMaster;
 import com.metamx.druid.indexing.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.indexing.coordinator.config.IndexerCoordinatorConfig;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -40,27 +40,27 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
   private final ObjectMapper jsonMapper;
   private final IndexerCoordinatorConfig indexerCoordinatorConfig;
   private final ServiceEmitter emitter;
-  private final TaskMasterLifecycle taskMasterLifecycle;
+  private final TaskMaster taskMaster;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
-  private final TaskLogProvider taskLogProvider;
+  private final TaskLogStreamer taskLogStreamer;
   private final JacksonConfigManager configManager;
 
   public IndexerCoordinatorServletModule(
       ObjectMapper jsonMapper,
       IndexerCoordinatorConfig indexerCoordinatorConfig,
       ServiceEmitter emitter,
-      TaskMasterLifecycle taskMasterLifecycle,
+      TaskMaster taskMaster,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
-      TaskLogProvider taskLogProvider,
+      TaskLogStreamer taskLogStreamer,
       JacksonConfigManager configManager
   )
   {
     this.jsonMapper = jsonMapper;
     this.indexerCoordinatorConfig = indexerCoordinatorConfig;
     this.emitter = emitter;
-    this.taskMasterLifecycle = taskMasterLifecycle;
+    this.taskMaster = taskMaster;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
-    this.taskLogProvider = taskLogProvider;
+    this.taskLogStreamer = taskLogStreamer;
     this.configManager = configManager;
   }
 
@@ -72,9 +72,9 @@ public class IndexerCoordinatorServletModule extends JerseyServletModule
     bind(ObjectMapper.class).toInstance(jsonMapper);
     bind(IndexerCoordinatorConfig.class).toInstance(indexerCoordinatorConfig);
     bind(ServiceEmitter.class).toInstance(emitter);
-    bind(TaskMasterLifecycle.class).toInstance(taskMasterLifecycle);
+    bind(TaskMaster.class).toInstance(taskMaster);
     bind(TaskStorageQueryAdapter.class).toInstance(taskStorageQueryAdapter);
-    bind(TaskLogProvider.class).toInstance(taskLogProvider);
+    bind(TaskLogStreamer.class).toInstance(taskLogStreamer);
     bind(JacksonConfigManager.class).toInstance(configManager);
 
     serve("/*").with(GuiceContainer.class);

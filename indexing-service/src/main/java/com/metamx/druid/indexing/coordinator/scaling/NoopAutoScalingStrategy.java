@@ -26,19 +26,19 @@ import java.util.List;
 /**
  * This class just logs when scaling should occur.
  */
-public class NoopAutoScalingStrategy implements AutoScalingStrategy<String>
+public class NoopAutoScalingStrategy implements AutoScalingStrategy
 {
   private static final EmittingLogger log = new EmittingLogger(NoopAutoScalingStrategy.class);
 
   @Override
-  public AutoScalingData<String> provision()
+  public AutoScalingData provision()
   {
     log.info("If I were a real strategy I'd create something now");
     return null;
   }
 
   @Override
-  public AutoScalingData<String> terminate(List<String> ips)
+  public AutoScalingData terminate(List<String> ips)
   {
     log.info("If I were a real strategy I'd terminate %s now", ips);
     return null;

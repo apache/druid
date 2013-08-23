@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public class S3CredentialsConfig
+public class AWSCredentialsConfig
 {
   @JsonProperty
   private String accessKey = "";

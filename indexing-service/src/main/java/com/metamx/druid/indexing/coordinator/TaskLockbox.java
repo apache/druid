@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
@@ -63,7 +64,10 @@ public class TaskLockbox
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);
 
-  public TaskLockbox(TaskStorage taskStorage)
+  @Inject
+  public TaskLockbox(
+      TaskStorage taskStorage
+  )
   {
     this.taskStorage = taskStorage;
   }

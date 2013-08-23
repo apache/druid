@@ -278,7 +278,7 @@ public class RealtimeIndexTask extends AbstractTask
     realtimePlumberSchool.setSegmentAnnouncer(lockingSegmentAnnouncer);
     realtimePlumberSchool.setSegmentPublisher(segmentPublisher);
     realtimePlumberSchool.setServerView(toolbox.getNewSegmentServerView());
-    realtimePlumberSchool.setServiceEmitter(toolbox.getEmitter());
+    realtimePlumberSchool.setEmitter(toolbox.getEmitter());
 
     if (this.rejectionPolicyFactory != null) {
       realtimePlumberSchool.setRejectionPolicyFactory(rejectionPolicyFactory);

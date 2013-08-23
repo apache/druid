@@ -3,8 +3,8 @@ package com.metamx.druid.indexing.coordinator.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.druid.config.JacksonConfigManager;
-import com.metamx.druid.indexing.common.tasklogs.TaskLogProvider;
-import com.metamx.druid.indexing.coordinator.TaskMasterLifecycle;
+import com.metamx.druid.indexing.common.tasklogs.TaskLogStreamer;
+import com.metamx.druid.indexing.coordinator.TaskMaster;
 import com.metamx.druid.indexing.coordinator.TaskStorageQueryAdapter;
 
 import javax.ws.rs.Path;
@@ -17,13 +17,13 @@ public class OldIndexerCoordinatorResource extends IndexerCoordinatorResource
 {
   @Inject
   public OldIndexerCoordinatorResource(
-      TaskMasterLifecycle taskMasterLifecycle,
+      TaskMaster taskMaster,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
-      TaskLogProvider taskLogProvider,
+      TaskLogStreamer taskLogStreamer,
       JacksonConfigManager configManager,
       ObjectMapper jsonMapper
   ) throws Exception
   {
-    super(taskMasterLifecycle, taskStorageQueryAdapter, taskLogProvider, configManager, jsonMapper);
+    super(taskMaster, taskStorageQueryAdapter, taskLogStreamer, configManager, jsonMapper);
   }
 }

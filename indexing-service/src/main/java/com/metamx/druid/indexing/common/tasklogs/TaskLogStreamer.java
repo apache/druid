@@ -9,7 +9,7 @@ import java.io.InputStream;
 /**
  * Something that knows how to stream logs for tasks.
  */
-public interface TaskLogProvider
+public interface TaskLogStreamer
 {
   /**
    * Stream log for a task.
