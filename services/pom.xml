@@ -70,7 +70,7 @@
                         <id>distro-assembly</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>assembly</goal>
                         </goals>
                         <configuration>
                             <descriptors>
