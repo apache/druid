@@ -37,7 +37,6 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.PotentiallyGzippedCompressionProvider;
-import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.guice.DruidGuiceExtensions;
 import com.metamx.druid.guice.DruidSecondaryModule;
@@ -273,13 +272,6 @@ public class Initialization
     );
 
     return serviceDiscovery;
-  }
-
-  public static ServiceAnnouncer makeServiceAnnouncer(
-      ServiceDiscovery<Void> serviceDiscovery
-  )
-  {
-    return new CuratorServiceAnnouncer(serviceDiscovery);
   }
 
   public static void announceDefaultService(
