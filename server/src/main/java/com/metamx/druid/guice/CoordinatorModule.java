@@ -4,14 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.druid.client.ServerInventoryViewConfig;
-import com.metamx.druid.client.indexing.IndexingService;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
-import com.metamx.druid.client.indexing.IndexingServiceSelector;
-import com.metamx.druid.client.selector.DiscoverySelector;
-import com.metamx.druid.client.selector.Server;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseRuleManagerConfig;
 import com.metamx.druid.db.DatabaseRuleManagerProvider;
@@ -26,11 +21,6 @@ import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.master.DruidMasterConfig;
 import com.metamx.druid.master.LoadQueueTaskMaster;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.x.discovery.ServiceDiscovery;
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.ServiceProvider;
-
-import java.io.IOException;
 
 /**
  */
@@ -56,44 +46,11 @@ public class CoordinatorModule implements Module
           .toProvider(DatabaseRuleManagerProvider.class)
           .in(ManageLifecycle.class);
 
-    binder.bind(new TypeLiteral<DiscoverySelector<Server>>(){})
-          .annotatedWith(IndexingService.class)
-          .to(IndexingServiceSelector.class)
-          .in(ManageLifecycle.class);
     binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
 
     binder.bind(RedirectInfo.class).to(MasterRedirectInfo.class).in(LazySingleton.class);
 
     binder.bind(DruidMaster.class);
-  }
-
-  @Provides @LazySingleton @IndexingService
-  public ServiceProvider getServiceProvider(DruidMasterConfig config, ServiceDiscovery<Void> serviceDiscovery)
-  {
-    // TODO: This service discovery stuff is really really janky.  It needs to be reworked.
-    if (config.getMergerServiceName() == null) {
-      return new ServiceProvider()
-      {
-        @Override
-        public void start() throws Exception
-        {
-
-        }
-
-        @Override
-        public ServiceInstance getInstance() throws Exception
-        {
-          return null;
-        }
-
-        @Override
-        public void close() throws IOException
-        {
-
-        }
-      };
-    }
-    return serviceDiscovery.serviceProviderBuilder().serviceName(config.getMergerServiceName()).build();
   }
 
   @Provides @LazySingleton

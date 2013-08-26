@@ -33,6 +33,7 @@ import com.metamx.druid.guice.HttpClientModule;
 import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.QueryRunnerFactoryModule;
 import com.metamx.druid.guice.QueryableModule;
+import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.guice.StorageNodeModule;
 import com.metamx.druid.http.StatusResource;
 import com.metamx.druid.initialization.EmitterModule;
@@ -70,6 +71,7 @@ public class CliHistorical extends ServerRunnable
         AWSModule.class,
         DataSegmentPullerModule.class,
         new MetricsModule().register(ServerMonitor.class),
+        new ServerModule(),
         new StorageNodeModule("historical"),
         new JettyServerModule(new QueryJettyServerInitializer())
             .addResource(StatusResource.class),

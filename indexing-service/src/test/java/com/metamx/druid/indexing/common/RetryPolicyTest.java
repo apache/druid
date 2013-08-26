@@ -1,9 +1,8 @@
-package com.metamx.druid.indexing.coordinator;
+package com.metamx.druid.indexing.common;
 
-import com.metamx.druid.indexing.common.RetryPolicy;
-import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
 import junit.framework.Assert;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 import org.junit.Test;
 
 /**
@@ -15,25 +14,9 @@ public class RetryPolicyTest
   {
     RetryPolicy retryPolicy = new RetryPolicy(
         new RetryPolicyConfig()
-        {
-          @Override
-          public Duration getRetryMinDuration()
-          {
-            return new Duration("PT1S");
-          }
-
-          @Override
-          public Duration getRetryMaxDuration()
-          {
-            return new Duration("PT10S");
-          }
-
-          @Override
-          public long getMaxRetryCount()
-          {
-            return 10;
-          }
-        }
+            .setMinWait(new Period("PT1S"))
+            .setMaxWait(new Period("PT10S"))
+            .setMaxRetryCount(6)
     );
 
     Assert.assertEquals(new Duration("PT1S"), retryPolicy.getAndIncrementRetryDelay());
@@ -42,5 +25,7 @@ public class RetryPolicyTest
     Assert.assertEquals(new Duration("PT8S"), retryPolicy.getAndIncrementRetryDelay());
     Assert.assertEquals(new Duration("PT10S"), retryPolicy.getAndIncrementRetryDelay());
     Assert.assertEquals(new Duration("PT10S"), retryPolicy.getAndIncrementRetryDelay());
+    Assert.assertEquals(null, retryPolicy.getAndIncrementRetryDelay());
+    Assert.assertTrue(retryPolicy.hasExceededRetryThreshold());
   }
 }

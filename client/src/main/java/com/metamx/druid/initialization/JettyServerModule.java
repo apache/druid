@@ -81,7 +81,7 @@ public class JettyServerModule extends JerseyServletModule
           .annotatedWith(Names.named("resourceClasses"))
           .toInstance(theResources);
     for (Class<?> resource : theResources) {
-      binder.bind(resource);
+      binder.bind(resource).in(LazySingleton.class);
     }
 
     binder.bind(Key.get(Server.class, Names.named("ForTheEagerness"))).to(Server.class).asEagerSingleton();

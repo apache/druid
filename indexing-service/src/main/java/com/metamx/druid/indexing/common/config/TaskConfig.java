@@ -19,38 +19,65 @@
 
 package com.metamx.druid.indexing.common.config;
 
-import com.google.common.base.Joiner;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.File;
 
-public abstract class TaskConfig
+public class TaskConfig
 {
-  private static Joiner joiner = Joiner.on("/");
+  @JsonProperty
+  private final String baseDir;
 
-  @Config("druid.indexer.baseDir")
-  @Default("/tmp/")
-  public abstract String getBaseDir();
+  @JsonProperty
+  private final File baseTaskDir;
 
-  @Config("druid.indexer.taskDir")
+  @JsonProperty
+  private final String hadoopWorkingPath;
+
+  @JsonProperty
+  private final int defaultRowFlushBoundary;
+
+  @JsonCreator
+  public TaskConfig(
+      @JsonProperty("baseDir") String baseDir,
+      @JsonProperty("baseTaskDir") String baseTaskDir,
+      @JsonProperty("hadoopWorkingPath") String hadoopWorkingPath,
+      @JsonProperty("defaultRowFlushBoundary") Integer defaultRowFlushBoundary
+  )
+  {
+    this.baseDir = baseDir == null ? "/tmp" : baseDir;
+    this.baseTaskDir = new File(defaultDir(baseTaskDir, "persistent/task"));
+    this.hadoopWorkingPath = defaultDir(hadoopWorkingPath, "druid-indexing");
+    this.defaultRowFlushBoundary = defaultRowFlushBoundary == null ? 500000 : defaultRowFlushBoundary;
+  }
+
+  public String getBaseDir()
+  {
+    return baseDir;
+  }
+
   public File getBaseTaskDir()
   {
-    return new File(defaultPath("persistent/task"));
+    return baseTaskDir;
   }
 
-  @Config("druid.indexer.hadoopWorkingPath")
   public String getHadoopWorkingPath()
   {
-    return defaultPath("druid-indexing");
+    return hadoopWorkingPath;
   }
 
-  @Config("druid.indexer.rowFlushBoundary")
-  @Default("500000")
-  public abstract int getDefaultRowFlushBoundary();
-
-  private String defaultPath(String subPath)
+  public int getDefaultRowFlushBoundary()
   {
-    return joiner.join(getBaseDir(), subPath);
+    return defaultRowFlushBoundary;
+  }
+
+  private String defaultDir(String configParameter, final String defaultVal)
+  {
+    if (configParameter == null) {
+      return String.format("%s/%s", getBaseDir(), defaultVal);
+    }
+
+    return configParameter;
   }
 }

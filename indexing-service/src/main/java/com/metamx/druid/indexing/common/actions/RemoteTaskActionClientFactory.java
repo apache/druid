@@ -20,23 +20,26 @@
 package com.metamx.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.druid.indexing.common.task.Task;
+import com.google.inject.Inject;
+import com.metamx.druid.client.indexing.IndexingServiceSelector;
+import com.metamx.druid.guice.annotations.Global;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
+import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.http.client.HttpClient;
-import org.apache.curator.x.discovery.ServiceProvider;
 
 /**
  */
 public class RemoteTaskActionClientFactory implements TaskActionClientFactory
 {
   private final HttpClient httpClient;
-  private final ServiceProvider serviceProvider;
+  private final IndexingServiceSelector serviceProvider;
   private final RetryPolicyFactory retryPolicyFactory;
   private final ObjectMapper jsonMapper;
 
+  @Inject
   public RemoteTaskActionClientFactory(
-      HttpClient httpClient,
-      ServiceProvider serviceProvider,
+      @Global HttpClient httpClient,
+      IndexingServiceSelector serviceProvider,
       RetryPolicyFactory retryPolicyFactory,
       ObjectMapper jsonMapper
   )

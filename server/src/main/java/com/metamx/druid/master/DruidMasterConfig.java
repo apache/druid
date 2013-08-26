@@ -60,12 +60,6 @@ public abstract class DruidMasterConfig
     return false;
   }
 
-  @Config("druid.master.merger.service")
-  public String getMergerServiceName()
-  {
-    return null;
-  }
-
   @Config("druid.master.merge.threshold")
   public long getMergeBytesLimit()
   {

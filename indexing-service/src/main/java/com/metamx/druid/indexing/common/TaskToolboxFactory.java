@@ -20,6 +20,7 @@
 package com.metamx.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import com.metamx.druid.client.ServerView;
 import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
@@ -49,6 +50,7 @@ public class TaskToolboxFactory
   private final MonitorScheduler monitorScheduler;
   private final ObjectMapper objectMapper;
 
+  @Inject
   public TaskToolboxFactory(
       TaskConfig config,
       TaskActionClientFactory taskActionClientFactory,

@@ -25,6 +25,7 @@ import com.metamx.druid.guice.DruidProcessingModule;
 import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.QueryRunnerFactoryModule;
 import com.metamx.druid.guice.QueryableModule;
+import com.metamx.druid.guice.ServerModule;
 import com.metamx.druid.guice.StorageNodeModule;
 import com.metamx.druid.http.StatusResource;
 import com.metamx.druid.initialization.EmitterModule;
@@ -56,6 +57,7 @@ public class CliRealtimeExample extends ServerRunnable
         new LifecycleModule(),
         EmitterModule.class,
         DruidProcessingModule.class,
+        new ServerModule(),
         new StorageNodeModule("realtime"),
         new JettyServerModule(new QueryJettyServerInitializer())
             .addResource(StatusResource.class),

@@ -101,12 +101,6 @@ public class DruidMasterTest
           }
 
           @Override
-          public String getMergerServiceName()
-          {
-            return "";
-          }
-
-          @Override
           public int getMaxSegmentsToMove()
           {
             return 0;

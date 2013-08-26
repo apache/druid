@@ -47,7 +47,6 @@ public class MiddleManagerModule implements Module
 
     binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
     binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
-
   }
 
   @Provides @LazySingleton

@@ -8,6 +8,7 @@ import com.metamx.druid.curator.discovery.DiscoveryModule;
 import com.metamx.druid.guice.CoordinatorModule;
 import com.metamx.druid.guice.DbConnectorModule;
 import com.metamx.druid.guice.HttpClientModule;
+import com.metamx.druid.guice.IndexingServiceDiscoveryModule;
 import com.metamx.druid.guice.JacksonConfigManagerModule;
 import com.metamx.druid.guice.LifecycleModule;
 import com.metamx.druid.guice.ServerModule;
@@ -68,6 +69,7 @@ public class CliCoordinator extends ServerRunnable
             .addResource(MasterResource.class)
             .addResource(StatusResource.class),
         new ServerViewModule(),
+        new IndexingServiceDiscoveryModule(),
         CoordinatorModule.class
     );
   }

@@ -6,13 +6,13 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.client.indexing.IndexingServiceSelector;
+import com.metamx.druid.client.selector.Server;
 import com.metamx.druid.indexing.common.RetryPolicy;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.ToStringResponseHandler;
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.ServiceProvider;
 import org.joda.time.Duration;
 
 import java.io.IOException;
@@ -23,7 +23,7 @@ public class RemoteTaskActionClient implements TaskActionClient
 {
   private final Task task;
   private final HttpClient httpClient;
-  private final ServiceProvider serviceProvider;
+  private final IndexingServiceSelector serviceProvider;
   private final RetryPolicyFactory retryPolicyFactory;
   private final ObjectMapper jsonMapper;
 
@@ -32,7 +32,7 @@ public class RemoteTaskActionClient implements TaskActionClient
   public RemoteTaskActionClient(
       Task task,
       HttpClient httpClient,
-      ServiceProvider serviceProvider,
+      IndexingServiceSelector serviceProvider,
       RetryPolicyFactory retryPolicyFactory,
       ObjectMapper jsonMapper
   )
@@ -79,20 +79,23 @@ public class RemoteTaskActionClient implements TaskActionClient
         }
 
         final Map<String, Object> responseDict = jsonMapper.readValue(
-            response,
-            new TypeReference<Map<String, Object>>() {}
+            response, new TypeReference<Map<String, Object>>()
+        {
+        }
         );
 
         return jsonMapper.convertValue(responseDict.get("result"), taskAction.getReturnTypeReference());
-      } catch(IOException e) {
-        log.warn(e, "Exception submitting action for task: %s", task.getId());
+      }
+      catch (IOException e) {
+        log.warn(e, "Exception submitting action for task[%s]", task.getId());
 
-        if (retryPolicy.hasExceededRetryThreshold()) {
+        final Duration delay = retryPolicy.getAndIncrementRetryDelay();
+        if (delay == null) {
           throw e;
         } else {
           try {
-            final long sleepTime = retryPolicy.getAndIncrementRetryDelay().getMillis();
-            log.info("Will try again in %s.", new Duration(sleepTime).toString());
+            final long sleepTime = delay.getMillis();
+            log.info("Will try again in [%s].", new Duration(sleepTime).toString());
             Thread.sleep(sleepTime);
           }
           catch (InterruptedException e2) {
@@ -105,26 +108,19 @@ public class RemoteTaskActionClient implements TaskActionClient
 
   private URI getServiceUri() throws Exception
   {
-    final ServiceInstance instance = serviceProvider.getInstance();
-    final String scheme;
-    final String host;
-    final int port;
-    final String path = "/druid/indexer/v1/action";
-
+    final Server instance = serviceProvider.pick();
     if (instance == null) {
       throw new ISE("Cannot find instance of indexer to talk to!");
     }
 
-    host = instance.getAddress();
-
-    if (instance.getSslPort() != null && instance.getSslPort() > 0) {
-      scheme = "https";
-      port = instance.getSslPort();
-    } else {
-      scheme = "http";
-      port = instance.getPort();
-    }
-
-    return new URI(scheme, null, host, port, path, null, null);
+    return new URI(
+        instance.getScheme(),
+        null,
+        instance.getHost(),
+        instance.getPort(),
+        "/druid/indexer/v1/action",
+        null,
+        null
+    );
   }
 }

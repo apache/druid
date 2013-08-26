@@ -19,22 +19,52 @@
 
 package com.metamx.druid.indexing.common;
 
-import com.google.inject.Inject;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Period;
 
 /**
  */
-public class RetryPolicyFactory
+public class RetryPolicyConfig
 {
-  private final RetryPolicyConfig config;
+  @JsonProperty
+  private Period minWait = new Period("PT1M");
 
-  @Inject
-  public RetryPolicyFactory(RetryPolicyConfig config)
+  @JsonProperty
+  private Period maxWait = new Period("PT10M");
+
+  @JsonProperty
+  private long maxRetryCount = 10;
+
+  public Period getMinWait()
   {
-    this.config = config;
+    return minWait;
   }
 
-  public RetryPolicy makeRetryPolicy()
+  RetryPolicyConfig setMinWait(Period minWait)
   {
-    return new RetryPolicy(config);
+    this.minWait = minWait;
+    return this;
+  }
+
+  public Period getMaxWait()
+  {
+    return maxWait;
+  }
+
+  RetryPolicyConfig setMaxWait(Period maxWait)
+  {
+    this.maxWait = maxWait;
+    return this;
+  }
+
+  public long getMaxRetryCount()
+  {
+    return maxRetryCount;
+  }
+
+  RetryPolicyConfig setMaxRetryCount(long maxRetryCount)
+  {
+    this.maxRetryCount = maxRetryCount;
+    return this;
   }
 }

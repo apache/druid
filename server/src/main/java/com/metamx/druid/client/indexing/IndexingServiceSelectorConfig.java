@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,25 +17,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.indexing.common.config;
+package com.metamx.druid.client.indexing;
 
-import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public abstract class RetryPolicyConfig
+public class IndexingServiceSelectorConfig
 {
-  @Config("${base_path}.retry.minWaitMillis")
-  @Default("PT1M") // 1 minute
-  public abstract Duration getRetryMinDuration();
+  @JsonProperty
+  private String serviceName = null;
 
-  @Config("${base_path}.retry.maxWaitMillis")
-  @Default("PT10M") // 10 minutes
-  public abstract Duration getRetryMaxDuration();
-
-  @Config("${base_path}.retry.maxRetryCount")
-  @Default("10")
-  public abstract long getMaxRetryCount();
+  public String getServiceName()
+  {
+    return serviceName;
+  }
 }

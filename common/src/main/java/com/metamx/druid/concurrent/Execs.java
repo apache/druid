@@ -32,9 +32,7 @@ public class Execs
 {
   public static ExecutorService singleThreaded(String nameFormat)
   {
-    return Executors.newSingleThreadExecutor(
-        makeThreadFactory(nameFormat)
-    );
+    return Executors.newSingleThreadExecutor(makeThreadFactory(nameFormat));
   }
 
   public static ExecutorService multiThreaded(int threads, String nameFormat)
@@ -44,9 +42,7 @@ public class Execs
 
   public static ScheduledExecutorService scheduledSingleThreaded(String nameFormat)
   {
-    return Executors.newSingleThreadScheduledExecutor(
-        makeThreadFactory(nameFormat)
-    );
+    return Executors.newSingleThreadScheduledExecutor(makeThreadFactory(nameFormat));
   }
 
   public static ThreadFactory makeThreadFactory(String nameFormat)

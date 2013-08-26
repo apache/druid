@@ -78,7 +78,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 
 public class TaskLifecycleTest
 {
@@ -116,26 +115,7 @@ public class TaskLifecycleTest
     tac = new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tq, tl, mdc, newMockEmitter()));
 
     tb = new TaskToolboxFactory(
-        new TaskConfig()
-        {
-          @Override
-          public String getBaseDir()
-          {
-            return tmp.toString();
-          }
-
-          @Override
-          public int getDefaultRowFlushBoundary()
-          {
-            return 50000;
-          }
-
-          @Override
-          public String getHadoopWorkingPath()
-          {
-            return null;
-          }
-        },
+        new TaskConfig(tmp.toString(), null, null, 50000),
         tac,
         newMockEmitter(),
         null, // s3 client
@@ -162,10 +142,7 @@ public class TaskLifecycleTest
         new DefaultObjectMapper()
     );
 
-    tr = new ThreadPoolTaskRunner(
-        tb,
-        Executors.newSingleThreadExecutor()
-    );
+    tr = new ThreadPoolTaskRunner(tb);
 
     tc = new TaskConsumer(tq, tr, tac, newMockEmitter());
     tsqa = new TaskStorageQueryAdapter(ts);

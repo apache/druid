@@ -40,7 +40,8 @@ public class Main
            .withDescription("Run one of the Druid server types.")
            .withDefaultCommand(Help.class)
            .withCommands(
-               CliCoordinator.class, CliHistorical.class, CliBroker.class, CliRealtime.class, CliOverlord.class, CliMiddleManager.class
+               CliCoordinator.class, CliHistorical.class, CliBroker.class, CliRealtime.class,
+               CliOverlord.class, CliMiddleManager.class, CliPeon.class
            );
 
     builder.withGroup("example")

@@ -20,6 +20,7 @@
 package com.metamx.druid.guice;
 
 import com.google.inject.Binder;
+import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.druid.client.DruidServerConfig;
 import com.metamx.druid.coordination.DruidServerMetadata;
@@ -33,7 +34,7 @@ import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 
 /**
  */
-public class StorageNodeModule extends ServerModule
+public class StorageNodeModule implements Module
 {
   private final String nodeType;
 
@@ -45,8 +46,6 @@ public class StorageNodeModule extends ServerModule
   @Override
   public void configure(Binder binder)
   {
-    super.configure(binder);
-
     JsonConfigProvider.bind(binder, "druid.server", DruidServerConfig.class);
     JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
 

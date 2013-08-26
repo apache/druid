@@ -19,7 +19,6 @@
 
 package com.metamx.druid.indexing.common;
 
-import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.Duration;
 
@@ -29,41 +28,35 @@ public class RetryPolicy
 {
   private static final EmittingLogger log = new EmittingLogger(RetryPolicy.class);
 
-  private final long MAX_NUM_RETRIES;
-  private final Duration MAX_RETRY_DURATION;
+  private final long maxNumRetries;
+  private final Duration maxRetryDelay;
 
   private volatile Duration currRetryDelay;
   private volatile int retryCount;
 
   public RetryPolicy(RetryPolicyConfig config)
   {
-    this.MAX_NUM_RETRIES = config.getMaxRetryCount();
-    this.MAX_RETRY_DURATION = config.getRetryMaxDuration();
+    this.maxNumRetries = config.getMaxRetryCount();
+    this.maxRetryDelay = config.getMaxWait().toStandardDuration();
 
-    this.currRetryDelay = config.getRetryMinDuration();
+    this.currRetryDelay = config.getMinWait().toStandardDuration();
     this.retryCount = 0;
-  }
-
-  public Duration getRetryDelay()
-  {
-    return currRetryDelay;
   }
 
   public Duration getAndIncrementRetryDelay()
   {
-    Duration retVal = new Duration(currRetryDelay);
-    currRetryDelay = new Duration(Math.min(currRetryDelay.getMillis() * 2, MAX_RETRY_DURATION.getMillis()));
-    retryCount++;
-    return retVal;
-  }
+    if (hasExceededRetryThreshold()) {
+      return null;
+    }
 
-  public int getNumRetries()
-  {
-    return retryCount;
+    Duration retVal = currRetryDelay;
+    currRetryDelay = new Duration(Math.min(currRetryDelay.getMillis() * 2, maxRetryDelay.getMillis()));
+    ++retryCount;
+    return retVal;
   }
 
   public boolean hasExceededRetryThreshold()
   {
-    return retryCount >= MAX_NUM_RETRIES;
+    return retryCount >= maxNumRetries;
   }
 }

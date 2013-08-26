@@ -49,7 +49,6 @@ import org.junit.Test;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -306,6 +305,8 @@ public class RemoteTaskRunnerTest
     );
     workerCuratorCoordinator.start();
 
+    final File tmp = Files.createTempDir();
+
     // Start a task monitor
     workerTaskMonitor = new WorkerTaskMonitor(
         jsonMapper,
@@ -313,29 +314,9 @@ public class RemoteTaskRunnerTest
         workerCuratorCoordinator,
         new ThreadPoolTaskRunner(
             new TaskToolboxFactory(
-                new TaskConfig()
-                {
-                  @Override
-                  public String getBaseDir()
-                  {
-                    File tmp = Files.createTempDir();
-                    tmp.deleteOnExit();
-                    return tmp.toString();
-                  }
-
-                  @Override
-                  public int getDefaultRowFlushBoundary()
-                  {
-                    return 0;
-                  }
-
-                  @Override
-                  public String getHadoopWorkingPath()
-                  {
-                    return null;
-                  }
-                }, null, null, null, null, null, null, null, null, null, jsonMapper
-            ), Executors.newSingleThreadExecutor()
+                new TaskConfig(tmp.toString(), null, null, 0),
+                null, null, null, null, null, null, null, null, null, jsonMapper
+            )
         ),
         new WorkerConfig().setCapacity(1)
     );

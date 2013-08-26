@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
@@ -36,16 +35,17 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.druid.BaseServerNode;
+import com.metamx.druid.client.indexing.IndexingServiceSelector;
 import com.metamx.druid.curator.CuratorConfig;
 import com.metamx.druid.curator.discovery.CuratorServiceAnnouncer;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
 import com.metamx.druid.http.GuiceServletConfig;
 import com.metamx.druid.http.QueryServlet;
 import com.metamx.druid.http.StatusServlet;
+import com.metamx.druid.indexing.common.RetryPolicyConfig;
 import com.metamx.druid.indexing.common.RetryPolicyFactory;
 import com.metamx.druid.indexing.common.TaskToolboxFactory;
 import com.metamx.druid.indexing.common.actions.RemoteTaskActionClientFactory;
-import com.metamx.druid.indexing.common.config.RetryPolicyConfig;
 import com.metamx.druid.indexing.common.config.TaskConfig;
 import com.metamx.druid.indexing.common.index.ChatHandlerProvider;
 import com.metamx.druid.indexing.common.index.EventReceiverFirehoseFactory;
@@ -86,7 +86,6 @@ import org.jets3t.service.security.AWSCredentials;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.Properties;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -322,7 +321,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
           taskConfig,
           new RemoteTaskActionClientFactory(
               httpClient,
-              coordinatorServiceProvider,
+              new IndexingServiceSelector(coordinatorServiceProvider),
               new RetryPolicyFactory(
                   configFactory.buildWithReplacements(
                       RetryPolicyConfig.class,
@@ -371,16 +370,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   public void initializeTaskRunner()
   {
     if (taskRunner == null) {
-      this.taskRunner = lifecycle.addManagedInstance(
-          new ThreadPoolTaskRunner(
-              taskToolboxFactory,
-              Executors.newSingleThreadExecutor(
-                  new ThreadFactoryBuilder()
-                      .setNameFormat("task-runner-%d")
-                      .build()
-              )
-          )
-      );
+      this.taskRunner = lifecycle.addManagedInstance(new ThreadPoolTaskRunner(taskToolboxFactory));
     }
   }
 
@@ -389,7 +379,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     if (chatHandlerProvider == null) {
       final ChatHandlerProviderConfig config = configFactory.build(ChatHandlerProviderConfig.class);
       if (config.isPublishDiscovery()) {
-        this.chatHandlerProvider = new EventReceivingChatHandlerProvider(config, serviceAnnouncer);
+        this.chatHandlerProvider = new EventReceivingChatHandlerProvider(null, serviceAnnouncer); // TODO: eliminate
       } else {
         log.info("ChatHandlerProvider: Using NoopServiceAnnouncer. Good luck finding your firehoses!");
         this.chatHandlerProvider = new NoopChatHandlerProvider();

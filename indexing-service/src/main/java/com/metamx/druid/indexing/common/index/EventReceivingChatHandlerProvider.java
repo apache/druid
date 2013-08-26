@@ -21,10 +21,11 @@ package com.metamx.druid.indexing.common.index;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
-import com.metamx.druid.indexing.worker.config.ChatHandlerProviderConfig;
+import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.initialization.DruidNode;
 
 import java.util.concurrent.ConcurrentMap;
@@ -38,16 +39,17 @@ public class EventReceivingChatHandlerProvider implements ChatHandlerProvider
 {
   private static final Logger log = new Logger(EventReceivingChatHandlerProvider.class);
 
-  private final ChatHandlerProviderConfig config;
+  private final DruidNode node;
   private final ServiceAnnouncer serviceAnnouncer;
   private final ConcurrentMap<String, ChatHandler> handlers;
 
+  @Inject
   public EventReceivingChatHandlerProvider(
-      ChatHandlerProviderConfig config,
+      @Self DruidNode node,
       ServiceAnnouncer serviceAnnouncer
   )
   {
-    this.config = config;
+    this.node = node;
     this.serviceAnnouncer = serviceAnnouncer;
     this.handlers = Maps.newConcurrentMap();
   }
@@ -100,6 +102,6 @@ public class EventReceivingChatHandlerProvider implements ChatHandlerProvider
 
   private DruidNode makeDruidNode(String key)
   {
-    return new DruidNode(key, config.getHost(), config.getPort());
+    return new DruidNode(key, node.getHost(), node.getPort());
   }
 }

@@ -52,6 +52,12 @@ public class IndexingServiceSelector implements DiscoverySelector<Server>
       {
         return instance.getPort();
       }
+
+      @Override
+      public String getScheme()
+      {
+        return "http";
+      }
     };
   }
 
