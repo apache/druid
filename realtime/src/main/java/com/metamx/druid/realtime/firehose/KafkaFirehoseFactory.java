@@ -21,11 +21,10 @@ package com.metamx.druid.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.indexer.data.StringInputRowParser;
+import com.metamx.druid.indexer.data.ByteBufferInputRowParser;
 import com.metamx.druid.input.InputRow;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
@@ -35,9 +34,6 @@ import kafka.message.Message;
 import kafka.message.MessageAndMetadata;
 
 import java.io.IOException;
-import java.nio.CharBuffer;
-import java.nio.charset.CoderResult;
-import java.nio.charset.CodingErrorAction;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -47,118 +43,111 @@ import java.util.Properties;
  */
 public class KafkaFirehoseFactory implements FirehoseFactory
 {
-  private static final Logger log = new Logger(KafkaFirehoseFactory.class);
+	private static final Logger log = new Logger(KafkaFirehoseFactory.class);
 
-  @JsonProperty
-  private final Properties consumerProps;
+	@JsonProperty
+	private final Properties consumerProps;
 
-  @JsonProperty
-  private final String feed;
+	@JsonProperty
+	private final String feed;
 
-  @JsonProperty
-  private final StringInputRowParser parser;
+	@JsonProperty
+	private final ByteBufferInputRowParser parser;
 
-  @JsonCreator
-  public KafkaFirehoseFactory(
-      @JsonProperty("consumerProps") Properties consumerProps,
-      @JsonProperty("feed") String feed,
-      @JsonProperty("parser") StringInputRowParser parser
-  )
-  {
-    this.consumerProps = consumerProps;
-    this.feed = feed;
-    this.parser = parser;
+	@JsonCreator
+	public KafkaFirehoseFactory(
+	    @JsonProperty("consumerProps") Properties consumerProps,
+	    @JsonProperty("feed") String feed,
+	    @JsonProperty("parser") ByteBufferInputRowParser parser)
+	{
+		this.consumerProps = consumerProps;
+		this.feed = feed;
+		this.parser = parser;
 
-    parser.addDimensionExclusion("feed");
-  }
+		parser.addDimensionExclusion("feed");
+	}
 
-  @Override
-  public Firehose connect() throws IOException
-  {
-    final ConsumerConnector connector = Consumer.createJavaConsumerConnector(new ConsumerConfig(consumerProps));
+	@Override
+	public Firehose connect() throws IOException
+	{
+		final ConsumerConnector connector = Consumer.createJavaConsumerConnector(new ConsumerConfig(consumerProps));
 
-    final Map<String, List<KafkaStream<Message>>> streams = connector.createMessageStreams(ImmutableMap.of(feed, 1));
+		final Map<String, List<KafkaStream<Message>>> streams = connector.createMessageStreams(ImmutableMap.of(feed, 1));
 
-    final List<KafkaStream<Message>> streamList = streams.get(feed);
-    if (streamList == null || streamList.size() != 1) {
-      return null;
-    }
+		final List<KafkaStream<Message>> streamList = streams.get(feed);
+		if (streamList == null || streamList.size() != 1)
+		{
+			return null;
+		}
 
-    final KafkaStream<Message> stream = streamList.get(0);
+		final KafkaStream<Message> stream = streamList.get(0);
 
-    return new Firehose()
-    {
-      Iterator<MessageAndMetadata<Message>> iter = stream.iterator();
-      private CharBuffer chars = null;
+		return new DefaultFirehose(connector, stream, parser);
+	}
 
-      @Override
-      public boolean hasMore()
-      {
-        return iter.hasNext();
-      }
+	private static class DefaultFirehose implements Firehose
+	{
+		private final ConsumerConnector connector;
+		private final Iterator<MessageAndMetadata<Message>> iter;
+		private final ByteBufferInputRowParser parser;
 
-      @Override
-      public InputRow nextRow() throws FormattedException
-      {
-        final Message message = iter.next().message();
+		public DefaultFirehose(ConsumerConnector connector, KafkaStream<Message> stream, ByteBufferInputRowParser parser)
+		{
+			iter = stream.iterator();
+			this.connector = connector;
+			this.parser = parser;
+		}
 
-        if (message == null) {
-          return null;
-        }
+		@Override
+		public boolean hasMore()
+		{
+			return iter.hasNext();
+		}
 
-        int payloadSize = message.payloadSize();
-        if (chars == null || chars.remaining() < payloadSize) {
-          chars = CharBuffer.allocate(payloadSize);
-        }
+		@Override
+		public InputRow nextRow() throws FormattedException
+		{
+			final Message message = iter.next().message();
 
-        final CoderResult coderResult = Charsets.UTF_8.newDecoder()
-                                           .onMalformedInput(CodingErrorAction.REPLACE)
-                                           .onUnmappableCharacter(CodingErrorAction.REPLACE)
-                                           .decode(message.payload(), chars, true);
+			if (message == null)
+			{
+				return null;
+			}
 
-        if (coderResult.isUnderflow()) {
-          chars.flip();
-          try {
-            return parser.parse(chars.toString());
-          }
-          finally {
-            chars.clear();
-          }
-        }
-        else {
-          throw new FormattedException.Builder()
-              .withErrorCode(FormattedException.ErrorCode.UNPARSABLE_ROW)
-              .withMessage(String.format("Failed with CoderResult[%s]", coderResult))
-              .build();
-        }
-      }
+			return parseMessage(message);
+		}
 
-      @Override
-      public Runnable commit()
-      {
-        return new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            /*
-              This is actually not going to do exactly what we want, cause it will be called asynchronously
-              after the persist is complete.  So, it's going to commit that it's processed more than was actually
-              persisted.  This is unfortunate, but good enough for now.  Should revisit along with an upgrade
-              of our Kafka version.
-            */
+		public InputRow parseMessage(Message message) throws FormattedException
+		{
+			return parser.parse(message.payload());
+		}
 
-            log.info("committing offsets");
-            connector.commitOffsets();
-          }
-        };
-      }
+		@Override
+		public Runnable commit()
+		{
+			return new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					/*
+					 * This is actually not going to do exactly what we want, cause it
+					 * will be called asynchronously after the persist is complete. So,
+					 * it's going to commit that it's processed more than was actually
+					 * persisted. This is unfortunate, but good enough for now. Should
+					 * revisit along with an upgrade of our Kafka version.
+					 */
 
-      @Override
-      public void close() throws IOException
-      {
-        connector.shutdown();
-      }
-    };
-  }
+					log.info("committing offsets");
+					connector.commitOffsets();
+				}
+			};
+		}
+
+		@Override
+		public void close() throws IOException
+		{
+			connector.shutdown();
+		}
+	}
 }

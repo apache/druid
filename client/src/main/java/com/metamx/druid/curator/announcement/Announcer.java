@@ -320,12 +320,9 @@ public class Announcer
 
     final ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
 
-    if (subPaths == null) {
-      throw new IAE("Path[%s] not announced, cannot unannounce.", path);
-    }
-
-    if (subPaths.remove(pathAndNode.getNode()) == null) {
-      log.info("Asked to unnanounce path[%s] that is not announced.  Was it registered multiple times?.", path);
+    if (subPaths == null || subPaths.remove(pathAndNode.getNode()) == null) {
+      log.error("Path[%s] not announced, cannot unannounce.", path);
+      return;
     }
 
     try {

@@ -25,7 +25,6 @@ import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.guava.Sequence;
 import com.metamx.druid.Query;
 import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
@@ -33,7 +32,6 @@ import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.collect.CountingMap;
 import com.metamx.druid.guice.annotations.Processing;
 import com.metamx.druid.index.ReferenceCountingSegment;
-import com.metamx.druid.index.ReferenceCountingSequence;
 import com.metamx.druid.index.Segment;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.SegmentLoadingException;
@@ -47,6 +45,7 @@ import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.QueryToolChest;
+import com.metamx.druid.query.ReferenceCountingSegmentQueryRunner;
 import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.druid.query.segment.SegmentDescriptor;
@@ -196,6 +195,7 @@ public class ServerManager implements QuerySegmentWalker
         }
 
         try {
+          log.info("Attempting to close segment %s", segment.getIdentifier());
           oldQueryable.close();
         }
         catch (IOException e) {
@@ -366,14 +366,7 @@ public class ServerManager implements QuerySegmentWalker
             new BySegmentQueryRunner<T>(
                 adapter.getIdentifier(),
                 adapter.getDataInterval().getStart(),
-                new QueryRunner<T>()
-                {
-                  @Override
-                  public Sequence<T> run(final Query<T> query)
-                  {
-                    return new ReferenceCountingSequence<T>(factory.createRunner(adapter).run(query), adapter);
-                  }
-                }
+                new ReferenceCountingSegmentQueryRunner<T>(factory, adapter)
             )
         ).withWaitMeasuredFromNow(),
         segmentSpec

@@ -96,15 +96,10 @@ public class IntegerPartitionChunk<T> implements PartitionChunk<T>
   {
     if (chunk instanceof IntegerPartitionChunk) {
       IntegerPartitionChunk<T> intChunk = (IntegerPartitionChunk<T>) chunk;
-
-      int retVal = comparator.compare(start, intChunk.start);
-      if (retVal == 0) {
-        retVal = comparator.compare(end, intChunk.end);
-      }
-
-      return retVal;
+      return comparator.compare(chunkNumber, intChunk.chunkNumber);
+    } else {
+      throw new IllegalArgumentException("Cannot compare against something that is not an IntegerPartitionChunk.");
     }
-    throw new IllegalArgumentException("Cannot compare against something that is not a StringPartitionChunk.");
   }
 
   @Override
@@ -139,3 +134,4 @@ public class IntegerPartitionChunk<T> implements PartitionChunk<T>
            '}';
   }
 }
+

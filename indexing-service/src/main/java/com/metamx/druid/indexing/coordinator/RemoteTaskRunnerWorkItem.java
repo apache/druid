@@ -22,6 +22,7 @@ package com.metamx.druid.indexing.coordinator;
 import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
+import com.metamx.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
 
 /**
@@ -29,25 +30,35 @@ import org.joda.time.DateTime;
 public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 {
   private final SettableFuture<TaskStatus> result;
+  private final Worker worker;
 
   public RemoteTaskRunnerWorkItem(
       Task task,
-      SettableFuture<TaskStatus> result
+      SettableFuture<TaskStatus> result,
+      Worker worker
   )
   {
     super(task, result);
     this.result = result;
+    this.worker = worker;
   }
 
   public RemoteTaskRunnerWorkItem(
       Task task,
       SettableFuture<TaskStatus> result,
       DateTime createdTime,
-      DateTime queueInsertionTime
+      DateTime queueInsertionTime,
+      Worker worker
   )
   {
     super(task, result, createdTime, queueInsertionTime);
     this.result = result;
+    this.worker = worker;
+  }
+
+  public Worker getWorker()
+  {
+    return worker;
   }
 
   public void setResult(TaskStatus status)
@@ -58,6 +69,11 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   @Override
   public RemoteTaskRunnerWorkItem withQueueInsertionTime(DateTime time)
   {
-    return new RemoteTaskRunnerWorkItem(getTask(), result, getCreatedTime(), time);
+    return new RemoteTaskRunnerWorkItem(getTask(), result, getCreatedTime(), time, worker);
+  }
+
+  public RemoteTaskRunnerWorkItem withWorker(Worker theWorker)
+  {
+    return new RemoteTaskRunnerWorkItem(getTask(), result, getCreatedTime(), getQueueInsertionTime(), theWorker);
   }
 }

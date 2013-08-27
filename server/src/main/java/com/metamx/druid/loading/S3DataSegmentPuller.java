@@ -153,6 +153,9 @@ public class S3DataSegmentPuller implements DataSegmentPuller
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
     }
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, "S3 fail! Key[%s]", coords);
+    }
     catch (ServiceException e) {
       throw new SegmentLoadingException(e, "S3 fail! Key[%s]", coords);
     }
@@ -177,6 +180,9 @@ public class S3DataSegmentPuller implements DataSegmentPuller
     }
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
+    }
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, e.getMessage());
     }
     catch (ServiceException e) {
       throw new SegmentLoadingException(e, e.getMessage());

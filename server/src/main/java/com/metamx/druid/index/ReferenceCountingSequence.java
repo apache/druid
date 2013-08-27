@@ -25,6 +25,8 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
 
+import java.io.Closeable;
+
 /**
  */
 public class ReferenceCountingSequence<T> extends YieldingSequenceBase<T>

@@ -397,7 +397,45 @@ public class DruidMasterSegmentMergerTest
     );
 
     Assert.assertEquals(
-        ImmutableList.of(ImmutableList.of(segments.get(0), segments.get(1), segments.get(2))),
+        ImmutableList.of(),
+        merge(segments)
+    );
+  }
+
+  @Test
+  public void testMergeMixedShardSpecs()
+  {
+    final List<DataSegment> segments = ImmutableList.of(
+        DataSegment.builder()
+                   .dataSource("foo")
+                   .interval(new Interval("2012-01-01/P1D"))
+                   .version("1")
+                   .build(),
+        DataSegment.builder()
+                   .dataSource("foo")
+                   .interval(new Interval("2012-01-02/P1D"))
+                   .version("1")
+                   .build(),
+        DataSegment.builder().dataSource("foo")
+                   .interval(new Interval("2012-01-03/P1D"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(1500))
+                   .build(),
+        DataSegment.builder().dataSource("foo")
+                   .interval(new Interval("2012-01-04/P1D"))
+                   .version("1")
+                   .build(),
+        DataSegment.builder().dataSource("foo")
+                   .interval(new Interval("2012-01-05/P1D"))
+                   .version("1")
+                   .build()
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableList.of(segments.get(0), segments.get(1)),
+            ImmutableList.of(segments.get(3), segments.get(4))
+        ),
         merge(segments)
     );
   }
@@ -421,10 +459,15 @@ public class DruidMasterSegmentMergerTest
     final DruidMasterSegmentMerger merger = new DruidMasterSegmentMerger(indexingServiceClient, whitelistRef);
     final DruidMasterRuntimeParams params = DruidMasterRuntimeParams.newBuilder()
                                                                     .withAvailableSegments(ImmutableSet.copyOf(segments))
-                                                                    .withMergeBytesLimit(mergeBytesLimit)
-                                                                    .withMergeSegmentsLimit(mergeSegmentsLimit)
+                                                                    .withMasterSegmentSettings(
+                                                                        new MasterSegmentSettings.Builder().withMergeBytesLimit(
+                                                                            mergeBytesLimit
+                                                                        ).withMergeSegmentsLimit(
+                                                                            mergeSegmentsLimit
+                                                                        )
+                                                                        .build()
+                                                                    )
                                                                     .build();
-
     merger.run(params);
     return retVal;
   }

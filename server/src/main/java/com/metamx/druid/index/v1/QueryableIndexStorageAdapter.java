@@ -22,7 +22,6 @@ package com.metamx.druid.index.v1;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.metamx.collections.spatial.ImmutableRTree;
@@ -48,6 +47,7 @@ import com.metamx.druid.index.v1.processing.Offset;
 import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.IndexedIterable;
+import com.metamx.druid.kv.SingleIndexedInts;
 import com.metamx.druid.processing.ComplexMetricSelector;
 import com.metamx.druid.processing.FloatMetricSelector;
 import com.metamx.druid.processing.ObjectColumnSelector;
@@ -350,7 +350,10 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
 
                       final DictionaryEncodedColumn column = columnDesc.getDictionaryEncoding();
 
-                      if (columnDesc.getCapabilities().hasMultipleValues()) {
+                      if (column == null) {
+                        return null;
+                      }
+                      else if (columnDesc.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override
@@ -384,27 +387,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                           @Override
                           public IndexedInts getRow()
                           {
-                            final int value = column.getSingleValueRow(cursorOffset.getOffset());
-                            return new IndexedInts()
-                            {
-                              @Override
-                              public int size()
-                              {
-                                return 1;
-                              }
-
-                              @Override
-                              public int get(int index)
-                              {
-                                return value;
-                              }
-
-                              @Override
-                              public Iterator<Integer> iterator()
-                              {
-                                return Iterators.singletonIterator(value);
-                              }
-                            };
+                            return new SingleIndexedInts(column.getSingleValueRow(cursorOffset.getOffset()));
                           }
 
                           @Override
@@ -779,39 +762,42 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                     public DimensionSelector makeDimensionSelector(String dimension)
                     {
                       final String dimensionName = dimension.toLowerCase();
-                      final Column columnDesc = index.getColumn(dimensionName);
-                      if (columnDesc == null) {
+                      final Column column = index.getColumn(dimensionName);
+                      if (column == null) {
                         return null;
                       }
 
-                      final DictionaryEncodedColumn column = columnDesc.getDictionaryEncoding();
+                      final DictionaryEncodedColumn dict = column.getDictionaryEncoding();
 
-                      if (columnDesc.getCapabilities().hasMultipleValues()) {
+                      if (dict == null) {
+                        return null;
+                      }
+                      else if (column.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override
                           public IndexedInts getRow()
                           {
-                            return column.getMultiValueRow(currRow);
+                            return dict.getMultiValueRow(currRow);
                           }
 
                           @Override
                           public int getValueCardinality()
                           {
-                            return column.getCardinality();
+                            return dict.getCardinality();
                           }
 
                           @Override
                           public String lookupName(int id)
                           {
-                            final String retVal = column.lookupName(id);
+                            final String retVal = dict.lookupName(id);
                             return retVal == null ? "" : retVal;
                           }
 
                           @Override
                           public int lookupId(String name)
                           {
-                            return column.lookupId(name);
+                            return dict.lookupId(name);
                           }
                         };
                       } else {
@@ -820,45 +806,25 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                           @Override
                           public IndexedInts getRow()
                           {
-                            final int value = column.getSingleValueRow(currRow);
-                            return new IndexedInts()
-                            {
-                              @Override
-                              public int size()
-                              {
-                                return 1;
-                              }
-
-                              @Override
-                              public int get(int index)
-                              {
-                                return value;
-                              }
-
-                              @Override
-                              public Iterator<Integer> iterator()
-                              {
-                                return Iterators.singletonIterator(value);
-                              }
-                            };
+                            return new SingleIndexedInts(dict.getSingleValueRow(currRow));
                           }
 
                           @Override
                           public int getValueCardinality()
                           {
-                            return column.getCardinality();
+                            return dict.getCardinality();
                           }
 
                           @Override
                           public String lookupName(int id)
                           {
-                            return column.lookupName(id);
+                            return dict.lookupName(id);
                           }
 
                           @Override
                           public int lookupId(String name)
                           {
-                            return column.lookupId(name);
+                            return dict.lookupId(name);
                           }
                         };
                       }
@@ -1086,6 +1052,33 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
             }
           }
       );
+    }
+  }
+
+  private static class NullDimensionSelector implements DimensionSelector
+  {
+    @Override
+    public IndexedInts getRow()
+    {
+      return new SingleIndexedInts(0);
+    }
+
+    @Override
+    public int getValueCardinality()
+    {
+      return 1;
+    }
+
+    @Override
+    public String lookupName(int id)
+    {
+      return "";
+    }
+
+    @Override
+    public int lookupId(String name)
+    {
+      return 0;
     }
   }
 

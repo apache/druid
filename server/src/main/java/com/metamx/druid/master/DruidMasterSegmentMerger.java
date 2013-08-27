@@ -21,7 +21,6 @@ package com.metamx.druid.master;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -38,6 +37,7 @@ import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.partition.PartitionChunk;
+import com.metamx.druid.shard.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -98,18 +98,10 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
       SegmentsToMerge segmentsToMerge = new SegmentsToMerge();
 
       for (int i = 0; i < timelineObjects.size(); i++) {
-
-        try {
-          segmentsToMerge.add(timelineObjects.get(i));
-        }
-        catch (Exception e) {
-          log.error("Unable to merge segments for %s", entry.getKey());
-          throw Throwables.propagate(e);
-        }
-
-        if (segmentsToMerge.getByteCount() > params.getMergeBytesLimit()
-            || segmentsToMerge.getSegmentCount() >= params.getMergeSegmentsLimit()) {
-          i -= segmentsToMerge.backtrack(params.getMergeBytesLimit());
+        if (!segmentsToMerge.add(timelineObjects.get(i))
+            || segmentsToMerge.getByteCount() > params.getMasterSegmentSettings().getMergeBytesLimit()
+            || segmentsToMerge.getSegmentCount() >= params.getMasterSegmentSettings().getMergeSegmentsLimit()) {
+          i -= segmentsToMerge.backtrack(params.getMasterSegmentSettings().getMergeBytesLimit());
 
           if (segmentsToMerge.getSegmentCount() > 1) {
             stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
@@ -125,7 +117,7 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
       }
 
       // Finish any timelineObjects to merge that may have not hit threshold
-      segmentsToMerge.backtrack(params.getMergeBytesLimit());
+      segmentsToMerge.backtrack(params.getMasterSegmentSettings().getMergeBytesLimit());
       if (segmentsToMerge.getSegmentCount() > 1) {
         stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
       }
@@ -216,7 +208,7 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
       ).asList();
     }
 
-    public void add(TimelineObjectHolder<String, DataSegment> timelineObject)
+    public boolean add(TimelineObjectHolder<String, DataSegment> timelineObject)
     {
       final Interval timelineObjectInterval = timelineObject.getInterval();
 
@@ -235,6 +227,10 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
       Interval underlyingInterval = firstChunk.getObject().getInterval();
 
       for (final PartitionChunk<DataSegment> segment : timelineObject.getObject()) {
+        if (!(segment.getObject().getShardSpec() instanceof NoneShardSpec)) {
+          return false;
+        }
+
         segments.add(segment.getObject());
         if (segments.count(segment.getObject()) == 1) {
           byteCount += segment.getObject().getSize();
@@ -256,6 +252,8 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
 
         timelineObjects.add(Pair.of(timelineObject, new Interval(start, end)));
       }
+
+      return true;
     }
 
     public Interval getMergedTimelineInterval()

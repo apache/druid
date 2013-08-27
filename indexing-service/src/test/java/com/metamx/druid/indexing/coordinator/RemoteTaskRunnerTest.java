@@ -53,6 +53,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ * Several of the tests here are integration tests rather than unit tests. We will introduce real unit tests for this
+ * class as well as integration tests in the very near future.
  */
 public class RemoteTaskRunnerTest
 {
@@ -255,6 +257,48 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(runningTasks.size() == 1);
     Assert.assertTrue(runningTasks.contains("second"));
     Assert.assertFalse(runningTasks.contains("first"));
+  }
+
+  @Test
+  public void testRunWithTaskComplete() throws Exception
+  {
+    cf.create()
+      .creatingParentsIfNeeded()
+      .withMode(CreateMode.EPHEMERAL)
+      .forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(TaskStatus.success(task.getId())));
+
+    doSetup();
+
+    remoteTaskRunner.bootstrap(Arrays.<Task>asList(task));
+
+    ListenableFuture<TaskStatus> future = remoteTaskRunner.run(task);
+
+    TaskStatus status = future.get();
+
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, status.getStatusCode());
+  }
+
+  @Test
+  public void testWorkerRemoved() throws Exception
+  {
+    doSetup();
+    remoteTaskRunner.bootstrap(Lists.<Task>newArrayList());
+    Future<TaskStatus> future = remoteTaskRunner.run(makeTask(TaskStatus.running("task")));
+
+    Stopwatch stopwatch = new Stopwatch();
+    stopwatch.start();
+    while (cf.checkExists().forPath(joiner.join(statusPath, "task")) == null) {
+      Thread.sleep(100);
+      if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
+        throw new ISE("Cannot find running task");
+      }
+    }
+
+    workerCuratorCoordinator.stop();
+
+    TaskStatus status = future.get();
+
+    Assert.assertEquals(TaskStatus.Status.FAILED, status.getStatusCode());
   }
 
   private void doSetup() throws Exception

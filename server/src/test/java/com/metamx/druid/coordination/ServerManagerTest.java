@@ -73,6 +73,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -81,6 +82,7 @@ public class ServerManagerTest
   private ServerManager serverManager;
   private MyQueryRunnerFactory factory;
   private CountDownLatch queryWaitLatch;
+  private CountDownLatch queryWaitYieldLatch;
   private CountDownLatch queryNotifyLatch;
   private ExecutorService serverManagerExec;
 
@@ -90,8 +92,9 @@ public class ServerManagerTest
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
 
     queryWaitLatch = new CountDownLatch(1);
+    queryWaitYieldLatch = new CountDownLatch(1);
     queryNotifyLatch = new CountDownLatch(1);
-    factory = new MyQueryRunnerFactory(queryWaitLatch, queryNotifyLatch);
+    factory = new MyQueryRunnerFactory(queryWaitLatch, queryWaitYieldLatch, queryNotifyLatch);
     serverManagerExec = Executors.newFixedThreadPool(2);
     serverManager = new ServerManager(
         new SegmentLoader()
@@ -260,7 +263,15 @@ public class ServerManagerTest
         )
     );
 
-    queryNotifyLatch.await();
+    queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals(1, factory.getSegmentReferences().size());
+
+    for (ReferenceCountingSegment referenceCountingSegment : factory.getSegmentReferences()) {
+      Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
+    }
+
+    queryWaitYieldLatch.countDown();
 
     Assert.assertTrue(factory.getAdapters().size() == 1);
 
@@ -291,9 +302,17 @@ public class ServerManagerTest
         )
     );
 
-    queryNotifyLatch.await();
+    queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
 
-    Assert.assertTrue(factory.getAdapters().size() == 1);
+    Assert.assertEquals(1, factory.getSegmentReferences().size());
+
+    for (ReferenceCountingSegment referenceCountingSegment : factory.getSegmentReferences()) {
+      Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
+    }
+
+    queryWaitYieldLatch.countDown();
+
+    Assert.assertEquals(1, factory.getAdapters().size());
 
     for (SegmentForTesting segmentForTesting : factory.getAdapters()) {
       Assert.assertFalse(segmentForTesting.isClosed());
@@ -326,9 +345,17 @@ public class ServerManagerTest
         )
     );
 
-    queryNotifyLatch.await();
+    queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
 
-    Assert.assertTrue(factory.getAdapters().size() == 1);
+    Assert.assertEquals(1, factory.getSegmentReferences().size());
+
+    for (ReferenceCountingSegment referenceCountingSegment : factory.getSegmentReferences()) {
+      Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
+    }
+
+    queryWaitYieldLatch.countDown();
+
+    Assert.assertEquals(1, factory.getAdapters().size());
 
     for (SegmentForTesting segmentForTesting : factory.getAdapters()) {
       Assert.assertFalse(segmentForTesting.isClosed());
@@ -352,7 +379,8 @@ public class ServerManagerTest
   private void waitForTestVerificationAndCleanup(Future future)
   {
     try {
-      queryNotifyLatch.await();
+      queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
+      queryWaitYieldLatch.countDown();
       queryWaitLatch.countDown();
       future.get();
       factory.clearAdapters();
@@ -455,12 +483,20 @@ public class ServerManagerTest
   public static class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
   {
     private final CountDownLatch waitLatch;
+    private final CountDownLatch waitYieldLatch;
     private final CountDownLatch notifyLatch;
     private List<SegmentForTesting> adapters = Lists.newArrayList();
+    private List<ReferenceCountingSegment> segmentReferences = Lists.newArrayList();
 
-    public MyQueryRunnerFactory(CountDownLatch waitLatch, CountDownLatch notifyLatch)
+
+    public MyQueryRunnerFactory(
+        CountDownLatch waitLatch,
+        CountDownLatch waitYieldLatch,
+        CountDownLatch notifyLatch
+    )
     {
       this.waitLatch = waitLatch;
+      this.waitYieldLatch = waitYieldLatch;
       this.notifyLatch = notifyLatch;
     }
 
@@ -470,11 +506,13 @@ public class ServerManagerTest
       if (!(adapter instanceof ReferenceCountingSegment)) {
         throw new IAE("Expected instance of ReferenceCountingSegment, got %s", adapter.getClass());
       }
-      adapters.add((SegmentForTesting) ((ReferenceCountingSegment) adapter).getBaseSegment());
+      final ReferenceCountingSegment segment = (ReferenceCountingSegment) adapter;
+
+      Assert.assertTrue(segment.getNumReferences() > 0);
+      segmentReferences.add(segment);
+      adapters.add((SegmentForTesting) segment.getBaseSegment());
       return new BlockingQueryRunner<Result<SearchResultValue>>(
-          new NoopQueryRunner<Result<SearchResultValue>>(),
-          waitLatch,
-          notifyLatch
+          new NoopQueryRunner<Result<SearchResultValue>>(), waitLatch, waitYieldLatch, notifyLatch
       );
     }
 
@@ -495,6 +533,11 @@ public class ServerManagerTest
     public List<SegmentForTesting> getAdapters()
     {
       return adapters;
+    }
+
+    public List<ReferenceCountingSegment> getSegmentReferences()
+    {
+      return segmentReferences;
     }
 
     public void clearAdapters()
@@ -608,23 +651,26 @@ public class ServerManagerTest
   {
     private final QueryRunner<T> runner;
     private final CountDownLatch waitLatch;
+    private final CountDownLatch waitYieldLatch;
     private final CountDownLatch notifyLatch;
 
     public BlockingQueryRunner(
         QueryRunner<T> runner,
         CountDownLatch waitLatch,
+        CountDownLatch waitYieldLatch,
         CountDownLatch notifyLatch
     )
     {
       this.runner = runner;
       this.waitLatch = waitLatch;
+      this.waitYieldLatch = waitYieldLatch;
       this.notifyLatch = notifyLatch;
     }
 
     @Override
     public Sequence<T> run(Query<T> query)
     {
-      return new BlockingSequence<T>(runner.run(query), waitLatch, notifyLatch);
+      return new BlockingSequence<T>(runner.run(query), waitLatch, waitYieldLatch, notifyLatch);
     }
   }
 
@@ -632,16 +678,20 @@ public class ServerManagerTest
   {
     private final Sequence<T> baseSequence;
     private final CountDownLatch waitLatch;
+    private final CountDownLatch waitYieldLatch;
     private final CountDownLatch notifyLatch;
 
-    public BlockingSequence(
+
+    private BlockingSequence(
         Sequence<T> baseSequence,
         CountDownLatch waitLatch,
+        CountDownLatch waitYieldLatch,
         CountDownLatch notifyLatch
     )
     {
       this.baseSequence = baseSequence;
       this.waitLatch = waitLatch;
+      this.waitYieldLatch = waitYieldLatch;
       this.notifyLatch = notifyLatch;
     }
 
@@ -652,6 +702,13 @@ public class ServerManagerTest
     {
       notifyLatch.countDown();
 
+      try {
+        waitYieldLatch.await(25, TimeUnit.MILLISECONDS);
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+
       final Yielder<OutType> baseYielder = baseSequence.toYielder(initValue, accumulator);
       return new Yielder<OutType>()
       {
@@ -659,7 +716,7 @@ public class ServerManagerTest
         public OutType get()
         {
           try {
-            waitLatch.await();
+            waitLatch.await(25, TimeUnit.MILLISECONDS);
           }
           catch (Exception e) {
             throw Throwables.propagate(e);

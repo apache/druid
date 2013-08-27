@@ -27,7 +27,7 @@ import java.util.Comparator;
  */
 public class StringPartitionChunk<T> implements PartitionChunk<T>
 {
-  private static final Comparator<String> comparator = Ordering.<String>natural().nullsFirst();
+  private static final Comparator<Integer> comparator = Ordering.<Integer>natural().nullsFirst();
 
   private final String start;
   private final String end;
@@ -95,12 +95,7 @@ public class StringPartitionChunk<T> implements PartitionChunk<T>
     if (chunk instanceof StringPartitionChunk) {
       StringPartitionChunk<T> stringChunk = (StringPartitionChunk<T>) chunk;
 
-      int retVal = comparator.compare(start, stringChunk.start);
-      if (retVal == 0) {
-        retVal = comparator.compare(end, stringChunk.end);
-      }
-
-      return retVal;
+      return comparator.compare(chunkNumber, stringChunk.chunkNumber);
     }
     throw new IllegalArgumentException("Cannot compare against something that is not a StringPartitionChunk.");
   }

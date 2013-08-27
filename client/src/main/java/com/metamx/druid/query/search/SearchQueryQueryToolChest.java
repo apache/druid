@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
@@ -168,8 +169,12 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         }
 
         final ByteBuffer queryCacheKey = ByteBuffer
-            .allocate(1 + granularityBytes.length + filterBytes.length + querySpecBytes.length + dimensionsBytesSize)
+            .allocate(
+                1 + 4 + granularityBytes.length + filterBytes.length +
+                querySpecBytes.length + dimensionsBytesSize
+            )
             .put(SEARCH_QUERY)
+            .put(Ints.toByteArray(query.getLimit()))
             .put(granularityBytes)
             .put(filterBytes)
             .put(querySpecBytes);

@@ -39,6 +39,7 @@ public class SelectorDimFilter implements DimFilter
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
+
     this.dimension = dimension;
     this.value = value;
   }
@@ -47,7 +48,7 @@ public class SelectorDimFilter implements DimFilter
   public byte[] getCacheKey()
   {
     byte[] dimensionBytes = dimension.getBytes();
-    byte[] valueBytes = value == null ? new byte[]{} : value.getBytes();
+    byte[] valueBytes = (value == null) ? new byte[]{} : value.getBytes();
 
     return ByteBuffer.allocate(1 + dimensionBytes.length + valueBytes.length)
                      .put(DimFilterCacheHelper.SELECTOR_CACHE_ID)

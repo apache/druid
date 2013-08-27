@@ -58,18 +58,14 @@ public abstract class AbstractTask implements Task
 
   protected AbstractTask(String id, String groupId, String dataSource, Interval interval)
   {
-    this.id = Preconditions.checkNotNull(id, "id");
-    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
-    this.taskResource = new TaskResource(id, 1);
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.interval = Optional.fromNullable(interval);
+    this(id, groupId, new TaskResource(id, 1), dataSource, interval);
   }
 
   protected AbstractTask(String id, String groupId, TaskResource taskResource, String dataSource, Interval interval)
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.groupId = Preconditions.checkNotNull(groupId, "groupId");
-    this.taskResource = Preconditions.checkNotNull(taskResource, "taskResource");
+    this.taskResource = Preconditions.checkNotNull(taskResource, "resource");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.interval = Optional.fromNullable(interval);
   }
@@ -88,7 +84,7 @@ public abstract class AbstractTask implements Task
     return groupId;
   }
 
-  @JsonProperty
+  @JsonProperty("resource")
   @Override
   public TaskResource getTaskResource()
   {

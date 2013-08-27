@@ -96,6 +96,14 @@ public class RealtimeManager implements QuerySegmentWalker
       Closeables.closeQuietly(chief);
     }
   }
+  public FireDepartmentMetrics getMetrics(String datasource)
+  {
+    FireChief chief = chiefs.get(datasource);
+    if (chief == null) {
+      return null;
+    }
+    return chief.getMetrics();
+  }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
@@ -151,6 +159,11 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
+    public FireDepartmentMetrics getMetrics()
+    {
+      return metrics;
+    }
+
     @Override
     public void run()
     {
@@ -165,7 +178,14 @@ public class RealtimeManager implements QuerySegmentWalker
         while (firehose.hasMore()) {
           final InputRow inputRow;
           try {
-            inputRow = firehose.nextRow();
+            try {
+              inputRow = firehose.nextRow();
+            }
+            catch (Exception e) {
+              log.info(e, "thrown away line due to exception");
+              metrics.incrementThrownAway();
+              continue;
+            }
 
             final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
             if (sink == null) {
@@ -181,11 +201,11 @@ public class RealtimeManager implements QuerySegmentWalker
             }
 
             int currCount = sink.add(inputRow);
-            metrics.incrementProcessed();
             if (currCount >= config.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
               plumber.persist(firehose.commit());
               nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
             }
+            metrics.incrementProcessed();
           }
           catch (FormattedException e) {
             log.info(e, "unparseable line: %s", e.getDetails());

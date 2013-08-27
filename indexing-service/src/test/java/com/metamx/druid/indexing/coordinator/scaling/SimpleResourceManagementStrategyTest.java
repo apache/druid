@@ -31,6 +31,7 @@ import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.coordinator.RemoteTaskRunnerWorkItem;
 import com.metamx.druid.indexing.coordinator.ZkWorker;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
+import com.metamx.druid.indexing.worker.TaskAnnouncement;
 import com.metamx.druid.indexing.worker.Worker;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.emitter.EmittingLogger;
@@ -111,7 +112,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -139,7 +140,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -155,7 +156,7 @@ public class SimpleResourceManagementStrategyTest
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -196,7 +197,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -214,7 +215,7 @@ public class SimpleResourceManagementStrategyTest
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -248,7 +249,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -278,7 +279,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -293,7 +294,7 @@ public class SimpleResourceManagementStrategyTest
 
     terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -323,12 +324,12 @@ public class SimpleResourceManagementStrategyTest
     }
 
     @Override
-    public Map<String, TaskStatus> getRunningTasks()
+    public Map<String, TaskAnnouncement> getRunningTasks()
     {
       if (testTask == null) {
         return Maps.newHashMap();
       }
-      return ImmutableMap.of(testTask.getId(), TaskStatus.running(testTask.getId()));
+      return ImmutableMap.of(testTask.getId(), TaskAnnouncement.create(testTask, TaskStatus.running(testTask.getId())));
     }
   }
 }

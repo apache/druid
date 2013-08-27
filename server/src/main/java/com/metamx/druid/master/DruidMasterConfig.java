@@ -42,12 +42,6 @@ public abstract class DruidMasterConfig
   @Default("PT1800s")
   public abstract Duration getMasterSegmentMergerPeriod();
 
-  @Config("druid.master.millisToWaitBeforeDeleting")
-  public long getMillisToWaitBeforeDeleting()
-  {
-    return 15 * 60 * 1000L;
-  }
-
   @Config("druid.master.merger.on")
   public boolean isMergeSegments()
   {
@@ -59,22 +53,6 @@ public abstract class DruidMasterConfig
   {
     return false;
   }
-
-  @Config("druid.master.merge.threshold")
-  public long getMergeBytesLimit()
-  {
-    return 100000000L;
-  }
-
-  @Config("druid.master.merge.maxSegments")
-  public int getMergeSegmentsLimit()
-  {
-    return Integer.MAX_VALUE;
-  }
-
-  @Config("druid.master.balancer.maxSegmentsToMove")
-  @Default("5")
-  public abstract int getMaxSegmentsToMove();
 
   @Config("druid.master.replicant.lifetime")
   @Default("15")

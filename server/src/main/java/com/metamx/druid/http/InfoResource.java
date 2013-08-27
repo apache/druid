@@ -102,6 +102,7 @@ public class InfoResource
   private final DatabaseRuleManager databaseRuleManager;
   private final IndexingServiceClient indexingServiceClient;
 
+
   @Inject
   public InfoResource(
       DruidMaster master,
@@ -128,6 +129,7 @@ public class InfoResource
                    .entity(master.getCurrentMaster())
                    .build();
   }
+
 
   @GET
   @Path("/cluster")

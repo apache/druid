@@ -95,18 +95,6 @@ public class DruidMasterTest
           }
 
           @Override
-          public long getMillisToWaitBeforeDeleting()
-          {
-            return super.getMillisToWaitBeforeDeleting();
-          }
-
-          @Override
-          public int getMaxSegmentsToMove()
-          {
-            return 0;
-          }
-
-          @Override
           public int getReplicantLifetime()
           {
             return 0;

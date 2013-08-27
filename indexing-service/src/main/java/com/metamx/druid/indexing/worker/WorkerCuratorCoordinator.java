@@ -184,7 +184,7 @@ public class WorkerCuratorCoordinator
     }
   }
 
-  public void announceStatus(TaskStatus status)
+  public void announceTask(TaskAnnouncement announcement)
   {
     synchronized (lock) {
       if (!started) {
@@ -192,14 +192,18 @@ public class WorkerCuratorCoordinator
       }
 
       try {
-        byte[] rawBytes = jsonMapper.writeValueAsBytes(status);
+        byte[] rawBytes = jsonMapper.writeValueAsBytes(announcement);
         if (rawBytes.length > config.getMaxZnodeBytes()) {
           throw new ISE(
               "Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes()
           );
         }
 
-        curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(getStatusPathForId(status.getId()), rawBytes);
+        curatorFramework.create()
+                        .withMode(CreateMode.EPHEMERAL)
+                        .forPath(
+                            getStatusPathForId(announcement.getTaskStatus().getId()), rawBytes
+                        );
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -207,7 +211,7 @@ public class WorkerCuratorCoordinator
     }
   }
 
-  public void updateStatus(TaskStatus status)
+  public void updateAnnouncement(TaskAnnouncement announcement)
   {
     synchronized (lock) {
       if (!started) {
@@ -215,18 +219,21 @@ public class WorkerCuratorCoordinator
       }
 
       try {
-        if (curatorFramework.checkExists().forPath(getStatusPathForId(status.getId())) == null) {
-          announceStatus(status);
+        if (curatorFramework.checkExists().forPath(getStatusPathForId(announcement.getTaskStatus().getId())) == null) {
+          announceTask(announcement);
           return;
         }
-        byte[] rawBytes = jsonMapper.writeValueAsBytes(status);
+        byte[] rawBytes = jsonMapper.writeValueAsBytes(announcement);
         if (rawBytes.length > config.getMaxZnodeBytes()) {
           throw new ISE(
               "Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes()
           );
         }
 
-        curatorFramework.setData().forPath(getStatusPathForId(status.getId()), rawBytes);
+        curatorFramework.setData()
+                        .forPath(
+                            getStatusPathForId(announcement.getTaskStatus().getId()), rawBytes
+                        );
       }
       catch (Exception e) {
         throw Throwables.propagate(e);

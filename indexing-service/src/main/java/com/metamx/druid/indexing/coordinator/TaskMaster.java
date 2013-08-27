@@ -293,7 +293,7 @@ public class TaskMaster
   public Optional<ResourceManagementScheduler> getResourceManagementScheduler()
   {
     if (leading) {
-      return Optional.of(resourceManagementScheduler);
+      return Optional.fromNullable(resourceManagementScheduler);
     } else {
       return Optional.absent();
     }
