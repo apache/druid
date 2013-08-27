@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.MergeSequence;
@@ -37,7 +38,6 @@ import com.metamx.druid.Query;
 import com.metamx.druid.ResultGranularTimestampComparator;
 import com.metamx.druid.SearchBinaryFn;
 import com.metamx.druid.collect.OrderedMergeSequence;
-import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.query.CacheStrategy;
 import com.metamx.druid.query.IntervalChunkingQueryRunner;
 import com.metamx.druid.query.MetricManipulationFn;
@@ -48,9 +48,7 @@ import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.result.BySegmentSearchResultValue;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
-import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
@@ -60,7 +58,6 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -70,22 +67,18 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   private static final byte SEARCH_QUERY = 0x2;
 
   private static final Joiner COMMA_JOIN = Joiner.on(",");
-  private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<Result<SearchResultValue>>()
+  private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<Result<SearchResultValue>>(){};
+
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>(){};
+  private final SearchQueryConfig config;
+
+  @Inject
+  public SearchQueryQueryToolChest(
+      SearchQueryConfig config
+  )
   {
-  };
-
-  private static final int maxSearchLimit;
-
-  static {
-    // I dislike this static loading of properies, but it's the only mechanism available right now.
-    Properties props = Initialization.loadProperties();
-
-    maxSearchLimit = PropUtils.getPropertyAsInt(props, "com.metamx.query.search.maxSearchLimit", 1000);
+    this.config = config;
   }
-
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
-  {
-  };
 
   @Override
   public QueryRunner<Result<SearchResultValue>> mergeResults(QueryRunner<Result<SearchResultValue>> runner)
@@ -259,15 +252,23 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   public QueryRunner<Result<SearchResultValue>> preMergeQueryDecoration(QueryRunner<Result<SearchResultValue>> runner)
   {
     return new SearchThresholdAdjustingQueryRunner(
-        new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, Period.months(1))
+        new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, Period.months(1)),
+        config
     );
   }
 
   private static class SearchThresholdAdjustingQueryRunner implements QueryRunner<Result<SearchResultValue>>
   {
     private final QueryRunner<Result<SearchResultValue>> runner;
+    private final SearchQueryConfig config;
 
-    public SearchThresholdAdjustingQueryRunner(QueryRunner<Result<SearchResultValue>> runner) {this.runner = runner;}
+    public SearchThresholdAdjustingQueryRunner(
+        QueryRunner<Result<SearchResultValue>> runner,
+        SearchQueryConfig config
+    ) {
+      this.runner = runner;
+      this.config = config;
+    }
 
     @Override
     public Sequence<Result<SearchResultValue>> run(Query<Result<SearchResultValue>> input)
@@ -277,14 +278,14 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       }
 
       final SearchQuery query = (SearchQuery) input;
-      if (query.getLimit() < maxSearchLimit) {
+      if (query.getLimit() < config.getMaxSearchLimit()) {
         return runner.run(query);
       }
 
       final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
 
       return Sequences.map(
-          runner.run(query.withLimit(maxSearchLimit)),
+          runner.run(query.withLimit(config.getMaxSearchLimit())),
           new Function<Result<SearchResultValue>, Result<SearchResultValue>>()
           {
             @Override

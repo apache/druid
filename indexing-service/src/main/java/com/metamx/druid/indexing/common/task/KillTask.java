@@ -32,7 +32,6 @@ import com.metamx.druid.indexing.common.TaskToolbox;
 import com.metamx.druid.indexing.common.actions.LockListAction;
 import com.metamx.druid.indexing.common.actions.SegmentListUnusedAction;
 import com.metamx.druid.indexing.common.actions.SegmentNukeAction;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -51,13 +50,7 @@ public class KillTask extends AbstractTask
   )
   {
     super(
-        id != null ? id : String.format(
-            "kill_%s_%s_%s_%s",
-            dataSource,
-            interval.getStart(),
-            interval.getEnd(),
-            new DateTime().toString()
-        ),
+        TaskUtils.makeId(id, "kill", dataSource, interval),
         dataSource,
         interval
     );

@@ -325,7 +325,7 @@ public class Announcer
     }
 
     if (subPaths.remove(pathAndNode.getNode()) == null) {
-      throw new IAE("Path[%s] not announced, cannot unannounce.", path);
+      log.info("Asked to unnanounce path[%s] that is not announced.  Was it registered multiple times?.", path);
     }
 
     try {

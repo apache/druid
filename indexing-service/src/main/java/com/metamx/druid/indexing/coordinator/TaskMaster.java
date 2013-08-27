@@ -34,7 +34,6 @@ import com.metamx.druid.indexing.coordinator.exec.TaskConsumer;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementSchedulerFactory;
 import com.metamx.druid.initialization.DruidNode;
-import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -129,7 +128,23 @@ public class TaskMaster
               }
           );
           leaderLifecycle.addManagedInstance(taskQueue);
-          Initialization.announceDefaultService(node, serviceAnnouncer, leaderLifecycle);
+
+          leaderLifecycle.addHandler(
+              new Lifecycle.Handler()
+              {
+                @Override
+                public void start() throws Exception
+                {
+                  serviceAnnouncer.announce(node);
+                }
+
+                @Override
+                public void stop()
+                {
+                  serviceAnnouncer.unannounce(node);
+                }
+              }
+          );
           leaderLifecycle.addManagedInstance(taskConsumer);
 
           if (taskRunner instanceof RemoteTaskRunner) {

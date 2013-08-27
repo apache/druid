@@ -4,6 +4,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.ConfigurationException;
 import com.google.inject.Inject;
@@ -25,7 +26,10 @@ import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.spi.container.servlet.WebConfig;
+import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.nio.SelectChannelConnector;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import javax.servlet.ServletException;
 import java.util.List;
@@ -113,7 +117,7 @@ public class JettyServerModule extends JerseyServletModule
   @Provides @LazySingleton
   public Server getServer(Injector injector, Lifecycle lifecycle, @Self DruidNode node, ServerConfig config)
   {
-    final Server server = Initialization.makeJettyServer(node, config);
+    final Server server = makeJettyServer(node, config);
     try {
       initializer.initialize(server, injector);
     }
@@ -143,6 +147,25 @@ public class JettyServerModule extends JerseyServletModule
           }
         }
     );
+    return server;
+  }
+
+  private static Server makeJettyServer(@Self DruidNode node, ServerConfig config)
+  {
+    final QueuedThreadPool threadPool = new QueuedThreadPool();
+    threadPool.setMinThreads(config.getNumThreads());
+    threadPool.setMaxThreads(config.getNumThreads());
+
+    final Server server = new Server();
+    server.setThreadPool(threadPool);
+
+    SelectChannelConnector connector = new SelectChannelConnector();
+    connector.setPort(node.getPort());
+    connector.setMaxIdleTime(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
+    connector.setStatsOn(true);
+
+    server.setConnectors(new Connector[]{connector});
+
     return server;
   }
 }

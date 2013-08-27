@@ -5,9 +5,10 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.coordinator.TaskRunner;
@@ -17,7 +18,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Encapsulates the lifecycle of a task executor. Loads one task, runs it, writes its status, and all the while
@@ -27,37 +27,33 @@ public class ExecutorLifecycle
 {
   private static final EmittingLogger log = new EmittingLogger(ExecutorLifecycle.class);
 
-  private final File taskFile;
-  private final File statusFile;
+  private final ExecutorLifecycleConfig config;
   private final TaskRunner taskRunner;
-  private final InputStream parentStream;
   private final ObjectMapper jsonMapper;
 
-  private final ExecutorService parentMonitorExec = Executors.newFixedThreadPool(
-      1,
-      new ThreadFactoryBuilder().setNameFormat("parent-monitor-%d").setDaemon(true).build()
-  );
+  private final ExecutorService parentMonitorExec = Execs.singleThreaded("parent-monitor-%d");
 
   private volatile ListenableFuture<TaskStatus> statusFuture = null;
 
+  @Inject
   public ExecutorLifecycle(
-      File taskFile,
-      File statusFile,
+      ExecutorLifecycleConfig config,
       TaskRunner taskRunner,
-      InputStream parentStream,
       ObjectMapper jsonMapper
   )
   {
-    this.taskFile = taskFile;
-    this.statusFile = statusFile;
+    this.config = config;
     this.taskRunner = taskRunner;
-    this.parentStream = parentStream;
     this.jsonMapper = jsonMapper;
   }
 
   @LifecycleStart
   public void start()
   {
+    final File taskFile = config.getTaskFile();
+    final File statusFile = config.getStatusFile();
+    final InputStream parentStream = config.getParentStream();
+
     final Task task;
 
     try {

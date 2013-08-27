@@ -19,23 +19,18 @@
 
 package com.metamx.druid.initialization;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.metamx.common.config.Config;
-import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.curator.CuratorConfig;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.zookeeper.data.Stat;
-import org.skife.config.ConfigurationObjectFactory;
 
-import java.io.ByteArrayInputStream;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Properties;
 
 /**
@@ -54,21 +49,23 @@ public class PropertiesModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    final Properties zkProps = new Properties();
-    final Properties fileProps = new Properties(zkProps);
+    final Properties fileProps = new Properties();
+    Properties systemProps = System.getProperties();
 
-    // Note that zookeeper coordinates must be either in cmdLine or in runtime.properties
-    Properties sp = System.getProperties();
+    Properties props = new Properties(fileProps);
+    props.putAll(systemProps);
 
-    Properties tmp_props = new Properties(fileProps); // the head of the 3 level Properties chain
-    tmp_props.putAll(sp);
+    InputStream stream = ClassLoader.getSystemResourceAsStream(propertiesFile);
+    try {
+      if (stream == null) {
+        File workingDirectoryFile = new File(systemProps.getProperty("druid.properties.file", propertiesFile));
+        if (workingDirectoryFile.exists()) {
+          stream = new BufferedInputStream(new FileInputStream(workingDirectoryFile));
+        }
+      }
 
-    final InputStream stream = ClassLoader.getSystemResourceAsStream(propertiesFile);
-    if (stream == null) {
-      log.info("%s not found on classpath, relying only on system properties and zookeeper.", propertiesFile);
-    } else {
-      log.info("Loading properties from %s", propertiesFile);
-      try {
+      if (stream != null) {
+        log.info("Loading properties from %s", propertiesFile);
         try {
           fileProps.load(stream);
         }
@@ -76,60 +73,14 @@ public class PropertiesModule implements Module
           throw Throwables.propagate(e);
         }
       }
-      finally {
-        Closeables.closeQuietly(stream);
-      }
+    }
+    catch (FileNotFoundException e) {
+      log.wtf(e, "This can only happen if the .exists() call lied.  That's f'd up.");
+    }
+    finally {
+      Closeables.closeQuietly(stream);
     }
 
-    // log properties from file; stringPropertyNames() would normally cascade down into the sub Properties objects, but
-    //    zkProps (the parent level) is empty at this point so it will only log properties from runtime.properties
-    for (String prop : fileProps.stringPropertyNames()) {
-      log.info("Loaded(runtime.properties) Property[%s] as [%s]", prop, fileProps.getProperty(prop));
-    }
-
-    final String zkHostsProperty = "druid.zk.service.host";
-
-    if (tmp_props.getProperty(zkHostsProperty) != null) {
-      final ConfigurationObjectFactory factory = Config.createFactory(tmp_props);
-
-      ZkPathsConfig config;
-      try {
-        config = factory.build(ZkPathsConfig.class);
-      }
-      catch (IllegalArgumentException e) {
-        log.warn(e, "Unable to build ZkPathsConfig.  Cannot load properties from ZK.");
-        config = null;
-      }
-
-      if (config != null) {
-        Lifecycle lifecycle = new Lifecycle();
-        try {
-          CuratorFramework curator = Initialization.makeCuratorFramework(factory.build(CuratorConfig.class), lifecycle);
-
-          lifecycle.start();
-
-          final Stat stat = curator.checkExists().forPath(config.getPropertiesPath());
-          if (stat != null) {
-            final byte[] data = curator.getData().forPath(config.getPropertiesPath());
-            zkProps.load(new InputStreamReader(new ByteArrayInputStream(data), Charsets.UTF_8));
-          }
-
-          // log properties from zk
-          for (String prop : zkProps.stringPropertyNames()) {
-            log.info("Loaded(zk) Property[%s] as [%s]", prop, zkProps.getProperty(prop));
-          }
-        }
-        catch (Exception e) {
-          throw Throwables.propagate(e);
-        }
-        finally {
-          lifecycle.stop();
-        }
-      }
-    } else {
-      log.warn("property[%s] not set, skipping ZK-specified properties.", zkHostsProperty);
-    }
-
-    binder.bind(Properties.class).toInstance(tmp_props);
+    binder.bind(Properties.class).toInstance(props);
   }
 }

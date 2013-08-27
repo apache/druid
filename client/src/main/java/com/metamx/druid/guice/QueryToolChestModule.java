@@ -13,6 +13,7 @@ import com.metamx.druid.query.group.GroupByQueryQueryToolChest;
 import com.metamx.druid.query.metadata.SegmentMetadataQuery;
 import com.metamx.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import com.metamx.druid.query.search.SearchQuery;
+import com.metamx.druid.query.search.SearchQueryConfig;
 import com.metamx.druid.query.search.SearchQueryQueryToolChest;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
@@ -47,5 +48,6 @@ public class QueryToolChestModule implements Module
     }
 
     JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
+    JsonConfigProvider.bind(binder, "druid.query.search", SearchQueryConfig.class);
   }
 }

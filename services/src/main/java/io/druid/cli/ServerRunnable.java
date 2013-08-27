@@ -40,6 +40,5 @@ public abstract class ServerRunnable implements Runnable
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
-
   }
 }

@@ -3,6 +3,7 @@ package com.metamx.druid.curator.discovery;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -17,9 +18,9 @@ import com.metamx.druid.guice.JsonConfigProvider;
 import com.metamx.druid.guice.LazySingleton;
 import com.metamx.druid.initialization.CuratorDiscoveryConfig;
 import com.metamx.druid.initialization.DruidNode;
-import com.metamx.druid.initialization.Initialization;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
+import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 
 import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
@@ -179,6 +180,35 @@ public class DiscoveryModule implements Module
       Lifecycle lifecycle
   ) throws Exception
   {
-    return Initialization.makeServiceDiscoveryClient(curator, config.get(), lifecycle);
+    final ServiceDiscovery<Void> serviceDiscovery =
+        ServiceDiscoveryBuilder.builder(Void.class)
+                               .basePath(config.get().getPath())
+                               .client(curator)
+                               .build();
+
+    lifecycle.addHandler(
+        new Lifecycle.Handler()
+        {
+          @Override
+          public void start() throws Exception
+          {
+            serviceDiscovery.start();
+          }
+
+          @Override
+          public void stop()
+          {
+            try {
+              serviceDiscovery.close();
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
+            }
+          }
+        },
+        Lifecycle.Stage.LAST
+    );
+
+    return serviceDiscovery;
   }
 }

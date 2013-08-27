@@ -45,7 +45,6 @@ import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogPusher;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogStreamer;
 import com.metamx.druid.indexing.coordinator.config.ForkingTaskRunnerConfig;
-import com.metamx.druid.indexing.worker.executor.ExecutorMain;
 import com.metamx.druid.initialization.DruidNode;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
@@ -65,12 +64,13 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 
 /**
- * Runs tasks in separate processes using {@link ExecutorMain}.
+ * Runs tasks in separate processes using the "internal peon" verb.
  */
 public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 {
   private static final EmittingLogger log = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
+  private static final Splitter whiteSpaceSplitter = Splitter.on(CharMatcher.WHITESPACE).omitEmptyStrings();
 
   private final ForkingTaskRunnerConfig config;
   private final Properties props;
@@ -145,11 +145,15 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
 
                               if (taskInfo == null) {
-                                throw new ISE("WTF?! TaskInfo disappeared for task: %s", task.getId());
+                                log.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
+                                throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
                               }
 
                               if (taskInfo.processHolder != null) {
-                                throw new ISE("WTF?! TaskInfo already has a process holder for task: %s", task.getId());
+                                log.makeAlert("WTF?! TaskInfo already has a processHolder")
+                                   .addData("task", task.getId())
+                                   .emit();
+                                throw new ISE("TaskInfo already has processHolder for task[%s]!", task.getId());
                               }
 
                               final List<String> command = Lists.newArrayList();
@@ -160,12 +164,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add("-cp");
                               command.add(config.getClasspath());
 
-                              Iterables.addAll(
-                                  command,
-                                  Splitter.on(CharMatcher.WHITESPACE)
-                                          .omitEmptyStrings()
-                                          .split(config.getJavaOpts())
-                              );
+                              Iterables.addAll(command, whiteSpaceSplitter.split(config.getJavaOpts()));
 
                               for (String propName : props.stringPropertyNames()) {
                                 for (String allowedPrefix : config.getAllowedPrefixes()) {
@@ -194,15 +193,16 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 }
                               }
 
-                              String nodeType = task.getNodeType();
-                              if (nodeType != null) {
-                                command.add(String.format("-Ddruid.executor.nodeType=%s", nodeType));
-                              }
-
                               command.add(String.format("-Ddruid.host=%s", childHost));
                               command.add(String.format("-Ddruid.port=%d", childPort));
 
-                              command.add(config.getMainClass());
+                              command.add("io.druid.cli.Main");
+                              command.add("internal");
+                              command.add("peon");
+                              String nodeType = task.getNodeType();
+                              if (nodeType != null) {
+                                command.add(String.format("--nodeType %s", nodeType));
+                              }
                               command.add(taskFile.toString());
                               command.add(statusFile.toString());
 

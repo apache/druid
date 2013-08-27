@@ -19,7 +19,9 @@
 
 package io.druid.cli;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Injector;
+import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.CuratorModule;
 import com.metamx.druid.curator.discovery.DiscoveryModule;
@@ -39,11 +41,19 @@ import com.metamx.druid.guice.StorageNodeModule;
 import com.metamx.druid.http.StatusResource;
 import com.metamx.druid.indexing.coordinator.ThreadPoolTaskRunner;
 import com.metamx.druid.indexing.worker.executor.ChatHandlerResource;
+import com.metamx.druid.indexing.worker.executor.ExecutorLifecycle;
+import com.metamx.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import com.metamx.druid.initialization.EmitterModule;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.JettyServerModule;
+import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.metrics.MetricsModule;
+import io.airlift.command.Arguments;
 import io.airlift.command.Command;
+import io.airlift.command.Option;
+
+import java.io.File;
+import java.util.List;
 
 /**
  */
@@ -52,20 +62,18 @@ import io.airlift.command.Command;
     description = "Runs a Peon, this is an individual forked \"task\" used as part of the indexing service. "
                   + "This should rarely, if ever, be used directly."
 )
-public class CliPeon extends ServerRunnable
+public class CliPeon implements Runnable
 {
+  @Arguments(description = "task.json status.json", required = true)
+  public List<String> taskAndStatusFile;
+
+  @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
+  public String nodeType = "indexer-executor";
+
   private static final Logger log = new Logger(CliPeon.class);
 
-  public CliPeon()
-  {
-    super(log);
-  }
-
-  @Override
   protected Injector getInjector()
   {
-    // TODO: make it take and run a task
-
     return Initialization.makeInjector(
         new LifecycleModule(),
         EmitterModule.class,
@@ -78,7 +86,7 @@ public class CliPeon extends ServerRunnable
             .addResource(ChatHandlerResource.class),
         new DiscoveryModule(),
         new ServerViewModule(),
-        new StorageNodeModule("real-time"),
+        new StorageNodeModule(nodeType),
         new DataSegmentPusherModule(),
         new AnnouncerModule(),
         new DruidProcessingModule(),
@@ -86,7 +94,35 @@ public class CliPeon extends ServerRunnable
         new QueryRunnerFactoryModule(),
         new IndexingServiceDiscoveryModule(),
         new AWSModule(),
-        new PeonModule()
+        new PeonModule(
+            new ExecutorLifecycleConfig()
+                .setTaskFile(new File(taskAndStatusFile.get(0)))
+                .setStatusFile(new File(taskAndStatusFile.get(1)))
+        )
     );
+  }
+
+  @Override
+  public void run()
+  {
+    try {
+      LogLevelAdjuster.register();
+
+      final Injector injector = getInjector();
+      final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
+
+      try {
+        lifecycle.start();
+        injector.getInstance(ExecutorLifecycle.class).join();
+        lifecycle.stop();
+      }
+      catch (Throwable t) {
+        log.error(t, "Error when starting up.  Failing.");
+        System.exit(1);
+      }
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 }

@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,27 +17,22 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid;
+package com.metamx.druid.query.search;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.druid.index.v1.serde.Registererer;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import javax.validation.constraints.Min;
 
 /**
  */
-public class RegisteringNode
+public class SearchQueryConfig
 {
-  public static void registerHandlers(Iterable<Registererer> registererers, Iterable<ObjectMapper> mappers)
-  {
-    for (Registererer registererer : registererers) {
-      if (!doneRegister) {
-        registererer.register();
-      }
-      for (ObjectMapper mapper : mappers) {
-        registererer.registerSubType(mapper);
-      }
-    }
-    doneRegister = true;
-  }
+  @JsonProperty
+  @Min(1)
+  private int maxSearchLimit = 1000;
 
-  private static boolean doneRegister = false;
+  public int getMaxSearchLimit()
+  {
+    return maxSearchLimit;
+  }
 }

@@ -2,7 +2,6 @@ package com.metamx.druid.indexing.coordinator.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import com.metamx.druid.indexing.worker.executor.ExecutorMain;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
@@ -23,6 +22,11 @@ public class ForkingTaskRunnerConfig
   @NotNull
   private String javaCommand = "java";
 
+  /**
+   * This is intended for setting -X parameters on the underlying java.  It is used by first splitting on whitespace,
+   * so it cannot handle properties that have whitespace in the value.  Those properties should be set via a
+   * druid.indexer.fork.property. property instead.
+   */
   @JsonProperty
   @NotNull
   private String javaOpts = "";
@@ -30,10 +34,6 @@ public class ForkingTaskRunnerConfig
   @JsonProperty
   @NotNull
   private String classpath = System.getProperty("java.class.path");
-
-  @JsonProperty
-  @NotNull
-  private String mainClass = ExecutorMain.class.getName();
 
   @JsonProperty
   @Min(1024) @Max(65535)
@@ -66,11 +66,6 @@ public class ForkingTaskRunnerConfig
   public String getClasspath()
   {
     return classpath;
-  }
-
-  public String getMainClass()
-  {
-    return mainClass;
   }
 
   public int getStartPort()

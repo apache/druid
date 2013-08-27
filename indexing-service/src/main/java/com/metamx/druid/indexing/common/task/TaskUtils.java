@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,27 +17,24 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid;
+package com.metamx.druid.indexing.common.task;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.druid.index.v1.serde.Registererer;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 /**
  */
-public class RegisteringNode
+public class TaskUtils
 {
-  public static void registerHandlers(Iterable<Registererer> registererers, Iterable<ObjectMapper> mappers)
+  public static String makeId(String id, final String typeName, String dataSource, Interval interval)
   {
-    for (Registererer registererer : registererers) {
-      if (!doneRegister) {
-        registererer.register();
-      }
-      for (ObjectMapper mapper : mappers) {
-        registererer.registerSubType(mapper);
-      }
-    }
-    doneRegister = true;
+    return id != null ? id : String.format(
+        "%s_%s_%s_%s_%s",
+        typeName,
+        dataSource,
+        interval.getStart(),
+        interval.getEnd(),
+        new DateTime().toString()
+    );
   }
-
-  private static boolean doneRegister = false;
 }

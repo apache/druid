@@ -32,6 +32,10 @@ import com.metamx.druid.indexing.common.config.TaskConfig;
 import com.metamx.druid.indexing.common.index.ChatHandlerProvider;
 import com.metamx.druid.indexing.common.index.EventReceivingChatHandlerProvider;
 import com.metamx.druid.indexing.common.index.NoopChatHandlerProvider;
+import com.metamx.druid.indexing.coordinator.TaskRunner;
+import com.metamx.druid.indexing.coordinator.ThreadPoolTaskRunner;
+import com.metamx.druid.indexing.worker.executor.ExecutorLifecycle;
+import com.metamx.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import com.metamx.druid.loading.DataSegmentKiller;
 import com.metamx.druid.loading.S3DataSegmentKiller;
 
@@ -39,6 +43,15 @@ import com.metamx.druid.loading.S3DataSegmentKiller;
  */
 public class PeonModule implements Module
 {
+  private final ExecutorLifecycleConfig config;
+
+  public PeonModule(
+      ExecutorLifecycleConfig config
+  )
+  {
+    this.config = config;
+  }
+
   @Override
   public void configure(Binder binder)
   {
@@ -63,5 +76,11 @@ public class PeonModule implements Module
     binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
     binder.bind(DataSegmentKiller.class).to(S3DataSegmentKiller.class).in(LazySingleton.class);
+
+    binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
+    binder.bind(ExecutorLifecycleConfig.class).toInstance(config);
+
+    binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class).in(LazySingleton.class);
+    binder.bind(ThreadPoolTaskRunner.class).in(ManageLifecycle.class);
   }
 }

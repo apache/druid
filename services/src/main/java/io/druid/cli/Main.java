@@ -40,14 +40,19 @@ public class Main
            .withDescription("Run one of the Druid server types.")
            .withDefaultCommand(Help.class)
            .withCommands(
-               CliCoordinator.class, CliHistorical.class, CliBroker.class, CliRealtime.class,
-               CliOverlord.class, CliMiddleManager.class, CliPeon.class
+               CliCoordinator.class, CliHistorical.class, CliBroker.class,
+               CliRealtime.class, CliOverlord.class, CliMiddleManager.class
            );
 
     builder.withGroup("example")
            .withDescription("Run an example")
            .withDefaultCommand(Help.class)
            .withCommands(CliRealtimeExample.class);
+
+    builder.withGroup("internal")
+           .withDescription("Processes that Druid runs \"internally\", you should rarely use these directly")
+           .withDefaultCommand(Help.class)
+           .withCommands(CliPeon.class);
 
     final Cli<Runnable> cli = builder.build();
     try {
