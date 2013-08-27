@@ -56,6 +56,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -74,6 +75,13 @@ public class GroupByQueryRunnerTest
 {
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
+  private Supplier<GroupByQueryConfig> configSupplier;
+
+  @Before
+  public void setUp() throws Exception
+  {
+    configSupplier = Suppliers.ofInstance(new GroupByQueryConfig());
+  }
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
@@ -653,7 +661,7 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-01", "quality", "automotive", "rows", 2L)
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 
@@ -688,7 +696,7 @@ public class GroupByQueryRunnerTest
     );
 
     TestHelper.assertExpectedObjects(expectedResults, runner.run(query), "normal");
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 

@@ -43,7 +43,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 /**
  */
@@ -54,7 +53,7 @@ public class SearchQueryRunnerTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.makeQueryRunners(
-        new SearchQueryRunnerFactory()
+        new SearchQueryRunnerFactory(new SearchQueryQueryToolChest(new SearchQueryConfig()))
     );
   }
 

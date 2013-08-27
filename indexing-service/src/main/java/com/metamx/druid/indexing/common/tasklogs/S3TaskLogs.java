@@ -101,7 +101,7 @@ public class S3TaskLogs implements TaskLogs
             {
               final StorageObject object = new StorageObject(logFile);
               object.setKey(taskKey);
-              service.putObject(bucket, object);
+              service.putObject(config.getS3Bucket(), object);
               return null;
             }
           }

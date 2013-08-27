@@ -113,7 +113,7 @@ public class RealtimePlumberSchoolTest
     realtimePlumberSchool.setVersioningPolicy(new IntervalStartVersioningPolicy());
     realtimePlumberSchool.setDataSegmentPusher(dataSegmentPusher);
     realtimePlumberSchool.setServerView(serverView);
-    realtimePlumberSchool.setServiceEmitter(emitter);
+    realtimePlumberSchool.setEmitter(emitter);
 
     plumber = realtimePlumberSchool.findPlumber(schema, new FireDepartmentMetrics());
   }

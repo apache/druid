@@ -20,6 +20,7 @@
 package com.metamx.druid.query.search;
 
 import com.google.common.collect.Iterators;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
@@ -42,7 +43,15 @@ import java.util.concurrent.ExecutorService;
  */
 public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
 {
-  private static final SearchQueryQueryToolChest toolChest = new SearchQueryQueryToolChest();
+  private final SearchQueryQueryToolChest toolChest;
+
+  @Inject
+  public SearchQueryRunnerFactory(
+      SearchQueryQueryToolChest toolChest
+  )
+  {
+    this.toolChest = toolChest;
+  }
 
   @Override
   public QueryRunner<Result<SearchResultValue>> createRunner(final Segment segment)

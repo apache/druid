@@ -49,6 +49,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
