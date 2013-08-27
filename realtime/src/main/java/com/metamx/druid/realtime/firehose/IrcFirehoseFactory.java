@@ -35,7 +35,6 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.input.InputRow;
 import org.joda.time.DateTime;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;

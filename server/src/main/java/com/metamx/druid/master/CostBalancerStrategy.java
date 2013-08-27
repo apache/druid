@@ -19,14 +19,12 @@
 
 package com.metamx.druid.master;
 
-import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.Pair;
 import com.metamx.druid.client.DataSegment;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.Comparator;
 import java.util.List;
 
 public class CostBalancerStrategy implements BalancerStrategy

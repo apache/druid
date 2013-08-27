@@ -30,7 +30,6 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.curator.announcement.Announcer;
-import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;

@@ -20,7 +20,6 @@
 package com.metamx.druid.indexing.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Maps;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -29,6 +28,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
@@ -272,7 +272,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
           runningTasks.put(
               task.getId(),
               new RemoteTaskRunnerWorkItem(
-                  task, SettableFuture.<TaskStatus>create(),
+                  task,
+                  SettableFuture.<TaskStatus>create(),
                   worker
               )
           );
@@ -680,7 +681,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     if (zkWorker != null) {
       try {
         List<String> tasksToFail = Lists.newArrayList(
-            cf.getChildren().forPath(JOINER.join(config.getIndexerTaskPath(), worker.getHost()))
+            cf.getChildren().forPath(JOINER.join(zkPaths.getIndexerTaskPath(), worker.getHost()))
         );
         log.info("[%s]: Found %d tasks assigned", worker.getHost(), tasksToFail.size());
 

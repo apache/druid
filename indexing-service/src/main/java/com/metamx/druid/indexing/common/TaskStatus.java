@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
-import com.metamx.druid.indexing.common.task.TaskResource;
 
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing

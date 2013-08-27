@@ -1,18 +1,16 @@
 package com.metamx.druid.indexer.data;
 
-import static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE;
-import static org.junit.Assert.assertEquals;
+import com.metamx.druid.input.InputRow;
+import org.joda.time.DateTime;
+import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
-import com.google.protobuf.ByteString;
-import org.joda.time.DateTime;
-import org.junit.Test;
-
-import com.metamx.druid.input.InputRow;
+import static com.metamx.druid.indexer.data.ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE;
+import static org.junit.Assert.assertEquals;
 
 public class ProtoBufInputRowParserTest {
 

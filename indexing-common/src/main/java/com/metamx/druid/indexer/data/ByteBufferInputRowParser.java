@@ -1,9 +1,9 @@
 package com.metamx.druid.indexer.data;
 
-import java.nio.ByteBuffer;
-
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+import java.nio.ByteBuffer;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringInputRowParser.class)
 @JsonSubTypes(value = {

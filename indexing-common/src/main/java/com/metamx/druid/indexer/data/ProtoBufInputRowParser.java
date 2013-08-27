@@ -1,14 +1,5 @@
 package com.metamx.druid.indexer.data;
 
-import static com.google.protobuf.DescriptorProtos.FileDescriptorSet;
-import static com.google.protobuf.Descriptors.Descriptor;
-import static com.google.protobuf.Descriptors.FileDescriptor;
-
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
@@ -19,6 +10,15 @@ import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.druid.input.InputRow;
+
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
+
+import static com.google.protobuf.DescriptorProtos.FileDescriptorSet;
+import static com.google.protobuf.Descriptors.Descriptor;
+import static com.google.protobuf.Descriptors.FileDescriptor;
 
 public class ProtoBufInputRowParser implements ByteBufferInputRowParser
 {

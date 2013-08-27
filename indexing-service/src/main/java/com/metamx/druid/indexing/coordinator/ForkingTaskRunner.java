@@ -62,7 +62,6 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Runs tasks in separate processes using the "internal peon" verb.
@@ -146,12 +145,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 throw new IllegalStateException("Task has been shut down!");
                               }
 
-                              if (taskInfo == null) {
+                              if (taskWorkItem == null) {
                                 log.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
                                 throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
                               }
 
-                              if (taskInfo.processHolder != null) {
+                              if (taskWorkItem.processHolder != null) {
                                 log.makeAlert("WTF?! TaskInfo already has a processHolder")
                                    .addData("task", task.getId())
                                    .emit();
