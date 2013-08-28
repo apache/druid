@@ -34,12 +34,10 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   private static final byte CACHE_TYPE_ID = 0x2;
 
   private final List<String> values;
-  private final SearchSortSpec sortSpec;
 
   @JsonCreator
   public FragmentSearchQuerySpec(
-      @JsonProperty("values") List<String> values,
-      @JsonProperty("sort") SearchSortSpec sortSpec
+      @JsonProperty("values") List<String> values
   )
   {
     this.values = Lists.transform(
@@ -53,20 +51,12 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
           }
         }
     );
-    this.sortSpec = (sortSpec == null) ? new LexicographicSearchSortSpec() : sortSpec;
   }
 
   @JsonProperty
   public List<String> getValues()
   {
     return values;
-  }
-
-  @JsonProperty("sort")
-  @Override
-  public SearchSortSpec getSearchSortSpec()
-  {
-    return sortSpec;
   }
 
   @Override
@@ -107,7 +97,6 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   {
     return "FragmentSearchQuerySpec{" +
              "values=" + values +
-             ", sortSpec=" + sortSpec +
            "}";
   }
 }

@@ -19,24 +19,15 @@
 
 package com.metamx.druid.query.search;
 
-import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.Sequence;
-import com.metamx.druid.SearchResultBuilder;
-import com.metamx.druid.index.brita.Filters;
 import com.metamx.druid.query.ChainedExecutionQueryRunner;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
-import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.segment.Segment;
-import io.druid.segment.StorageAdapter;
 
-import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -73,50 +64,5 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
   public QueryToolChest<Result<SearchResultValue>, SearchQuery> getToolchest()
   {
     return toolChest;
-  }
-
-  private static class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
-  {
-    private final StorageAdapter adapter;
-
-    public SearchQueryRunner(Segment segment)
-    {
-      this.adapter = segment.asStorageAdapter();
-    }
-
-    @Override
-    public Sequence<Result<SearchResultValue>> run(final Query<Result<SearchResultValue>> input)
-    {
-      if (!(input instanceof SearchQuery)) {
-        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), SearchQuery.class);
-      }
-
-      final SearchQuery query = (SearchQuery) input;
-
-      return new BaseSequence<Result<SearchResultValue>, Iterator<Result<SearchResultValue>>>(
-          new BaseSequence.IteratorMaker<Result<SearchResultValue>, Iterator<Result<SearchResultValue>>>()
-          {
-            @Override
-            public Iterator<Result<SearchResultValue>> make()
-            {
-              return Iterators.singletonIterator(
-                  new SearchResultBuilder(
-                      adapter.getInterval().getStart(),
-                      adapter.searchDimensions(
-                          query,
-                          Filters.convertDimensionFilters(query.getDimensionsFilter())
-                      )
-                  ).build()
-              );
-            }
-
-            @Override
-            public void cleanup(Iterator<Result<SearchResultValue>> toClean)
-            {
-
-            }
-          }
-      );
-    }
   }
 }

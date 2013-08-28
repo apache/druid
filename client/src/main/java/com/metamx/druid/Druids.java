@@ -524,7 +524,7 @@ public class Druids
           querySegmentSpec,
           dimensions,
           querySpec,
-          querySpec.getSearchSortSpec(),
+          null,
           context
       );
     }
@@ -639,13 +639,13 @@ public class Druids
 
     public SearchQueryBuilder query(String q)
     {
-      querySpec = new InsensitiveContainsSearchQuerySpec(q, null);
+      querySpec = new InsensitiveContainsSearchQuerySpec(q);
       return this;
     }
 
     public SearchQueryBuilder query(Map<String, Object> q)
     {
-      querySpec = new InsensitiveContainsSearchQuerySpec((String) q.get("value"), null);
+      querySpec = new InsensitiveContainsSearchQuerySpec((String) q.get("value"));
       return this;
     }
 

@@ -31,18 +31,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface SearchQuerySpec
 {
-  /**
-   *  Deprecated!
-   *
-   *  This has been moved to the SearchQuery and is only still here for backwards compatibility purposes.  Search
-   *  queries should be adjusted to use the sort parameter on the SearchQuery object itself rather than on this
-   *  object.  This method will eventually go away.
-   *
-   * @return
-   */
-  @Deprecated
-  public SearchSortSpec getSearchSortSpec();
-
   public boolean accept(String dimVal);
 
   public byte[] getCacheKey();

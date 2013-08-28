@@ -25,17 +25,13 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.metamx.collections.spatial.search.Bound;
-import com.metamx.common.IAE;
-import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.druid.index.brita.BooleanValueMatcher;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
-import com.metamx.druid.query.search.SearchHit;
-import com.metamx.druid.query.search.SearchQuery;
-import com.metamx.druid.query.search.SearchQuerySpec;
+import com.metamx.druid.kv.ListIndexed;
+import io.druid.data.Indexed;
 import io.druid.data.IndexedInts;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
@@ -57,7 +53,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 /**
@@ -85,6 +80,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public Interval getInterval()
   {
     return index.getInterval();
+  }
+
+  @Override
+  public Indexed<String> getAvailableDimensions()
+  {
+    return new ListIndexed<String>(index.getDimensions(), String.class);
   }
 
   @Override
@@ -430,92 +431,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
             );
       }
     };
-  }
-
-  @Override
-  public Iterable<SearchHit> searchDimensions(final SearchQuery query, final Filter filter)
-  {
-    final List<String> dimensions = query.getDimensions();
-    final int[] dimensionIndexes;
-    final String[] dimensionNames;
-    final List<String> dimensionOrder = index.getDimensions();
-    if (dimensions == null || dimensions.isEmpty()) {
-      dimensionIndexes = new int[dimensionOrder.size()];
-      dimensionNames = new String[dimensionIndexes.length];
-
-      Iterator<String> dimensionOrderIter = dimensionOrder.iterator();
-      for (int i = 0; i < dimensionIndexes.length; ++i) {
-        dimensionNames[i] = dimensionOrderIter.next();
-        dimensionIndexes[i] = index.getDimensionIndex(dimensionNames[i]);
-      }
-    } else {
-      int[] tmpDimensionIndexes = new int[dimensions.size()];
-      String[] tmpDimensionNames = new String[dimensions.size()];
-      int i = 0;
-      for (String dimension : dimensions) {
-        Integer dimIndex = index.getDimensionIndex(dimension.toLowerCase());
-        if (dimIndex != null) {
-          tmpDimensionNames[i] = dimension;
-          tmpDimensionIndexes[i] = dimIndex;
-          ++i;
-        }
-      }
-
-      if (i != tmpDimensionIndexes.length) {
-        dimensionIndexes = new int[i];
-        dimensionNames = new String[i];
-        System.arraycopy(tmpDimensionIndexes, 0, dimensionIndexes, 0, i);
-        System.arraycopy(tmpDimensionNames, 0, dimensionNames, 0, i);
-      } else {
-        dimensionIndexes = tmpDimensionIndexes;
-        dimensionNames = tmpDimensionNames;
-      }
-    }
-
-    final List<Interval> queryIntervals = query.getIntervals();
-    if (queryIntervals.size() != 1) {
-      throw new IAE("Can only handle one interval, got query[%s]", query);
-    }
-
-    final Interval queryInterval = queryIntervals.get(0);
-    final long intervalStart = queryInterval.getStartMillis();
-    final long intervalEnd = queryInterval.getEndMillis();
-
-    final EntryHolder holder = new EntryHolder();
-    final ValueMatcher theMatcher = makeFilterMatcher(filter, holder);
-    final SearchQuerySpec searchQuerySpec = query.getQuery();
-    final TreeSet<SearchHit> retVal = Sets.newTreeSet(query.getSort().getComparator());
-
-    ConcurrentNavigableMap<IncrementalIndex.TimeAndDims, Aggregator[]> facts = index.getSubMap(
-        new IncrementalIndex.TimeAndDims(intervalStart, new String[][]{}),
-        new IncrementalIndex.TimeAndDims(intervalEnd, new String[][]{})
-    );
-
-    for (Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]> entry : facts.entrySet()) {
-      holder.set(entry);
-      final IncrementalIndex.TimeAndDims key = holder.getKey();
-      final long timestamp = key.getTimestamp();
-
-      if (timestamp >= intervalStart && timestamp < intervalEnd && theMatcher.matches()) {
-        final String[][] dims = key.getDims();
-
-        for (int i = 0; i < dimensionIndexes.length; ++i) {
-          if (dimensionIndexes[i] < dims.length) {
-            final String[] dimVals = dims[dimensionIndexes[i]];
-            if (dimVals != null) {
-              for (int j = 0; j < dimVals.length; ++j) {
-                if (searchQuerySpec.accept(dimVals[j])) {
-                  retVal.add(new SearchHit(dimensionNames[i], dimVals[j]));
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-
-    return new FunctionalIterable<SearchHit>(retVal).limit(query.getLimit());
   }
 
   private ValueMatcher makeFilterMatcher(final Filter filter, final EntryHolder holder)

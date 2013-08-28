@@ -24,18 +24,14 @@ import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
-import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.collect.MoreIterators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.FunctionalIterator;
-import com.metamx.druid.BaseStorageAdapter;
 import com.metamx.druid.index.v1.processing.Offset;
-import com.metamx.druid.kv.IndexedIterable;
 import com.metamx.druid.kv.SingleIndexedInts;
 import io.druid.data.Indexed;
 import io.druid.data.IndexedInts;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.segment.Capabilities;
 import io.druid.segment.ColumnSelector;
@@ -45,13 +41,13 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatMetricSelector;
 import io.druid.segment.ObjectMetricSelector;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.ValueType;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -61,7 +57,7 @@ import java.util.Map;
 
 /**
  */
-public class QueryableIndexStorageAdapter extends BaseStorageAdapter
+public class QueryableIndexStorageAdapter implements StorageAdapter
 {
   private final QueryableIndex index;
 
@@ -82,6 +78,12 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
   public Interval getInterval()
   {
     return index.getDataInterval();
+  }
+
+  @Override
+  public Indexed<String> getAvailableDimensions()
+  {
+    return index.getAvailableDimensions();
   }
 
   @Override
@@ -155,108 +157,12 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
     if (filter == null) {
       iterable = new NoFilterCursorIterable(index, actualInterval, gran);
     } else {
-      Offset offset = new ConciseOffset(filter.goConcise(new MMappedBitmapIndexSelector(index)));
+      Offset offset = new ConciseOffset(filter.goConcise(new ColumnSelectorBitmapIndexSelector(index)));
 
       iterable = new CursorIterable(index, actualInterval, gran, offset);
     }
 
     return FunctionalIterable.create(iterable).keep(Functions.<Cursor>identity());
-  }
-
-  @Override
-  public Indexed<String> getAvailableDimensions()
-  {
-    return index.getAvailableDimensions();
-  }
-
-  @Override
-  public Indexed<String> getDimValueLookup(String dimension)
-  {
-    final Column column = index.getColumn(dimension.toLowerCase());
-
-    if (column == null || !column.getCapabilities().isDictionaryEncoded()) {
-      return null;
-    }
-
-    final DictionaryEncodedColumn dictionary = column.getDictionaryEncoding();
-    return new Indexed<String>()
-    {
-      @Override
-      public Class<? extends String> getClazz()
-      {
-        return String.class;
-      }
-
-      @Override
-      public int size()
-      {
-        return dictionary.getCardinality();
-      }
-
-      @Override
-      public String get(int index)
-      {
-        return dictionary.lookupName(index);
-      }
-
-      @Override
-      public int indexOf(String value)
-      {
-        return dictionary.lookupId(value);
-      }
-
-      @Override
-      public Iterator<String> iterator()
-      {
-        return IndexedIterable.create(this).iterator();
-      }
-    };
-  }
-
-  @Override
-  public ImmutableConciseSet getInvertedIndex(String dimension, String dimVal)
-  {
-    final Column column = index.getColumn(dimension.toLowerCase());
-    if (column == null) {
-      return new ImmutableConciseSet();
-    }
-    if (!column.getCapabilities().hasBitmapIndexes()) {
-      return new ImmutableConciseSet();
-    }
-
-    return column.getBitmapIndex().getConciseSet(dimVal);
-  }
-
-  @Override
-  public ImmutableConciseSet getInvertedIndex(String dimension, int idx)
-  {
-    final Column column = index.getColumn(dimension.toLowerCase());
-    if (column == null) {
-      return new ImmutableConciseSet();
-    }
-    if (!column.getCapabilities().hasBitmapIndexes()) {
-      return new ImmutableConciseSet();
-    }
-    // This is a workaround given the current state of indexing, I feel shame
-    final int index = column.getBitmapIndex().hasNulls() ? idx + 1 : idx;
-
-    return column.getBitmapIndex().getConciseSet(index);
-  }
-
-  public ImmutableRTree getRTreeSpatialIndex(String dimension)
-  {
-    final Column column = index.getColumn(dimension.toLowerCase());
-    if (column == null || !column.getCapabilities().hasSpatialIndexes()) {
-      return new ImmutableRTree();
-    }
-
-    return column.getSpatialIndex().getRTree();
-  }
-
-  @Override
-  public Offset getFilterOffset(Filter filter)
-  {
-    return new ConciseOffset(filter.goConcise(new MMappedBitmapIndexSelector(index)));
   }
 
   private static class CursorIterable implements Iterable<Cursor>
@@ -1079,89 +985,6 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
     public int lookupId(String name)
     {
       return 0;
-    }
-  }
-
-  private class MMappedBitmapIndexSelector implements BitmapIndexSelector
-  {
-    private final ColumnSelector index;
-
-    public MMappedBitmapIndexSelector(final ColumnSelector index)
-    {
-      this.index = index;
-    }
-
-    @Override
-    public Indexed<String> getDimensionValues(String dimension)
-    {
-      final Column columnDesc = index.getColumn(dimension.toLowerCase());
-      if (columnDesc == null || !columnDesc.getCapabilities().isDictionaryEncoded()) {
-        return null;
-      }
-      final DictionaryEncodedColumn column = columnDesc.getDictionaryEncoding();
-      return new Indexed<String>()
-      {
-        @Override
-        public Class<? extends String> getClazz()
-        {
-          return String.class;
-        }
-
-        @Override
-        public int size()
-        {
-          return column.getCardinality();
-        }
-
-        @Override
-        public String get(int index)
-        {
-          return column.lookupName(index);
-        }
-
-        @Override
-        public int indexOf(String value)
-        {
-          return column.lookupId(value);
-        }
-
-        @Override
-        public Iterator<String> iterator()
-        {
-          return IndexedIterable.create(this).iterator();
-        }
-      };
-    }
-
-    @Override
-    public int getNumRows()
-    {
-      GenericColumn column = null;
-      try {
-        column = index.getTimeColumn().getGenericColumn();
-        return column.length();
-      }
-      finally {
-        Closeables.closeQuietly(column);
-      }
-    }
-
-    @Override
-    public ImmutableConciseSet getConciseInvertedIndex(String dimension, String value)
-    {
-      return getInvertedIndex(dimension, value);
-    }
-
-    @Override
-    public ImmutableConciseSet getConciseInvertedIndex(String dimension, int idx)
-    {
-      return getInvertedIndex(dimension, idx);
-    }
-
-    @Override
-    public ImmutableRTree getSpatialIndex(String dimension)
-    {
-      return getRTreeSpatialIndex(dimension);
     }
   }
 }

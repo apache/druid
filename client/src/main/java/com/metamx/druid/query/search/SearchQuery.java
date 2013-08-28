@@ -62,7 +62,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   {
     super(dataSource, querySegmentSpec, context);
     this.dimFilter = dimFilter;
-    this.sortSpec = sortSpec;
+    this.sortSpec = sortSpec == null ? new LexicographicSearchSortSpec() : sortSpec;
     this.granularity = granularity == null ? QueryGranularity.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = (dimensions == null) ? null : Lists.transform(
@@ -159,7 +159,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   @JsonProperty("sort")
   public SearchSortSpec getSort()
   {
-    return sortSpec == null ? querySpec.getSearchSortSpec() : sortSpec;
+    return sortSpec;
   }
 
   public SearchQuery withLimit(int newLimit)

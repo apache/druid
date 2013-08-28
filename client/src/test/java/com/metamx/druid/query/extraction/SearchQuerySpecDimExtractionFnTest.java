@@ -21,7 +21,6 @@ package com.metamx.druid.query.extraction;
 
 import com.google.common.collect.Sets;
 import com.metamx.druid.query.search.FragmentSearchQuerySpec;
-import com.metamx.druid.query.search.LexicographicSearchSortSpec;
 import com.metamx.druid.query.search.SearchQuerySpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,7 +48,7 @@ public class SearchQuerySpecDimExtractionFnTest
   public void testExtraction()
   {
     SearchQuerySpec spec = new FragmentSearchQuerySpec(
-        Arrays.asList("to", "yo"), new LexicographicSearchSortSpec()
+        Arrays.asList("to", "yo")
     );
     DimExtractionFn dimExtractionFn = new SearchQuerySpecDimExtractionFn(spec);
     List<String> expected = Arrays.asList("Kyoto", "Tokyo", "Toyokawa", "Yorktown");

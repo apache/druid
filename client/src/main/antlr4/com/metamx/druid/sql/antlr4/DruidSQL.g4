@@ -1,18 +1,50 @@
 grammar DruidSQL;
 
 @header {
-import com.metamx.druid.aggregation.post.*;
-import com.metamx.druid.aggregation.*;
-import com.metamx.druid.query.filter.*;
-import com.metamx.druid.query.dimension.*;
-import com.metamx.druid.*;
-
-import com.google.common.base.*;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import org.joda.time.*;
+import com.metamx.druid.aggregation.CountAggregatorFactory;
+import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
+import com.metamx.druid.aggregation.MaxAggregatorFactory;
+import com.metamx.druid.aggregation.MinAggregatorFactory;
+import com.metamx.druid.aggregation.post.ArithmeticPostAggregator;
+import com.metamx.druid.aggregation.post.ConstantPostAggregator;
+import com.metamx.druid.aggregation.post.FieldAccessPostAggregator;
+import com.metamx.druid.aggregation.post.PostAggregator;
+import com.metamx.druid.query.dimension.DefaultDimensionSpec;
+import com.metamx.druid.query.dimension.DimensionSpec;
+import com.metamx.druid.query.filter.AndDimFilter;
+import com.metamx.druid.query.filter.DimFilter;
+import com.metamx.druid.query.filter.NotDimFilter;
+import com.metamx.druid.query.filter.OrDimFilter;
+import com.metamx.druid.query.filter.RegexDimFilter;
+import com.metamx.druid.query.filter.SelectorDimFilter;
+import io.druid.granularity.PeriodGranularity;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.AggregatorFactory;
+import org.antlr.v4.runtime.NoViableAltException;
+import org.antlr.v4.runtime.Parser;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.TokenStream;
+import org.antlr.v4.runtime.atn.ATN;
+import org.antlr.v4.runtime.atn.ATNSimulator;
+import org.antlr.v4.runtime.atn.ParserATNSimulator;
+import org.antlr.v4.runtime.atn.PredictionContextCache;
+import org.antlr.v4.runtime.dfa.DFA;
+import org.antlr.v4.runtime.tree.ParseTreeListener;
+import org.antlr.v4.runtime.tree.TerminalNode;
+import org.joda.time.DateTime;
+import org.joda.time.Period;
 
-import java.text.*;
-import java.util.*;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 }
 
 @parser::members {

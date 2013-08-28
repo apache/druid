@@ -94,7 +94,7 @@ public class SearchQueryRunnerTest
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
                                     .intervals(QueryRunnerTestHelper.fullOnInterval)
-                                    .query(new FragmentSearchQuerySpec(Arrays.asList("auto", "ve"), null))
+                                    .query(new FragmentSearchQuerySpec(Arrays.asList("auto", "ve")))
                                     .build();
 
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
@@ -104,7 +104,7 @@ public class SearchQueryRunnerTest
   }
 
   @Test
-  public void testSearchWithDimension1()
+  public void testSearchWithDimensionQuality()
   {
     Map<String, Set<String>> expectedResults = new HashMap<String, Set<String>>();
     expectedResults.put(
@@ -128,7 +128,7 @@ public class SearchQueryRunnerTest
   }
 
   @Test
-  public void testSearchWithDimension2()
+  public void testSearchWithDimensionProvider()
   {
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.put(QueryRunnerTestHelper.providerDimension, new HashSet<String>(Arrays.asList("total_market")));
@@ -146,7 +146,7 @@ public class SearchQueryRunnerTest
   }
 
   @Test
-  public void testSearchWithDimensions1()
+  public void testSearchWithDimensionsQualityAndProvider()
   {
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.putAll(
@@ -182,7 +182,7 @@ public class SearchQueryRunnerTest
   }
 
   @Test
-  public void testSearchWithDimensions2()
+  public void testSearchWithDimensionsPlacementAndProvider()
   {
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     expectedResults.put(QueryRunnerTestHelper.providerDimension, new HashSet<String>(Arrays.asList("total_market")));
@@ -390,7 +390,7 @@ public class SearchQueryRunnerTest
     for (Map.Entry<String, Set<String>> entry : expectedResults.entrySet()) {
       Assert.assertTrue(
           String.format(
-              "Dimension %s should have had everything removed, still has[%s]", entry.getKey(), entry.getValue()
+              "Dimension[%s] should have had everything removed, still has[%s]", entry.getKey(), entry.getValue()
           ),
           entry.getValue().isEmpty()
       );

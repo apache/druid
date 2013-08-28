@@ -31,29 +31,19 @@ public class InsensitiveContainsSearchQuerySpec implements SearchQuerySpec
   private static final byte CACHE_TYPE_ID = 0x1;
 
   private final String value;
-  private final SearchSortSpec sortSpec;
 
   @JsonCreator
   public InsensitiveContainsSearchQuerySpec(
-      @JsonProperty("value") String value,
-      @JsonProperty("sort") SearchSortSpec sortSpec
+      @JsonProperty("value") String value
   )
   {
     this.value = value.toLowerCase();
-    this.sortSpec = (sortSpec == null) ? new LexicographicSearchSortSpec() : sortSpec;
   }
 
   @JsonProperty
   public String getValue()
   {
     return value;
-  }
-
-  @JsonProperty("sort")
-  @Override
-  public SearchSortSpec getSearchSortSpec()
-  {
-    return sortSpec;
   }
 
   @Override
@@ -81,7 +71,6 @@ public class InsensitiveContainsSearchQuerySpec implements SearchQuerySpec
   {
     return "InsensitiveContainsSearchQuerySpec{" +
            "value=" + value +
-           ", sortSpec=" + sortSpec +
            "}";
   }
 }
