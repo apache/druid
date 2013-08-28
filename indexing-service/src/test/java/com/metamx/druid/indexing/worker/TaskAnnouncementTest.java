@@ -1,8 +1,6 @@
 package com.metamx.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.RealtimeIndexTask;
@@ -11,6 +9,8 @@ import com.metamx.druid.indexing.common.task.TaskResource;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.AggregatorFactory;
 import junit.framework.Assert;
 import org.joda.time.Period;
 import org.junit.Test;

@@ -21,7 +21,9 @@ package com.metamx.druid.aggregation;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.druid.processing.ObjectColumnSelector;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.BufferAggregator;
+import io.druid.segment.ObjectMetricSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -77,7 +79,7 @@ public class JavaScriptAggregatorTest
 
     JavaScriptAggregator agg = new JavaScriptAggregator(
       "billy",
-      Arrays.<ObjectColumnSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
+      Arrays.<ObjectMetricSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
       JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
                                                 script.get("fnReset"),
                                                 script.get("fnCombine"))
@@ -113,7 +115,7 @@ public class JavaScriptAggregatorTest
 
     Map<String, String> script = sumLogATimesBPlusTen;
     JavaScriptBufferAggregator agg = new JavaScriptBufferAggregator(
-      Arrays.<ObjectColumnSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
+      Arrays.<ObjectMetricSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
       JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
                                                 script.get("fnReset"),
                                                 script.get("fnCombine"))
@@ -164,7 +166,7 @@ public class JavaScriptAggregatorTest
     Map<String, String> script = scriptDoubleSum;
     JavaScriptAggregator aggRhino = new JavaScriptAggregator(
       "billy",
-      Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectColumnSelector[]{}),
+      Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectMetricSelector[]{}),
       JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
                                                 script.get("fnReset"),
                                                 script.get("fnCombine"))

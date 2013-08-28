@@ -20,7 +20,9 @@
 package com.metamx.druid.index;
 
 import com.google.common.base.Throwables;
-import com.metamx.druid.StorageAdapter;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.Segment;
+import io.druid.segment.StorageAdapter;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Days;

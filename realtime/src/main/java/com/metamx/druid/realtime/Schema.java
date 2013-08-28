@@ -23,11 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.index.v1.SpatialDimensionSchema;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.Arrays;
 import java.util.List;

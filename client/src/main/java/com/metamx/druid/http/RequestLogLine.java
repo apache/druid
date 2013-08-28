@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
-import com.metamx.druid.Query;
+import io.druid.query.Query;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;

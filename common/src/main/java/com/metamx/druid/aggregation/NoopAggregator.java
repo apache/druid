@@ -19,6 +19,8 @@
 
 package com.metamx.druid.aggregation;
 
+import io.druid.query.aggregation.Aggregator;
+
 /**
  */
 public class NoopAggregator implements Aggregator

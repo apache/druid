@@ -20,12 +20,12 @@
 package com.metamx.druid;
 
 import com.metamx.common.guava.nary.BinaryFn;
-import com.metamx.druid.AllGranularity;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
+import io.druid.granularity.AllGranularity;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.LinkedHashMap;
 import java.util.List;

@@ -20,6 +20,7 @@
 package com.metamx.druid.kv;
 
 import com.google.common.collect.Maps;
+import io.druid.data.Indexed;
 import org.junit.Assert;
 import org.junit.Test;
 

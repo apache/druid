@@ -19,8 +19,10 @@
 
 package com.metamx.druid.index;
 
-import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.index.v1.QueryableIndexStorageAdapter;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.Segment;
+import io.druid.segment.StorageAdapter;
 import org.joda.time.Interval;
 
 import java.io.IOException;

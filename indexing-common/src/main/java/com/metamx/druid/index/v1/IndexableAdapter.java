@@ -19,8 +19,8 @@
 
 package com.metamx.druid.index.v1;
 
-import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedInts;
+import io.druid.data.Indexed;
+import io.druid.data.IndexedInts;
 import org.joda.time.Interval;
 
 /**

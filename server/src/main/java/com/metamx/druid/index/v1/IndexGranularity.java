@@ -20,7 +20,7 @@
 package com.metamx.druid.index.v1;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.metamx.druid.QueryGranularity;
+import io.druid.granularity.QueryGranularity;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.Hours;

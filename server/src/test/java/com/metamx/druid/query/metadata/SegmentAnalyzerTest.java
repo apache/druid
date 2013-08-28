@@ -23,13 +23,13 @@ import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.index.IncrementalIndexSegment;
 import com.metamx.druid.index.QueryableIndexSegment;
-import com.metamx.druid.index.Segment;
-import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.index.v1.TestIndex;
-import com.metamx.druid.query.QueryRunner;
-import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerTestHelper;
 import com.metamx.druid.query.segment.QuerySegmentSpecs;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
+import io.druid.segment.Segment;
+import io.druid.segment.column.ValueType;
 import junit.framework.Assert;
 import org.junit.Test;
 

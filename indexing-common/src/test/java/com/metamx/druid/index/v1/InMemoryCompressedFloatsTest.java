@@ -19,7 +19,7 @@
 
 package com.metamx.druid.index.v1;
 
-import com.metamx.druid.kv.IndexedFloats;
+import io.druid.data.IndexedFloats;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

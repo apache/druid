@@ -24,6 +24,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
+import io.druid.data.Indexed;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;

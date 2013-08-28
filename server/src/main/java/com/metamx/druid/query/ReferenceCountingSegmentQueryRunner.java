@@ -3,8 +3,10 @@ package com.metamx.druid.query;
 import com.google.common.io.Closeables;
 import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
-import com.metamx.druid.Query;
 import com.metamx.druid.index.ReferenceCountingSegment;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
 
 import java.io.Closeable;
 

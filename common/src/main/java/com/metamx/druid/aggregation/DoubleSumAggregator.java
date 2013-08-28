@@ -21,7 +21,8 @@ package com.metamx.druid.aggregation;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Doubles;
-import com.metamx.druid.processing.FloatMetricSelector;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.segment.FloatMetricSelector;
 
 import java.util.Comparator;
 

@@ -20,7 +20,7 @@
 package com.metamx.druid.query;
 
 import com.google.common.collect.Lists;
-import com.metamx.druid.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.List;

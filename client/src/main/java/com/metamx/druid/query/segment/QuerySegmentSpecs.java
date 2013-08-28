@@ -19,6 +19,9 @@
 
 package com.metamx.druid.query.segment;
 
+import io.druid.query.spec.LegacySegmentSpec;
+import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 
 import java.util.Arrays;

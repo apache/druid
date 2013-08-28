@@ -30,25 +30,25 @@ import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.FunctionalIterator;
-import com.metamx.druid.Capabilities;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.StorageAdapter;
-import com.metamx.druid.aggregation.Aggregator;
 import com.metamx.druid.index.brita.BooleanValueMatcher;
-import com.metamx.druid.index.brita.Filter;
-import com.metamx.druid.index.brita.ValueMatcher;
-import com.metamx.druid.index.brita.ValueMatcherFactory;
-import com.metamx.druid.index.v1.processing.Cursor;
-import com.metamx.druid.index.v1.processing.DimensionSelector;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
-import com.metamx.druid.kv.IndexedInts;
-import com.metamx.druid.processing.ComplexMetricSelector;
-import com.metamx.druid.processing.FloatMetricSelector;
-import com.metamx.druid.processing.ObjectColumnSelector;
 import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.query.search.SearchQuerySpec;
+import io.druid.data.IndexedInts;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.ValueMatcherFactory;
+import io.druid.query.filter.Filter;
+import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.Capabilities;
+import io.druid.segment.ComplexMetricSelector;
+import io.druid.segment.Cursor;
+import io.druid.segment.DimensionSelector;
+import io.druid.segment.FloatMetricSelector;
+import io.druid.segment.ObjectMetricSelector;
+import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -367,7 +367,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       }
 
                       @Override
-                      public ObjectColumnSelector makeObjectColumnSelector(String column)
+                      public ObjectMetricSelector makeObjectColumnSelector(String column)
                       {
                         final String columnName = column.toLowerCase();
                         final Integer metricIndexInt = index.getMetricIndex(columnName);
@@ -377,7 +377,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                           final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(columnName));
 
-                          return new ObjectColumnSelector()
+                          return new ObjectMetricSelector()
                           {
                             @Override
                             public Class classOfObject()
@@ -397,7 +397,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                         if (dimensionIndexInt != null) {
                           final int dimensionIndex = dimensionIndexInt;
-                          return new ObjectColumnSelector<String>()
+                          return new ObjectMetricSelector<String>()
                           {
                             @Override
                             public Class classOfObject()

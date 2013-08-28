@@ -22,6 +22,7 @@ package com.metamx.druid.kv;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.metamx.druid.IntList;
+import io.druid.data.IndexedInts;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;

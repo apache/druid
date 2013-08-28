@@ -28,7 +28,7 @@ import com.metamx.common.IAE;
 import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.collect.StupidResourceHolder;
 import com.metamx.druid.kv.GenericIndexed;
-import com.metamx.druid.kv.IndexedFloats;
+import io.druid.data.IndexedFloats;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

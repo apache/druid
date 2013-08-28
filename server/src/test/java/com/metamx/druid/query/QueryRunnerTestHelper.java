@@ -20,9 +20,6 @@
 package com.metamx.druid.query;
 
 import com.google.common.collect.Lists;
-import com.metamx.druid.Query;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.CountAggregatorFactory;
 import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
 import com.metamx.druid.aggregation.LongSumAggregatorFactory;
@@ -30,13 +27,18 @@ import com.metamx.druid.aggregation.post.ArithmeticPostAggregator;
 import com.metamx.druid.aggregation.post.ConstantPostAggregator;
 import com.metamx.druid.aggregation.post.FieldAccessPostAggregator;
 import com.metamx.druid.index.IncrementalIndexSegment;
-import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.QueryableIndexSegment;
-import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.index.v1.TestIndex;
-import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
-import com.metamx.druid.query.segment.QuerySegmentSpec;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.Segment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

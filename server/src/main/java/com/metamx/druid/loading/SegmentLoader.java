@@ -20,7 +20,7 @@
 package com.metamx.druid.loading;
 
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.Segment;
+import io.druid.segment.Segment;
 
 /**
  */

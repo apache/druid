@@ -21,15 +21,15 @@ package com.metamx.druid.query.timeseries;
 
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
-import com.metamx.druid.Query;
-import com.metamx.druid.StorageAdapter;
-import com.metamx.druid.index.Segment;
 import com.metamx.druid.query.ChainedExecutionQueryRunner;
-import com.metamx.druid.query.QueryRunner;
-import com.metamx.druid.query.QueryRunnerFactory;
-import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryToolChest;
+import io.druid.segment.Segment;
+import io.druid.segment.StorageAdapter;
 
 import java.util.concurrent.ExecutorService;
 

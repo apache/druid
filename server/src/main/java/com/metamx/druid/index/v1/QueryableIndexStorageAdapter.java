@@ -29,28 +29,28 @@ import com.metamx.common.collect.MoreIterators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.druid.BaseStorageAdapter;
-import com.metamx.druid.Capabilities;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.index.QueryableIndex;
-import com.metamx.druid.index.brita.BitmapIndexSelector;
-import com.metamx.druid.index.brita.Filter;
-import com.metamx.druid.index.column.Column;
-import com.metamx.druid.index.column.ColumnCapabilities;
-import com.metamx.druid.index.column.ColumnSelector;
-import com.metamx.druid.index.column.ComplexColumn;
-import com.metamx.druid.index.column.DictionaryEncodedColumn;
-import com.metamx.druid.index.column.GenericColumn;
-import com.metamx.druid.index.column.ValueType;
-import com.metamx.druid.index.v1.processing.Cursor;
-import com.metamx.druid.index.v1.processing.DimensionSelector;
 import com.metamx.druid.index.v1.processing.Offset;
-import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.IndexedIterable;
 import com.metamx.druid.kv.SingleIndexedInts;
-import com.metamx.druid.processing.ComplexMetricSelector;
-import com.metamx.druid.processing.FloatMetricSelector;
-import com.metamx.druid.processing.ObjectColumnSelector;
+import io.druid.data.Indexed;
+import io.druid.data.IndexedInts;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.Filter;
+import io.druid.segment.Capabilities;
+import io.druid.segment.ColumnSelector;
+import io.druid.segment.ComplexMetricSelector;
+import io.druid.segment.Cursor;
+import io.druid.segment.DimensionSelector;
+import io.druid.segment.FloatMetricSelector;
+import io.druid.segment.ObjectMetricSelector;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ComplexColumn;
+import io.druid.segment.column.DictionaryEncodedColumn;
+import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.ValueType;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -483,7 +483,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                     }
 
                     @Override
-                    public ObjectColumnSelector makeObjectColumnSelector(String column)
+                    public ObjectMetricSelector makeObjectColumnSelector(String column)
                     {
                       final String columnName = column.toLowerCase();
 
@@ -524,7 +524,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                         final ValueType type = columnVals.getType();
 
                         if (type == ValueType.FLOAT) {
-                          return new ObjectColumnSelector<Float>()
+                          return new ObjectMetricSelector<Float>()
                           {
                             @Override
                             public Class classOfObject()
@@ -540,7 +540,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                           };
                         }
                         if (type == ValueType.LONG) {
-                          return new ObjectColumnSelector<Long>()
+                          return new ObjectMetricSelector<Long>()
                           {
                             @Override
                             public Class classOfObject()
@@ -556,7 +556,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                           };
                         }
                         if (type == ValueType.STRING) {
-                          return new ObjectColumnSelector<String>()
+                          return new ObjectMetricSelector<String>()
                           {
                             @Override
                             public Class classOfObject()
@@ -575,7 +575,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
 
                       if (cachedColumnVals instanceof DictionaryEncodedColumn) {
                         final DictionaryEncodedColumn columnVals = (DictionaryEncodedColumn) cachedColumnVals;
-                        return new ObjectColumnSelector<String>()
+                        return new ObjectMetricSelector<String>()
                         {
                           @Override
                           public Class classOfObject()
@@ -592,7 +592,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                       }
 
                       final ComplexColumn columnVals = (ComplexColumn) cachedColumnVals;
-                      return new ObjectColumnSelector()
+                      return new ObjectMetricSelector()
                       {
                         @Override
                         public Class classOfObject()
@@ -902,7 +902,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                     }
 
                     @Override
-                    public ObjectColumnSelector makeObjectColumnSelector(String column)
+                    public ObjectMetricSelector makeObjectColumnSelector(String column)
                     {
                       final String columnName = column.toLowerCase();
 
@@ -942,7 +942,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                         final ValueType type = columnVals.getType();
 
                         if (type == ValueType.FLOAT) {
-                          return new ObjectColumnSelector<Float>()
+                          return new ObjectMetricSelector<Float>()
                           {
                             @Override
                             public Class classOfObject()
@@ -958,7 +958,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                           };
                         }
                         if (type == ValueType.LONG) {
-                          return new ObjectColumnSelector<Long>()
+                          return new ObjectMetricSelector<Long>()
                           {
                             @Override
                             public Class classOfObject()
@@ -974,7 +974,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                           };
                         }
                         if (type == ValueType.STRING) {
-                          return new ObjectColumnSelector<String>()
+                          return new ObjectMetricSelector<String>()
                           {
                             @Override
                             public Class classOfObject()
@@ -993,7 +993,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
 
                       if (cachedColumnVals instanceof DictionaryEncodedColumn) {
                         final DictionaryEncodedColumn columnVals = (DictionaryEncodedColumn) cachedColumnVals;
-                        return new ObjectColumnSelector<String>()
+                        return new ObjectMetricSelector<String>()
                         {
                           @Override
                           public Class classOfObject()
@@ -1010,7 +1010,7 @@ public class QueryableIndexStorageAdapter extends BaseStorageAdapter
                       }
 
                       final ComplexColumn columnVals = (ComplexColumn) cachedColumnVals;
-                      return new ObjectColumnSelector()
+                      return new ObjectMetricSelector()
                       {
                         @Override
                         public Class classOfObject()

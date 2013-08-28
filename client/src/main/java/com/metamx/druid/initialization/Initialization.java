@@ -33,6 +33,7 @@ import com.metamx.druid.guice.DruidSecondaryModule;
 import com.metamx.druid.guice.annotations.Json;
 import com.metamx.druid.guice.annotations.Smile;
 import com.metamx.druid.jackson.JacksonModule;
+import io.druid.initialization.DruidModule;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;

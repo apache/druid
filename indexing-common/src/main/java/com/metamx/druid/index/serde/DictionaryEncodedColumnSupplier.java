@@ -20,11 +20,11 @@
 package com.metamx.druid.index.serde;
 
 import com.google.common.base.Supplier;
-import com.metamx.druid.index.column.DictionaryEncodedColumn;
 import com.metamx.druid.index.column.SimpleDictionaryEncodedColumn;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.VSizeIndexed;
 import com.metamx.druid.kv.VSizeIndexedInts;
+import io.druid.segment.column.DictionaryEncodedColumn;
 
 /**
 */

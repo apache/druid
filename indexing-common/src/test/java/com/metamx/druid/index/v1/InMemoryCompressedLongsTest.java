@@ -19,7 +19,7 @@
 
 package com.metamx.druid.index.v1;
 
-import com.metamx.druid.kv.IndexedLongs;
+import io.druid.data.IndexedLongs;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

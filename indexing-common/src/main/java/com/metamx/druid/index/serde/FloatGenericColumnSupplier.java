@@ -20,9 +20,9 @@
 package com.metamx.druid.index.serde;
 
 import com.google.common.base.Supplier;
-import com.metamx.druid.index.column.GenericColumn;
 import com.metamx.druid.index.column.IndexedFloatsGenericColumn;
 import com.metamx.druid.index.v1.CompressedFloatsIndexedSupplier;
+import io.druid.segment.column.GenericColumn;
 
 import java.nio.ByteOrder;
 

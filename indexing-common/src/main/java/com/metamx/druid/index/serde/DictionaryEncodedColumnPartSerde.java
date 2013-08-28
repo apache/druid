@@ -25,13 +25,13 @@ import com.google.common.primitives.Ints;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
 import com.metamx.druid.index.column.ColumnBuilder;
-import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.kv.ByteBufferSerializer;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.IndexedRTree;
 import com.metamx.druid.kv.VSizeIndexed;
 import com.metamx.druid.kv.VSizeIndexedInts;
+import io.druid.segment.column.ValueType;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import java.io.IOException;

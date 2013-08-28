@@ -25,6 +25,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.druid.index.serde.ColumnPartSerde;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

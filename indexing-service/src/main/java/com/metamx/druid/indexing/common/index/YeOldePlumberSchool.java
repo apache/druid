@@ -30,20 +30,19 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.Query;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.loading.DataSegmentPusher;
-import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
+import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.PlumberSchool;
-import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.plumber.Sink;
-
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.segment.QueryableIndex;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 

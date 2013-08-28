@@ -19,6 +19,8 @@
 
 package com.metamx.druid.index.brita;
 
+import io.druid.query.filter.ValueMatcher;
+
 /**
 */
 public class BooleanValueMatcher implements ValueMatcher

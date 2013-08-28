@@ -20,6 +20,9 @@
 package com.metamx.druid.index.column;
 
 import com.metamx.druid.index.v1.CompressedLongsIndexedSupplier;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.ValueType;
 
 /**
  */

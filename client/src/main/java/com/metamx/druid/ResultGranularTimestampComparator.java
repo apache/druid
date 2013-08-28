@@ -21,6 +21,7 @@ package com.metamx.druid;
 
 import com.google.common.primitives.Longs;
 import com.metamx.druid.result.Result;
+import io.druid.granularity.QueryGranularity;
 
 import java.util.Comparator;
 

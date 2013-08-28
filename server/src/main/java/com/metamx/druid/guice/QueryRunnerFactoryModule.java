@@ -2,10 +2,7 @@ package com.metamx.druid.guice;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
-import com.metamx.druid.Query;
-import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.query.group.GroupByQueryEngine;
 import com.metamx.druid.query.group.GroupByQueryRunnerFactory;
@@ -17,6 +14,9 @@ import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import io.druid.initialization.Binders;
+import io.druid.query.Query;
+import io.druid.query.QueryRunnerFactory;
 
 import java.util.Map;
 
@@ -24,7 +24,7 @@ import java.util.Map;
  */
 public class QueryRunnerFactoryModule extends QueryToolChestModule
 {
-  final Map<Class<? extends Query>, Class<? extends QueryRunnerFactory>> mappings =
+  private static final Map<Class<? extends Query>, Class<? extends QueryRunnerFactory>> mappings =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryRunnerFactory>>builder()
                   .put(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
                   .put(SearchQuery.class, SearchQueryRunnerFactory.class)
@@ -38,9 +38,8 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
   {
     super.configure(binder);
 
-    final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = MapBinder.newMapBinder(
-        binder, new TypeLiteral<Class<? extends Query>>(){}, new TypeLiteral<QueryRunnerFactory>(){}
-    );
+
+    final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = Binders.queryFactoryBinder(binder);
 
     for (Map.Entry<Class<? extends Query>, Class<? extends QueryRunnerFactory>> entry : mappings.entrySet()) {
       queryFactoryBinder.addBinding(entry.getKey()).to(entry.getValue());

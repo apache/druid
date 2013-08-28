@@ -23,8 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import javax.annotation.Nullable;
 import java.util.List;

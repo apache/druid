@@ -21,14 +21,15 @@ package com.metamx.druid;
 
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.druid.index.brita.Filter;
 import com.metamx.druid.index.v1.ConciseOffset;
 import com.metamx.druid.index.v1.processing.IntersectingOffset;
 import com.metamx.druid.index.v1.processing.Offset;
-import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.query.search.SearchQuerySpec;
+import io.druid.data.Indexed;
+import io.druid.query.filter.Filter;
+import io.druid.segment.StorageAdapter;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import java.util.List;

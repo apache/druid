@@ -20,8 +20,8 @@
 package com.metamx.druid.realtime;
 
 import com.metamx.druid.index.IncrementalIndexSegment;
-import com.metamx.druid.index.Segment;
 import com.metamx.druid.index.v1.IncrementalIndex;
+import io.druid.segment.Segment;
 
 /**
 */

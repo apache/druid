@@ -20,6 +20,8 @@
 package com.metamx.druid.index.column;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 
 /**
  */

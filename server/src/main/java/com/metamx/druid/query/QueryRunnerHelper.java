@@ -21,16 +21,15 @@ package com.metamx.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.StorageAdapter;
-import com.metamx.druid.aggregation.Aggregator;
-import com.metamx.druid.aggregation.AggregatorFactory;
-import com.metamx.druid.index.brita.Filter;
-import com.metamx.druid.index.v1.processing.Cursor;
 import com.metamx.druid.result.Result;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.filter.Filter;
+import io.druid.segment.Cursor;
+import io.druid.segment.StorageAdapter;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

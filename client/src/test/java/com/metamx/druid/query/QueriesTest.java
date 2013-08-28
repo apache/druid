@@ -19,13 +19,13 @@
 
 package com.metamx.druid.query;
 
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.CountAggregatorFactory;
 import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
 import com.metamx.druid.aggregation.post.ArithmeticPostAggregator;
 import com.metamx.druid.aggregation.post.ConstantPostAggregator;
 import com.metamx.druid.aggregation.post.FieldAccessPostAggregator;
 import com.metamx.druid.aggregation.post.PostAggregator;
+import io.druid.query.aggregation.AggregatorFactory;
 import junit.framework.Assert;
 import org.junit.Test;
 

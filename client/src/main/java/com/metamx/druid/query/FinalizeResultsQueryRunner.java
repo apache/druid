@@ -24,10 +24,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.Query;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryToolChest;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.MetricManipulationFn;
 
 import javax.annotation.Nullable;
 

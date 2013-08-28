@@ -25,11 +25,11 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.metamx.druid.Query;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.actions.SegmentListUsedAction;
 import com.metamx.druid.indexing.common.actions.TaskActionClient;
-import com.metamx.druid.query.QueryRunner;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
 import org.joda.time.Interval;
 
 public abstract class AbstractTask implements Task

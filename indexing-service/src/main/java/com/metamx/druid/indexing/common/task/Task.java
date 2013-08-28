@@ -22,11 +22,11 @@ package com.metamx.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
-import com.metamx.druid.Query;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
 import com.metamx.druid.indexing.common.actions.TaskActionClient;
-import com.metamx.druid.query.QueryRunner;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
 import org.joda.time.Interval;
 
 /**

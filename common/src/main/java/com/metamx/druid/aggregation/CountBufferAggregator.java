@@ -19,6 +19,8 @@
 
 package com.metamx.druid.aggregation;
 
+import io.druid.query.aggregation.BufferAggregator;
+
 import java.nio.ByteBuffer;
 
 /**

@@ -30,7 +30,8 @@ import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.Query;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
 
 import java.util.Arrays;
 import java.util.Iterator;

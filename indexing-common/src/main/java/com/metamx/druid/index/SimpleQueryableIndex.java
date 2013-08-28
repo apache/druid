@@ -20,8 +20,9 @@
 package com.metamx.druid.index;
 
 import com.metamx.common.io.smoosh.SmooshedFileMapper;
-import com.metamx.druid.index.column.Column;
-import com.metamx.druid.kv.Indexed;
+import io.druid.data.Indexed;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.column.Column;
 import org.joda.time.Interval;
 
 import java.io.IOException;

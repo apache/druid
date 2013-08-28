@@ -20,9 +20,9 @@
 package com.metamx.druid.index.serde;
 
 import com.google.common.base.Supplier;
-import com.metamx.druid.index.column.ComplexColumn;
 import com.metamx.druid.index.column.IndexedComplexColumn;
 import com.metamx.druid.kv.GenericIndexed;
+import io.druid.segment.column.ComplexColumn;
 
 /**
 */

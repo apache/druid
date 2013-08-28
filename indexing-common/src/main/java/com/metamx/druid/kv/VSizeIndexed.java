@@ -22,6 +22,7 @@ package com.metamx.druid.kv;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import io.druid.data.Indexed;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

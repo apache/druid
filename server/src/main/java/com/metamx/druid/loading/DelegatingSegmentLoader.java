@@ -21,7 +21,7 @@ package com.metamx.druid.loading;
 
 import com.metamx.common.MapUtils;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.Segment;
+import io.druid.segment.Segment;
 
 import java.util.Map;
 

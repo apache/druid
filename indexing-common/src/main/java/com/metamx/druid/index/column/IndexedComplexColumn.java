@@ -19,7 +19,8 @@
 
 package com.metamx.druid.index.column;
 
-import com.metamx.druid.kv.Indexed;
+import io.druid.data.Indexed;
+import io.druid.segment.column.ComplexColumn;
 
 import java.io.IOException;
 

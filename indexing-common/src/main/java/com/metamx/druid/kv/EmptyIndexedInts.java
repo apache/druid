@@ -20,6 +20,7 @@
 package com.metamx.druid.kv;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.data.IndexedInts;
 
 import java.util.Iterator;
 

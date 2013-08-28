@@ -19,10 +19,10 @@
 
 package com.metamx.druid;
 
-import com.metamx.druid.aggregation.Aggregator;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
+import io.druid.query.aggregation.Aggregator;
 import org.joda.time.DateTime;
 
 import java.util.HashMap;

@@ -20,8 +20,7 @@ package com.metamx.druid.index.serde;
 
 import com.google.common.base.Supplier;
 import com.metamx.collections.spatial.ImmutableRTree;
-import com.metamx.druid.index.column.SpatialIndex;
-import com.metamx.druid.kv.GenericIndexed;
+import io.druid.segment.column.SpatialIndex;
 
 /**
  */

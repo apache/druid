@@ -33,9 +33,6 @@ import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.aggregation.Aggregator;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.index.v1.serde.ComplexMetricExtractor;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
@@ -43,10 +40,13 @@ import com.metamx.druid.index.v1.serde.ComplexMetrics;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
-import com.metamx.druid.processing.ColumnSelectorFactory;
-import com.metamx.druid.processing.ComplexMetricSelector;
-import com.metamx.druid.processing.FloatMetricSelector;
-import com.metamx.druid.processing.ObjectColumnSelector;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.ComplexMetricSelector;
+import io.druid.segment.FloatMetricSelector;
+import io.druid.segment.MetricSelectorFactory;
+import io.druid.segment.ObjectMetricSelector;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -194,7 +194,7 @@ public class IncrementalIndex implements Iterable<Row>
       for (int i = 0; i < metrics.length; ++i) {
         final AggregatorFactory agg = metrics[i];
         aggs[i] = agg.factorize(
-            new ColumnSelectorFactory()
+            new MetricSelectorFactory()
             {
               @Override
               public FloatMetricSelector makeFloatMetricSelector(String metric)
@@ -241,13 +241,13 @@ public class IncrementalIndex implements Iterable<Row>
               }
 
               @Override
-              public ObjectColumnSelector makeObjectColumnSelector(String column)
+              public ObjectMetricSelector makeObjectColumnSelector(String column)
               {
                 final String typeName = agg.getTypeName();
                 final String columnName = column.toLowerCase();
 
                 if (typeName.equals("float")) {
-                  return new ObjectColumnSelector<Float>()
+                  return new ObjectMetricSelector<Float>()
                   {
                     @Override
                     public Class classOfObject()
@@ -271,7 +271,7 @@ public class IncrementalIndex implements Iterable<Row>
 
                 final ComplexMetricExtractor extractor = serde.getExtractor();
 
-                return new ObjectColumnSelector()
+                return new ObjectMetricSelector()
                 {
                   @Override
                   public Class classOfObject()

@@ -25,12 +25,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.druid.BaseQuery;
-import com.metamx.druid.Query;
-import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
-import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
-
+import io.druid.query.Query;
+import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

@@ -19,6 +19,8 @@
 
 package com.metamx.druid.kv;
 
+import io.druid.data.Indexed;
+
 import java.util.Iterator;
 import java.util.List;
 

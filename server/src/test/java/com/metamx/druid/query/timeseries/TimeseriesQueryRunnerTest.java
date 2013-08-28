@@ -23,22 +23,22 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.Druids;
-import com.metamx.druid.PeriodGranularity;
-import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.TestHelper;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.LongSumAggregatorFactory;
 import com.metamx.druid.aggregation.MaxAggregatorFactory;
 import com.metamx.druid.aggregation.MinAggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
-import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerTestHelper;
 import com.metamx.druid.query.filter.AndDimFilter;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.filter.RegexDimFilter;
-import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
+import io.druid.granularity.PeriodGranularity;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.QueryRunner;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -52,7 +52,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
  */

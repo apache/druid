@@ -31,6 +31,7 @@ import com.metamx.druid.query.filter.RegexDimFilter;
 import com.metamx.druid.query.filter.SearchQueryDimFilter;
 import com.metamx.druid.query.filter.SelectorDimFilter;
 import com.metamx.druid.query.filter.SpatialDimFilter;
+import io.druid.query.filter.Filter;
 
 import javax.annotation.Nullable;
 import java.util.List;

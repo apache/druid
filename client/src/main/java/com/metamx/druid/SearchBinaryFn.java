@@ -26,6 +26,8 @@ import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchSortSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
+import io.druid.granularity.AllGranularity;
+import io.druid.granularity.QueryGranularity;
 
 import java.util.TreeSet;
 

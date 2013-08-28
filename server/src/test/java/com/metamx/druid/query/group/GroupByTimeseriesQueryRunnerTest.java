@@ -25,16 +25,16 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.Query;
 import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
-import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryRunnerTestHelper;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 

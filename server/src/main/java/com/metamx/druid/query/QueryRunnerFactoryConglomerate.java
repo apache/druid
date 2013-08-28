@@ -19,7 +19,8 @@
 
 package com.metamx.druid.query;
 
-import com.metamx.druid.Query;
+import io.druid.query.Query;
+import io.druid.query.QueryRunnerFactory;
 
 /**
  */

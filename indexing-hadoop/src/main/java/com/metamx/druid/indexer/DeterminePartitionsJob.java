@@ -20,7 +20,6 @@
 package com.metamx.druid.indexer;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -40,11 +39,11 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.CombiningIterable;
-import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
 import com.metamx.druid.shard.SingleDimensionShardSpec;
+import io.druid.granularity.QueryGranularity;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -66,7 +65,6 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;

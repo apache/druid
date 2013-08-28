@@ -20,6 +20,7 @@
 package com.metamx.druid;
 
 import com.metamx.druid.result.Result;
+import io.druid.granularity.QueryGranularity;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;

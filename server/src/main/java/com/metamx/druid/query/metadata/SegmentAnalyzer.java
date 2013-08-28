@@ -25,14 +25,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Longs;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.index.QueryableIndex;
-import com.metamx.druid.index.column.BitmapIndex;
-import com.metamx.druid.index.column.Column;
-import com.metamx.druid.index.column.ColumnCapabilities;
-import com.metamx.druid.index.column.ComplexColumn;
-import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ComplexColumn;
+import io.druid.segment.column.ValueType;
 
 import java.util.Map;
 

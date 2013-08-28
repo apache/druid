@@ -39,9 +39,9 @@ import java.io.IOException;
 
 /**
  */
-public class JodaStuff
+class JodaStuff
 {
-  public static SimpleModule register(SimpleModule module)
+  static SimpleModule register(SimpleModule module)
   {
     module.addKeyDeserializer(DateTime.class, new DateTimeKeyDeserializer());
     module.addDeserializer(DateTime.class, new DateTimeDeserializer());
@@ -58,7 +58,7 @@ public class JodaStuff
 
   /**
    */
-  public static class IntervalDeserializer extends StdDeserializer<Interval>
+  private static class IntervalDeserializer extends StdDeserializer<Interval>
   {
     public IntervalDeserializer()
     {
@@ -82,7 +82,7 @@ public class JodaStuff
     }
   }
 
-  public static class DateTimeDeserializer extends StdDeserializer<DateTime>
+  private static class DateTimeDeserializer extends StdDeserializer<DateTime>
   {
       public DateTimeDeserializer() {
         super(DateTime.class);
@@ -109,5 +109,4 @@ public class JodaStuff
           throw ctxt.mappingException(getValueClass());
       }
   }
-
 }

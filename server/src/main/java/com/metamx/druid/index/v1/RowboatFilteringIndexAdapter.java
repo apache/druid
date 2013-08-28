@@ -21,8 +21,8 @@ package com.metamx.druid.index.v1;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedInts;
+import io.druid.data.Indexed;
+import io.druid.data.IndexedInts;
 import org.joda.time.Interval;
 
 /**

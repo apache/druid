@@ -19,6 +19,8 @@
 
 package com.metamx.druid.kv;
 
+import io.druid.data.IndexedInts;
+
 /**
  */
 public class Indexedids

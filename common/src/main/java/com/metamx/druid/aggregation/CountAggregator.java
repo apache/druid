@@ -19,6 +19,8 @@
 
 package com.metamx.druid.aggregation;
 
+import io.druid.query.aggregation.Aggregator;
+
 import java.util.Comparator;
 
 /**

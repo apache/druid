@@ -20,7 +20,7 @@
 package com.metamx.druid.index.v1;
 
 import com.metamx.druid.index.v1.processing.Offset;
-import com.metamx.druid.kv.IndexedInts;
+import io.druid.data.IndexedInts;
 
 /**
 */

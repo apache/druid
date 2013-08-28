@@ -23,12 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.query.segment.LegacySegmentSpec;
-import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
-import com.metamx.druid.query.segment.MultipleSpecificSegmentSpec;
-import com.metamx.druid.query.segment.QuerySegmentSpec;
-import com.metamx.druid.query.segment.SegmentDescriptor;
-
+import io.druid.query.SegmentDescriptor;
+import io.druid.query.spec.LegacySegmentSpec;
+import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.query.spec.MultipleSpecificSegmentSpec;
+import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;

@@ -26,8 +26,11 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
-import com.metamx.druid.processing.ColumnSelectorFactory;
-import com.metamx.druid.processing.ObjectColumnSelector;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
+import io.druid.segment.MetricSelectorFactory;
+import io.druid.segment.ObjectMetricSelector;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
@@ -80,16 +83,16 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(final ColumnSelectorFactory columnFactory)
+  public Aggregator factorize(final MetricSelectorFactory columnFactory)
   {
     return new JavaScriptAggregator(
         name,
         Lists.transform(
             fieldNames,
-            new com.google.common.base.Function<String, ObjectColumnSelector>()
+            new com.google.common.base.Function<String, ObjectMetricSelector>()
             {
               @Override
-              public ObjectColumnSelector apply(@Nullable String s)
+              public ObjectMetricSelector apply(@Nullable String s)
               {
                 return columnFactory.makeObjectColumnSelector(s);
               }
@@ -100,17 +103,17 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
+  public BufferAggregator factorizeBuffered(final MetricSelectorFactory metricSelectorFactory)
   {
     return new JavaScriptBufferAggregator(
         Lists.transform(
             fieldNames,
-            new com.google.common.base.Function<String, ObjectColumnSelector>()
+            new com.google.common.base.Function<String, ObjectMetricSelector>()
             {
               @Override
-              public ObjectColumnSelector apply(@Nullable String s)
+              public ObjectMetricSelector apply(@Nullable String s)
               {
-                return columnSelectorFactory.makeObjectColumnSelector(s);
+                return metricSelectorFactory.makeObjectColumnSelector(s);
               }
             }
         ),
@@ -254,7 +257,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
     return new JavaScriptAggregator.ScriptAggregator()
     {
       @Override
-      public double aggregate(final double current, final ObjectColumnSelector[] selectorList)
+      public double aggregate(final double current, final ObjectMetricSelector[] selectorList)
       {
         Context cx = Context.getCurrentContext();
         if (cx == null) {

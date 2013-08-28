@@ -22,8 +22,8 @@ package com.metamx.druid.query.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.druid.BaseQuery;
-import com.metamx.druid.Query;
-import com.metamx.druid.query.segment.QuerySegmentSpec;
+import io.druid.query.Query;
+import io.druid.query.spec.QuerySegmentSpec;
 
 import java.util.Map;
 

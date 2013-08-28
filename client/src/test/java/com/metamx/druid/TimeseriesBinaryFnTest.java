@@ -21,7 +21,6 @@ package com.metamx.druid;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.CountAggregatorFactory;
 import com.metamx.druid.aggregation.LongSumAggregatorFactory;
 import com.metamx.druid.aggregation.post.ArithmeticPostAggregator;
@@ -30,6 +29,8 @@ import com.metamx.druid.aggregation.post.FieldAccessPostAggregator;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.AggregatorFactory;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.junit.Test;

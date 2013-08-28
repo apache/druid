@@ -20,6 +20,7 @@
 package com.metamx.druid.kv;
 
 import com.google.common.collect.Ordering;
+import io.druid.data.IndexedInts;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import it.uniroma3.mat.extendedset.intset.IntSet;
 

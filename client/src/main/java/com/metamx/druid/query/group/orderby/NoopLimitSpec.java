@@ -3,10 +3,10 @@ package com.metamx.druid.query.group.orderby;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.metamx.common.guava.Sequence;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.dimension.DimensionSpec;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.List;
 

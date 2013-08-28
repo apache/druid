@@ -20,7 +20,6 @@
 package com.metamx.druid;
 
 import com.google.common.collect.Lists;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.query.filter.AndDimFilter;
 import com.metamx.druid.query.filter.DimFilter;
@@ -31,13 +30,15 @@ import com.metamx.druid.query.filter.SelectorDimFilter;
 import com.metamx.druid.query.search.InsensitiveContainsSearchQuerySpec;
 import com.metamx.druid.query.search.SearchQuery;
 import com.metamx.druid.query.search.SearchQuerySpec;
-import com.metamx.druid.query.segment.LegacySegmentSpec;
-import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
 import com.metamx.druid.result.TimeBoundaryResultValue;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.spec.LegacySegmentSpec;
+import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

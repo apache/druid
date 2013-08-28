@@ -22,10 +22,10 @@ package com.metamx.druid.index.v1;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
-import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedFloats;
-import com.metamx.druid.kv.IndexedInts;
-import com.metamx.druid.kv.IndexedLongs;
+import io.druid.data.Indexed;
+import io.druid.data.IndexedFloats;
+import io.druid.data.IndexedInts;
+import io.druid.data.IndexedLongs;
 import org.joda.time.Interval;
 
 import java.util.Iterator;

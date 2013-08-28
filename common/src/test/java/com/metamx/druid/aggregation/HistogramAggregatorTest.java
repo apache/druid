@@ -20,6 +20,8 @@
 package com.metamx.druid.aggregation;
 
 import com.google.common.collect.Lists;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.BufferAggregator;
 import org.junit.Assert;
 import org.junit.Test;
 

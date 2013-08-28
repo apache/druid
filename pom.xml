@@ -38,7 +38,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.24.0</metamx.java-util.version>
+        <metamx.java-util.version>0.25.0-SNAPSHOT</metamx.java-util.version>
         <apache.curator.version>2.1.0-incubating</apache.curator.version>
     </properties>
 
@@ -56,6 +56,12 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>io.druid</groupId>
+                <artifactId>druid-api</artifactId>
+                <version>1.0.0-SNAPSHOT</version>
+            </dependency>
+
             <!-- Compile Scope -->
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -377,6 +383,16 @@
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
                 <version>2.4.0a</version>
+            </dependency>
+            <dependency>
+                <groupId>io.tesla.aether</groupId>
+                <artifactId>tesla-aether</artifactId>
+                <version>0.0.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.aether</groupId>
+                <artifactId>aether-api</artifactId>
+                <version>0.9.0.M2</version>
             </dependency>
 
 

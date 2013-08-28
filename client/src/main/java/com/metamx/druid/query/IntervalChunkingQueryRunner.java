@@ -24,9 +24,10 @@ import com.google.common.collect.Lists;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.PeriodGranularity;
-import com.metamx.druid.Query;
-import com.metamx.druid.query.segment.MultipleIntervalSegmentSpec;
+import io.druid.granularity.PeriodGranularity;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 

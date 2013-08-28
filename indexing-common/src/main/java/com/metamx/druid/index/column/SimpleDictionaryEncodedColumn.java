@@ -20,9 +20,10 @@
 package com.metamx.druid.index.column;
 
 import com.metamx.druid.kv.GenericIndexed;
-import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.kv.VSizeIndexed;
 import com.metamx.druid.kv.VSizeIndexedInts;
+import io.druid.data.IndexedInts;
+import io.druid.segment.column.DictionaryEncodedColumn;
 
 /**
 */

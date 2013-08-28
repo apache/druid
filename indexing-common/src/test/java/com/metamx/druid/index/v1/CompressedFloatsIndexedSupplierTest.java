@@ -21,7 +21,7 @@ package com.metamx.druid.index.v1;
 
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Floats;
-import com.metamx.druid.kv.IndexedFloats;
+import io.druid.data.IndexedFloats;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

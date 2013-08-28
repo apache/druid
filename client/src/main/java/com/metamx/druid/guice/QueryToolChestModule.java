@@ -5,8 +5,6 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
-import com.metamx.druid.Query;
-import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.query.group.GroupByQueryConfig;
 import com.metamx.druid.query.group.GroupByQueryQueryToolChest;
@@ -19,6 +17,8 @@ import com.metamx.druid.query.timeboundary.TimeBoundaryQuery;
 import com.metamx.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import io.druid.query.Query;
+import io.druid.query.QueryToolChest;
 
 import java.util.Map;
 

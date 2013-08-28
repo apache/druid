@@ -1,6 +1,7 @@
 package com.metamx.druid.kv;
 
 import com.google.common.collect.Iterators;
+import io.druid.data.IndexedInts;
 
 import java.util.Iterator;
 

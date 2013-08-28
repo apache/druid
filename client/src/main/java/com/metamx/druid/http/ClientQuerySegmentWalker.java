@@ -21,17 +21,17 @@ package com.metamx.druid.http;
 
 import com.google.common.base.Function;
 import com.google.inject.Inject;
-import com.metamx.druid.Query;
 import com.metamx.druid.client.CachingClusteredClient;
 import com.metamx.druid.query.FinalizeResultsQueryRunner;
 import com.metamx.druid.query.MetricsEmittingQueryRunner;
-import com.metamx.druid.query.QueryRunner;
-import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.QueryToolChestWarehouse;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
-import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryToolChest;
+import io.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

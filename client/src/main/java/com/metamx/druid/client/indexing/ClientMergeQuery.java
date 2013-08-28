@@ -21,8 +21,8 @@ package com.metamx.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.DataSegment;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.List;
 

@@ -19,7 +19,10 @@
 
 package com.metamx.druid.index.column;
 
-import com.metamx.druid.kv.Indexed;
+import io.druid.data.Indexed;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ComplexColumn;
+import io.druid.segment.column.ValueType;
 
 /**
  */

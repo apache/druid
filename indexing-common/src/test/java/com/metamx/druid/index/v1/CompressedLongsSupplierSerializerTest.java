@@ -22,7 +22,7 @@ package com.metamx.druid.index.v1;
 import com.google.common.io.OutputSupplier;
 import com.metamx.druid.collect.ResourceHolder;
 import com.metamx.druid.kv.GenericIndexedWriter;
-import com.metamx.druid.kv.IndexedLongs;
+import io.druid.data.IndexedLongs;
 import org.junit.Assert;
 import org.junit.Test;
 

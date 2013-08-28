@@ -22,11 +22,11 @@ package com.metamx.druid.http.log;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.druid.Query;
 import com.metamx.druid.http.RequestLogLine;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
+import io.druid.query.Query;
 import org.joda.time.DateTime;
 
 import java.util.Map;

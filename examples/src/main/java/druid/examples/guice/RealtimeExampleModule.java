@@ -16,7 +16,6 @@ import com.metamx.druid.guice.JsonConfigProvider;
 import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.druid.guice.NoopSegmentPublisherProvider;
 import com.metamx.druid.guice.RealtimeManagerConfig;
-import com.metamx.druid.initialization.DruidModule;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.realtime.FireDepartment;
 import com.metamx.druid.realtime.RealtimeManager;
@@ -25,6 +24,7 @@ import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
 import druid.examples.web.WebFirehoseFactory;
+import io.druid.initialization.DruidModule;
 
 import java.io.File;
 import java.io.IOException;

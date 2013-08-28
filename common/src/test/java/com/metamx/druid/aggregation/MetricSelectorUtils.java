@@ -19,15 +19,14 @@
 
 package com.metamx.druid.aggregation;
 
-import com.metamx.druid.processing.ComplexMetricSelector;
-import com.metamx.druid.processing.FloatMetricSelector;
-import com.metamx.druid.processing.ObjectColumnSelector;
+import io.druid.segment.FloatMetricSelector;
+import io.druid.segment.ObjectMetricSelector;
 
 public class MetricSelectorUtils
 {
-  public static ObjectColumnSelector<Float> wrap(final FloatMetricSelector selector)
+  public static ObjectMetricSelector<Float> wrap(final FloatMetricSelector selector)
   {
-    return new ObjectColumnSelector<Float>()
+    return new ObjectMetricSelector<Float>()
     {
       @Override
       public Class<Float> classOfObject()

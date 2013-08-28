@@ -19,9 +19,11 @@
 
 package com.metamx.druid.index.column;
 
-import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedFloats;
-import com.metamx.druid.kv.IndexedLongs;
+import io.druid.data.Indexed;
+import io.druid.data.IndexedFloats;
+import io.druid.data.IndexedLongs;
+import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.ValueType;
 
 import java.io.IOException;
 

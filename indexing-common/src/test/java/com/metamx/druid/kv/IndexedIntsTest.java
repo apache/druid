@@ -19,6 +19,7 @@
 
 package com.metamx.druid.kv;
 
+import io.druid.data.IndexedInts;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

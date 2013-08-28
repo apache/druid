@@ -31,10 +31,9 @@ import com.google.common.collect.Iterables;
 import com.metamx.common.Granularity;
 import com.metamx.druid.jackson.CommaListJoinDeserializer;
 import com.metamx.druid.jackson.CommaListJoinSerializer;
-import com.metamx.druid.query.segment.SegmentDescriptor;
 import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.druid.shard.ShardSpec;
-
+import io.druid.query.SegmentDescriptor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

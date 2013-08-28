@@ -20,8 +20,8 @@
 package com.metamx.druid.index.serde;
 
 import com.google.common.base.Supplier;
-import com.metamx.druid.index.column.BitmapIndex;
 import com.metamx.druid.kv.GenericIndexed;
+import io.druid.segment.column.BitmapIndex;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**

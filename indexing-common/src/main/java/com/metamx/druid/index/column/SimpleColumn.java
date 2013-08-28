@@ -21,6 +21,14 @@ package com.metamx.druid.index.column;
 
 import com.google.common.base.Supplier;
 import com.google.common.io.Closeables;
+import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ComplexColumn;
+import io.druid.segment.column.DictionaryEncodedColumn;
+import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.RunLengthColumn;
+import io.druid.segment.column.SpatialIndex;
 
 /**
  */

@@ -20,10 +20,10 @@
 package com.metamx.druid.loading;
 
 import com.metamx.common.MapUtils;
-import com.metamx.druid.StorageAdapter;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.QueryableIndex;
-import com.metamx.druid.index.Segment;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.Segment;
+import io.druid.segment.StorageAdapter;
 import org.joda.time.Interval;
 
 import java.io.File;

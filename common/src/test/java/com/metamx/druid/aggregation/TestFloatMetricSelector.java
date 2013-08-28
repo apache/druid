@@ -19,7 +19,7 @@
 
 package com.metamx.druid.aggregation;
 
-import com.metamx.druid.processing.FloatMetricSelector;
+import io.druid.segment.FloatMetricSelector;
 
 /**
  */

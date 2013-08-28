@@ -21,7 +21,7 @@ package com.metamx.druid.index.v1;
 
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Longs;
-import com.metamx.druid.kv.IndexedLongs;
+import io.druid.data.IndexedLongs;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -31,7 +31,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
 import java.nio.LongBuffer;
 import java.nio.channels.Channels;
 import java.util.concurrent.CountDownLatch;

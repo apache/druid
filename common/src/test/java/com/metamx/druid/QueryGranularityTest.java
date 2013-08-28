@@ -23,7 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-
+import io.druid.granularity.DurationGranularity;
+import io.druid.granularity.PeriodGranularity;
+import io.druid.granularity.QueryGranularity;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;

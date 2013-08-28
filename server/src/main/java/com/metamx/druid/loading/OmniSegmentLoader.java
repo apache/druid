@@ -10,9 +10,9 @@ import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.QueryableIndexSegment;
-import com.metamx.druid.index.Segment;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.Segment;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

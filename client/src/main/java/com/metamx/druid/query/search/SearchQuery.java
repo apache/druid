@@ -25,12 +25,12 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.druid.BaseQuery;
-import com.metamx.druid.Query;
-import com.metamx.druid.QueryGranularity;
 import com.metamx.druid.query.filter.DimFilter;
-import com.metamx.druid.query.segment.QuerySegmentSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.Query;
+import io.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
 import java.util.List;

@@ -28,11 +28,11 @@ import com.metamx.common.io.smoosh.SmooshedFileMapper;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
 import com.metamx.druid.kv.GenericIndexed;
-import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.IndexedList;
-import com.metamx.druid.kv.IndexedLongs;
 import com.metamx.druid.kv.VSizeIndexed;
 import com.metamx.druid.kv.VSizeIndexedInts;
+import io.druid.data.Indexed;
+import io.druid.data.IndexedLongs;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.Interval;
 

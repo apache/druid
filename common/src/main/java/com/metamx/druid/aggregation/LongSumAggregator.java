@@ -20,7 +20,8 @@
 package com.metamx.druid.aggregation;
 
 import com.google.common.primitives.Longs;
-import com.metamx.druid.processing.FloatMetricSelector;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.segment.FloatMetricSelector;
 
 import java.util.Comparator;
 

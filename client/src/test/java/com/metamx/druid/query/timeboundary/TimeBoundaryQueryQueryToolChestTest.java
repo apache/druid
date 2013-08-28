@@ -19,7 +19,7 @@
 
 package com.metamx.druid.query.timeboundary;
 
-import com.metamx.druid.LogicalSegment;
+import io.druid.segment.LogicalSegment;
 import junit.framework.Assert;
 import org.joda.time.Interval;
 import org.junit.Test;

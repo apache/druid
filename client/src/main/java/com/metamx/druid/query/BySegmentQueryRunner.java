@@ -26,9 +26,10 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.Yielders;
 import com.metamx.common.guava.YieldingAccumulator;
-import com.metamx.druid.Query;
 import com.metamx.druid.result.BySegmentResultValueClass;
 import com.metamx.druid.result.Result;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
 import org.joda.time.DateTime;
 
 import java.util.List;

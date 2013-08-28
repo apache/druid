@@ -19,7 +19,10 @@
 
 package com.metamx.druid.aggregation;
 
-import com.metamx.druid.processing.ColumnSelectorFactory;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
+import io.druid.segment.MetricSelectorFactory;
 
 import java.util.Comparator;
 import java.util.List;
@@ -36,13 +39,13 @@ public class ToLowerCaseAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Aggregator factorize(MetricSelectorFactory metricFactory)
   {
     return baseAggregatorFactory.factorize(metricFactory);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(MetricSelectorFactory metricFactory)
   {
     return baseAggregatorFactory.factorizeBuffered(metricFactory);
   }

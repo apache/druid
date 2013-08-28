@@ -20,6 +20,7 @@
 package com.metamx.druid;
 
 import com.metamx.druid.partition.PartitionHolder;
+import io.druid.segment.LogicalSegment;
 import org.joda.time.Interval;
 
 /**

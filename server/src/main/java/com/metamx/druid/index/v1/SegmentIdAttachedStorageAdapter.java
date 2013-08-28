@@ -19,13 +19,13 @@
 
 package com.metamx.druid.index.v1;
 
-import com.metamx.druid.Capabilities;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.StorageAdapter;
-import com.metamx.druid.index.brita.Filter;
-import com.metamx.druid.index.v1.processing.Cursor;
 import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchQuery;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.filter.Filter;
+import io.druid.segment.Capabilities;
+import io.druid.segment.Cursor;
+import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

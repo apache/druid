@@ -20,31 +20,26 @@
 package com.metamx.druid.index.v1;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import com.google.common.io.CharStreams;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.LineProcessor;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
-import com.metamx.druid.client.RangeIterable;
-import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.indexer.data.DelimitedDataSpec;
 import com.metamx.druid.indexer.data.StringInputRowParser;
 import com.metamx.druid.indexer.data.TimestampSpec;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.QueryableIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**

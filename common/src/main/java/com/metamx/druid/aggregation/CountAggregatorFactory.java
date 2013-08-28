@@ -24,7 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
-import com.metamx.druid.processing.ColumnSelectorFactory;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
+import io.druid.segment.MetricSelectorFactory;
 
 import java.util.Comparator;
 import java.util.List;
@@ -47,13 +50,13 @@ public class CountAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Aggregator factorize(MetricSelectorFactory metricFactory)
   {
     return new CountAggregator(name);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(MetricSelectorFactory metricFactory)
   {
     return new CountBufferAggregator();
   }

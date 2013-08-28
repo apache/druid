@@ -20,8 +20,8 @@
 package com.metamx.druid.loading;
 
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.index.QueryableIndex;
 import com.metamx.druid.index.v1.IndexIO;
+import io.druid.segment.QueryableIndex;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

@@ -25,6 +25,7 @@ import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.StrlenSearchSortSpec;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
+import io.druid.granularity.QueryGranularity;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.junit.Test;

@@ -1,7 +1,8 @@
 package com.metamx.druid.query;
 
 import com.google.inject.Inject;
-import com.metamx.druid.Query;
+import io.druid.query.Query;
+import io.druid.query.QueryToolChest;
 
 import java.util.Map;
 

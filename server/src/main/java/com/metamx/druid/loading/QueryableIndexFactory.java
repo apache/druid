@@ -19,7 +19,7 @@
 
 package com.metamx.druid.loading;
 
-import com.metamx.druid.index.QueryableIndex;
+import io.druid.segment.QueryableIndex;
 
 import java.io.File;
 

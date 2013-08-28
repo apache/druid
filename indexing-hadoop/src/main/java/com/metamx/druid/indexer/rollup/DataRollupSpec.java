@@ -20,8 +20,8 @@
 package com.metamx.druid.indexer.rollup;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.aggregation.AggregatorFactory;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.List;
 

@@ -19,9 +19,9 @@
 
 package com.metamx.druid.index.v1;
 
-import com.metamx.druid.index.brita.Filter;
 import com.metamx.druid.query.search.SearchHit;
 import com.metamx.druid.query.search.SearchQuery;
+import io.druid.query.filter.Filter;
 
 /**
  */

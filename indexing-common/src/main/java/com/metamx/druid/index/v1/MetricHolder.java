@@ -27,12 +27,12 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
-import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.GenericIndexed;
-import com.metamx.druid.kv.Indexed;
-import com.metamx.druid.kv.IndexedFloats;
+import com.metamx.druid.kv.GenericIndexedWriter;
 import com.metamx.druid.kv.ObjectStrategy;
 import com.metamx.druid.utils.SerializerUtils;
+import io.druid.data.Indexed;
+import io.druid.data.IndexedFloats;
 
 import java.io.IOException;
 import java.io.InputStream;

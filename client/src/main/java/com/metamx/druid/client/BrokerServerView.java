@@ -30,9 +30,9 @@ import com.metamx.druid.client.selector.ServerSelector;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.guice.annotations.Client;
 import com.metamx.druid.partition.PartitionChunk;
-import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChestWarehouse;
 import com.metamx.http.client.HttpClient;
+import io.druid.query.QueryRunner;
 
 import java.util.Iterator;
 import java.util.Map;

@@ -21,9 +21,9 @@ package com.metamx.druid.index.v1;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.aggregation.AggregatorFactory;
-import com.metamx.druid.index.QueryableIndex;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.QueryableIndex;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;

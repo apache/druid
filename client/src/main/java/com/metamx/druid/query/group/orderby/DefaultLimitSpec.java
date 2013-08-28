@@ -31,10 +31,10 @@ import com.google.common.primitives.Longs;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.dimension.DimensionSpec;
+import io.druid.query.aggregation.AggregatorFactory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

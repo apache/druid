@@ -21,7 +21,7 @@ package com.metamx.druid.client;
 
 import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.client.selector.ServerSelector;
-import com.metamx.druid.query.QueryRunner;
+import io.druid.query.QueryRunner;
 
 /**
  */
