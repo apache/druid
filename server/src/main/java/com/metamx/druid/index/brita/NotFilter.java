@@ -19,10 +19,10 @@
 
 package com.metamx.druid.index.brita;
 
-import io.druid.query.aggregation.ValueMatcherFactory;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.query.filter.ValueMatcherFactory;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**
