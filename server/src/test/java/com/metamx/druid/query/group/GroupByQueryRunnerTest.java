@@ -700,6 +700,41 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 
+  @Test
+  public void testGroupByWithNonexistantDimension() throws Exception
+  {
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .addDimension("billy")
+        .addDimension("quality")
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+
+    final GroupByQuery query = builder.build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "quality", "automotive", "rows", 2L),
+        createExpectedRow("2011-04-01", "quality", "business", "rows", 2L),
+        createExpectedRow("2011-04-01", "quality", "entertainment", "rows", 2L),
+        createExpectedRow("2011-04-01", "quality", "health", "rows", 2L),
+        createExpectedRow("2011-04-01", "quality", "mezzanine", "rows", 6L),
+        createExpectedRow("2011-04-01", "quality", "news", "rows", 2L),
+        createExpectedRow("2011-04-01", "quality", "premium", "rows", 6L),
+        createExpectedRow("2011-04-01", "quality", "technology", "rows", 2L),
+        createExpectedRow("2011-04-01", "quality", "travel", "rows", 2L)
+    );
+
+    TestHelper.assertExpectedObjects(expectedResults, runner.run(query), "normal");
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
+  }
+
   private Row createExpectedRow(final String timestamp, Object... vals)
   {
     return createExpectedRow(new DateTime(timestamp), vals);

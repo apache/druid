@@ -53,6 +53,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -281,7 +282,7 @@ public class GroupByQueryEngine
 
     private final List<DimensionSpec> dimensionSpecs;
     private final List<DimensionSelector> dimensions;
-    private final String[] dimNames;
+    private final ArrayList<String> dimNames;
     private final List<AggregatorFactory> aggregatorSpecs;
     private final BufferAggregator[] aggregators;
     private final String[] metricNames;
@@ -301,14 +302,14 @@ public class GroupByQueryEngine
       delegate = Iterators.emptyIterator();
       dimensionSpecs = query.getDimensions();
       dimensions = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
-      dimNames = new String[dimensionSpecs.size()];
+      dimNames = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
       for (int i = 0; i < dimensionSpecs.size(); ++i) {
         final DimensionSpec dimSpec = dimensionSpecs.get(i);
         final DimensionSelector selector = cursor.makeDimensionSelector(dimSpec.getDimension());
         if (selector != null) {
           dimensions.add(selector);
+          dimNames.add(dimSpec.getOutputName());
         }
-        dimNames[i] = dimSpec.getOutputName();
       }
 
       aggregatorSpecs = query.getAggregatorSpecs();
@@ -384,7 +385,7 @@ public class GroupByQueryEngine
 
                   ByteBuffer keyBuffer = input.getKey().duplicate();
                   for (int i = 0; i < dimensions.size(); ++i) {
-                    theEvent.put(dimNames[i], dimensions.get(i).lookupName(keyBuffer.getInt()));
+                    theEvent.put(dimNames.get(i), dimensions.get(i).lookupName(keyBuffer.getInt()));
                   }
 
                   int position = input.getValue();
