@@ -701,7 +701,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByWithNonexistantDimension() throws Exception
+  public void testGroupByWithNonexistentDimension() throws Exception
   {
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
