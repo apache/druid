@@ -15,7 +15,8 @@ public class LinearShardSpec implements ShardSpec {
   @JsonCreator
   public LinearShardSpec(
       @JsonProperty("partitionNum") Integer partitionNum
-  ) {
+  )
+  {
     this.partitionNum = Preconditions.checkNotNull(partitionNum, "Must set partitionNum on LinearShardSpec");
   }
 
