@@ -31,7 +31,6 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.BaseQuery;
-import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.Queries;
 import com.metamx.druid.query.dimension.DefaultDimensionSpec;
@@ -45,6 +44,7 @@ import com.metamx.druid.query.group.orderby.OrderByColumnSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Query;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 

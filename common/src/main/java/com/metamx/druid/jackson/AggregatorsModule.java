@@ -29,17 +29,22 @@ import com.metamx.druid.aggregation.JavaScriptAggregatorFactory;
 import com.metamx.druid.aggregation.LongSumAggregatorFactory;
 import com.metamx.druid.aggregation.MaxAggregatorFactory;
 import com.metamx.druid.aggregation.MinAggregatorFactory;
+import com.metamx.druid.aggregation.post.ArithmeticPostAggregator;
+import com.metamx.druid.aggregation.post.ConstantPostAggregator;
+import com.metamx.druid.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 
 /**
  */
-public class AggregatorFactoriesModule extends SimpleModule
+public class AggregatorsModule extends SimpleModule
 {
-  public AggregatorFactoriesModule()
+  public AggregatorsModule()
   {
     super("AggregatorFactories");
 
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
+    setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
   }
 
   @JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="type")
@@ -53,4 +58,12 @@ public class AggregatorFactoriesModule extends SimpleModule
       @JsonSubTypes.Type(name="histogram", value=HistogramAggregatorFactory.class)
   })
   public static interface AggregatorFactoryMixin {}
+
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+  @JsonSubTypes(value = {
+      @JsonSubTypes.Type(name = "arithmetic", value = ArithmeticPostAggregator.class),
+      @JsonSubTypes.Type(name = "fieldAccess", value = FieldAccessPostAggregator.class),
+      @JsonSubTypes.Type(name = "constant", value = ConstantPostAggregator.class)
+  })
+  public static interface PostAggregatorMixin {}
 }

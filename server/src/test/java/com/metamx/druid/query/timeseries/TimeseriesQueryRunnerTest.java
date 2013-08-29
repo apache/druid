@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,7 +27,6 @@ import com.metamx.druid.TestHelper;
 import com.metamx.druid.aggregation.LongSumAggregatorFactory;
 import com.metamx.druid.aggregation.MaxAggregatorFactory;
 import com.metamx.druid.aggregation.MinAggregatorFactory;
-import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.query.QueryRunnerTestHelper;
 import com.metamx.druid.query.filter.AndDimFilter;
 import com.metamx.druid.query.filter.DimFilter;
@@ -38,6 +37,7 @@ import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;

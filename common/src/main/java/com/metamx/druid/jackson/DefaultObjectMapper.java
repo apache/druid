@@ -41,7 +41,7 @@ public class DefaultObjectMapper extends ObjectMapper
     registerModule(new DruidDefaultSerializersModule());
     registerModule(new GuavaModule());
     registerModule(new QueryGranularityModule());
-    registerModule(new AggregatorFactoriesModule());
+    registerModule(new AggregatorsModule());
 
     configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     configure(MapperFeature.AUTO_DETECT_GETTERS, false);
