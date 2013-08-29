@@ -731,7 +731,7 @@ public class GroupByQueryRunnerTest
     );
 
     TestHelper.assertExpectedObjects(expectedResults, runner.run(query), "normal");
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 
