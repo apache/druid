@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -41,7 +41,6 @@ import com.metamx.druid.query.MetricsEmittingQueryRunner;
 import com.metamx.druid.query.NoopQueryRunner;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.query.ReferenceCountingSegmentQueryRunner;
-import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.druid.query.segment.SpecificSegmentQueryRunner;
 import com.metamx.druid.query.segment.SpecificSegmentSpec;
 import com.metamx.emitter.EmittingLogger;
@@ -50,6 +49,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.QuerySegmentSpec;

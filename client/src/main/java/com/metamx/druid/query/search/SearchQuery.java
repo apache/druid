@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,12 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.metamx.druid.BaseQuery;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.SearchResultValue;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.Query;
+import io.druid.query.BaseQuery;
 import io.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
@@ -91,7 +90,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   @Override
   public String getType()
   {
-    return Query.SEARCH;
+    return "search";
   }
 
   @Override

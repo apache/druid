@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.sql;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -11,7 +30,6 @@ import com.google.common.io.Closeables;
 import com.metamx.druid.Druids;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
@@ -19,6 +37,7 @@ import com.metamx.druid.sql.antlr4.DruidSQLLexer;
 import com.metamx.druid.sql.antlr4.DruidSQLParser;
 import io.druid.query.Query;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.spec.DimensionSpec;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;

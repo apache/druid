@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,7 +22,7 @@ package com.metamx.druid;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.jackson.CommonObjectMapper;
 import io.druid.granularity.DurationGranularity;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
@@ -437,7 +437,7 @@ public class QueryGranularityTest
   @Test
   public void testSerializePeriod() throws Exception
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = new CommonObjectMapper();
 
     String json = "{ \"type\": \"period\", \"period\": \"P1D\" }";
     QueryGranularity gran = mapper.readValue(json, QueryGranularity.class);
@@ -462,7 +462,7 @@ public class QueryGranularityTest
   @Test
   public void testSerializeDuration() throws Exception
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = new CommonObjectMapper();
 
     String json = "{ \"type\": \"duration\", \"duration\": \"3600000\" }";
     QueryGranularity gran = mapper.readValue(json, QueryGranularity.class);
@@ -479,7 +479,7 @@ public class QueryGranularityTest
   @Test
   public void testSerializeSimple() throws Exception
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = new CommonObjectMapper();
 
     Assert.assertEquals(
       QueryGranularity.ALL,
@@ -501,7 +501,7 @@ public class QueryGranularityTest
   @Test
   public void testDeserializeSimple() throws Exception
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = new CommonObjectMapper();
 
     Assert.assertEquals(QueryGranularity.ALL, mapper.readValue("\"all\"", QueryGranularity.class));
     Assert.assertEquals(QueryGranularity.ALL, mapper.readValue("\"ALL\"", QueryGranularity.class));

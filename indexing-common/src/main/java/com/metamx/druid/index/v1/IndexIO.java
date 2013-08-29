@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -52,7 +52,7 @@ import com.metamx.druid.index.serde.FloatGenericColumnSupplier;
 import com.metamx.druid.index.serde.LongGenericColumnPartSerde;
 import com.metamx.druid.index.serde.LongGenericColumnSupplier;
 import com.metamx.druid.index.serde.SpatialIndexColumnPartSupplier;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import com.metamx.druid.jackson.CommonObjectMapper;
 import com.metamx.druid.kv.ArrayIndexed;
 import com.metamx.druid.kv.ByteBufferSerializer;
 import com.metamx.druid.kv.ConciseCompressedIndexedInts;
@@ -110,7 +110,7 @@ public class IndexIO
   public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 
   // This should really be provided by DI, should be changed once we switch around to using a DI framework
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper mapper = new CommonObjectMapper();
 
   private static volatile IndexIOHandler handler = null;
   public static final int CURRENT_VERSION_ID = V9_VERSION;
@@ -790,7 +790,7 @@ public class IndexIO
 
       Map<String, Column> columns = Maps.newHashMap();
 
-      ObjectMapper mapper = new DefaultObjectMapper();
+      ObjectMapper mapper = new CommonObjectMapper();
 
       for (String columnName : cols) {
         columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName)));

@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,11 +32,11 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.guice.annotations.Json;
 import com.metamx.druid.guice.annotations.Smile;
 import com.metamx.druid.http.log.RequestLogger;
-import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.Query;
+import io.druid.query.QuerySegmentWalker;
 import org.eclipse.jetty.server.Request;
 import org.joda.time.DateTime;
 

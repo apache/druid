@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -30,12 +30,10 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.BaseQuery;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.Queries;
 import com.metamx.druid.query.dimension.DefaultDimensionSpec;
-import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.group.having.HavingSpec;
 import com.metamx.druid.query.group.orderby.DefaultLimitSpec;
@@ -43,8 +41,9 @@ import com.metamx.druid.query.group.orderby.LimitSpec;
 import com.metamx.druid.query.group.orderby.NoopLimitSpec;
 import com.metamx.druid.query.group.orderby.OrderByColumnSpec;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.Query;
+import io.druid.query.BaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.spec.DimensionSpec;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 
@@ -210,7 +209,7 @@ public class GroupByQuery extends BaseQuery<Row>
   @Override
   public String getType()
   {
-    return Query.GROUP_BY;
+    return "groupBy";
   }
 
   public Sequence<Row> applyLimit(Sequence<Row> results)

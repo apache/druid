@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,12 +20,12 @@
 package com.metamx.druid.index.brita;
 
 import com.google.common.collect.Lists;
-import com.metamx.druid.query.extraction.DimExtractionFn;
 import io.druid.data.Indexed;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.query.spec.DimExtractionFn;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import java.util.List;

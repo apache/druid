@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,14 +28,14 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 
 /**
  */
-public class DefaultObjectMapper extends ObjectMapper
+public class CommonObjectMapper extends ObjectMapper
 {
-  public DefaultObjectMapper()
+  public CommonObjectMapper()
   {
     this(null);
   }
 
-  public DefaultObjectMapper(JsonFactory factory)
+  public CommonObjectMapper(JsonFactory factory)
   {
     super(factory);
     registerModule(new DruidDefaultSerializersModule());

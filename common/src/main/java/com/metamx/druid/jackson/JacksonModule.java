@@ -42,13 +42,13 @@ public class JacksonModule implements Module
   @Provides @LazySingleton @Json
   public ObjectMapper jsonMapper()
   {
-    return new DefaultObjectMapper();
+    return new CommonObjectMapper();
   }
 
   @Provides @LazySingleton @Smile
   public ObjectMapper smileMapper()
   {
-    ObjectMapper retVal = new DefaultObjectMapper(new SmileFactory());
+    ObjectMapper retVal = new CommonObjectMapper(new SmileFactory());
     retVal.getJsonFactory().setCodec(retVal);
     return retVal;
   }

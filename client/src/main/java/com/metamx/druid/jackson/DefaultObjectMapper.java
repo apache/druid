@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,11 +17,22 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
+package com.metamx.druid.jackson;
+
+import com.fasterxml.jackson.core.JsonFactory;
 
 /**
-*/
-public interface MetricManipulationFn
+ */
+public class DefaultObjectMapper extends CommonObjectMapper
 {
-  public Object manipulate(AggregatorFactory factory, Object object);
+  public DefaultObjectMapper()
+  {
+    this(null);
+  }
+
+  public DefaultObjectMapper(JsonFactory factory)
+  {
+    super(factory);
+    registerModule(new QueryRegisteringModule());
+  }
 }

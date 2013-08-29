@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,9 +22,9 @@ package com.metamx.druid.http;
 import com.metamx.druid.client.DirectDruidClient;
 import com.metamx.druid.query.FinalizeResultsQueryRunner;
 import com.metamx.druid.query.QueryToolChestWarehouse;
-import com.metamx.druid.query.segment.QuerySegmentWalker;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 

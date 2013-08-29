@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,14 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
-import com.metamx.druid.BaseQuery;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.query.Queries;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.Query;
+import io.druid.query.BaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.spec.QuerySegmentSpec;
 
@@ -76,7 +75,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public String getType()
   {
-    return Query.TIMESERIES;
+    return "timeseries";
   }
 
   @JsonProperty("filter")
