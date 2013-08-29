@@ -20,7 +20,6 @@
 package com.metamx.druid.query.extraction;
 
 import com.google.common.collect.Sets;
-import io.druid.query.spec.DimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
 

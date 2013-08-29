@@ -17,26 +17,27 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.query.group.orderby;
+package io.druid.query.spec;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Function;
-import com.metamx.common.guava.Sequence;
-import com.metamx.druid.aggregation.post.PostAggregator;
-import com.metamx.druid.input.Row;
-import com.metamx.druid.query.dimension.DimensionSpec;
-import io.druid.query.aggregation.AggregatorFactory;
+import com.metamx.druid.query.segment.QuerySegmentWalker;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import org.joda.time.Interval;
 
 import java.util.List;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopLimitSpec.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultLimitSpec.class)
+@JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="type", defaultImpl = LegacySegmentSpec.class)
+@JsonSubTypes(value={
+    @JsonSubTypes.Type(name="intervals", value=MultipleIntervalSegmentSpec.class),
+    @JsonSubTypes.Type(name="segments", value=MultipleSpecificSegmentSpec.class)
 })
-public interface LimitSpec
+public interface QuerySegmentSpec
 {
-  public Function<Sequence<Row>, Sequence<Row>> build(List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs);
+  public List<Interval> getIntervals();
+
+  public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker);
 }

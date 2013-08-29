@@ -33,8 +33,8 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.input.Row;
+import com.metamx.druid.query.dimension.DimensionSpec;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.spec.DimensionSpec;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

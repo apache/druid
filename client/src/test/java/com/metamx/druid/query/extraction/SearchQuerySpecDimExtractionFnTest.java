@@ -22,7 +22,6 @@ package com.metamx.druid.query.extraction;
 import com.google.common.collect.Sets;
 import com.metamx.druid.query.search.FragmentSearchQuerySpec;
 import com.metamx.druid.query.search.SearchQuerySpec;
-import io.druid.query.spec.DimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
 

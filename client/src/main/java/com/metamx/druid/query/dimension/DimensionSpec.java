@@ -17,24 +17,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.jackson;
+package com.metamx.druid.query.dimension;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import junit.framework.Assert;
-import org.joda.time.DateTime;
-import org.junit.Test;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.metamx.druid.query.extraction.DimExtractionFn;
 
 /**
  */
-public class CommonObjectMapperTest
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LegacyDimensionSpec.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "default", value = DefaultDimensionSpec.class),
+    @JsonSubTypes.Type(name = "extraction", value = ExtractionDimensionSpec.class)
+})
+public interface DimensionSpec
 {
-  ObjectMapper mapper = new CommonObjectMapper();
-
-  @Test
-  public void testDateTime() throws Exception
-  {
-    final DateTime time = new DateTime();
-
-    Assert.assertEquals(String.format("\"%s\"", time), mapper.writeValueAsString(time));
-  }
+  public String getDimension();
+  public String getOutputName();
+  public DimExtractionFn getDimExtractionFn();
+  public byte[] getCacheKey();
 }

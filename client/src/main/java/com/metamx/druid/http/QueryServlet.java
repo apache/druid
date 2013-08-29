@@ -32,11 +32,11 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.guice.annotations.Json;
 import com.metamx.druid.guice.annotations.Smile;
 import com.metamx.druid.http.log.RequestLogger;
+import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.Query;
-import io.druid.query.QuerySegmentWalker;
 import org.eclipse.jetty.server.Request;
 import org.joda.time.DateTime;
 

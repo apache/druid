@@ -38,6 +38,7 @@ import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.QueryRunnerTestHelper;
 import com.metamx.druid.query.dimension.DefaultDimensionSpec;
+import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.filter.RegexDimFilter;
 import com.metamx.druid.query.group.having.EqualToHavingSpec;
 import com.metamx.druid.query.group.having.GreaterThanHavingSpec;
@@ -50,7 +51,6 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.spec.DimensionSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -731,7 +731,7 @@ public class GroupByQueryRunnerTest
     );
 
     TestHelper.assertExpectedObjects(expectedResults, runner.run(query), "normal");
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier).mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 

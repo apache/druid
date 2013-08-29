@@ -21,7 +21,6 @@ package com.metamx.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.query.spec.DimExtractionFn;
 
 import java.nio.ByteBuffer;
 import java.util.regex.Matcher;

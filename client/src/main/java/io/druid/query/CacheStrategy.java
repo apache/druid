@@ -17,26 +17,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.query.group.orderby;
+package io.druid.query;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
-import com.metamx.druid.aggregation.post.PostAggregator;
-import com.metamx.druid.input.Row;
-import com.metamx.druid.query.dimension.DimensionSpec;
-import io.druid.query.aggregation.AggregatorFactory;
-
-import java.util.List;
 
 /**
- */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopLimitSpec.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultLimitSpec.class)
-})
-public interface LimitSpec
+*/
+public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
-  public Function<Sequence<Row>, Sequence<Row>> build(List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs);
+  public byte[] computeCacheKey(QueryType query);
+
+  public TypeReference<CacheType> getCacheObjectClazz();
+
+  public Function<T, CacheType> prepareForCache();
+
+  public Function<CacheType, T> pullFromCache();
+
+  public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences);
 }

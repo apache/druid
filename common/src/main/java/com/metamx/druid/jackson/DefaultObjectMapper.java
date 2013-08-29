@@ -28,14 +28,14 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 
 /**
  */
-public class CommonObjectMapper extends ObjectMapper
+public class DefaultObjectMapper extends ObjectMapper
 {
-  public CommonObjectMapper()
+  public DefaultObjectMapper()
   {
     this(null);
   }
 
-  public CommonObjectMapper(JsonFactory factory)
+  public DefaultObjectMapper(JsonFactory factory)
   {
     super(factory);
     registerModule(new DruidDefaultSerializersModule());

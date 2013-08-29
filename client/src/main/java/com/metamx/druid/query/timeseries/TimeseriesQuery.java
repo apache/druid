@@ -23,13 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
+import com.metamx.druid.BaseQuery;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.query.Queries;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeseriesResultValue;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.BaseQuery;
+import io.druid.query.Query;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.spec.QuerySegmentSpec;
 
@@ -75,7 +76,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public String getType()
   {
-    return "timeseries";
+    return Query.TIMESERIES;
   }
 
   @JsonProperty("filter")

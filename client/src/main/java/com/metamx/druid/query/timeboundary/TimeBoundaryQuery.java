@@ -24,9 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.druid.BaseQuery;
 import com.metamx.druid.result.Result;
 import com.metamx.druid.result.TimeBoundaryResultValue;
-import io.druid.query.BaseQuery;
+import io.druid.query.Query;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
@@ -73,7 +74,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   @Override
   public String getType()
   {
-    return "timeBoundary";
+    return Query.TIME_BOUNDARY;
   }
 
   @Override

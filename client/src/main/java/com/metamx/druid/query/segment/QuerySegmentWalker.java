@@ -22,33 +22,26 @@ package com.metamx.druid.query.segment;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 
-import java.util.Arrays;
-import java.util.List;
-
 /**
-*/
-public class SpecificSegmentSpec implements QuerySegmentSpec
+ */
+public interface QuerySegmentWalker
 {
-  private final SegmentDescriptor descriptor;
+  /**
+   * Gets the Queryable for a given interval, the Queryable returned can be any version(s) or partitionNumber(s)
+   * such that it represents the interval.
+   *
+   * @param intervals the intervals to find a Queryable for
+   * @return a Queryable object that represents the interval
+   */
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals);
 
-  public SpecificSegmentSpec(
-      SegmentDescriptor descriptor
-  ) {
-    this.descriptor = descriptor;
-  }
-
-  @Override
-  public List<Interval> getIntervals()
-  {
-    return Arrays.asList(descriptor.getInterval());
-  }
-
-  @Override
-  public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker)
-  {
-    return walker.getQueryRunnerForSegments(query, Arrays.asList(descriptor));
-  }
+  /**
+   * Gets the Queryable for a given list of SegmentSpecs.
+   * exist.
+   *
+   * @return the Queryable object with the given SegmentSpecs
+   */
+  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs);
 }

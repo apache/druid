@@ -17,22 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.jackson;
-
-import com.fasterxml.jackson.core.JsonFactory;
+package io.druid.query.aggregation;
 
 /**
- */
-public class DefaultObjectMapper extends CommonObjectMapper
+*/
+public interface MetricManipulationFn
 {
-  public DefaultObjectMapper()
-  {
-    this(null);
-  }
-
-  public DefaultObjectMapper(JsonFactory factory)
-  {
-    super(factory);
-    registerModule(new QueryRegisteringModule());
-  }
+  public Object manipulate(AggregatorFactory factory, Object object);
 }

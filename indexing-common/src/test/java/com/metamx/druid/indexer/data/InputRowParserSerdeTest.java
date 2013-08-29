@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.druid.index.v1.SpatialDimensionSchema;
 import com.metamx.druid.input.InputRow;
-import com.metamx.druid.jackson.CommonObjectMapper;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.junit.Test;
@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
 
 public class InputRowParserSerdeTest
 {
-  private final ObjectMapper jsonMapper = new CommonObjectMapper();
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
   public void testStringInputRowParserSerde() throws Exception

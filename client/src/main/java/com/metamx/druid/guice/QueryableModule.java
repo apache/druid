@@ -27,8 +27,8 @@ import com.metamx.druid.http.log.EmittingRequestLoggerProvider;
 import com.metamx.druid.http.log.FileRequestLoggerProvider;
 import com.metamx.druid.http.log.RequestLogger;
 import com.metamx.druid.http.log.RequestLoggerProvider;
+import com.metamx.druid.query.segment.QuerySegmentWalker;
 import io.druid.initialization.DruidModule;
-import io.druid.query.QuerySegmentWalker;
 
 import java.util.Arrays;
 import java.util.List;

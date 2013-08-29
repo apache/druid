@@ -17,57 +17,51 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.query.extraction;
+package io.druid.query.spec;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.query.search.SearchQuerySpec;
+import com.metamx.druid.query.segment.QuerySegmentWalker;
+import com.metamx.druid.utils.JodaUtils;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import org.joda.time.Interval;
 
-import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.List;
 
 /**
  */
-public class SearchQuerySpecDimExtractionFn implements DimExtractionFn
+public class MultipleIntervalSegmentSpec implements QuerySegmentSpec
 {
-  private static final byte CACHE_TYPE_ID = 0x3;
-
-  private final SearchQuerySpec searchQuerySpec;
+  private final List<Interval> intervals;
 
   @JsonCreator
-  public SearchQuerySpecDimExtractionFn(
-      @JsonProperty("query") SearchQuerySpec searchQuerySpec
+  public MultipleIntervalSegmentSpec(
+      @JsonProperty("intervals") List<Interval> intervals
   )
   {
-    this.searchQuerySpec = searchQuerySpec;
-  }
-
-  @JsonProperty("query")
-  public SearchQuerySpec getSearchQuerySpec()
-  {
-    return searchQuerySpec;
+    this.intervals = Collections.unmodifiableList(JodaUtils.condenseIntervals(intervals));
   }
 
   @Override
-  public byte[] getCacheKey()
+  @JsonProperty("intervals")
+  public List<Interval> getIntervals()
   {
-    byte[] specBytes = searchQuerySpec.getCacheKey();
-    return ByteBuffer.allocate(1 + specBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(specBytes)
-                     .array();
+    return intervals;
   }
 
   @Override
-  public String apply(String dimValue)
+  public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker)
   {
-    return searchQuerySpec.accept(dimValue) ? dimValue : null;
+    return walker.getQueryRunnerForIntervals(query, intervals);
   }
 
   @Override
   public String toString()
   {
-    return "SearchQuerySpecDimExtractionFn{" +
-           "searchQuerySpec=" + searchQuerySpec +
+    return getClass().getSimpleName() + "{" +
+           "intervals=" + intervals +
            '}';
   }
 }

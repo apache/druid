@@ -17,26 +17,22 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.query.group.orderby;
+package com.metamx.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Function;
-import com.metamx.common.guava.Sequence;
-import com.metamx.druid.aggregation.post.PostAggregator;
-import com.metamx.druid.input.Row;
-import com.metamx.druid.query.dimension.DimensionSpec;
-import io.druid.query.aggregation.AggregatorFactory;
-
-import java.util.List;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopLimitSpec.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property="type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultLimitSpec.class)
+    @JsonSubTypes.Type(name = "time", value = TimeDimExtractionFn.class),
+    @JsonSubTypes.Type(name = "regex", value = RegexDimExtractionFn.class),
+    @JsonSubTypes.Type(name = "partial", value = PartialDimExtractionFn.class),
+    @JsonSubTypes.Type(name = "searchQuery", value = SearchQuerySpecDimExtractionFn.class)
 })
-public interface LimitSpec
+public interface DimExtractionFn
 {
-  public Function<Sequence<Row>, Sequence<Row>> build(List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs);
+  public byte[] getCacheKey();
+  public String apply(String dimValue);
 }

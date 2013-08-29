@@ -21,7 +21,7 @@ package com.metamx.druid.query.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.query.BaseQuery;
+import com.metamx.druid.BaseQuery;
 import io.druid.query.Query;
 import io.druid.query.spec.QuerySegmentSpec;
 
@@ -69,7 +69,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public String getType()
   {
-    return "segmentMetadata";
+    return Query.SEGMENT_METADATA;
   }
 
   @Override

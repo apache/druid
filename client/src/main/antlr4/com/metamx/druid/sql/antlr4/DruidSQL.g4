@@ -12,7 +12,7 @@ import com.metamx.druid.aggregation.post.ConstantPostAggregator;
 import com.metamx.druid.aggregation.post.FieldAccessPostAggregator;
 import com.metamx.druid.aggregation.post.PostAggregator;
 import com.metamx.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.spec.DimensionSpec;
+import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.druid.query.filter.AndDimFilter;
 import com.metamx.druid.query.filter.DimFilter;
 import com.metamx.druid.query.filter.NotDimFilter;

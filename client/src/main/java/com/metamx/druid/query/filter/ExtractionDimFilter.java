@@ -22,7 +22,7 @@ package com.metamx.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.query.spec.DimExtractionFn;
+import com.metamx.druid.query.extraction.DimExtractionFn;
 
 import java.nio.ByteBuffer;
 

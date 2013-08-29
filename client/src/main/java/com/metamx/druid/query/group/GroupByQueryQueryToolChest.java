@@ -36,6 +36,7 @@ import com.metamx.druid.index.v1.IncrementalIndex;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.input.Rows;
+import com.metamx.druid.query.dimension.DimensionSpec;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Query;
@@ -43,7 +44,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
-import io.druid.query.spec.DimensionSpec;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 

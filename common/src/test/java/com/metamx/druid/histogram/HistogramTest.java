@@ -22,6 +22,7 @@ package com.metamx.druid.histogram;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.metamx.druid.aggregation.Histogram;
+import com.metamx.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -61,7 +62,7 @@ public class HistogramTest
     Double[] visualBreaks = {-1.0, -0.5, 0.0, 0.5, 1.0};
     Double[] visualCounts = { 123., 4., 56., 7. };
 
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper = new DefaultObjectMapper();
     String json = objectMapper.writeValueAsString(h.asVisual());
 
     Map<String,Object> expectedObj = Maps.newLinkedHashMap();
