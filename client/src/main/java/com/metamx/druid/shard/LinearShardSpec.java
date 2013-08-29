@@ -1,6 +1,8 @@
 package com.metamx.druid.shard;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.partition.LinearPartitionChunk;
 import com.metamx.druid.partition.PartitionChunk;
@@ -10,12 +12,11 @@ import java.util.Map;
 public class LinearShardSpec implements ShardSpec {
   private int partitionNum;
 
-  public LinearShardSpec() {
-    this(-1);
-  }
-
-  public LinearShardSpec(int partitionNum) {
-    this.partitionNum = partitionNum;
+  @JsonCreator
+  public LinearShardSpec(
+      @JsonProperty("partitionNum") Integer partitionNum
+  ) {
+    this.partitionNum = Preconditions.checkNotNull(partitionNum, "Must set partitionNum on LinearShardSpec");
   }
 
   @JsonProperty("partitionNum")
