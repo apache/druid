@@ -55,45 +55,45 @@ public class RackspaceSegmentPuller implements DataSegmentPuller{
 		fileContainer = MapUtils.getString(segmentLoadSpec, AppConstant.FILE_CONTAINER.getValue());
 		filePath = MapUtils.getString(segmentLoadSpec, AppConstant.FILE_PATH.getValue());
 		
-	    log.info("Pulling index at path[%s] to outDir[%s]", filePath, outDir);	   
+    	log.info("Pulling index at path[%s] to outDir[%s]", filePath, outDir);	   
 
-	    if (!outDir.exists()) {
-	      outDir.mkdirs();
-	    }
+    	if (!outDir.exists()) {
+	      		outDir.mkdirs();
+    	}
 
-	    if (!outDir.isDirectory()) {
-	      throw new ISE("outDir[%s] must be a directory.", outDir);
-	    }
+    	if (!outDir.isDirectory()) {
+      		throw new ISE("outDir[%s] must be a directory.", outDir);
+    	}
 
-	    long startTime = System.currentTimeMillis();
-	    try {
-	      InputStream in = null;
-	      try {
-	        in = this.rsClient.getObjectAsStream(fileContainer, filePath);
-	        
-	        if (filePath.endsWith(".zip")) {
-	          CompressionUtils.unzip(in, outDir);
-	        } else if (filePath.endsWith(".gz")) {
-	          final File outFile = new File(outDir, toFilename(filePath, ".gz"));
-	          ByteStreams.copy(new GZIPInputStream(in), Files.newOutputStreamSupplier(outFile));
-	        } else {
-	          ByteStreams.copy(in, Files.newOutputStreamSupplier(new File(outDir, toFilename(filePath, ""))));
-	        }
-	        
-	        log.info("Pull of file[%s] completed in [%,d] millis", filePath, System.currentTimeMillis() - startTime);
-	      }
-	      catch (FilesNotFoundException e){
-	    	  FileUtils.deleteDirectory(outDir);
-	    	  log.error("File [%s] not found", filePath);
-	    	  throw new SegmentLoadingException(e, "File [%s] not found", filePath);
-	      }
-	      catch (IOException e) {
-	        FileUtils.deleteDirectory(outDir);
-	        throw new SegmentLoadingException(e, "Problem decompressing file[%s]", filePath);
-	      }
-	      finally {
-	        Closeables.closeQuietly(in);
-	      }
+    	long startTime = System.currentTimeMillis();
+    	try {
+      		InputStream in = null;
+      		try {
+        		in = this.rsClient.getObjectAsStream(fileContainer, filePath);
+        
+        		if (filePath.endsWith(".zip")) {
+          			CompressionUtils.unzip(in, outDir);
+        		} else if (filePath.endsWith(".gz")) {
+          			final File outFile = new File(outDir, toFilename(filePath, ".gz"));
+          			ByteStreams.copy(new GZIPInputStream(in), Files.newOutputStreamSupplier(outFile));
+        		} else {
+          			ByteStreams.copy(in, Files.newOutputStreamSupplier(new File(outDir, toFilename(filePath, ""))));
+        		}
+        
+        		log.info("Pull of file[%s] completed in [%,d] millis", filePath, System.currentTimeMillis() - startTime);
+      		}
+      		catch (FilesNotFoundException e){
+    	  		FileUtils.deleteDirectory(outDir);
+    	  		log.error("File [%s] not found", filePath);
+    	  		throw new SegmentLoadingException(e, "File [%s] not found", filePath);
+      		}
+      		catch (IOException e) {
+        		FileUtils.deleteDirectory(outDir);
+        		throw new SegmentLoadingException(e, "Problem decompressing file[%s]", filePath);
+      		}
+      		finally {
+        		Closeables.closeQuietly(in);
+      		}
 	    }
 	    catch (Exception e) {
 	      throw new SegmentLoadingException(e, e.getMessage());
