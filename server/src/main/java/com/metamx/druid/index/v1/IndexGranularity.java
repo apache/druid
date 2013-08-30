@@ -178,6 +178,232 @@ public enum IndexGranularity
           return Hours.hoursIn(interval).getHours();
         }
       },
+  TWO_HOUR
+      {
+        DateTimeFormatter format = DateTimeFormat.forPattern("'y'=yyyy/'m'=MM/'d'=dd/'H'=HH");
+        private final int MILLIS_IN = 3 * 60 * 60 * 1000;
+
+        @Override
+        public String toPath(DateTime time)
+        {
+          return format.print(time);
+        }
+
+        @Override
+        public DateTime increment(DateTime time)
+        {
+          return time.plus(Hours.TWO);
+        }
+
+        @Override
+        public DateTime increment(DateTime time, int count)
+        {
+          return time.plus(Hours.hours(count));
+        }
+
+        @Override
+        public long increment(long timeMillis)
+        {
+          return timeMillis + MILLIS_IN;
+        }
+
+        @Override
+        public DateTime decrement(DateTime time)
+        {
+          return time.minus(Hours.TWO);
+        }
+
+        @Override
+        public DateTime decrement(DateTime time, int count)
+        {
+          return time.minus(Hours.hours(count));
+        }
+
+        @Override
+        public long decrement(long timeMillis)
+        {
+          return timeMillis - MILLIS_IN;
+        }
+
+        @Override
+        public long truncate(long timeMillis)
+        {
+          return QueryGranularity.TWO_HOUR.truncate(timeMillis);
+        }
+
+        @Override
+        public DateTime truncate(DateTime time)
+        {
+          final MutableDateTime mutableDateTime = time.toMutableDateTime();
+
+          mutableDateTime.setMillisOfSecond(0);
+          mutableDateTime.setSecondOfMinute(0);
+          mutableDateTime.setMinuteOfHour(0);
+          
+          if(mutableDateTime.getHourOfDay()%2 != 0) {
+        	  mutableDateTime.setHourOfDay(mutableDateTime.getHourOfDay() - (mutableDateTime.getHourOfDay()%2));
+          }
+          
+          return mutableDateTime.toDateTime();
+        }
+
+        @Override
+        public int numIn(ReadableInterval interval)
+        {
+          return Hours.hoursIn(interval).getHours();
+        }
+      },
+      THREE_HOUR
+      {
+        DateTimeFormatter format = DateTimeFormat.forPattern("'y'=yyyy/'m'=MM/'d'=dd/'H'=HH");
+        private final int MILLIS_IN = 3 * 60 * 60 * 1000;
+
+        @Override
+        public String toPath(DateTime time)
+        {
+          return format.print(time);
+        }
+
+        @Override
+        public DateTime increment(DateTime time)
+        {
+          return time.plus(Hours.THREE);
+        }
+
+        @Override
+        public DateTime increment(DateTime time, int count)
+        {
+          return time.plus(Hours.hours(count));
+        }
+
+        @Override
+        public long increment(long timeMillis)
+        {
+          return timeMillis + MILLIS_IN;
+        }
+
+        @Override
+        public DateTime decrement(DateTime time)
+        {
+          return time.minus(Hours.THREE);
+        }
+
+        @Override
+        public DateTime decrement(DateTime time, int count)
+        {
+          return time.minus(Hours.hours(count));
+        }
+
+        @Override
+        public long decrement(long timeMillis)
+        {
+          return timeMillis - MILLIS_IN;
+        }
+
+        @Override
+        public long truncate(long timeMillis)
+        {
+          return QueryGranularity.THREE_HOUR.truncate(timeMillis);
+        }
+
+        @Override
+        public DateTime truncate(DateTime time)
+        {
+          final MutableDateTime mutableDateTime = time.toMutableDateTime();
+
+          mutableDateTime.setMillisOfSecond(0);
+          mutableDateTime.setSecondOfMinute(0);
+          mutableDateTime.setMinuteOfHour(0);
+          
+          if(mutableDateTime.getHourOfDay()%3 != 0) {
+        	  mutableDateTime.setHourOfDay(mutableDateTime.getHourOfDay() - (mutableDateTime.getHourOfDay()%3));
+          }
+          
+          return mutableDateTime.toDateTime();
+        }
+
+        @Override
+        public int numIn(ReadableInterval interval)
+        {
+          return Hours.hoursIn(interval).getHours();
+        }
+      },
+   FOUR_HOUR
+      {
+        DateTimeFormatter format = DateTimeFormat.forPattern("'y'=yyyy/'m'=MM/'d'=dd/'H'=HH");
+        private final int MILLIS_IN = 4 * 60 * 60 * 1000;
+
+        @Override
+        public String toPath(DateTime time)
+        {
+          return format.print(time);
+        }
+
+        @Override
+        public DateTime increment(DateTime time)
+        {
+          return time.plus(Hours.FOUR);
+        }
+
+        @Override
+        public DateTime increment(DateTime time, int count)
+        {
+          return time.plus(Hours.hours(count));
+        }
+
+        @Override
+        public long increment(long timeMillis)
+        {
+          return timeMillis + MILLIS_IN;
+        }
+
+        @Override
+        public DateTime decrement(DateTime time)
+        {
+          return time.minus(Hours.FOUR);
+        }
+
+        @Override
+        public DateTime decrement(DateTime time, int count)
+        {
+          return time.minus(Hours.hours(count));
+        }
+
+        @Override
+        public long decrement(long timeMillis)
+        {
+          return timeMillis - MILLIS_IN;
+        }
+
+        @Override
+        public long truncate(long timeMillis)
+        {
+          return QueryGranularity.FOUR_HOUR.truncate(timeMillis);
+        }
+
+        @Override
+        public DateTime truncate(DateTime time)
+        {
+          final MutableDateTime mutableDateTime = time.toMutableDateTime();
+
+          mutableDateTime.setMillisOfSecond(0);
+          mutableDateTime.setSecondOfMinute(0);
+          mutableDateTime.setMinuteOfHour(0);
+
+          // A logic to set start time on a four hour boundary
+          if(mutableDateTime.getHourOfDay()%4 != 0) {
+        	  mutableDateTime.setHourOfDay(mutableDateTime.getHourOfDay() - (mutableDateTime.getHourOfDay()%4));
+          }
+          
+          return mutableDateTime.toDateTime();
+        }
+
+        @Override
+        public int numIn(ReadableInterval interval)
+        {
+          return Hours.hoursIn(interval).getHours();
+        }
+      },
   DAY
       {
         DateTimeFormatter format = DateTimeFormat.forPattern("'y'=yyyy/'m'=MM/'d'=dd");
