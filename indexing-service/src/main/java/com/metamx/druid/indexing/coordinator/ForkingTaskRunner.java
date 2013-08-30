@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -39,14 +39,14 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogPusher;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogStreamer;
 import com.metamx.druid.indexing.coordinator.config.ForkingTaskRunnerConfig;
-import com.metamx.druid.initialization.DruidNode;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.guice.guice.annotations.Self;
+import io.druid.server.DruidNode;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

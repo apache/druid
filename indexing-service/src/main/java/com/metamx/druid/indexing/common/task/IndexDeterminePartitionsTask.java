@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -38,9 +38,9 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
-import com.metamx.druid.shard.NoneShardSpec;
-import com.metamx.druid.shard.ShardSpec;
-import com.metamx.druid.shard.SingleDimensionShardSpec;
+import io.druid.server.shard.shard.NoneShardSpec;
+import io.druid.server.shard.shard.ShardSpec;
+import io.druid.server.shard.shard.SingleDimensionShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

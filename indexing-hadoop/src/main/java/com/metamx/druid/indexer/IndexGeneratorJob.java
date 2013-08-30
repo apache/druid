@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,16 +32,16 @@ import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.v1.IncrementalIndex;
-import com.metamx.druid.index.v1.IncrementalIndexSchema;
-import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.indexer.data.StringInputRowParser;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.input.InputRow;
+import io.druid.client.DataSegment;
+import io.druid.data.input.StringInputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;

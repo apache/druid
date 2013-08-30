@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -37,21 +37,21 @@ import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidDataSource;
-import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.ServerInventoryView;
-import com.metamx.druid.client.indexing.IndexingServiceClient;
 import com.metamx.druid.concurrent.Execs;
 import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.db.DatabaseRuleManager;
 import com.metamx.druid.db.DatabaseSegmentManager;
-import com.metamx.druid.guice.ManageLifecycle;
-import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.client.DataSegment;
+import io.druid.client.DruidDataSource;
+import io.druid.client.DruidServer;
+import io.druid.client.ServerInventoryView;
+import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.guice.guice.ManageLifecycle;
+import io.druid.segment.IndexIO;
+import io.druid.server.initialization.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;

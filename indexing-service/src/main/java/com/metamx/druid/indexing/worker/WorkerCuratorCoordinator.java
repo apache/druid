@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -29,9 +29,9 @@ import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.curator.announcement.Announcer;
 import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
-import com.metamx.druid.initialization.ZkPathsConfig;
+import io.druid.curator.announcement.Announcer;
+import io.druid.server.initialization.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.joda.time.DateTime;

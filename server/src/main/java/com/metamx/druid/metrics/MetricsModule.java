@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.metrics;
 
 import com.google.common.base.Preconditions;
@@ -12,13 +31,13 @@ import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.guice.JsonConfigProvider;
-import com.metamx.druid.guice.JsonConfigurator;
-import com.metamx.druid.guice.LazySingleton;
-import com.metamx.druid.guice.ManageLifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
+import io.druid.guice.guice.JsonConfigProvider;
+import io.druid.guice.guice.JsonConfigurator;
+import io.druid.guice.guice.LazySingleton;
+import io.druid.guice.guice.ManageLifecycle;
 
 import java.util.List;
 import java.util.Properties;

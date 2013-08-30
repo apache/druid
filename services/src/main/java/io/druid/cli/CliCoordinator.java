@@ -1,30 +1,49 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package io.druid.cli;
 
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.curator.CuratorModule;
-import com.metamx.druid.curator.discovery.DiscoveryModule;
-import com.metamx.druid.guice.CoordinatorModule;
-import com.metamx.druid.guice.DbConnectorModule;
-import com.metamx.druid.guice.HttpClientModule;
-import com.metamx.druid.guice.IndexingServiceDiscoveryModule;
-import com.metamx.druid.guice.JacksonConfigManagerModule;
-import com.metamx.druid.guice.LifecycleModule;
-import com.metamx.druid.guice.ServerModule;
-import com.metamx.druid.guice.ServerViewModule;
-import com.metamx.druid.guice.annotations.Self;
-import com.metamx.druid.http.InfoResource;
-import com.metamx.druid.http.MasterResource;
-import com.metamx.druid.http.RedirectFilter;
-import com.metamx.druid.http.StatusResource;
-import com.metamx.druid.initialization.EmitterModule;
-import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.JettyServerInitializer;
-import com.metamx.druid.initialization.JettyServerModule;
 import com.metamx.druid.master.DruidMaster;
 import com.metamx.druid.metrics.MetricsModule;
 import io.airlift.command.Command;
+import io.druid.curator.CuratorModule;
+import io.druid.curator.discovery.DiscoveryModule;
+import io.druid.guice.guice.CoordinatorModule;
+import io.druid.guice.guice.DbConnectorModule;
+import io.druid.guice.guice.HttpClientModule;
+import io.druid.guice.guice.IndexingServiceDiscoveryModule;
+import io.druid.guice.guice.JacksonConfigManagerModule;
+import io.druid.guice.guice.LifecycleModule;
+import io.druid.guice.guice.ServerModule;
+import io.druid.guice.guice.ServerViewModule;
+import io.druid.guice.guice.annotations.Self;
+import io.druid.server.StatusResource;
+import io.druid.server.http.InfoResource;
+import io.druid.server.http.MasterResource;
+import io.druid.server.http.RedirectFilter;
+import io.druid.server.initialization.initialization.EmitterModule;
+import io.druid.server.initialization.initialization.Initialization;
+import io.druid.server.initialization.initialization.JettyServerInitializer;
+import io.druid.server.initialization.initialization.JettyServerModule;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;

@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package druid.examples.guice;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -6,16 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.InventoryView;
-import com.metamx.druid.client.ServerView;
-import com.metamx.druid.coordination.DataSegmentAnnouncer;
-import com.metamx.druid.guice.FireDepartmentsProvider;
-import com.metamx.druid.guice.JsonConfigProvider;
-import com.metamx.druid.guice.ManageLifecycle;
-import com.metamx.druid.guice.NoopSegmentPublisherProvider;
-import com.metamx.druid.guice.RealtimeManagerConfig;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.realtime.FireDepartment;
 import com.metamx.druid.realtime.RealtimeManager;
@@ -24,7 +33,17 @@ import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
 import druid.examples.web.WebFirehoseFactory;
+import io.druid.client.DataSegment;
+import io.druid.client.DruidServer;
+import io.druid.client.InventoryView;
+import io.druid.client.ServerView;
+import io.druid.guice.guice.FireDepartmentsProvider;
+import io.druid.guice.guice.JsonConfigProvider;
+import io.druid.guice.guice.ManageLifecycle;
+import io.druid.guice.guice.NoopSegmentPublisherProvider;
+import io.druid.guice.guice.RealtimeManagerConfig;
 import io.druid.initialization.DruidModule;
+import io.druid.server.coordination.DataSegmentAnnouncer;
 
 import java.io.File;
 import java.io.IOException;

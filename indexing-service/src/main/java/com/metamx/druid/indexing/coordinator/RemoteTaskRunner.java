@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -37,7 +37,6 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.curator.cache.PathChildrenCacheFactory;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogStreamer;
@@ -45,12 +44,13 @@ import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import com.metamx.druid.indexing.worker.TaskAnnouncement;
 import com.metamx.druid.indexing.worker.Worker;
-import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.curator.cache.PathChildrenCacheFactory;
+import io.druid.server.initialization.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;

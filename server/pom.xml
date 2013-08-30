@@ -18,7 +18,8 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metamx.druid</groupId>
     <artifactId>druid-server</artifactId>
@@ -34,12 +35,7 @@
     <dependencies>
         <dependency>
             <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-client</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-segment</artifactId>
+            <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
 
@@ -199,7 +195,30 @@
             <artifactId>astyanax</artifactId>
             <version>1.0.1</version>
         </dependency>
-        <!-- Dependencies required for jets3t -->
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-runtime</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.simple-spring-memcached</groupId>
+            <artifactId>spymemcached</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>net.jpountz.lz4</groupId>
+          <artifactId>lz4</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlets</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -214,14 +233,7 @@
         </dependency>
         <dependency>
             <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-indexing-common</artifactId>
-            <version>${project.parent.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-client</artifactId>
+            <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
@@ -229,6 +241,11 @@
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.caliper</groupId>
+            <artifactId>caliper</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -243,6 +260,17 @@
                     <execution>
                         <goals>
                             <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>antlr4</goal>
                         </goals>
                     </execution>
                 </executions>

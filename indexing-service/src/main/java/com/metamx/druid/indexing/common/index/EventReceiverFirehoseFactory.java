@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,11 +28,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.druid.indexer.data.MapInputRowParser;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.data.input.MapInputRowParser;
 
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;

@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,7 +20,7 @@
 package com.metamx.druid.loading;
 
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.index.v1.IndexIO;
+import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
 import org.apache.commons.io.FileUtils;
 
@@ -37,25 +37,6 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
   public QueryableIndex factorize(File parentDir) throws SegmentLoadingException
   {
     try {
-      if (! IndexIO.canBeMapped(parentDir)) {
-        File canBeMappedDir = new File(parentDir, "forTheMapping");
-        if (canBeMappedDir.exists()) {
-          FileUtils.deleteDirectory(canBeMappedDir);
-        }
-        canBeMappedDir.mkdirs();
-
-        IndexIO.storeLatest(IndexIO.readIndex(parentDir), canBeMappedDir);
-        if (! IndexIO.canBeMapped(canBeMappedDir)) {
-          throw new SegmentLoadingException("WTF!? newly written file[%s] cannot be mapped!?", canBeMappedDir);
-        }
-        for (File file : canBeMappedDir.listFiles()) {
-          if (! file.renameTo(new File(parentDir, file.getName()))) {
-            throw new SegmentLoadingException("Couldn't rename[%s] to [%s]", canBeMappedDir, parentDir);
-          }
-        }
-        FileUtils.deleteDirectory(canBeMappedDir);
-      }
-
       return IndexIO.loadIndex(parentDir);
     }
     catch (IOException e) {

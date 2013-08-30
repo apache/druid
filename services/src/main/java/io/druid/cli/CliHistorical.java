@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,25 +23,25 @@ import com.google.inject.Injector;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.coordination.ServerManager;
 import com.metamx.druid.coordination.ZkCoordinator;
-import com.metamx.druid.curator.CuratorModule;
-import com.metamx.druid.guice.AWSModule;
-import com.metamx.druid.guice.AnnouncerModule;
-import com.metamx.druid.guice.DataSegmentPullerModule;
-import com.metamx.druid.guice.DruidProcessingModule;
-import com.metamx.druid.guice.HistoricalModule;
-import com.metamx.druid.guice.HttpClientModule;
-import com.metamx.druid.guice.LifecycleModule;
-import com.metamx.druid.guice.QueryRunnerFactoryModule;
-import com.metamx.druid.guice.QueryableModule;
-import com.metamx.druid.guice.ServerModule;
-import com.metamx.druid.guice.StorageNodeModule;
-import com.metamx.druid.http.StatusResource;
-import com.metamx.druid.initialization.EmitterModule;
-import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.JettyServerModule;
 import com.metamx.druid.metrics.MetricsModule;
 import com.metamx.druid.metrics.ServerMonitor;
 import io.airlift.command.Command;
+import io.druid.curator.CuratorModule;
+import io.druid.guice.guice.AWSModule;
+import io.druid.guice.guice.AnnouncerModule;
+import io.druid.guice.guice.DataSegmentPullerModule;
+import io.druid.guice.guice.DruidProcessingModule;
+import io.druid.guice.guice.HistoricalModule;
+import io.druid.guice.guice.HttpClientModule;
+import io.druid.guice.guice.LifecycleModule;
+import io.druid.guice.guice.QueryRunnerFactoryModule;
+import io.druid.guice.guice.QueryableModule;
+import io.druid.guice.guice.ServerModule;
+import io.druid.guice.guice.StorageNodeModule;
+import io.druid.server.StatusResource;
+import io.druid.server.initialization.initialization.EmitterModule;
+import io.druid.server.initialization.initialization.Initialization;
+import io.druid.server.initialization.initialization.JettyServerModule;
 
 /**
  */

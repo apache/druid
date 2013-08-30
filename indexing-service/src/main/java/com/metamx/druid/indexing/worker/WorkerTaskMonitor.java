@@ -28,7 +28,6 @@ import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.coordinator.TaskRunner;
 import com.metamx.druid.indexing.worker.config.WorkerConfig;
-import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;

@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,18 +24,21 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.curator.CuratorTestBase;
-import com.metamx.druid.curator.announcement.Announcer;
-import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.loading.CacheTestSegmentLoader;
 import com.metamx.druid.loading.SegmentLoaderConfig;
 import com.metamx.druid.metrics.NoopServiceEmitter;
 import com.metamx.druid.query.NoopQueryRunnerFactoryConglomerate;
-import com.metamx.druid.shard.NoneShardSpec;
+import io.druid.client.DataSegment;
+import io.druid.curator.CuratorTestBase;
+import io.druid.curator.announcement.Announcer;
+import io.druid.segment.IndexIO;
+import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.SingleDataSegmentAnnouncer;
+import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.shard.shard.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;

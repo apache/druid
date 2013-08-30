@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,8 +21,6 @@ package com.metamx.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import com.metamx.druid.client.ServerView;
-import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
 import com.metamx.druid.indexing.common.config.TaskConfig;
 import com.metamx.druid.indexing.common.task.Task;
@@ -31,6 +29,8 @@ import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
+import io.druid.client.ServerView;
+import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 /**

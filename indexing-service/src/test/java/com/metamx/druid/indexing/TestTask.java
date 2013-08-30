@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,10 +22,10 @@ package com.metamx.druid.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
 import com.metamx.druid.indexing.common.task.MergeTask;
+import io.druid.client.DataSegment;
 import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.List;

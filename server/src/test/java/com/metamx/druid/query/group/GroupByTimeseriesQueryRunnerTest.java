@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -29,12 +29,15 @@ import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
 import com.metamx.druid.query.QueryRunnerTestHelper;
-import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerTest;
-import com.metamx.druid.result.Result;
-import com.metamx.druid.result.TimeseriesResultValue;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.query.Result;
+import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryQueryToolChest;
+import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.timeseries.TimeseriesResultValue;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 

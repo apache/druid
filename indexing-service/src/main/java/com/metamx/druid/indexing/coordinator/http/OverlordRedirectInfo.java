@@ -21,8 +21,8 @@ package com.metamx.druid.indexing.coordinator.http;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.druid.http.RedirectInfo;
 import com.metamx.druid.indexing.coordinator.TaskMaster;
+import io.druid.server.http.RedirectInfo;
 
 import java.net.URL;
 

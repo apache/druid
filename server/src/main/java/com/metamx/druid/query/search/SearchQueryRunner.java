@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.query.search;
 
 import com.google.common.base.Strings;
@@ -9,16 +28,17 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.index.brita.Filters;
-import com.metamx.druid.index.v1.ColumnSelectorBitmapIndexSelector;
-import com.metamx.druid.result.Result;
-import com.metamx.druid.result.SearchResultValue;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.data.IndexedInts;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.query.Result;
 import io.druid.query.filter.Filter;
+import io.druid.query.search.SearchResultValue;
+import io.druid.query.search.search.SearchHit;
+import io.druid.query.search.search.SearchQuery;
+import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.segment.ColumnSelectorBitmapIndexSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.QueryableIndex;
@@ -26,6 +46,8 @@ import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
+import io.druid.segment.data.IndexedInts;
+import io.druid.segment.filter.Filters;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import java.util.List;

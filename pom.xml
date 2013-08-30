@@ -43,16 +43,14 @@
     </properties>
 
     <modules>
-        <module>client</module>
         <module>common</module>
         <module>examples</module>
-        <module>indexing-common</module>
         <module>indexing-hadoop</module>
         <module>indexing-service</module>
         <module>realtime</module>
         <module>server</module>
         <module>services</module>
-        <module>segment</module>
+        <module>processing</module>
     </modules>
 
     <dependencyManagement>
@@ -464,8 +462,8 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>2.5.1</version>
                     <configuration>
-                        <source>1.6</source>
-                        <target>1.6</target>
+                        <source>1.7</source>
+                        <target>1.7</target>
                     </configuration>
                 </plugin>
                 <plugin>

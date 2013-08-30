@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,9 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
 import com.metamx.common.exception.FormattedException;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.coordination.DataSegmentAnnouncer;
-import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.indexing.common.TaskLock;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
@@ -38,7 +35,6 @@ import com.metamx.druid.indexing.common.actions.LockListAction;
 import com.metamx.druid.indexing.common.actions.LockReleaseAction;
 import com.metamx.druid.indexing.common.actions.SegmentInsertAction;
 import com.metamx.druid.input.InputRow;
-import com.metamx.druid.query.FinalizeResultsQueryRunner;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 import com.metamx.druid.realtime.FireDepartment;
 import com.metamx.druid.realtime.FireDepartmentConfig;
@@ -53,10 +49,14 @@ import com.metamx.druid.realtime.plumber.RejectionPolicyFactory;
 import com.metamx.druid.realtime.plumber.Sink;
 import com.metamx.druid.realtime.plumber.VersioningPolicy;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.client.DataSegment;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.segment.IndexGranularity;
+import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;

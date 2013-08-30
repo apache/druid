@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,17 +25,17 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidServer;
 import com.metamx.druid.db.DatabaseRuleManager;
-import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.master.rules.IntervalDropRule;
 import com.metamx.druid.master.rules.IntervalLoadRule;
 import com.metamx.druid.master.rules.Rule;
-import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
+import io.druid.client.DataSegment;
+import io.druid.client.DruidServer;
+import io.druid.segment.IndexIO;
+import io.druid.server.shard.shard.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;

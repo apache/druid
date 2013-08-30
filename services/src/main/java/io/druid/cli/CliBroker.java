@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,23 +21,23 @@ package io.druid.cli;
 
 import com.google.inject.Injector;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.cache.CacheMonitor;
-import com.metamx.druid.curator.CuratorModule;
-import com.metamx.druid.guice.BrokerModule;
-import com.metamx.druid.guice.HttpClientModule;
-import com.metamx.druid.guice.LifecycleModule;
-import com.metamx.druid.guice.QueryToolChestModule;
-import com.metamx.druid.guice.QueryableModule;
-import com.metamx.druid.guice.ServerModule;
-import com.metamx.druid.guice.ServerViewModule;
-import com.metamx.druid.guice.annotations.Client;
-import com.metamx.druid.http.ClientQuerySegmentWalker;
-import com.metamx.druid.http.StatusResource;
-import com.metamx.druid.initialization.EmitterModule;
-import com.metamx.druid.initialization.Initialization;
-import com.metamx.druid.initialization.JettyServerModule;
 import com.metamx.druid.metrics.MetricsModule;
 import io.airlift.command.Command;
+import io.druid.client.cache.CacheMonitor;
+import io.druid.curator.CuratorModule;
+import io.druid.guice.QueryToolChestModule;
+import io.druid.guice.guice.BrokerModule;
+import io.druid.guice.guice.HttpClientModule;
+import io.druid.guice.guice.LifecycleModule;
+import io.druid.guice.guice.QueryableModule;
+import io.druid.guice.guice.ServerModule;
+import io.druid.guice.guice.ServerViewModule;
+import io.druid.guice.guice.annotations.Client;
+import io.druid.server.ClientQuerySegmentWalker;
+import io.druid.server.StatusResource;
+import io.druid.server.initialization.initialization.EmitterModule;
+import io.druid.server.initialization.initialization.Initialization;
+import io.druid.server.initialization.initialization.JettyServerModule;
 
 /**
  */

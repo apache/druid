@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,23 +24,23 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.metamx.common.ISE;
-import com.metamx.druid.aggregation.CountAggregatorFactory;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.ServerView;
-import com.metamx.druid.coordination.DataSegmentAnnouncer;
-import com.metamx.druid.index.v1.IndexGranularity;
-import com.metamx.druid.index.v1.SpatialDimensionSchema;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.SegmentPublisher;
-import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.DataSegment;
+import io.druid.client.ServerView;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.aggregation.CountAggregatorFactory;
+import io.druid.segment.IndexGranularity;
+import io.druid.segment.incremental.SpatialDimensionSchema;
+import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.shard.shard.NoneShardSpec;
 import junit.framework.Assert;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.easymock.EasyMock;

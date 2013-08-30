@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,10 +32,10 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.guice.ManageLifecycle;
-import com.metamx.druid.guice.annotations.Json;
 import com.metamx.druid.master.rules.PeriodLoadRule;
 import com.metamx.druid.master.rules.Rule;
+import io.druid.guice.guice.ManageLifecycle;
+import io.druid.guice.guice.annotations.Json;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;

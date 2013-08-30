@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.index.v1.SpatialDimensionSchema;
 import com.metamx.druid.indexer.granularity.GranularitySpec;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
@@ -33,9 +32,10 @@ import com.metamx.druid.indexing.common.actions.SpawnTasksAction;
 import com.metamx.druid.indexing.common.actions.TaskActionClient;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
-import com.metamx.druid.shard.NoneShardSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.incremental.SpatialDimensionSchema;
+import io.druid.server.shard.shard.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

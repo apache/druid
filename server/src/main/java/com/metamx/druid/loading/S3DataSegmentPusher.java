@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,11 +26,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.common.s3.S3Utils;
-import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.utils.CompressionUtils;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.client.DataSegment;
+import io.druid.segment.IndexIO;
+import io.druid.storage.s3.S3Utils;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.acl.gs.GSAccessControlList;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;

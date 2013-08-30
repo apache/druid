@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,13 +28,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.index.v1.IndexableAdapter;
-import com.metamx.druid.index.v1.QueryableIndexIndexableAdapter;
-import com.metamx.druid.index.v1.Rowboat;
-import com.metamx.druid.index.v1.RowboatFilteringIndexAdapter;
+import io.druid.client.DataSegment;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexableAdapter;
+import io.druid.segment.QueryableIndexIndexableAdapter;
+import io.druid.segment.Rowboat;
+import io.druid.segment.RowboatFilteringIndexAdapter;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

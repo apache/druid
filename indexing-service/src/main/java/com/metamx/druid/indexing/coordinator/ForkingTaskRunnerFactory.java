@@ -21,10 +21,10 @@ package com.metamx.druid.indexing.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.indexing.common.tasklogs.TaskLogPusher;
 import com.metamx.druid.indexing.coordinator.config.ForkingTaskRunnerConfig;
-import com.metamx.druid.initialization.DruidNode;
+import io.druid.guice.guice.annotations.Self;
+import io.druid.server.DruidNode;
 
 import java.util.Properties;
 

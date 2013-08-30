@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -35,31 +35,31 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
-import com.metamx.druid.Druids;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.ReferenceCountingSegment;
-import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.loading.SegmentLoader;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.metamx.druid.metrics.NoopServiceEmitter;
-import com.metamx.druid.query.ConcatQueryRunner;
-import com.metamx.druid.query.NoopQueryRunner;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
-import com.metamx.druid.query.search.SearchQuery;
-import com.metamx.druid.result.Result;
-import com.metamx.druid.result.SearchResultValue;
-import com.metamx.druid.shard.NoneShardSpec;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.client.DataSegment;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.ConcatQueryRunner;
+import io.druid.query.Druids;
+import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
+import io.druid.query.search.SearchResultValue;
+import io.druid.query.search.search.SearchQuery;
+import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import io.druid.server.shard.shard.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;

@@ -22,18 +22,18 @@ package com.metamx.druid.jackson;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.metamx.druid.aggregation.CountAggregatorFactory;
-import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
-import com.metamx.druid.aggregation.HistogramAggregatorFactory;
-import com.metamx.druid.aggregation.JavaScriptAggregatorFactory;
-import com.metamx.druid.aggregation.LongSumAggregatorFactory;
-import com.metamx.druid.aggregation.MaxAggregatorFactory;
-import com.metamx.druid.aggregation.MinAggregatorFactory;
-import com.metamx.druid.aggregation.post.ArithmeticPostAggregator;
-import com.metamx.druid.aggregation.post.ConstantPostAggregator;
-import com.metamx.druid.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.aggregation.HistogramAggregatorFactory;
+import io.druid.query.aggregation.aggregation.JavaScriptAggregatorFactory;
+import io.druid.query.aggregation.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.aggregation.MaxAggregatorFactory;
+import io.druid.query.aggregation.aggregation.MinAggregatorFactory;
+import io.druid.query.aggregation.aggregation.post.ArithmeticPostAggregator;
+import io.druid.query.aggregation.aggregation.post.ConstantPostAggregator;
+import io.druid.query.aggregation.aggregation.post.FieldAccessPostAggregator;
 
 /**
  */

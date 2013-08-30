@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,7 +22,6 @@ package com.metamx.druid.indexing.coordinator.scaling;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.guava.DSuppliers;
 import com.metamx.druid.indexing.TestTask;
 import com.metamx.druid.indexing.common.TaskStatus;
@@ -36,6 +35,7 @@ import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
+import io.druid.client.DataSegment;
 import io.druid.query.aggregation.AggregatorFactory;
 import junit.framework.Assert;
 import org.easymock.EasyMock;

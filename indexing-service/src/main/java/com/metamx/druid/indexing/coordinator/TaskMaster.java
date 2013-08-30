@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,18 +25,18 @@ import com.google.inject.Inject;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.druid.curator.discovery.ServiceAnnouncer;
-import com.metamx.druid.guice.annotations.Self;
 import com.metamx.druid.indexing.common.actions.TaskActionClient;
 import com.metamx.druid.indexing.common.actions.TaskActionClientFactory;
 import com.metamx.druid.indexing.common.task.Task;
 import com.metamx.druid.indexing.coordinator.exec.TaskConsumer;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementSchedulerFactory;
-import com.metamx.druid.initialization.DruidNode;
-import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.curator.discovery.ServiceAnnouncer;
+import io.druid.guice.guice.annotations.Self;
+import io.druid.server.DruidNode;
+import io.druid.server.initialization.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderSelector;
 import org.apache.curator.framework.recipes.leader.LeaderSelectorListener;

@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,13 +24,13 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.v1.IndexIO;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.DataSegmentPusherUtil;
 import com.metamx.druid.utils.CompressionUtils;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
+import io.druid.client.DataSegment;
+import io.druid.segment.IndexIO;
 
 import java.io.File;
 import java.io.FileInputStream;

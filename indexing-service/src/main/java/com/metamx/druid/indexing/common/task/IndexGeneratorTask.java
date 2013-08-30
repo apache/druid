@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,21 +27,21 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.indexing.common.TaskLock;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
 import com.metamx.druid.indexing.common.actions.LockListAction;
 import com.metamx.druid.indexing.common.actions.SegmentInsertAction;
 import com.metamx.druid.indexing.common.index.YeOldePlumberSchool;
+import com.metamx.druid.input.InputRow;
+import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
+import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.druid.realtime.plumber.Plumber;
-import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.realtime.plumber.Sink;
+import io.druid.client.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

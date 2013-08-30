@@ -21,8 +21,8 @@ package com.metamx.druid.histogram;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
-import com.metamx.druid.aggregation.Histogram;
 import com.metamx.druid.jackson.DefaultObjectMapper;
+import io.druid.query.aggregation.aggregation.Histogram;
 import org.junit.Assert;
 import org.junit.Test;
 

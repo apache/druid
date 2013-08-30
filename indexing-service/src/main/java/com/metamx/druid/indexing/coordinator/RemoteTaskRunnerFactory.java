@@ -22,12 +22,12 @@ package com.metamx.druid.indexing.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import com.metamx.druid.curator.cache.SimplePathChildrenCacheFactory;
-import com.metamx.druid.guice.annotations.Global;
 import com.metamx.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
-import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.http.client.HttpClient;
+import io.druid.curator.cache.SimplePathChildrenCacheFactory;
+import io.druid.guice.guice.annotations.Global;
+import io.druid.server.initialization.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 
 /**

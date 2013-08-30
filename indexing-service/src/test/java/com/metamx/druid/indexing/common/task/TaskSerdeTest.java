@@ -1,23 +1,42 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package com.metamx.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.Granularity;
-import com.metamx.druid.aggregation.CountAggregatorFactory;
-import com.metamx.druid.aggregation.DoubleSumAggregatorFactory;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.v1.IndexGranularity;
 import com.metamx.druid.indexer.HadoopDruidIndexerConfig;
-import com.metamx.druid.indexer.data.JSONDataSpec;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.path.StaticPathSpec;
 import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.jackson.DefaultObjectMapper;
 import com.metamx.druid.realtime.Schema;
-import com.metamx.druid.shard.NoneShardSpec;
+import io.druid.client.DataSegment;
+import io.druid.data.input.JSONDataSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.aggregation.DoubleSumAggregatorFactory;
+import io.druid.segment.IndexGranularity;
+import io.druid.server.shard.shard.NoneShardSpec;
 import junit.framework.Assert;
 import org.joda.time.Interval;
 import org.joda.time.Period;

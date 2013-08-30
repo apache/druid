@@ -25,9 +25,9 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.metamx.druid.guice.LazySingleton;
-import com.metamx.druid.guice.annotations.Json;
-import com.metamx.druid.guice.annotations.Smile;
+import io.druid.guice.guice.LazySingleton;
+import io.druid.guice.guice.annotations.Json;
+import io.druid.guice.guice.annotations.Smile;
 
 /**
  */

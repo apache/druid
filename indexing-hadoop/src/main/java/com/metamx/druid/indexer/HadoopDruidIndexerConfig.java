@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -38,13 +38,6 @@ import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.RegisteringNode;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.index.v1.serde.Registererer;
-import com.metamx.druid.indexer.data.DataSpec;
-import com.metamx.druid.indexer.data.StringInputRowParser;
-import com.metamx.druid.indexer.data.TimestampSpec;
-import com.metamx.druid.indexer.data.ToLowercaseDataSpec;
 import com.metamx.druid.indexer.granularity.GranularitySpec;
 import com.metamx.druid.indexer.granularity.UniformGranularitySpec;
 import com.metamx.druid.indexer.partitions.PartitionsSpec;
@@ -53,9 +46,16 @@ import com.metamx.druid.indexer.rollup.DataRollupSpec;
 import com.metamx.druid.indexer.updater.DbUpdaterJobSpec;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.shard.ShardSpec;
 import com.metamx.druid.utils.JodaUtils;
+import io.druid.client.DataSegment;
+import io.druid.data.input.DataSpec;
+import io.druid.data.input.StringInputRowParser;
+import io.druid.data.input.TimestampSpec;
+import io.druid.data.input.ToLowercaseDataSpec;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.serde.Registererer;
+import io.druid.segment.serde.Registererers;
+import io.druid.server.shard.shard.ShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -81,8 +81,6 @@ public class HadoopDruidIndexerConfig
 {
   public static final Charset javaNativeCharset = Charset.forName("Unicode");
 
-  public static final Splitter tagSplitter = Splitter.on("\u0001");
-  public static final Joiner tagJoiner = Joiner.on("\u0001");
   public static final Splitter tabSplitter = Splitter.on("\t");
   public static final Joiner tabJoiner = Joiner.on("\t");
   public static final ObjectMapper jsonMapper;
@@ -117,7 +115,7 @@ public class HadoopDruidIndexerConfig
     );
 
     if (!registererers.isEmpty()) {
-      RegisteringNode.registerHandlers(registererers, Arrays.asList(jsonMapper));
+      Registererers.registerHandlers(registererers, Arrays.asList(jsonMapper));
     }
 
     return jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);

@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -38,22 +38,11 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.druid.TimelineObjectHolder;
 import com.metamx.druid.VersionedIntervalTimeline;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.ServerView;
-import com.metamx.druid.coordination.DataSegmentAnnouncer;
 import com.metamx.druid.guava.ThreadRenamingCallable;
 import com.metamx.druid.guava.ThreadRenamingRunnable;
-import com.metamx.druid.index.QueryableIndexSegment;
-import com.metamx.druid.index.v1.IndexGranularity;
-import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.index.v1.IndexMerger;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.partition.SingleElementPartitionChunk;
-import com.metamx.druid.query.MetricsEmittingQueryRunner;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
-import com.metamx.druid.query.segment.SpecificSegmentQueryRunner;
-import com.metamx.druid.query.segment.SpecificSegmentSpec;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Schema;
@@ -61,13 +50,24 @@ import com.metamx.druid.realtime.SegmentPublisher;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.client.DataSegment;
+import io.druid.client.DruidServer;
+import io.druid.client.ServerView;
+import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.spec.SpecificSegmentQueryRunner;
+import io.druid.query.spec.SpecificSegmentSpec;
+import io.druid.segment.IndexGranularity;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;

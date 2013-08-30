@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,7 +21,7 @@ package com.metamx.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.shard.ShardSpec;
+import io.druid.server.shard.shard.ShardSpec;
 
 /**
  * ShardSpec + a shard ID that is unique across this run. The shard ID is used for grouping and partitioning.

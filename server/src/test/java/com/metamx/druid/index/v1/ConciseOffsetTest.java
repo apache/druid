@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,7 +19,8 @@
 
 package com.metamx.druid.index.v1;
 
-import com.metamx.druid.index.v1.processing.Offset;
+import io.druid.segment.ConciseOffset;
+import io.druid.segment.data.Offset;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.junit.Assert;

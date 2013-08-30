@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,7 +21,7 @@ package com.metamx.druid.indexing.coordinator.config;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
-import com.metamx.druid.initialization.ZkPathsConfig;
+import io.druid.server.initialization.initialization.ZkPathsConfig;
 import org.skife.config.Config;
 import org.skife.config.Default;
 

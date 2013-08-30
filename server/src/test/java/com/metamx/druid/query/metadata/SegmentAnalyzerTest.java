@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,13 +21,16 @@ package com.metamx.druid.query.metadata;
 
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.index.IncrementalIndexSegment;
-import com.metamx.druid.index.QueryableIndexSegment;
 import com.metamx.druid.index.v1.TestIndex;
 import com.metamx.druid.query.QueryRunnerTestHelper;
-import com.metamx.druid.query.segment.QuerySegmentSpecs;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
+import io.druid.query.metadata.metadata.ColumnAnalysis;
+import io.druid.query.metadata.metadata.SegmentAnalysis;
+import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.query.spec.QuerySegmentSpecs;
+import io.druid.segment.IncrementalIndexSegment;
+import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.column.ValueType;
 import junit.framework.Assert;

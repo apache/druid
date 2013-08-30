@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,29 +24,29 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.collections.spatial.search.RadiusBound;
 import com.metamx.collections.spatial.search.RectangularBound;
-import com.metamx.druid.Druids;
 import com.metamx.druid.TestHelper;
-import com.metamx.druid.aggregation.CountAggregatorFactory;
-import com.metamx.druid.aggregation.LongSumAggregatorFactory;
-import com.metamx.druid.index.IncrementalIndexSegment;
-import com.metamx.druid.index.QueryableIndexSegment;
-import com.metamx.druid.index.v1.IncrementalIndex;
-import com.metamx.druid.index.v1.IncrementalIndexSchema;
-import com.metamx.druid.index.v1.IndexIO;
-import com.metamx.druid.index.v1.IndexMerger;
-import com.metamx.druid.index.v1.SpatialDimensionSchema;
 import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.query.FinalizeResultsQueryRunner;
-import com.metamx.druid.query.filter.SpatialDimFilter;
-import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
-import com.metamx.druid.result.Result;
-import com.metamx.druid.result.TimeseriesResultValue;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.Druids;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
+import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.aggregation.LongSumAggregatorFactory;
+import io.druid.query.filter.SpatialDimFilter;
+import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.timeseries.TimeseriesResultValue;
+import io.druid.segment.IncrementalIndexSegment;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.SpatialDimensionSchema;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;

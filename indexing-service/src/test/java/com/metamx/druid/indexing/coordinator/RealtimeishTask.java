@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,7 +21,6 @@ package com.metamx.druid.indexing.coordinator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.metamx.druid.client.DataSegment;
 import com.metamx.druid.indexing.common.TaskLock;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.TaskToolbox;
@@ -31,6 +30,7 @@ import com.metamx.druid.indexing.common.actions.LockReleaseAction;
 import com.metamx.druid.indexing.common.actions.SegmentInsertAction;
 import com.metamx.druid.indexing.common.task.AbstractTask;
 import com.metamx.druid.indexing.common.task.TaskResource;
+import io.druid.client.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 

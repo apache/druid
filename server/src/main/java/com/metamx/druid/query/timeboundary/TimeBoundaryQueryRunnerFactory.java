@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,13 +22,15 @@ package com.metamx.druid.query.timeboundary;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
-import com.metamx.druid.query.ChainedExecutionQueryRunner;
-import com.metamx.druid.result.Result;
-import com.metamx.druid.result.TimeBoundaryResultValue;
+import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.query.Result;
+import io.druid.query.timeboundary.TimeBoundaryQuery;
+import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
+import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 

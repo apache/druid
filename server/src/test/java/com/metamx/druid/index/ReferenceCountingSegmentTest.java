@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,6 +21,7 @@ package com.metamx.druid.index;
 
 import com.google.common.base.Throwables;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import junit.framework.Assert;

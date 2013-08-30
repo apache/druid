@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,13 +21,13 @@ package com.metamx.druid.master;
 
 import com.google.common.collect.MapMaker;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.druid.client.DataSegment;
-import com.metamx.druid.client.DruidServer;
-import com.metamx.druid.client.SingleServerInventoryView;
-import com.metamx.druid.curator.inventory.InventoryManagerConfig;
 import com.metamx.druid.db.DatabaseSegmentManager;
-import com.metamx.druid.initialization.ZkPathsConfig;
 import com.metamx.druid.metrics.NoopServiceEmitter;
+import io.druid.client.DataSegment;
+import io.druid.client.DruidServer;
+import io.druid.client.SingleServerInventoryView;
+import io.druid.curator.inventory.InventoryManagerConfig;
+import io.druid.server.initialization.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
