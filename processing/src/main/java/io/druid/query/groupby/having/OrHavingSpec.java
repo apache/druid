@@ -22,7 +22,7 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.metamx.druid.input.Row;
+import io.druid.data.input.Row;
 
 import java.util.List;
 

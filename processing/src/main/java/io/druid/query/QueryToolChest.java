@@ -22,9 +22,9 @@ package io.druid.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
-import com.metamx.druid.LogicalSegment;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.aggregation.MetricManipulationFn;
+import io.druid.timeline.LogicalSegment;
 
 import java.util.List;
 

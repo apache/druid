@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,7 +32,7 @@ import com.ircclouds.irc.api.listeners.VariousMessageListenerAdapter;
 import com.ircclouds.irc.api.state.IIRCState;
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.input.InputRow;
+import io.druid.data.input.InputRow;
 import org.joda.time.DateTime;
 
 import java.io.IOException;

@@ -22,7 +22,7 @@ package io.druid.query;
 import com.google.common.collect.Ordering;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
-import com.metamx.druid.guava.CombiningSequence;
+import io.druid.common.guava.CombiningSequence;
 
 /**
  */

@@ -30,7 +30,7 @@ import io.druid.data.input.StringInputRowParser;
 import io.druid.data.input.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;

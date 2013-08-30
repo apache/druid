@@ -24,11 +24,11 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.druid.config.ConfigManager;
-import com.metamx.druid.config.ConfigManagerConfig;
-import com.metamx.druid.config.JacksonConfigManager;
-import com.metamx.druid.db.DbConnector;
-import com.metamx.druid.db.DbTablesConfig;
+import io.druid.common.config.ConfigManager;
+import io.druid.common.config.ConfigManagerConfig;
+import io.druid.common.config.JacksonConfigManager;
+import io.druid.db.DbConnector;
+import io.druid.db.DbTablesConfig;
 
 /**
  */

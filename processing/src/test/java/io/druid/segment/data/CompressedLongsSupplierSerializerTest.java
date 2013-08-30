@@ -20,7 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.io.OutputSupplier;
-import com.metamx.druid.collect.ResourceHolder;
+import io.druid.collections.ResourceHolder;
 import org.junit.Assert;
 import org.junit.Test;
 

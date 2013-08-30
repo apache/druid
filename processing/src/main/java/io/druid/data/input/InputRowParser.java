@@ -20,7 +20,6 @@
 package io.druid.data.input;
 
 import com.metamx.common.exception.FormattedException;
-import com.metamx.druid.input.InputRow;
 
 public interface InputRowParser<T>
 {

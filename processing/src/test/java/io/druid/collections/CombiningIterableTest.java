@@ -20,7 +20,6 @@
 package io.druid.collections;
 
 import com.metamx.common.guava.nary.BinaryFn;
-import com.metamx.druid.CombiningIterable;
 import io.druid.query.Result;
 import org.joda.time.DateTime;
 import org.junit.Assert;

@@ -19,7 +19,7 @@
 
 package io.druid.segment.serde;
 
-import com.metamx.druid.input.InputRow;
+import io.druid.data.input.InputRow;
 
 /**
  */

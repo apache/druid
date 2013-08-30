@@ -33,7 +33,6 @@ import com.metamx.druid.indexing.common.TaskToolbox;
 import com.metamx.druid.indexing.common.actions.LockListAction;
 import com.metamx.druid.indexing.common.actions.SegmentInsertAction;
 import com.metamx.druid.indexing.common.index.YeOldePlumberSchool;
-import com.metamx.druid.input.InputRow;
 import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.realtime.FireDepartmentMetrics;
 import com.metamx.druid.realtime.Schema;
@@ -42,6 +41,7 @@ import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.Sink;
 import io.druid.client.DataSegment;
+import io.druid.data.input.InputRow;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

@@ -24,15 +24,15 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.VersionedIntervalTimeline;
-import com.metamx.druid.concurrent.Execs;
-import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.http.client.HttpClient;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
+import io.druid.concurrent.Execs;
 import io.druid.guice.guice.annotations.Client;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.timeline.VersionedIntervalTimeline;
+import io.druid.timeline.partition.PartitionChunk;
 
 import java.util.Iterator;
 import java.util.Map;

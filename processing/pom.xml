@@ -41,6 +41,15 @@
             <groupId>com.metamx</groupId>
             <artifactId>java-util</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.metamx</groupId>
+            <artifactId>bytebuffer-collections</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.metamx</groupId>
+            <artifactId>emitter</artifactId>
+        </dependency>
+
 
         <dependency>
             <groupId>com.ning</groupId>

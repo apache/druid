@@ -20,7 +20,7 @@
 package io.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.input.Row;
+import io.druid.data.input.Row;
 
 /**
  * The "<" operator in a "having" clause. This is similar to SQL's "having aggregation < value",

@@ -21,8 +21,8 @@ package com.metamx.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.druid.jackson.DefaultObjectMapper;
 import io.druid.client.DataSegment;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.shard.shard.NoneShardSpec;
 import junit.framework.Assert;
 import org.joda.time.DateTime;

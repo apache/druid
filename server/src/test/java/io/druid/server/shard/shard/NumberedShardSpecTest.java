@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.metamx.druid.jackson.DefaultObjectMapper;
-import com.metamx.druid.partition.PartitionChunk;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.timeline.partition.PartitionChunk;
 import junit.framework.Assert;
 import org.junit.Test;
 

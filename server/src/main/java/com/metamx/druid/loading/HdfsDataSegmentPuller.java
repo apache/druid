@@ -21,8 +21,8 @@ package com.metamx.druid.loading;
 
 import com.google.common.io.Closeables;
 import com.google.inject.Inject;
-import com.metamx.druid.utils.CompressionUtils;
 import io.druid.client.DataSegment;
+import io.druid.common.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;

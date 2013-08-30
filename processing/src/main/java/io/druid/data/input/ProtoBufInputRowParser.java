@@ -29,7 +29,6 @@ import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.input.InputRow;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;

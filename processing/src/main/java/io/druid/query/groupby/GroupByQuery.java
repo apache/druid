@@ -30,7 +30,7 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.input.Row;
+import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.Queries;

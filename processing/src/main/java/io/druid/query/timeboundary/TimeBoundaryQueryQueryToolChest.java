@@ -29,9 +29,8 @@ import com.google.common.collect.Ordering;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.LogicalSegment;
-import com.metamx.druid.collect.OrderedMergeSequence;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.collections.OrderedMergeSequence;
 import io.druid.query.BySegmentSkippingQueryRunner;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
@@ -39,6 +38,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
+import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;

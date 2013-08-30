@@ -36,7 +36,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.IndexGranularity;
 import io.druid.segment.incremental.SpatialDimensionSchema;
 import io.druid.server.coordination.DataSegmentAnnouncer;

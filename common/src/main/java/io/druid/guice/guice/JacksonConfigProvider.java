@@ -26,8 +26,8 @@ import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.util.Types;
-import com.metamx.druid.config.JacksonConfigManager;
-import com.metamx.druid.guava.DSuppliers;
+import io.druid.common.config.JacksonConfigManager;
+import io.druid.common.guava.DSuppliers;
 
 /**
  */

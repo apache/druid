@@ -20,7 +20,7 @@
 package com.metamx.druid.indexer;
 
 import com.metamx.common.RE;
-import com.metamx.druid.input.InputRow;
+import io.druid.data.input.InputRow;
 import io.druid.data.input.StringInputRowParser;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;

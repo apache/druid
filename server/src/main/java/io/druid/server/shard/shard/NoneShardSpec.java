@@ -19,9 +19,9 @@
 
 package io.druid.server.shard.shard;
 
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.partition.PartitionChunk;
-import com.metamx.druid.partition.SingleElementPartitionChunk;
+import io.druid.data.input.InputRow;
+import io.druid.timeline.partition.PartitionChunk;
+import io.druid.timeline.partition.SingleElementPartitionChunk;
 
 import java.util.Map;
 

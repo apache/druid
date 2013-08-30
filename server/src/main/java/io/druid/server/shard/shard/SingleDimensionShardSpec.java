@@ -20,9 +20,9 @@
 package io.druid.server.shard.shard;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.partition.PartitionChunk;
-import com.metamx.druid.partition.StringPartitionChunk;
+import io.druid.data.input.InputRow;
+import io.druid.timeline.partition.PartitionChunk;
+import io.druid.timeline.partition.StringPartitionChunk;
 
 import java.util.List;
 import java.util.Map;

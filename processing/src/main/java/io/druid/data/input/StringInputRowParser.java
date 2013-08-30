@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.common.parsers.Parser;
 import com.metamx.common.parsers.ToLowerCaseParser;
-import com.metamx.druid.input.InputRow;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;

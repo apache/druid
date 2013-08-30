@@ -32,12 +32,12 @@ import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.TimelineObjectHolder;
-import com.metamx.druid.VersionedIntervalTimeline;
-import com.metamx.druid.partition.PartitionChunk;
 import io.druid.client.DataSegment;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.server.shard.shard.NoneShardSpec;
+import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.VersionedIntervalTimeline;
+import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

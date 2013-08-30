@@ -22,13 +22,13 @@ package com.metamx.druid.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.input.InputRow;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.ShutdownListener;
 import com.rabbitmq.client.ShutdownSignalException;
+import io.druid.data.input.InputRow;
 import io.druid.data.input.StringInputRowParser;
 
 import java.io.IOException;

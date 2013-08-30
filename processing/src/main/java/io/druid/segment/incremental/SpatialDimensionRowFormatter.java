@@ -29,7 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Floats;
 import com.metamx.common.ISE;
-import com.metamx.druid.input.InputRow;
+import io.druid.data.input.InputRow;
 
 import java.util.Arrays;
 import java.util.List;

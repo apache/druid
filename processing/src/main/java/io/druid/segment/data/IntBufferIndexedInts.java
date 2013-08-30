@@ -21,7 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
-import com.metamx.druid.IntList;
+import io.druid.collections.IntList;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;

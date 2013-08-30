@@ -25,13 +25,13 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.loading.DataSegmentPuller;
 import com.metamx.druid.loading.SegmentLoadingException;
-import com.metamx.druid.utils.CompressionUtils;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
 import com.netflix.astyanax.recipes.storage.ObjectMetadata;
 import io.druid.client.DataSegment;
+import io.druid.common.utils.CompressionUtils;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

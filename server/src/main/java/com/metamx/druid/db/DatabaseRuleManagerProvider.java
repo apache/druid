@@ -25,6 +25,8 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.metamx.common.lifecycle.Lifecycle;
+import io.druid.db.DbConnector;
+import io.druid.db.DbTablesConfig;
 
 /**
  */

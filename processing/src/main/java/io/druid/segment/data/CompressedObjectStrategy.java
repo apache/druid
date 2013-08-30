@@ -21,10 +21,10 @@ package io.druid.segment.data;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
-import com.metamx.druid.collect.ResourceHolder;
 import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFDecoder;
+import io.druid.collections.ResourceHolder;
 import io.druid.segment.CompressedPools;
 
 import java.io.IOException;

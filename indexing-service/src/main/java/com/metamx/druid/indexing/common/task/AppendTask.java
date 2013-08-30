@@ -26,8 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.metamx.druid.TimelineObjectHolder;
-import com.metamx.druid.VersionedIntervalTimeline;
 import io.druid.client.DataSegment;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -35,6 +33,8 @@ import io.druid.segment.IndexableAdapter;
 import io.druid.segment.QueryableIndexIndexableAdapter;
 import io.druid.segment.Rowboat;
 import io.druid.segment.RowboatFilteringIndexAdapter;
+import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

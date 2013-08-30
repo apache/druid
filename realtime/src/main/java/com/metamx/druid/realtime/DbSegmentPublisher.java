@@ -21,8 +21,8 @@ package com.metamx.druid.realtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.db.DbTablesConfig;
 import io.druid.client.DataSegment;
+import io.druid.db.DbTablesConfig;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;

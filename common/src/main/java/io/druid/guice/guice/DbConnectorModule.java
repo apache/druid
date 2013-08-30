@@ -22,9 +22,9 @@ package io.druid.guice.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.metamx.druid.db.DbConnector;
-import com.metamx.druid.db.DbConnectorConfig;
-import com.metamx.druid.db.DbTablesConfig;
+import io.druid.db.DbConnector;
+import io.druid.db.DbConnectorConfig;
+import io.druid.db.DbTablesConfig;
 import org.skife.jdbi.v2.IDBI;
 
 /**

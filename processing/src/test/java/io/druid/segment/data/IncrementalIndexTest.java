@@ -20,8 +20,8 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.ImmutableMap;
-import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.input.Row;
+import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;

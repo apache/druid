@@ -25,9 +25,9 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.io.Closeables;
-import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.firehose.Firehose;
 import com.metamx.druid.realtime.firehose.FirehoseFactory;
+import io.druid.data.input.InputRow;
 import io.druid.data.input.StringInputRowParser;
 
 import java.io.BufferedReader;

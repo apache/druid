@@ -22,9 +22,9 @@ package io.druid.server.shard.shard;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.partition.LinearPartitionChunk;
-import com.metamx.druid.partition.PartitionChunk;
+import io.druid.data.input.InputRow;
+import io.druid.timeline.partition.LinearPartitionChunk;
+import io.druid.timeline.partition.PartitionChunk;
 
 import java.util.Map;
 

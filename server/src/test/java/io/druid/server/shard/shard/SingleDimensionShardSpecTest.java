@@ -26,8 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.Pair;
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.input.MapBasedInputRow;
+import io.druid.data.input.InputRow;
+import io.druid.data.input.MapBasedInputRow;
 import org.junit.Assert;
 import org.junit.Test;
 

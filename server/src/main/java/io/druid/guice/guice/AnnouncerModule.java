@@ -22,7 +22,7 @@ package io.druid.guice.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.metamx.druid.concurrent.Execs;
+import io.druid.concurrent.Execs;
 import io.druid.curator.announcement.Announcer;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentAnnouncer;

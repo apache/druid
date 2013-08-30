@@ -29,7 +29,6 @@ import com.google.common.collect.Maps;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.indexing.common.TaskStatus;
 import com.metamx.druid.indexing.common.actions.TaskActionClient;
 import com.metamx.druid.indexing.common.actions.TaskActionHolder;
@@ -43,6 +42,7 @@ import com.metamx.druid.indexing.coordinator.TaskStorageQueryAdapter;
 import com.metamx.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
 import io.druid.client.DataSegment;
+import io.druid.common.config.JacksonConfigManager;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;

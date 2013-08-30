@@ -22,12 +22,12 @@ package com.metamx.druid.master;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.collect.CountingMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.DataSegment;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.collections.CountingMap;
 
 import java.util.Map;
 import java.util.Set;

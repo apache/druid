@@ -23,8 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
-import com.metamx.druid.collect.ResourceHolder;
-import com.metamx.druid.collect.StupidResourceHolder;
+import io.druid.collections.ResourceHolder;
+import io.druid.collections.StupidResourceHolder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

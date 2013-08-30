@@ -21,9 +21,9 @@ package io.druid.guice.guice;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.druid.db.DbTablesConfig;
 import com.metamx.druid.realtime.DbSegmentPublisher;
 import com.metamx.druid.realtime.SegmentPublisher;
+import io.druid.db.DbTablesConfig;
 import org.skife.jdbi.v2.IDBI;
 
 import javax.validation.constraints.NotNull;

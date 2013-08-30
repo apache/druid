@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,11 +28,11 @@ import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.google.common.collect.Lists;
-import com.metamx.druid.guava.DSuppliers;
 import com.metamx.druid.indexing.coordinator.setup.EC2NodeData;
 import com.metamx.druid.indexing.coordinator.setup.GalaxyUserData;
 import com.metamx.druid.indexing.coordinator.setup.WorkerSetupData;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import io.druid.common.guava.DSuppliers;
+import io.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;

@@ -22,7 +22,7 @@ package io.druid.query.spec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 import org.junit.Assert;

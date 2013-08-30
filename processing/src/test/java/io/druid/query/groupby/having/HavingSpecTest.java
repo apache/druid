@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.input.Row;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.Row;
+import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Test;
 
 import java.util.ArrayList;

@@ -23,8 +23,8 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
-import com.metamx.druid.collect.ResourceHolder;
-import com.metamx.druid.collect.StupidResourceHolder;
+import io.druid.collections.ResourceHolder;
+import io.druid.collections.StupidResourceHolder;
 
 import java.io.IOException;
 import java.io.OutputStream;

@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,7 +22,7 @@ package druid.examples.flights;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Closeables;
 import com.metamx.common.parsers.CSVParser;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import io.druid.jackson.DefaultObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;

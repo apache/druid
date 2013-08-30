@@ -21,7 +21,7 @@ package io.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.input.Row;
+import io.druid.data.input.Row;
 
 /**
  * The logical "not" operator for the "having" clause.

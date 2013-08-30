@@ -19,7 +19,7 @@
 
 package io.druid.query.groupby.having;
 
-import com.metamx.druid.input.Row;
+import io.druid.data.input.Row;
 
 /**
  */

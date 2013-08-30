@@ -21,12 +21,12 @@ package com.metamx.druid.realtime.plumber;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Schema;
+import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.SpatialDimensionSchema;
 import io.druid.server.shard.shard.NoneShardSpec;
 import junit.framework.Assert;

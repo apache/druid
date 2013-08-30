@@ -22,7 +22,7 @@ package io.druid.curator.inventory;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.metamx.druid.concurrent.Execs;
+import io.druid.concurrent.Execs;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;

@@ -19,7 +19,6 @@
 
 package io.druid.data.input;
 
-import com.metamx.druid.input.InputRow;
 import org.joda.time.DateTime;
 import org.junit.Test;
 

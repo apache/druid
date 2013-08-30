@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.exception.FormattedException;
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.input.MapBasedInputRow;
 import org.joda.time.DateTime;
 
 import java.util.List;

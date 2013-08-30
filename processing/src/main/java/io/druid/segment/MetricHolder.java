@@ -25,7 +25,7 @@ import com.google.common.io.InputSupplier;
 import com.google.common.io.OutputSupplier;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
-import com.metamx.druid.utils.SerializerUtils;
+import io.druid.common.utils.SerializerUtils;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedFloatsSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;

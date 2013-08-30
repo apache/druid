@@ -19,9 +19,9 @@
 
 package io.druid.client;
 
-import com.metamx.druid.VersionedIntervalTimeline;
 import io.druid.client.selector.ServerSelector;
 import io.druid.query.QueryRunner;
+import io.druid.timeline.VersionedIntervalTimeline;
 
 /**
  */

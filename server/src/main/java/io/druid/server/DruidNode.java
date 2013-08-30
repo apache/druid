@@ -21,7 +21,7 @@ package io.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.druid.utils.SocketUtil;
+import io.druid.common.utils.SocketUtil;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;

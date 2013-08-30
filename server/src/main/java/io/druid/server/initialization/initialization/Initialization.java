@@ -28,12 +28,12 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.metamx.common.ISE;
-import com.metamx.druid.jackson.JacksonModule;
 import io.druid.guice.guice.DruidGuiceExtensions;
 import io.druid.guice.guice.DruidSecondaryModule;
 import io.druid.guice.guice.annotations.Json;
 import io.druid.guice.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
+import io.druid.jackson.JacksonModule;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;

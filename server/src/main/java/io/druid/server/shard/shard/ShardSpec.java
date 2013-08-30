@@ -21,8 +21,8 @@ package io.druid.server.shard.shard;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.partition.PartitionChunk;
+import io.druid.data.input.InputRow;
+import io.druid.timeline.partition.PartitionChunk;
 
 import java.util.Map;
 

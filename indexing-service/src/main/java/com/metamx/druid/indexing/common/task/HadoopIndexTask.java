@@ -34,8 +34,8 @@ import com.metamx.druid.indexing.common.TaskToolbox;
 import com.metamx.druid.indexing.common.actions.LockListAction;
 import com.metamx.druid.indexing.common.actions.SegmentInsertAction;
 import com.metamx.druid.loading.S3DataSegmentPusher;
-import com.metamx.druid.utils.JodaUtils;
 import io.druid.client.DataSegment;
+import io.druid.common.utils.JodaUtils;
 import org.joda.time.DateTime;
 
 import java.util.List;

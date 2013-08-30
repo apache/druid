@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,7 +21,8 @@ package com.metamx.druid.db;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import io.druid.db.DbTablesConfig;
+import io.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;

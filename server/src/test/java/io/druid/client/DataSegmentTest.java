@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.druid.jackson.DefaultObjectMapper;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.IndexIO;
 import io.druid.server.shard.shard.NoneShardSpec;
 import io.druid.server.shard.shard.SingleDimensionShardSpec;

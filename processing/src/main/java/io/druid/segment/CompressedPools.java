@@ -21,9 +21,9 @@ package io.druid.segment;
 
 import com.google.common.base.Supplier;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.collect.ResourceHolder;
-import com.metamx.druid.collect.StupidPool;
 import com.ning.compress.lzf.ChunkEncoder;
+import io.druid.collections.ResourceHolder;
+import io.druid.collections.StupidPool;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

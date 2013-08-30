@@ -16,10 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+
 package io.druid.server.http;
 
-import com.metamx.druid.config.JacksonConfigManager;
 import com.metamx.druid.master.MasterSegmentSettings;
+import io.druid.common.config.JacksonConfigManager;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
