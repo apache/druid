@@ -26,7 +26,7 @@ import com.rackspacecloud.client.cloudfiles.FilesObject;
 /**
  * Pushes data segments to blob-store. Two different files are pushed : 
  * <ul><li> an index file in zip format</li><li> a descriptor file as json</ul></li>
- * @author Nitin
+ * @author Nitin Mane
  *
  */
 public class RackspaceSegmentPusher implements DataSegmentPusher{
@@ -34,9 +34,9 @@ public class RackspaceSegmentPusher implements DataSegmentPusher{
 	private static final EmittingLogger log = new EmittingLogger(RackspaceSegmentPusher.class);
 	private static final Joiner JOINER = Joiner.on("/").skipNulls();
 	
-	private final FilesClient 					rsClient ;
+	private final FilesClient 			rsClient ;
 	private final RackspaceSegmentPusherConfig 	rsPusherConfig ;
-	private final ObjectMapper 					jsonMapper ;
+	private final ObjectMapper 			jsonMapper ;
 		
 	public RackspaceSegmentPusher(FilesClient rsClient, RackspaceSegmentPusherConfig rsPusherConfig, ObjectMapper jsonMapper) 
 	{
@@ -63,14 +63,14 @@ public class RackspaceSegmentPusher implements DataSegmentPusher{
 								segment.getVersion(), 
 								segment.getShardSpec().getPartitionNum());
 		
-	    bucketName = this.rsPusherConfig.getFileContainer();
+	    	bucketName = this.rsPusherConfig.getFileContainer();
 	    
-	    File indexFilesDir = file;
+	    	File indexFilesDir = file;
 	    
-	    final File zipOutFile = File.createTempFile("admaxim", AppConstant.INDEX_FILE.getValue());   
-	    indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);    
+	    	final File zipOutFile = File.createTempFile("admaxim", AppConstant.INDEX_FILE.getValue());   
+		indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);    
 	      
-    	try {
+    		try {
 			log.info("Pushing Index File %s.",zipOutFile.getName());
 			
 			if(pushFileToRackspace(zipOutFile, fileName+"/"+AppConstant.INDEX_FILE.getValue()) != null) {
@@ -101,14 +101,14 @@ public class RackspaceSegmentPusher implements DataSegmentPusher{
 			log.error("RackspaceSegmentPusher.push() : %s", "HttpException: "+e.getMessage());
 			e.printStackTrace();
 		}    	
-	    finally
-	    {
-	    	log.info("Deleting Zipped Index File [%s]", zipOutFile);
+	    	finally
+	    	{
+	    		log.info("Deleting Zipped Index File [%s]", zipOutFile);
 			zipOutFile.delete();
 
 			log.info("Deleting Descriptor file [%s]", descriptorFile);
 			descriptorFile.delete();
-	    }
+	    	}
     	
 	   return segment;
 	}
