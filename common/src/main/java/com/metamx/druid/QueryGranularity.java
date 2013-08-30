@@ -53,6 +53,10 @@ public abstract class QueryGranularity
   public static final QueryGranularity HOUR   = fromString("HOUR");
   public static final QueryGranularity DAY    = fromString("DAY");
   public static final QueryGranularity SECOND = fromString("SECOND");
+  
+  public static final QueryGranularity TWO_HOUR   = fromString("TWO_HOUR");
+  public static final QueryGranularity THREE_HOUR   = fromString("THREE_HOUR");
+  public static final QueryGranularity FOUR_HOUR   = fromString("FOUR_HOUR");
 
   @JsonCreator
   public static QueryGranularity fromString(String str)
@@ -76,6 +80,11 @@ public abstract class QueryGranularity
     FIFTEEN_MINUTE (15 *   60 * 1000),
     THIRTY_MINUTE  (30 *   60 * 1000),
     HOUR           (     3600 * 1000),
+    
+    TWO_HOUR       (2  * 3600 * 1000),
+    THREE_HOUR     (3  * 3600 * 1000),
+    FOUR_HOUR      (4  * 3600 * 1000),
+    
     DAY            (24 * 3600 * 1000);
 
     private final long millis;
