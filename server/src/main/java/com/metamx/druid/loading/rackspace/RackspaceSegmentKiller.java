@@ -12,6 +12,12 @@ import com.metamx.druid.loading.S3DataSegmentKiller;
 import com.metamx.druid.loading.SegmentLoadingException;
 import com.rackspacecloud.client.cloudfiles.FilesClient;
 
+/**
+ * Segment deleter - to delete segments from blob-store
+ * @author Nitin Mane
+ *
+ */
+ 
 public class RackspaceSegmentKiller implements DataSegmentKiller {
 
 	private static final Logger log = new Logger(RackspaceSegmentKiller.class);
