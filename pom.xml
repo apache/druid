@@ -482,4 +482,11 @@
             <url>https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local</url>
         </repository>
     </distributionManagement>
+    <dependencies>
+		  <dependency>
+  			<groupId>com.rackspacecloud</groupId>
+  			<artifactId>java-cloudfiles</artifactId>
+  			<version>1.0-SNAPSHOT</version>
+		  </dependency>
+		</dependencies>
 </project>
