@@ -19,6 +19,7 @@
 
 package com.metamx.druid.initialization;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -26,11 +27,15 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.http.HttpException;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
 import org.skife.config.ConfigurationObjectFactory;
 
+import com.admaxim.realtime.segment.RackspaceSegmentPuller;
+import com.admaxim.realtime.segment.RackspaceSegmentPusher;
+import com.admaxim.realtime.segment.RackspaceSegmentPusherConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -75,6 +80,7 @@ import com.metamx.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import com.metamx.druid.query.timeseries.TimeseriesQuery;
 import com.metamx.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import com.metamx.druid.utils.PropUtils;
+import com.rackspacecloud.client.cloudfiles.FilesClient;
 
 /**
  */
@@ -90,29 +96,74 @@ public class ServerInit
   	SegmentLoaderConfig config = configFactory.build(SegmentLoaderConfig.class);
     DelegatingSegmentLoader delegateLoader = new DelegatingSegmentLoader();
     final QueryableIndexFactory factory = new MMappedQueryableIndexFactory();
-
-    final RestS3Service s3Client = new RestS3Service(
-        new AWSCredentials(
-            props.getProperty("com.metamx.aws.accessKey", ""),
-            props.getProperty("com.metamx.aws.secretKey", "")
-        )
-    );
-    final S3DataSegmentPuller segmentGetter = new S3DataSegmentPuller(s3Client);
-    final SingleSegmentLoader s3segmentLoader = new SingleSegmentLoader(segmentGetter, factory, config);
+    String queryableLoader = null;
+   
+    if(Boolean.parseBoolean(props.getProperty("druid.pusher.rackspace", "false"))) {
+    	queryableLoader = "rackspace";    	
+		
+    	final RackspaceSegmentPuller segmentPuller = new RackspaceSegmentPuller(getFilesClient(props));		
+      final SingleSegmentLoader rsSegmentLoader = new SingleSegmentLoader(segmentPuller, factory, config);
+        
+      delegateLoader.setLoaderTypes(
+            ImmutableMap.<String, SegmentLoader>builder()
+            .put("local", new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config))
+            .put("hdfs", new SingleSegmentLoader(new HdfsDataSegmentPuller(new Configuration()), factory, config))
+            .put("rs", rsSegmentLoader)
+            .put("rs_zip", rsSegmentLoader)
+            .put("c*",new SingleSegmentLoader(new CassandraDataSegmentPuller(configFactory.build(CassandraDataSegmentConfig.class)), factory, config))
+            .build()
+        );
+    }
+    else {
+    	queryableLoader = "amazons3";
+	    final RestS3Service s3Client = new RestS3Service(
+	        new AWSCredentials(
+	            props.getProperty("com.metamx.aws.accessKey", ""),
+	            props.getProperty("com.metamx.aws.secretKey", "")
+	        )
+	    );
+	    final S3DataSegmentPuller segmentGetter = new S3DataSegmentPuller(s3Client);
+	    final SingleSegmentLoader s3segmentLoader = new SingleSegmentLoader(segmentGetter, factory, config);
+	    
+	    delegateLoader.setLoaderTypes(
+	        ImmutableMap.<String, SegmentLoader>builder()
+	        .put("local", new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config))
+	        .put("hdfs", new SingleSegmentLoader(new HdfsDataSegmentPuller(new Configuration()), factory, config))
+	        .put("s3", s3segmentLoader)
+	        .put("s3_zip", s3segmentLoader)
+	        .put("c*",new SingleSegmentLoader(new CassandraDataSegmentPuller(configFactory.build(CassandraDataSegmentConfig.class)), factory, config))
+	        .build()
+	    );
+    }
     
-    delegateLoader.setLoaderTypes(
-        ImmutableMap.<String, SegmentLoader>builder()
-        .put("local", new SingleSegmentLoader(new LocalDataSegmentPuller(), factory, config))
-        .put("hdfs", new SingleSegmentLoader(new HdfsDataSegmentPuller(new Configuration()), factory, config))
-        .put("s3", s3segmentLoader)
-        .put("s3_zip", s3segmentLoader)
-        .put("c*",new SingleSegmentLoader(new CassandraDataSegmentPuller(configFactory.build(CassandraDataSegmentConfig.class)), factory, config))
-        .build()
-    );
+    log.info("Initialized with [%s] as queryable loader", queryableLoader);
+    queryableLoader = null;
+    
     return delegateLoader;
   }
 
-  public static StupidPool<ByteBuffer> makeComputeScratchPool(DruidProcessingConfig config)
+  private static FilesClient getFilesClient(Properties props) {
+	  
+	  final FilesClient rackspaceClient =  new FilesClient(	PropUtils.getProperty(props, "com.metamx.rs.userName"), 
+				PropUtils.getProperty(props, "com.metamx.rs.apiKey"), 
+				PropUtils.getProperty(props, "com.metamx.rs.authUrl"),
+				null,
+				Integer.parseInt(PropUtils.getProperty(props, "com.metamx.rs.connTimeOut")));
+
+	  try {
+		if(!rackspaceClient.isLoggedin()) {
+			rackspaceClient.login();
+		}				
+	  } catch (IOException e) {			
+		Throwables.propagate(e);
+	  } catch (HttpException e) {
+		Throwables.propagate(e);
+	  }
+	
+	return rackspaceClient;
+}
+
+public static StupidPool<ByteBuffer> makeComputeScratchPool(DruidProcessingConfig config)
   {
     try {
       Class<?> vmClass = Class.forName("sun.misc.VM");
@@ -191,6 +242,9 @@ public class ServerInit
 
       return new HdfsDataSegmentPusher(config, new Configuration(), jsonMapper);
     }
+    else if(Boolean.parseBoolean(props.getProperty("druid.pusher.rackspace", "false"))) {    			
+		return new RackspaceSegmentPusher(getFilesClient(props), configFactory.build(RackspaceSegmentPusherConfig.class), jsonMapper);
+    }
     else {
 
       final RestS3Service s3Client;
@@ -232,5 +286,5 @@ public class ServerInit
           }
       );
     }
-  }
+  }  
 }
