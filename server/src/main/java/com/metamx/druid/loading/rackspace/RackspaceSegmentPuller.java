@@ -80,7 +80,7 @@ public class RackspaceSegmentPuller implements DataSegmentPuller{
           			ByteStreams.copy(in, Files.newOutputStreamSupplier(new File(outDir, toFilename(filePath, ""))));
         		}
         
-        		log.info("Pull of file[%s] completed in [%,d] millis", filePath, System.currentTimeMillis() - startTime);
+        		log.info("Pull of file [%s] completed in [%,d] millis", filePath, System.currentTimeMillis() - startTime);
       		}
       		catch (FilesNotFoundException e){
     	  		FileUtils.deleteDirectory(outDir);
@@ -89,7 +89,7 @@ public class RackspaceSegmentPuller implements DataSegmentPuller{
       		}
       		catch (IOException e) {
         		FileUtils.deleteDirectory(outDir);
-        		throw new SegmentLoadingException(e, "Problem decompressing file[%s]", filePath);
+        		throw new SegmentLoadingException(e, "Problem decompressing file [%s]", filePath);
       		}
       		finally {
         		Closeables.closeQuietly(in);
