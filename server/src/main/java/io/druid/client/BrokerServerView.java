@@ -28,7 +28,7 @@ import com.metamx.http.client.HttpClient;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.concurrent.Execs;
-import io.druid.guice.guice.annotations.Client;
+import io.druid.guice.annotations.Client;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.timeline.VersionedIntervalTimeline;

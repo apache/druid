@@ -25,10 +25,10 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.io.Closeables;
-import com.metamx.druid.realtime.firehose.Firehose;
-import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.StringInputRowParser;
+import io.druid.segment.realtime.firehose.Firehose;
+import io.druid.segment.realtime.firehose.FirehoseFactory;
 
 import java.io.BufferedReader;
 import java.io.File;

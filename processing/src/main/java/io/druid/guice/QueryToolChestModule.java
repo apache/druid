@@ -24,8 +24,6 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
-import io.druid.guice.guice.JsonConfigProvider;
-import io.druid.guice.guice.LazySingleton;
 import io.druid.query.Query;
 import io.druid.query.QueryToolChest;
 import io.druid.query.groupby.GroupByQuery;

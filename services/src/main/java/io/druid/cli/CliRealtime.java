@@ -21,27 +21,27 @@ package io.druid.cli;
 
 import com.google.inject.Injector;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.metrics.MetricsModule;
-import com.metamx.druid.realtime.RealtimeManager;
 import io.airlift.command.Command;
 import io.druid.curator.CuratorModule;
-import io.druid.guice.guice.AWSModule;
-import io.druid.guice.guice.AnnouncerModule;
-import io.druid.guice.guice.DataSegmentPusherModule;
-import io.druid.guice.guice.DbConnectorModule;
-import io.druid.guice.guice.DruidProcessingModule;
-import io.druid.guice.guice.HttpClientModule;
-import io.druid.guice.guice.LifecycleModule;
-import io.druid.guice.guice.QueryRunnerFactoryModule;
-import io.druid.guice.guice.QueryableModule;
-import io.druid.guice.guice.RealtimeModule;
-import io.druid.guice.guice.ServerModule;
-import io.druid.guice.guice.ServerViewModule;
-import io.druid.guice.guice.StorageNodeModule;
+import io.druid.guice.AWSModule;
+import io.druid.guice.AnnouncerModule;
+import io.druid.guice.DataSegmentPusherModule;
+import io.druid.guice.DbConnectorModule;
+import io.druid.guice.DruidProcessingModule;
+import io.druid.guice.HttpClientModule;
+import io.druid.guice.LifecycleModule;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
+import io.druid.guice.RealtimeModule;
+import io.druid.guice.ServerModule;
+import io.druid.guice.ServerViewModule;
+import io.druid.guice.StorageNodeModule;
+import io.druid.segment.realtime.RealtimeManager;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.initialization.EmitterModule;
 import io.druid.server.initialization.initialization.Initialization;
 import io.druid.server.initialization.initialization.JettyServerModule;
+import io.druid.server.metrics.MetricsModule;
 
 /**
  */

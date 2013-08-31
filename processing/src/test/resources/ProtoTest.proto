@@ -1,6 +1,6 @@
 
 package prototest;
-option java_package = "com.metamx.druid.indexer.data";
+option java_package = "io.druid.indexer.data";
 option java_outer_classname = "ProtoTestEventWrapper";
 
 

@@ -36,9 +36,9 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.guice.guice.LazySingleton;
-import io.druid.guice.guice.ManageLifecycle;
-import io.druid.guice.guice.annotations.Self;
+import io.druid.guice.LazySingleton;
+import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;

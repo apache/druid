@@ -24,10 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.realtime.firehose.Firehose;
-import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.segment.realtime.firehose.Firehose;
+import io.druid.segment.realtime.firehose.FirehoseFactory;
 
 import java.io.IOException;
 import java.util.LinkedList;

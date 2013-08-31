@@ -21,23 +21,23 @@ package io.druid.cli;
 
 import com.google.inject.Injector;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.metrics.MetricsModule;
 import io.airlift.command.Command;
 import io.druid.client.cache.CacheMonitor;
 import io.druid.curator.CuratorModule;
+import io.druid.guice.BrokerModule;
+import io.druid.guice.HttpClientModule;
+import io.druid.guice.LifecycleModule;
 import io.druid.guice.QueryToolChestModule;
-import io.druid.guice.guice.BrokerModule;
-import io.druid.guice.guice.HttpClientModule;
-import io.druid.guice.guice.LifecycleModule;
-import io.druid.guice.guice.QueryableModule;
-import io.druid.guice.guice.ServerModule;
-import io.druid.guice.guice.ServerViewModule;
-import io.druid.guice.guice.annotations.Client;
+import io.druid.guice.QueryableModule;
+import io.druid.guice.ServerModule;
+import io.druid.guice.ServerViewModule;
+import io.druid.guice.annotations.Client;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.initialization.EmitterModule;
 import io.druid.server.initialization.initialization.Initialization;
 import io.druid.server.initialization.initialization.JettyServerModule;
+import io.druid.server.metrics.MetricsModule;
 
 /**
  */

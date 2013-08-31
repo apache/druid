@@ -20,8 +20,8 @@
 package io.druid.server.http;
 
 import com.google.inject.Inject;
-import com.metamx.druid.master.DruidMaster;
-import com.metamx.druid.master.LoadPeonCallback;
+import io.druid.server.master.DruidMaster;
+import io.druid.server.master.LoadPeonCallback;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;

@@ -28,10 +28,10 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.metamx.common.ISE;
-import io.druid.guice.guice.DruidGuiceExtensions;
-import io.druid.guice.guice.DruidSecondaryModule;
-import io.druid.guice.guice.annotations.Json;
-import io.druid.guice.guice.annotations.Smile;
+import io.druid.guice.DruidGuiceExtensions;
+import io.druid.guice.DruidSecondaryModule;
+import io.druid.guice.annotations.Json;
+import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
 import io.druid.jackson.JacksonModule;
 

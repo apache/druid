@@ -19,8 +19,8 @@
 
 package io.druid.server.http;
 
-import com.metamx.druid.master.MasterSegmentSettings;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.server.master.MasterSegmentSettings;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;

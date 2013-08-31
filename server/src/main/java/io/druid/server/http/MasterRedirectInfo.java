@@ -21,7 +21,7 @@ package io.druid.server.http;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.druid.master.DruidMaster;
+import io.druid.server.master.DruidMaster;
 
 import java.net.URL;
 

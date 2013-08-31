@@ -28,8 +28,8 @@ import com.google.inject.name.Named;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.core.LoggingEmitterConfig;
-import io.druid.guice.guice.JsonConfigProvider;
-import io.druid.guice.guice.ManageLifecycle;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.ManageLifecycle;
 
 /**
  */

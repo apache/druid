@@ -29,7 +29,7 @@ import com.metamx.http.client.response.InputStreamResponseHandler;
 import io.druid.client.DataSegment;
 import io.druid.client.selector.DiscoverySelector;
 import io.druid.client.selector.Server;
-import io.druid.guice.guice.annotations.Global;
+import io.druid.guice.annotations.Global;
 import org.joda.time.Interval;
 
 import java.io.InputStream;

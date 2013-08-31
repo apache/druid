@@ -30,9 +30,9 @@ import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.HttpPostEmitter;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
-import io.druid.guice.guice.JsonConfigProvider;
-import io.druid.guice.guice.LazySingleton;
-import io.druid.guice.guice.ManageLifecycle;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
+import io.druid.guice.ManageLifecycle;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
