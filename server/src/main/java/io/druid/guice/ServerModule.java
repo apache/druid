@@ -19,19 +19,27 @@
 
 package io.druid.guice;
 
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
-import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.Lifecycle;
 import io.druid.guice.annotations.Self;
+import io.druid.initialization.DruidModule;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.timeline.partition.LinearShardSpec;
+import io.druid.timeline.partition.NumberedShardSpec;
+import io.druid.timeline.partition.SingleDimensionShardSpec;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  */
-public class ServerModule implements Module
+public class ServerModule implements DruidModule
 {
   @Override
   public void configure(Binder binder)
@@ -45,5 +53,18 @@ public class ServerModule implements Module
   public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
   {
     return ScheduledExecutors.createFactory(lifecycle);
+  }
+
+  @Override
+  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  {
+    return Arrays.asList(
+        new SimpleModule()
+            .registerSubtypes(
+                new NamedType(SingleDimensionShardSpec.class, "single"),
+                new NamedType(LinearShardSpec.class, "linear"),
+                new NamedType(NumberedShardSpec.class, "numbered")
+            )
+    );
   }
 }

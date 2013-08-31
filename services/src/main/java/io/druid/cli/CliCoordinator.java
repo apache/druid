@@ -82,7 +82,7 @@ public class CliCoordinator extends ServerRunnable
         CuratorModule.class,
         new MetricsModule(),
         new DiscoveryModule().register(Self.class),
-        ServerModule.class,
+        new ServerModule(),
         new JettyServerModule(new CoordinatorJettyServerInitializer())
             .addResource(InfoResource.class)
             .addResource(MasterResource.class)

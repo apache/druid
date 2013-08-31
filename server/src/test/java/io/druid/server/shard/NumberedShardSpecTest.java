@@ -19,11 +19,10 @@
 
 package io.druid.server.shard;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.TestUtil;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
@@ -37,9 +36,8 @@ public class NumberedShardSpecTest
   @Test
   public void testSerdeRoundTrip() throws Exception
   {
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
-    final ShardSpec spec = jsonMapper.readValue(
-        jsonMapper.writeValueAsBytes(new NumberedShardSpec(1, 2)),
+    final ShardSpec spec = TestUtil.MAPPER.readValue(
+        TestUtil.MAPPER.writeValueAsBytes(new NumberedShardSpec(1, 2)),
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
@@ -49,8 +47,7 @@ public class NumberedShardSpecTest
   @Test
   public void testSerdeBackwardsCompat() throws Exception
   {
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
-    final ShardSpec spec = jsonMapper.readValue(
+    final ShardSpec spec = TestUtil.MAPPER.readValue(
         "{\"type\": \"numbered\", \"partitions\": 2, \"partitionNum\": 1}",
         ShardSpec.class
     );

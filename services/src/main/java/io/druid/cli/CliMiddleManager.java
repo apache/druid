@@ -71,7 +71,7 @@ public class CliMiddleManager extends ServerRunnable
         HttpClientModule.global(),
         CuratorModule.class,
         new MetricsModule(),
-        ServerModule.class,
+        new ServerModule(),
         new JettyServerModule(new MiddleManagerJettyServerInitializer())
             .addResource(StatusResource.class)
             .addResource(WorkerResource.class),

@@ -78,7 +78,7 @@ public class CliOverlord extends ServerRunnable
         HttpClientModule.global(),
         CuratorModule.class,
         new MetricsModule(),
-        ServerModule.class,
+        new ServerModule(),
         new AWSModule(),
         new DbConnectorModule(),
         new JacksonConfigManagerModule(),

@@ -63,7 +63,7 @@ public class CliBroker extends ServerRunnable
             HttpClientModule.global(),
             CuratorModule.class,
             new MetricsModule().register(CacheMonitor.class),
-            ServerModule.class,
+            new ServerModule(),
             new JettyServerModule(new QueryJettyServerInitializer())
                 .addResource(StatusResource.class),
             new QueryableModule(ClientQuerySegmentWalker.class),
