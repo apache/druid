@@ -21,9 +21,9 @@ package io.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.client.DataSegment;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.server.shard.shard.NoneShardSpec;
+import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;

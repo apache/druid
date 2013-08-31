@@ -21,7 +21,6 @@ package io.druid.indexing.coordinator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import io.druid.client.DataSegment;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -31,6 +30,7 @@ import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 

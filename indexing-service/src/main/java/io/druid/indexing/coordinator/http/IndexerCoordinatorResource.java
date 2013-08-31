@@ -28,7 +28,6 @@ import com.google.common.collect.Maps;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
@@ -41,6 +40,7 @@ import io.druid.indexing.coordinator.TaskRunnerWorkItem;
 import io.druid.indexing.coordinator.TaskStorageQueryAdapter;
 import io.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import io.druid.indexing.coordinator.setup.WorkerSetupData;
+import io.druid.timeline.DataSegment;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;

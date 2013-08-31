@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
 import java.util.Map;

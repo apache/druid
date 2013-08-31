@@ -32,6 +32,8 @@ import com.ircclouds.irc.api.listeners.VariousMessageListenerAdapter;
 import com.ircclouds.irc.api.state.IIRCState;
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import org.joda.time.DateTime;
 

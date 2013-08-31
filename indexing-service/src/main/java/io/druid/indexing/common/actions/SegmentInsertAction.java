@@ -26,8 +26,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.common.ISE;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.client.DataSegment;
 import io.druid.indexing.common.task.Task;
+import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
 import java.util.Set;

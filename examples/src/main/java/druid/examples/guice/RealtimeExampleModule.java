@@ -29,7 +29,6 @@ import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
 import druid.examples.web.WebFirehoseFactory;
-import io.druid.client.DataSegment;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.ServerView;
@@ -44,6 +43,7 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.RealtimeManager;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;

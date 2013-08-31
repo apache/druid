@@ -27,10 +27,10 @@ import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

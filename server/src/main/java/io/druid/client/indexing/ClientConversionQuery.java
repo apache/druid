@@ -20,7 +20,7 @@
 package io.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 /**

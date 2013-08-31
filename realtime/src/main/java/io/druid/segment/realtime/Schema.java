@@ -26,8 +26,8 @@ import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.SpatialDimensionSchema;
-import io.druid.server.shard.shard.NoneShardSpec;
-import io.druid.server.shard.shard.ShardSpec;
+import io.druid.timeline.partition.NoneShardSpec;
+import io.druid.timeline.partition.ShardSpec;
 
 import java.util.Arrays;
 import java.util.List;

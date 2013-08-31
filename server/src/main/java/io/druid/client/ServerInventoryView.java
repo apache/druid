@@ -32,6 +32,7 @@ import io.druid.concurrent.Execs;
 import io.druid.curator.inventory.CuratorInventoryManager;
 import io.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import io.druid.curator.inventory.InventoryManagerConfig;
+import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.io.IOException;

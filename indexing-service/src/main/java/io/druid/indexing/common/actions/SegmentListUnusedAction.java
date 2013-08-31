@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import io.druid.client.DataSegment;
 import io.druid.indexing.common.task.Task;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.io.IOException;

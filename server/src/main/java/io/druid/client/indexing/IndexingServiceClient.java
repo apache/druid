@@ -26,10 +26,10 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.InputStreamResponseHandler;
-import io.druid.client.DataSegment;
 import io.druid.client.selector.DiscoverySelector;
 import io.druid.client.selector.Server;
 import io.druid.guice.annotations.Global;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.io.InputStream;

@@ -30,7 +30,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;
@@ -43,6 +42,7 @@ import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
+import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 

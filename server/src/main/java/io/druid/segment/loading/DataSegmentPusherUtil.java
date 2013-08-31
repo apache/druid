@@ -20,7 +20,7 @@
 package io.druid.segment.loading;
 
 import com.google.common.base.Joiner;
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 import org.joda.time.format.ISODateTimeFormat;
 
 /**

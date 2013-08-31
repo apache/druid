@@ -29,7 +29,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexGranularity;
 import io.druid.segment.realtime.Schema;
-import io.druid.server.shard.shard.NoneShardSpec;
+import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
 import org.joda.time.Period;
 import org.junit.Test;

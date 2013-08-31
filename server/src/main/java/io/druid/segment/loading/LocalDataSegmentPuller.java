@@ -22,8 +22,8 @@ package io.druid.segment.loading;
 import com.google.common.io.Files;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.common.utils.CompressionUtils;
+import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;

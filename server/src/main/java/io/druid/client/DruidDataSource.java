@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
+import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
 import java.util.Map;

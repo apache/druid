@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import io.druid.client.DataSegment;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
@@ -36,6 +35,7 @@ import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.server.master.DruidMaster;
 import io.druid.server.master.rules.Rule;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

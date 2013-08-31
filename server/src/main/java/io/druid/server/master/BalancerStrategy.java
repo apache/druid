@@ -19,7 +19,7 @@
 
 package io.druid.server.master;
 
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 
 import java.util.List;
 

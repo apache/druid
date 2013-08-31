@@ -28,10 +28,10 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
 import com.netflix.astyanax.recipes.storage.ObjectMetadata;
-import io.druid.client.DataSegment;
 import io.druid.common.utils.CompressionUtils;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

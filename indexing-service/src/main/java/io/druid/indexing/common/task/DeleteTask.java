@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -38,7 +37,8 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
-import io.druid.server.shard.shard.NoneShardSpec;
+import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

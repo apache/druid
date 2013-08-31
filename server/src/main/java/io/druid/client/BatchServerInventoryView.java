@@ -28,6 +28,7 @@ import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
 import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.util.Set;

@@ -24,8 +24,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.client.DataSegment;
 import io.druid.client.DruidServer;
+import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import java.util.Comparator;

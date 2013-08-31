@@ -20,9 +20,9 @@
 package io.druid.server.master;
 
 import com.metamx.emitter.EmittingLogger;
-import io.druid.client.DataSegment;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.server.master.rules.Rule;
+import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import java.util.List;

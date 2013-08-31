@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
@@ -36,6 +35,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.segment.loading.S3DataSegmentPusher;
+import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import java.util.List;

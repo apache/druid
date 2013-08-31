@@ -26,11 +26,11 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.client.DataSegment;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
+import io.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.io.File;

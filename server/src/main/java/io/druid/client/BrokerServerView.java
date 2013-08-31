@@ -31,6 +31,7 @@ import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Client;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 

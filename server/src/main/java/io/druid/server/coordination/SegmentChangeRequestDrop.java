@@ -22,7 +22,7 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 
 /**
  */

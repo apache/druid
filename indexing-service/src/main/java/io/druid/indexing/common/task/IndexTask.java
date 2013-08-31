@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexer.granularity.GranularitySpec;
 import io.druid.indexing.common.TaskStatus;
@@ -34,8 +35,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.SpatialDimensionSchema;
 import io.druid.segment.realtime.Schema;
-import io.druid.segment.realtime.firehose.FirehoseFactory;
-import io.druid.server.shard.shard.NoneShardSpec;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

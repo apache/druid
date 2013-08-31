@@ -27,10 +27,10 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.curator.announcement.Announcer;
 import io.druid.server.initialization.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.timeline.DataSegment;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 

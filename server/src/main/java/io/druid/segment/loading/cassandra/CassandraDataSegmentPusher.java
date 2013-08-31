@@ -26,11 +26,11 @@ import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
-import io.druid.client.DataSegment;
 import io.druid.common.utils.CompressionUtils;
 import io.druid.segment.IndexIO;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.DataSegmentPusherUtil;
+import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.FileInputStream;

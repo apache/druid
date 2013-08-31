@@ -29,7 +29,7 @@ import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.realtime.Schema;
-import io.druid.server.shard.shard.NoneShardSpec;
+import io.druid.timeline.partition.NoneShardSpec;
 
 /**
  */

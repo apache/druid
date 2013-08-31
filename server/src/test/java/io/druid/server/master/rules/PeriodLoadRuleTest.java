@@ -19,8 +19,8 @@
 
 package io.druid.server.master.rules;
 
-import io.druid.client.DataSegment;
-import io.druid.server.shard.shard.NoneShardSpec;
+import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;

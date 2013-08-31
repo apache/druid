@@ -26,10 +26,10 @@ import com.google.common.base.Throwables;
 import com.metamx.common.parsers.TimestampParser;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.common.guava.Runnables;
+import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.segment.realtime.firehose.Firehose;
-import io.druid.segment.realtime.firehose.FirehoseFactory;
 import org.joda.time.DateTime;
 
 import java.io.IOException;

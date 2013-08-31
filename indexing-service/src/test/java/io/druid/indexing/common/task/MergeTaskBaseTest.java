@@ -22,7 +22,7 @@ package io.druid.indexing.common.task;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;

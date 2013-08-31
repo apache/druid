@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.shard.shard;
+package io.druid.server.shard;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -28,6 +28,7 @@ import com.google.common.collect.Maps;
 import com.metamx.common.Pair;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 

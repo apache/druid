@@ -21,7 +21,7 @@ package io.druid.server.master;
 
 import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

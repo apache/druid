@@ -17,15 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.shard.shard;
+package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.InputRow;
-import io.druid.timeline.partition.NumberedPartitionChunk;
-import io.druid.timeline.partition.PartitionChunk;
 
 import java.util.Map;
 

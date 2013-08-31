@@ -19,7 +19,7 @@
 
 package io.druid.server.coordination;
 
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 
 /**
  */

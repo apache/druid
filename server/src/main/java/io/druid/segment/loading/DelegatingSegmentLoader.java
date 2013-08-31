@@ -20,8 +20,8 @@
 package io.druid.segment.loading;
 
 import com.metamx.common.MapUtils;
-import io.druid.client.DataSegment;
 import io.druid.segment.Segment;
+import io.druid.timeline.DataSegment;
 
 import java.util.Map;
 

@@ -28,7 +28,6 @@ import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
@@ -37,6 +36,7 @@ import io.druid.indexing.common.actions.SpawnTasksAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.segment.IndexIO;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

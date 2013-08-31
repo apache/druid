@@ -22,11 +22,11 @@ package io.druid.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import io.druid.client.DataSegment;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.task.MergeTask;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.timeline.DataSegment;
 
 import java.util.List;
 

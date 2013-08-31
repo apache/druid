@@ -28,7 +28,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.SpatialDimensionSchema;
 import io.druid.segment.realtime.FireHydrant;
 import io.druid.segment.realtime.Schema;
-import io.druid.server.shard.shard.NoneShardSpec;
+import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;

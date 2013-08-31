@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
-import io.druid.client.DataSegment;
 import io.druid.client.ServerView;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -38,6 +37,7 @@ import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.SingleSegmentLoader;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.timeline.DataSegment;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 import java.io.File;

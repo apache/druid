@@ -20,7 +20,7 @@
 package io.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;

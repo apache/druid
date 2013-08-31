@@ -22,9 +22,9 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.curator.announcement.Announcer;
 import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.timeline.DataSegment;
 import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;

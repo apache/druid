@@ -23,9 +23,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.client.DataSegment;
 import io.druid.client.DruidDataSource;
 import io.druid.db.DatabaseRuleManager;
+import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import java.util.Collection;

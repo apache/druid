@@ -21,13 +21,13 @@ package io.druid.server.master;
 
 import com.google.common.collect.MapMaker;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import io.druid.client.DataSegment;
 import io.druid.client.DruidServer;
 import io.druid.client.SingleServerInventoryView;
 import io.druid.curator.inventory.InventoryManagerConfig;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.server.initialization.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
+import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;

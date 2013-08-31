@@ -20,6 +20,7 @@
 package io.druid.segment.realtime.firehose;
 
 import com.google.common.base.Predicate;
+import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 
 import java.io.IOException;

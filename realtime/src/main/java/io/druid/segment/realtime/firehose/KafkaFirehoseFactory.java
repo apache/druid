@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.ByteBufferInputRowParser;
+import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;

@@ -21,7 +21,7 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.server.shard.shard.ShardSpec;
+import io.druid.timeline.partition.ShardSpec;
 
 /**
  * ShardSpec + a shard ID that is unique across this run. The shard ID is used for grouping and partitioning.

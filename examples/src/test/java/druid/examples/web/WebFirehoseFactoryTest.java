@@ -21,8 +21,8 @@ package druid.examples.web;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
-import io.druid.segment.realtime.firehose.Firehose;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;

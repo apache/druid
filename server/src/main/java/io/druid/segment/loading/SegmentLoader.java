@@ -19,8 +19,8 @@
 
 package io.druid.segment.loading;
 
-import io.druid.client.DataSegment;
 import io.druid.segment.Segment;
+import io.druid.timeline.DataSegment;
 
 /**
  */

@@ -23,9 +23,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 

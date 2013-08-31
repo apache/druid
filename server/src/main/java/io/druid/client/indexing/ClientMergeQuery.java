@@ -21,8 +21,8 @@ package io.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.client.DataSegment;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.timeline.DataSegment;
 
 import java.util.List;
 

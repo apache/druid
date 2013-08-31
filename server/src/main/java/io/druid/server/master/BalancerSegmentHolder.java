@@ -19,8 +19,8 @@
 
 package io.druid.server.master;
 
-import io.druid.client.DataSegment;
 import io.druid.client.DruidServer;
+import io.druid.timeline.DataSegment;
 
 /**
  */

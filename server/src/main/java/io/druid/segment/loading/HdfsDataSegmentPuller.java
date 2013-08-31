@@ -21,8 +21,8 @@ package io.druid.segment.loading;
 
 import com.google.common.io.Closeables;
 import com.google.inject.Inject;
-import io.druid.client.DataSegment;
 import io.druid.common.utils.CompressionUtils;
+import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;

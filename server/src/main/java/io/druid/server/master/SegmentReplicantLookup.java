@@ -23,8 +23,8 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Table;
-import io.druid.client.DataSegment;
 import io.druid.client.DruidServer;
+import io.druid.timeline.DataSegment;
 
 import java.util.Map;
 

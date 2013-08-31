@@ -27,12 +27,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.guava.FunctionalIterable;
-import io.druid.client.DataSegment;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SpawnTasksAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
+import io.druid.timeline.DataSegment;
 
 import java.util.List;
 import java.util.Map;

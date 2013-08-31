@@ -21,8 +21,8 @@ package io.druid.segment.realtime;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.segment.realtime.firehose.Firehose;
-import io.druid.segment.realtime.firehose.FirehoseFactory;
+import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 

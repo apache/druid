@@ -21,10 +21,10 @@ package io.druid.server.master.rules;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.client.DataSegment;
 import io.druid.server.master.DruidMaster;
 import io.druid.server.master.DruidMasterRuntimeParams;
 import io.druid.server.master.MasterStats;
+import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 /**

@@ -25,9 +25,9 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
 import io.druid.common.utils.CompressionUtils;
 import io.druid.segment.IndexIO;
+import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;

@@ -22,7 +22,7 @@ package io.druid.segment.loading;
 import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 

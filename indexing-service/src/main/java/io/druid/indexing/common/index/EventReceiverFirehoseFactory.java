@@ -29,10 +29,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapInputRowParser;
-import io.druid.segment.realtime.firehose.Firehose;
-import io.druid.segment.realtime.firehose.FirehoseFactory;
 
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;

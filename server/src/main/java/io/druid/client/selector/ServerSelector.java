@@ -21,7 +21,7 @@ package io.druid.client.selector;
 
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
 import java.util.Comparator;

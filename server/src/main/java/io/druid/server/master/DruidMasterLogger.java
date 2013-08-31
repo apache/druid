@@ -24,10 +24,10 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.client.DataSegment;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.collections.CountingMap;
+import io.druid.timeline.DataSegment;
 
 import java.util.Map;
 import java.util.Set;

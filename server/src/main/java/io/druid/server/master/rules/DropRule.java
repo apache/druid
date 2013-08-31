@@ -19,10 +19,10 @@
 
 package io.druid.server.master.rules;
 
-import io.druid.client.DataSegment;
 import io.druid.server.master.DruidMaster;
 import io.druid.server.master.DruidMasterRuntimeParams;
 import io.druid.server.master.MasterStats;
+import io.druid.timeline.DataSegment;
 
 /**
  * DropRules indicate when segments should be completely removed from the cluster.

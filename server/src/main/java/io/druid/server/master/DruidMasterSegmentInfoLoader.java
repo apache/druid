@@ -20,7 +20,7 @@
 package io.druid.server.master;
 
 import com.metamx.common.logger.Logger;
-import io.druid.client.DataSegment;
+import io.druid.timeline.DataSegment;
 
 import java.util.Set;
 

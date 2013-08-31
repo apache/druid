@@ -22,7 +22,6 @@ package io.druid.server.master.rules;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.client.DataSegment;
 import io.druid.server.master.BalancerStrategy;
 import io.druid.server.master.DruidMaster;
 import io.druid.server.master.DruidMasterRuntimeParams;
@@ -30,6 +29,7 @@ import io.druid.server.master.LoadPeonCallback;
 import io.druid.server.master.MasterStats;
 import io.druid.server.master.ReplicationThrottler;
 import io.druid.server.master.ServerHolder;
+import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;

@@ -19,6 +19,8 @@
 
 package io.druid.client;
 
+import io.druid.timeline.DataSegment;
+
 import java.util.concurrent.Executor;
 
 /**
