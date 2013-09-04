@@ -58,7 +58,7 @@ DRUID_CP=${EXAMPLE_LOC}
 DRUID_CP=${DRUID_CP}:`ls ${SCRIPT_DIR}/../target/druid-examples-*-selfcontained.jar`
 DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/../config/realtime
 #For the kit
-DRUID_CP=${DRUID_CP}:`ls ${SCRIPT_DIR}/lib/druid-examples-*-selfcontained.jar`
+DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/lib/*
 DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/config/realtime
 
 echo "Running command:"
