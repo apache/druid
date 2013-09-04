@@ -51,14 +51,14 @@
         <fileSet>
             <directory>../examples/target</directory>
             <includes>
-                <include>druid-examples-*-selfcontained.jar</include>
+                <include>druid-examples-${project.version}.jar</include>
             </includes>
             <outputDirectory>lib</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>../services/target</directory>
             <includes>
-                <include>druid-services-*-selfcontained.jar</include>
+                <include>druid-services-${project.version}.jar</include>
             </includes>
             <outputDirectory>lib</outputDirectory>
         </fileSet>
