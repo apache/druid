@@ -28,7 +28,7 @@
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.5.52</version>
+        <version>0.5.53-SNAPSHOT</version>
     </parent>
 
     <dependencies>
