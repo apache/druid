@@ -19,14 +19,14 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatMetricSelector;
-import io.druid.segment.ObjectMetricSelector;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.ObjectColumnSelector;
 
 public class MetricSelectorUtils
 {
-  public static ObjectMetricSelector<Float> wrap(final FloatMetricSelector selector)
+  public static ObjectColumnSelector<Float> wrap(final FloatColumnSelector selector)
   {
-    return new ObjectMetricSelector<Float>()
+    return new ObjectColumnSelector<Float>()
     {
       @Override
       public Class<Float> classOfObject()

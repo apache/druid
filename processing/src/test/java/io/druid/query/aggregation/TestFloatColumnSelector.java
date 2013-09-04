@@ -17,21 +17,31 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.query.aggregation;
 
-import com.google.inject.ScopeAnnotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
-
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import io.druid.segment.FloatColumnSelector;
 
 /**
  */
-@Target({ ElementType.TYPE, ElementType.METHOD })
-@Retention(RUNTIME)
-@ScopeAnnotation
-public @interface LazySingleton
+public class TestFloatColumnSelector implements FloatColumnSelector
 {
+  private final float[] floats;
+
+  private int index = 0;
+
+  public TestFloatColumnSelector(float[] floats)
+  {
+    this.floats = floats;
+  }
+
+  @Override
+  public float get()
+  {
+    return floats[index];
+  }
+
+  public void increment()
+  {
+    ++index;
+  }
 }

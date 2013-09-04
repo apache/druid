@@ -22,7 +22,6 @@ package io.druid.guice;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import io.druid.query.Query;
 import io.druid.query.QueryToolChest;
@@ -45,7 +44,7 @@ import java.util.Map;
  */
 public class QueryToolChestModule implements Module
 {
-  final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
+  public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryToolChest>>builder()
                   .put(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
                   .put(SearchQuery.class, SearchQueryQueryToolChest.class)
@@ -57,9 +56,7 @@ public class QueryToolChestModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    MapBinder<Class<? extends Query>, QueryToolChest> toolChests = MapBinder.newMapBinder(
-        binder, new TypeLiteral<Class<? extends Query>>(){}, new TypeLiteral<QueryToolChest>(){}
-    );
+    MapBinder<Class<? extends Query>, QueryToolChest> toolChests = Binders.queryToolChestBinder(binder);
 
     for (Map.Entry<Class<? extends Query>, Class<? extends QueryToolChest>> entry : mappings.entrySet()) {
       toolChests.addBinding(entry.getKey()).to(entry.getValue());

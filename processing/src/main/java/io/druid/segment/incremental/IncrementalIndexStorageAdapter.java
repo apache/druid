@@ -33,11 +33,10 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.Capabilities;
-import io.druid.segment.ComplexMetricSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.FloatMetricSelector;
-import io.druid.segment.ObjectMetricSelector;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -311,12 +310,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       }
 
                       @Override
-                      public FloatMetricSelector makeFloatMetricSelector(String metric)
+                      public FloatColumnSelector makeFloatColumnSelector(String columnName)
                       {
-                        final String metricName = metric.toLowerCase();
+                        final String metricName = columnName.toLowerCase();
                         final Integer metricIndexInt = index.getMetricIndex(metricName);
                         if (metricIndexInt == null) {
-                          return new FloatMetricSelector()
+                          return new FloatColumnSelector()
                           {
                             @Override
                             public float get()
@@ -328,7 +327,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                         final int metricIndex = metricIndexInt;
 
-                        return new FloatMetricSelector()
+                        return new FloatColumnSelector()
                         {
                           @Override
                           public float get()
@@ -339,36 +338,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       }
 
                       @Override
-                      public ComplexMetricSelector makeComplexMetricSelector(String metric)
-                      {
-                        final String metricName = metric.toLowerCase();
-                        final Integer metricIndexInt = index.getMetricIndex(metricName);
-                        if (metricIndexInt == null) {
-                          return null;
-                        }
-
-                        final int metricIndex = metricIndexInt;
-
-                        final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(metricName));
-
-                        return new ComplexMetricSelector()
-                        {
-                          @Override
-                          public Class classOfObject()
-                          {
-                            return serde.getObjectStrategy().getClazz();
-                          }
-
-                          @Override
-                          public Object get()
-                          {
-                            return currEntry.getValue()[metricIndex].get();
-                          }
-                        };
-                      }
-
-                      @Override
-                      public ObjectMetricSelector makeObjectColumnSelector(String column)
+                      public ObjectColumnSelector makeObjectColumnSelector(String column)
                       {
                         final String columnName = column.toLowerCase();
                         final Integer metricIndexInt = index.getMetricIndex(columnName);
@@ -378,7 +348,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                           final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(columnName));
 
-                          return new ObjectMetricSelector()
+                          return new ObjectColumnSelector()
                           {
                             @Override
                             public Class classOfObject()
@@ -398,7 +368,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                         if (dimensionIndexInt != null) {
                           final int dimensionIndex = dimensionIndexInt;
-                          return new ObjectMetricSelector<String>()
+                          return new ObjectColumnSelector<String>()
                           {
                             @Override
                             public Class classOfObject()

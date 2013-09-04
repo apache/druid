@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatMetricSelector;
+import io.druid.segment.FloatColumnSelector;
 
 import java.util.Comparator;
 
@@ -34,12 +34,12 @@ public class MaxAggregator implements Aggregator
     return Math.max(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
-  private final FloatMetricSelector selector;
+  private final FloatColumnSelector selector;
   private final String name;
 
   private double max;
 
-  public MaxAggregator(String name, FloatMetricSelector selector)
+  public MaxAggregator(String name, FloatColumnSelector selector)
   {
     this.name = name;
     this.selector = selector;

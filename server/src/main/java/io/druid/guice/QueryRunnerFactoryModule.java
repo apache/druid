@@ -21,7 +21,6 @@ package io.druid.guice;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
@@ -57,9 +56,8 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
   {
     super.configure(binder);
 
-
-    final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = MapBinder.newMapBinder(
-        binder, new TypeLiteral<Class<? extends Query>>(){}, TypeLiteral.get(QueryRunnerFactory.class)
+    final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = Binders.queryRunnerFactoryBinder(
+        binder
     );
 
     for (Map.Entry<Class<? extends Query>, Class<? extends QueryRunnerFactory>> entry : mappings.entrySet()) {

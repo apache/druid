@@ -17,24 +17,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
-
-import com.google.inject.ScopeAnnotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
-
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+package io.druid.segment;
 
 /**
- * Marks the object to be managed by {@link com.metamx.common.lifecycle.Lifecycle} and set to be on Stage.LAST
- *
- * This Scope gets defined by {@link io.druid.guice.LifecycleModule}
+ * An object that gets a metric value.  Metric values are always floats and there is an assumption that the
+ * FloatColumnSelector has a handle onto some other stateful object (e.g. an Offset) which is changing between calls
+ * to get() (though, that doesn't have to be the case if you always want the same value...).
  */
-@Target({ ElementType.TYPE, ElementType.METHOD })
-@Retention(RUNTIME)
-@ScopeAnnotation
-public @interface ManageLifecycleLast
+public interface FloatColumnSelector
 {
+  public float get();
 }

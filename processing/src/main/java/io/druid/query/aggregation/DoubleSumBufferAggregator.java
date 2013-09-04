@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatMetricSelector;
+import io.druid.segment.FloatColumnSelector;
 
 import java.nio.ByteBuffer;
 
@@ -27,10 +27,10 @@ import java.nio.ByteBuffer;
  */
 public class DoubleSumBufferAggregator implements BufferAggregator
 {
-  private final FloatMetricSelector selector;
+  private final FloatColumnSelector selector;
 
   public DoubleSumBufferAggregator(
-      FloatMetricSelector selector
+      FloatColumnSelector selector
   )
   {
     this.selector = selector;

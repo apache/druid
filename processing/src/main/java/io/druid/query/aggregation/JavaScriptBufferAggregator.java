@@ -20,22 +20,22 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
-import io.druid.segment.ObjectMetricSelector;
+import io.druid.segment.ObjectColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
 public class JavaScriptBufferAggregator implements BufferAggregator
 {
-  private final ObjectMetricSelector[] selectorList;
+  private final ObjectColumnSelector[] selectorList;
   private final JavaScriptAggregator.ScriptAggregator script;
 
   public JavaScriptBufferAggregator(
-      List<ObjectMetricSelector> selectorList,
+      List<ObjectColumnSelector> selectorList,
       JavaScriptAggregator.ScriptAggregator script
   )
   {
-    this.selectorList = Lists.newArrayList(selectorList).toArray(new ObjectMetricSelector[]{});
+    this.selectorList = Lists.newArrayList(selectorList).toArray(new ObjectColumnSelector[]{});
     this.script = script;
   }
 

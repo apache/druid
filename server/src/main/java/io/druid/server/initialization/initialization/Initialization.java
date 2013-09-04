@@ -20,7 +20,7 @@
 package io.druid.server.initialization.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
@@ -28,23 +28,66 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.metamx.common.ISE;
+import com.metamx.common.logger.Logger;
 import io.druid.guice.DruidGuiceExtensions;
 import io.druid.guice.DruidSecondaryModule;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
 import io.druid.jackson.JacksonModule;
+import io.tesla.aether.internal.DefaultTeslaAether;
+import org.eclipse.aether.artifact.Artifact;
 
-import javax.annotation.Nullable;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
  */
 public class Initialization
 {
+  private static final Logger log = new Logger(Initialization.class);
+
+  private static final List<String> exclusions = Arrays.asList(
+      "io.druid",
+      "com.metamx.druid"
+  );
+
+
   public static Injector makeInjector(final Object... modules)
   {
+    final List<Class<?>> externalModules = Lists.newArrayList();
+    final DefaultTeslaAether aether = new DefaultTeslaAether();
+    try {
+      final List<Artifact> artifacts = aether.resolveArtifacts(
+          "com.metamx.druid-extensions-mmx:druid-extensions:0.4.18-SNAPSHOT"
+      );
+      List<URL> urls = Lists.newArrayListWithExpectedSize(artifacts.size());
+      for (Artifact artifact : artifacts) {
+        if (!exclusions.contains(artifact.getGroupId())) {
+          urls.add(artifact.getFile().toURI().toURL());
+        }
+        else {
+          log.error("Skipped Artifact[%s]", artifact);
+        }
+      }
+
+      for (URL url : urls) {
+        log.error("Added URL[%s]", url);
+      }
+
+      ClassLoader loader = new URLClassLoader(
+          urls.toArray(new URL[urls.size()]), Initialization.class.getClassLoader()
+      );
+
+      externalModules.add(loader.loadClass("com.metamx.druid.extensions.query.topn.TopNQueryDruidModule"));
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+
     final Injector baseInjector = Guice.createInjector(
         new DruidGuiceExtensions(),
         new JacksonModule(),
@@ -62,62 +105,82 @@ public class Initialization
                 binder.bind((Class) module);
               }
             }
+
+            for (Class<?> externalModule : externalModules) {
+              binder.bind(externalModule);
+            }
           }
         }
     );
 
-    List<Object> actualModules = Lists.newArrayList();
 
-    actualModules.add(DruidSecondaryModule.class);
-    actualModules.addAll(Arrays.asList(modules));
+    ModuleList actualModules = new ModuleList(baseInjector);
+    actualModules.addModule(DruidSecondaryModule.class);
+    for (Object module : modules) {
+      actualModules.addModule(module);
+    }
 
-    return Guice.createInjector(
-        Lists.transform(
-            actualModules,
-            new Function<Object, Module>()
-            {
-              ObjectMapper jsonMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
-              ObjectMapper smileMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Smile.class));
+    for (Class<?> externalModule : externalModules) {
+      actualModules.addModule(externalModule);
+    }
 
-              @Override
-              @SuppressWarnings("unchecked")
-              public Module apply(@Nullable Object input)
-              {
-                if (input instanceof DruidModule) {
-                  baseInjector.injectMembers(input);
-                  return registerJacksonModules(((DruidModule) input));
-                }
-
-                if (input instanceof Module) {
-                  baseInjector.injectMembers(input);
-                  return (Module) input;
-                }
-
-                if (input instanceof Class) {
-                  if (DruidModule.class.isAssignableFrom((Class) input)) {
-                    return registerJacksonModules(baseInjector.getInstance((Class<? extends DruidModule>) input));
-                  }
-                  if (Module.class.isAssignableFrom((Class) input)) {
-                    return baseInjector.getInstance((Class<? extends Module>) input);
-                  }
-                  else {
-                    throw new ISE("Class[%s] does not implement %s", input.getClass(), Module.class);
-                  }
-                }
-
-                throw new ISE("Unknown module type[%s]", input.getClass());
-              }
-
-              private DruidModule registerJacksonModules(DruidModule module)
-              {
-                for (com.fasterxml.jackson.databind.Module jacksonModule : module.getJacksonModules()) {
-                  jsonMapper.registerModule(jacksonModule);
-                  smileMapper.registerModule(jacksonModule);
-                }
-                return module;
-              }
-            }
-        )
-    );
+    return Guice.createInjector(actualModules.getModules());
   }
-}
+
+  private static class ModuleList
+  {
+    private final Injector baseInjector;
+    private final ObjectMapper jsonMapper;
+    private final ObjectMapper smileMapper;
+    private final List<Module> modules;
+
+    public ModuleList(Injector baseInjector) {
+      this.baseInjector = baseInjector;
+      this.jsonMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
+      this.smileMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Smile.class));
+      this.modules = Lists.newArrayList();
+    }
+
+    private List<Module> getModules()
+    {
+      return Collections.unmodifiableList(modules);
+    }
+
+    public void addModule(Object input)
+    {
+      if (input instanceof DruidModule) {
+        baseInjector.injectMembers(input);
+        modules.add(registerJacksonModules(((DruidModule) input)));
+      }
+      else if (input instanceof Module) {
+        baseInjector.injectMembers(input);
+        modules.add((Module) input);
+      }
+      else if (input instanceof Class) {
+        if (DruidModule.class.isAssignableFrom((Class) input)) {
+          modules.add(registerJacksonModules(baseInjector.getInstance((Class<? extends DruidModule>) input)));
+        }
+        else if (Module.class.isAssignableFrom((Class) input)) {
+          modules.add(baseInjector.getInstance((Class<? extends Module>) input));
+          return;
+        }
+        else {
+          throw new ISE("Class[%s] does not implement %s", input.getClass(), Module.class);
+        }
+      }
+      else {
+        throw new ISE("Unknown module type[%s]", input.getClass());
+      }
+    }
+
+    private DruidModule registerJacksonModules(DruidModule module)
+    {
+      for (com.fasterxml.jackson.databind.Module jacksonModule : module.getJacksonModules()) {
+        jsonMapper.registerModule(jacksonModule);
+        smileMapper.registerModule(jacksonModule);
+      }
+      return module;
+    }
+  }
+
+  }

@@ -19,8 +19,11 @@
 
 package io.druid.segment;
 
-public interface ObjectMetricSelector<T>
+/**
+ * Factory class for MetricSelectors
+ */
+public interface ColumnSelectorFactory
 {
-  public Class<T> classOfObject();
-  public T get();
+  public FloatColumnSelector makeFloatColumnSelector(String columnName);
+  public ObjectColumnSelector makeObjectColumnSelector(String columnName);
 }

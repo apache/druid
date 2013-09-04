@@ -21,19 +21,19 @@ package io.druid.query.aggregation;
 
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
-import io.druid.segment.FloatMetricSelector;
+import io.druid.segment.FloatColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class HistogramBufferAggregator implements BufferAggregator
 {
-  private final FloatMetricSelector selector;
+  private final FloatColumnSelector selector;
   private final float[] breaks;
   private final int minOffset;
   private final int maxOffset;
 
-  public HistogramBufferAggregator(FloatMetricSelector selector, float[] breaks)
+  public HistogramBufferAggregator(FloatColumnSelector selector, float[] breaks)
   {
     this.selector = selector;
     this.breaks   = breaks;

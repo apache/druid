@@ -21,7 +21,7 @@ package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.segment.ObjectMetricSelector;
+import io.druid.segment.ObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,15 +44,15 @@ public class JavaScriptAggregatorTest
     scriptDoubleSum.put("fnCombine", "function combine(a,b)          { return a + b }");
   }
 
-  private static void aggregate(TestFloatMetricSelector selector1, TestFloatMetricSelector selector2, Aggregator agg)
+  private static void aggregate(TestFloatColumnSelector selector1, TestFloatColumnSelector selector2, Aggregator agg)
   {
     agg.aggregate();
     selector1.increment();
     selector2.increment();
   }
 
-  private void aggregateBuffer(TestFloatMetricSelector selector1,
-                               TestFloatMetricSelector selector2,
+  private void aggregateBuffer(TestFloatColumnSelector selector1,
+                               TestFloatColumnSelector selector2,
                                BufferAggregator agg,
                                ByteBuffer buf, int position)
   {
@@ -61,7 +61,7 @@ public class JavaScriptAggregatorTest
     selector2.increment();
   }
 
-  private static void aggregate(TestFloatMetricSelector selector, Aggregator agg)
+  private static void aggregate(TestFloatColumnSelector selector, Aggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -70,14 +70,14 @@ public class JavaScriptAggregatorTest
   @Test
   public void testAggregate()
   {
-    final TestFloatMetricSelector selector1 = new TestFloatMetricSelector(new float[]{42.12f, 9f});
-    final TestFloatMetricSelector selector2 = new TestFloatMetricSelector(new float[]{2f, 3f});
+    final TestFloatColumnSelector selector1 = new TestFloatColumnSelector(new float[]{42.12f, 9f});
+    final TestFloatColumnSelector selector2 = new TestFloatColumnSelector(new float[]{2f, 3f});
 
     Map<String, String> script = sumLogATimesBPlusTen;
 
     JavaScriptAggregator agg = new JavaScriptAggregator(
       "billy",
-      Arrays.<ObjectMetricSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
+      Arrays.<ObjectColumnSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
       JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
                                                 script.get("fnReset"),
                                                 script.get("fnCombine"))
@@ -108,12 +108,12 @@ public class JavaScriptAggregatorTest
   @Test
   public void testBufferAggregate()
   {
-    final TestFloatMetricSelector selector1 = new TestFloatMetricSelector(new float[]{42.12f, 9f});
-    final TestFloatMetricSelector selector2 = new TestFloatMetricSelector(new float[]{2f, 3f});
+    final TestFloatColumnSelector selector1 = new TestFloatColumnSelector(new float[]{42.12f, 9f});
+    final TestFloatColumnSelector selector2 = new TestFloatColumnSelector(new float[]{2f, 3f});
 
     Map<String, String> script = sumLogATimesBPlusTen;
     JavaScriptBufferAggregator agg = new JavaScriptBufferAggregator(
-      Arrays.<ObjectMetricSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
+      Arrays.<ObjectColumnSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
       JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
                                                 script.get("fnReset"),
                                                 script.get("fnCombine"))
@@ -142,7 +142,7 @@ public class JavaScriptAggregatorTest
   }
 
   public static void main(String... args) throws Exception {
-    final LoopingFloatMetricSelector selector = new LoopingFloatMetricSelector(new float[]{42.12f, 9f});
+    final LoopingFloatColumnSelector selector = new LoopingFloatColumnSelector(new float[]{42.12f, 9f});
 
     /* memory usage test
     List<JavaScriptAggregator> aggs = Lists.newLinkedList();
@@ -150,7 +150,7 @@ public class JavaScriptAggregatorTest
     for(int i = 0; i < 100000; ++i) {
         JavaScriptAggregator a = new JavaScriptAggregator(
           "billy",
-          Lists.asList(selector, new FloatMetricSelector[]{}),
+          Lists.asList(selector, new FloatColumnSelector[]{}),
           JavaScriptAggregatorFactory.compileScript(scriptDoubleSum)
         );
         //aggs.add(a);
@@ -164,7 +164,7 @@ public class JavaScriptAggregatorTest
     Map<String, String> script = scriptDoubleSum;
     JavaScriptAggregator aggRhino = new JavaScriptAggregator(
       "billy",
-      Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectMetricSelector[]{}),
+      Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectColumnSelector[]{}),
       JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
                                                 script.get("fnReset"),
                                                 script.get("fnCombine"))
@@ -206,12 +206,12 @@ public class JavaScriptAggregatorTest
     System.out.println(String.format("JavaScript is %2.1fx slower", (double)t1 / t2));
   }
 
-  static class LoopingFloatMetricSelector extends TestFloatMetricSelector
+  static class LoopingFloatColumnSelector extends TestFloatColumnSelector
   {
     private final float[] floats;
     private long index = 0;
 
-    public LoopingFloatMetricSelector(float[] floats)
+    public LoopingFloatColumnSelector(float[] floats)
     {
       super(floats);
       this.floats = floats;

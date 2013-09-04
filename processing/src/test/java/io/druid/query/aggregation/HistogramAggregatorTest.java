@@ -28,7 +28,7 @@ import java.util.ArrayList;
 
 public class HistogramAggregatorTest
 {
-  private void aggregate(TestFloatMetricSelector selector, Aggregator agg)
+  private void aggregate(TestFloatColumnSelector selector, Aggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -39,7 +39,7 @@ public class HistogramAggregatorTest
     final float[] values = {0.55f, 0.27f, -0.3f, -.1f, -0.8f, -.7f, -.5f, 0.25f, 0.1f, 2f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
 
-    final TestFloatMetricSelector selector = new TestFloatMetricSelector(values);
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     HistogramAggregator agg = new HistogramAggregator("billy", selector, breaks);
 
@@ -76,7 +76,7 @@ public class HistogramAggregatorTest
     Assert.assertArrayEquals(new long[]{1,3,2,3,1,1}, ((Histogram)agg.get()).bins);
   }
 
-  private void aggregateBuffer(TestFloatMetricSelector selector, BufferAggregator agg, ByteBuffer buf, int position)
+  private void aggregateBuffer(TestFloatColumnSelector selector, BufferAggregator agg, ByteBuffer buf, int position)
   {
     agg.aggregate(buf, position);
     selector.increment();
@@ -87,7 +87,7 @@ public class HistogramAggregatorTest
     final float[] values = {0.55f, 0.27f, -0.3f, -.1f, -0.8f, -.7f, -.5f, 0.25f, 0.1f, 2f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
 
-    final TestFloatMetricSelector selector = new TestFloatMetricSelector(values);
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     ArrayList<Float> b = Lists.newArrayList();
     for (int i = 0; i < breaks.length; ++i) {

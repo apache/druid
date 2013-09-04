@@ -19,9 +19,7 @@
 
 package io.druid.segment;
 
-/**
- */
-public interface ComplexMetricSelector<T>
+public interface ObjectColumnSelector<T>
 {
   public Class<T> classOfObject();
   public T get();

@@ -21,7 +21,7 @@ package io.druid.segment;import org.joda.time.DateTime;
 
 /**
  */
-public interface Cursor extends MetricSelectorFactory, DimensionSelectorFactory
+public interface Cursor extends ColumnSelectorFactory, DimensionSelectorFactory
 {
   public DateTime getTime();
   public void advance();

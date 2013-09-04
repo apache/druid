@@ -26,7 +26,7 @@ package io.druid.query.aggregation;
  *
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate().  This is currently (as of this documentation) implemented through the use of Offset and
- * FloatMetricSelector objects.  The Aggregator has a handle on a FloatMetricSelector object which has a handle on an Offset.
+ * FloatColumnSelector objects.  The Aggregator has a handle on a FloatColumnSelector object which has a handle on an Offset.
  * QueryableIndex has both the Aggregators and the Offset object and iterates through the Offset calling the aggregate()
  * method on the Aggregators for each applicable row.
  *

@@ -33,6 +33,11 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class MapCache implements Cache
 {
+  public static Cache create(long sizeInBytes)
+  {
+    return new MapCache(new ByteCountingLRUMap(sizeInBytes));
+  }
+
   private final Map<ByteBuffer, byte[]> baseMap;
   private final ByteCountingLRUMap byteCountingLRUMap;
 

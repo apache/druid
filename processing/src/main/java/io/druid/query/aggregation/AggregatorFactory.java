@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.MetricSelectorFactory;
+import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Comparator;
 import java.util.List;
@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * Processing related interface
  *
- * An AggregatorFactory is an object that knows how to generate an Aggregator using a MetricSelectorFactory.
+ * An AggregatorFactory is an object that knows how to generate an Aggregator using a ColumnSelectorFactory.
  *
  * This is useful as an abstraction to allow Aggregator classes to be written in terms of MetricSelector objects
  * without making any assumptions about how they are pulling values out of the base data.  That is, the data is
@@ -36,8 +36,8 @@ import java.util.List;
  */
 public interface AggregatorFactory
 {
-  public Aggregator factorize(MetricSelectorFactory metricFactory);
-  public BufferAggregator factorizeBuffered(MetricSelectorFactory metricFactory);
+  public Aggregator factorize(ColumnSelectorFactory metricFactory);
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory);
   public Comparator getComparator();
 
   /**

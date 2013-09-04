@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
-import io.druid.segment.MetricSelectorFactory;
+import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -53,18 +53,18 @@ public class LongSumAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(MetricSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new LongSumAggregator(
         name,
-        metricFactory.makeFloatMetricSelector(fieldName)
+        metricFactory.makeFloatColumnSelector(fieldName)
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(MetricSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongSumBufferAggregator(metricFactory.makeFloatMetricSelector(fieldName));
+    return new LongSumBufferAggregator(metricFactory.makeFloatColumnSelector(fieldName));
   }
 
   @Override

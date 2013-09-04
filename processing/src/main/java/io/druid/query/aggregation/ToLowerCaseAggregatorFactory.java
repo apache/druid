@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.MetricSelectorFactory;
+import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Comparator;
 import java.util.List;
@@ -36,13 +36,13 @@ public class ToLowerCaseAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(MetricSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return baseAggregatorFactory.factorize(metricFactory);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(MetricSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return baseAggregatorFactory.factorizeBuffered(metricFactory);
   }

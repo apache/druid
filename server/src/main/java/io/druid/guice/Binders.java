@@ -17,20 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice.annotations;
+package io.druid.guice;
 
-import com.google.inject.BindingAnnotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.google.inject.Binder;
+import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.MapBinder;
+import io.druid.query.Query;
+import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryToolChest;
 
 /**
  */
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-@BindingAnnotation
-public @interface Self
+public class Binders
 {
+  public static MapBinder<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder(Binder binder)
+  {
+    return MapBinder.newMapBinder(
+        binder, new TypeLiteral<Class<? extends Query>>()
+    {
+    }, TypeLiteral.get(QueryRunnerFactory.class)
+    );
+  }
+
+  public static MapBinder<Class<? extends Query>, QueryToolChest> queryToolChestBinder(Binder binder)
+  {
+    return MapBinder.newMapBinder(
+        binder, new TypeLiteral<Class<? extends Query>>()
+        {
+        }, new TypeLiteral<QueryToolChest>()
+        {
+        }
+    );
+  }
 }

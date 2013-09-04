@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatMetricSelector;
+import io.druid.segment.FloatColumnSelector;
 
 import java.util.Comparator;
 
@@ -34,12 +34,12 @@ public class MinAggregator implements Aggregator
     return Math.min(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
-  private final FloatMetricSelector selector;
+  private final FloatColumnSelector selector;
   private final String name;
 
   private double min;
 
-  public MinAggregator(String name, FloatMetricSelector selector)
+  public MinAggregator(String name, FloatColumnSelector selector)
   {
     this.name = name;
     this.selector = selector;

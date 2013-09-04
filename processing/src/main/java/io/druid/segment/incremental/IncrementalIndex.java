@@ -40,10 +40,9 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.segment.ComplexMetricSelector;
-import io.druid.segment.FloatMetricSelector;
-import io.druid.segment.MetricSelectorFactory;
-import io.druid.segment.ObjectMetricSelector;
+import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
@@ -194,13 +193,13 @@ public class IncrementalIndex implements Iterable<Row>
       for (int i = 0; i < metrics.length; ++i) {
         final AggregatorFactory agg = metrics[i];
         aggs[i] = agg.factorize(
-            new MetricSelectorFactory()
+            new ColumnSelectorFactory()
             {
               @Override
-              public FloatMetricSelector makeFloatMetricSelector(String metric)
+              public FloatColumnSelector makeFloatColumnSelector(String columnName)
               {
-                final String metricName = metric.toLowerCase();
-                return new FloatMetricSelector()
+                final String metricName = columnName.toLowerCase();
+                return new FloatColumnSelector()
                 {
                   @Override
                   public float get()
@@ -211,43 +210,13 @@ public class IncrementalIndex implements Iterable<Row>
               }
 
               @Override
-              public ComplexMetricSelector makeComplexMetricSelector(final String metric)
-              {
-                final String typeName = agg.getTypeName();
-
-                final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
-
-                if (serde == null) {
-                  throw new ISE("Don't know how to handle type[%s]", typeName);
-                }
-
-                final ComplexMetricExtractor extractor = serde.getExtractor();
-                final String metricName = metric.toLowerCase();
-
-                return new ComplexMetricSelector()
-                {
-                  @Override
-                  public Class classOfObject()
-                  {
-                    return extractor.extractedClass();
-                  }
-
-                  @Override
-                  public Object get()
-                  {
-                    return extractor.extractValue(in, metricName);
-                  }
-                };
-              }
-
-              @Override
-              public ObjectMetricSelector makeObjectColumnSelector(String column)
+              public ObjectColumnSelector makeObjectColumnSelector(String column)
               {
                 final String typeName = agg.getTypeName();
                 final String columnName = column.toLowerCase();
 
                 if (typeName.equals("float")) {
-                  return new ObjectMetricSelector<Float>()
+                  return new ObjectColumnSelector<Float>()
                   {
                     @Override
                     public Class classOfObject()
@@ -271,7 +240,7 @@ public class IncrementalIndex implements Iterable<Row>
 
                 final ComplexMetricExtractor extractor = serde.getExtractor();
 
-                return new ObjectMetricSelector()
+                return new ObjectColumnSelector()
                 {
                   @Override
                   public Class classOfObject()

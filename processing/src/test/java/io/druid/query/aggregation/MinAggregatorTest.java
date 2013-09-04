@@ -26,7 +26,7 @@ import org.junit.Test;
  */
 public class MinAggregatorTest
 {
-  private void aggregate(TestFloatMetricSelector selector, MinAggregator agg)
+  private void aggregate(TestFloatColumnSelector selector, MinAggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -36,7 +36,7 @@ public class MinAggregatorTest
   public void testAggregate() throws Exception
   {
     final float[] values = {0.15f, 0.27f, 0.0f, 0.93f};
-    final TestFloatMetricSelector selector = new TestFloatMetricSelector(values);
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
     MinAggregator agg = new MinAggregator("billy", selector);
 
     Assert.assertEquals("billy", agg.getName());

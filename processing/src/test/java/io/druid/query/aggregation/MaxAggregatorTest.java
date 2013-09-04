@@ -26,7 +26,7 @@ import org.junit.Test;
  */
 public class MaxAggregatorTest
 {
-  private void aggregate(TestFloatMetricSelector selector, MaxAggregator agg)
+  private void aggregate(TestFloatColumnSelector selector, MaxAggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -36,7 +36,7 @@ public class MaxAggregatorTest
   public void testAggregate() throws Exception
   {
     final float[] values = {0.15f, 0.27f, 0.0f, 0.93f};
-    final TestFloatMetricSelector selector = new TestFloatMetricSelector(values);
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
     MaxAggregator agg = new MaxAggregator("billy", selector);
 
     Assert.assertEquals("billy", agg.getName());

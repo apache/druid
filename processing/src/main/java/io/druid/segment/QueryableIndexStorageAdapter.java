@@ -309,9 +309,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
-                    public FloatMetricSelector makeFloatMetricSelector(String metric)
+                    public FloatColumnSelector makeFloatColumnSelector(String columnName)
                     {
-                      final String metricName = metric.toLowerCase();
+                      final String metricName = columnName.toLowerCase();
                       GenericColumn cachedMetricVals = genericColumnCache.get(metricName);
 
                       if (cachedMetricVals == null) {
@@ -323,7 +323,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedMetricVals == null) {
-                        return new FloatMetricSelector()
+                        return new FloatColumnSelector()
                         {
                           @Override
                           public float get()
@@ -334,7 +334,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       final GenericColumn metricVals = cachedMetricVals;
-                      return new FloatMetricSelector()
+                      return new FloatColumnSelector()
                       {
                         @Override
                         public float get()
@@ -345,42 +345,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
-                    public ComplexMetricSelector makeComplexMetricSelector(String metric)
-                    {
-                      final String metricName = metric.toLowerCase();
-                      ComplexColumn cachedMetricVals = complexColumnCache.get(metricName);
-
-                      if (cachedMetricVals == null) {
-                        Column holder = index.getColumn(metricName);
-                        if (holder != null && holder.getCapabilities().getType() == ValueType.COMPLEX) {
-                          cachedMetricVals = holder.getComplexColumn();
-                          complexColumnCache.put(metricName, cachedMetricVals);
-                        }
-                      }
-
-                      if (cachedMetricVals == null) {
-                        return null;
-                      }
-
-                      final ComplexColumn metricVals = cachedMetricVals;
-                      return new ComplexMetricSelector()
-                      {
-                        @Override
-                        public Class classOfObject()
-                        {
-                          return metricVals.getClazz();
-                        }
-
-                        @Override
-                        public Object get()
-                        {
-                          return metricVals.getRowValue(cursorOffset.getOffset());
-                        }
-                      };
-                    }
-
-                    @Override
-                    public ObjectMetricSelector makeObjectColumnSelector(String column)
+                    public ObjectColumnSelector makeObjectColumnSelector(String column)
                     {
                       final String columnName = column.toLowerCase();
 
@@ -421,7 +386,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         final ValueType type = columnVals.getType();
 
                         if (type == ValueType.FLOAT) {
-                          return new ObjectMetricSelector<Float>()
+                          return new ObjectColumnSelector<Float>()
                           {
                             @Override
                             public Class classOfObject()
@@ -437,7 +402,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           };
                         }
                         if (type == ValueType.LONG) {
-                          return new ObjectMetricSelector<Long>()
+                          return new ObjectColumnSelector<Long>()
                           {
                             @Override
                             public Class classOfObject()
@@ -453,7 +418,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           };
                         }
                         if (type == ValueType.STRING) {
-                          return new ObjectMetricSelector<String>()
+                          return new ObjectColumnSelector<String>()
                           {
                             @Override
                             public Class classOfObject()
@@ -472,7 +437,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedColumnVals instanceof DictionaryEncodedColumn) {
                         final DictionaryEncodedColumn columnVals = (DictionaryEncodedColumn) cachedColumnVals;
-                        return new ObjectMetricSelector<String>()
+                        return new ObjectColumnSelector<String>()
                         {
                           @Override
                           public Class classOfObject()
@@ -489,7 +454,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       final ComplexColumn columnVals = (ComplexColumn) cachedColumnVals;
-                      return new ObjectMetricSelector()
+                      return new ObjectColumnSelector()
                       {
                         @Override
                         public Class classOfObject()
@@ -728,9 +693,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
-                    public FloatMetricSelector makeFloatMetricSelector(String metric)
+                    public FloatColumnSelector makeFloatColumnSelector(String columnName)
                     {
-                      final String metricName = metric.toLowerCase();
+                      final String metricName = columnName.toLowerCase();
                       GenericColumn cachedMetricVals = genericColumnCache.get(metricName);
 
                       if (cachedMetricVals == null) {
@@ -742,7 +707,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       if (cachedMetricVals == null) {
-                        return new FloatMetricSelector()
+                        return new FloatColumnSelector()
                         {
                           @Override
                           public float get()
@@ -753,7 +718,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       final GenericColumn metricVals = cachedMetricVals;
-                      return new FloatMetricSelector()
+                      return new FloatColumnSelector()
                       {
                         @Override
                         public float get()
@@ -764,42 +729,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
-                    public ComplexMetricSelector makeComplexMetricSelector(String metric)
-                    {
-                      final String metricName = metric.toLowerCase();
-                      ComplexColumn cachedMetricVals = complexColumnCache.get(metricName);
-
-                      if (cachedMetricVals == null) {
-                        Column holder = index.getColumn(metricName);
-                        if (holder != null && holder.getCapabilities().getType() == ValueType.COMPLEX) {
-                          cachedMetricVals = holder.getComplexColumn();
-                          complexColumnCache.put(metricName, cachedMetricVals);
-                        }
-                      }
-
-                      if (cachedMetricVals == null) {
-                        return null;
-                      }
-
-                      final ComplexColumn metricVals = cachedMetricVals;
-                      return new ComplexMetricSelector()
-                      {
-                        @Override
-                        public Class classOfObject()
-                        {
-                          return metricVals.getClazz();
-                        }
-
-                        @Override
-                        public Object get()
-                        {
-                          return metricVals.getRowValue(currRow);
-                        }
-                      };
-                    }
-
-                    @Override
-                    public ObjectMetricSelector makeObjectColumnSelector(String column)
+                    public ObjectColumnSelector makeObjectColumnSelector(String column)
                     {
                       final String columnName = column.toLowerCase();
 
@@ -839,7 +769,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         final ValueType type = columnVals.getType();
 
                         if (type == ValueType.FLOAT) {
-                          return new ObjectMetricSelector<Float>()
+                          return new ObjectColumnSelector<Float>()
                           {
                             @Override
                             public Class classOfObject()
@@ -855,7 +785,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           };
                         }
                         if (type == ValueType.LONG) {
-                          return new ObjectMetricSelector<Long>()
+                          return new ObjectColumnSelector<Long>()
                           {
                             @Override
                             public Class classOfObject()
@@ -871,7 +801,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           };
                         }
                         if (type == ValueType.STRING) {
-                          return new ObjectMetricSelector<String>()
+                          return new ObjectColumnSelector<String>()
                           {
                             @Override
                             public Class classOfObject()
@@ -890,7 +820,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedColumnVals instanceof DictionaryEncodedColumn) {
                         final DictionaryEncodedColumn columnVals = (DictionaryEncodedColumn) cachedColumnVals;
-                        return new ObjectMetricSelector<String>()
+                        return new ObjectColumnSelector<String>()
                         {
                           @Override
                           public Class classOfObject()
@@ -907,7 +837,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       }
 
                       final ComplexColumn columnVals = (ComplexColumn) cachedColumnVals;
-                      return new ObjectMetricSelector()
+                      return new ObjectColumnSelector()
                       {
                         @Override
                         public Class classOfObject()

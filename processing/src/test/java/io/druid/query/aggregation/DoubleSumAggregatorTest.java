@@ -28,7 +28,7 @@ import java.util.Comparator;
  */
 public class DoubleSumAggregatorTest
 {
-  private void aggregate(TestFloatMetricSelector selector, DoubleSumAggregator agg)
+  private void aggregate(TestFloatColumnSelector selector, DoubleSumAggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -38,7 +38,7 @@ public class DoubleSumAggregatorTest
   public void testAggregate()
   {
     final float[] values = {0.15f, 0.27f};
-    final TestFloatMetricSelector selector = new TestFloatMetricSelector(values);
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
     DoubleSumAggregator agg = new DoubleSumAggregator("billy", selector);
 
     Assert.assertEquals("billy", agg.getName());
@@ -62,7 +62,7 @@ public class DoubleSumAggregatorTest
   @Test
   public void testComparator()
   {
-    final TestFloatMetricSelector selector = new TestFloatMetricSelector(new float[]{0.15f, 0.27f});
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(new float[]{0.15f, 0.27f});
     DoubleSumAggregator agg = new DoubleSumAggregator("billy", selector);
 
     Assert.assertEquals("billy", agg.getName());

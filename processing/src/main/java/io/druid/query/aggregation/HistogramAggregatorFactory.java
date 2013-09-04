@@ -26,7 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
-import io.druid.segment.MetricSelectorFactory;
+import io.druid.segment.ColumnSelectorFactory;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
@@ -64,20 +64,20 @@ public class HistogramAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(MetricSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new HistogramAggregator(
         name,
-        metricFactory.makeFloatMetricSelector(fieldName),
+        metricFactory.makeFloatColumnSelector(fieldName),
         breaks
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(MetricSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new HistogramBufferAggregator(
-        metricFactory.makeFloatMetricSelector(fieldName),
+        metricFactory.makeFloatColumnSelector(fieldName),
         breaks
     );
   }
