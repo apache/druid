@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
-
 import org.joda.time.Interval;
 
 import java.util.Arrays;
@@ -39,6 +38,8 @@ public class LegacySegmentSpec extends MultipleIntervalSegmentSpec
     final List<?> intervalStringList;
     if (intervals instanceof String) {
       intervalStringList = Arrays.asList((((String) intervals).split(",")));
+    } else if (intervals instanceof Interval) {
+      intervalStringList = Arrays.asList(intervals.toString());
     } else if (intervals instanceof Map) {
       intervalStringList = (List) ((Map) intervals).get("intervals");
     } else if (intervals instanceof List) {

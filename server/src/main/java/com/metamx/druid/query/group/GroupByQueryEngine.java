@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -44,6 +44,7 @@ import com.metamx.druid.index.v1.processing.Cursor;
 import com.metamx.druid.index.v1.processing.DimensionSelector;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
+import com.metamx.druid.kv.IndexedInts;
 import com.metamx.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -173,16 +174,27 @@ public class GroupByQueryEngine
     {
       if (dims.size() > 0) {
         List<ByteBuffer> retVal = null;
-        for (Integer dimValue : dims.get(0).getRow()) {
+        List<ByteBuffer> unaggregatedBuffers = null;
+
+        final DimensionSelector dimSelector = dims.get(0);
+        final IndexedInts row = dimSelector.getRow();
+        if (row.size() == 0) {
           ByteBuffer newKey = key.duplicate();
-          newKey.putInt(dimValue);
-          final List<ByteBuffer> unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
-          if (unaggregatedBuffers != null) {
-            if (retVal == null) {
-              retVal = Lists.newArrayList();
-            }
-            retVal.addAll(unaggregatedBuffers);
+          newKey.putInt(dimSelector.getValueCardinality());
+          unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+        }
+        else {
+          for (Integer dimValue : row) {
+            ByteBuffer newKey = key.duplicate();
+            newKey.putInt(dimValue);
+            unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
           }
+        }
+        if (unaggregatedBuffers != null) {
+          if (retVal == null) {
+            retVal = Lists.newArrayList();
+          }
+          retVal.addAll(unaggregatedBuffers);
         }
         return retVal;
       }
@@ -379,7 +391,11 @@ public class GroupByQueryEngine
 
                   ByteBuffer keyBuffer = input.getKey().duplicate();
                   for (int i = 0; i < dimensions.size(); ++i) {
-                    theEvent.put(dimNames.get(i), dimensions.get(i).lookupName(keyBuffer.getInt()));
+                    final DimensionSelector dimSelector = dimensions.get(i);
+                    final int dimVal = keyBuffer.getInt();
+                    if (dimSelector.getValueCardinality() != dimVal) {
+                      theEvent.put(dimNames.get(i), dimSelector.lookupName(dimVal));
+                    }
                   }
 
                   int position = input.getValue();
