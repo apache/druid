@@ -12,8 +12,8 @@
       },
       {
          "type":"longSum",
-         "fieldName":"edits",
-         "name":"edits"
+         "fieldName":"edit_count",
+         "name":"count"
       }
    ],
    "filter":{
