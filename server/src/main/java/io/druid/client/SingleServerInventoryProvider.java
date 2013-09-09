@@ -21,7 +21,7 @@ package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 
 import javax.validation.constraints.NotNull;

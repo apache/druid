@@ -17,36 +17,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.server.initialization;
 
-import com.google.inject.Binder;
-import com.google.inject.TypeLiteral;
-import com.google.inject.multibindings.MapBinder;
-import io.druid.query.Query;
-import io.druid.query.QueryRunnerFactory;
-import io.druid.query.QueryToolChest;
+import com.google.inject.Injector;
+import org.eclipse.jetty.server.Server;
 
 /**
  */
-public class Binders
+public interface JettyServerInitializer
 {
-  public static MapBinder<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder(Binder binder)
-  {
-    return MapBinder.newMapBinder(
-        binder, new TypeLiteral<Class<? extends Query>>()
-    {
-    }, TypeLiteral.get(QueryRunnerFactory.class)
-    );
-  }
-
-  public static MapBinder<Class<? extends Query>, QueryToolChest> queryToolChestBinder(Binder binder)
-  {
-    return MapBinder.newMapBinder(
-        binder, new TypeLiteral<Class<? extends Query>>()
-        {
-        }, new TypeLiteral<QueryToolChest>()
-        {
-        }
-    );
-  }
+  public void initialize(Server server, Injector injector);
 }

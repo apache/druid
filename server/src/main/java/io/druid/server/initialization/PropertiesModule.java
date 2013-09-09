@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization.initialization;
+package io.druid.server.initialization;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;

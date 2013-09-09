@@ -27,7 +27,7 @@ import io.druid.curator.cache.SimplePathChildrenCacheFactory;
 import io.druid.guice.annotations.Global;
 import io.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.coordinator.setup.WorkerSetupData;
-import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 
 /**

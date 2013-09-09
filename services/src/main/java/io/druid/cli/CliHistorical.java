@@ -37,9 +37,9 @@ import io.druid.guice.StorageNodeModule;
 import io.druid.server.StatusResource;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
-import io.druid.server.initialization.initialization.EmitterModule;
-import io.druid.server.initialization.initialization.Initialization;
-import io.druid.server.initialization.initialization.JettyServerModule;
+import io.druid.server.initialization.EmitterModule;
+import io.druid.server.initialization.Initialization;
+import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.ServerMonitor;
 

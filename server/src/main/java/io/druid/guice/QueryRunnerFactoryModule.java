@@ -56,7 +56,7 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
   {
     super.configure(binder);
 
-    final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = Binders.queryRunnerFactoryBinder(
+    final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = DruidBinders.queryRunnerFactoryBinder(
         binder
     );
 

@@ -21,7 +21,7 @@ package io.druid.indexing.coordinator.config;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
-import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.skife.config.Config;
 import org.skife.config.Default;
 

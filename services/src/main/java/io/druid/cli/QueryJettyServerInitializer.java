@@ -22,7 +22,7 @@ package io.druid.cli;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import io.druid.server.QueryServlet;
-import io.druid.server.initialization.initialization.JettyServerInitializer;
+import io.druid.server.initialization.JettyServerInitializer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;

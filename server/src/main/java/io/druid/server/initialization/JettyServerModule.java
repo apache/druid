@@ -17,10 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization.initialization;
+package io.druid.server.initialization;
 
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -32,8 +30,6 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
-import com.google.inject.TypeLiteral;
-import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -42,8 +38,10 @@ import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.spi.container.servlet.WebConfig;
+import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 import org.eclipse.jetty.server.Connector;
@@ -85,26 +83,12 @@ public class JettyServerModule extends JerseyServletModule
 
     JsonConfigProvider.bind(binder, "druid.server.http", ServerConfig.class);
 
-    // The Guice servlet extension doesn't actually like requiring explicit bindings, so we do its job for it here.
-    try {
-      final Class<?> classToBind = Class.forName(
-          "com.google.inject.servlet.InternalServletModule$BackwardsCompatibleServletContextProvider"
-      );
-      binder.bind(classToBind);
-    }
-    catch (ClassNotFoundException e) {
-      throw Throwables.propagate(e);
-    }
-
     binder.bind(GuiceContainer.class).to(DruidGuiceContainer.class);
     binder.bind(DruidGuiceContainer.class).in(Scopes.SINGLETON);
     serve("/*").with(DruidGuiceContainer.class);
 
-    final ImmutableSet<Class<?>> theResources = ImmutableSet.copyOf(resources);
-    binder.bind(new TypeLiteral<Set<Class<?>>>(){})
-          .annotatedWith(Names.named("resourceClasses"))
-          .toInstance(theResources);
-    for (Class<?> resource : theResources) {
+    for (Class<?> resource : resources) {
+      Jerseys.addResource(binder, resource);
       binder.bind(resource).in(LazySingleton.class);
     }
 
@@ -118,7 +102,7 @@ public class JettyServerModule extends JerseyServletModule
     @Inject
     public DruidGuiceContainer(
         Injector injector,
-        @Named("resourceClasses") Set<Class<?>> resources
+        @JSR311Resource Set<Class<?>> resources
     )
     {
       super(injector);

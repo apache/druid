@@ -28,7 +28,7 @@ import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentAnnouncerProvider;
 import io.druid.server.coordination.SingleDataSegmentAnnouncer;
-import io.druid.server.initialization.initialization.BatchDataSegmentAnnouncerConfig;
+import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.curator.framework.CuratorFramework;
 
 /**

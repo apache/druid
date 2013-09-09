@@ -49,7 +49,7 @@ import io.druid.indexing.worker.WorkerTaskMonitor;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;

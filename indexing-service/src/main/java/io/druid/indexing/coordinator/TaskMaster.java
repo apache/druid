@@ -36,7 +36,7 @@ import io.druid.indexing.coordinator.exec.TaskConsumer;
 import io.druid.indexing.coordinator.scaling.ResourceManagementScheduler;
 import io.druid.indexing.coordinator.scaling.ResourceManagementSchedulerFactory;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderSelector;
 import org.apache.curator.framework.recipes.leader.LeaderSelectorListener;

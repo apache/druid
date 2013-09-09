@@ -17,11 +17,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization.initialization;
+package io.druid.server.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.io.ByteStreams;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -31,18 +32,22 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.guice.DruidGuiceExtensions;
 import io.druid.guice.DruidSecondaryModule;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
 import io.druid.jackson.JacksonModule;
+import io.tesla.aether.TeslaAether;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.eclipse.aether.artifact.Artifact;
 
+import java.io.PrintStream;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.ServiceLoader;
 
 /**
  */
@@ -58,36 +63,6 @@ public class Initialization
 
   public static Injector makeInjector(final Object... modules)
   {
-    final List<Class<?>> externalModules = Lists.newArrayList();
-    final DefaultTeslaAether aether = new DefaultTeslaAether();
-    try {
-      final List<Artifact> artifacts = aether.resolveArtifacts(
-          "com.metamx.druid-extensions-mmx:druid-extensions:0.4.18-SNAPSHOT"
-      );
-      List<URL> urls = Lists.newArrayListWithExpectedSize(artifacts.size());
-      for (Artifact artifact : artifacts) {
-        if (!exclusions.contains(artifact.getGroupId())) {
-          urls.add(artifact.getFile().toURI().toURL());
-        }
-        else {
-          log.error("Skipped Artifact[%s]", artifact);
-        }
-      }
-
-      for (URL url : urls) {
-        log.error("Added URL[%s]", url);
-      }
-
-      ClassLoader loader = new URLClassLoader(
-          urls.toArray(new URL[urls.size()]), Initialization.class.getClassLoader()
-      );
-
-      externalModules.add(loader.loadClass("com.metamx.druid.extensions.query.topn.TopNQueryDruidModule"));
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
     final Injector baseInjector = Guice.createInjector(
         new DruidGuiceExtensions(),
         new JacksonModule(),
@@ -99,20 +74,16 @@ public class Initialization
           public void configure(Binder binder)
           {
             binder.bind(DruidSecondaryModule.class);
+            JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
 
             for (Object module : modules) {
               if (module instanceof Class) {
                 binder.bind((Class) module);
               }
             }
-
-            for (Class<?> externalModule : externalModules) {
-              binder.bind(externalModule);
-            }
           }
         }
     );
-
 
     ModuleList actualModules = new ModuleList(baseInjector);
     actualModules.addModule(DruidSecondaryModule.class);
@@ -120,11 +91,75 @@ public class Initialization
       actualModules.addModule(module);
     }
 
-    for (Class<?> externalModule : externalModules) {
-      actualModules.addModule(externalModule);
-    }
+    addExtensionModules(baseInjector.getInstance(ExtensionsConfig.class), actualModules);
 
     return Guice.createInjector(actualModules.getModules());
+  }
+
+  private static void addExtensionModules(ExtensionsConfig config, ModuleList actualModules)
+  {
+    final TeslaAether aether = getAetherClient(config);
+
+    for (String coordinate : config.getCoordinates()) {
+      log.info("Loading extension[%s]", coordinate);
+      try {
+        final List<Artifact> artifacts = aether.resolveArtifacts(coordinate);
+        List<URL> urls = Lists.newArrayListWithExpectedSize(artifacts.size());
+        for (Artifact artifact : artifacts) {
+          if (!exclusions.contains(artifact.getGroupId())) {
+            urls.add(artifact.getFile().toURI().toURL());
+          }
+          else {
+            log.debug("Skipped Artifact[%s]", artifact);
+          }
+        }
+
+        for (URL url : urls) {
+          log.debug("Added URL[%s]", url);
+        }
+
+        ClassLoader loader = new URLClassLoader(
+            urls.toArray(new URL[urls.size()]), Initialization.class.getClassLoader()
+        );
+
+        final ServiceLoader<DruidModule> serviceLoader = ServiceLoader.load(DruidModule.class, loader);
+
+        for (DruidModule module : serviceLoader) {
+          log.info("Adding extension module[%s]", module.getClass());
+          actualModules.addModule(module);
+        }
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+    }
+  }
+
+  private static DefaultTeslaAether getAetherClient(ExtensionsConfig config)
+  {
+    /*
+    DefaultTeslaAether logs a bunch of stuff to System.out, which is annoying.  We choose to disable that
+    unless debug logging is turned on.  "Disabling" it, however, is kinda bass-ackwards.  We copy out a reference
+    to the current System.out, and set System.out to a noop output stream.  Then after DefaultTeslaAether has pulled
+    The reference we swap things back.
+
+    This has implications for other things that are running in parallel to this.  Namely, if anything else also grabs
+    a reference to System.out or tries to log to it while we have things adjusted like this, then they will also log
+    to nothingness.  Fortunately, the code that calls this is single-threaded and shouldn't hopefully be running
+    alongside anything else that's grabbing System.out.  But who knows.
+    */
+    if (log.isTraceEnabled() || log.isDebugEnabled()) {
+      return new DefaultTeslaAether(config.getLocalRepository(), config.getRemoteRepositories());
+    }
+
+    PrintStream oldOut = System.out;
+    try {
+      System.setOut(new PrintStream(ByteStreams.nullOutputStream()));
+      return new DefaultTeslaAether(config.getLocalRepository(), config.getRemoteRepositories());
+    }
+    finally {
+      System.setOut(oldOut);
+    }
   }
 
   private static class ModuleList

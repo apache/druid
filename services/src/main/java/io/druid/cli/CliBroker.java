@@ -34,9 +34,9 @@ import io.druid.guice.ServerViewModule;
 import io.druid.guice.annotations.Client;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.StatusResource;
-import io.druid.server.initialization.initialization.EmitterModule;
-import io.druid.server.initialization.initialization.Initialization;
-import io.druid.server.initialization.initialization.JettyServerModule;
+import io.druid.server.initialization.EmitterModule;
+import io.druid.server.initialization.Initialization;
+import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
 
 /**

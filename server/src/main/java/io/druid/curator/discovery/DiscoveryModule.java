@@ -36,7 +36,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.initialization.CuratorDiscoveryConfig;
+import io.druid.server.initialization.CuratorDiscoveryConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;

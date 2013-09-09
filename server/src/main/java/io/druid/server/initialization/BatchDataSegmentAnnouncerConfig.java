@@ -17,24 +17,33 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization.initialization;
+package io.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+
 /**
  */
-public class CuratorDiscoveryConfig
+public class BatchDataSegmentAnnouncerConfig
 {
   @JsonProperty
-  private String path = null;
+  @Min(1)
+  private int segmentsPerNode = 50;
 
-  public String getPath()
+  @JsonProperty
+  @Max(1024 * 1024)
+  @Min(1024)
+  private long maxBytesPerNode = 512 * 1024;
+
+  public int getSegmentsPerNode()
   {
-    return path;
+    return segmentsPerNode;
   }
 
-  public boolean useDiscovery()
+  public long getMaxBytesPerNode()
   {
-    return path != null;
+    return maxBytesPerNode;
   }
 }

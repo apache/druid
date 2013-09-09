@@ -29,7 +29,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.DruidModule;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;

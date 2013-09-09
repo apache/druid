@@ -17,14 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization.initialization;
+package io.druid.server.initialization;
 
-import com.google.inject.Injector;
-import org.eclipse.jetty.server.Server;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Period;
 
 /**
  */
-public interface JettyServerInitializer
+public class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
 {
-  public void initialize(Server server, Injector injector);
+  @JsonProperty
+  private Period timeOut = new Period("PT5M");
+
+  public Period getReadTimeout()
+  {
+    return timeOut;
+  }
 }

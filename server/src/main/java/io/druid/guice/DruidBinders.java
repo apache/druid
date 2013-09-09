@@ -17,34 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization.initialization;
+package io.druid.guice;
 
 import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.metamx.common.config.Config;
-import io.druid.guice.JsonConfigurator;
-import io.druid.guice.LazySingleton;
-import org.skife.config.ConfigurationObjectFactory;
-
-import javax.validation.Validation;
-import javax.validation.Validator;
-import java.util.Properties;
+import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.MapBinder;
+import io.druid.query.Query;
+import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryToolChest;
 
 /**
  */
-public class ConfigModule implements Module
+public class DruidBinders
 {
-  @Override
-  public void configure(Binder binder)
+  public static MapBinder<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder(Binder binder)
   {
-    binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
-    binder.bind(JsonConfigurator.class).in(LazySingleton.class);
+    return MapBinder.newMapBinder(
+        binder, new TypeLiteral<Class<? extends Query>>()
+    {
+    }, TypeLiteral.get(QueryRunnerFactory.class)
+    );
   }
 
-  @Provides @LazySingleton
-  public ConfigurationObjectFactory makeFactory(Properties props)
+  public static MapBinder<Class<? extends Query>, QueryToolChest> queryToolChestBinder(Binder binder)
   {
-    return Config.createFactory(props);
+    return MapBinder.newMapBinder(
+        binder, new TypeLiteral<Class<? extends Query>>()
+        {
+        }, new TypeLiteral<QueryToolChest>()
+        {
+        }
+    );
   }
 }

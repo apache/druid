@@ -50,7 +50,7 @@ import io.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.coordinator.setup.WorkerSetupData;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
-import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;

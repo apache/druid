@@ -17,20 +17,34 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization.initialization;
+package io.druid.server.initialization;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.metamx.common.config.Config;
+import io.druid.guice.JsonConfigurator;
+import io.druid.guice.LazySingleton;
+import org.skife.config.ConfigurationObjectFactory;
+
+import javax.validation.Validation;
+import javax.validation.Validator;
+import java.util.Properties;
 
 /**
  */
-public class HttpEmitterConfig extends com.metamx.emitter.core.HttpEmitterConfig
+public class ConfigModule implements Module
 {
-  @JsonProperty
-  private Period timeOut = new Period("PT5M");
-
-  public Period getReadTimeout()
+  @Override
+  public void configure(Binder binder)
   {
-    return timeOut;
+    binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+    binder.bind(JsonConfigurator.class).in(LazySingleton.class);
+  }
+
+  @Provides @LazySingleton
+  public ConfigurationObjectFactory makeFactory(Properties props)
+  {
+    return Config.createFactory(props);
   }
 }

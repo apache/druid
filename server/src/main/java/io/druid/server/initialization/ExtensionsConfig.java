@@ -17,33 +17,45 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization.initialization;
+package io.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  */
-public class BatchDataSegmentAnnouncerConfig
+public class ExtensionsConfig
 {
   @JsonProperty
-  @Min(1)
-  private int segmentsPerNode = 50;
+  @NotNull
+  private List<String> coordinates = ImmutableList.of();
 
   @JsonProperty
-  @Max(1024 * 1024)
-  @Min(1024)
-  private long maxBytesPerNode = 512 * 1024;
+  @NotNull
+  private String localRepository = String.format("%s/%s", System.getProperty("user.home"), ".m2/repository");
 
-  public int getSegmentsPerNode()
+  @JsonProperty
+  @NotNull
+  private List<String> remoteRepositories = ImmutableList.of(
+      "http://repo1.maven.org/maven2/",
+      "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"
+  );
+
+  public List<String> getCoordinates()
   {
-    return segmentsPerNode;
+    return coordinates;
   }
 
-  public long getMaxBytesPerNode()
+  public String getLocalRepository()
   {
-    return maxBytesPerNode;
+    return localRepository;
+  }
+
+  public List<String> getRemoteRepositories()
+  {
+    return remoteRepositories;
   }
 }

@@ -47,9 +47,9 @@ import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.initialization.LogLevelAdjuster;
 import io.druid.server.StatusResource;
-import io.druid.server.initialization.initialization.EmitterModule;
-import io.druid.server.initialization.initialization.Initialization;
-import io.druid.server.initialization.initialization.JettyServerModule;
+import io.druid.server.initialization.EmitterModule;
+import io.druid.server.initialization.Initialization;
+import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
 
 import java.io.File;

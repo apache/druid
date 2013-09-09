@@ -17,34 +17,24 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.client;
+package io.druid.server.initialization;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.server.initialization.ZkPathsConfig;
-import org.apache.curator.framework.CuratorFramework;
-
-import javax.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public class BatchServerInventoryViewProvider implements ServerInventoryViewProvider
+public class CuratorDiscoveryConfig
 {
-  @JacksonInject
-  @NotNull
-  private ZkPathsConfig zkPaths = null;
+  @JsonProperty
+  private String path = null;
 
-  @JacksonInject
-  @NotNull
-  private CuratorFramework curator = null;
-
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
-
-  @Override
-  public ServerInventoryView get()
+  public String getPath()
   {
-    return new BatchServerInventoryView(zkPaths, curator, jsonMapper);
+    return path;
+  }
+
+  public boolean useDiscovery()
+  {
+    return path != null;
   }
 }

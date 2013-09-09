@@ -19,7 +19,7 @@
 
 package io.druid.indexing.common.config;
 
-import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.skife.config.Config;
 import org.skife.config.Default;
 

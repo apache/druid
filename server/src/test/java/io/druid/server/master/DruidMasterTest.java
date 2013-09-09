@@ -25,7 +25,7 @@ import io.druid.client.DruidServer;
 import io.druid.client.SingleServerInventoryView;
 import io.druid.curator.inventory.InventoryManagerConfig;
 import io.druid.db.DatabaseSegmentManager;
-import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;

@@ -50,7 +50,7 @@ import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.guice.ManageLifecycle;
 import io.druid.segment.IndexIO;
-import io.druid.server.initialization.initialization.ZkPathsConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
