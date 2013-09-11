@@ -19,7 +19,7 @@
 
 package io.druid.cli;
 
-import com.google.inject.Injector;
+import com.google.common.collect.ImmutableList;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.curator.CuratorModule;
@@ -38,10 +38,11 @@ import io.druid.server.StatusResource;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.Initialization;
 import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.ServerMonitor;
+
+import java.util.List;
 
 /**
  */
@@ -59,9 +60,9 @@ public class CliHistorical extends ServerRunnable
   }
 
   @Override
-  protected Injector getInjector()
+  protected List<Object> getModules()
   {
-    return Initialization.makeInjector(
+    return ImmutableList.<Object>of(
         new LifecycleModule().register(ZkCoordinator.class),
         EmitterModule.class,
         HttpClientModule.global(),

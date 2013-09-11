@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,9 +19,23 @@
 
 package io.druid.cli;
 
+import com.google.inject.Binder;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
 import io.airlift.command.Cli;
 import io.airlift.command.Help;
 import io.airlift.command.ParseException;
+import io.druid.guice.DruidGuiceExtensions;
+import io.druid.guice.DruidSecondaryModule;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.jackson.JacksonModule;
+import io.druid.server.initialization.ConfigModule;
+import io.druid.server.initialization.ExtensionsConfig;
+import io.druid.server.initialization.Initialization;
+import io.druid.server.initialization.PropertiesModule;
+
+import java.util.List;
 
 /**
  */
@@ -54,9 +68,19 @@ public class Main
            .withDefaultCommand(Help.class)
            .withCommands(CliPeon.class);
 
+    final Injector injector = makeStartupInjector();
+    final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
+    final List<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(config, CliCommandCreator.class);
+
+    for (CliCommandCreator creator : extensionCommands) {
+      creator.addCommands(builder);
+    }
+
     final Cli<Runnable> cli = builder.build();
     try {
-      cli.parse(args).run();
+      final Runnable command = cli.parse(args);
+      injector.injectMembers(command);
+      command.run();
     }
     catch (ParseException e) {
       System.out.println("ERROR!!!!");
@@ -64,5 +88,24 @@ public class Main
       System.out.println("===");
       cli.parse(new String[]{"help"}).run();
     }
+  }
+
+  public static Injector makeStartupInjector()
+  {
+    return Guice.createInjector(
+        new DruidGuiceExtensions(),
+        new JacksonModule(),
+        new PropertiesModule("runtime.properties"),
+        new ConfigModule(),
+        new Module()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
+            binder.bind(DruidSecondaryModule.class);
+            JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
+          }
+        }
+    );
   }
 }

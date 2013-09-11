@@ -19,7 +19,7 @@
 
 package io.druid.cli;
 
-import com.google.inject.Injector;
+import com.google.common.collect.ImmutableList;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.curator.CuratorModule;
@@ -39,9 +39,10 @@ import io.druid.guice.StorageNodeModule;
 import io.druid.segment.realtime.RealtimeManager;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.Initialization;
 import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
+
+import java.util.List;
 
 /**
  */
@@ -59,9 +60,9 @@ public class CliRealtime extends ServerRunnable
   }
 
   @Override
-  protected Injector getInjector()
+  protected List<Object> getModules()
   {
-    return Initialization.makeInjector(
+    return ImmutableList.<Object>of(
         new LifecycleModule(),
         EmitterModule.class,
         DbConnectorModule.class,

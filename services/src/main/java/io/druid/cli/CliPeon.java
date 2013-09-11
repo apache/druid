@@ -20,6 +20,8 @@
 package io.druid.cli;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -70,34 +72,45 @@ public class CliPeon implements Runnable
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String nodeType = "indexer-executor";
 
+  private Injector injector;
+
+  @Inject
+  public void configure(Injector injector)
+  {
+    this.injector = injector;
+  }
+
   private static final Logger log = new Logger(CliPeon.class);
 
   protected Injector getInjector()
   {
-    return Initialization.makeInjector(
-        new LifecycleModule(),
-        EmitterModule.class,
-        HttpClientModule.global(),
-        CuratorModule.class,
-        new MetricsModule(),
-        new ServerModule(),
-        new JettyServerModule(new QueryJettyServerInitializer())
-            .addResource(StatusResource.class)
-            .addResource(ChatHandlerResource.class),
-        new DiscoveryModule(),
-        new ServerViewModule(),
-        new StorageNodeModule(nodeType),
-        new DataSegmentPusherModule(),
-        new AnnouncerModule(),
-        new DruidProcessingModule(),
-        new QueryableModule(ThreadPoolTaskRunner.class),
-        new QueryRunnerFactoryModule(),
-        new IndexingServiceDiscoveryModule(),
-        new AWSModule(),
-        new PeonModule(
-            new ExecutorLifecycleConfig()
-                .setTaskFile(new File(taskAndStatusFile.get(0)))
-                .setStatusFile(new File(taskAndStatusFile.get(1)))
+    return Initialization.makeInjectorWithModules(
+        injector,
+        ImmutableList.of(
+            new LifecycleModule(),
+            EmitterModule.class,
+            HttpClientModule.global(),
+            CuratorModule.class,
+            new MetricsModule(),
+            new ServerModule(),
+            new JettyServerModule(new QueryJettyServerInitializer())
+                .addResource(StatusResource.class)
+                .addResource(ChatHandlerResource.class),
+            new DiscoveryModule(),
+            new ServerViewModule(),
+            new StorageNodeModule(nodeType),
+            new DataSegmentPusherModule(),
+            new AnnouncerModule(),
+            new DruidProcessingModule(),
+            new QueryableModule(ThreadPoolTaskRunner.class),
+            new QueryRunnerFactoryModule(),
+            new IndexingServiceDiscoveryModule(),
+            new AWSModule(),
+            new PeonModule(
+                new ExecutorLifecycleConfig()
+                    .setTaskFile(new File(taskAndStatusFile.get(0)))
+                    .setStatusFile(new File(taskAndStatusFile.get(1)))
+            )
         )
     );
   }

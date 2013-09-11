@@ -19,6 +19,7 @@
 
 package io.druid.cli;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.logger.Logger;
@@ -39,7 +40,6 @@ import io.druid.server.http.InfoResource;
 import io.druid.server.http.MasterResource;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.Initialization;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.master.DruidMaster;
@@ -54,6 +54,8 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.GzipFilter;
+
+import java.util.List;
 
 /**
  */
@@ -71,9 +73,9 @@ public class CliCoordinator extends ServerRunnable
   }
 
   @Override
-  protected Injector getInjector()
+  protected List<Object> getModules()
   {
-    return Initialization.makeInjector(
+    return ImmutableList.<Object>of(
         new LifecycleModule().register(DruidMaster.class),
         EmitterModule.class,
         HttpClientModule.global(),

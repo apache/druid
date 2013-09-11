@@ -19,7 +19,7 @@
 
 package io.druid.cli;
 
-import com.google.inject.Injector;
+import com.google.common.collect.ImmutableList;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.cache.CacheMonitor;
@@ -35,9 +35,10 @@ import io.druid.guice.annotations.Client;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.Initialization;
 import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
+
+import java.util.List;
 
 /**
  */
@@ -55,22 +56,22 @@ public class CliBroker extends ServerRunnable
   }
 
   @Override
-  protected Injector getInjector()
+  protected List<Object> getModules()
   {
-    return Initialization.makeInjector(
-            new LifecycleModule(),
-            EmitterModule.class,
-            HttpClientModule.global(),
-            CuratorModule.class,
-            new MetricsModule().register(CacheMonitor.class),
-            new ServerModule(),
-            new JettyServerModule(new QueryJettyServerInitializer())
-                .addResource(StatusResource.class),
-            new QueryableModule(ClientQuerySegmentWalker.class),
-            new QueryToolChestModule(),
-            new ServerViewModule(),
-            new HttpClientModule("druid.broker.http", Client.class),
-            new BrokerModule()
+    return ImmutableList.<Object>of(
+        new LifecycleModule(),
+        EmitterModule.class,
+        HttpClientModule.global(),
+        CuratorModule.class,
+        new MetricsModule().register(CacheMonitor.class),
+        new ServerModule(),
+        new JettyServerModule(new QueryJettyServerInitializer())
+            .addResource(StatusResource.class),
+        new QueryableModule(ClientQuerySegmentWalker.class),
+        new QueryToolChestModule(),
+        new ServerViewModule(),
+        new HttpClientModule("druid.broker.http", Client.class),
+        new BrokerModule()
     );
   }
 }

@@ -20,10 +20,14 @@
 package io.druid.cli;
 
 import com.google.common.base.Throwables;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.initialization.LogLevelAdjuster;
+import io.druid.server.initialization.Initialization;
+
+import java.util.List;
 
 /**
  */
@@ -31,12 +35,20 @@ public abstract class ServerRunnable implements Runnable
 {
   private final Logger log;
 
+  private Injector baseInjector;
+
   public ServerRunnable(Logger log)
   {
     this.log = log;
   }
 
-  protected abstract Injector getInjector();
+  @Inject
+  public void configure(Injector injector)
+  {
+    this.baseInjector = injector;
+  }
+
+  protected abstract List<Object> getModules();
 
   @Override
   public void run()
@@ -44,7 +56,8 @@ public abstract class ServerRunnable implements Runnable
     try {
       LogLevelAdjuster.register();
 
-      final Lifecycle lifecycle = getInjector().getInstance(Lifecycle.class);
+      final Injector injector = Initialization.makeInjectorWithModules(baseInjector, getModules());
+      final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
 
       try {
         lifecycle.start();
