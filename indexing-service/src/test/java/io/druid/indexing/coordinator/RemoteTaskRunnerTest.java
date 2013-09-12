@@ -20,62 +20,46 @@
 package io.druid.indexing.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.SimplePathChildrenCacheFactory;
-import io.druid.indexing.TestTask;
+import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TaskToolboxFactory;
-import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.TestMergeTask;
+import io.druid.indexing.common.TestRealtimeTask;
+import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
-import io.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.coordinator.setup.WorkerSetupData;
+import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
-import io.druid.indexing.worker.WorkerCuratorCoordinator;
-import io.druid.indexing.worker.WorkerTaskMonitor;
-import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.server.initialization.ZkPathsConfig;
-import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Several of the tests here are integration tests rather than unit tests. We will introduce real unit tests for this
- * class as well as integration tests in the very near future.
- */
 public class RemoteTaskRunnerTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
@@ -88,10 +72,8 @@ public class RemoteTaskRunnerTest
   private TestingCluster testingCluster;
   private CuratorFramework cf;
   private RemoteTaskRunner remoteTaskRunner;
-  private WorkerCuratorCoordinator workerCuratorCoordinator;
-  private WorkerTaskMonitor workerTaskMonitor;
 
-  private TestTask task;
+  private TestMergeTask task;
 
   private Worker worker;
 
@@ -108,26 +90,77 @@ public class RemoteTaskRunnerTest
                                 .build();
     cf.start();
     cf.create().creatingParentsIfNeeded().forPath(basePath);
+    cf.create().creatingParentsIfNeeded().forPath(tasksPath);
+    cf.create().creatingParentsIfNeeded().forPath(statusPath);
 
-    task = makeTask(TaskStatus.success("task"));
+
+    task = TestMergeTask.createDummyTask("task");
   }
 
   @After
   public void tearDown() throws Exception
   {
     remoteTaskRunner.stop();
-    workerCuratorCoordinator.stop();
-    workerTaskMonitor.stop();
     cf.close();
     testingCluster.stop();
   }
 
   @Test
-  public void testRunNoExistingTask() throws Exception
+  public void testRun() throws Exception
+  {
+    doSetup();
+
+    ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
+
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+    Assert.assertTrue(workerRunningTask(task.getId()));
+    mockWorkerCompleteSuccessfulTask(task);
+    Assert.assertTrue(workerCompletedTask(result));
+
+    Assert.assertEquals(task.getId(), result.get().getId());
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, result.get().getStatusCode());
+  }
+
+  @Test
+  public void testRunExistingTaskThatHasntStartedRunning() throws Exception
   {
     doSetup();
 
     remoteTaskRunner.run(task);
+    Assert.assertTrue(taskAnnounced(task.getId()));
+
+    ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
+
+    Assert.assertFalse(result.isDone());
+    mockWorkerRunningTask(task);
+    Assert.assertTrue(workerRunningTask(task.getId()));
+    mockWorkerCompleteSuccessfulTask(task);
+    Assert.assertTrue(workerCompletedTask(result));
+
+    Assert.assertEquals(task.getId(), result.get().getId());
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, result.get().getStatusCode());
+  }
+
+  @Test
+  public void testRunExistingTaskThatHasStartedRunning() throws Exception
+  {
+    doSetup();
+
+    remoteTaskRunner.run(task);
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+    Assert.assertTrue(workerRunningTask(task.getId()));
+
+    ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
+
+    Assert.assertFalse(result.isDone());
+
+    mockWorkerCompleteSuccessfulTask(task);
+    Assert.assertTrue(workerCompletedTask(result));
+
+    Assert.assertEquals(task.getId(), result.get().getId());
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, result.get().getStatusCode());
   }
 
   @Test
@@ -139,7 +172,7 @@ public class RemoteTaskRunnerTest
 
     doSetup();
 
-    remoteTaskRunner.run(makeTask(TaskStatus.success(new String(new char[5000]))));
+    remoteTaskRunner.run(TestMergeTask.createDummyTask(new String(new char[5000])));
 
     EasyMock.verify(emitter);
   }
@@ -149,31 +182,43 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
-    TestRealtimeTask theTask = new TestRealtimeTask(
-        "rt1",
-        new TaskResource("rt1", 1),
-        "foo",
-        TaskStatus.running("rt1")
-    );
-    remoteTaskRunner.run(theTask);
-    remoteTaskRunner.run(
-        new TestRealtimeTask("rt2", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt2"))
-    );
-    remoteTaskRunner.run(
-        new TestRealtimeTask("rt3", new TaskResource("rt2", 1), "foo", TaskStatus.running("rt3"))
+    TestRealtimeTask task1 = new TestRealtimeTask("rt1", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt1"));
+    remoteTaskRunner.run(task1);
+    Assert.assertTrue(taskAnnounced(task1.getId()));
+    mockWorkerRunningTask(task1);
+
+    TestRealtimeTask task2 = new TestRealtimeTask("rt2", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt2"));
+    remoteTaskRunner.run(task2);
+
+    TestRealtimeTask task3 = new TestRealtimeTask("rt3", new TaskResource("rt2", 1), "foo", TaskStatus.running("rt3"));
+    remoteTaskRunner.run(task3);
+
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getRunningTasks().size() == 2;
+              }
+            }
+        )
     );
 
-    Stopwatch stopwatch = new Stopwatch();
-    stopwatch.start();
-    while (remoteTaskRunner.getRunningTasks().size() < 2) {
-      Thread.sleep(100);
-      if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
-        throw new ISE("Cannot find running task");
-      }
-    }
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getPendingTasks().size() == 1;
+              }
+            }
+        )
+    );
 
-    Assert.assertTrue(remoteTaskRunner.getRunningTasks().size() == 2);
-    Assert.assertTrue(remoteTaskRunner.getPendingTasks().size() == 1);
     Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTask().getId().equals("rt2"));
   }
 
@@ -182,53 +227,62 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
-    TestRealtimeTask theTask = new TestRealtimeTask(
-        "rt1",
-        new TaskResource("rt1", 1),
-        "foo",
-        TaskStatus.running("rt1")
-    );
-    remoteTaskRunner.run(theTask);
-    remoteTaskRunner.run(
-        new TestRealtimeTask("rt2", new TaskResource("rt2", 3), "foo", TaskStatus.running("rt2"))
-    );
-    remoteTaskRunner.run(
-        new TestRealtimeTask("rt3", new TaskResource("rt3", 2), "foo", TaskStatus.running("rt3"))
+    TestRealtimeTask task1 = new TestRealtimeTask("rt1", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt1"));
+    remoteTaskRunner.run(task1);
+    Assert.assertTrue(taskAnnounced(task1.getId()));
+    mockWorkerRunningTask(task1);
+
+    TestRealtimeTask task2 = new TestRealtimeTask("rt2", new TaskResource("rt2", 3), "foo", TaskStatus.running("rt2"));
+    remoteTaskRunner.run(task2);
+
+    TestRealtimeTask task3 = new TestRealtimeTask("rt3", new TaskResource("rt3", 2), "foo", TaskStatus.running("rt3"));
+    remoteTaskRunner.run(task3);
+    Assert.assertTrue(taskAnnounced(task3.getId()));
+    mockWorkerRunningTask(task3);
+
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getRunningTasks().size() == 2;
+              }
+            }
+        )
     );
 
-    Stopwatch stopwatch = new Stopwatch();
-    stopwatch.start();
-    while (remoteTaskRunner.getRunningTasks().size() < 2) {
-      Thread.sleep(100);
-      if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
-        throw new ISE("Cannot find running task");
-      }
-    }
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getPendingTasks().size() == 1;
+              }
+            }
+        )
+    );
 
-    Assert.assertTrue(remoteTaskRunner.getRunningTasks().size() == 2);
-    Assert.assertTrue(remoteTaskRunner.getPendingTasks().size() == 1);
     Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTask().getId().equals("rt2"));
   }
 
   @Test
-  public void testFailure() throws Exception
+  public void testStatusRemoved() throws Exception
   {
     doSetup();
 
-    ListenableFuture<TaskStatus> future = remoteTaskRunner.run(makeTask(TaskStatus.running("task")));
-    final String taskStatus = joiner.join(statusPath, "task");
+    ListenableFuture<TaskStatus> future = remoteTaskRunner.run(task);
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
 
-    Stopwatch stopwatch = new Stopwatch();
-    stopwatch.start();
-    while (cf.checkExists().forPath(taskStatus) == null) {
-      Thread.sleep(100);
-      if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
-        throw new ISE("Cannot find running task");
-      }
-    }
+    Assert.assertTrue(workerRunningTask(task.getId()));
+
     Assert.assertTrue(remoteTaskRunner.getRunningTasks().iterator().next().getTask().getId().equals("task"));
 
-    cf.delete().forPath(taskStatus);
+    cf.delete().forPath(joiner.join(statusPath, task.getId()));
 
     TaskStatus status = future.get();
 
@@ -258,7 +312,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(existingTasks.contains("first"));
     Assert.assertTrue(existingTasks.contains("second"));
 
-    remoteTaskRunner.bootstrap(Arrays.<Task>asList(makeTask(TaskStatus.running("second"))));
+    remoteTaskRunner.bootstrap(Arrays.<Task>asList(TestMergeTask.createDummyTask("second")));
 
     Set<String> runningTasks = Sets.newHashSet(
         Iterables.transform(
@@ -303,18 +357,14 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
     remoteTaskRunner.bootstrap(Lists.<Task>newArrayList());
-    Future<TaskStatus> future = remoteTaskRunner.run(makeTask(TaskStatus.running("task")));
+    Future<TaskStatus> future = remoteTaskRunner.run(task);
 
-    Stopwatch stopwatch = new Stopwatch();
-    stopwatch.start();
-    while (cf.checkExists().forPath(joiner.join(statusPath, "task")) == null) {
-      Thread.sleep(100);
-      if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
-        throw new ISE("Cannot find running task");
-      }
-    }
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
 
-    workerCuratorCoordinator.stop();
+    Assert.assertTrue(workerRunningTask(task.getId()));
+
+    cf.delete().forPath(announcementsPath);
 
     TaskStatus status = future.get();
 
@@ -325,68 +375,6 @@ public class RemoteTaskRunnerTest
   {
     makeWorker();
     makeRemoteTaskRunner();
-    makeTaskMonitor();
-  }
-
-  private TestTask makeTask(TaskStatus status)
-  {
-    return new TestTask(
-        status.getId(),
-        "dummyDs",
-        Lists.<DataSegment>newArrayList(
-            new DataSegment(
-                "dummyDs",
-                new Interval(new DateTime(), new DateTime()),
-                new DateTime().toString(),
-                null,
-                null,
-                null,
-                null,
-                0,
-                0
-            )
-        ),
-        Lists.<AggregatorFactory>newArrayList(),
-        status
-    );
-  }
-
-  private void makeTaskMonitor() throws Exception
-  {
-    workerCuratorCoordinator = new WorkerCuratorCoordinator(
-        jsonMapper,
-        new ZkPathsConfig()
-        {
-          @Override
-          public String getZkBasePath()
-          {
-            return basePath;
-          }
-        },
-        new TestRemoteTaskRunnerConfig(),
-        cf,
-        worker
-    );
-    workerCuratorCoordinator.start();
-
-    final File tmp = Files.createTempDir();
-
-    // Start a task monitor
-    workerTaskMonitor = new WorkerTaskMonitor(
-        jsonMapper,
-        cf,
-        workerCuratorCoordinator,
-        new ThreadPoolTaskRunner(
-            new TaskToolboxFactory(
-                new TaskConfig(tmp.toString(), null, null, 0),
-                null, null, null, null, null, null, null, null, null, jsonMapper
-            )
-        ),
-        new WorkerConfig().setCapacity(1)
-    );
-    jsonMapper.registerSubtypes(new NamedType(TestTask.class, "test"));
-    jsonMapper.registerSubtypes(new NamedType(TestRealtimeTask.class, "test_realtime"));
-    workerTaskMonitor.start();
   }
 
   private void makeRemoteTaskRunner() throws Exception
@@ -426,30 +414,60 @@ public class RemoteTaskRunnerTest
     );
   }
 
-  private static class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
+  private boolean taskAnnounced(final String taskId)
   {
-    @Override
-    public boolean isCompressZnodes()
-    {
-      return false;
-    }
+    return pathExists(joiner.join(tasksPath, taskId));
+  }
 
-    @Override
-    public Period getTaskAssignmentTimeout()
-    {
-      return new Period(60000);
-    }
+  private boolean workerRunningTask(final String taskId)
+  {
+    return pathExists(joiner.join(statusPath, taskId));
+  }
 
-    @Override
-    public long getMaxZnodeBytes()
-    {
-      return 1000;
-    }
+  private boolean pathExists(final String path)
+  {
+    return TestUtils.conditionValid(
+        new IndexingServiceCondition()
+        {
+          @Override
+          public boolean isValid()
+          {
+            try {
+              return cf.checkExists().forPath(path) != null;
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
+            }
+          }
+        }
+    );
+  }
 
-    @Override
-    public String getWorkerVersion()
-    {
-      return "";
-    }
+  private boolean workerCompletedTask(final ListenableFuture<TaskStatus> result)
+  {
+    return TestUtils.conditionValid(
+        new IndexingServiceCondition()
+        {
+          @Override
+          public boolean isValid()
+          {
+            return result.isDone();
+          }
+        }
+    );
+  }
+
+  private void mockWorkerRunningTask(final Task task) throws Exception
+  {
+    cf.delete().forPath(joiner.join(tasksPath, task.getId()));
+
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.running(task.getId()));
+    cf.create().forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
+  }
+
+  private void mockWorkerCompleteSuccessfulTask(final Task task) throws Exception
+  {
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.success(task.getId()));
+    cf.setData().forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
   }
 }

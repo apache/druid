@@ -17,36 +17,43 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing;
+package io.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.task.MergeTask;
+import io.druid.granularity.QueryGranularity;
+import io.druid.indexing.common.task.RealtimeIndexTask;
+import io.druid.indexing.common.task.TaskResource;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.timeline.DataSegment;
-
-import java.util.List;
+import io.druid.segment.realtime.Schema;
+import io.druid.timeline.partition.NoneShardSpec;
 
 /**
  */
-@JsonTypeName("test")
-public class TestTask extends MergeTask
+@JsonTypeName("test_realtime")
+public class TestRealtimeTask extends RealtimeIndexTask implements TestTask
 {
   private final TaskStatus status;
 
   @JsonCreator
-  public TestTask(
+  public TestRealtimeTask(
       @JsonProperty("id") String id,
+      @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("segments") List<DataSegment> segments,
-      @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
       @JsonProperty("taskStatus") TaskStatus status
   )
   {
-    super(id, dataSource, segments, aggregators);
+    super(
+        id,
+        taskResource,
+        new Schema(dataSource, null, new AggregatorFactory[]{}, QueryGranularity.NONE, new NoneShardSpec()),
+        null,
+        null,
+        null,
+        null,
+        null
+    );
     this.status = status;
   }
 
@@ -54,9 +61,10 @@ public class TestTask extends MergeTask
   @JsonProperty
   public String getType()
   {
-    return "test";
+    return "test_realtime";
   }
 
+  @Override
   @JsonProperty
   public TaskStatus getStatus()
   {
