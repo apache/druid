@@ -118,7 +118,6 @@ public class TaskLifecycleTest
         new TaskConfig(tmp.toString(), null, null, 50000),
         tac,
         newMockEmitter(),
-        null, // s3 client
         new DataSegmentPusher()
         {
           @Override
@@ -139,6 +138,7 @@ public class TaskLifecycleTest
         null, // new segment server view
         null, // query runner factory conglomerate corporation unionized collective
         null, // monitor scheduler
+        null, // segment loader
         new DefaultObjectMapper()
     );
 

@@ -32,6 +32,7 @@ import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
+import io.druid.guice.DataSegmentPullerModule;
 import io.druid.guice.DataSegmentPusherModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.HttpClientModule;
@@ -99,6 +100,7 @@ public class CliPeon implements Runnable
             new DiscoveryModule(),
             new ServerViewModule(),
             new StorageNodeModule(nodeType),
+            new DataSegmentPullerModule(),
             new DataSegmentPusherModule(),
             new AnnouncerModule(),
             new DruidProcessingModule(),

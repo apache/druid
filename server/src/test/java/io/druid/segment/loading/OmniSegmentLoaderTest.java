@@ -30,13 +30,13 @@ import java.util.Arrays;
 
 /**
  */
-public class SingleSegmentLoaderTest
+public class OmniSegmentLoaderTest
 {
   @Test
   public void testStorageLocation() throws Exception
   {
     long expectedAvail = 1000l;
-    SingleSegmentLoader.StorageLocation loc = new SingleSegmentLoader.StorageLocation(new File("/tmp"), expectedAvail);
+    OmniSegmentLoader.StorageLocation loc = new OmniSegmentLoader.StorageLocation(new File("/tmp"), expectedAvail);
 
     verifyLoc(expectedAvail, loc);
 
@@ -65,7 +65,7 @@ public class SingleSegmentLoaderTest
     verifyLoc(expectedAvail, loc);
   }
 
-  private void verifyLoc(long maxSize, SingleSegmentLoader.StorageLocation loc)
+  private void verifyLoc(long maxSize, OmniSegmentLoader.StorageLocation loc)
   {
     Assert.assertEquals(maxSize, loc.available());
     for (int i = 0; i <= maxSize; ++i) {

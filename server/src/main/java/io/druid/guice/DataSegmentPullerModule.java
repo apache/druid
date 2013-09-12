@@ -21,8 +21,6 @@ package io.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.google.inject.multibindings.MapBinder;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.HdfsDataSegmentPuller;
 import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.loading.OmniSegmentLoader;
@@ -49,35 +47,35 @@ public class DataSegmentPullerModule implements Module
 
   private static void bindDeepStorageLocal(Binder binder)
   {
-    final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
-        binder, String.class, DataSegmentPuller.class
-    );
-    segmentPullerBinder.addBinding("local").to(LocalDataSegmentPuller.class).in(LazySingleton.class);
+    DruidBinders.dataSegmentPullerBinder(binder)
+                .addBinding("local")
+                .to(LocalDataSegmentPuller.class)
+                .in(LazySingleton.class);
   }
 
   private static void bindDeepStorageS3(Binder binder)
   {
-    final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
-        binder, String.class, DataSegmentPuller.class
-    );
-    segmentPullerBinder.addBinding("s3_zip").to(S3DataSegmentPuller.class).in(LazySingleton.class);
+    DruidBinders.dataSegmentPullerBinder(binder)
+                .addBinding("s3_zip")
+                .to(S3DataSegmentPuller.class)
+                .in(LazySingleton.class);
   }
 
   private static void bindDeepStorageHdfs(Binder binder)
   {
-    final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
-        binder, String.class, DataSegmentPuller.class
-    );
-    segmentPullerBinder.addBinding("hdfs").to(HdfsDataSegmentPuller.class).in(LazySingleton.class);
+    DruidBinders.dataSegmentPullerBinder(binder)
+                .addBinding("hdfs")
+                .to(HdfsDataSegmentPuller.class)
+                .in(LazySingleton.class);
     binder.bind(Configuration.class).toInstance(new Configuration());
   }
 
   private static void bindDeepStorageCassandra(Binder binder)
   {
-    final MapBinder<String, DataSegmentPuller> segmentPullerBinder = MapBinder.newMapBinder(
-        binder, String.class, DataSegmentPuller.class
-    );
-    segmentPullerBinder.addBinding("c*").to(CassandraDataSegmentPuller.class).in(LazySingleton.class);
+    DruidBinders.dataSegmentPullerBinder(binder)
+                .addBinding("c*")
+                .to(CassandraDataSegmentPuller.class)
+                .in(LazySingleton.class);
     ConfigProvider.bind(binder, CassandraDataSegmentConfig.class);
   }
 }

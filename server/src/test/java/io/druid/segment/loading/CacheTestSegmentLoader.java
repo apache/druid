@@ -78,6 +78,12 @@ public class CacheTestSegmentLoader implements SegmentLoader
   }
 
   @Override
+  public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void cleanup(DataSegment loadSpec) throws SegmentLoadingException
   {
   }

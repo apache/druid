@@ -65,6 +65,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -112,6 +113,12 @@ public class ServerManagerTest
                 MapUtils.getString(segment.getLoadSpec(), "version"),
                 (Interval) segment.getLoadSpec().get("interval")
             );
+          }
+
+          @Override
+          public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+          {
+            throw new UnsupportedOperationException();
           }
 
           @Override

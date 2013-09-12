@@ -25,6 +25,7 @@ import com.google.inject.multibindings.MapBinder;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.segment.loading.DataSegmentPuller;
 
 /**
  */
@@ -48,5 +49,10 @@ public class DruidBinders
         {
         }
     );
+  }
+
+  public static MapBinder<String, DataSegmentPuller> dataSegmentPullerBinder(Binder binder)
+  {
+    return MapBinder.newMapBinder(binder, String.class, DataSegmentPuller.class);
   }
 }

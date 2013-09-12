@@ -30,8 +30,8 @@ import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentPusher;
+import io.druid.segment.loading.SegmentLoader;
 import io.druid.server.coordination.DataSegmentAnnouncer;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -41,13 +41,13 @@ public class TaskToolboxFactory
   private final TaskConfig config;
   private final TaskActionClientFactory taskActionClientFactory;
   private final ServiceEmitter emitter;
-  private final RestS3Service s3Client;
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final MonitorScheduler monitorScheduler;
+  private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
 
   @Inject
@@ -55,26 +55,26 @@ public class TaskToolboxFactory
       TaskConfig config,
       TaskActionClientFactory taskActionClientFactory,
       ServiceEmitter emitter,
-      RestS3Service s3Client,
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       MonitorScheduler monitorScheduler,
+      SegmentLoader segmentLoader,
       ObjectMapper objectMapper
   )
   {
     this.config = config;
     this.taskActionClientFactory = taskActionClientFactory;
     this.emitter = emitter;
-    this.s3Client = s3Client;
     this.segmentPusher = segmentPusher;
     this.dataSegmentKiller = dataSegmentKiller;
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
     this.monitorScheduler = monitorScheduler;
+    this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
   }
 
@@ -85,13 +85,13 @@ public class TaskToolboxFactory
         task,
         taskActionClientFactory,
         emitter,
-        s3Client,
         segmentPusher,
         dataSegmentKiller,
         segmentAnnouncer,
         newSegmentServerView,
         queryRunnerFactoryConglomerate,
         monitorScheduler,
+        segmentLoader,
         objectMapper
     );
   }

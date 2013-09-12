@@ -116,13 +116,14 @@ public class OmniSegmentLoader implements SegmentLoader
   @Override
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException
   {
-    File segmentFiles = loadSegmentFiles(segment);
+    File segmentFiles = getSegmentFiles(segment);
     final QueryableIndex index = factory.factorize(segmentFiles);
 
     return new QueryableIndexSegment(segment.getIdentifier(), index);
   }
 
-  public File loadSegmentFiles(DataSegment segment) throws SegmentLoadingException
+  @Override
+  public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
     StorageLocation loc = findStorageLocationIfLoaded(segment);
 
@@ -199,7 +200,7 @@ public class OmniSegmentLoader implements SegmentLoader
   }
 
 
-  private static class StorageLocation
+  static class StorageLocation
   {
     private final File path;
     private final long maxSize;
@@ -218,41 +219,41 @@ public class OmniSegmentLoader implements SegmentLoader
       this.segments = Sets.newHashSet();
     }
 
-    private File getPath()
+    File getPath()
     {
       return path;
     }
 
-    private Long getMaxSize()
+    Long getMaxSize()
     {
       return maxSize;
     }
 
-    private synchronized void addSegment(DataSegment segment)
+    synchronized void addSegment(DataSegment segment)
     {
       if (segments.add(segment)) {
         currSize += segment.getSize();
       }
     }
 
-    private synchronized void removeSegment(DataSegment segment)
+    synchronized void removeSegment(DataSegment segment)
     {
       if (segments.remove(segment)) {
         currSize -= segment.getSize();
       }
     }
 
-    private boolean canHandle(long size)
+    boolean canHandle(long size)
     {
-      return available() > size;
+      return available() >= size;
     }
 
-    private synchronized long available()
+    synchronized long available()
     {
       return maxSize - currSize;
     }
 
-    private StorageLocation mostEmpty(StorageLocation other)
+    StorageLocation mostEmpty(StorageLocation other)
     {
       return available() > other.available() ? this : other;
     }

@@ -31,14 +31,10 @@ import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.MMappedQueryableIndexFactory;
-import io.druid.segment.loading.S3DataSegmentPuller;
-import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
-import io.druid.segment.loading.SingleSegmentLoader;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 import java.io.File;
 import java.util.List;
@@ -53,13 +49,13 @@ public class TaskToolbox
   private final Task task;
   private final TaskActionClientFactory taskActionClientFactory;
   private final ServiceEmitter emitter;
-  private final RestS3Service s3Client;
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final MonitorScheduler monitorScheduler;
+  private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
 
   public TaskToolbox(
@@ -67,13 +63,13 @@ public class TaskToolbox
       Task task,
       TaskActionClientFactory taskActionClientFactory,
       ServiceEmitter emitter,
-      RestS3Service s3Client,
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       MonitorScheduler monitorScheduler,
+      SegmentLoader segmentLoader,
       ObjectMapper objectMapper
   )
   {
@@ -81,13 +77,13 @@ public class TaskToolbox
     this.task = task;
     this.taskActionClientFactory = taskActionClientFactory;
     this.emitter = emitter;
-    this.s3Client = s3Client;
     this.segmentPusher = segmentPusher;
     this.dataSegmentKiller = dataSegmentKiller;
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
     this.monitorScheduler = monitorScheduler;
+    this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
   }
 
@@ -144,22 +140,9 @@ public class TaskToolbox
   public Map<DataSegment, File> getSegments(List<DataSegment> segments)
       throws SegmentLoadingException
   {
-    final SingleSegmentLoader loader = new SingleSegmentLoader(
-        new S3DataSegmentPuller(s3Client),
-        new MMappedQueryableIndexFactory(),
-        new SegmentLoaderConfig()
-        {
-          @Override
-          public String getLocations()
-          {
-            return new File(getTaskWorkDir(), "fetched_segments").toString();
-          }
-        }
-    );
-
     Map<DataSegment, File> retVal = Maps.newLinkedHashMap();
     for (DataSegment segment : segments) {
-      retVal.put(segment, loader.getSegmentFiles(segment));
+      retVal.put(segment, segmentLoader.getSegmentFiles(segment));
     }
 
     return retVal;
