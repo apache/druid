@@ -24,7 +24,6 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import io.druid.client.ServerInventoryViewConfig;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseRuleManagerConfig;
@@ -49,7 +48,6 @@ public class CoordinatorModule implements Module
   public void configure(Binder binder)
   {
     ConfigProvider.bind(binder, DruidMasterConfig.class);
-    ConfigProvider.bind(binder, ServerInventoryViewConfig.class);
 
     JsonConfigProvider.bind(binder, "druid.manager.segment", DatabaseSegmentManagerConfig.class);
     JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);

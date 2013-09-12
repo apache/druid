@@ -160,8 +160,8 @@ public class DruidMaster
 
     this.exec = scheduledExecutorFactory.create(1, "Master-Exec--%d");
 
-    this.leaderLatch = new AtomicReference<LeaderLatch>(null);
-    this.segmentSettingsAtomicReference= new AtomicReference<MasterSegmentSettings>(null);
+    this.leaderLatch = new AtomicReference<>(null);
+    this.segmentSettingsAtomicReference= new AtomicReference<>(null);
     this.loadManagementPeons = loadQueuePeonMap;
   }
 
@@ -731,28 +731,15 @@ public class DruidMaster
                   SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
 
                   // Stop peons for servers that aren't there anymore.
-                  for (String name : Sets.difference(
-                      loadManagementPeons.keySet(),
-                      Sets.newHashSet(
-                          Iterables.transform(
-                              servers,
-                              new Function<DruidServer, String>()
-                              {
-                                @Override
-                                public String apply(@Nullable DruidServer input)
-                                {
-                                  return input.getName();
-                                }
-                              }
-                          )
-                      )
-                  )) {
+                  final Set<String> disdappearedServers = Sets.newHashSet(loadManagementPeons.keySet());
+                  for (DruidServer server : servers) {
+                    disdappearedServers.remove(server.getName());
+                  }
+                  for (String name : disdappearedServers) {
                     log.info("Removing listener for server[%s] which is no longer there.", name);
                     LoadQueuePeon peon = loadManagementPeons.remove(name);
                     peon.stop();
                   }
-
-                  // TODO: decrementRemovedSegmentsLifetime();
 
                   return params.buildFromExisting()
                                .withDruidCluster(cluster)

@@ -63,7 +63,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
   )
   {
     this.log = log;
-    this.inventoryManager = new CuratorInventoryManager<DruidServer, InventoryType>(
+    this.inventoryManager = new CuratorInventoryManager<>(
         curator,
         new InventoryManagerConfig()
         {
