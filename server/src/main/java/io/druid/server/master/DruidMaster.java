@@ -760,16 +760,12 @@ public class DruidMaster
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .withBalancerReferenceTimestamp(DateTime.now())
-                               .withMasterSegmentSettings(
-                                   segmentSettingsAtomicReference.get()
-                               )
+                               .withMasterSegmentSettings(segmentSettingsAtomicReference.get())
                                .build();
                 }
               },
               new DruidMasterRuleRunner(
-                  DruidMaster.this,
-                  config.getReplicantLifetime(),
-                  config.getReplicantThrottleLimit()
+                  DruidMaster.this, config.getReplicantLifetime(), config.getReplicantThrottleLimit()
               ),
               new DruidMasterCleanup(DruidMaster.this),
               new DruidMasterBalancer(DruidMaster.this),
