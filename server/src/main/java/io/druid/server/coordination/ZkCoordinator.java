@@ -109,17 +109,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
         curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
 
-/* TODO
-        if (config.isLoadFromSegmentCacheEnabled()) {
-          try {
-            loadCache();
-          }
-          catch (Exception e) {
-            log.makeAlert(e, "Exception loading from cache")
-               .emit();
-          }
-        }
-*/
         loadCache();
 
         loadQueueCache.getListenable().addListener(
