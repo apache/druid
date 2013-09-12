@@ -17,64 +17,71 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.coordinator;
+package io.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import io.druid.granularity.QueryGranularity;
-import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.task.RealtimeIndexTask;
-import io.druid.indexing.common.task.TaskResource;
+import com.google.common.collect.Lists;
+import io.druid.indexing.common.task.MergeTask;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.realtime.Schema;
-import io.druid.timeline.partition.NoneShardSpec;
+import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
+import java.util.List;
 
 /**
  */
-@JsonTypeName("test_realtime")
-public class TestRealtimeTask extends RealtimeIndexTask
+@JsonTypeName("test")
+public class TestMergeTask extends MergeTask
 {
-  private final TaskStatus status;
+  public static TestMergeTask createDummyTask(String taskId)
+  {
+    return new TestMergeTask(
+        taskId,
+        "dummyDs",
+        Lists.<DataSegment>newArrayList(
+            new DataSegment(
+                "dummyDs",
+                new Interval(new DateTime(), new DateTime()),
+                new DateTime().toString(),
+                null,
+                null,
+                null,
+                null,
+                0,
+                0
+            )
+        ),
+        Lists.<AggregatorFactory>newArrayList()
+    );
+  }
+
+  private final String id;
 
   @JsonCreator
-  public TestRealtimeTask(
+  public TestMergeTask(
       @JsonProperty("id") String id,
-      @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("taskStatus") TaskStatus status
+      @JsonProperty("segments") List<DataSegment> segments,
+      @JsonProperty("aggregations") List<AggregatorFactory> aggregators
   )
   {
-    super(
-        id,
-        taskResource,
-        new Schema(dataSource, null, new AggregatorFactory[]{}, QueryGranularity.NONE, new NoneShardSpec()),
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-    this.status = status;
+    super(id, dataSource, segments, aggregators);
+    this.id = id;
   }
 
   @Override
   @JsonProperty
   public String getType()
   {
-    return "test_realtime";
-  }
-
-  @JsonProperty
-  public TaskStatus getStatus()
-  {
-    return status;
+    return "test";
   }
 
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    return status;
+    return TaskStatus.running(id);
   }
 }

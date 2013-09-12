@@ -183,7 +183,7 @@ public class WorkerCuratorCoordinator
     }
   }
 
-  public void announceTask(TaskAnnouncement announcement)
+  public void announceTastAnnouncement(TaskAnnouncement announcement)
   {
     synchronized (lock) {
       if (!started) {
@@ -219,7 +219,7 @@ public class WorkerCuratorCoordinator
 
       try {
         if (curatorFramework.checkExists().forPath(getStatusPathForId(announcement.getTaskStatus().getId())) == null) {
-          announceTask(announcement);
+          announceTastAnnouncement(announcement);
           return;
         }
         byte[] rawBytes = jsonMapper.writeValueAsBytes(announcement);

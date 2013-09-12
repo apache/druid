@@ -26,7 +26,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.common.guava.DSuppliers;
-import io.druid.indexing.TestTask;
+import io.druid.indexing.common.TestMergeTask;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.coordinator.RemoteTaskRunnerWorkItem;
@@ -69,7 +69,7 @@ public class SimpleResourceManagementStrategyTest
         )
     );
 
-    testTask = new TestTask(
+    testTask = new TestMergeTask(
         "task1",
         "dummyDs",
         Lists.<DataSegment>newArrayList(
@@ -85,8 +85,7 @@ public class SimpleResourceManagementStrategyTest
                 0
             )
         ),
-        Lists.<AggregatorFactory>newArrayList(),
-        TaskStatus.success("task1")
+        Lists.<AggregatorFactory>newArrayList()
     );
     simpleResourceManagementStrategy = new SimpleResourceManagementStrategy(
         autoScalingStrategy,
