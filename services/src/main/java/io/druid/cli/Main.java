@@ -26,6 +26,7 @@ import com.google.inject.Module;
 import io.airlift.command.Cli;
 import io.airlift.command.Help;
 import io.airlift.command.ParseException;
+import io.druid.cli.convert.ConvertProperties;
 import io.druid.guice.DruidGuiceExtensions;
 import io.druid.guice.DruidSecondaryModule;
 import io.druid.guice.JsonConfigProvider;
@@ -62,6 +63,11 @@ public class Main
            .withDescription("Run an example")
            .withDefaultCommand(Help.class)
            .withCommands(CliRealtimeExample.class);
+
+    builder.withGroup("tools")
+           .withDescription("Various tools for working with Druid")
+           .withDefaultCommand(Help.class)
+           .withCommands(ConvertProperties.class);
 
     builder.withGroup("internal")
            .withDescription("Processes that Druid runs \"internally\", you should rarely use these directly")

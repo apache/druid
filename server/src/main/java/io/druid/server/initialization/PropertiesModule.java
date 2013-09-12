@@ -19,6 +19,7 @@
 
 package io.druid.server.initialization;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 import com.google.inject.Binder;
@@ -31,6 +32,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Properties;
 
 /**
@@ -67,7 +69,7 @@ public class PropertiesModule implements Module
       if (stream != null) {
         log.info("Loading properties from %s", propertiesFile);
         try {
-          fileProps.load(stream);
+          fileProps.load(new InputStreamReader(stream, Charsets.UTF_8));
         }
         catch (IOException e) {
           throw Throwables.propagate(e);
