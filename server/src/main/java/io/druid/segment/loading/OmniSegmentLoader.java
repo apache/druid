@@ -19,12 +19,8 @@
 
 package io.druid.segment.loading;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
-import com.google.common.primitives.Longs;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
@@ -39,7 +35,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  */
@@ -64,36 +59,10 @@ public class OmniSegmentLoader implements SegmentLoader
     this.factory = factory;
     this.config = config;
 
-    final ImmutableList.Builder<StorageLocation> locBuilder = ImmutableList.builder();
-
-    // TODO
-    // This is a really, really stupid way of getting this information.  Splitting on commas and bars is error-prone
-    // We should instead switch it up to be a JSON Array of JSON Object or something and cool stuff like that
-    // But, that'll have to wait for some other day.
-    for (String dirSpec : config.getLocations().split(",")) {
-      String[] dirSplit = dirSpec.split("\\|");
-      if (dirSplit.length == 1) {
-        locBuilder.add(new StorageLocation(new File(dirSplit[0]), Integer.MAX_VALUE));
-      }
-      else if (dirSplit.length == 2) {
-        final Long maxSize = Longs.tryParse(dirSplit[1]);
-        if (maxSize == null) {
-          throw new IAE("Size of a local segment storage location must be an integral number, got[%s]", dirSplit[1]);
-        }
-        locBuilder.add(new StorageLocation(new File(dirSplit[0]), maxSize));
-      }
-      else {
-        throw new ISE(
-            "Unknown segment storage location[%s]=>[%s], config[%s].",
-            dirSplit.length, dirSpec, config.getLocations()
-        );
-      }
+    this.locations = Lists.newArrayList();
+    for (StorageLocationConfig locationConfig : config.getLocations()) {
+      locations.add(new StorageLocation(locationConfig.getPath(), locationConfig.getMaxSize()));
     }
-    locations = locBuilder.build();
-
-    Preconditions.checkArgument(locations.size() > 0, "Must have at least one segment cache directory.");
-    log.info("Using storage locations[%s]", locations);
-
   }
 
   @Override
@@ -197,74 +166,5 @@ public class OmniSegmentLoader implements SegmentLoader
     }
 
     return loader;
-  }
-
-
-  static class StorageLocation
-  {
-    private final File path;
-    private final long maxSize;
-    private final Set<DataSegment> segments;
-
-    private volatile long currSize = 0;
-
-    StorageLocation(
-        File path,
-        long maxSize
-    )
-    {
-      this.path = path;
-      this.maxSize = maxSize;
-
-      this.segments = Sets.newHashSet();
-    }
-
-    File getPath()
-    {
-      return path;
-    }
-
-    Long getMaxSize()
-    {
-      return maxSize;
-    }
-
-    synchronized void addSegment(DataSegment segment)
-    {
-      if (segments.add(segment)) {
-        currSize += segment.getSize();
-      }
-    }
-
-    synchronized void removeSegment(DataSegment segment)
-    {
-      if (segments.remove(segment)) {
-        currSize -= segment.getSize();
-      }
-    }
-
-    boolean canHandle(long size)
-    {
-      return available() >= size;
-    }
-
-    synchronized long available()
-    {
-      return maxSize - currSize;
-    }
-
-    StorageLocation mostEmpty(StorageLocation other)
-    {
-      return available() > other.available() ? this : other;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "StorageLocation{" +
-             "path=" + path +
-             ", maxSize=" + maxSize +
-             '}';
-    }
   }
 }

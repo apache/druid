@@ -20,51 +20,39 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.hibernate.validator.constraints.NotEmpty;
 
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 import java.io.File;
-import java.util.List;
 
 /**
  */
-public class SegmentLoaderConfig
+public class StorageLocationConfig
 {
   @JsonProperty
-  @NotEmpty
-  private List<StorageLocationConfig> locations = null;
-
-  @JsonProperty("deleteOnRemove")
-  private boolean deleteOnRemove = true;
+  @NotNull
+  private File path = null;
 
   @JsonProperty
-  private File infoDir = null;
+  @Min(1)
+  private long maxSize = Long.MAX_VALUE;
 
-  public List<StorageLocationConfig> getLocations()
+  public File getPath()
   {
-    return locations;
+    return path;
   }
 
-  public boolean isDeleteOnRemove()
+  public long getMaxSize()
   {
-    return deleteOnRemove;
-  }
-
-  public File getInfoDir()
-  {
-    if (infoDir == null) {
-      infoDir = new File(locations.get(0).getPath(), "info_dir");
-    }
-
-    return infoDir;
+    return maxSize;
   }
 
   @Override
   public String toString()
   {
-    return "SegmentLoaderConfig{" +
-           "locations=" + getLocations() +
-           ", deleteOnRemove=" + isDeleteOnRemove() +
-           ", infoDir=" + getInfoDir() +
+    return "StorageLocationConfig{" +
+           "path=" + path +
+           ", maxSize=" + maxSize +
            '}';
   }
 }
