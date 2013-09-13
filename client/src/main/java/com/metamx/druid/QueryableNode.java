@@ -525,7 +525,19 @@ public abstract class QueryableNode<T extends QueryableNode> extends Registering
       List<Monitor> theMonitors = Lists.newArrayList();
       theMonitors.add(new JvmMonitor());
       if (Boolean.parseBoolean(props.getProperty("druid.monitoring.monitorSystem", "false"))) {
-        theMonitors.add(new SysMonitor());
+        SysMonitor sysMonitor = new SysMonitor();
+        if (Boolean.parseBoolean(props.getProperty("druid.monitoring.monitorDirs", "false"))) {
+          String csv = getProps().getProperty("druid.monitoring.dirs");
+          if (csv != null) {
+            sysMonitor.addDirectoriesToMonitor(csv.split(","));
+          } else {
+            log.warn(
+                "druid.monitoring.monitorDirs is set to true but no directory path is set to monitor."
+                + " Please set it using druid.monitoring.dirs."
+            );
+          }
+        }
+        theMonitors.add(sysMonitor);
       }
 
       setMonitors(theMonitors);

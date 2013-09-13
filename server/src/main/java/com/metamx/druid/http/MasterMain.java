@@ -193,7 +193,19 @@ public class MasterMain
     final List<Monitor> monitors = Lists.newArrayList();
     monitors.add(new JvmMonitor());
     if (Boolean.parseBoolean(props.getProperty("druid.monitoring.monitorSystem", "false"))) {
-      monitors.add(new SysMonitor());
+      SysMonitor sysMonitor = new SysMonitor();
+      if (Boolean.parseBoolean(props.getProperty("druid.monitoring.monitorDirs", "false"))) {
+        String csv = props.getProperty("druid.monitoring.dirs");
+        if (csv != null) {
+          sysMonitor.addDirectoriesToMonitor(csv.split(","));
+        } else {
+          log.warn(
+              "druid.monitoring.monitorDirs is set to true but no directory path is set to monitor."
+              + " Please set it using druid.monitoring.dirs."
+          );
+        }
+      }
+      monitors.add(sysMonitor);
     }
 
     final MonitorScheduler healthMonitor = new MonitorScheduler(
