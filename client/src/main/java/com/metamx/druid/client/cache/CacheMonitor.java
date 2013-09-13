@@ -28,14 +28,17 @@ import com.metamx.metrics.AbstractMonitor;
 public class CacheMonitor extends AbstractMonitor
 {
   private final Cache cache;
+  private final String name;
 
   private volatile CacheStats prevCacheStats = null;
 
   public CacheMonitor(
-      Cache cache
+      Cache cache,
+      String name
   )
   {
     this.cache = cache;
+    this.name = name;
   }
 
   @Override
@@ -45,8 +48,8 @@ public class CacheMonitor extends AbstractMonitor
     final CacheStats deltaCacheStats = currCacheStats.delta(prevCacheStats);
 
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    emitStats(emitter, "cache/delta", deltaCacheStats, builder);
-    emitStats(emitter, "cache/total", currCacheStats, builder);
+    emitStats(emitter, String.format("cache/%s/delta", name), deltaCacheStats, builder);
+    emitStats(emitter, String.format("cache/%s/total", name), currCacheStats, builder);
 
     prevCacheStats = currCacheStats;
     return true;

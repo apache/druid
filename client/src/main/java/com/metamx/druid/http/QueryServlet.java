@@ -29,12 +29,15 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.Query;
+import com.metamx.druid.client.cache.Cache;
+import com.metamx.druid.client.cache.Cache.NamedKey;
 import com.metamx.druid.query.segment.QuerySegmentWalker;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.mortbay.jetty.Request;
 
 import javax.servlet.ServletException;
@@ -44,6 +47,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  */
@@ -57,6 +61,7 @@ public class QueryServlet extends HttpServlet
   private final QuerySegmentWalker texasRanger;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
+  private final Cache queryResultsCache;
 
   public QueryServlet(
       ObjectMapper jsonMapper,
@@ -66,11 +71,89 @@ public class QueryServlet extends HttpServlet
       RequestLogger requestLogger
   )
   {
+    this(jsonMapper, smileMapper, texasRanger, emitter, requestLogger, null);
+  }
+
+  public QueryServlet(
+      ObjectMapper jsonMapper,
+      ObjectMapper smileMapper,
+      QuerySegmentWalker texasRanger,
+      ServiceEmitter emitter,
+      RequestLogger requestLogger,
+      Cache queryResultsCache
+  )
+  {
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.texasRanger = texasRanger;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
+    this.queryResultsCache = queryResultsCache;
+  }
+
+  /**
+   * Creates NamedKey for given query with type as namespace and query string as key
+   *
+   * @param query
+   *
+   * @return namedKey for the query
+   */
+
+  private NamedKey computeQueryKey(Query query)
+  {
+    return new NamedKey(query.getType(), query.toString().getBytes());
+  }
+
+  /**
+   * Reads the cached results of query from the cache.
+   * By passes if useQueryResultsCache is set to false or Interval in the query is beyond current time.
+   *
+   * @param query
+   *
+   * @return result sequence
+   */
+  private byte[] getFromQueryResultsCache(Query query)
+  {
+    boolean useQueryResultsCache = Boolean.parseBoolean(query.getContextValue("useQueryResultsCache").trim());
+    if (!useQueryResultsCache) {
+      return null;
+    }
+
+    // Do not cache queries if they are after current time as the results can be updated
+    List<Interval> intervals = query.getIntervals();
+    for (Interval interval : intervals) {
+      if (interval.containsNow()) {
+        return null;
+      }
+    }
+
+    byte[] result = null;
+    NamedKey key = computeQueryKey(query);
+
+    if (queryResultsCache != null) {
+      result = queryResultsCache.get(key);
+    }
+
+    return result;
+  }
+
+  /**
+   * Stores the results in they query results cache. Ignores if useQueryResultsCache is set to false.
+   *
+   * @param query
+   * @param result
+   */
+  private void storeInQueryResultsCache(Query query, byte[] result)
+  {
+    boolean useQueryResultsCache = Boolean.parseBoolean(query.getContextValue("useQueryResultsCache").trim());
+    if (!useQueryResultsCache) {
+      return;
+    }
+
+    NamedKey key = computeQueryKey(query);
+    if (queryResultsCache != null) {
+      queryResultsCache.put(key, result);
+    }
   }
 
   @Override
@@ -95,17 +178,26 @@ public class QueryServlet extends HttpServlet
           new RequestLogLine(new DateTime(), req.getRemoteAddr(), query)
       );
 
-      Sequence<?> results = query.run(texasRanger);
-
-      if (results == null) {
-        results = Sequences.empty();
-      }
-
       resp.setStatus(200);
       resp.setContentType("application/x-javascript");
 
       out = resp.getOutputStream();
-      jsonWriter.writeValue(out, results);
+
+      /*
+       * Query Results cache stores the result sequence in byte[]
+       */
+      byte[] result = getFromQueryResultsCache(query);
+
+      if (result == null) {
+        Sequence<?> resultSequence = query.run(texasRanger);
+        if (resultSequence == null) {
+          resultSequence = Sequences.empty();
+        }
+        result = objectMapper.writeValueAsBytes(resultSequence);
+        storeInQueryResultsCache(query, result);
+      }
+
+      out.write(result);
 
       long requestTime = System.currentTimeMillis() - ((Request) req).getTimeStamp();
 
