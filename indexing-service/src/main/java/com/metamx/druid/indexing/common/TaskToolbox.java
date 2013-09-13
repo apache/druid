@@ -43,6 +43,7 @@ import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -59,6 +60,7 @@ public class TaskToolbox
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
+  private final ExecutorService queryExecutorService;
   private final MonitorScheduler monitorScheduler;
   private final ObjectMapper objectMapper;
 
@@ -73,6 +75,7 @@ public class TaskToolbox
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
+      ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       ObjectMapper objectMapper
   )
@@ -87,6 +90,7 @@ public class TaskToolbox
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
+    this.queryExecutorService = queryExecutorService;
     this.monitorScheduler = monitorScheduler;
     this.objectMapper = objectMapper;
   }
@@ -129,6 +133,11 @@ public class TaskToolbox
   public QueryRunnerFactoryConglomerate getQueryRunnerFactoryConglomerate()
   {
     return queryRunnerFactoryConglomerate;
+  }
+
+  public ExecutorService getQueryExecutorService()
+  {
+    return queryExecutorService;
   }
 
   public MonitorScheduler getMonitorScheduler()

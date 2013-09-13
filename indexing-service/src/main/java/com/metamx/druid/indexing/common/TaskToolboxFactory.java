@@ -32,6 +32,8 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
+import java.util.concurrent.ExecutorService;
+
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
  */
@@ -46,6 +48,7 @@ public class TaskToolboxFactory
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
+  private final ExecutorService queryExecutorService;
   private final MonitorScheduler monitorScheduler;
   private final ObjectMapper objectMapper;
 
@@ -59,6 +62,7 @@ public class TaskToolboxFactory
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
+      ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       ObjectMapper objectMapper
   )
@@ -72,6 +76,7 @@ public class TaskToolboxFactory
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
+    this.queryExecutorService = queryExecutorService;
     this.monitorScheduler = monitorScheduler;
     this.objectMapper = objectMapper;
   }
@@ -89,6 +94,7 @@ public class TaskToolboxFactory
         segmentAnnouncer,
         newSegmentServerView,
         queryRunnerFactoryConglomerate,
+        queryExecutorService,
         monitorScheduler,
         objectMapper
     );
