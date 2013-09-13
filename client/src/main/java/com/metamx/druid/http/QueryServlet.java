@@ -114,8 +114,8 @@ public class QueryServlet extends HttpServlet
    */
   private byte[] getFromQueryResultsCache(Query query)
   {
-    boolean useQueryResultsCache = Boolean.parseBoolean(query.getContextValue("useQueryResultsCache").trim());
-    if (!useQueryResultsCache) {
+    String context = query.getContextValue("useQueryResultsCache");
+    if (context != null && !Boolean.parseBoolean(context.trim())){
       return null;
     }
 
@@ -145,8 +145,8 @@ public class QueryServlet extends HttpServlet
    */
   private void storeInQueryResultsCache(Query query, byte[] result)
   {
-    boolean useQueryResultsCache = Boolean.parseBoolean(query.getContextValue("useQueryResultsCache").trim());
-    if (!useQueryResultsCache) {
+    String context = query.getContextValue("useQueryResultsCache");
+    if (context != null && !Boolean.parseBoolean(context.trim())){
       return;
     }
 
