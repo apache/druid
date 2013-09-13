@@ -76,6 +76,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
   public static final String CACHE_TYPE_LOCAL = "local";
   public static final String CACHE_TYPE_MEMCACHED = "memcached";
   public static final String CACHE_PROPERTY_PREFIX = "druid.bard.cache";
+  public static final String QUERY_RESULTS_CACHE_PROPERTY_PREFIX = "druid.bard.query.results.cache";
 
   private final List<Module> extraModules = Lists.newArrayList();
   private final List<String> pathsForGuiceFilter = Lists.newArrayList();
@@ -83,6 +84,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
   private QueryToolChestWarehouse warehouse = null;
   private HttpClient brokerHttpClient = null;
   private Cache cache = null;
+  private Cache queryResultsCache = null;
 
   private boolean useDiscovery = true;
 
@@ -147,7 +149,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
   /**
    * This method allows you to specify more Guice modules to use primarily for injected extra Jersey resources.
    * I'd like to remove the Guice dependency for this, but I don't know how to set up Jersey without Guice...
-   *
+   * <p/>
    * This is deprecated because at some point in the future, we will eliminate the Guice dependency and anything
    * that uses this will break.  Use at your own risk.
    *
@@ -164,7 +166,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
 
   /**
    * This method is used to specify extra paths that the GuiceFilter should pay attention to.
-   *
+   * <p/>
    * This is deprecated for the same reason that addModule is deprecated.
    *
    * @param path the path that the GuiceFilter should pay attention to.
@@ -184,12 +186,14 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     initializeWarehouse();
     initializeBrokerHttpClient();
     initializeCacheBroker();
+    initializeQueryResultsCache();
     initializeDiscovery();
 
     final Lifecycle lifecycle = getLifecycle();
 
     final List<Monitor> monitors = getMonitors();
-    monitors.add(new CacheMonitor(cache));
+    monitors.add(new CacheMonitor(cache, "segmentCache"));
+    monitors.add(new CacheMonitor(queryResultsCache, "queryResultsCache"));
     startMonitoring(monitors);
 
     final ExecutorService viewExec = Executors.newFixedThreadPool(
@@ -212,7 +216,16 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     final Context root = new Context(getServer(), "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(
-        new ServletHolder(new QueryServlet(getJsonMapper(), getSmileMapper(), texasRanger, getEmitter(), getRequestLogger())),
+        new ServletHolder(
+            new QueryServlet(
+                getJsonMapper(),
+                getSmileMapper(),
+                texasRanger,
+                getEmitter(),
+                getRequestLogger(),
+                queryResultsCache
+            )
+        ),
         "/druid/v2/*"
     );
     root.addFilter(GzipFilter.class, "/*", 0);
@@ -265,6 +278,38 @@ public class BrokerNode extends QueryableNode<BrokerNode>
                 getConfigFactory().buildWithReplacements(
                     MemcachedCacheConfig.class,
                     ImmutableMap.of("prefix", CACHE_PROPERTY_PREFIX)
+                )
+            )
+        );
+      } else {
+        throw new ISE("Unknown cache type [%s]", cacheType);
+      }
+    }
+  }
+
+  private void initializeQueryResultsCache()
+  {
+    if (queryResultsCache == null) {
+      String cacheType = getConfigFactory()
+          .build(CacheConfig.class)
+          .getType();
+
+      if (cacheType.equals(CACHE_TYPE_LOCAL)) {
+        log.info("Initializing query cache with local heap.");
+        queryResultsCache = (
+            MapCache.create(
+                getConfigFactory().buildWithReplacements(
+                    MapCacheConfig.class,
+                    ImmutableMap.of("prefix", QUERY_RESULTS_CACHE_PROPERTY_PREFIX)
+                )
+            )
+        );
+      } else if (cacheType.equals(CACHE_TYPE_MEMCACHED)) {
+        queryResultsCache = (
+            MemcachedCache.create(
+                getConfigFactory().buildWithReplacements(
+                    MemcachedCacheConfig.class,
+                    ImmutableMap.of("prefix", QUERY_RESULTS_CACHE_PROPERTY_PREFIX)
                 )
             )
         );
@@ -329,9 +374,12 @@ public class BrokerNode extends QueryableNode<BrokerNode>
         jsonMapper = new DefaultObjectMapper();
         smileMapper = new DefaultObjectMapper(new SmileFactory());
         smileMapper.getJsonFactory().setCodec(smileMapper);
-      }
-      else if (jsonMapper == null || smileMapper == null) {
-        throw new ISE("Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.", jsonMapper, smileMapper);
+      } else if (jsonMapper == null || smileMapper == null) {
+        throw new ISE(
+            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
+            jsonMapper,
+            smileMapper
+        );
       }
 
       if (lifecycle == null) {
