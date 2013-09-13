@@ -297,18 +297,16 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     if (runningTask != null) {
       ZkWorker zkWorker = findWorkerRunningTask(task.getId());
       if (zkWorker == null) {
-        log.makeAlert("Told to run task that is in the running queue but no worker is actually running it?!")
-           .addData("taskId", task.getId())
-           .emit();
-        runningTasks.remove(task.getId());
+        log.warn("Told to run task[%s], but no worker has started running it yet.", task.getId());
       } else {
         log.info("Task[%s] already running on %s.", task.getId(), zkWorker.getWorker().getHost());
         TaskAnnouncement announcement = zkWorker.getRunningTasks().get(task.getId());
         if (announcement.getTaskStatus().isComplete()) {
           taskComplete(runningTask, zkWorker, task.getId(), announcement.getTaskStatus());
         }
-        return runningTask.getResult();
       }
+
+      return runningTask.getResult();
     }
 
     RemoteTaskRunnerWorkItem pendingTask = pendingTasks.get(task.getId());
@@ -552,12 +550,15 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     timeoutStopwatch.start();
     synchronized (statusLock) {
       while (!isWorkerRunningTask(theWorker, task)) {
-        statusLock.wait(config.getTaskAssignmentTimeout().getMillis());
-        if (timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS) >= config.getTaskAssignmentTimeout().getMillis()) {
+        final long waitMs = config.getTaskAssignmentTimeout().toStandardDuration().getMillis();
+        statusLock.wait(waitMs);
+        long elapsed = timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS);
+        if (elapsed >= waitMs) {
           log.error(
-              "Something went wrong! %s never ran task %s after %s!",
+              "Something went wrong! [%s] never ran task [%s]! Timeout: (%s >= %s)!",
               theWorker.getHost(),
               task.getId(),
+              elapsed,
               config.getTaskAssignmentTimeout()
           );
 
