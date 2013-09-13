@@ -274,6 +274,7 @@ public class RealtimeIndexTask extends AbstractTask
     // NOTE: "same" segment.
     realtimePlumberSchool.setDataSegmentPusher(toolbox.getSegmentPusher());
     realtimePlumberSchool.setConglomerate(toolbox.getQueryRunnerFactoryConglomerate());
+    realtimePlumberSchool.setQueryExecutorService(toolbox.getQueryExecutorService());
     realtimePlumberSchool.setVersioningPolicy(versioningPolicy);
     realtimePlumberSchool.setSegmentAnnouncer(lockingSegmentAnnouncer);
     realtimePlumberSchool.setSegmentPublisher(segmentPublisher);
