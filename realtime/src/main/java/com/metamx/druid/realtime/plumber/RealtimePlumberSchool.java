@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -92,7 +91,6 @@ import java.util.concurrent.ScheduledExecutorService;
 public class RealtimePlumberSchool implements PlumberSchool
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumberSchool.class);
-  private static final ListeningExecutorService EXEC = MoreExecutors.sameThreadExecutor();
 
   private final Period windowPeriod;
   private final File basePersistDirectory;
@@ -108,6 +106,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private volatile DataSegmentAnnouncer segmentAnnouncer = null;
   private volatile SegmentPublisher segmentPublisher = null;
   private volatile ServerView serverView = null;
+  private volatile ExecutorService queryExecutorService = null;
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -173,6 +172,12 @@ public class RealtimePlumberSchool implements PlumberSchool
   public void setServiceEmitter(ServiceEmitter emitter)
   {
     this.emitter = emitter;
+  }
+
+  @JacksonInject("queryExecutorService")
+  public void setQueryExecutorService(ExecutorService queryExecutorService)
+  {
+    this.queryExecutorService = queryExecutorService;
   }
 
   @Override
@@ -262,7 +267,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
         return toolchest.mergeResults(
             factory.mergeRunners(
-                EXEC,
+                queryExecutorService,
                 FunctionalIterable
                     .create(querySinks)
                     .transform(
@@ -277,7 +282,7 @@ public class RealtimePlumberSchool implements PlumberSchool
                                     emitter,
                                     builderFn,
                                     factory.mergeRunners(
-                                        EXEC,
+                                        MoreExecutors.sameThreadExecutor(),
                                         Iterables.transform(
                                             theSink,
                                             new Function<FireHydrant, QueryRunner<T>>()
