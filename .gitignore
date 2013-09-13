@@ -12,3 +12,4 @@ target
 .settings/
 *.log
 *.DS_Store
+_site
