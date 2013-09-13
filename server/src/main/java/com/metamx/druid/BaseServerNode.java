@@ -23,19 +23,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.metamx.common.concurrent.ExecutorServiceConfig;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.initialization.ServerInit;
 import com.metamx.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import com.metamx.druid.query.MetricsEmittingExecutorService;
+import com.metamx.druid.query.PrioritizedExecutorService;
 import com.metamx.druid.query.QueryRunnerFactory;
 import com.metamx.druid.query.QueryRunnerFactoryConglomerate;
 
+import com.metamx.emitter.service.ServiceMetricEvent;
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
 
 /**
  */
@@ -45,6 +50,7 @@ public abstract class BaseServerNode<T extends QueryableNode> extends QueryableN
   private DruidProcessingConfig processingConfig = null;
   private QueryRunnerFactoryConglomerate conglomerate = null;
   private StupidPool<ByteBuffer> computeScratchPool = null;
+  private ExecutorService queryExecutorService = null;
 
   public BaseServerNode(
       String nodeType,
@@ -77,6 +83,12 @@ public abstract class BaseServerNode<T extends QueryableNode> extends QueryableN
     return processingConfig;
   }
 
+  public ExecutorService getQueryExecutorService()
+  {
+    initializeQueryExecutorService();
+    return queryExecutorService;
+  }
+
   @SuppressWarnings("unchecked")
   public T setConglomerate(QueryRunnerFactoryConglomerate conglomerate)
   {
@@ -95,6 +107,13 @@ public abstract class BaseServerNode<T extends QueryableNode> extends QueryableN
   public T setProcessingConfig(DruidProcessingConfig processingConfig)
   {
     checkFieldNotSetAndSet("processingConfig", processingConfig);
+    return (T) this;
+  }
+
+  @SuppressWarnings("unchecked")
+  public T setQueryExecutorService(ExecutorService queryExecutorService)
+  {
+    checkFieldNotSetAndSet("queryExecutorService", queryExecutorService);
     return (T) this;
   }
 
@@ -140,6 +159,26 @@ public abstract class BaseServerNode<T extends QueryableNode> extends QueryableN
       setProcessingConfig(
           getConfigFactory().buildWithReplacements(
               DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing")
+          )
+      );
+    }
+  }
+
+  private void initializeQueryExecutorService()
+  {
+    if (queryExecutorService == null) {
+      final PrioritizedExecutorService innerExecutorService = PrioritizedExecutorService.create(
+          getLifecycle(),
+          getConfigFactory().buildWithReplacements(
+              ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
+          )
+      );
+
+      setQueryExecutorService(
+          new MetricsEmittingExecutorService(
+              innerExecutorService,
+              getEmitter(),
+              new ServiceMetricEvent.Builder()
           )
       );
     }
