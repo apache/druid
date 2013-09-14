@@ -23,7 +23,7 @@
     <groupId>com.metamx</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.5.55</version>
+    <version>0.5.56-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
