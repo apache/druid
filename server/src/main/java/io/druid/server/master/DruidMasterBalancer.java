@@ -156,27 +156,33 @@ public class DruidMasterBalancer implements DruidMasterHelper
         (toServer.getSegment(segmentName) == null) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
       log.info("Moving [%s] from [%s] to [%s]", segmentName, fromServerName, toServerName);
+
+      LoadPeonCallback callback = null;
       try {
+        currentlyMovingSegments.get(toServer.getTier()).put(segmentName, segment);
+        callback = new LoadPeonCallback()
+        {
+          @Override
+          protected void execute()
+          {
+            Map<String, BalancerSegmentHolder> movingSegments = currentlyMovingSegments.get(toServer.getTier());
+            if (movingSegments != null) {
+              movingSegments.remove(segmentName);
+            }
+          }
+        };
         master.moveSegment(
             fromServerName,
             toServerName,
             segmentToMove.getIdentifier(),
-            new LoadPeonCallback()
-            {
-              @Override
-              protected void execute()
-              {
-                Map<String, BalancerSegmentHolder> movingSegments = currentlyMovingSegments.get(toServer.getTier());
-                if (movingSegments != null) {
-                  movingSegments.remove(segmentName);
-                }
-              }
-            }
+            callback
         );
-        currentlyMovingSegments.get(toServer.getTier()).put(segmentName, segment);
       }
       catch (Exception e) {
         log.makeAlert(e, String.format("[%s] : Moving exception", segmentName)).emit();
+        if (callback != null) {
+          callback.execute();
+        }
       }
     } else {
       currentlyMovingSegments.get(toServer.getTier()).remove(segmentName);
