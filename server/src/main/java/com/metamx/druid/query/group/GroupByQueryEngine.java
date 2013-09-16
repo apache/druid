@@ -413,7 +413,14 @@ public class GroupByQueryEngine
               }
           );
 
-      return delegate.next();
+      
+      Row nextRow = null;
+      if(delegate.hasNext()) {
+    	  nextRow = delegate.next();
+      }
+      
+      return nextRow;
+      //return delegate.next();
     }
 
     @Override
