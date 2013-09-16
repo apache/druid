@@ -91,7 +91,7 @@ These properties are for connecting with S3 and using it to pull down segments. 
 
 ### JDBC connection
 
-These properties specify the jdbc connection and other configuration around the “segments table” database. The only processes that connect to the DB with these properties are the [Master](Master.html) and [Indexing service](Indexing service.html). This is tested on MySQL.
+These properties specify the jdbc connection and other configuration around the “segments table” database. The only processes that connect to the DB with these properties are the [Master](Master.html) and [Indexing service](Indexing-service.html). This is tested on MySQL.
 
 |Property|Description|Default|
 |--------|-----------|-------|

@@ -3,7 +3,7 @@ layout: default
 ---
 # Druid Personal Demo Cluster (DPDC)
 
-Note, there are currently some issues with the CloudFormation.  We are working through them and will update the documentation here when things work properly.  In the meantime, the simplest way to get your feet wet with a cluster setup is to run through the instructions at [housejester/druid-test-harness](https://github.com/housejester/druid-test-harness), though it is based on an older version.  If you just want to get a feel for the types of data and queries that you can issue, check out [Realtime Examples](Realtime Examples.html)
+Note, there are currently some issues with the CloudFormation.  We are working through them and will update the documentation here when things work properly.  In the meantime, the simplest way to get your feet wet with a cluster setup is to run through the instructions at [housejester/druid-test-harness](https://github.com/housejester/druid-test-harness), though it is based on an older version.  If you just want to get a feel for the types of data and queries that you can issue, check out [Realtime Examples](Realtime-Examples.html)
 
 ## Introduction
 To make it easy for you to get started with Druid, we created an AWS (Amazon Web Services) [CloudFormation](http://aws.amazon.com/cloudformation/) Template that allows you to create a small pre-configured Druid cluster using your own AWS account. The cluster contains a pre-loaded sample workload, the Wikipedia edit stream, and a basic query interface that gets you familiar with Druid capabilities like drill-downs and filters. 

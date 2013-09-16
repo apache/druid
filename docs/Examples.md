@@ -34,7 +34,7 @@ Clone Druid and build it:
 Twitter Example
 ---------------
 
-For a full tutorial based on the twitter example, check out this [Twitter Tutorial](Twitter Tutorial.html).
+For a full tutorial based on the twitter example, check out this [Twitter Tutorial](Twitter-Tutorial.html).
 
 This Example uses a feature of Twitter that allows for sampling of it’s stream. We sample the Twitter stream via our [TwitterSpritzerFirehoseFactory](https://github.com/metamx/druid/blob/master/examples/src/main/java/druid/examples/twitter/TwitterSpritzerFirehoseFactory.java) class and use it to simulate the kinds of data you might ingest into Druid. Then, with the client part, the sample shows what kinds of analytics explorations you can do during and after the data is loaded.
 

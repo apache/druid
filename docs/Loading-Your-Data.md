@@ -165,7 +165,7 @@ curl -X POST "http://localhost:8080/druid/v2/?pretty" \
   }
 } ]
 ```
-Now you're ready for [Querying Your Data](Querying Your Data.html)!
+Now you're ready for [Querying Your Data](Querying-Your-Data.html)!
 
 ## Loading Data with the HadoopDruidIndexer ##
 
@@ -367,4 +367,4 @@ Now its time to run the Hadoop [Batch-ingestion](Batch-ingestion.html) job, Hado
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=realtime.spec -classpath lib/* com.metamx.druid.indexer.HadoopDruidIndexerMain batchConfig.json
 ```
 
-You can now move on to [Querying Your Data](Querying Your Data.html)!
+You can now move on to [Querying Your Data](Querying-Your-Data.html)!

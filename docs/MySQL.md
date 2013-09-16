@@ -44,4 +44,4 @@ The config table is used to store runtime configuration objects. We do not have 
 Task-related Tables
 -------------------
 
-There are also a number of tables created and used by the [Indexing Service](Indexing Service.html) in the course of its work.
+There are also a number of tables created and used by the [Indexing Service](Indexing-Service.html) in the course of its work.

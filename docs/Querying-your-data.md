@@ -3,7 +3,7 @@ layout: default
 ---
 # Setup #
 
-Before we start querying druid, we're going to finish setting up a complete cluster on localhost. In [Loading Your Data](Loading Your Data.html) we setup a [Realtime](Realtime.html), [Compute](Compute.html) and [Master](Master.html) node. If you've already completed that tutorial, you need only follow the directions for 'Booting a Broker Node'.
+Before we start querying druid, we're going to finish setting up a complete cluster on localhost. In [Loading Your Data](Loading-Your-Data.html) we setup a [Realtime](Realtime.html), [Compute](Compute.html) and [Master](Master.html) node. If you've already completed that tutorial, you need only follow the directions for 'Booting a Broker Node'.
 
 ## Booting a Broker Node ##
 
@@ -98,7 +98,7 @@ com.metamx.druid.http.ComputeMain
 
 # Querying Your Data #
 
-Now that we have a complete cluster setup on localhost, we need to load data. To do so, refer to [Loading Your Data](Loading Your Data.html). Having done that, its time to query our data! For a complete specification of queries, see [Querying](Querying.html).
+Now that we have a complete cluster setup on localhost, we need to load data. To do so, refer to [Loading Your Data](Loading-Your-Data.html). Having done that, its time to query our data! For a complete specification of queries, see [Querying](Querying.html).
 
 ## Querying Different Nodes ##
 
@@ -363,4 +363,4 @@ Check out [Filters](Filters.html) for more.
 
 ## Learn More ##
 
-You can learn more about querying at [Querying](Querying.html)! Now check out [Booting a production cluster](Booting a production cluster.html)!
+You can learn more about querying at [Querying](Querying.html)! Now check out [Booting a production cluster](Booting-a-production-cluster.html)!
