@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
+import com.metamx.common.guava.LazySequence;
 import com.metamx.common.logger.Logger;
 import druid.examples.flights.FlightsFirehoseFactory;
 import druid.examples.rand.RandomFirehoseFactory;
@@ -34,6 +35,7 @@ import io.druid.client.InventoryView;
 import io.druid.client.ServerView;
 import io.druid.guice.FireDepartmentsProvider;
 import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.NoopSegmentPublisherProvider;
 import io.druid.guice.RealtimeManagerConfig;
@@ -71,7 +73,7 @@ public class RealtimeExampleModule implements DruidModule
         new TypeLiteral<List<FireDepartment>>()
         {
         }
-    ).toProvider(FireDepartmentsProvider.class);
+    ).toProvider(FireDepartmentsProvider.class).in(LazySingleton.class);
     binder.bind(RealtimeManager.class).in(ManageLifecycle.class);
   }
 

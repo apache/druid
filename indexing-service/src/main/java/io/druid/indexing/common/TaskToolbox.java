@@ -39,6 +39,7 @@ import io.druid.timeline.DataSegment;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -55,6 +56,7 @@ public class TaskToolbox
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final MonitorScheduler monitorScheduler;
+  private final ExecutorService queryExecutorService;
   private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
 
@@ -68,6 +70,7 @@ public class TaskToolbox
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
+      ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
       ObjectMapper objectMapper
@@ -82,6 +85,7 @@ public class TaskToolbox
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
+    this.queryExecutorService = queryExecutorService;
     this.monitorScheduler = monitorScheduler;
     this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
@@ -125,6 +129,11 @@ public class TaskToolbox
   public QueryRunnerFactoryConglomerate getQueryRunnerFactoryConglomerate()
   {
     return queryRunnerFactoryConglomerate;
+  }
+
+  public ExecutorService getQueryExecutorService()
+  {
+    return queryExecutorService;
   }
 
   public MonitorScheduler getMonitorScheduler()

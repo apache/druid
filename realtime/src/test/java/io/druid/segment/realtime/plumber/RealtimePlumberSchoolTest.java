@@ -23,6 +23,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.ServerView;
@@ -114,6 +115,7 @@ public class RealtimePlumberSchoolTest
     realtimePlumberSchool.setDataSegmentPusher(dataSegmentPusher);
     realtimePlumberSchool.setServerView(serverView);
     realtimePlumberSchool.setEmitter(emitter);
+    realtimePlumberSchool.setQueryExecutorService(MoreExecutors.sameThreadExecutor());
 
     plumber = realtimePlumberSchool.findPlumber(schema, new FireDepartmentMetrics());
   }

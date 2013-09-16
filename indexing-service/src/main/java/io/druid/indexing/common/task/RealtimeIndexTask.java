@@ -116,6 +116,7 @@ public class RealtimeIndexTask extends AbstractTask
         id == null
         ? makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString())
         :id,
+
         String.format(
             "index_realtime_%s",
             schema.getDataSource()
@@ -274,6 +275,7 @@ public class RealtimeIndexTask extends AbstractTask
     // NOTE: "same" segment.
     realtimePlumberSchool.setDataSegmentPusher(toolbox.getSegmentPusher());
     realtimePlumberSchool.setConglomerate(toolbox.getQueryRunnerFactoryConglomerate());
+    realtimePlumberSchool.setQueryExecutorService(toolbox.getQueryExecutorService());
     realtimePlumberSchool.setVersioningPolicy(versioningPolicy);
     realtimePlumberSchool.setSegmentAnnouncer(lockingSegmentAnnouncer);
     realtimePlumberSchool.setSegmentPublisher(segmentPublisher);

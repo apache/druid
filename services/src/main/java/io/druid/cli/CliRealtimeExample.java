@@ -39,7 +39,7 @@ import java.util.List;
 /**
  */
 @Command(
-    name = "example realtime",
+    name = "realtime",
     description = "Runs a standalone realtime node for examples, see https://github.com/metamx/druid/wiki/Realtime for a description"
 )
 public class CliRealtimeExample extends ServerRunnable

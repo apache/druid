@@ -19,19 +19,24 @@
 
 package io.druid.guice;
 
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.metamx.common.logger.Logger;
+import io.druid.initialization.DruidModule;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.RealtimeManager;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
  */
-public class RealtimeModule implements Module
+public class RealtimeModule implements DruidModule
 {
   private static final Logger log = new Logger(RealtimeModule.class);
 
@@ -46,7 +51,18 @@ public class RealtimeModule implements Module
         new TypeLiteral<List<FireDepartment>>()
         {
         }
-    ).toProvider(FireDepartmentsProvider.class);
+    ).toProvider(FireDepartmentsProvider.class).in(LazySingleton.class);
     binder.bind(RealtimeManager.class).in(ManageLifecycle.class);
+  }
+
+  @Override
+  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  {
+    return Arrays.<com.fasterxml.jackson.databind.Module>asList(
+        new SimpleModule("RealtimeModule")
+            .registerSubtypes(
+                new NamedType(KafkaFirehoseFactory.class, "kafka-0.7.2")
+            )
+    );
   }
 }

@@ -43,6 +43,7 @@ import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
+import io.druid.guice.annotations.Processing;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -75,6 +76,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -91,23 +93,43 @@ import java.util.concurrent.ScheduledExecutorService;
 public class RealtimePlumberSchool implements PlumberSchool
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumberSchool.class);
-  private static final ListeningExecutorService EXEC = MoreExecutors.sameThreadExecutor();
 
   private final Period windowPeriod;
   private final File basePersistDirectory;
   private final IndexGranularity segmentGranularity;
   private final Object handoffCondition = new Object();
 
+  @JacksonInject
+  @NotNull
   private volatile ServiceEmitter emitter;
+
+  @JacksonInject
+  @NotNull
   private volatile QueryRunnerFactoryConglomerate conglomerate = null;
+
+  @JacksonInject
+  @NotNull
   private volatile DataSegmentPusher dataSegmentPusher = null;
+
+  @JacksonInject
+  @NotNull
   private volatile DataSegmentAnnouncer segmentAnnouncer = null;
+
+  @JacksonInject
+  @NotNull
   private volatile SegmentPublisher segmentPublisher = null;
+
+  @JacksonInject
+  @NotNull
   private volatile ServerView serverView = null;
+
+  @JacksonInject
+  @NotNull
+  @Processing
+  private volatile ExecutorService queryExecutorService = null;
 
   private volatile VersioningPolicy versioningPolicy = null;
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
-
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -139,40 +161,39 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.rejectionPolicyFactory = factory;
   }
 
-  @JacksonInject
   public void setEmitter(ServiceEmitter emitter)
   {
     this.emitter = emitter;
   }
 
-  @JacksonInject
   public void setConglomerate(QueryRunnerFactoryConglomerate conglomerate)
   {
     this.conglomerate = conglomerate;
   }
 
-  @JacksonInject
   public void setDataSegmentPusher(DataSegmentPusher dataSegmentPusher)
   {
     this.dataSegmentPusher = dataSegmentPusher;
   }
 
-  @JacksonInject
   public void setSegmentAnnouncer(DataSegmentAnnouncer segmentAnnouncer)
   {
     this.segmentAnnouncer = segmentAnnouncer;
   }
 
-  @JacksonInject
   public void setSegmentPublisher(SegmentPublisher segmentPublisher)
   {
     this.segmentPublisher = segmentPublisher;
   }
 
-  @JacksonInject
   public void setServerView(ServerView serverView)
   {
     this.serverView = serverView;
+  }
+
+  public void setQueryExecutorService(ExecutorService executorService)
+  {
+    this.queryExecutorService = queryExecutorService;
   }
 
   @Override
@@ -262,7 +283,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
         return toolchest.mergeResults(
             factory.mergeRunners(
-                EXEC,
+                queryExecutorService,
                 FunctionalIterable
                     .create(querySinks)
                     .transform(
@@ -277,7 +298,7 @@ public class RealtimePlumberSchool implements PlumberSchool
                                     emitter,
                                     builderFn,
                                     factory.mergeRunners(
-                                        EXEC,
+                                        MoreExecutors.sameThreadExecutor(),
                                         Iterables.transform(
                                             theSink,
                                             new Function<FireHydrant, QueryRunner<T>>()

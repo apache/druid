@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.ServerView;
+import io.druid.guice.annotations.Processing;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
@@ -32,6 +33,8 @@ import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+
+import java.util.concurrent.ExecutorService;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -46,6 +49,7 @@ public class TaskToolboxFactory
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
+  private final ExecutorService queryExecutorService;
   private final MonitorScheduler monitorScheduler;
   private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
@@ -60,6 +64,7 @@ public class TaskToolboxFactory
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
+      @Processing ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
       ObjectMapper objectMapper
@@ -73,6 +78,7 @@ public class TaskToolboxFactory
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
+    this.queryExecutorService = queryExecutorService;
     this.monitorScheduler = monitorScheduler;
     this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
@@ -90,6 +96,7 @@ public class TaskToolboxFactory
         segmentAnnouncer,
         newSegmentServerView,
         queryRunnerFactoryConglomerate,
+        queryExecutorService,
         monitorScheduler,
         segmentLoader,
         objectMapper
