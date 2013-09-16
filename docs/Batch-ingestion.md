@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Batch Data Ingestion
 ====================
 

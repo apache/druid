@@ -1,3 +1,6 @@
+---
+layout: default
+---
 A search query returns dimension values that match the search specification.
 
     <code>{

@@ -1,3 +1,6 @@
+---
+layout: default
+---
 This page discusses how we do versioning and provides information on our stable releases.
 
 Versioning Strategy

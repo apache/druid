@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Note: This feature is highly experimental and only works with spatially indexed dimensions.
 
 The grammar for a spatial filter is as follows:

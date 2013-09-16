@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Concepts and Terminology
 ========================
 

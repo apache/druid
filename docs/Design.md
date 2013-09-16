@@ -1,3 +1,6 @@
+---
+layout: default
+---
 For a comprehensive look at the architecture of Druid, read the [White Paper](http://static.druid.io/docs/druid.pdf).
 
 What is Druid?

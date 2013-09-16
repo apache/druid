@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Note: This feature is highly experimental.
 
 In any of the data specs, there is now the option of providing spatial dimensions. For example, for a JSON data spec, spatial dimensions can be specified as follows:

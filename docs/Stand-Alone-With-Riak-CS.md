@@ -1,3 +1,6 @@
+---
+layout: default
+---
 This page describes how to use Riak-CS for deep storage instead of S3.  We are still setting up some of the peripheral stuff (file downloads, etc.).
 
 This guide provided by Pablo Nebrera, thanks!

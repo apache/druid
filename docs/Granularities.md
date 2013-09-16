@@ -1,3 +1,6 @@
+---
+layout: default
+---
 The granularity field determines how data gets bucketed across the time dimension, i.e how it gets aggregated by hour, day, minute, etc.
 
 It can be specified either as a string for simple granularities or as an object for arbitrary granularities.

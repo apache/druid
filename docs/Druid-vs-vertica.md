@@ -1,3 +1,6 @@
+---
+layout: default
+---
 How does Druid compare to Vertica?
 
 Vertica is similar to ParAccel/Redshift ([[Druid-vs-Redshift]]) described above in that it wasn’t built for real-time streaming data ingestion and it supports full SQL.

@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Examples
 ========
 

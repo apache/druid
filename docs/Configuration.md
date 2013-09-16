@@ -1,3 +1,6 @@
+---
+layout: default
+---
 This describes the basic server configuration that is loaded by all the server processes; the same file is loaded by all. See also the json “specFile” descriptions in [[Realtime]] and [[Batch-ingestion]].
 
 JVM Configuration Best Practices

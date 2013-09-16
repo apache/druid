@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Firehoses describe the data stream source. They are pluggable and thus the configuration schema can and will vary based on the `type` of the firehose.
 
 |Field|Type|Description|Required|

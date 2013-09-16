@@ -1,3 +1,6 @@
+---
+layout: default
+---
 These types of queries take a groupBy query object and return an array of JSON objects where each object represents a grouping asked for by the query.
 
 An example groupBy query object is shown below:

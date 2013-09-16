@@ -1,3 +1,6 @@
+---
+layout: default
+---
 A Druid cluster consists of various node types that need to be set up depending on your use case. See our [[Design]] docs for a description of the different node types.
 
 Setup Scripts

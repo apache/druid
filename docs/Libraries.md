@@ -1,3 +1,6 @@
+---
+layout: default
+---
 ### R
 
 -   [RDruid](https://github.com/metamx/RDruid) - Druid connector for R

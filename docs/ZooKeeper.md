@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Druid uses ZooKeeper (ZK) for management of current cluster state. The operations that happen over ZK are
 
 1.  [[Master]] leader election

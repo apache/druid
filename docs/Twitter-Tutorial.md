@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Greetings! We see you’ve taken an interest in Druid. That’s awesome! Hopefully this tutorial will help clarify some core Druid concepts. We will go through one of the Real-time [[Examples]], and issue some basic Druid queries. The data source we’ll be working with is the [Twitter spritzer stream](https://dev.twitter.com/docs/streaming-apis/streams/public). If you are ready to explore Druid, brave its challenges, and maybe learn a thing or two, read on!
 
 Setting Up

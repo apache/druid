@@ -1,3 +1,6 @@
+---
+layout: default
+---
 # Booting a Single Node Cluster #
 
 [[Loading Your Data]] and [[Querying Your Data]] contain recipes to boot a small druid cluster on localhost. Here we will boot a small cluster on EC2. You can checkout the code, or download a tarball from [here](http://static.druid.io/artifacts/druid-services-0.5.51-SNAPSHOT-bin.tar.gz).

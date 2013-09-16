@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Greetings! This tutorial will help clarify some core Druid concepts. We will use a realtime dataset and issue some basic Druid queries. If you are ready to explore Druid, and learn a thing or two, read on!
 
 About the data

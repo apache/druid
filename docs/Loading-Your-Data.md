@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Once you have a realtime node working, it is time to load your own data to see how Druid performs.
 
 Druid can ingest data in three ways: via Kafka and a realtime node, via the indexing service, and via the Hadoop batch loader. Data is ingested in realtime using a [[Firehose]].

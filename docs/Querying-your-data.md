@@ -1,3 +1,6 @@
+---
+layout: default
+---
 # Setup #
 
 Before we start querying druid, we're going to finish setting up a complete cluster on localhost. In [[Loading Your Data]] we setup a [[Realtime]], [[Compute]] and [[Master]] node. If you've already completed that tutorial, you need only follow the directions for 'Booting a Broker Node'.

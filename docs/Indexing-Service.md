@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Disclaimer: We are still in the process of finalizing the indexing service and these configs are prone to change at any time. We will announce when we feel the indexing service and the configurations described are stable.
 
 The indexing service is a distributed task/job queue. It accepts requests in the form of [[Tasks]] and executes those tasks across a set of worker nodes. Worker capacity can be automatically adjusted based on the number of tasks pending in the system. The indexing service is highly available, has built in retry logic, and can backup per task logs in deep storage.
