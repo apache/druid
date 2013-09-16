@@ -2,70 +2,70 @@
 layout: default
 ---
 Contents
-\* [[Introduction|Home]]
-\* [[Download]]
-\* [[Support]]
-\* [[Contribute]]
+\* [Introduction|Home](Introduction|Home.html)
+\* [Download](Download.html)
+\* [Support](Support.html)
+\* [Contribute](Contribute.html)
 ========================
 
 Getting Started
-\* [[Tutorial: A First Look at Druid]]
-\* [[Tutorial: The Druid Cluster]]
-\* [[Loading Your Data]]
-\* [[Querying Your Data]]
-\* [[Booting a Production Cluster]]
-\* [[Examples]]
-\* [[Cluster Setup]]
-\* [[Configuration]]
+\* [Tutorial: A First Look at Druid](Tutorial: A First Look at Druid.html)
+\* [Tutorial: The Druid Cluster](Tutorial: The Druid Cluster.html)
+\* [Loading Your Data](Loading Your Data.html)
+\* [Querying Your Data](Querying Your Data.html)
+\* [Booting a Production Cluster](Booting a Production Cluster.html)
+\* [Examples](Examples.html)
+\* [Cluster Setup](Cluster Setup.html)
+\* [Configuration](Configuration.html)
 --------------------------------------
 
 Data Ingestion
-\* [[Realtime]]
-\* [[Batch|Batch Ingestion]]
-\* [[Indexing Service]]
+\* [Realtime](Realtime.html)
+\* [Batch|Batch Ingestion](Batch|Batch Ingestion.html)
+\* [Indexing Service](Indexing Service.html)
 ----------------------------
 
 Querying
-\* [[Querying]]
+\* [Querying](Querying.html)
 **\* ]
-**\* [[Aggregations]]
+**\* [Aggregations](Aggregations.html)
 **\* ]
-**\* [[Granularities]]
+**\* [Granularities](Granularities.html)
 \* Query Types
 **\* ]
 ****\* ]
 ****\* ]
-**\* [[SearchQuery]]
+**\* [SearchQuery](SearchQuery.html)
 **\* ]
-** [[SegmentMetadataQuery]]
+** [SegmentMetadataQuery](SegmentMetadataQuery.html)
 **\* ]
-**\* [[TimeseriesQuery]]
+**\* [TimeseriesQuery](TimeseriesQuery.html)
 ---------------------------
 
 Architecture
-\* [[Design]]
-\* [[Segments]]
+\* [Design](Design.html)
+\* [Segments](Segments.html)
 \* Node Types
 **\* ]
-**\* [[Broker]]
+**\* [Broker](Broker.html)
 **\* ]
 ****\* ]
-**\* [[Realtime]]
+**\* [Realtime](Realtime.html)
 **\* ]
-**\* [[Plumber]]
+**\* [Plumber](Plumber.html)
 \* External Dependencies
 **\* ]
-**\* [[MySQL]]
+**\* [MySQL](MySQL.html)
 **\* ]
-** [[Concepts and Terminology]]
+** [Concepts and Terminology](Concepts and Terminology.html)
 -------------------------------
 
 Development
-\* [[Versioning]]
-\* [[Build From Source]]
-\* [[Libraries]]
+\* [Versioning](Versioning.html)
+\* [Build From Source](Build From Source.html)
+\* [Libraries](Libraries.html)
 ------------------------
 
 Misc
-\* [[Thanks]]
+\* [Thanks](Thanks.html)
 -------------

@@ -9,9 +9,9 @@ The Broker is the node to route queries to if you want to run a distributed clus
 Forwarding Queries
 ------------------
 
-Most druid queries contain an interval object that indicates a span of time for which data is requested. Likewise, Druid [[Segments]] are partitioned to contain data for some interval of time and segments are distributed across a cluster. Consider a simple datasource with 7 segments where each segment contains data for a given day of the week. Any query issued to the datasource for more than one day of data will hit more than one segment. These segments will likely be distributed across multiple nodes, and hence, the query will likely hit multiple nodes.
+Most druid queries contain an interval object that indicates a span of time for which data is requested. Likewise, Druid [Segments](Segments.html) are partitioned to contain data for some interval of time and segments are distributed across a cluster. Consider a simple datasource with 7 segments where each segment contains data for a given day of the week. Any query issued to the datasource for more than one day of data will hit more than one segment. These segments will likely be distributed across multiple nodes, and hence, the query will likely hit multiple nodes.
 
-To determine which nodes to forward queries to, the Broker node first builds a view of the world from information in Zookeeper. Zookeeper maintains information about [[Compute]] and [[Realtime]] nodes and the segments they are serving. For every datasource in Zookeeper, the Broker node builds a timeline of segments and the nodes that serve them. When queries are received for a specific datasource and interval, the Broker node performs a lookup into the timeline associated with the query datasource for the query interval and retrieves the nodes that contain data for the query. The Broker node then forwards down the query to the selected nodes.
+To determine which nodes to forward queries to, the Broker node first builds a view of the world from information in Zookeeper. Zookeeper maintains information about [Compute](Compute.html) and [Realtime](Realtime.html) nodes and the segments they are serving. For every datasource in Zookeeper, the Broker node builds a timeline of segments and the nodes that serve them. When queries are received for a specific datasource and interval, the Broker node performs a lookup into the timeline associated with the query datasource for the query interval and retrieves the nodes that contain data for the query. The Broker node then forwards down the query to the selected nodes.
 
 Caching
 -------
@@ -27,4 +27,4 @@ Broker nodes can be run using the `com.metamx.druid.http.BrokerMain` class.
 Configuration
 -------------
 
-See [[Configuration]].
+See [Configuration](Configuration.html).

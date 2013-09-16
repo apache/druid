@@ -93,12 +93,12 @@ There are 9 main parts to a groupBy query:
 |queryType|This String should always be “groupBy”; this is the first thing Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
 |dimensions|A JSON list of dimensions to do the groupBy over|yes|
-|orderBy|See [[OrderBy]].|no|
-|having|See [[Having]].|no|
-|granularity|Defines the granularity of the query. See [[Granularities]]|yes|
-|filter|See [[Filters]]|no|
-|aggregations|See [[Aggregations]]|yes|
-|postAggregations|See [[Post Aggregations]]|no|
+|orderBy|See [OrderBy](OrderBy.html).|no|
+|having|See [Having](Having.html).|no|
+|granularity|Defines the granularity of the query. See [Granularities](Granularities.html)|yes|
+|filter|See [Filters](Filters.html)|no|
+|aggregations|See [Aggregations](Aggregations.html)|yes|
+|postAggregations|See [Post Aggregations](Post Aggregations.html)|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 

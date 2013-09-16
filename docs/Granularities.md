@@ -11,7 +11,7 @@ Simple granularities are specified as a string and bucket timestamps by their UT
 
 Supported granularity strings are: `all`, `none`, `minute`, `fifteen_minute`, `thirty_minute`, `hour` and `day`
 \* **`all`** buckets everything into a single bucket
-\* **`none`** does not bucket data (it actually uses the granularity of the index - minimum here is `none` which means millisecond granularity). Using `none` in a [[timeseries query|TimeSeriesQuery]] is currently not recommended (the system will try to generate 0 values for all milliseconds that didn’t exist, which is often a lot).
+\* **`none`** does not bucket data (it actually uses the granularity of the index - minimum here is `none` which means millisecond granularity). Using `none` in a [timeseries query|TimeSeriesQuery](timeseries query|TimeSeriesQuery.html) is currently not recommended (the system will try to generate 0 values for all milliseconds that didn’t exist, which is often a lot).
 
 ### Duration Granularities
 

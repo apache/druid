@@ -19,7 +19,7 @@ tar -zxvf druid-services-*-bin.tar.gz
 cd druid-services-*
 ```
 
-You can also [[Build From Source]].
+You can also [Build From Source](Build From Source.html).
 
 ## External Dependencies ##
 

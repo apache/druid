@@ -22,9 +22,9 @@ The grammar for an arithmetic post aggregation is:
 
 ### Field accessor post-aggregator
 
-This returns the value produced by the specified [[aggregator|Aggregations]].
+This returns the value produced by the specified [aggregator|Aggregations](aggregator|Aggregations.html).
 
-`fieldName` refers to the output name of the aggregator given in the [[aggregations|Aggregations]] portion of the query.
+`fieldName` refers to the output name of the aggregator given in the [aggregations|Aggregations](aggregations|Aggregations.html) portion of the query.
 
     <code>field_accessor : {
         "type"      : "fieldAccess",

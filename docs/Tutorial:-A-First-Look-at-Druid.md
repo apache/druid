@@ -41,7 +41,7 @@ These metrics track the number of characters added, deleted, and changed.
 Setting Up
 ----------
 
-There are two ways to setup Druid: download a tarball, or [[Build From Source]]. You only need to do one of these.
+There are two ways to setup Druid: download a tarball, or [Build From Source](Build From Source.html). You only need to do one of these.
 
 ### Download a Tarball
 
@@ -64,7 +64,7 @@ You should see a bunch of files:
 Running Example Scripts
 -----------------------
 
-Let’s start doing stuff. You can start a Druid [[Realtime]] node by issuing:
+Let’s start doing stuff. You can start a Druid [Realtime](Realtime.html) node by issuing:
 
     ./run_example_server.sh
 
@@ -176,7 +176,7 @@ As you can probably tell, the result is indicating the maximum and minimum times
 Return to your favorite editor and create the file:
 <pre>timeseries_query.body</pre>
 
-We are going to make a slightly more complicated query, the [[TimeseriesQuery]]. Copy and paste the following into the file:
+We are going to make a slightly more complicated query, the [TimeseriesQuery](TimeseriesQuery.html). Copy and paste the following into the file:
 <pre><code>
 {
     "queryType": "timeseries", 
@@ -200,7 +200,7 @@ We are going to make a slightly more complicated query, the [[TimeseriesQuery]].
 }
 </code></pre>
 
-You are probably wondering, what are these [[Granularities]] and [[Aggregations]] things? What the query is doing is aggregating some metrics over some span of time. 
+You are probably wondering, what are these [Granularities](Granularities.html) and [Aggregations](Aggregations.html) things? What the query is doing is aggregating some metrics over some span of time. 
 To issue the query and get some results, run the following in your command line:
 <pre><code>curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  ````timeseries\_query.body</code>
 
@@ -275,7 +275,7 @@ This gives us something like the following:
 Solving a Problem
 -----------------
 
-One of Druid’s main powers is to provide answers to problems, so let’s pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you’ve been going through this tutorial? To solve this problem, we have to return to the query we introduced at the very beginning of this tutorial, the [[GroupByQuery]]. It would be nice if we could group by results by dimension value and somehow sort those results… and it turns out we can!
+One of Druid’s main powers is to provide answers to problems, so let’s pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you’ve been going through this tutorial? To solve this problem, we have to return to the query we introduced at the very beginning of this tutorial, the [GroupByQuery](GroupByQuery.html). It would be nice if we could group by results by dimension value and somehow sort those results… and it turns out we can!
 
 Let’s create the file:
 
@@ -317,7 +317,7 @@ Let’s create the file:
     }
     </code>
 
-Woah! Our query just got a way more complicated. Now we have these [[Filters]] things and this [[OrderBy]] thing. Fear not, it turns out the new objects we’ve introduced to our query can help define the format of our results and provide an answer to our question.
+Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [OrderBy](OrderBy.html) thing. Fear not, it turns out the new objects we’ve introduced to our query can help define the format of our results and provide an answer to our question.
 
 If you issue the query:
 
@@ -357,9 +357,9 @@ Feel free to tweak other query parameters to answer other questions you may have
 Next Steps
 ----------
 
-What to know even more information about the Druid Cluster? Check out [[Tutorial: The Druid Cluster]]
+What to know even more information about the Druid Cluster? Check out [Tutorial: The Druid Cluster](Tutorial: The Druid Cluster.html)
 
-Druid is even more fun if you load your own data into it! To learn how to load your data, see [[Loading Your Data]].
+Druid is even more fun if you load your own data into it! To learn how to load your data, see [Loading Your Data](Loading Your Data.html).
 
 Additional Information
 ----------------------

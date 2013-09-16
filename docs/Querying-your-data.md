@@ -3,7 +3,7 @@ layout: default
 ---
 # Setup #
 
-Before we start querying druid, we're going to finish setting up a complete cluster on localhost. In [[Loading Your Data]] we setup a [[Realtime]], [[Compute]] and [[Master]] node. If you've already completed that tutorial, you need only follow the directions for 'Booting a Broker Node'.
+Before we start querying druid, we're going to finish setting up a complete cluster on localhost. In [Loading Your Data](Loading Your Data.html) we setup a [Realtime](Realtime.html), [Compute](Compute.html) and [Master](Master.html) node. If you've already completed that tutorial, you need only follow the directions for 'Booting a Broker Node'.
 
 ## Booting a Broker Node ##
 
@@ -98,11 +98,11 @@ com.metamx.druid.http.ComputeMain
 
 # Querying Your Data #
 
-Now that we have a complete cluster setup on localhost, we need to load data. To do so, refer to [[Loading Your Data]]. Having done that, its time to query our data! For a complete specification of queries, see [[Querying]].
+Now that we have a complete cluster setup on localhost, we need to load data. To do so, refer to [Loading Your Data](Loading Your Data.html). Having done that, its time to query our data! For a complete specification of queries, see [Querying](Querying.html).
 
 ## Querying Different Nodes ##
 
-As a shared-nothing system, there are three ways to query druid, against the [[Realtime]], [[Compute]] or [[Broker]] node. Querying a Realtime node returns only realtime data, querying a compute node returns only historical segments. Querying the broker will query both realtime and compute segments and compose an overall result for the query. This is the normal mode of operation for queries in druid.
+As a shared-nothing system, there are three ways to query druid, against the [Realtime](Realtime.html), [Compute](Compute.html) or [Broker](Broker.html) node. Querying a Realtime node returns only realtime data, querying a compute node returns only historical segments. Querying the broker will query both realtime and compute segments and compose an overall result for the query. This is the normal mode of operation for queries in druid.
 
 ### Construct a Query ###
 
@@ -183,7 +183,7 @@ Now that we know what nodes can be queried (although you should usually use the 
 
 ## Querying Against the realtime.spec ##
 
-How are we to know what queries we can run? Although [[Querying]] is a helpful index, to get a handle on querying our data we need to look at our [[Realtime]] node's realtime.spec file:
+How are we to know what queries we can run? Although [Querying](Querying.html) is a helpful index, to get a handle on querying our data we need to look at our [Realtime](Realtime.html) node's realtime.spec file:
 
 ```json
 [{
@@ -225,7 +225,7 @@ Our dataSource tells us the name of the relation/table, or 'source of data', to 
 
 ### aggregations ###
 
-Note the [[Aggregations]] in our query:
+Note the [Aggregations](Aggregations.html) in our query:
 
 ```json
     "aggregations": [
@@ -244,7 +244,7 @@ this matches up to the aggregators in the schema of our realtime.spec!
 
 ### dimensions ###
 
-Lets look back at our actual records (from [[Loading Your Data]]):
+Lets look back at our actual records (from [Loading Your Data](Loading Your Data.html)):
 
 ```json
 {"utcdt": "2010-01-01T01:01:01", "wp": 1000, "gender": "male", "age": 100}
@@ -359,8 +359,8 @@ Which gets us just people aged 40:
 } ]
 ```
 
-Check out [[Filters]] for more.
+Check out [Filters](Filters.html) for more.
 
 ## Learn More ##
 
-You can learn more about querying at [[Querying]]! Now check out [[Booting a production cluster]]!
+You can learn more about querying at [Querying](Querying.html)! Now check out [Booting a production cluster](Booting a production cluster.html)!

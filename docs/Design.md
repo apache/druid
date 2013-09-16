@@ -53,7 +53,7 @@ Getting data into the Druid system requires an indexing process. This gives the 
     -   Bitmap compression
     -   RLE (on the roadmap, but not yet implemented)
 
-The output of the indexing process is stored in a “deep storage” LOB store/file system ([[Deep Storage]] for information about potential options). Data is then loaded by compute nodes by first downloading the data to their local disk and then memory mapping it before serving queries.
+The output of the indexing process is stored in a “deep storage” LOB store/file system ([Deep Storage](Deep Storage.html) for information about potential options). Data is then loaded by compute nodes by first downloading the data to their local disk and then memory mapping it before serving queries.
 
 If a compute node dies, it will no longer serve its segments, but given that the segments are still available on the “deep storage” any other node can simply download the segment and start serving it. This means that it is possible to actually remove all compute nodes from the cluster and then re-provision them without any data loss. It also means that if the “deep storage” is not available, the nodes can continue to serve the segments they have already pulled down (i.e. the cluster goes stale, not down).
 

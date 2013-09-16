@@ -12,4 +12,4 @@ Concepts and Terminology
 
 -   **Segment:** A collection of (internal) records that are stored and processed together.
 -   **Shard:** A unit of partitioning data across machine. TODO: clarify; by time or other dimensions?
--   **specFile** is specification for services in JSON format; see [[Realtime]] and [[Batch-ingestion]]
+-   **specFile** is specification for services in JSON format; see [Realtime](Realtime.html) and [Batch-ingestion](Batch-ingestion.html)

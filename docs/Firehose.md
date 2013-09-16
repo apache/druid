@@ -28,11 +28,11 @@ This firehose ingests events from a predefined list of S3 objects.
 
 #### TwitterSpritzerFirehose
 
-See [[Examples]]. This firehose connects directly to the twitter spritzer data stream.
+See [Examples](Examples.html). This firehose connects directly to the twitter spritzer data stream.
 
 #### RandomFirehose
 
-See [[Examples]]. This firehose creates a stream of random numbers.
+See [Examples](Examples.html). This firehose creates a stream of random numbers.
 
 #### RabbitMqFirehouse
 

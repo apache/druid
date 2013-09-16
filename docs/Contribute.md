@@ -5,4 +5,4 @@ If you are interested in contributing to the code, we accept [pull requests](htt
 
 For issue tracking, we are using the github issue tracker. Please fill out an issue from the Issues tab on the github screen.
 
-We also have a [[Libraries]] page that lists external libraries that people have created for working with Druid.
+We also have a [Libraries](Libraries.html) page that lists external libraries that people have created for working with Druid.
