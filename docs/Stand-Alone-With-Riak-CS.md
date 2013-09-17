@@ -1,3 +1,6 @@
+---
+layout: default
+---
 This page describes how to use Riak-CS for deep storage instead of S3.  We are still setting up some of the peripheral stuff (file downloads, etc.).
 
 This guide provided by Pablo Nebrera, thanks!
@@ -19,12 +22,12 @@ We started with a minimal CentOS installation but you can use any other compatib
 1. A Kafka Broker
 1. A single-node Zookeeper ensemble
 1. A single-node Riak-CS cluster
-1. A Druid [[Master]]
-1. A Druid [[Broker]]
-1. A Druid [[Compute]]
-1. A Druid [[Realtime]]
+1. A Druid [Master](Master.html)
+1. A Druid [Broker](Broker.html)
+1. A Druid [Compute](Compute.html)
+1. A Druid [Realtime](Realtime.html)
 
-This just walks through getting the relevant software installed and running.  You will then need to configure the [[Realtime]] node to take in your data.
+This just walks through getting the relevant software installed and running.  You will then need to configure the [Realtime](Realtime.html) node to take in your data.
 
 ### Configure System
 

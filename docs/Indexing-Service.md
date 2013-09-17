@@ -1,6 +1,9 @@
+---
+layout: default
+---
 Disclaimer: We are still in the process of finalizing the indexing service and these configs are prone to change at any time. We will announce when we feel the indexing service and the configurations described are stable.
 
-The indexing service is a distributed task/job queue. It accepts requests in the form of [[Tasks]] and executes those tasks across a set of worker nodes. Worker capacity can be automatically adjusted based on the number of tasks pending in the system. The indexing service is highly available, has built in retry logic, and can backup per task logs in deep storage.
+The indexing service is a distributed task/job queue. It accepts requests in the form of [Tasks](Tasks.html) and executes those tasks across a set of worker nodes. Worker capacity can be automatically adjusted based on the number of tasks pending in the system. The indexing service is highly available, has built in retry logic, and can backup per task logs in deep storage.
 
 The indexing service is composed of two main components, a coordinator node that manages task distribution and worker capacity, and worker nodes that execute tasks in separate JVMs.
 
@@ -42,7 +45,7 @@ The coordinator also exposes a simple UI to show what tasks are currently runnin
 
 #### Task Execution
 
-The coordinator retrieves worker setup metadata from the Druid [[MySQL]] config table. This metadata contains information about the version of workers to create, the maximum and minimum number of workers in the cluster at one time, and additional information required to automatically create workers.
+The coordinator retrieves worker setup metadata from the Druid [MySQL](MySQL.html) config table. This metadata contains information about the version of workers to create, the maximum and minimum number of workers in the cluster at one time, and additional information required to automatically create workers.
 
 Tasks are assigned to workers by creating entries under specific /tasks paths associated with a worker, similar to how the Druid master node assigns segments to compute nodes. See [Worker Configuration](Indexing-Service#configuration-1). Once a worker picks up a task, it deletes the task entry and announces a task status under a /status path associated with the worker. Tasks are submitted to a worker until the worker hits capacity. If all workers in a cluster are at capacity, the indexer coordinator node automatically creates new worker resources.
 

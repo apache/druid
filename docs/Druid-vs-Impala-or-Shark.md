@@ -1,3 +1,6 @@
+---
+layout: default
+---
 The question of Druid versus Impala or Shark basically comes down to your product requirements and what the systems were designed to do.  
 
 Druid was designed to
@@ -17,11 +20,11 @@ What does this mean?  We can talk about it in terms of four general areas
 
 ## Fault Tolerance
 
-Druid pulls segments down from [[Deep Storage]] before serving queries on top of it.  This means that for the data to exist in the Druid cluster, it must exist as a local copy on a historical node.  If deep storage becomes unavailable for any reason, new segments will not be loaded into the system, but the cluster will continue to operate exactly as it was when the backing store disappeared. 
+Druid pulls segments down from [Deep Storage](Deep Storage.html) before serving queries on top of it.  This means that for the data to exist in the Druid cluster, it must exist as a local copy on a historical node.  If deep storage becomes unavailable for any reason, new segments will not be loaded into the system, but the cluster will continue to operate exactly as it was when the backing store disappeared. 
 
 Impala and Shark, on the other hand, pull their data in from HDFS (or some other Hadoop FileSystem) in response to a query.  This has implications for the operation of queries if you need to take HDFS down for a bit (say a software upgrade).  It's possible that data that has been cached in the nodes is still available when the backing file system goes down, but I'm not sure.
 
-This is just one example, but Druid was built to continue operating in the face of failures of any one of its various pieces.  The [[Design]] describes these design decisions from the Druid side in more detail.
+This is just one example, but Druid was built to continue operating in the face of failures of any one of its various pieces.  The [Design](Design.html) describes these design decisions from the Druid side in more detail.
 
 ## Query Speed
 

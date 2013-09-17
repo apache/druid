@@ -1,7 +1,10 @@
+---
+layout: default
+---
 Querying
 ========
 
-Queries are made using an HTTP REST style request to a [[Broker]], [[Compute]], or [[Realtime]] node. The query is expressed in JSON and each of these node types expose the same REST query interface.
+Queries are made using an HTTP REST style request to a [Broker](Broker.html), [Compute](Compute.html), or [Realtime](Realtime.html) node. The query is expressed in JSON and each of these node types expose the same REST query interface.
 
 We start by describing an example query with additional comments that mention possible variations. Query operators are also summarized in a table below.
 
@@ -52,7 +55,7 @@ The dataSource JSON field shown next identifies where to apply the query. In thi
 \`\`\`javascript
  [dataSource]() “randSeq”,
 \`\`\`
-The granularity JSON field specifies the bucket size for values. It could be a built-in time interval like “second”, “minute”, “fifteen\_minute”, “thirty\_minute”, “hour” or “day”. It can also be an expression like `{"type": "period", "period":"PT6m"}` meaning “6 minute buckets”. See [[Granularities]] for more information on the different options for this field. In this example, it is set to the special value “all” which means [bucket all data points together into the same time bucket]()
+The granularity JSON field specifies the bucket size for values. It could be a built-in time interval like “second”, “minute”, “fifteen\_minute”, “thirty\_minute”, “hour” or “day”. It can also be an expression like `{"type": "period", "period":"PT6m"}` meaning “6 minute buckets”. See [Granularities](Granularities.html) for more information on the different options for this field. In this example, it is set to the special value “all” which means [bucket all data points together into the same time bucket]()
 \`\`\`javascript
  [granularity]() “all”,
 \`\`\`
@@ -60,7 +63,7 @@ The dimensions JSON field value is an array of zero or more fields as defined in
 \`\`\`javascript
  [dimensions]() [],
 \`\`\`
-A groupBy also requires the JSON field “aggregations” (See [[Aggregations]]), which are applied to the column specified by fieldName and the output of the aggregation will be named according to the value in the “name” field:
+A groupBy also requires the JSON field “aggregations” (See [Aggregations](Aggregations.html)), which are applied to the column specified by fieldName and the output of the aggregation will be named according to the value in the “name” field:
 \`\`\`javascript
  [aggregations]() [
  { [type]() “count”, [name]() “rows” },
@@ -68,7 +71,7 @@ A groupBy also requires the JSON field “aggregations” (See [[Aggregations]])
  { [type]() “doubleSum”, [fieldName]() “outColumn”, [name]() “randomNumberSum” }
  ],
 \`\`\`
-You can also specify postAggregations, which are applied after data has been aggregated for the current granularity and dimensions bucket. See [[Post Aggregations]] for a detailed description. In the rand example, an arithmetic type operation (division, as specified by “fn”) is performed with the result “name” of “avg\_random”. The “fields” field specifies the inputs from the aggregation stage to this expression. Note that identifiers corresponding to “name” JSON field inside the type “fieldAccess” are required but not used outside this expression, so they are prefixed with “dummy” for clarity:
+You can also specify postAggregations, which are applied after data has been aggregated for the current granularity and dimensions bucket. See [Post Aggregations](Post Aggregations.html) for a detailed description. In the rand example, an arithmetic type operation (division, as specified by “fn”) is performed with the result “name” of “avg\_random”. The “fields” field specifies the inputs from the aggregation stage to this expression. Note that identifiers corresponding to “name” JSON field inside the type “fieldAccess” are required but not used outside this expression, so they are prefixed with “dummy” for clarity:
 \`\`\`javascript
  [postAggregations]() [{
  [type]() “arithmetic”,
@@ -96,11 +99,11 @@ The following table summarizes query properties.
 |timeseries, groupBy, search, timeBoundary|dataSource|query is applied to this data source|yes|
 |timeseries, groupBy, search|intervals|range of time series to include in query|yes|
 |timeseries, groupBy, search, timeBoundary|context|This is a key-value map that can allow the query to alter some of the behavior of a query. It is primarily used for debugging, for example if you include `"bySegment":true` in the map, you will get results associated with the data segment they came from.|no|
-|timeseries, groupBy, search|filter|Specifies the filter (the “WHERE” clause in SQL) for the query. See [[Filters]]|no|
-|timeseries, groupBy, search|granularity|the timestamp granularity to bucket results into (i.e. “hour”). See [[Granularities]] for more information.|no|
+|timeseries, groupBy, search|filter|Specifies the filter (the “WHERE” clause in SQL) for the query. See [Filters](Filters.html)|no|
+|timeseries, groupBy, search|granularity|the timestamp granularity to bucket results into (i.e. “hour”). See [Granularities](Granularities.html) for more information.|no|
 |groupBy|dimensions|constrains the groupings; if empty, then one value per time granularity bucket|yes|
-|timeseries, groupBy|aggregations|aggregations that combine values in a bucket. See [[Aggregations]].|yes|
-|timeseries, groupBy|postAggregations|aggregations of aggregations. See [[Post Aggregations]].|yes|
+|timeseries, groupBy|aggregations|aggregations that combine values in a bucket. See [Aggregations](Aggregations.html).|yes|
+|timeseries, groupBy|postAggregations|aggregations of aggregations. See [Post Aggregations](Post Aggregations.html).|yes|
 |search|limit|maximum number of results (default is 1000), a system-level maximum can also be set via `com.metamx.query.search.maxSearchLimit`|no|
 |search|searchDimensions|Dimensions to apply the search query to. If not specified, it will search through all dimensions.|no|
 |search|query|The query portion of the search query. This is essentially a predicate that specifies if something matches.|yes|
@@ -108,4 +111,4 @@ The following table summarizes query properties.
 Additional Information about Query Types
 ----------------------------------------
 
-[[TimeseriesQuery]]
+[TimeseriesQuery](TimeseriesQuery.html)

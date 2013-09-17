@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Segment metadata queries return per segment information about:
 \* Cardinality of all columns in the segment
 \* Estimated byte size for the segment columns in TSV format

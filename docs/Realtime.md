@@ -1,7 +1,10 @@
+---
+layout: default
+---
 Realtime
 ========
 
-Realtime nodes provide a realtime index. Data indexed via these nodes is immediately available for querying. Realtime nodes will periodically build segments representing the data they’ve collected over some span of time and hand these segments off to [[Compute]] nodes.
+Realtime nodes provide a realtime index. Data indexed via these nodes is immediately available for querying. Realtime nodes will periodically build segments representing the data they’ve collected over some span of time and hand these segments off to [Compute](Compute.html) nodes.
 
 Running
 -------
@@ -18,7 +21,7 @@ The segment propagation diagram for real-time data ingestion can be seen below:
 Configuration
 -------------
 
-Realtime nodes take a mix of base server configuration and spec files that describe how to connect, process and expose the realtime feed. See [[Configuration]] for information about general server configuration.
+Realtime nodes take a mix of base server configuration and spec files that describe how to connect, process and expose the realtime feed. See [Configuration](Configuration.html) for information about general server configuration.
 
 ### Realtime “specFile”
 
@@ -59,7 +62,7 @@ There are four parts to a realtime stream specification, `schema`, `config`, `fi
 
 #### Schema
 
-This describes the data schema for the output Druid segment. More information about concepts in Druid and querying can be found at [[Concepts-and-Terminology]] and [[Querying]].
+This describes the data schema for the output Druid segment. More information about concepts in Druid and querying can be found at [Concepts-and-Terminology](Concepts-and-Terminology.html) and [Querying](Querying.html).
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
@@ -80,11 +83,11 @@ This provides configuration for the data processing portion of the realtime stre
 
 ### Firehose
 
-See [[Firehose]].
+See [Firehose](Firehose.html).
 
 ### Plumber
 
-See [[Plumber]]
+See [Plumber](Plumber.html)
 
 Constraints
 -----------

@@ -1,3 +1,6 @@
+---
+layout: default
+---
 A search query returns dimension values that match the search specification.
 
     <code>{
@@ -27,11 +30,11 @@ There are several main parts to a search query:
 |--------|-----------|---------|
 |queryType|This String should always be “search”; this is the first thing Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
-|granularity|Defines the granularity of the query. See [[Granularities]]|yes|
-|filter|See [[Filters]]|no|
+|granularity|Defines the granularity of the query. See [Granularities](Granularities.html)|yes|
+|filter|See [Filters](Filters.html)|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |searchDimensions|The dimensions to run the search over. Excluding this means the search is run over all dimensions.|no|
-|query|See [[SearchQuerySpec]].|yes|
+|query|See [SearchQuerySpec](SearchQuerySpec.html).|yes|
 |sort|How the results of the search should sorted. Two possible types here are “lexicographic” and “strlen”.|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 

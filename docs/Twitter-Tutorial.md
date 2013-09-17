@@ -1,4 +1,7 @@
-Greetings! We see you’ve taken an interest in Druid. That’s awesome! Hopefully this tutorial will help clarify some core Druid concepts. We will go through one of the Real-time [[Examples]], and issue some basic Druid queries. The data source we’ll be working with is the [Twitter spritzer stream](https://dev.twitter.com/docs/streaming-apis/streams/public). If you are ready to explore Druid, brave its challenges, and maybe learn a thing or two, read on!
+---
+layout: default
+---
+Greetings! We see you’ve taken an interest in Druid. That’s awesome! Hopefully this tutorial will help clarify some core Druid concepts. We will go through one of the Real-time [Examples](Examples.html), and issue some basic Druid queries. The data source we’ll be working with is the [Twitter spritzer stream](https://dev.twitter.com/docs/streaming-apis/streams/public). If you are ready to explore Druid, brave its challenges, and maybe learn a thing or two, read on!
 
 Setting Up
 ----------
@@ -49,7 +52,7 @@ You can find the example executables in the examples/bin directory:
 Running Example Scripts
 -----------------------
 
-Let’s start doing stuff. You can start a Druid [[Realtime]] node by issuing:
+Let’s start doing stuff. You can start a Druid [Realtime](Realtime.html) node by issuing:
 
     ./run_example_server.sh
 
@@ -172,7 +175,7 @@ If you said the result is indicating the maximum and minimum timestamps we've se
 Return to your favorite editor and create the file:
 <pre>timeseries_query.body</pre>
 
-We are going to make a slightly more complicated query, the [[TimeseriesQuery]]. Copy and paste the following into the file:
+We are going to make a slightly more complicated query, the [TimeseriesQuery](TimeseriesQuery.html). Copy and paste the following into the file:
 <pre><code>{
   "queryType":"timeseries",
   "dataSource":"twitterstream",
@@ -185,7 +188,7 @@ We are going to make a slightly more complicated query, the [[TimeseriesQuery]].
 }
 </code></pre>
 
-You are probably wondering, what are these [[Granularities]] and [[Aggregations]] things? What the query is doing is aggregating some metrics over some span of time. 
+You are probably wondering, what are these [Granularities](Granularities.html) and [Aggregations](Aggregations.html) things? What the query is doing is aggregating some metrics over some span of time. 
 To issue the query and get some results, run the following in your command line:
 <pre><code>curl -X POST 'http://localhost:8080/druid/v2/?pretty' -H 'content-type: application/json'  -d  ````timeseries\_query.body</code>
 
@@ -249,7 +252,7 @@ This gives us something like the following:
 Solving a Problem
 -----------------
 
-One of Druid’s main powers (see what we did there?) is to provide answers to problems, so let’s pose a problem. What if we wanted to know what the top hash tags are, ordered by the number tweets, where the language is english, over the last few minutes you’ve been reading this tutorial? To solve this problem, we have to return to the query we introduced at the very beginning of this tutorial, the [[GroupByQuery]]. It would be nice if we could group by results by dimension value and somehow sort those results… and it turns out we can!
+One of Druid’s main powers (see what we did there?) is to provide answers to problems, so let’s pose a problem. What if we wanted to know what the top hash tags are, ordered by the number tweets, where the language is english, over the last few minutes you’ve been reading this tutorial? To solve this problem, we have to return to the query we introduced at the very beginning of this tutorial, the [GroupByQuery](GroupByQuery.html). It would be nice if we could group by results by dimension value and somehow sort those results… and it turns out we can!
 
 Let’s create the file:
 
@@ -269,7 +272,7 @@ Let’s create the file:
     }
     </code>
 
-Woah! Our query just got a way more complicated. Now we have these [[Filters]] things and this [[OrderBy]] thing. Fear not, it turns out the new objects we’ve introduced to our query can help define the format of our results and provide an answer to our question.
+Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [OrderBy](OrderBy.html) thing. Fear not, it turns out the new objects we’ve introduced to our query can help define the format of our results and provide an answer to our question.
 
 If you issue the query:
 
@@ -321,6 +324,6 @@ Feel free to tweak other query parameters to answer other questions you may have
 Additional Information
 ----------------------
 
-This tutorial is merely showcasing a small fraction of what Druid can do. Next, continue on to [[Loading Your Data]].
+This tutorial is merely showcasing a small fraction of what Druid can do. Next, continue on to [Loading Your Data](Loading Your Data.html).
 
 And thus concludes our journey! Hopefully you learned a thing or two about Druid real-time ingestion, querying Druid, and how Druid can be used to solve problems. If you have additional questions, feel free to post in our [google groups page](http://www.groups.google.com/forum/#!forum/druid-development).

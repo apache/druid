@@ -1,3 +1,6 @@
+---
+layout: default
+---
 ### Clone and Build from Source
 
 The other way to setup Druid is from source via git. To do so, run these commands:

@@ -1,8 +1,11 @@
+---
+layout: default
+---
 Druid uses ZooKeeper (ZK) for management of current cluster state. The operations that happen over ZK are
 
-1.  [[Master]] leader election
-2.  Segment “publishing” protocol from [[Compute]] and [[Realtime]]
-3.  Segment load/drop protocol between [[Master]] and [[Compute]]
+1.  [Master](Master.html) leader election
+2.  Segment “publishing” protocol from [Compute](Compute.html) and [Realtime](Realtime.html)
+3.  Segment load/drop protocol between [Master](Master.html) and [Compute](Compute.html)
 
 ### Property Configuration
 
@@ -38,7 +41,7 @@ We use the Curator LeadershipLatch recipe to do leader election at path
 
 The `announcementsPath` and `servedSegmentsPath` are used for this.
 
-All [[Compute]] and [[Realtime]] nodes publish themselves on the `announcementsPath`, specifically, they will create an ephemeral znode at
+All [Compute](Compute.html) and [Realtime](Realtime.html) nodes publish themselves on the `announcementsPath`, specifically, they will create an ephemeral znode at
 
     ${druid.zk.paths.announcementsPath}/${druid.host}
 
@@ -50,13 +53,13 @@ And as they load up segments, they will attach ephemeral znodes that look like
 
     ${druid.zk.paths.servedSegmentsPath}/${druid.host}/_segment_identifier_
 
-Nodes like the [[Master]] and [[Broker]] can then watch these paths to see which nodes are currently serving which segments.
+Nodes like the [Master](Master.html) and [Broker](Broker.html) can then watch these paths to see which nodes are currently serving which segments.
 
 ### Segment load/drop protocol between Master and Compute
 
 The `loadQueuePath` is used for this.
 
-When the [[Master]] decides that a [[Compute]] node should load or drop a segment, it writes an ephemeral znode to
+When the [Master](Master.html) decides that a [Compute](Compute.html) node should load or drop a segment, it writes an ephemeral znode to
 
     ${druid.zk.paths.loadQueuePath}/_host_of_compute_node/_segment_identifier
 
