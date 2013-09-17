@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Timeseries queries
 ==================
 
@@ -81,10 +84,10 @@ There are 7 main parts to a timeseries query:
 |--------|-----------|---------|
 |queryType|This String should always be “timeseries”; this is the first thing Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
-|granularity|Defines the granularity of the query. See [[Granularities]]|yes|
-|filter|See [[Filters]]|no|
-|aggregations|See [[Aggregations]]|yes|
-|postAggregations|See [[Post Aggregations]]|no|
+|granularity|Defines the granularity of the query. See [Granularities](Granularities.html)|yes|
+|filter|See [Filters](Filters.html)|no|
+|aggregations|See [Aggregations](Aggregations.html)|yes|
+|postAggregations|See [Post Aggregations](Post-Aggregations.html)|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 

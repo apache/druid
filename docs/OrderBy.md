@@ -1,3 +1,6 @@
+---
+layout: default
+---
 The orderBy field provides the functionality to sort and limit the set of results from a groupBy query. Available options are:
 
 ### DefaultLimitSpec

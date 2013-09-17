@@ -1,14 +1,17 @@
+---
+layout: default
+---
 Batch Data Ingestion
 ====================
 
-There are two choices for batch data ingestion to your Druid cluster, you can use the [[Indexing service]] or you can use the `HadoopDruidIndexerMain`. This page describes how to use the `HadoopDruidIndexerMain`.
+There are two choices for batch data ingestion to your Druid cluster, you can use the [Indexing service](Indexing-service.html) or you can use the `HadoopDruidIndexerMain`. This page describes how to use the `HadoopDruidIndexerMain`.
 
 Which should I use?
 -------------------
 
-The [[Indexing service]] is a node that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the Database that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. Long-term, the indexing service is going to be the preferred method of ingesting data.
+The [Indexing service](Indexing-service.html) is a node that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the Database that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. Long-term, the indexing service is going to be the preferred method of ingesting data.
 
-The `HadoopDruidIndexerMain` runs hadoop jobs in order to separate and index data segments. It takes advantage of Hadoop as a job scheduling and distributed job execution platform. It is a simple method if you already have Hadoop running and don’t want to spend the time configuring and deploying the [[Indexing service]] just yet.
+The `HadoopDruidIndexerMain` runs hadoop jobs in order to separate and index data segments. It takes advantage of Hadoop as a job scheduling and distributed job execution platform. It is a simple method if you already have Hadoop running and don’t want to spend the time configuring and deploying the [Indexing service](Indexing service.html) just yet.
 
 HadoopDruidIndexer
 ------------------
@@ -135,4 +138,4 @@ This is a specification of the properties that tell the job how to update metada
 |password|password for db|yes|
 |segmentTable|table to use in DB|yes|
 
-These properties should parrot what you have configured for your [[Master]].
+These properties should parrot what you have configured for your [Master](Master.html).

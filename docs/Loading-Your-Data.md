@@ -1,6 +1,9 @@
+---
+layout: default
+---
 Once you have a realtime node working, it is time to load your own data to see how Druid performs.
 
-Druid can ingest data in three ways: via Kafka and a realtime node, via the indexing service, and via the Hadoop batch loader. Data is ingested in realtime using a [[Firehose]].
+Druid can ingest data in three ways: via Kafka and a realtime node, via the indexing service, and via the Hadoop batch loader. Data is ingested in realtime using a [Firehose](Firehose.html).
 
 ## Create Config Directories ##
 Each type of node needs its own config file and directory, so create them as subdirectories under the druid directory.
@@ -14,7 +17,7 @@ mkdir config/broker
 
 ## Loading Data with Kafka ##
 
-[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/master/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [[Firehose]] with the right configuration, we can import data into Druid in realtime without writing any code. To load data to a realtime node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [[Realtime]] node.
+[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/master/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in realtime without writing any code. To load data to a realtime node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
 
 ### Booting Kafka ###
 
@@ -162,7 +165,7 @@ curl -X POST "http://localhost:8080/druid/v2/?pretty" \
   }
 } ]
 ```
-Now you're ready for [[Querying Your Data]]!
+Now you're ready for [Querying Your Data](Querying-Your-Data.html)!
 
 ## Loading Data with the HadoopDruidIndexer ##
 
@@ -181,7 +184,7 @@ mysql -u root
 GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
 CREATE database druid;
 ```
-The [[Master]] node will create the tables it needs based on its configuration.
+The [Master](Master.html) node will create the tables it needs based on its configuration.
 
 ### Make sure you have ZooKeeper Running ###
 
@@ -203,7 +206,7 @@ cd ..
 ```
 
 ### Launch a Master Node ###
-If you've already setup a realtime node, be aware that although you can run multiple node types on one physical computer, you must assign them unique ports. Having used 8080 for the [[Realtime]] node, we use 8081 for the [[Master]].
+If you've already setup a realtime node, be aware that although you can run multiple node types on one physical computer, you must assign them unique ports. Having used 8080 for the [Realtime](Realtime.html) node, we use 8081 for the [Master](Master.html).
 
 1. Setup a configuration file called config/master/runtime.properties similar to:
 ```bash
@@ -248,7 +251,7 @@ druid.paths.indexCache=/tmp/druid/indexCache
 # Path on local FS for storage of segment metadata; dir will be created if needed
 druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
 ```
-2. Launch the [[Master]] node
+2. Launch the [Master](Master.html) node
 ```bash
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
 -classpath lib/*:config/master \
@@ -321,7 +324,7 @@ We can use the same records we have been, in a file called records.json:
 
 ### Run the Hadoop Job ###
 
-Now its time to run the Hadoop [[Batch-ingestion]] job, HadoopDruidIndexer, which will fill a historical [[Compute]] node with data. First we'll need to configure the job.
+Now its time to run the Hadoop [Batch-ingestion](Batch-ingestion.html) job, HadoopDruidIndexer, which will fill a historical [Compute](Compute.html) node with data. First we'll need to configure the job.
 
 1. Create a config called batchConfig.json similar to:
 ```json
@@ -364,4 +367,4 @@ Now its time to run the Hadoop [[Batch-ingestion]] job, HadoopDruidIndexer, whic
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=realtime.spec -classpath lib/* com.metamx.druid.indexer.HadoopDruidIndexerMain batchConfig.json
 ```
 
-You can now move on to [[Querying Your Data]]!
+You can now move on to [Querying Your Data](Querying-Your-Data.html)!

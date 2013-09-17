@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Firehoses describe the data stream source. They are pluggable and thus the configuration schema can and will vary based on the `type` of the firehose.
 
 |Field|Type|Description|Required|
@@ -25,11 +28,11 @@ This firehose ingests events from a predefined list of S3 objects.
 
 #### TwitterSpritzerFirehose
 
-See [[Examples]]. This firehose connects directly to the twitter spritzer data stream.
+See [Examples](Examples.html). This firehose connects directly to the twitter spritzer data stream.
 
 #### RandomFirehose
 
-See [[Examples]]. This firehose creates a stream of random numbers.
+See [Examples](Examples.html). This firehose creates a stream of random numbers.
 
 #### RabbitMqFirehouse
 
