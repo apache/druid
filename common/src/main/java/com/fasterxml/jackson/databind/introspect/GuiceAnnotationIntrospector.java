@@ -3,6 +3,7 @@ package com.fasterxml.jackson.databind.introspect;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Key;
+import com.metamx.common.IAE;
 
 import java.lang.annotation.Annotation;
 
@@ -26,6 +27,9 @@ public class GuiceAnnotationIntrospector extends NopAnnotationIntrospector
     }
 
     if (guiceAnnotation == null) {
+      if (m instanceof AnnotatedMethod) {
+        throw new IAE("Annotated methods don't work very well yet...");
+      }
       return Key.get(m.getGenericType());
     }
     return Key.get(m.getGenericType(), guiceAnnotation);
