@@ -292,7 +292,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                           @Override
                           public int getValueCardinality()
                           {
-                            return dimValLookup.size();
+                            return maxId;
                           }
 
                           @Override
