@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Aggregations are specifications of processing over metrics available in Druid.
 Available aggregations are:
 
@@ -13,7 +16,7 @@ computes the sum of values as a 64-bit, signed integer
         "fieldName" : <metric_name>
     }</code>
 
-`name` – output name for the summed value
+`name` – output name for the summed value
 `fieldName` – name of the metric column to sum over
 
 #### `doubleSum` aggregator

@@ -1,7 +1,10 @@
+---
+layout: default
+---
 Segments
 ========
 
-Segments are the fundamental structure to store data in Druid. [[Compute]] and [[Realtime]] nodes load and serve segments for querying. To construct segments, Druid will always shard data by a time partition. Data may be further sharded based on dimension cardinality and row count.
+Segments are the fundamental structure to store data in Druid. [Compute](Compute.html) and [Realtime](Realtime.html) nodes load and serve segments for querying. To construct segments, Druid will always shard data by a time partition. Data may be further sharded based on dimension cardinality and row count.
 
 The latest Druid segment version is `v9`.
 

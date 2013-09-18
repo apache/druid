@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Welcome back! In our first [tutorial](https://github.com/metamx/druid/wiki/Tutorial%3A-A-First-Look-at-Druid), we introduced you to the most basic Druid setup: a single realtime node. We streamed in some data and queried it. Realtime nodes collect very recent data and periodically hand that data off to the rest of the Druid cluster. Some questions about the architecture must naturally come to mind. What does the rest of Druid cluster look like? How does Druid load available static data?
 
 This tutorial will hopefully answer these questions!
@@ -16,7 +19,7 @@ tar -zxvf druid-services-*-bin.tar.gz
 cd druid-services-*
 ```
 
-You can also [[Build From Source]].
+You can also [Build From Source](Build-From-Source.html).
 
 ## External Dependencies ##
 

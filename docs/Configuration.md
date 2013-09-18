@@ -1,4 +1,7 @@
-This describes the basic server configuration that is loaded by all the server processes; the same file is loaded by all. See also the json “specFile” descriptions in [[Realtime]] and [[Batch-ingestion]].
+---
+layout: default
+---
+This describes the basic server configuration that is loaded by all the server processes; the same file is loaded by all. See also the json “specFile” descriptions in [Realtime](Realtime.html) and [Batch-ingestion](Batch-ingestion.html).
 
 JVM Configuration Best Practices
 ================================
@@ -77,7 +80,7 @@ Configuration groupings
 
 ### S3 Access
 
-These properties are for connecting with S3 and using it to pull down segments. In the future, we plan on being able to use other deep storage file systems as well, like HDFS. The file system is actually only accessed by the [[Compute]], [[Realtime]] and [[Indexing service]] nodes.
+These properties are for connecting with S3 and using it to pull down segments. In the future, we plan on being able to use other deep storage file systems as well, like HDFS. The file system is actually only accessed by the [Compute](Compute.html), [Realtime](Realtime.html) and [Indexing service](Indexing service.html) nodes.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -88,7 +91,7 @@ These properties are for connecting with S3 and using it to pull down segments. 
 
 ### JDBC connection
 
-These properties specify the jdbc connection and other configuration around the “segments table” database. The only processes that connect to the DB with these properties are the [[Master]] and [[Indexing service]]. This is tested on MySQL.
+These properties specify the jdbc connection and other configuration around the “segments table” database. The only processes that connect to the DB with these properties are the [Master](Master.html) and [Indexing service](Indexing-service.html). This is tested on MySQL.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -110,7 +113,7 @@ These properties specify the jdbc connection and other configuration around the 
 
 ### Zk properties
 
-See [[ZooKeeper]] for a description of these properties.
+See [ZooKeeper](ZooKeeper.html) for a description of these properties.
 
 ### Service properties
 
@@ -143,7 +146,7 @@ These are properties that the compute nodes use
 
 ### Emitter Properties
 
-The Druid servers emit various metrics and alerts via something we call an [[Emitter]]. There are two emitter implementations included with the code, one that just logs to log4j and one that does POSTs of JSON events to a server. More information can be found on the [[Emitter]] page. The properties for using the logging emitter are described below.
+The Druid servers emit various metrics and alerts via something we call an [Emitter](Emitter.html). There are two emitter implementations included with the code, one that just logs to log4j and one that does POSTs of JSON events to a server. More information can be found on the [Emitter](Emitter.html) page. The properties for using the logging emitter are described below.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -155,5 +158,5 @@ The Druid servers emit various metrics and alerts via something we call an [[Emi
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.realtime.specFile`|The file with realtime specifications in it. See [[Realtime]].|none|
+|`druid.realtime.specFile`|The file with realtime specifications in it. See [Realtime](Realtime.html).|none|
 

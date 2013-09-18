@@ -1,6 +1,9 @@
+---
+layout: default
+---
 Druid is an open-source analytics datastore designed for realtime, exploratory, queries on large-scale data sets (100’s of Billions entries, 100’s TB data). Druid provides for cost effective, always-on, realtime data ingestion and arbitrary data exploration.
 
--   Check out some [[Examples]]
+-   Check out some [Examples](Examples.html)
 -   Try out Druid with our Getting Started [Tutorial](https://github.com/metamx/druid/wiki/Tutorial%3A-A-First-Look-at-Druid)
 -   Learn more by reading the [White Paper](http://static.druid.io/docs/druid.pdf)
 
@@ -16,7 +19,7 @@ The first one is the joy that everyone feels the first time they get Hadoop runn
 
 Druid is especially useful if you are summarizing your data sets and then querying the summarizations. If you put your summarizations into Druid, you will get quick queryability out of a system that you can be confident will scale up as your data volumes increase. Deployments have scaled up to 2TB of data per hour at peak ingested and aggregated in real-time.
 
-We have more details about the general design of the system and why you might want to use it in our [White Paper](http://static.druid.io/docs/druid.pdf) or in our [[Design]] doc.
+We have more details about the general design of the system and why you might want to use it in our [White Paper](http://static.druid.io/docs/druid.pdf) or in our [Design](Design.html) doc.
 
 The data store world is vast, confusing and constantly in flux. This page is meant to help potential evaluators decide whether Druid is a good fit for the problem one needs to solve. If anything about it is incorrect please provide that feedback on the mailing list or via some other means, we will fix this page.
 
@@ -35,11 +38,11 @@ The data store world is vast, confusing and constantly in flux. This page is mea
 \* Downtime is no big deal
 
 #### Druid vs…
-\* [[Druid-vs-Impala-or-Shark]]
-\* [[Druid-vs-Redshift]]
-\* [[Druid-vs-Vertica]]
-\* [[Druid-vs-Cassandra]]
-\* [[Druid-vs-Hadoop]]
+\* [Druid-vs-Impala-or-Shark](Druid-vs-Impala-or-Shark.html)
+\* [Druid-vs-Redshift](Druid-vs-Redshift.html)
+\* [Druid-vs-Vertica](Druid-vs-Vertica.html)
+\* [Druid-vs-Cassandra](Druid-vs-Cassandra.html)
+\* [Druid-vs-Hadoop](Druid-vs-Hadoop.html)
 
 Key Features
 ------------

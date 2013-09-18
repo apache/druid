@@ -1,3 +1,6 @@
+---
+layout: default
+---
 Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Druid. If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
 
 There are several post-aggregators available.
@@ -19,9 +22,9 @@ The grammar for an arithmetic post aggregation is:
 
 ### Field accessor post-aggregator
 
-This returns the value produced by the specified [[aggregator|Aggregations]].
+This returns the value produced by the specified [aggregator|Aggregations](aggregator|Aggregations.html).
 
-`fieldName` refers to the output name of the aggregator given in the [[aggregations|Aggregations]] portion of the query.
+`fieldName` refers to the output name of the aggregator given in the [aggregations|Aggregations](aggregations|Aggregations.html) portion of the query.
 
     <code>field_accessor : {
         "type"      : "fieldAccess",

@@ -1,4 +1,7 @@
-A Druid cluster consists of various node types that need to be set up depending on your use case. See our [[Design]] docs for a description of the different node types.
+---
+layout: default
+---
+A Druid cluster consists of various node types that need to be set up depending on your use case. See our [Design](Design.html) docs for a description of the different node types.
 
 Setup Scripts
 -------------
@@ -8,14 +11,14 @@ One of our community members, [housejester](https://github.com/housejester/), co
 Minimum Physical Layout: Absolute Minimum
 -----------------------------------------
 
-As a special case, the absolute minimum setup is one of the standalone examples for realtime ingestion and querying; see [[Examples]] that can easily run on one machine with one core and 1GB RAM. This layout can be set up to try some basic queries with Druid.
+As a special case, the absolute minimum setup is one of the standalone examples for realtime ingestion and querying; see [Examples](Examples.html) that can easily run on one machine with one core and 1GB RAM. This layout can be set up to try some basic queries with Druid.
 
 Minimum Physical Layout: Experimental Testing with 4GB of RAM
 -------------------------------------------------------------
 
 This layout can be used to load some data from deep storage onto a Druid compute node for the first time. A minimal physical layout for a 1 or 2 core machine with 4GB of RAM is:
 
-1.  node1: [[Master]] + metadata service + zookeeper + [[Compute]]
+1.  node1: [Master](Master.html) + metadata service + zookeeper + [Compute](Compute.html)
 2.  transient nodes: indexer
 
 This setup is only reasonable to prove that a configuration works. It would not be worthwhile to use this layout for performance measurement.
@@ -27,13 +30,13 @@ Comfortable Physical Layout: Pilot Project with Multiple Machines
 
 A minimal physical layout not constrained by cores that demonstrates parallel querying and realtime, using AWS-EC2 “small”/m1.small (one core, with 1.7GB of RAM) or larger, no realtime, is:
 
-1.  node1: [[Master]] (m1.small)
+1.  node1: [Master](Master.html) (m1.small)
 2.  node2: metadata service (m1.small)
 3.  node3: zookeeper (m1.small)
-4.  node4: [[Broker]] (m1.small or m1.medium or m1.large)
-5.  node5: [[Compute]] (m1.small or m1.medium or m1.large)
-6.  node6: [[Compute]] (m1.small or m1.medium or m1.large)
-7.  node7: [[Realtime]] (m1.small or m1.medium or m1.large)
+4.  node4: [Broker](Broker.html) (m1.small or m1.medium or m1.large)
+5.  node5: [Compute](Compute.html) (m1.small or m1.medium or m1.large)
+6.  node6: [Compute](Compute.html) (m1.small or m1.medium or m1.large)
+7.  node7: [Realtime](Realtime.html) (m1.small or m1.medium or m1.large)
 8.  transient nodes: indexer
 
 This layout naturally lends itself to adding more RAM and core to Compute nodes, and to adding many more Compute nodes. Depending on the actual load, the Master, metadata server, and Zookeeper might need to use larger machines.
@@ -45,18 +48,18 @@ High Availability Physical Layout
 
 An HA layout allows full rolling restarts and heavy volume:
 
-1.  node1: [[Master]] (m1.small or m1.medium or m1.large)
-2.  node2: [[Master]] (m1.small or m1.medium or m1.large) (backup)
+1.  node1: [Master](Master.html) (m1.small or m1.medium or m1.large)
+2.  node2: [Master](Master.html) (m1.small or m1.medium or m1.large) (backup)
 3.  node3: metadata service (c1.medium or m1.large)
 4.  node4: metadata service (c1.medium or m1.large) (backup)
 5.  node5: zookeeper (c1.medium)
 6.  node6: zookeeper (c1.medium)
 7.  node7: zookeeper (c1.medium)
-8.  node8: [[Broker]] (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
-9.  node9: [[Broker]] (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge) (backup)
-10. node10: [[Compute]] (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
-11. node11: [[Compute]] (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
-12. node12: [[Realtime]] (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
+8.  node8: [Broker](Broker.html) (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
+9.  node9: [Broker](Broker.html) (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge) (backup)
+10. node10: [Compute](Compute.html) (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
+11. node11: [Compute](Compute.html) (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
+12. node12: [Realtime](Realtime.html) (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
 13. transient nodes: indexer
 
 Sizing for Cores and RAM
@@ -76,7 +79,7 @@ Local disk (“ephemeral” on AWS EC2) for caching is recommended over network 
 Setup
 -----
 
-Setting up a cluster is essentially just firing up all of the nodes you want with the proper [[configuration]]. One thing to be aware of is that there are a few properties in the configuration that potentially need to be set individually for each process:
+Setting up a cluster is essentially just firing up all of the nodes you want with the proper [configuration](configuration.html). One thing to be aware of is that there are a few properties in the configuration that potentially need to be set individually for each process:
 
     <code>
     druid.server.type=historical|realtime
@@ -104,8 +107,8 @@ The following table shows the possible services and fully qualified class for ma
 
 |service|main class|
 |-------|----------|
-|[[ Realtime ]]|com.metamx.druid.realtime.RealtimeMain|
-|[[ Master ]]|com.metamx.druid.http.MasterMain|
-|[[ Broker ]]|com.metamx.druid.http.BrokerMain|
-|[[ Compute ]]|com.metamx.druid.http.ComputeMain|
+|[ Realtime ]( Realtime .html)|com.metamx.druid.realtime.RealtimeMain|
+|[ Master ]( Master .html)|com.metamx.druid.http.MasterMain|
+|[ Broker ]( Broker .html)|com.metamx.druid.http.BrokerMain|
+|[ Compute ]( Compute .html)|com.metamx.druid.http.ComputeMain|
 
