@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~ Druid - a distributed column store.
-  ~ Copyright (C) 2012  Metamarkets Group Inc.
+  ~ Copyright (C) 2012, 2013  Metamarkets Group Inc.
   ~
   ~ This program is free software; you can redistribute it and/or
   ~ modify it under the terms of the GNU General Public License
@@ -28,7 +28,7 @@
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.5.59-SNAPSHOT</version>
+        <version>0.6.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -42,17 +42,7 @@
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-client</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-indexing-common</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
+         <dependency>
             <groupId>com.metamx.druid</groupId>
             <artifactId>druid-indexing-hadoop</artifactId>
             <version>${project.parent.version}</version>
@@ -145,8 +135,8 @@
             <artifactId>jets3t</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.mortbay.jetty</groupId>
-            <artifactId>jetty</artifactId>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
         </dependency>
         <dependency>
             <groupId>joda-time</groupId>
