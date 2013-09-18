@@ -47,6 +47,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -177,16 +178,27 @@ public class GroupByQueryEngine
     {
       if (dims.size() > 0) {
         List<ByteBuffer> retVal = null;
-        for (Integer dimValue : dims.get(0).getRow()) {
+        List<ByteBuffer> unaggregatedBuffers = null;
+
+        final DimensionSelector dimSelector = dims.get(0);
+        final IndexedInts row = dimSelector.getRow();
+        if (row.size() == 0) {
           ByteBuffer newKey = key.duplicate();
-          newKey.putInt(dimValue);
-          final List<ByteBuffer> unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
-          if (unaggregatedBuffers != null) {
-            if (retVal == null) {
-              retVal = Lists.newArrayList();
-            }
-            retVal.addAll(unaggregatedBuffers);
+          newKey.putInt(dimSelector.getValueCardinality());
+          unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+        }
+        else {
+          for (Integer dimValue : row) {
+            ByteBuffer newKey = key.duplicate();
+            newKey.putInt(dimValue);
+            unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
           }
+        }
+        if (unaggregatedBuffers != null) {
+          if (retVal == null) {
+            retVal = Lists.newArrayList();
+          }
+          retVal.addAll(unaggregatedBuffers);
         }
         return retVal;
       }
@@ -385,7 +397,11 @@ public class GroupByQueryEngine
 
                   ByteBuffer keyBuffer = input.getKey().duplicate();
                   for (int i = 0; i < dimensions.size(); ++i) {
-                    theEvent.put(dimNames.get(i), dimensions.get(i).lookupName(keyBuffer.getInt()));
+                    final DimensionSelector dimSelector = dimensions.get(i);
+                    final int dimVal = keyBuffer.getInt();
+                    if (dimSelector.getValueCardinality() != dimVal) {
+                      theEvent.put(dimNames.get(i), dimSelector.lookupName(dimVal));
+                    }
                   }
 
                   int position = input.getValue();

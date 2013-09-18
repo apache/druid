@@ -50,8 +50,10 @@ class WikipediaIrcDecoder implements IrcDecoder
   final DatabaseReader geoLookup;
 
   static final Pattern pattern = Pattern.compile(
-      "\\x0314\\[\\[\\x0307(.+?)\\x0314\\]\\]\\x034 (.*?)\\x0310.*\\x0302(http.+?)\\x03.+\\x0303(.+?)\\x03.+\\x03 (\\(([+-]\\d+)\\).*|.+) \\x0310(.+)\\x03"
+      ".*\\x0314\\[\\[\\x0307(.+?)\\x0314\\]\\]\\x034 (.*?)\\x0310.*\\x0302(http.+?)" +
+      "\\x03.+\\x0303(.+?)\\x03.+\\x03 (\\(([+-]\\d+)\\).*|.+) \\x0310(.+)\\x03.*"
   );
+
   static final Pattern ipPattern = Pattern.compile("\\d+.\\d+.\\d+.\\d+");
   static final Pattern shortnamePattern = Pattern.compile("#(\\w\\w)\\..*");
 

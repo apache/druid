@@ -30,7 +30,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.Pair;
@@ -193,7 +192,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
   public void setQueryExecutorService(ExecutorService executorService)
   {
-    this.queryExecutorService = queryExecutorService;
+    this.queryExecutorService = executorService;
   }
 
   @Override

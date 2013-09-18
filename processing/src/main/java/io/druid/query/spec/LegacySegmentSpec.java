@@ -38,6 +38,8 @@ public class LegacySegmentSpec extends MultipleIntervalSegmentSpec
     final List<?> intervalStringList;
     if (intervals instanceof String) {
       intervalStringList = Arrays.asList((((String) intervals).split(",")));
+    } else if (intervals instanceof Interval) {
+      intervalStringList = Arrays.asList(intervals.toString());
     } else if (intervals instanceof Map) {
       intervalStringList = (List) ((Map) intervals).get("intervals");
     } else if (intervals instanceof List) {
