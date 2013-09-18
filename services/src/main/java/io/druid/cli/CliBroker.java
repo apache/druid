@@ -24,6 +24,7 @@ import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.cache.CacheMonitor;
 import io.druid.curator.CuratorModule;
+import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.BrokerModule;
 import io.druid.guice.HttpClientModule;
 import io.druid.guice.LifecycleModule;
@@ -32,6 +33,7 @@ import io.druid.guice.QueryableModule;
 import io.druid.guice.ServerModule;
 import io.druid.guice.ServerViewModule;
 import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.Self;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.EmitterModule;
@@ -64,6 +66,7 @@ public class CliBroker extends ServerRunnable
         HttpClientModule.global(),
         CuratorModule.class,
         new MetricsModule().register(CacheMonitor.class),
+        new DiscoveryModule().register(Self.class),
         new ServerModule(),
         new JettyServerModule(new QueryJettyServerInitializer())
             .addResource(StatusResource.class),
