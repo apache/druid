@@ -19,15 +19,22 @@
 
 package io.druid.guice;
 
+import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import io.druid.client.BrokerServerView;
 import io.druid.client.CachingClusteredClient;
 import io.druid.client.TimelineServerView;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheProvider;
+import io.druid.collections.ResourceHolder;
+import io.druid.collections.StupidPool;
+import io.druid.guice.annotations.Global;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.QueryToolChestWarehouse;
+
+import java.nio.ByteBuffer;
 
 /**
  */
@@ -43,5 +50,26 @@ public class BrokerModule implements Module
 
     binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
     JsonConfigProvider.bind(binder, "druid.broker.cache", CacheProvider.class);
+
+    // This is a workaround and needs to be made better in the near future.
+    binder.bind(
+        new TypeLiteral<StupidPool<ByteBuffer>>()
+        {
+        }
+    ).annotatedWith(Global.class).toInstance(new NoopStupidPool(null));
+  }
+
+  private static class NoopStupidPool extends StupidPool<ByteBuffer>
+  {
+    public NoopStupidPool(Supplier<ByteBuffer> generator)
+    {
+      super(generator);
+    }
+
+    @Override
+    public ResourceHolder<ByteBuffer> take()
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 }
