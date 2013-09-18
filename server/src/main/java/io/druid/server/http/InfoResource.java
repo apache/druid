@@ -83,8 +83,8 @@ public class InfoResource
                         {
                           return new ImmutableMap.Builder<String, Object>()
                               .put("id", segment.getIdentifier())
-                              .put("dataSource", segment.getDimensions())
-                              .put("interval", segment.getInterval())
+                              .put("dataSource", segment.getDataSource())
+                              .put("interval", segment.getInterval().toString())
                               .put("version", segment.getVersion())
                               .put("size", segment.getSize())
                               .build();
@@ -143,9 +143,11 @@ public class InfoResource
                      .build();
     }
     return Response.ok(
-        Iterables.transform(
-            serverInventoryView.getInventory(),
-            simplifyClusterFn
+        Lists.newArrayList(
+            Iterables.transform(
+                serverInventoryView.getInventory(),
+                simplifyClusterFn
+            )
         )
     ).build();
   }
@@ -159,20 +161,22 @@ public class InfoResource
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (full != null) {
-      return builder.entity(serverInventoryView.getInventory()).build();
+      return builder.entity(Lists.newArrayList(serverInventoryView.getInventory())).build();
     }
 
     return builder.entity(
-        Iterables.transform(
-            serverInventoryView.getInventory(),
-            new Function<DruidServer, String>()
-            {
-              @Override
-              public String apply(@Nullable DruidServer druidServer)
-              {
-                return druidServer.getName();
-              }
-            }
+        Lists.newArrayList(
+            Iterables.transform(
+                serverInventoryView.getInventory(),
+                new Function<DruidServer, String>()
+                {
+                  @Override
+                  public String apply(DruidServer druidServer)
+                  {
+                    return druidServer.getHost();
+                  }
+                }
+            )
         )
     ).build();
   }
@@ -259,44 +263,48 @@ public class InfoResource
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (full != null) {
       return builder.entity(
-          Iterables.concat(
-              Iterables.transform(
-                  serverInventoryView.getInventory(),
-                  new Function<DruidServer, Iterable<DataSegment>>()
-                  {
-                    @Override
-                    public Iterable<DataSegment> apply(@Nullable DruidServer druidServer)
-                    {
-                      return druidServer.getSegments().values();
-                    }
-                  }
+          Lists.newArrayList(
+              Iterables.concat(
+                  Iterables.transform(
+                      serverInventoryView.getInventory(),
+                      new Function<DruidServer, Iterable<DataSegment>>()
+                      {
+                        @Override
+                        public Iterable<DataSegment> apply(@Nullable DruidServer druidServer)
+                        {
+                          return druidServer.getSegments().values();
+                        }
+                      }
+                  )
               )
           )
       ).build();
     }
 
     return builder.entity(
-        Iterables.concat(
-            Iterables.transform(
-                serverInventoryView.getInventory(),
-                new Function<DruidServer, Iterable<String>>()
-                {
-                  @Override
-                  public Iterable<String> apply(@Nullable DruidServer druidServer)
-                  {
-                    return Collections2.transform(
-                        druidServer.getSegments().values(),
-                        new Function<DataSegment, String>()
-                        {
-                          @Override
-                          public String apply(@Nullable DataSegment segment)
-                          {
-                            return segment.getIdentifier();
-                          }
-                        }
-                    );
-                  }
-                }
+        Lists.newArrayList(
+            Iterables.concat(
+                Iterables.transform(
+                    serverInventoryView.getInventory(),
+                    new Function<DruidServer, Iterable<String>>()
+                    {
+                      @Override
+                      public Iterable<String> apply(@Nullable DruidServer druidServer)
+                      {
+                        return Collections2.transform(
+                            druidServer.getSegments().values(),
+                            new Function<DataSegment, String>()
+                            {
+                              @Override
+                              public String apply(@Nullable DataSegment segment)
+                              {
+                                return segment.getIdentifier();
+                              }
+                            }
+                        );
+                      }
+                    }
+                )
             )
         )
     ).build();
@@ -388,16 +396,18 @@ public class InfoResource
     }
 
     return builder.entity(
-        Iterables.transform(
-            getDataSources(),
-            new Function<DruidDataSource, String>()
-            {
-              @Override
-              public String apply(@Nullable DruidDataSource dataSource)
-              {
-                return dataSource.getName();
-              }
-            }
+        Lists.newArrayList(
+            Iterables.transform(
+                getDataSources(),
+                new Function<DruidDataSource, String>()
+                {
+                  @Override
+                  public String apply(@Nullable DruidDataSource dataSource)
+                  {
+                    return dataSource.getName();
+                  }
+                }
+            )
         )
     ).build();
   }
