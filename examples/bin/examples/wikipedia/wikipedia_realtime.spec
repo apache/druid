@@ -2,7 +2,7 @@
     "schema": {
         "dataSource": "wikipedia",
         "aggregators": [
-            {"type": "count", "name": "edits"},
+            {"type": "count", "name": "count"},
             {"type": "longSum", "fieldName": "added", "name": "added"},
             {"type": "longSum", "fieldName": "deleted", "name": "deleted"},
             {"type": "longSum", "fieldName": "delta", "name": "delta"}
