@@ -20,23 +20,22 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.druid.QueryGranularity;
-import com.metamx.druid.aggregation.AggregatorFactory;
-import com.metamx.druid.aggregation.CountAggregatorFactory;
-import com.metamx.druid.aggregation.LongSumAggregatorFactory;
-import com.metamx.druid.collect.StupidPool;
-import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.input.MapBasedRow;
-import com.metamx.druid.input.Row;
-import com.metamx.druid.query.group.GroupByQuery;
-import com.metamx.druid.query.group.GroupByQueryEngine;
-import com.metamx.druid.query.group.GroupByQueryEngineConfig;
-import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import io.druid.collections.StupidPool;
+import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.MapBasedRow;
+import io.druid.data.input.Row;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryEngine;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -72,15 +71,16 @@ public class IncrementalIndexStorageAdapterTest
     );
 
     GroupByQueryEngine engine = new GroupByQueryEngine(
-        new GroupByQueryEngineConfig()
+        Suppliers.<GroupByQueryConfig>ofInstance(new GroupByQueryConfig()
         {
+
           @Override
           public int getMaxIntermediateRows()
           {
             return 5;
           }
-        },
-        new StupidPool<ByteBuffer>(
+        }),
+        new StupidPool(
             new Supplier<ByteBuffer>()
             {
               @Override
