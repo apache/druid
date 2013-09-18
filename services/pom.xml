@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~ Druid - a distributed column store.
-  ~ Copyright (C) 2012  Metamarkets Group Inc.
+  ~ Copyright (C) 2012, 2013  Metamarkets Group Inc.
   ~
   ~ This program is free software; you can redistribute it and/or
   ~ modify it under the terms of the GNU General Public License
@@ -24,11 +24,11 @@
     <artifactId>druid-services</artifactId>
     <name>druid-services</name>
     <description>druid-services</description>
-    <version>0.5.59-SNAPSHOT</version>
+    <version>0.6.0-SNAPSHOT</version>
     <parent>
         <groupId>com.metamx</groupId>
         <artifactId>druid</artifactId>
-        <version>0.5.59-SNAPSHOT</version>
+        <version>0.6.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -56,6 +56,20 @@
             <groupId>com.metamx.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.metamx.druid</groupId>
+            <artifactId>druid-examples</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.metamx.druid</groupId>
+            <artifactId>druid-indexing-service</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>airline</artifactId>
         </dependency>
     </dependencies>
     <build>

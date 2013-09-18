@@ -10,7 +10,6 @@ target
 .idea
 .project
 .settings/
-examples/rand/RealtimeNode.out
-examples/twitter/RealtimeNode.out
 *.log
 *.DS_Store
+_site

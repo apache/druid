@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,12 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import com.metamx.common.parsers.TimestampParser;
-import com.metamx.druid.guava.Runnables;
-import com.metamx.druid.input.InputRow;
-import com.metamx.druid.input.MapBasedInputRow;
-import com.metamx.druid.realtime.firehose.Firehose;
-import com.metamx.druid.realtime.firehose.FirehoseFactory;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.common.guava.Runnables;
+import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseFactory;
+import io.druid.data.input.InputRow;
+import io.druid.data.input.MapBasedInputRow;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
