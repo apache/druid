@@ -39,6 +39,7 @@ import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -147,9 +148,7 @@ public class IrcFirehoseFactory implements FirehoseFactory
           @Override
           public List<String> getAlternativeNicknames()
           {
-            return Lists.newArrayList(nick + "_",
-                                      nick + "__",
-                                      nick + "___");
+            return Lists.newArrayList(nick + UUID.randomUUID(), nick + UUID.randomUUID(), nick + UUID.randomUUID());
           }
 
           @Override
