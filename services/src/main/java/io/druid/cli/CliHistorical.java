@@ -20,25 +20,18 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import com.google.inject.Module;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
-import io.druid.curator.CuratorModule;
-import io.druid.guice.AWSModule;
-import io.druid.guice.AnnouncerModule;
-import io.druid.guice.DataSegmentPullerModule;
-import io.druid.guice.DruidProcessingModule;
-import io.druid.guice.HistoricalModule;
-import io.druid.guice.HttpClientModule;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
-import io.druid.guice.QueryRunnerFactoryModule;
-import io.druid.guice.QueryableModule;
-import io.druid.guice.ServerModule;
-import io.druid.guice.StorageNodeModule;
-import io.druid.server.StatusResource;
+import io.druid.guice.ManageLifecycle;
+import io.druid.guice.NodeTypeConfig;
+import io.druid.query.QuerySegmentWalker;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
-import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.JettyServerModule;
+import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.ServerMonitor;
 
@@ -63,22 +56,21 @@ public class CliHistorical extends ServerRunnable
   protected List<Object> getModules()
   {
     return ImmutableList.<Object>of(
-        new LifecycleModule().register(ZkCoordinator.class),
-        EmitterModule.class,
-        HttpClientModule.global(),
-        CuratorModule.class,
-        AnnouncerModule.class,
-        DruidProcessingModule.class,
-        AWSModule.class,
-        DataSegmentPullerModule.class,
-        new MetricsModule().register(ServerMonitor.class),
-        new ServerModule(),
-        new StorageNodeModule("historical"),
-        new JettyServerModule(new QueryJettyServerInitializer())
-            .addResource(StatusResource.class),
-        new QueryableModule(ServerManager.class),
-        new QueryRunnerFactoryModule(),
-        HistoricalModule.class
+        new Module()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
+            binder.bind(ServerManager.class).in(LazySingleton.class);
+            binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+            binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
+
+            LifecycleModule.register(binder, ZkCoordinator.class);
+            MetricsModule.register(binder, ServerMonitor.class);
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("historical"));
+            binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+          }
+        }
     );
   }
 }

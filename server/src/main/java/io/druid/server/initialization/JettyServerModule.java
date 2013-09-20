@@ -20,7 +20,6 @@
 package io.druid.server.initialization;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.ConfigurationException;
@@ -44,13 +43,13 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
+import io.druid.server.StatusResource;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.nio.SelectChannelConnector;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import javax.servlet.ServletException;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -59,22 +58,6 @@ import java.util.Set;
 public class JettyServerModule extends JerseyServletModule
 {
   private static final Logger log = new Logger(JettyServerModule.class);
-
-  private final JettyServerInitializer initializer;
-  private final List<Class<?>> resources = Lists.newArrayList();
-
-  public JettyServerModule(
-      JettyServerInitializer initializer
-  )
-  {
-    this.initializer = initializer;
-  }
-
-  public JettyServerModule addResource(Class<?> resource)
-  {
-    resources.add(resource);
-    return this;
-  }
 
   @Override
   protected void configureServlets()
@@ -87,10 +70,8 @@ public class JettyServerModule extends JerseyServletModule
     binder.bind(DruidGuiceContainer.class).in(Scopes.SINGLETON);
     serve("/*").with(DruidGuiceContainer.class);
 
-    for (Class<?> resource : resources) {
-      Jerseys.addResource(binder, resource);
-      binder.bind(resource).in(LazySingleton.class);
-    }
+    Jerseys.addResource(binder, StatusResource.class);
+    binder.bind(StatusResource.class).in(LazySingleton.class);
 
     binder.bind(Key.get(Server.class, Names.named("ForTheEagerness"))).to(Server.class).asEagerSingleton();
   }
@@ -121,6 +102,8 @@ public class JettyServerModule extends JerseyServletModule
   @Provides @LazySingleton
   public Server getServer(Injector injector, Lifecycle lifecycle, @Self DruidNode node, ServerConfig config)
   {
+    JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
+
     final Server server = makeJettyServer(node, config);
     try {
       initializer.initialize(server, injector);

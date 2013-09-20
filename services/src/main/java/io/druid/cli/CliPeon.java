@@ -21,41 +21,47 @@ package io.druid.cli;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import com.google.inject.multibindings.MapBinder;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
-import io.druid.curator.CuratorModule;
-import io.druid.curator.discovery.DiscoveryModule;
-import io.druid.guice.AWSModule;
-import io.druid.guice.AnnouncerModule;
-import io.druid.guice.DataSegmentPullerModule;
-import io.druid.guice.DataSegmentPusherModule;
-import io.druid.guice.DruidProcessingModule;
-import io.druid.guice.HttpClientModule;
-import io.druid.guice.IndexingServiceDiscoveryModule;
-import io.druid.guice.LifecycleModule;
-import io.druid.guice.PeonModule;
-import io.druid.guice.QueryRunnerFactoryModule;
-import io.druid.guice.QueryableModule;
-import io.druid.guice.ServerModule;
-import io.druid.guice.ServerViewModule;
-import io.druid.guice.StorageNodeModule;
+import io.druid.guice.Jerseys;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
+import io.druid.guice.ManageLifecycle;
+import io.druid.guice.NodeTypeConfig;
+import io.druid.guice.PolyBind;
+import io.druid.indexing.common.RetryPolicyConfig;
+import io.druid.indexing.common.RetryPolicyFactory;
+import io.druid.indexing.common.TaskToolboxFactory;
+import io.druid.indexing.common.actions.RemoteTaskActionClientFactory;
+import io.druid.indexing.common.actions.TaskActionClientFactory;
+import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.index.ChatHandlerProvider;
+import io.druid.indexing.common.index.EventReceivingChatHandlerProvider;
+import io.druid.indexing.common.index.NoopChatHandlerProvider;
+import io.druid.indexing.coordinator.TaskRunner;
 import io.druid.indexing.coordinator.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.executor.ChatHandlerResource;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.initialization.LogLevelAdjuster;
-import io.druid.server.StatusResource;
-import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.Initialization;
-import io.druid.server.initialization.JettyServerModule;
-import io.druid.server.metrics.MetricsModule;
+import io.druid.query.QuerySegmentWalker;
+import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.S3DataSegmentKiller;
+import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.segment.loading.StorageLocationConfig;
+import io.druid.server.initialization.JettyServerInitializer;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -87,32 +93,59 @@ public class CliPeon implements Runnable
   {
     return Initialization.makeInjectorWithModules(
         injector,
-        ImmutableList.of(
-            new LifecycleModule(),
-            EmitterModule.class,
-            HttpClientModule.global(),
-            CuratorModule.class,
-            new MetricsModule(),
-            new ServerModule(),
-            new JettyServerModule(new QueryJettyServerInitializer())
-                .addResource(StatusResource.class)
-                .addResource(ChatHandlerResource.class),
-            new DiscoveryModule(),
-            new ServerViewModule(),
-            new StorageNodeModule(nodeType),
-            new DataSegmentPullerModule(),
-            new DataSegmentPusherModule(),
-            new AnnouncerModule(),
-            new DruidProcessingModule(),
-            new QueryableModule(ThreadPoolTaskRunner.class),
-            new QueryRunnerFactoryModule(),
-            new IndexingServiceDiscoveryModule(),
-            new AWSModule(),
-            new PeonModule(
-                new ExecutorLifecycleConfig()
-                    .setTaskFile(new File(taskAndStatusFile.get(0)))
-                    .setStatusFile(new File(taskAndStatusFile.get(1)))
-            )
+        ImmutableList.<Object>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                PolyBind.createChoice(
+                    binder,
+                    "druid.indexer.task.chathandler.type",
+                    Key.get(ChatHandlerProvider.class),
+                    Key.get(NoopChatHandlerProvider.class)
+                );
+                final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
+                    binder, Key.get(ChatHandlerProvider.class)
+                );
+                handlerProviderBinder.addBinding("curator").to(EventReceivingChatHandlerProvider.class);
+                handlerProviderBinder.addBinding("noop").to(NoopChatHandlerProvider.class);
+
+                binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
+
+                JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
+                JsonConfigProvider.bind(binder, "druid.worker.taskActionClient.retry", RetryPolicyConfig.class);
+
+                binder.bind(TaskActionClientFactory.class)
+                      .to(RemoteTaskActionClientFactory.class)
+                      .in(LazySingleton.class);
+                binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
+
+                binder.bind(DataSegmentKiller.class).to(S3DataSegmentKiller.class).in(LazySingleton.class);
+
+                binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
+                binder.bind(ExecutorLifecycleConfig.class).toInstance(
+                    new ExecutorLifecycleConfig()
+                        .setTaskFile(new File(taskAndStatusFile.get(0)))
+                        .setStatusFile(new File(taskAndStatusFile.get(1)))
+                );
+
+                binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);
+                binder.bind(QuerySegmentWalker.class).to(ThreadPoolTaskRunner.class);
+                binder.bind(ThreadPoolTaskRunner.class).in(ManageLifecycle.class);
+
+                // Override the default SegmentLoaderConfig because we don't actually care about the
+                // configuration based locations.  This will override them anyway.  This is also stopping
+                // configuration of other parameters, but I don't think that's actually a problem.
+                // Note, if that is actually not a problem, then that probably means we have the wrong abstraction.
+                binder.bind(SegmentLoaderConfig.class)
+                      .toInstance(new SegmentLoaderConfig().withLocations(Arrays.<StorageLocationConfig>asList()));
+
+                binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
+                Jerseys.addResource(binder, ChatHandlerResource.class);
+                binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
+              }
+            }
         )
     );
   }

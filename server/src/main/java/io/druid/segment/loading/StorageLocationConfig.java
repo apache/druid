@@ -42,9 +42,21 @@ public class StorageLocationConfig
     return path;
   }
 
+  public StorageLocationConfig setPath(File path)
+  {
+    this.path = path;
+    return this;
+  }
+
   public long getMaxSize()
   {
     return maxSize;
+  }
+
+  public StorageLocationConfig setMaxSize(long maxSize)
+  {
+    this.maxSize = maxSize;
+    return this;
   }
 
   @Override

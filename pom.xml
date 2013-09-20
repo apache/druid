@@ -51,6 +51,7 @@
         <module>server</module>
         <module>services</module>
         <module>processing</module>
+        <module>cassandra-storage</module>
     </modules>
 
     <dependencyManagement>

@@ -200,11 +200,6 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>com.netflix.astyanax</groupId>
-            <artifactId>astyanax</artifactId>
-            <version>1.0.1</version>
-        </dependency>
-        <dependency>
             <groupId>org.antlr</groupId>
             <artifactId>antlr4-runtime</artifactId>
         </dependency>

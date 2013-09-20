@@ -19,11 +19,10 @@
 
 package io.druid.server.metrics;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -34,14 +33,12 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.concurrent.Execs;
+import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.JsonConfigurator;
-import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 
 import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Set;
 
 /**
  * Sets up the {@link MonitorScheduler} to monitor things on a regular schedule.  {@link Monitor}s must be explicitly
@@ -51,40 +48,18 @@ public class MetricsModule implements Module
 {
   private static final Logger log = new Logger(MetricsModule.class);
 
-  private final List<Class<? extends Monitor>> monitors = new CopyOnWriteArrayList<Class<? extends Monitor>>();
-  public boolean configured = false;
-
-  public MetricsModule register(Class<? extends Monitor> monitorClazz)
+  public static void register(Binder binder, Class<? extends Monitor> monitorClazz)
   {
-    synchronized (monitors) {
-      Preconditions.checkState(!configured, "Cannot register monitor[%s] after configuration.", monitorClazz);
-    }
-    monitors.add(monitorClazz);
-    return this;
-  }
-
-  @Inject
-  public void setProperties(Properties props, JsonConfigurator configurator)
-  {
-    final MonitorsConfig config = configurator.configurate(
-        props,
-        "druid.monitoring",
-        MonitorsConfig.class
-    );
-
-    for (Class<? extends Monitor> monitorClazz : config.getMonitors()) {
-      register(monitorClazz);
-    }
+    DruidBinders.metricMonitorBinder(binder).addBinding().toInstance(monitorClazz);
   }
 
   @Override
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.monitoring", DruidMonitorSchedulerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.monitoring", MonitorsConfig.class);
 
-    for (Class<? extends Monitor> monitor : monitors) {
-      binder.bind(monitor).in(LazySingleton.class);
-    }
+    DruidBinders.metricMonitorBinder(binder); // get the binder so that it will inject the empty set at a minimum.
 
     // Instantiate eagerly so that we get everything registered and put into the Lifecycle
     binder.bind(Key.get(MonitorScheduler.class, Names.named("ForTheEagerness")))
@@ -96,20 +71,20 @@ public class MetricsModule implements Module
   @ManageLifecycle
   public MonitorScheduler getMonitorScheduler(
       Supplier<DruidMonitorSchedulerConfig> config,
+      MonitorsConfig monitorsConfig,
+      Set<Class<? extends Monitor>> monitorSet,
       ServiceEmitter emitter,
       Injector injector
   )
   {
     List<Monitor> monitors = Lists.newArrayList();
 
-    for (Key<?> key : injector.getBindings().keySet()) {
-      if (Monitor.class.isAssignableFrom(key.getTypeLiteral().getRawType())) {
-        final Monitor monitor = (Monitor) injector.getInstance(key);
+    for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
+      final Monitor monitor = injector.getInstance(monitorClass);
 
-        log.info("Adding monitor[%s]", monitor);
+      log.info("Adding monitor[%s]", monitor);
 
-        monitors.add(monitor);
-      }
+      monitors.add(monitor);
     }
 
     return new MonitorScheduler(

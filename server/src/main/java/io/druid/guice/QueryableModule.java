@@ -22,6 +22,7 @@ package io.druid.guice;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
+import com.google.inject.util.Providers;
 import io.druid.initialization.DruidModule;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.QueryServlet;
@@ -37,20 +38,11 @@ import java.util.List;
  */
 public class QueryableModule implements DruidModule
 {
-  private final Class<? extends QuerySegmentWalker> walkerClass;
-
-  public QueryableModule(
-      Class<? extends QuerySegmentWalker> walkerClass
-  )
-  {
-    this.walkerClass = walkerClass;
-  }
-
   @Override
   public void configure(Binder binder)
   {
     binder.bind(QueryServlet.class).in(LazySingleton.class);
-    binder.bind(QuerySegmentWalker.class).to(walkerClass).in(LazySingleton.class);
+    binder.bind(QuerySegmentWalker.class).toProvider(Providers.<QuerySegmentWalker>of(null));
     binder.bind(RequestLogger.class).toProvider(RequestLoggerProvider.class).in(ManageLifecycle.class);
     JsonConfigProvider.bind(binder, "druid.request.logging", RequestLoggerProvider.class);
   }

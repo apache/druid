@@ -19,25 +19,21 @@
 
 package io.druid.guice;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.LocalDataSegmentPusher;
-import io.druid.segment.loading.LocalDataSegmentPusherConfig;
-
-import javax.validation.constraints.NotNull;
-
 /**
  */
-public class LocalDataSegmentPusherProvider extends LocalDataSegmentPusherConfig implements DataSegmentPusherProvider
+public class NodeTypeConfig
 {
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
+  private final String nodeType;
 
-  @Override
-  public DataSegmentPusher get()
+  public NodeTypeConfig(
+      String nodeType
+  )
   {
-    return new LocalDataSegmentPusher(this, jsonMapper);
+    this.nodeType = nodeType;
+  }
+
+  public String getNodeType()
+  {
+    return nodeType;
   }
 }
