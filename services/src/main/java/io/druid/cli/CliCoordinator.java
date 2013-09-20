@@ -42,7 +42,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
-import io.druid.server.StatusResource;
+import io.druid.server.http.BackwardsCompatiableInfoResource;
 import io.druid.server.http.InfoResource;
 import io.druid.server.http.MasterRedirectInfo;
 import io.druid.server.http.MasterResource;
@@ -107,6 +107,7 @@ public class CliCoordinator extends ServerRunnable
             DiscoveryModule.register(binder, Self.class);
 
             binder.bind(JettyServerInitializer.class).toInstance(new CoordinatorJettyServerInitializer());
+            Jerseys.addResource(binder, BackwardsCompatiableInfoResource.class);
             Jerseys.addResource(binder, InfoResource.class);
             Jerseys.addResource(binder, MasterResource.class);
           }
