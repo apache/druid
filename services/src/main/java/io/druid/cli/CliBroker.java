@@ -20,6 +20,8 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Injector;
+import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.cache.CacheMonitor;
@@ -34,11 +36,18 @@ import io.druid.guice.ServerModule;
 import io.druid.guice.ServerViewModule;
 import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Self;
+import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.EmitterModule;
 import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.util.List;
 
@@ -68,7 +77,8 @@ public class CliBroker extends ServerRunnable
         new MetricsModule().register(CacheMonitor.class),
         new DiscoveryModule().register(Self.class),
         new ServerModule(),
-        new JettyServerModule(new QueryJettyServerInitializer())
+        new JettyServerModule(new BrokerJettyServerInitializer())
+            .addResource(ClientInfoResource.class)
             .addResource(StatusResource.class),
         new QueryableModule(ClientQuerySegmentWalker.class),
         new QueryToolChestModule(),
@@ -76,5 +86,22 @@ public class CliBroker extends ServerRunnable
         new HttpClientModule("druid.broker.http", Client.class),
         new BrokerModule()
     );
+  }
+
+  private static class BrokerJettyServerInitializer extends QueryJettyServerInitializer
+  {
+    @Override
+    public void initialize(Server server, Injector injector)
+    {
+      super.initialize(server, injector);
+
+      final ServletContextHandler resources = new ServletContextHandler(ServletContextHandler.SESSIONS);
+      resources.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+      resources.addFilter(GuiceFilter.class, "/druid/v2/datasources/*", null);
+
+      final HandlerList handlerList = new HandlerList();
+      handlerList.setHandlers(new Handler[]{resources});
+      server.setHandler(handlerList);
+    }
   }
 }

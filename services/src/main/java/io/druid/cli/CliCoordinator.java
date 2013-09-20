@@ -36,6 +36,7 @@ import io.druid.guice.ServerModule;
 import io.druid.guice.ServerViewModule;
 import io.druid.guice.annotations.Self;
 import io.druid.server.StatusResource;
+import io.druid.server.http.BackwardsCompatiableInfoResource;
 import io.druid.server.http.InfoResource;
 import io.druid.server.http.MasterResource;
 import io.druid.server.http.RedirectFilter;
@@ -87,6 +88,7 @@ public class CliCoordinator extends ServerRunnable
         new ServerModule(),
         new JettyServerModule(new CoordinatorJettyServerInitializer())
             .addResource(InfoResource.class)
+            .addResource(BackwardsCompatiableInfoResource.class)
             .addResource(MasterResource.class)
             .addResource(StatusResource.class),
         new ServerViewModule(),
