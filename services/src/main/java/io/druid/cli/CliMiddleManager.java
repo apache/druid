@@ -20,32 +20,27 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceFilter;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
-import io.druid.curator.CuratorModule;
-import io.druid.guice.AWSModule;
-import io.druid.guice.HttpClientModule;
+import io.druid.guice.IndexingServiceModuleHelper;
+import io.druid.guice.Jerseys;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
-import io.druid.guice.MiddleManagerModule;
-import io.druid.guice.ServerModule;
-import io.druid.guice.TaskLogsModule;
+import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.Self;
+import io.druid.indexing.coordinator.ForkingTaskRunner;
+import io.druid.indexing.coordinator.TaskRunner;
+import io.druid.indexing.worker.Worker;
+import io.druid.indexing.worker.WorkerCuratorCoordinator;
 import io.druid.indexing.worker.WorkerTaskMonitor;
+import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.indexing.worker.http.WorkerResource;
-import io.druid.server.StatusResource;
-import io.druid.server.initialization.EmitterModule;
+import io.druid.server.DruidNode;
 import io.druid.server.initialization.JettyServerInitializer;
-import io.druid.server.initialization.JettyServerModule;
-import io.druid.server.metrics.MetricsModule;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.DefaultHandler;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.GzipFilter;
 
 import java.util.List;
 
@@ -68,34 +63,38 @@ public class CliMiddleManager extends ServerRunnable
   protected List<Object> getModules()
   {
     return ImmutableList.<Object>of(
-        new LifecycleModule().register(WorkerTaskMonitor.class),
-        EmitterModule.class,
-        HttpClientModule.global(),
-        CuratorModule.class,
-        new MetricsModule(),
-        new ServerModule(),
-        new JettyServerModule(new MiddleManagerJettyServerInitializer())
-            .addResource(StatusResource.class)
-            .addResource(WorkerResource.class),
-        new AWSModule(),
-        new TaskLogsModule(),
-        new MiddleManagerModule()
+        new Module()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
+            IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
+
+            JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
+
+            binder.bind(TaskRunner.class).to(ForkingTaskRunner.class);
+            binder.bind(ForkingTaskRunner.class).in(LazySingleton.class);
+
+            binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
+            binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
+
+            LifecycleModule.register(binder, WorkerTaskMonitor.class);
+            binder.bind(JettyServerInitializer.class).toInstance(new MiddleManagerJettyServerInitializer());
+            Jerseys.addResource(binder, WorkerResource.class);
+          }
+
+          @Provides
+          @LazySingleton
+          public Worker getWorker(@Self DruidNode node, WorkerConfig config)
+          {
+            return new Worker(
+                node.getHost(),
+                config.getIp(),
+                config.getCapacity(),
+                config.getVersion()
+            );
+          }
+        }
     );
-  }
-
-  private static class MiddleManagerJettyServerInitializer implements JettyServerInitializer
-  {
-    @Override
-    public void initialize(Server server, Injector injector)
-    {
-      final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
-      root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-      root.addFilter(GzipFilter.class, "/*", null);
-      root.addFilter(GuiceFilter.class, "/*", null);
-
-      final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{root, new DefaultHandler()});
-      server.setHandler(handlerList);
-    }
   }
 }

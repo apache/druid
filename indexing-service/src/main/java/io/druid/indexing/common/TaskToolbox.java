@@ -59,6 +59,7 @@ public class TaskToolbox
   private final ExecutorService queryExecutorService;
   private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
+  private final File taskWorkDir;
 
   public TaskToolbox(
       TaskConfig config,
@@ -73,7 +74,8 @@ public class TaskToolbox
       ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      final File taskWorkDir
   )
   {
     this.config = config;
@@ -89,6 +91,7 @@ public class TaskToolbox
     this.monitorScheduler = monitorScheduler;
     this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
+    this.taskWorkDir = taskWorkDir;
   }
 
   public TaskConfig getConfig()
@@ -159,6 +162,6 @@ public class TaskToolbox
 
   public File getTaskWorkDir()
   {
-    return new File(new File(config.getBaseTaskDir(), task.getId()), "work");
+    return taskWorkDir;
   }
 }

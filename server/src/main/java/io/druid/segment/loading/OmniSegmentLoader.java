@@ -65,6 +65,11 @@ public class OmniSegmentLoader implements SegmentLoader
     }
   }
 
+  public OmniSegmentLoader withConfig(SegmentLoaderConfig config)
+  {
+    return new OmniSegmentLoader(pullers, factory, config);
+  }
+
   @Override
   public boolean isSegmentLoaded(final DataSegment segment)
   {

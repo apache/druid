@@ -19,10 +19,8 @@
 
 package io.druid.curator.discovery;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -33,18 +31,30 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
+import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.KeyHolder;
 import io.druid.guice.LazySingleton;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.CuratorDiscoveryConfig;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.x.discovery.ProviderStrategy;
+import org.apache.curator.x.discovery.ServiceCache;
+import org.apache.curator.x.discovery.ServiceCacheBuilder;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
+import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.ServiceProvider;
+import org.apache.curator.x.discovery.ServiceProviderBuilder;
+import org.apache.curator.x.discovery.details.ServiceCacheListener;
 
-import javax.annotation.Nullable;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * The DiscoveryModule allows for the registration of Keys of DruidNode objects, which it intends to be
@@ -57,21 +67,16 @@ public class DiscoveryModule implements Module
 {
   private static final String NAME = "DiscoveryModule:internal";
 
-  public final List<Key<Supplier<DruidNode>>> nodesToAnnounce = new CopyOnWriteArrayList<Key<Supplier<DruidNode>>>();
-  public boolean configured = false;
-
   /**
    * Requests that the un-annotated DruidNode instance be injected and published as part of the lifecycle.
    *
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class)) automatically.
    * Announcement will happen in the LAST stage of the Lifecycle
-   *
-   * @return this, for chaining.
    */
-  public DiscoveryModule registerDefault()
+  public static void registerDefault(Binder binder)
   {
-    return registerKey(Key.get(new TypeLiteral<Supplier<DruidNode>>(){}));
+    registerKey(binder, Key.get(new TypeLiteral<DruidNode>(){}));
   }
 
   /**
@@ -82,11 +87,10 @@ public class DiscoveryModule implements Module
    * Announcement will happen in the LAST stage of the Lifecycle
    *
    * @param annotation The annotation instance to use in finding the DruidNode instance, usually a Named annotation
-   * @return this, for chaining.
    */
-  public DiscoveryModule register(Annotation annotation)
+  public static void register(Binder binder, Annotation annotation)
   {
-    return registerKey(Key.get(new TypeLiteral<Supplier<DruidNode>>(){}, annotation));
+    registerKey(binder, Key.get(new TypeLiteral<DruidNode>(){}, annotation));
   }
 
   /**
@@ -97,11 +101,10 @@ public class DiscoveryModule implements Module
    * Announcement will happen in the LAST stage of the Lifecycle
    *
    * @param annotation The annotation class to use in finding the DruidNode instance
-   * @return this, for chaining
    */
-  public DiscoveryModule register(Class<? extends Annotation> annotation)
+  public static void register(Binder binder, Class<? extends Annotation> annotation)
   {
-    return registerKey(Key.get(new TypeLiteral<Supplier<DruidNode>>(){}, annotation));
+    registerKey(binder, Key.get(new TypeLiteral<DruidNode>(){}, annotation));
   }
 
   /**
@@ -112,67 +115,53 @@ public class DiscoveryModule implements Module
    * Announcement will happen in the LAST stage of the Lifecycle
    *
    * @param key The key to use in finding the DruidNode instance
-   * @return this, for chaining
    */
-  public DiscoveryModule registerKey(Key<Supplier<DruidNode>> key)
+  public static void registerKey(Binder binder, Key<DruidNode> key)
   {
-    synchronized (nodesToAnnounce) {
-      Preconditions.checkState(!configured, "Cannot register key[%s] after configuration.", key);
-    }
-    nodesToAnnounce.add(key);
-    return this;
+    DruidBinders.discoveryAnnouncementBinder(binder).addBinding().toInstance(new KeyHolder<>(key));
   }
 
   @Override
   public void configure(Binder binder)
   {
-    synchronized (nodesToAnnounce) {
-      configured = true;
-      JsonConfigProvider.bind(binder, "druid.discovery.curator", CuratorDiscoveryConfig.class);
+    JsonConfigProvider.bind(binder, "druid.discovery.curator", CuratorDiscoveryConfig.class);
 
-      binder.bind(CuratorServiceAnnouncer.class).in(LazySingleton.class);
+    binder.bind(CuratorServiceAnnouncer.class).in(LazySingleton.class);
 
-      // We bind this eagerly so that it gets instantiated and registers stuff with Lifecycle as a side-effect
-      binder.bind(ServiceAnnouncer.class)
-            .to(Key.get(CuratorServiceAnnouncer.class, Names.named(NAME)))
-            .asEagerSingleton();
-    }
+    // Build the binder so that it will at a minimum inject an empty set.
+    DruidBinders.discoveryAnnouncementBinder(binder);
+
+    // We bind this eagerly so that it gets instantiated and registers stuff with Lifecycle as a side-effect
+    binder.bind(ServiceAnnouncer.class)
+          .to(Key.get(CuratorServiceAnnouncer.class, Names.named(NAME)))
+          .asEagerSingleton();
   }
 
   @Provides @LazySingleton @Named(NAME)
   public CuratorServiceAnnouncer getServiceAnnouncer(
       final CuratorServiceAnnouncer announcer,
       final Injector injector,
+      final Set<KeyHolder<DruidNode>> nodesToAnnounce,
       final Lifecycle lifecycle
   )
   {
     lifecycle.addHandler(
         new Lifecycle.Handler()
         {
-          private volatile List<Supplier<DruidNode>> nodes = null;
+          private volatile List<DruidNode> nodes = null;
 
           @Override
           public void start() throws Exception
           {
             if (nodes == null) {
-              nodes = Lists.transform(
-                  nodesToAnnounce,
-                  new Function<Key<Supplier<DruidNode>>, Supplier<DruidNode>>()
-                  {
-                    @Nullable
-                    @Override
-                    public Supplier<DruidNode> apply(
-                        @Nullable Key<Supplier<DruidNode>> input
-                    )
-                    {
-                      return injector.getInstance(input);
-                    }
-                  }
-              );
+              nodes = Lists.newArrayList();
+              for (KeyHolder<DruidNode> holder : nodesToAnnounce) {
+                nodes.add(injector.getInstance(holder.getKey()));
+              }
             }
 
-            for (Supplier<DruidNode> node : nodes) {
-              announcer.announce(node.get());
+            for (DruidNode node : nodes) {
+              announcer.announce(node);
             }
           }
 
@@ -180,8 +169,8 @@ public class DiscoveryModule implements Module
           public void stop()
           {
             if (nodes != null) {
-              for (Supplier<DruidNode> node : nodes) {
-                announcer.unannounce(node.get());
+              for (DruidNode node : nodes) {
+                announcer.unannounce(node);
               }
             }
           }
@@ -195,13 +184,17 @@ public class DiscoveryModule implements Module
   @Provides @LazySingleton
   public ServiceDiscovery<Void> getServiceDiscovery(
       CuratorFramework curator,
-      Supplier<CuratorDiscoveryConfig> config,
+      CuratorDiscoveryConfig config,
       Lifecycle lifecycle
   ) throws Exception
   {
+    if (!config.useDiscovery()) {
+      return new NoopServiceDiscovery<>();
+    }
+
     final ServiceDiscovery<Void> serviceDiscovery =
         ServiceDiscoveryBuilder.builder(Void.class)
-                               .basePath(config.get().getPath())
+                               .basePath(config.getPath())
                                .client(curator)
                                .build();
 
@@ -229,5 +222,184 @@ public class DiscoveryModule implements Module
     );
 
     return serviceDiscovery;
+  }
+
+  private static class NoopServiceDiscovery<T> implements ServiceDiscovery<T>
+  {
+    @Override
+    public void start() throws Exception
+    {
+
+    }
+
+    @Override
+    public void registerService(ServiceInstance<T> service) throws Exception
+    {
+
+    }
+
+    @Override
+    public void updateService(ServiceInstance<T> service) throws Exception
+    {
+
+    }
+
+    @Override
+    public void unregisterService(ServiceInstance<T> service) throws Exception
+    {
+
+    }
+
+    @Override
+    public ServiceCacheBuilder<T> serviceCacheBuilder()
+    {
+      return new NoopServiceCacheBuilder<>();
+    }
+
+    @Override
+    public Collection<String> queryForNames() throws Exception
+    {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public Collection<ServiceInstance<T>> queryForInstances(String name) throws Exception
+    {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ServiceInstance<T> queryForInstance(String name, String id) throws Exception
+    {
+      return null;
+    }
+
+    @Override
+    public ServiceProviderBuilder<T> serviceProviderBuilder()
+    {
+      return new NoopServiceProviderBuilder<>();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+
+    }
+  }
+
+  private static class NoopServiceCacheBuilder<T> implements ServiceCacheBuilder<T>
+  {
+    @Override
+    public ServiceCache<T> build()
+    {
+      return new NoopServiceCache<>();
+    }
+
+    @Override
+    public ServiceCacheBuilder<T> name(String name)
+    {
+      return this;
+    }
+
+    @Override
+    public ServiceCacheBuilder<T> threadFactory(ThreadFactory threadFactory)
+    {
+      return this;
+    }
+
+    private static class NoopServiceCache<T> implements ServiceCache<T>
+    {
+      @Override
+      public List<ServiceInstance<T>> getInstances()
+      {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public void start() throws Exception
+      {
+
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+
+      }
+
+      @Override
+      public void addListener(ServiceCacheListener listener)
+      {
+
+      }
+
+      @Override
+      public void addListener(
+          ServiceCacheListener listener, Executor executor
+      )
+      {
+
+      }
+
+      @Override
+      public void removeListener(ServiceCacheListener listener)
+      {
+
+      }
+    }
+  }
+
+  private static class NoopServiceProviderBuilder<T> implements ServiceProviderBuilder<T>
+  {
+    @Override
+    public ServiceProvider<T> build()
+    {
+      return new NoopServiceProvider<>();
+    }
+
+    @Override
+    public ServiceProviderBuilder<T> serviceName(String serviceName)
+    {
+      return this;
+    }
+
+    @Override
+    public ServiceProviderBuilder<T> providerStrategy(ProviderStrategy<T> providerStrategy)
+    {
+      return this;
+    }
+
+    @Override
+    public ServiceProviderBuilder<T> threadFactory(ThreadFactory threadFactory)
+    {
+      return this;
+    }
+
+    @Override
+    public ServiceProviderBuilder<T> refreshPaddingMs(int refreshPaddingMs)
+    {
+      return this;
+    }
+  }
+
+  private static class NoopServiceProvider<T> implements ServiceProvider<T>
+  {
+    @Override
+    public void start() throws Exception
+    {
+
+    }
+
+    @Override
+    public ServiceInstance<T> getInstance() throws Exception
+    {
+      return null;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+
+    }
   }
 }

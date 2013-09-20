@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization;
+package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
@@ -29,12 +29,35 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.util.Modules;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import io.druid.curator.CuratorModule;
+import io.druid.curator.discovery.DiscoveryModule;
+import io.druid.guice.AWSModule;
+import io.druid.guice.AnnouncerModule;
+import io.druid.guice.DataSegmentPusherPullerModule;
+import io.druid.guice.DbConnectorModule;
+import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
+import io.druid.guice.HttpClientModule;
+import io.druid.guice.IndexingServiceDiscoveryModule;
+import io.druid.guice.JacksonConfigManagerModule;
+import io.druid.guice.LifecycleModule;
+import io.druid.guice.QueryRunnerFactoryModule;
+import io.druid.guice.QueryableModule;
+import io.druid.guice.ServerModule;
+import io.druid.guice.ServerViewModule;
+import io.druid.guice.StorageNodeModule;
+import io.druid.guice.TaskLogsModule;
+import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
+import io.druid.server.initialization.EmitterModule;
+import io.druid.server.initialization.ExtensionsConfig;
+import io.druid.server.initialization.JettyServerModule;
+import io.druid.server.metrics.MetricsModule;
 import io.tesla.aether.TeslaAether;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.eclipse.aether.artifact.Artifact;
@@ -171,8 +194,33 @@ public class Initialization
     }
   }
 
-  public static Injector makeInjectorWithModules(final Injector baseInjector, List<Object> modules)
+  public static Injector makeInjectorWithModules(final Injector baseInjector, Iterable<Object> modules)
   {
+    final ModuleList defaultModules = new ModuleList(baseInjector);
+    defaultModules.addModules(
+        new LifecycleModule(),
+        EmitterModule.class,
+        HttpClientModule.global(),
+        new HttpClientModule("druid.broker.http", Client.class),
+        new CuratorModule(),
+        new AnnouncerModule(),
+        new DruidProcessingModule(),
+        new AWSModule(),
+        new MetricsModule(),
+        new ServerModule(),
+        new StorageNodeModule(),
+        new JettyServerModule(),
+        new QueryableModule(),
+        new QueryRunnerFactoryModule(),
+        new DiscoveryModule(),
+        new ServerViewModule(),
+        new DbConnectorModule(),
+        new JacksonConfigManagerModule(),
+        new IndexingServiceDiscoveryModule(),
+        new DataSegmentPusherPullerModule(),
+        new TaskLogsModule()
+    );
+
     ModuleList actualModules = new ModuleList(baseInjector);
     actualModules.addModule(DruidSecondaryModule.class);
     for (Object module : modules) {
@@ -184,7 +232,7 @@ public class Initialization
       actualModules.addModule(module);
     }
 
-    return Guice.createInjector(actualModules.getModules());
+    return Guice.createInjector(Modules.override(defaultModules.getModules()).with(actualModules.getModules()));
   }
 
   private static class ModuleList
@@ -230,6 +278,13 @@ public class Initialization
       }
       else {
         throw new ISE("Unknown module type[%s]", input.getClass());
+      }
+    }
+
+    public void addModules(Object... object)
+    {
+      for (Object o : object) {
+        addModule(o);
       }
     }
 

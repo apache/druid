@@ -22,10 +22,13 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.multibindings.Multibinder;
+import com.metamx.metrics.Monitor;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.segment.loading.DataSegmentPuller;
+import io.druid.server.DruidNode;
 
 /**
  */
@@ -34,25 +37,29 @@ public class DruidBinders
   public static MapBinder<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder(Binder binder)
   {
     return MapBinder.newMapBinder(
-        binder, new TypeLiteral<Class<? extends Query>>()
-    {
-    }, TypeLiteral.get(QueryRunnerFactory.class)
+        binder, new TypeLiteral<Class<? extends Query>>(){}, TypeLiteral.get(QueryRunnerFactory.class)
     );
   }
 
   public static MapBinder<Class<? extends Query>, QueryToolChest> queryToolChestBinder(Binder binder)
   {
     return MapBinder.newMapBinder(
-        binder, new TypeLiteral<Class<? extends Query>>()
-        {
-        }, new TypeLiteral<QueryToolChest>()
-        {
-        }
+        binder, new TypeLiteral<Class<? extends Query>>(){}, new TypeLiteral<QueryToolChest>(){}
     );
   }
 
   public static MapBinder<String, DataSegmentPuller> dataSegmentPullerBinder(Binder binder)
   {
     return MapBinder.newMapBinder(binder, String.class, DataSegmentPuller.class);
+  }
+
+  public static Multibinder<KeyHolder<DruidNode>> discoveryAnnouncementBinder(Binder binder)
+  {
+    return Multibinder.newSetBinder(binder, new TypeLiteral<KeyHolder<DruidNode>>(){});
+  }
+
+  public static Multibinder<Class<? extends Monitor>> metricMonitorBinder(Binder binder)
+  {
+    return Multibinder.newSetBinder(binder, new TypeLiteral<Class<? extends Monitor>>(){});
   }
 }

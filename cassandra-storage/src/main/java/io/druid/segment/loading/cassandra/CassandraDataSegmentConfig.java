@@ -17,24 +17,34 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.segment.loading.cassandra;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.metamx.common.logger.Logger;
-import io.druid.server.coordination.ServerManager;
-import io.druid.server.coordination.ZkCoordinator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import javax.validation.constraints.NotNull;
 
 /**
+ * Cassandra Config
+ * 
+ * @author boneill42
  */
-public class HistoricalModule implements Module
+public class CassandraDataSegmentConfig
 {
-  private static final Logger log = new Logger(HistoricalModule.class);
+  @JsonProperty
+  @NotNull
+  public String host = null;
 
-  @Override
-  public void configure(Binder binder)
+  @JsonProperty
+  @NotNull
+  public String keyspace = null;
+
+  public String getKeyspace()
   {
-    binder.bind(ServerManager.class).in(LazySingleton.class);
-    binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+    return keyspace;
+  }
+
+  public String getHost()
+  {
+    return host;
   }
 }

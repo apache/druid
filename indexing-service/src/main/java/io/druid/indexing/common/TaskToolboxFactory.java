@@ -31,9 +31,9 @@ import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.SegmentLoader;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 
+import java.io.File;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -51,7 +51,7 @@ public class TaskToolboxFactory
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final ExecutorService queryExecutorService;
   private final MonitorScheduler monitorScheduler;
-  private final SegmentLoader segmentLoader;
+  private final SegmentLoaderFactory segmentLoaderFactory;
   private final ObjectMapper objectMapper;
 
   @Inject
@@ -66,7 +66,7 @@ public class TaskToolboxFactory
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       @Processing ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
-      SegmentLoader segmentLoader,
+      SegmentLoaderFactory segmentLoaderFactory,
       ObjectMapper objectMapper
   )
   {
@@ -80,12 +80,14 @@ public class TaskToolboxFactory
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
     this.queryExecutorService = queryExecutorService;
     this.monitorScheduler = monitorScheduler;
-    this.segmentLoader = segmentLoader;
+    this.segmentLoaderFactory = segmentLoaderFactory;
     this.objectMapper = objectMapper;
   }
 
   public TaskToolbox build(Task task)
   {
+    final File taskWorkDir = new File(new File(config.getBaseTaskDir(), task.getId()), "work");
+
     return new TaskToolbox(
         config,
         task,
@@ -98,8 +100,9 @@ public class TaskToolboxFactory
         queryRunnerFactoryConglomerate,
         queryExecutorService,
         monitorScheduler,
-        segmentLoader,
-        objectMapper
+        segmentLoaderFactory.manufacturate(taskWorkDir),
+        objectMapper,
+        taskWorkDir
     );
   }
 }

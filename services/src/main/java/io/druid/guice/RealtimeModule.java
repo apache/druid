@@ -19,27 +19,27 @@
 
 package io.druid.guice;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
-import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
-import com.metamx.common.logger.Logger;
+import io.druid.cli.QueryJettyServerInitializer;
 import io.druid.initialization.DruidModule;
+import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.RealtimeManager;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
+import io.druid.server.initialization.JettyServerInitializer;
 
 import java.util.Arrays;
 import java.util.List;
 
 /**
- */
+*/
 public class RealtimeModule implements DruidModule
 {
-  private static final Logger log = new Logger(RealtimeModule.class);
-
   @Override
   public void configure(Binder binder)
   {
@@ -47,18 +47,19 @@ public class RealtimeModule implements DruidModule
     binder.bind(SegmentPublisher.class).toProvider(SegmentPublisherProvider.class);
 
     JsonConfigProvider.bind(binder, "druid.realtime", RealtimeManagerConfig.class);
-    binder.bind(
-        new TypeLiteral<List<FireDepartment>>()
-        {
-        }
-    ).toProvider(FireDepartmentsProvider.class).in(LazySingleton.class);
-    binder.bind(RealtimeManager.class).in(ManageLifecycle.class);
+    binder.bind(new TypeLiteral<List<FireDepartment>>(){})
+          .toProvider(FireDepartmentsProvider.class)
+          .in(LazySingleton.class);
+
+    binder.bind(QuerySegmentWalker.class).to(RealtimeManager.class).in(ManageLifecycle.class);
+    binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("realtime"));
+    binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
   }
 
   @Override
-  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<com.fasterxml.jackson.databind.Module>asList(
+    return Arrays.<Module>asList(
         new SimpleModule("RealtimeModule")
             .registerSubtypes(
                 new NamedType(KafkaFirehoseFactory.class, "kafka-0.7.2")

@@ -94,7 +94,7 @@ public class ServerManager implements QuerySegmentWalker
 
     this.exec = exec;
 
-    this.dataSources = new HashMap<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>>();
+    this.dataSources = new HashMap<>();
   }
 
   public Map<String, Long> getDataSourceSizes()

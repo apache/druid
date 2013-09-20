@@ -17,36 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.indexing.common;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.S3DataSegmentPusher;
-import io.druid.segment.loading.S3DataSegmentPusherConfig;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import com.google.inject.Inject;
+import io.druid.segment.loading.OmniSegmentLoader;
+import io.druid.segment.loading.SegmentLoader;
+import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.segment.loading.StorageLocationConfig;
 
-import javax.validation.constraints.NotNull;
+import java.io.File;
+import java.util.Arrays;
 
 /**
  */
-public class S3DataSegmentPusherProvider implements DataSegmentPusherProvider
+public class SegmentLoaderFactory
 {
-  @JacksonInject
-  @NotNull
-  private RestS3Service restS3Service = null;
+  private final OmniSegmentLoader loader;
 
-  @JacksonInject
-  @NotNull
-  private S3DataSegmentPusherConfig config = null;
-
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
-
-  @Override
-  public DataSegmentPusher get()
+  @Inject
+  public SegmentLoaderFactory(
+      OmniSegmentLoader loader
+  )
   {
-    return new S3DataSegmentPusher(restS3Service, config, jsonMapper);
+    this.loader = loader;
+  }
+
+  public SegmentLoader manufacturate(File storageDir)
+  {
+    return loader.withConfig(
+        new SegmentLoaderConfig().withLocations(Arrays.asList(new StorageLocationConfig().setPath(storageDir)))
+    );
   }
 }

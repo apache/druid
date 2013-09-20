@@ -68,7 +68,6 @@ public class DruidSecondaryModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    binder.requireExplicitBindings();
     binder.install(new DruidGuiceExtensions());
     binder.bind(Properties.class).toInstance(properties);
     binder.bind(ConfigurationObjectFactory.class).toInstance(factory);

@@ -19,41 +19,40 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceFilter;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
-import io.druid.curator.CuratorModule;
+import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.curator.discovery.DiscoveryModule;
-import io.druid.guice.CoordinatorModule;
-import io.druid.guice.DbConnectorModule;
-import io.druid.guice.HttpClientModule;
-import io.druid.guice.IndexingServiceDiscoveryModule;
-import io.druid.guice.JacksonConfigManagerModule;
+import io.druid.db.DatabaseRuleManager;
+import io.druid.db.DatabaseRuleManagerConfig;
+import io.druid.db.DatabaseRuleManagerProvider;
+import io.druid.db.DatabaseSegmentManager;
+import io.druid.db.DatabaseSegmentManagerConfig;
+import io.druid.db.DatabaseSegmentManagerProvider;
+import io.druid.guice.ConfigProvider;
+import io.druid.guice.Jerseys;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
-import io.druid.guice.ServerModule;
-import io.druid.guice.ServerViewModule;
+import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
-import io.druid.server.StatusResource;
 import io.druid.server.http.InfoResource;
+import io.druid.server.http.MasterRedirectInfo;
 import io.druid.server.http.MasterResource;
 import io.druid.server.http.RedirectFilter;
-import io.druid.server.initialization.EmitterModule;
+import io.druid.server.http.RedirectInfo;
+import io.druid.server.http.RedirectServlet;
 import io.druid.server.initialization.JettyServerInitializer;
-import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.master.DruidMaster;
-import io.druid.server.metrics.MetricsModule;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.DefaultHandler;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.server.handler.ResourceHandler;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.GzipFilter;
+import io.druid.server.master.DruidMasterConfig;
+import io.druid.server.master.LoadQueueTaskMaster;
+import org.apache.curator.framework.CuratorFramework;
 
 import java.util.List;
 
@@ -76,44 +75,50 @@ public class CliCoordinator extends ServerRunnable
   protected List<Object> getModules()
   {
     return ImmutableList.<Object>of(
-        new LifecycleModule().register(DruidMaster.class),
-        EmitterModule.class,
-        HttpClientModule.global(),
-        DbConnectorModule.class,
-        JacksonConfigManagerModule.class,
-        CuratorModule.class,
-        new MetricsModule(),
-        new DiscoveryModule().register(Self.class),
-        new ServerModule(),
-        new JettyServerModule(new CoordinatorJettyServerInitializer())
-            .addResource(InfoResource.class)
-            .addResource(MasterResource.class)
-            .addResource(StatusResource.class),
-        new ServerViewModule(),
-        new IndexingServiceDiscoveryModule(),
-        CoordinatorModule.class
+        new Module()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
+            ConfigProvider.bind(binder, DruidMasterConfig.class);
+
+            JsonConfigProvider.bind(binder, "druid.manager.segment", DatabaseSegmentManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
+
+            binder.bind(RedirectServlet.class).in(LazySingleton.class);
+            binder.bind(RedirectFilter.class).in(LazySingleton.class);
+
+            binder.bind(DatabaseSegmentManager.class)
+                  .toProvider(DatabaseSegmentManagerProvider.class)
+                  .in(ManageLifecycle.class);
+
+            binder.bind(DatabaseRuleManager.class)
+                  .toProvider(DatabaseRuleManagerProvider.class)
+                  .in(ManageLifecycle.class);
+
+            binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
+
+            binder.bind(RedirectInfo.class).to(MasterRedirectInfo.class).in(LazySingleton.class);
+
+            binder.bind(DruidMaster.class);
+
+            LifecycleModule.register(binder, DruidMaster.class);
+            DiscoveryModule.register(binder, Self.class);
+
+            binder.bind(JettyServerInitializer.class).toInstance(new CoordinatorJettyServerInitializer());
+            Jerseys.addResource(binder, InfoResource.class);
+            Jerseys.addResource(binder, MasterResource.class);
+          }
+
+          @Provides
+          @LazySingleton
+          public LoadQueueTaskMaster getLoadQueueTaskMaster(
+              CuratorFramework curator, ObjectMapper jsonMapper, ScheduledExecutorFactory factory, DruidMasterConfig config
+          )
+          {
+            return new LoadQueueTaskMaster(curator, jsonMapper, factory.create(1, "Master-PeonExec--%d"), config);
+          }
+        }
     );
-  }
-
-  private static class CoordinatorJettyServerInitializer implements JettyServerInitializer
-  {
-    @Override
-    public void initialize(Server server, Injector injector)
-    {
-      ResourceHandler resourceHandler = new ResourceHandler();
-      resourceHandler.setResourceBase(DruidMaster.class.getClassLoader().getResource("static").toExternalForm());
-
-      final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
-      root.setContextPath("/");
-
-      HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{resourceHandler, root, new DefaultHandler()});
-      server.setHandler(handlerList);
-
-      root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-      root.addFilter(GzipFilter.class, "/*", null);
-      root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
-      root.addFilter(GuiceFilter.class, "/*", null);
-    }
   }
 }
