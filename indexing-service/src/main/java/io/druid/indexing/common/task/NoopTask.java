@@ -56,8 +56,12 @@ public class NoopTask extends AbstractTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
+    final int sleepTime = 2500;
+
     log.info("Running noop task[%s]", getId());
-    Thread.sleep(2500);
+    log.info("Sleeping for %,d millis.", sleepTime);
+    Thread.sleep(sleepTime);
+    log.info("Woke up!");
     return TaskStatus.success(getId());
   }
 }

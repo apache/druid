@@ -20,6 +20,7 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Lists;
 import org.hibernate.validator.constraints.NotEmpty;
 
 import java.io.File;
@@ -56,6 +57,15 @@ public class SegmentLoaderConfig
     }
 
     return infoDir;
+  }
+
+  public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
+  {
+    SegmentLoaderConfig retVal = new SegmentLoaderConfig();
+    retVal.locations = Lists.newArrayList(locations);
+    retVal.deleteOnRemove = this.deleteOnRemove;
+    retVal.infoDir = this.infoDir;
+    return retVal;
   }
 
   @Override

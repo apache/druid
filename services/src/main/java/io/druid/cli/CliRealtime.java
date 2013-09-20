@@ -22,25 +22,7 @@ package io.druid.cli;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
-import io.druid.curator.CuratorModule;
-import io.druid.guice.AWSModule;
-import io.druid.guice.AnnouncerModule;
-import io.druid.guice.DataSegmentPusherModule;
-import io.druid.guice.DbConnectorModule;
-import io.druid.guice.DruidProcessingModule;
-import io.druid.guice.HttpClientModule;
-import io.druid.guice.LifecycleModule;
-import io.druid.guice.QueryRunnerFactoryModule;
-import io.druid.guice.QueryableModule;
 import io.druid.guice.RealtimeModule;
-import io.druid.guice.ServerModule;
-import io.druid.guice.ServerViewModule;
-import io.druid.guice.StorageNodeModule;
-import io.druid.segment.realtime.RealtimeManager;
-import io.druid.server.StatusResource;
-import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.JettyServerModule;
-import io.druid.server.metrics.MetricsModule;
 
 import java.util.List;
 
@@ -63,24 +45,7 @@ public class CliRealtime extends ServerRunnable
   protected List<Object> getModules()
   {
     return ImmutableList.<Object>of(
-        new LifecycleModule(),
-        EmitterModule.class,
-        DbConnectorModule.class,
-        HttpClientModule.global(),
-        CuratorModule.class,
-        AnnouncerModule.class,
-        DruidProcessingModule.class,
-        AWSModule.class,
-        DataSegmentPusherModule.class,
-        new MetricsModule(),
-        new ServerModule(),
-        new StorageNodeModule("realtime"),
-        new JettyServerModule(new QueryJettyServerInitializer())
-            .addResource(StatusResource.class),
-        new ServerViewModule(),
-        new QueryableModule(RealtimeManager.class),
-        new QueryRunnerFactoryModule(),
-        RealtimeModule.class
+        new RealtimeModule()
     );
   }
 }

@@ -33,7 +33,6 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.jackson.JacksonModule;
 import io.druid.server.initialization.ConfigModule;
 import io.druid.server.initialization.ExtensionsConfig;
-import io.druid.server.initialization.Initialization;
 import io.druid.server.initialization.PropertiesModule;
 
 import java.util.List;

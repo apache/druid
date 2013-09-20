@@ -19,22 +19,33 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
 import com.metamx.common.logger.Logger;
-import druid.examples.guice.RealtimeExampleModule;
+import druid.examples.flights.FlightsFirehoseFactory;
+import druid.examples.rand.RandomFirehoseFactory;
+import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
+import druid.examples.web.WebFirehoseFactory;
 import io.airlift.command.Command;
-import io.druid.guice.DruidProcessingModule;
-import io.druid.guice.LifecycleModule;
-import io.druid.guice.QueryRunnerFactoryModule;
-import io.druid.guice.QueryableModule;
-import io.druid.guice.ServerModule;
-import io.druid.guice.StorageNodeModule;
-import io.druid.segment.realtime.RealtimeManager;
-import io.druid.server.StatusResource;
-import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.JettyServerModule;
+import io.druid.client.DruidServer;
+import io.druid.client.InventoryView;
+import io.druid.client.ServerView;
+import io.druid.guice.NoopSegmentPublisherProvider;
+import io.druid.guice.RealtimeModule;
+import io.druid.initialization.DruidModule;
+import io.druid.segment.loading.DataSegmentPusher;
+import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.timeline.DataSegment;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 /**
  */
@@ -54,17 +65,104 @@ public class CliRealtimeExample extends ServerRunnable
   @Override
   protected List<Object> getModules()
   {
-    return ImmutableList.of(
-        new LifecycleModule(),
-        EmitterModule.class,
-        DruidProcessingModule.class,
-        new ServerModule(),
-        new StorageNodeModule("realtime"),
-        new JettyServerModule(new QueryJettyServerInitializer())
-            .addResource(StatusResource.class),
-        new QueryableModule(RealtimeManager.class),
-        new QueryRunnerFactoryModule(),
-        RealtimeExampleModule.class
+    return ImmutableList.<Object>of(
+        new RealtimeModule(),
+        new DruidModule()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
+            binder.bind(SegmentPublisher.class).toProvider(NoopSegmentPublisherProvider.class);
+            binder.bind(DataSegmentPusher.class).to(NoopDataSegmentPusher.class);
+            binder.bind(DataSegmentAnnouncer.class).to(NoopDataSegmentAnnouncer.class);
+            binder.bind(InventoryView.class).to(NoopInventoryView.class);
+            binder.bind(ServerView.class).to(NoopServerView.class);
+          }
+
+          @Override
+          public List<Module> getJacksonModules()
+          {
+            return Arrays.<Module>asList(
+                new SimpleModule("RealtimeExampleModule")
+                    .registerSubtypes(
+                        new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
+                        new NamedType(FlightsFirehoseFactory.class, "flights"),
+                        new NamedType(RandomFirehoseFactory.class, "rand"),
+                        new NamedType(WebFirehoseFactory.class, "webstream")
+                    )
+            );
+          }
+        }
     );
+  }
+
+  private static class NoopServerView implements ServerView
+  {
+    @Override
+    public void registerServerCallback(
+        Executor exec, ServerCallback callback
+    )
+    {
+      // do nothing
+    }
+
+    @Override
+    public void registerSegmentCallback(
+        Executor exec, SegmentCallback callback
+    )
+    {
+      // do nothing
+    }
+  }
+
+  private static class NoopInventoryView implements InventoryView
+  {
+    @Override
+    public DruidServer getInventoryValue(String string)
+    {
+      return null;
+    }
+
+    @Override
+    public Iterable<DruidServer> getInventory()
+    {
+      return ImmutableList.of();
+    }
+  }
+
+  private static class NoopDataSegmentPusher implements DataSegmentPusher
+  {
+    @Override
+    public DataSegment push(File file, DataSegment segment) throws IOException
+    {
+      return segment;
+    }
+  }
+
+  private static class NoopDataSegmentAnnouncer implements DataSegmentAnnouncer
+  {
+    @Override
+    public void announceSegment(DataSegment segment) throws IOException
+    {
+      // do nothing
+    }
+
+    @Override
+    public void unannounceSegment(DataSegment segment) throws IOException
+    {
+      // do nothing
+    }
+
+    @Override
+    public void announceSegments(Iterable<DataSegment> segments) throws IOException
+    {
+      // do nothing
+    }
+
+    @Override
+    public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+    {
+      // do nothing
+    }
   }
 }

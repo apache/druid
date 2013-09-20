@@ -98,7 +98,11 @@ public class ConvertProperties implements Runnable
       new Rename("druid.indexer.rowFlushBoundary", "druid.indexer.task.rowFlushBoundary"),
       new Rename("druid.worker.taskActionClient.retry.minWaitMillis", "druid.worker.taskActionClient.retry.minWait"),
       new Rename("druid.worker.taskActionClient.retry.maxWaitMillis", "druid.worker.taskActionClient.retry.maxWait"),
-      new Rename("druid.master.merger.service", "druid.selectors.indexing.serviceName")
+      new Rename("druid.master.merger.service", "druid.selectors.indexing.serviceName"),
+      new DataSegmentPusherDefaultConverter(),
+      new Rename("druid.pusher.hdfs.storageDirectory", "druid.pusher.storageDirectory"),
+      new Rename("druid.pusher.cassandra.host", "druid.pusher.host"),
+      new Rename("druid.pusher.cassandra.keySpace", "druid.pusher.keySpace")
   );
 
   @Option(name = "-f", title = "file", description = "The properties file to convert", required = true)
@@ -149,6 +153,10 @@ public class ConvertProperties implements Runnable
         updatedProps.put(property, fromFile.getProperty(property));
       }
     }
+
+    updatedProps.setProperty(
+        "druid.monitoring.monitors", "[\"io.druid.server.metrics.ServerMonitor\", \"com.metamx.metrics.SysMonitor\"]"
+    );
 
     try (Writer out = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8))
     {

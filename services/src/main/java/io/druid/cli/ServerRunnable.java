@@ -25,7 +25,6 @@ import com.google.inject.Injector;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.initialization.LogLevelAdjuster;
-import io.druid.server.initialization.Initialization;
 
 import java.util.List;
 
@@ -56,7 +55,9 @@ public abstract class ServerRunnable implements Runnable
     try {
       LogLevelAdjuster.register();
 
-      final Injector injector = Initialization.makeInjectorWithModules(baseInjector, getModules());
+      final Injector injector = Initialization.makeInjectorWithModules(
+          baseInjector, getModules()
+      );
       final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
 
       try {
