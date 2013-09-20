@@ -42,6 +42,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
+import io.druid.server.StatusResource;
 import io.druid.server.http.InfoResource;
 import io.druid.server.http.MasterRedirectInfo;
 import io.druid.server.http.MasterResource;

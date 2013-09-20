@@ -20,8 +20,6 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
-import com.google.inject.Module;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.BrokerServerView;
@@ -35,12 +33,15 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
-import io.druid.query.MapQueryToolChestWarehouse;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.util.List;
 
@@ -83,5 +84,22 @@ public class CliBroker extends ServerRunnable
           }
         }
     );
+  }
+
+  private static class BrokerJettyServerInitializer extends QueryJettyServerInitializer
+  {
+    @Override
+    public void initialize(Server server, Injector injector)
+    {
+      super.initialize(server, injector);
+
+      final ServletContextHandler resources = new ServletContextHandler(ServletContextHandler.SESSIONS);
+      resources.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+      resources.addFilter(GuiceFilter.class, "/druid/v2/datasources/*", null);
+
+      final HandlerList handlerList = new HandlerList();
+      handlerList.setHandlers(new Handler[]{resources});
+      server.setHandler(handlerList);
+    }
   }
 }
