@@ -23,11 +23,15 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.MapBinder;
 import io.druid.cli.QueryJettyServerInitializer;
 import io.druid.initialization.DruidModule;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.segment.realtime.DbSegmentPublisher;
 import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.NoopSegmentPublisher;
 import io.druid.segment.realtime.RealtimeManager;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
@@ -38,17 +42,28 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
-*/
+ */
 public class RealtimeModule implements DruidModule
 {
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.publish", SegmentPublisherProvider.class);
-    binder.bind(SegmentPublisher.class).toProvider(SegmentPublisherProvider.class);
+    PolyBind.createChoice(
+        binder,
+        "druid.publish.type",
+        Key.get(SegmentPublisher.class),
+        Key.get(NoopSegmentPublisher.class)
+    );
+    final MapBinder<String, SegmentPublisher> publisherBinder = PolyBind.optionBinder(binder, Key.get(SegmentPublisher.class));
+    publisherBinder.addBinding("db").to(DbSegmentPublisher.class);
+    binder.bind(DbSegmentPublisher.class).in(LazySingleton.class);
 
     JsonConfigProvider.bind(binder, "druid.realtime", RealtimeManagerConfig.class);
-    binder.bind(new TypeLiteral<List<FireDepartment>>(){})
+    binder.bind(
+        new TypeLiteral<List<FireDepartment>>()
+        {
+        }
+    )
           .toProvider(FireDepartmentsProvider.class)
           .in(LazySingleton.class);
 

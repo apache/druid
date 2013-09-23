@@ -21,7 +21,9 @@ package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.BrokerServerView;
@@ -42,9 +44,18 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
+import io.druid.server.QueryServlet;
+import io.druid.server.StatusResource;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.DefaultHandler;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.servlets.GzipFilter;
 
 import java.util.List;
 
@@ -81,7 +92,7 @@ public class CliBroker extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.broker.cache", CacheProvider.class);
 
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
-            binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+            binder.bind(JettyServerInitializer.class).to(BrokerJettyServerInitializer.class).in(LazySingleton.class);
             Jerseys.addResource(binder, ClientInfoResource.class);
 
             DiscoveryModule.register(binder, Self.class);
@@ -91,5 +102,29 @@ public class CliBroker extends ServerRunnable
           }
         }
     );
+  }
+
+  private static class BrokerJettyServerInitializer implements JettyServerInitializer
+  {
+    @Override
+    public void initialize(Server server, Injector injector)
+    {
+      final ServletContextHandler resources = new ServletContextHandler(ServletContextHandler.SESSIONS);
+      resources.addServlet(new ServletHolder(new DefaultServlet()), "/druid/v2/datasources/*");
+      resources.addFilter(GuiceFilter.class, "/druid/v2/datasources/*", null);
+
+      final ServletContextHandler queries = new ServletContextHandler(ServletContextHandler.SESSIONS);
+      queries.setResourceBase("/");
+      queries.addServlet(new ServletHolder(injector.getInstance(QueryServlet.class)), "/druid/v2/*");
+
+      final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
+      root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+      root.addFilter(GzipFilter.class, "/*", null);
+      root.addFilter(GuiceFilter.class, "/*", null);
+
+      final HandlerList handlerList = new HandlerList();
+      handlerList.setHandlers(new Handler[]{resources, queries, root, new DefaultHandler()});
+      server.setHandler(handlerList);
+    }
   }
 }

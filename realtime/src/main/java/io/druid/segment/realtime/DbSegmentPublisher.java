@@ -20,6 +20,7 @@
 package io.druid.segment.realtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.db.DbTablesConfig;
 import io.druid.timeline.DataSegment;
@@ -40,6 +41,7 @@ public class DbSegmentPublisher implements SegmentPublisher
   private final DbTablesConfig config;
   private final IDBI dbi;
 
+  @Inject
   public DbSegmentPublisher(
       ObjectMapper jsonMapper,
       DbTablesConfig config,
