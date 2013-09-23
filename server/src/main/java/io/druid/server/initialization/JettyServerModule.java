@@ -25,11 +25,9 @@ import com.google.inject.Binder;
 import com.google.inject.ConfigurationException;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
-import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.sun.jersey.api.core.DefaultResourceConfig;
@@ -72,8 +70,6 @@ public class JettyServerModule extends JerseyServletModule
 
     Jerseys.addResource(binder, StatusResource.class);
     binder.bind(StatusResource.class).in(LazySingleton.class);
-
-    binder.bind(Key.get(Server.class, Names.named("ForTheEagerness"))).to(Server.class).asEagerSingleton();
   }
 
   public static class DruidGuiceContainer extends GuiceContainer

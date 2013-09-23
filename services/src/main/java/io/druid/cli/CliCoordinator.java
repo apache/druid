@@ -54,6 +54,7 @@ import io.druid.server.master.DruidMaster;
 import io.druid.server.master.DruidMasterConfig;
 import io.druid.server.master.LoadQueueTaskMaster;
 import org.apache.curator.framework.CuratorFramework;
+import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 
@@ -110,6 +111,8 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, BackwardsCompatiableInfoResource.class);
             Jerseys.addResource(binder, InfoResource.class);
             Jerseys.addResource(binder, MasterResource.class);
+
+            LifecycleModule.register(binder, Server.class);
           }
 
           @Provides

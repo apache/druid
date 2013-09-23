@@ -41,6 +41,7 @@ import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.indexing.worker.http.WorkerResource;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.JettyServerInitializer;
+import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 
@@ -81,6 +82,8 @@ public class CliMiddleManager extends ServerRunnable
             LifecycleModule.register(binder, WorkerTaskMonitor.class);
             binder.bind(JettyServerInitializer.class).toInstance(new MiddleManagerJettyServerInitializer());
             Jerseys.addResource(binder, WorkerResource.class);
+
+            LifecycleModule.register(binder, Server.class);
           }
 
           @Provides

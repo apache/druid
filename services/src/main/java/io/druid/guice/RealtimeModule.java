@@ -32,6 +32,7 @@ import io.druid.segment.realtime.RealtimeManager;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
 import io.druid.server.initialization.JettyServerInitializer;
+import org.eclipse.jetty.server.Server;
 
 import java.util.Arrays;
 import java.util.List;
@@ -54,6 +55,8 @@ public class RealtimeModule implements DruidModule
     binder.bind(QuerySegmentWalker.class).to(RealtimeManager.class).in(ManageLifecycle.class);
     binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("realtime"));
     binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+
+    LifecycleModule.register(binder, Server.class);
   }
 
   @Override

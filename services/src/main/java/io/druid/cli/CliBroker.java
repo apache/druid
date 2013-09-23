@@ -34,6 +34,7 @@ import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.query.MapQueryToolChestWarehouse;
@@ -43,6 +44,7 @@ import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
+import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 
@@ -84,6 +86,8 @@ public class CliBroker extends ServerRunnable
 
             DiscoveryModule.register(binder, Self.class);
             MetricsModule.register(binder, CacheMonitor.class);
+
+            LifecycleModule.register(binder, Server.class);
           }
         }
     );

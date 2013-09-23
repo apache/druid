@@ -34,6 +34,7 @@ import io.druid.guice.JacksonConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.LifecycleModule;
 import io.druid.guice.ListProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
@@ -138,6 +139,8 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(JettyServerInitializer.class).toInstance(new OverlordJettyServerInitializer());
             Jerseys.addResource(binder, IndexerCoordinatorResource.class);
+
+            LifecycleModule.register(binder, Server.class);
           }
 
           private void configureTaskStorage(Binder binder)
