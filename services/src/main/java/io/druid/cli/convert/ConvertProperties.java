@@ -59,6 +59,7 @@ public class ConvertProperties implements Runnable
       new Rename("druid.database.password", "druid.db.connector.password"),
       new Rename("com.metamx.emitter", "druid.emitter"),
       new Rename("com.metamx.emitter.logging.level", "druid.emitter.logging.logLevel"),
+      new Rename("com.metamx.druid.emitter.period", "druid.emitter.emissionPeriod"),
       new IndexCacheConverter(),
       new Rename("druid.paths.segmentInfoCache", "druid.segmentCache.infoPath"),
       new Rename("com.metamx.aws.accessKey", "druid.s3.accessKey"),
