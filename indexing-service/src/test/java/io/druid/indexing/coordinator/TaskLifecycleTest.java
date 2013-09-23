@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
@@ -41,6 +42,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexer.granularity.UniformGranularitySpec;
+import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -61,8 +63,13 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.DataSegmentPusher;
+import io.druid.segment.loading.LocalDataSegmentPuller;
+import io.druid.segment.loading.OmniSegmentLoader;
+import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
@@ -139,7 +146,23 @@ public class TaskLifecycleTest
         null, // query runner factory conglomerate corporation unionized collective
         null, // query executor service
         null, // monitor scheduler
-        null, // segment loader
+        new SegmentLoaderFactory(
+            new OmniSegmentLoader(
+                ImmutableMap.<String, DataSegmentPuller>of(
+                    "local",
+                    new LocalDataSegmentPuller()
+                ),
+                null,
+                new SegmentLoaderConfig()
+                {
+                  @Override
+                  public List<StorageLocationConfig> getLocations()
+                  {
+                    return Lists.newArrayList();
+                  }
+                }
+            )
+        ),
         new DefaultObjectMapper()
     );
 
@@ -157,7 +180,8 @@ public class TaskLifecycleTest
   {
     try {
       FileUtils.deleteDirectory(tmp);
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       // suppress
     }
     tc.stop();
@@ -202,12 +226,20 @@ public class TaskLifecycleTest
 
     Assert.assertEquals("segment1 datasource", "foo", publishedSegments.get(0).getDataSource());
     Assert.assertEquals("segment1 interval", new Interval("2010-01-01/P1D"), publishedSegments.get(0).getInterval());
-    Assert.assertEquals("segment1 dimensions", ImmutableList.of("dim1", "dim2"), publishedSegments.get(0).getDimensions());
+    Assert.assertEquals(
+        "segment1 dimensions",
+        ImmutableList.of("dim1", "dim2"),
+        publishedSegments.get(0).getDimensions()
+    );
     Assert.assertEquals("segment1 metrics", ImmutableList.of("met"), publishedSegments.get(0).getMetrics());
 
     Assert.assertEquals("segment2 datasource", "foo", publishedSegments.get(1).getDataSource());
     Assert.assertEquals("segment2 interval", new Interval("2010-01-02/P1D"), publishedSegments.get(1).getInterval());
-    Assert.assertEquals("segment2 dimensions", ImmutableList.of("dim1", "dim2"), publishedSegments.get(1).getDimensions());
+    Assert.assertEquals(
+        "segment2 dimensions",
+        ImmutableList.of("dim1", "dim2"),
+        publishedSegments.get(1).getDimensions()
+    );
     Assert.assertEquals("segment2 metrics", ImmutableList.of("met"), publishedSegments.get(1).getMetrics());
   }
 
@@ -373,8 +405,8 @@ public class TaskLifecycleTest
     TaskStatus status;
 
     try {
-      while ( (status = tsqa.getSameGroupMergedStatus(task.getId()).get()).isRunnable()) {
-        if(System.currentTimeMillis() > startTime + 10 * 1000) {
+      while ((status = tsqa.getSameGroupMergedStatus(task.getId()).get()).isRunnable()) {
+        if (System.currentTimeMillis() > startTime + 10 * 1000) {
           throw new ISE("Where did the task go?!: %s", task.getId());
         }
 
@@ -414,8 +446,8 @@ public class TaskLifecycleTest
     public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
     {
       Set<DataSegment> added = Sets.newHashSet();
-      for(final DataSegment segment : segments) {
-        if(published.add(segment)) {
+      for (final DataSegment segment : segments) {
+        if (published.add(segment)) {
           added.add(segment);
         }
       }
@@ -500,7 +532,8 @@ public class TaskLifecycleTest
           @Override
           public Runnable commit()
           {
-            return new Runnable() {
+            return new Runnable()
+            {
               @Override
               public void run()
               {

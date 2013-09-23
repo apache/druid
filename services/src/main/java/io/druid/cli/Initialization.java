@@ -81,7 +81,8 @@ import java.util.Set;
 
 /**
  */
-public class Initialization
+public class
+    Initialization
 {
   private static final Logger log = new Logger(Initialization.class);
   private static final Map<String, ClassLoader> loadersMap = Maps.newHashMap();

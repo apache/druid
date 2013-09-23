@@ -20,9 +20,11 @@
 package io.druid.indexing.coordinator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -30,8 +32,14 @@ import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.SpawnTasksAction;
 import io.druid.indexing.common.actions.TaskActionToolbox;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.segment.loading.DataSegmentPuller;
+import io.druid.segment.loading.LocalDataSegmentPuller;
+import io.druid.segment.loading.OmniSegmentLoader;
+import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.segment.loading.StorageLocationConfig;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -81,18 +89,23 @@ public class TaskQueueTest
 
     Throwable thrown;
 
-    for(Task task : tasks) {
+    for (Task task : tasks) {
       tq.add(task);
     }
 
     // get task status for in-progress task
-    Assert.assertEquals("T2 status (before finishing)", TaskStatus.Status.RUNNING, ts.getStatus(tasks[2].getId()).get().getStatusCode());
+    Assert.assertEquals(
+        "T2 status (before finishing)",
+        TaskStatus.Status.RUNNING,
+        ts.getStatus(tasks[2].getId()).get().getStatusCode()
+    );
 
     // Can't add tasks with the same id
     thrown = null;
     try {
       tq.add(newTask("T5", "G5", "baz", new Interval("2013-02-01/PT1H")));
-    } catch(TaskExistsException e) {
+    }
+    catch (TaskExistsException e) {
       thrown = e;
     }
 
@@ -102,7 +115,7 @@ public class TaskQueueTest
     final List<Task> taken = Lists.newArrayList();
     while (true) {
       final Task task = tq.poll();
-      if(task != null) {
+      if (task != null) {
         taken.add(task);
       } else {
         break;
@@ -132,7 +145,7 @@ public class TaskQueueTest
     taken.clear();
     while (true) {
       final Task task = tq.poll();
-      if(task != null) {
+      if (task != null) {
         taken.add(task);
       } else {
         break;
@@ -159,7 +172,7 @@ public class TaskQueueTest
     final TaskLockbox tl = new TaskLockbox(ts);
     final TaskQueue tq = newTaskQueue(ts, tl);
     final TaskToolboxFactory tb = new TaskToolboxFactory(
-        null,
+        new TaskConfig(null, null, null, null),
         new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tq, tl, null, null)),
         null,
         null,
@@ -169,7 +182,23 @@ public class TaskQueueTest
         null,
         null,
         null,
-        null,
+        new SegmentLoaderFactory(
+            new OmniSegmentLoader(
+                ImmutableMap.<String, DataSegmentPuller>of(
+                    "local",
+                    new LocalDataSegmentPuller()
+                ),
+                null,
+                new SegmentLoaderConfig()
+                {
+                  @Override
+                  public List<StorageLocationConfig> getLocations()
+                  {
+                    return Lists.newArrayList();
+                  }
+                }
+            )
+        ),
         null
     );
 
@@ -177,8 +206,8 @@ public class TaskQueueTest
     final Task t1 = newContinuedTask("T1", "G1", "bar", new Interval("2013/P1Y"), Lists.newArrayList(t0));
     tq.add(t1);
 
-    Assert.assertTrue("T0 isPresent (#1)",  !ts.getStatus("T0").isPresent());
-    Assert.assertTrue("T1 isPresent (#1)",   ts.getStatus("T1").isPresent());
+    Assert.assertTrue("T0 isPresent (#1)", !ts.getStatus("T0").isPresent());
+    Assert.assertTrue("T1 isPresent (#1)", ts.getStatus("T1").isPresent());
     Assert.assertTrue("T1 isRunnable (#1)", ts.getStatus("T1").get().isRunnable());
     Assert.assertTrue("T1 isComplete (#1)", !ts.getStatus("T1").get().isComplete());
 
@@ -190,11 +219,11 @@ public class TaskQueueTest
     tq.notify(t1, t1.run(tb.build(t1)));
 
     Assert.assertTrue("T0 isPresent (#2)", ts.getStatus("T0").isPresent());
-    Assert.assertTrue("T0 isRunnable (#2)",  ts.getStatus("T0").get().isRunnable());
+    Assert.assertTrue("T0 isRunnable (#2)", ts.getStatus("T0").get().isRunnable());
     Assert.assertTrue("T0 isComplete (#2)", !ts.getStatus("T0").get().isComplete());
-    Assert.assertTrue("T1 isPresent (#2)",   ts.getStatus("T1").isPresent());
+    Assert.assertTrue("T1 isPresent (#2)", ts.getStatus("T1").isPresent());
     Assert.assertTrue("T1 isRunnable (#2)", !ts.getStatus("T1").get().isRunnable());
-    Assert.assertTrue("T1 isComplete (#2)",  ts.getStatus("T1").get().isComplete());
+    Assert.assertTrue("T1 isComplete (#2)", ts.getStatus("T1").get().isComplete());
 
     // should be able to get t0 out
     Assert.assertEquals("poll #3", "T0", tq.poll().getId());
@@ -205,10 +234,10 @@ public class TaskQueueTest
 
     Assert.assertTrue("T0 isPresent (#3)", ts.getStatus("T0").isPresent());
     Assert.assertTrue("T0 isRunnable (#3)", !ts.getStatus("T0").get().isRunnable());
-    Assert.assertTrue("T0 isComplete (#3)",  ts.getStatus("T0").get().isComplete());
-    Assert.assertTrue("T1 isPresent (#3)",   ts.getStatus("T1").isPresent());
+    Assert.assertTrue("T0 isComplete (#3)", ts.getStatus("T0").get().isComplete());
+    Assert.assertTrue("T1 isPresent (#3)", ts.getStatus("T1").isPresent());
     Assert.assertTrue("T1 isRunnable (#3)", !ts.getStatus("T1").get().isRunnable());
-    Assert.assertTrue("T1 isComplete (#3)",  ts.getStatus("T1").get().isComplete());
+    Assert.assertTrue("T1 isComplete (#3)", ts.getStatus("T1").get().isComplete());
 
     // should be no more events available for polling
     Assert.assertNull("poll #5", tq.poll());
@@ -221,7 +250,7 @@ public class TaskQueueTest
     final TaskLockbox tl = new TaskLockbox(ts);
     final TaskQueue tq = newTaskQueue(ts, tl);
     final TaskToolboxFactory tb = new TaskToolboxFactory(
-        null,
+        new TaskConfig(null, null, null, null),
         new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tq, tl, null, null)),
         null,
         null,
@@ -231,7 +260,23 @@ public class TaskQueueTest
         null,
         null,
         null,
-        null,
+        new SegmentLoaderFactory(
+            new OmniSegmentLoader(
+                ImmutableMap.<String, DataSegmentPuller>of(
+                    "local",
+                    new LocalDataSegmentPuller()
+                ),
+                null,
+                new SegmentLoaderConfig()
+                {
+                  @Override
+                  public List<StorageLocationConfig> getLocations()
+                  {
+                    return Lists.newArrayList();
+                  }
+                }
+            )
+        ),
         null
     );
 
@@ -270,7 +315,7 @@ public class TaskQueueTest
 
       final Task task = tq.poll();
 
-      if(task != null) {
+      if (task != null) {
         final TaskLock taskLock = Iterables.getOnlyElement(tl.findLocksForTask(task));
         Assert.assertEquals(
             String.format("%s version", task.getId()),

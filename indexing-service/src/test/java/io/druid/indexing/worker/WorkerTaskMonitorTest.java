@@ -22,9 +22,12 @@ package io.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.indexing.common.IndexingServiceCondition;
+import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestMergeTask;
@@ -35,6 +38,11 @@ import io.druid.indexing.coordinator.TestRemoteTaskRunnerConfig;
 import io.druid.indexing.coordinator.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.loading.DataSegmentPuller;
+import io.druid.segment.loading.LocalDataSegmentPuller;
+import io.druid.segment.loading.OmniSegmentLoader;
+import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import junit.framework.Assert;
 import org.apache.curator.framework.CuratorFramework;
@@ -46,6 +54,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.List;
 
 /**
  */
@@ -79,8 +88,6 @@ public class WorkerTaskMonitorTest
                                 .build();
     cf.start();
     cf.create().creatingParentsIfNeeded().forPath(basePath);
-    //cf.create().creatingParentsIfNeeded().forPath(tasksPath);
-    //cf.create().creatingParentsIfNeeded().forPath(statusPath);
 
     worker = new Worker(
         "worker",
@@ -115,7 +122,23 @@ public class WorkerTaskMonitorTest
         new ThreadPoolTaskRunner(
             new TaskToolboxFactory(
                 new TaskConfig(tmp.toString(), null, null, 0),
-                null, null, null, null, null, null, null, null, null, null, jsonMapper
+                null, null, null, null, null, null, null, null, null, new SegmentLoaderFactory(
+                new OmniSegmentLoader(
+                    ImmutableMap.<String, DataSegmentPuller>of(
+                        "local",
+                        new LocalDataSegmentPuller()
+                    ),
+                    null,
+                    new SegmentLoaderConfig()
+                    {
+                      @Override
+                      public List<StorageLocationConfig> getLocations()
+                      {
+                        return Lists.newArrayList();
+                      }
+                    }
+                )
+            ), jsonMapper
             )
         ),
         new WorkerConfig().setCapacity(1)
@@ -180,7 +203,7 @@ public class WorkerTaskMonitorTest
     );
 
     TaskAnnouncement taskAnnouncement = jsonMapper.readValue(
-      cf.getData().forPath(joiner.join(statusPath, task.getId())), TaskAnnouncement.class
+        cf.getData().forPath(joiner.join(statusPath, task.getId())), TaskAnnouncement.class
     );
 
     Assert.assertEquals(task.getId(), taskAnnouncement.getTaskStatus().getId());
