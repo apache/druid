@@ -97,6 +97,13 @@ public class
     final TeslaAether aether = getAetherClient(config);
     List<T> retVal = Lists.newArrayList();
 
+    if (config.searchCurrentClassloader()) {
+      for (T module : ServiceLoader.load(clazz, Initialization.class.getClassLoader())) {
+        log.info("Adding local module[%s]", module.getClass());
+        retVal.add(module);
+      }
+    }
+
     for (String coordinate : config.getCoordinates()) {
       log.info("Loading extension[%s]", coordinate);
       try {
@@ -139,14 +146,13 @@ public class
           for (Artifact artifact : artifacts) {
             if (!exclusions.contains(artifact.getGroupId())) {
               urls.add(artifact.getFile().toURI().toURL());
-            }
-            else {
+            } else {
               log.error("Skipped Artifact[%s]", artifact);
             }
           }
 
           for (URL url : urls) {
-            log.error("Added URL[%s]", url);
+            log.info("Added URL[%s]", url);
           }
 
           loader = new URLClassLoader(urls.toArray(new URL[urls.size()]), Initialization.class.getClassLoader());
@@ -243,7 +249,8 @@ public class
     private final ObjectMapper smileMapper;
     private final List<Module> modules;
 
-    public ModuleList(Injector baseInjector) {
+    public ModuleList(Injector baseInjector)
+    {
       this.baseInjector = baseInjector;
       this.jsonMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
       this.smileMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Smile.class));
@@ -260,24 +267,19 @@ public class
       if (input instanceof DruidModule) {
         baseInjector.injectMembers(input);
         modules.add(registerJacksonModules(((DruidModule) input)));
-      }
-      else if (input instanceof Module) {
+      } else if (input instanceof Module) {
         baseInjector.injectMembers(input);
         modules.add((Module) input);
-      }
-      else if (input instanceof Class) {
+      } else if (input instanceof Class) {
         if (DruidModule.class.isAssignableFrom((Class) input)) {
           modules.add(registerJacksonModules(baseInjector.getInstance((Class<? extends DruidModule>) input)));
-        }
-        else if (Module.class.isAssignableFrom((Class) input)) {
+        } else if (Module.class.isAssignableFrom((Class) input)) {
           modules.add(baseInjector.getInstance((Class<? extends Module>) input));
           return;
-        }
-        else {
+        } else {
           throw new ISE("Class[%s] does not implement %s", input.getClass(), Module.class);
         }
-      }
-      else {
+      } else {
         throw new ISE("Unknown module type[%s]", input.getClass());
       }
     }

@@ -26,8 +26,8 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.InputStreamResponseHandler;
-import io.druid.client.selector.DiscoverySelector;
 import io.druid.client.selector.Server;
+import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -43,18 +43,18 @@ public class IndexingServiceClient
 
   private final HttpClient client;
   private final ObjectMapper jsonMapper;
-  private final DiscoverySelector<Server> serviceProvider;
+  private final ServerDiscoverySelector selector;
 
   @Inject
   public IndexingServiceClient(
       @Global HttpClient client,
       ObjectMapper jsonMapper,
-      @IndexingService DiscoverySelector<Server> serviceProvider
+      @IndexingService ServerDiscoverySelector selector
   )
   {
     this.client = client;
     this.jsonMapper = jsonMapper;
-    this.serviceProvider = serviceProvider;
+    this.selector = selector;
   }
 
   public void mergeSegments(List<DataSegment> segments)
@@ -106,7 +106,7 @@ public class IndexingServiceClient
   private String baseUrl()
   {
     try {
-      final Server instance = serviceProvider.pick();
+      final Server instance = selector.pick();
       if (instance == null) {
         throw new ISE("Cannot find instance of indexingService");
       }

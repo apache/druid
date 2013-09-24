@@ -31,6 +31,10 @@ public class ExtensionsConfig
 {
   @JsonProperty
   @NotNull
+  private boolean searchCurrentClassloader = true;
+
+  @JsonProperty
+  @NotNull
   private List<String> coordinates = ImmutableList.of();
 
   @JsonProperty
@@ -43,6 +47,11 @@ public class ExtensionsConfig
       "http://repo1.maven.org/maven2/",
       "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"
   );
+
+  public boolean searchCurrentClassloader()
+  {
+    return searchCurrentClassloader;
+  }
 
   public List<String> getCoordinates()
   {
