@@ -97,6 +97,13 @@ public class
     final TeslaAether aether = getAetherClient(config);
     List<T> retVal = Lists.newArrayList();
 
+    if (config.searchCurrentClassloader()) {
+      for (T module : ServiceLoader.load(clazz, Initialization.class.getClassLoader())) {
+        log.info("Adding local module[%s]", module.getClass());
+        retVal.add(module);
+      }
+    }
+
     for (String coordinate : config.getCoordinates()) {
       log.info("Loading extension[%s]", coordinate);
       try {
@@ -161,13 +168,6 @@ public class
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
-      }
-    }
-
-    if (config.searchCurrentClassloader()) {
-      for (T module : ServiceLoader.load(clazz, Initialization.class.getClassLoader())) {
-        log.info("Adding local module[%s]", module.getClass());
-        retVal.add(module);
       }
     }
 
