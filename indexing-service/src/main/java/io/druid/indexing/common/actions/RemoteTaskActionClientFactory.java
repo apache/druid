@@ -22,7 +22,8 @@ package io.druid.indexing.common.actions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
-import io.druid.client.indexing.IndexingServiceSelector;
+import io.druid.client.indexing.IndexingService;
+import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.task.Task;
@@ -32,20 +33,20 @@ import io.druid.indexing.common.task.Task;
 public class RemoteTaskActionClientFactory implements TaskActionClientFactory
 {
   private final HttpClient httpClient;
-  private final IndexingServiceSelector serviceProvider;
+  private final ServerDiscoverySelector selector;
   private final RetryPolicyFactory retryPolicyFactory;
   private final ObjectMapper jsonMapper;
 
   @Inject
   public RemoteTaskActionClientFactory(
       @Global HttpClient httpClient,
-      IndexingServiceSelector serviceProvider,
+      @IndexingService ServerDiscoverySelector selector,
       RetryPolicyFactory retryPolicyFactory,
       ObjectMapper jsonMapper
   )
   {
     this.httpClient = httpClient;
-    this.serviceProvider = serviceProvider;
+    this.selector = selector;
     this.retryPolicyFactory = retryPolicyFactory;
     this.jsonMapper = jsonMapper;
   }
@@ -53,6 +54,6 @@ public class RemoteTaskActionClientFactory implements TaskActionClientFactory
   @Override
   public TaskActionClient create(Task task)
   {
-    return new RemoteTaskActionClient(task, httpClient, serviceProvider, retryPolicyFactory, jsonMapper);
+    return new RemoteTaskActionClient(task, httpClient, selector, retryPolicyFactory, jsonMapper);
   }
 }

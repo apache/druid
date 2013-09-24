@@ -224,6 +224,14 @@ public class DiscoveryModule implements Module
     return serviceDiscovery;
   }
 
+  @Provides @LazySingleton
+  public ServerDiscoveryFactory getServerDiscoveryFactory(
+      ServiceDiscovery<Void> serviceDiscovery
+  )
+  {
+    return new ServerDiscoveryFactory(serviceDiscovery);
+  }
+
   private static class NoopServiceDiscovery<T> implements ServiceDiscovery<T>
   {
     @Override
