@@ -22,17 +22,10 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import io.druid.client.indexing.IndexingService;
-import io.druid.client.indexing.IndexingServiceSelector;
 import io.druid.client.indexing.IndexingServiceSelectorConfig;
-import io.druid.client.selector.DiscoverySelector;
-import io.druid.client.selector.Server;
-import org.apache.curator.x.discovery.ServiceDiscovery;
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.ServiceProvider;
-
-import java.io.IOException;
+import io.druid.curator.discovery.ServerDiscoveryFactory;
+import io.druid.curator.discovery.ServerDiscoverySelector;
 
 /**
  */
@@ -42,42 +35,16 @@ public class IndexingServiceDiscoveryModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.selectors.indexing", IndexingServiceSelectorConfig.class);
-    binder.bind(new TypeLiteral<DiscoverySelector<Server>>(){})
-          .annotatedWith(IndexingService.class)
-          .to(IndexingServiceSelector.class);
-
-    binder.bind(IndexingServiceSelector.class).in(ManageLifecycle.class);
   }
 
   @Provides
-  @LazySingleton @IndexingService
-  public ServiceProvider getServiceProvider(
+  @IndexingService
+  @ManageLifecycle
+  public ServerDiscoverySelector getServiceProvider(
       IndexingServiceSelectorConfig config,
-      ServiceDiscovery<Void> serviceDiscovery
+      ServerDiscoveryFactory serverDiscoveryFactory
   )
   {
-    if (config.getServiceName() == null) {
-      return new ServiceProvider()
-      {
-        @Override
-        public void start() throws Exception
-        {
-
-        }
-
-        @Override
-        public ServiceInstance getInstance() throws Exception
-        {
-          return null;
-        }
-
-        @Override
-        public void close() throws IOException
-        {
-
-        }
-      };
-    }
-    return serviceDiscovery.serviceProviderBuilder().serviceName(config.getServiceName()).build();
+    return serverDiscoveryFactory.createSelector(config.getServiceName());
   }
 }

@@ -59,7 +59,7 @@ import java.util.concurrent.ThreadFactory;
 /**
  * The DiscoveryModule allows for the registration of Keys of DruidNode objects, which it intends to be
  * automatically announced at the end of the lifecycle start.
- *
+ * <p/>
  * In order for this to work a ServiceAnnouncer instance *must* be injected and instantiated first.
  * This can often be achieved by registering ServiceAnnouncer.class with the LifecycleModule.
  */
@@ -69,7 +69,7 @@ public class DiscoveryModule implements Module
 
   /**
    * Requests that the un-annotated DruidNode instance be injected and published as part of the lifecycle.
-   *
+   * <p/>
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class)) automatically.
    * Announcement will happen in the LAST stage of the Lifecycle
@@ -81,7 +81,7 @@ public class DiscoveryModule implements Module
 
   /**
    * Requests that the annotated DruidNode instance be injected and published as part of the lifecycle.
-   *
+   * <p/>
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class, annotation)) automatically.
    * Announcement will happen in the LAST stage of the Lifecycle
@@ -95,7 +95,7 @@ public class DiscoveryModule implements Module
 
   /**
    * Requests that the annotated DruidNode instance be injected and published as part of the lifecycle.
-   *
+   * <p/>
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class, annotation)) automatically.
    * Announcement will happen in the LAST stage of the Lifecycle
@@ -109,7 +109,7 @@ public class DiscoveryModule implements Module
 
   /**
    * Requests that the keyed DruidNode instance be injected and published as part of the lifecycle.
-   *
+   * <p/>
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class, annotation)) automatically.
    * Announcement will happen in the LAST stage of the Lifecycle
@@ -137,7 +137,9 @@ public class DiscoveryModule implements Module
           .asEagerSingleton();
   }
 
-  @Provides @LazySingleton @Named(NAME)
+  @Provides
+  @LazySingleton
+  @Named(NAME)
   public CuratorServiceAnnouncer getServiceAnnouncer(
       final CuratorServiceAnnouncer announcer,
       final Injector injector,
@@ -181,7 +183,8 @@ public class DiscoveryModule implements Module
     return announcer;
   }
 
-  @Provides @LazySingleton
+  @Provides
+  @LazySingleton
   public ServiceDiscovery<Void> getServiceDiscovery(
       CuratorFramework curator,
       CuratorDiscoveryConfig config,
@@ -217,11 +220,19 @@ public class DiscoveryModule implements Module
               throw Throwables.propagate(e);
             }
           }
-        },
-        Lifecycle.Stage.LAST
+        }
     );
 
     return serviceDiscovery;
+  }
+
+  @Provides
+  @LazySingleton
+  public ServerDiscoveryFactory getServerDiscoveryFactory(
+      ServiceDiscovery<Void> serviceDiscovery
+  )
+  {
+    return new ServerDiscoveryFactory(serviceDiscovery);
   }
 
   private static class NoopServiceDiscovery<T> implements ServiceDiscovery<T>
