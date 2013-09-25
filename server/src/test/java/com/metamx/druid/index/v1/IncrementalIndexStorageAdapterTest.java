@@ -165,7 +165,7 @@ public class IncrementalIndexStorageAdapterTest
                     .addDimension("billy")
                     .addDimension("sally")
                     .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
-                    .setDimFilter(DimFilters.dimEquals("sally", null))
+                    .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                     .build(),
         new IncrementalIndexStorageAdapter(index)
     );
