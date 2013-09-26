@@ -97,27 +97,6 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
-    List<Registererer> registererers = Lists.transform(
-        MapUtils.getList(argSpec, "registererers", ImmutableList.of()),
-        new Function<Object, Registererer>()
-        {
-          @Override
-          public Registererer apply(@Nullable Object input)
-          {
-            try {
-              return (Registererer) Class.forName((String) input).newInstance();
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
-          }
-        }
-    );
-
-    if (!registererers.isEmpty()) {
-      Registererers.registerHandlers(registererers, Arrays.asList(jsonMapper));
-    }
-
     return jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
   }
 
@@ -179,7 +158,6 @@ public class HadoopDruidIndexerConfig
   private volatile DataRollupSpec rollupSpec;
   private volatile DbUpdaterJobSpec updaterJobSpec;
   private volatile boolean ignoreInvalidRows = false;
-  private volatile List<String> registererers = Lists.newArrayList();
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
@@ -203,8 +181,7 @@ public class HadoopDruidIndexerConfig
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
       final @JsonProperty("rollupSpec") DataRollupSpec rollupSpec,
       final @JsonProperty("updaterJobSpec") DbUpdaterJobSpec updaterJobSpec,
-      final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
-      final @JsonProperty("registererers") List<String> registererers
+      final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows
   )
   {
     this.dataSource = dataSource;
@@ -224,7 +201,6 @@ public class HadoopDruidIndexerConfig
     this.rollupSpec = rollupSpec;
     this.updaterJobSpec = updaterJobSpec;
     this.ignoreInvalidRows = ignoreInvalidRows;
-    this.registererers = registererers;
 
     if(partitionsSpec != null) {
       Preconditions.checkArgument(
@@ -515,17 +491,6 @@ public class HadoopDruidIndexerConfig
   public void setIgnoreInvalidRows(boolean ignoreInvalidRows)
   {
     this.ignoreInvalidRows = ignoreInvalidRows;
-  }
-
-  @JsonProperty
-  public List<String> getRegistererers()
-  {
-    return registererers;
-  }
-
-  public void setRegistererers(List<String> registererers)
-  {
-    this.registererers = registererers;
   }
 
   /********************************************
