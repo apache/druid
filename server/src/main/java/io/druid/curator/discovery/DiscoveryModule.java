@@ -120,6 +120,7 @@ public class DiscoveryModule implements Module
    */
   public static void registerKey(Binder binder, Key<DruidNode> key)
   {
+    DruidBinders.discoveryAnnouncementBinder(binder).addBinding().toInstance(new KeyHolder<>(key));
     LifecycleModule.registerKey(binder, key);
   }
 

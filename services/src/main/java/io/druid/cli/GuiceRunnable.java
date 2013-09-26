@@ -28,11 +28,6 @@ public abstract class GuiceRunnable implements Runnable
     this.baseInjector = injector;
   }
 
-  public Injector getBaseInjector()
-  {
-    return baseInjector;
-  }
-
   protected abstract List<Object> getModules();
 
   public Injector makeInjector()
@@ -66,11 +61,5 @@ public abstract class GuiceRunnable implements Runnable
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
-  }
-
-  @Override
-  public void run()
-  {
-    initLifecycle(makeInjector());
   }
 }

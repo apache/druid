@@ -19,10 +19,8 @@
 
 package io.druid.cli;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 import com.google.common.io.InputSupplier;
@@ -32,16 +30,11 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.emitter.core.LoggingEmitter;
-import com.metamx.emitter.core.LoggingEmitterConfig;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.druid.guice.LazySingleton;
-import io.druid.guice.ManageLifecycle;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
-import io.druid.initialization.LogLevelAdjuster;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,7 +48,7 @@ import java.util.List;
  */
 @Command(
     name = "hadoop",
-    description = "Runs the batch Hadoop Druid Indexer, see LINK GOES HERE for a description."
+    description = "Runs the batch Hadoop Druid Indexer, see https://github.com/metamx/druid/wiki/Batch-ingestion for a description."
 )
 public class CliHadoopIndexer extends GuiceRunnable
 {
@@ -122,21 +115,10 @@ public class CliHadoopIndexer extends GuiceRunnable
   public void run()
   {
     try {
-      LogLevelAdjuster.register();
-
-      final Injector injector = Initialization.makeInjectorWithModules(
-          getBaseInjector(), getModules()
-      );
-      final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
+      Injector injector = makeInjector();
       final HadoopDruidIndexerJob job = injector.getInstance(HadoopDruidIndexerJob.class);
 
-      try {
-        lifecycle.start();
-      }
-      catch (Throwable t) {
-        log.error(t, "Error when starting up.  Failing.");
-        System.exit(1);
-      }
+      Lifecycle lifecycle = initLifecycle(injector);
 
       job.run();
 
@@ -150,7 +132,7 @@ public class CliHadoopIndexer extends GuiceRunnable
 
     }
     catch (Exception e) {
-      throw com.google.common.base.Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
   }
 
