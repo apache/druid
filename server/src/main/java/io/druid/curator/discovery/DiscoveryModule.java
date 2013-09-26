@@ -35,6 +35,8 @@ import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.KeyHolder;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.LifecycleModule;
+import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.CuratorDiscoveryConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -119,6 +121,7 @@ public class DiscoveryModule implements Module
   public static void registerKey(Binder binder, Key<DruidNode> key)
   {
     DruidBinders.discoveryAnnouncementBinder(binder).addBinding().toInstance(new KeyHolder<>(key));
+    LifecycleModule.registerKey(binder, key);
   }
 
   @Override
@@ -134,7 +137,7 @@ public class DiscoveryModule implements Module
     // We bind this eagerly so that it gets instantiated and registers stuff with Lifecycle as a side-effect
     binder.bind(ServiceAnnouncer.class)
           .to(Key.get(CuratorServiceAnnouncer.class, Names.named(NAME)))
-          .asEagerSingleton();
+          .in(LazySingleton.class);
   }
 
   @Provides

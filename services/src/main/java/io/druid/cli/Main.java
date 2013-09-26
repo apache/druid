@@ -68,6 +68,11 @@ public class Main
            .withDefaultCommand(Help.class)
            .withCommands(ConvertProperties.class);
 
+    builder.withGroup("index")
+               .withDescription("Run indexing for druid")
+               .withDefaultCommand(Help.class)
+               .withCommands(CliHadoopIndexer.class);
+
     builder.withGroup("internal")
            .withDescription("Processes that Druid runs \"internally\", you should rarely use these directly")
            .withDefaultCommand(Help.class)
