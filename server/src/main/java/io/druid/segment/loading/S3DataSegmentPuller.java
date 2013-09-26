@@ -110,7 +110,6 @@ public class S3DataSegmentPuller implements DataSegmentPuller
                   return null;
                 }
                 catch (IOException e) {
-                  FileUtils.deleteDirectory(outDir);
                   throw new IOException(String.format("Problem decompressing object[%s]", s3Obj), e);
                 }
                 finally {
@@ -125,6 +124,16 @@ public class S3DataSegmentPuller implements DataSegmentPuller
       );
     }
     catch (Exception e) {
+      try {
+        FileUtils.deleteDirectory(outDir);
+      } catch (IOException ioe) {
+        log.warn(
+            ioe,
+            "Failed to remove output directory for segment[%s] after exception: %s",
+            segment.getIdentifier(),
+            outDir
+        );
+      }
       throw new SegmentLoadingException(e, e.getMessage());
     }
   }
