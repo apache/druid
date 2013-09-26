@@ -57,7 +57,7 @@ public class ConfigProvider<T> implements Provider<T>
   private final Class<T> clazz;
   private final Map<String, String> replacements;
 
-  private T object = null;
+  private ConfigurationObjectFactory factory = null;
 
   public ConfigProvider(
       Class<T> clazz,
@@ -71,19 +71,20 @@ public class ConfigProvider<T> implements Provider<T>
   @Inject
   public void inject(ConfigurationObjectFactory factory)
   {
-    try {
-      // ConfigMagic handles a null replacements
-      object = factory.buildWithReplacements(clazz, replacements);
-    }
-    catch (IllegalArgumentException e) {
-      log.info("Unable to build instance of class[%s]", clazz);
-      throw e;
-    }
+    this.factory = factory;
   }
 
   @Override
   public T get()
   {
-    return Preconditions.checkNotNull(object, "WTF!? Code misconfigured, inject() didn't get called.");
+    try {
+      // ConfigMagic handles a null replacements
+      Preconditions.checkNotNull(factory, "WTF!? Code misconfigured, inject() didn't get called.");
+      return factory.buildWithReplacements(clazz, replacements);
+    }
+    catch (IllegalArgumentException e) {
+      log.info("Unable to build instance of class[%s]", clazz);
+      throw e;
+    }
   }
 }
