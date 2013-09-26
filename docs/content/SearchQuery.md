@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 A search query returns dimension values that match the search specification.
 

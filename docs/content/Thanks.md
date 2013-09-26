@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 YourKit supports the Druid open source projects with its
 full-featured Java Profiler.

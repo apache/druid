@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 # Druid Personal Demo Cluster (DPDC)
 
@@ -68,7 +68,7 @@ This guide walks you through the steps to create the cluster and then how to cre
 
 **`http://IPAddressDruidMaster:8082/druid/v3/demoServlet`**
 
-As you can see from the image below, there are default values in the Dimensions and Granularity fields. Clicking **Execute** will produce a basic query result. 
+As you can see from the image below, there are doc_page values in the Dimensions and Granularity fields. Clicking **Execute** will produce a basic query result. 
 ![Demo Query Interface](images/demo/query-1.png)
 
 1. Note: when the Query is in running the **Execute** button will be disabled and read: **Fetching…**

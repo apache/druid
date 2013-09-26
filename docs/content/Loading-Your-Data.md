@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Once you have a realtime node working, it is time to load your own data to see how Druid performs.
 
@@ -7,6 +7,7 @@ Druid can ingest data in three ways: via Kafka and a realtime node, via the inde
 
 ## Create Config Directories ##
 Each type of node needs its own config file and directory, so create them as subdirectories under the druid directory.
+
 ```bash
 mkdir config
 mkdir config/realtime
@@ -17,7 +18,7 @@ mkdir config/broker
 
 ## Loading Data with Kafka ##
 
-[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/master/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in realtime without writing any code. To load data to a realtime node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
+[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/druid-0.5.x/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in realtime without writing any code. To load data to a realtime node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
 
 ### Booting Kafka ###
 
@@ -45,8 +46,8 @@ bin/kafka-server-start.sh config/server.properties
 ```bash
 bin/kafka-console-producer.sh --zookeeper localhost:2181 --topic druidtest
 ```
-### Launching a Realtime Node
 
+### Launching a Realtime Node
 1. Create a valid configuration file similar to this called config/realtime/runtime.properties:
 ```
 druid.host=0.0.0.0:8080
@@ -81,8 +82,8 @@ druid.database.user=user
 druid.database.password=diurd
 druid.database.connectURI=
 druid.host=127.0.0.1:8080
-
 ```
+
 2. Create a valid realtime configuration file similar to this called realtime.spec:
 ```json
 [{
@@ -114,12 +115,14 @@ druid.host=127.0.0.1:8080
 
 }]
 ```
+
 3. Launch the realtime node
 ```bash
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
 -Ddruid.realtime.specFile=config/realtime/realtime.spec \
 -classpath lib/*:config/realtime com.metamx.druid.realtime.RealtimeMain
 ```
+
 4. Paste data into the Kafka console producer
 ```json
 {"utcdt": "2010-01-01T01:01:01", "wp": 1000, "gender": "male", "age": 100}
@@ -128,12 +131,14 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
 {"utcdt": "2010-01-01T01:01:04", "wp": 4000, "gender": "female", "age": 30}
 {"utcdt": "2010-01-01T01:01:05", "wp": 5000, "gender": "male", "age": 40}
 ```
+
 5. Watch the events as they are ingested by Druid's realtime node
 ```bash
 ...
 2013-06-17 21:41:55,569 INFO [Global--0] com.metamx.emitter.core.LoggingEmitter - Event [{"feed":"metrics","timestamp":"2013-06-17T21:41:55.569Z","service":"example","host":"127.0.0.1","metric":"events/processed","value":5,"user2":"druidtest"}]
 ...
 ```
+
 6. In a new console, edit a file called query.body:
 ```json
 {
@@ -149,11 +154,13 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
     "intervals": ["2010-01-01T00:00/2020-01-01T00"]
 }
 ```
+
 7. Submit the query via curl
 ```bash
 curl -X POST "http://localhost:8080/druid/v2/?pretty" \
 -H 'content-type: application/json' -d @query.body
 ```
+
 8. View Result!
 ```json
 [ {
@@ -165,6 +172,7 @@ curl -X POST "http://localhost:8080/druid/v2/?pretty" \
   }
 } ]
 ```
+
 Now you're ready for [Querying Your Data](Querying-Your-Data.html)!
 
 ## Loading Data with the HadoopDruidIndexer ##
@@ -177,13 +185,16 @@ The setup for a single node, 'standalone' Hadoop cluster is available at [http:/
 1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/)
 2. Install MySQL
 3. Create a druid user and database
+
 ```bash
 mysql -u root
 ```
+
 ```sql
 GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
 CREATE database druid;
 ```
+
 The [Master](Master.html) node will create the tables it needs based on its configuration.
 
 ### Make sure you have ZooKeeper Running ###
@@ -209,6 +220,7 @@ cd ..
 If you've already setup a realtime node, be aware that although you can run multiple node types on one physical computer, you must assign them unique ports. Having used 8080 for the [Realtime](Realtime.html) node, we use 8081 for the [Master](Master.html).
 
 1. Setup a configuration file called config/master/runtime.properties similar to:
+
 ```bash
 druid.host=0.0.0.0:8081
 druid.port=8081
@@ -252,6 +264,7 @@ druid.paths.indexCache=/tmp/druid/indexCache
 druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
 ```
 2. Launch the [Master](Master.html) node
+
 ```bash
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
 -classpath lib/*:config/master \
@@ -260,6 +273,7 @@ com.metamx.druid.http.MasterMain
 
 ### Launch a Compute/Historical Node ###
 1. Create a configuration file in config/compute/runtime.properties similar to:
+
 ```bash
 druid.host=0.0.0.0:8082
 druid.port=8082
@@ -304,7 +318,9 @@ druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
 druid.pusher.local.storageDirectory=/tmp/druid/localStorage
 druid.pusher.local=true
 ```
+
 2. Launch the compute node:
+
 ```bash
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
 -classpath lib/*:config/compute \
@@ -314,6 +330,7 @@ com.metamx.druid.http.ComputeMain
 ### Create a File of Records ###
 
 We can use the same records we have been, in a file called records.json:
+
 ```json
 {"utcdt": "2010-01-01T01:01:01", "wp": 1000, "gender": "male", "age": 100}
 {"utcdt": "2010-01-01T01:01:02", "wp": 2000, "gender": "female", "age": 50}
@@ -327,6 +344,7 @@ We can use the same records we have been, in a file called records.json:
 Now its time to run the Hadoop [Batch-ingestion](Batch-ingestion.html) job, HadoopDruidIndexer, which will fill a historical [Compute](Compute.html) node with data. First we'll need to configure the job.
 
 1. Create a config called batchConfig.json similar to:
+
 ```json
 {
   "dataSource": "druidtest",
@@ -362,7 +380,9 @@ Now its time to run the Hadoop [Batch-ingestion](Batch-ingestion.html) job, Hado
   }
 }
 ```
+
 2. Now run the job, with the config pointing at batchConfig.json:
+
 ```bash
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=realtime.spec -classpath lib/* com.metamx.druid.indexer.HadoopDruidIndexerMain batchConfig.json
 ```

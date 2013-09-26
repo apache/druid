@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 For a comprehensive look at the architecture of Druid, read the [White Paper](http://static.druid.io/docs/druid.pdf).
 

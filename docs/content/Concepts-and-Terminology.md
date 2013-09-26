@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Concepts and Terminology
 ========================

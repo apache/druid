@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Querying
 ========
@@ -104,7 +104,7 @@ The following table summarizes query properties.
 |groupBy|dimensions|constrains the groupings; if empty, then one value per time granularity bucket|yes|
 |timeseries, groupBy|aggregations|aggregations that combine values in a bucket. See [Aggregations](Aggregations.html).|yes|
 |timeseries, groupBy|postAggregations|aggregations of aggregations. See [Post Aggregations](Post Aggregations.html).|yes|
-|search|limit|maximum number of results (default is 1000), a system-level maximum can also be set via `com.metamx.query.search.maxSearchLimit`|no|
+|search|limit|maximum number of results (doc_page is 1000), a system-level maximum can also be set via `com.metamx.query.search.maxSearchLimit`|no|
 |search|searchDimensions|Dimensions to apply the search query to. If not specified, it will search through all dimensions.|no|
 |search|query|The query portion of the search query. This is essentially a predicate that specifies if something matches.|yes|
 

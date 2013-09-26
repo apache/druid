@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Greetings! This tutorial will help clarify some core Druid concepts. We will use a realtime dataset and issue some basic Druid queries. If you are ready to explore Druid, and learn a thing or two, read on!
 
@@ -261,7 +261,7 @@ Let’s create the file:
             "geo_region"
         ], 
         "orderBy": {
-            "type": "default", 
+            "type": "doc_page", 
             "columns": [
                 {
                     "dimension": "known_users", 

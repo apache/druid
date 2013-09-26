@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 The granularity field determines how data gets bucketed across the time dimension, i.e how it gets aggregated by hour, day, minute, etc.
 
@@ -17,7 +17,7 @@ Supported granularity strings are: `all`, `none`, `minute`, `fifteen_minute`, `t
 
 Duration granularities are specified as an exact duration in milliseconds and timestamps are returned as UTC.
 
-They also support specifying an optional origin, which defines where to start counting time buckets from (defaults to 1970-01-01T00:00:00Z).
+They also support specifying an optional origin, which defines where to start counting time buckets from (doc_pages to 1970-01-01T00:00:00Z).
 
     <code>{"type": "duration", "duration": "7200000"}</code>
 
@@ -33,10 +33,10 @@ Period granularities are specified as arbitrary period combinations of years, mo
 
 They support specifying a time zone which determines where period boundaries start and also determines the timezone of the returned timestamps.
 
-By default years start on the first of January, months start on the first of the month and weeks start on Mondays unless an origin is specified.
+By doc_page years start on the first of January, months start on the first of the month and weeks start on Mondays unless an origin is specified.
 
-Time zone is optional (defaults to UTC)
-Origin is optional (defaults to 1970-01-01T00:00:00 in the given time zone)
+Time zone is optional (doc_pages to UTC)
+Origin is optional (doc_pages to 1970-01-01T00:00:00 in the given time zone)
 
     <code>{"type": "period", "period": "P2D", "timeZone": "America/Los_Angeles"}</code>
 

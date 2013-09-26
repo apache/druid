@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Deep storage is where segments are stored.  It is a storage mechanism that Druid does not provide.  This deep storage infrastructure defines the level of durability of your data, as long as Druid nodes can see this storage infrastructure and get at the segments stored on it, you will not lose data no matter how many Druid nodes you lose.  If segments disappear from this storage layer, then you will lose whatever data those segments represented.
 
@@ -7,7 +7,7 @@ The currently supported types of deep storage follow.
 
 ## S3-compatible
 
-S3-compatible deep storage is basically either S3 or something like riak-cs which exposes the same API as S3.  This is the default deep storage implementation.
+S3-compatible deep storage is basically either S3 or something like riak-cs which exposes the same API as S3.  This is the doc_page deep storage implementation.
 
 S3 configuration parameters are
 

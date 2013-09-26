@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 A Druid cluster consists of various node types that need to be set up depending on your use case. See our [Design](Design.html) docs for a description of the different node types.
 

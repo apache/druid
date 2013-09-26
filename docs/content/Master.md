@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Master
 ======
@@ -13,7 +13,7 @@ Before any unassigned segments are serviced by compute nodes, the available comp
 Rules
 -----
 
-Segments are loaded and dropped from the cluster based on a set of rules. Rules indicate how segments should be assigned to different compute node tiers and how many replicants of a segment should exist in each tier. Rules may also indicate when segments should be dropped entirely from the cluster. The master loads a set of rules from the database. Rules may be specific to a certain datasource and/or a default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The master will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule
+Segments are loaded and dropped from the cluster based on a set of rules. Rules indicate how segments should be assigned to different compute node tiers and how many replicants of a segment should exist in each tier. Rules may also indicate when segments should be dropped entirely from the cluster. The master loads a set of rules from the database. Rules may be specific to a certain datasource and/or a doc_page set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The master will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule
 
 For more information on rules, see [Rule Configuration](Rule-Configuration.html).
 
@@ -63,7 +63,7 @@ The master node exposes several HTTP endpoints for interactions.
 
 /info/datasources/{dataSourceName}/segments/{segmentId} - returns full segment metadata for a specific segment
 
-/info/rules - returns all rules for all data sources in the cluster including the default datasource.
+/info/rules - returns all rules for all data sources in the cluster including the doc_page datasource.
 
 /info/rules/{dataSourceName} - returns all rules for a specified datasource
 
@@ -76,7 +76,7 @@ The Master Console
 
 The Druid master exposes a web GUI for displaying cluster information and rule configuration. After the master starts, the console can be accessed at http://HOST:PORT/static/. There exists a full cluster view, as well as views for individual compute nodes, datasources and segments themselves. Segment information can be displayed in raw JSON form or as part of a sortable and filterable table.
 
-The master console also exposes an interface to creating and editing rules. All valid datasources configured in the segment database, along with a default datasource, are available for configuration. Rules of different types can be added, deleted or edited.
+The master console also exposes an interface to creating and editing rules. All valid datasources configured in the segment database, along with a doc_page datasource, are available for configuration. Rules of different types can be added, deleted or edited.
 
 FAQ
 ---

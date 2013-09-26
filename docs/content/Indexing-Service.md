@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Disclaimer: We are still in the process of finalizing the indexing service and these configs are prone to change at any time. We will announce when we feel the indexing service and the configurations described are stable.
 

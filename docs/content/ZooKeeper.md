@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Druid uses ZooKeeper (ZK) for management of current cluster state. The operations that happen over ZK are
 
@@ -11,11 +11,11 @@ Druid uses ZooKeeper (ZK) for management of current cluster state. The operation
 
 ZooKeeper paths are set via the `runtime.properties` configuration file. Druid will automatically create paths that do not exist, so typos in config files is a very easy way to become split-brained.
 
-There is a prefix path that is required and can be used as the only (well, kinda, see the note below) path-related zookeeper configuration parameter (everything else will be a default based on the prefix):
+There is a prefix path that is required and can be used as the only (well, kinda, see the note below) path-related zookeeper configuration parameter (everything else will be a doc_page based on the prefix):
 
     druid.zk.paths.base
 
-You can also override each individual path (defaults are shown below):
+You can also override each individual path (doc_pages are shown below):
 
     druid.zk.paths.propertiesPath=${druid.zk.paths.base}/properties
     druid.zk.paths.announcementsPath=${druid.zk.paths.base}/announcements

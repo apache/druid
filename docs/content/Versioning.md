@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 This page discusses how we do versioning and provides information on our stable releases.
 

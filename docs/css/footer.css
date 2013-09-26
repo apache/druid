@@ -1,0 +1,38 @@
+footer {
+   font-size: 14px;
+   color: #000000;
+   font-weight: 300;
+}
+
+footer strong {
+   display: block;
+   font-weight: 400;
+}
+
+footer a {
+   color: #000000;
+}
+
+footer address {
+   margin: 0 0 30px 30px;
+}
+
+footer .soc {
+	text-align:left;
+	margin:5px 0 0 0;
+}
+footer .soc a {
+	display:inline-block;
+	width:35px;
+	height:34px;
+	background:url(../img/icons-soc.png) no-repeat;
+}
+footer .soc a.github {
+	background-position:0 -34px;
+}
+footer .soc a.meet {
+	background-position:0 -68px;
+}
+footer .soc a.rss {
+        background-position:0 -102px;
+}

@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Search query specs define how a “match” is defined between a search value and a dimension value. The available search query specs are:
 

@@ -1,0 +1,14 @@
+.doc-content pre, .doc-content pre code {
+   overflow: auto;
+   white-space: pre;
+   word-wrap: normal;
+}
+
+.doc-content p {
+   padding: 8px 0 8px 0;
+}
+
+/*** HACK: This is a horrible hack, but I have no clue why images don't want to stay in the container **/
+.doc-content img {
+   max-width: 847.5px;
+}

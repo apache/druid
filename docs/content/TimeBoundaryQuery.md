@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Time boundary queries return the earliest and latest data points of a data set. The grammar is:
 

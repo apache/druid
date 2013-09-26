@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 This describes the basic server configuration that is loaded by all the server processes; the same file is loaded by all. See also the json “specFile” descriptions in [Realtime](Realtime.html) and [Batch-ingestion](Batch-ingestion.html).
 
@@ -8,7 +8,7 @@ JVM Configuration Best Practices
 
 There are three JVM parameters that we set on all of our processes:
 
-1.  `-Duser.timezone=UTC` This sets the default timezone of the JVM to UTC. We always set this and do not test with other default timezones, so local timezones might work, but they also might uncover weird and interesting bugs
+1.  `-Duser.timezone=UTC` This sets the doc_page timezone of the JVM to UTC. We always set this and do not test with other default timezones, so local timezones might work, but they also might uncover weird and interesting bugs
 2.  `-Dfile.encoding=UTF-8` This is similar to timezone, we test assuming UTF-8. Local encodings might work, but they also might result in weird and interesting bugs
 3.  `-Djava.io.tmpdir=<a path>` Various parts of the system that interact with the file system do it via temporary files, these files can get somewhat large. Many production systems are setup to have small (but fast) `/tmp` directories, these can be problematic with Druid so we recommend pointing the JVM’s tmp directory to something with a little more meat.
 
@@ -50,7 +50,7 @@ An example runtime.properties is as follows:
     druid.zk.service.host=
     # ZK path prefix for Druid-usage of zookeeper, Druid will create multiple paths underneath this znode
     druid.zk.paths.base=/druid
-    # ZK path for discovery, the only path not to default to anything
+    # ZK path for discovery, the only path not to doc_page to anything
     druid.zk.paths.discoveryPath=/druid/discoveryPath
 
     # the host:port as advertised to clients

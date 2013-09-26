@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Examples
 ========
@@ -15,21 +15,22 @@ There are two options for installing standalone Druid. Building from source, and
 
 Clone Druid and build it:
 
-    <code>git clone https://github.com/metamx/druid.git druid
-    cd druid
-    git fetch --tags
-    git checkout druid-0.4.30
-    ./build.sh
-    </code>
+``` bash
+git clone https://github.com/metamx/druid.git druid
+cd druid
+git fetch --tags
+git checkout druid-0.4.30
+./build.sh
+```
 
 ### Downloading the DSK (Druid Standalone Kit)
 
 [Download](http://static.druid.io/data/examples/druid-services-0.4.6.tar.gz) a stand-alone tarball and run it:
 
-    <code>
-    tar -xzf druid-services-0.X.X-SNAPSHOT-bin.tar.gz
-    cd druid-services-0.X.X-SNAPSHOT
-    </code>
+``` bash
+tar -xzf druid-services-0.X.X-SNAPSHOT-bin.tar.gz
+cd druid-services-0.X.X-SNAPSHOT
+```
 
 Twitter Example
 ---------------
@@ -39,12 +40,12 @@ For a full tutorial based on the twitter example, check out this [Twitter Tutori
 This Example uses a feature of Twitter that allows for sampling of it’s stream. We sample the Twitter stream via our [TwitterSpritzerFirehoseFactory](https://github.com/metamx/druid/blob/master/examples/src/main/java/druid/examples/twitter/TwitterSpritzerFirehoseFactory.java) class and use it to simulate the kinds of data you might ingest into Druid. Then, with the client part, the sample shows what kinds of analytics explorations you can do during and after the data is loaded.
 
 ### What you’ll learn
-\* See how large amounts of data gets ingested into Druid in real-time
-\* Learn how to do fast, interactive, analytics queries on that real-time data
+* See how large amounts of data gets ingested into Druid in real-time
+* Learn how to do fast, interactive, analytics queries on that real-time data
 
 ### What you need
-\* A build of standalone Druid with the Twitter example (see above)
-\* A Twitter username and password.
+* A build of standalone Druid with the Twitter example (see above)
+* A Twitter username and password.
 
 ### What you’ll do
 
@@ -57,12 +58,15 @@ This uses `RandomFirehoseFactory` which emits a stream of random numbers (outCol
 
 In a terminal window, (NOTE: If you are using the cloned Github repository these scripts are in ./examples/bin) start the server with:
 
-`./run_example_server.sh`
-`# type rand when prompted`
+``` bash
+./run_example_server.sh # type rand when prompted
+```
 
 In another terminal window:
 
-`./run_example_client.sh`
-`# type rand when prompted`
+``` bash
+./run_example_client.sh # type rand when prompted
+```
 
-The result of the client query is in JSON format. The client makes a REST request using the program `curl` which is usually installed on Linux, Unix, and OSX by default.
+
+The result of the client query is in JSON format. The client makes a REST request using the program `curl` which is usually installed on Linux, Unix, and OSX by doc_page.

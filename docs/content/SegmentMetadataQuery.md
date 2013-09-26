@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Segment metadata queries return per segment information about:
 \* Cardinality of all columns in the segment

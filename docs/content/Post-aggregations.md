@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Druid. If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
 

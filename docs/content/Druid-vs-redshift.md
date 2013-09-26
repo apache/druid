@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 ###How does Druid compare to Redshift?
 

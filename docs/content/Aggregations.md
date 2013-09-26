@@ -1,5 +1,5 @@
 ---
-layout: docs_default
+layout: doc_page
 ---
 Aggregations are specifications of processing over metrics available in Druid.
 Available aggregations are:

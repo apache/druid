@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Note: It is recommended that the master console is used to configure rules. However, the master node does have HTTP endpoints to programmatically configure rules.
 
