@@ -54,10 +54,14 @@ public class ScalingStats
 
   public ScalingStats(int capacity)
   {
-    this.recentEvents = MinMaxPriorityQueue
-        .orderedBy(comparator)
-        .maximumSize(capacity)
-        .create();
+    if (capacity == 0) {
+      this.recentEvents = MinMaxPriorityQueue.orderedBy(comparator).create();
+    } else {
+      this.recentEvents = MinMaxPriorityQueue
+          .orderedBy(comparator)
+          .maximumSize(capacity)
+          .create();
+    }
   }
 
   public void addProvisionEvent(AutoScalingData data)

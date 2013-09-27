@@ -55,12 +55,19 @@ public class ForkingTaskRunnerConfig
   private String classpath = System.getProperty("java.class.path");
 
   @JsonProperty
-  @Min(1024) @Max(65535)
+  @Min(1024)
+  @Max(65535)
   private int startPort = 8080;
 
   @JsonProperty
   @NotNull
-  List<String> allowedPrefixes = Lists.newArrayList("com.metamx", "druid", "io.druid");
+  List<String> allowedPrefixes = Lists.newArrayList(
+      "com.metamx",
+      "druid",
+      "io.druid",
+      "user.timezone",
+      "file.encoding"
+  );
 
   public int maxForks()
   {

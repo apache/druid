@@ -57,6 +57,7 @@ import io.druid.indexing.coordinator.TaskRunnerFactory;
 import io.druid.indexing.coordinator.TaskStorage;
 import io.druid.indexing.coordinator.TaskStorageQueryAdapter;
 import io.druid.indexing.coordinator.http.IndexerCoordinatorResource;
+import io.druid.indexing.coordinator.http.OldIndexerCoordinatorResource;
 import io.druid.indexing.coordinator.http.OverlordRedirectInfo;
 import io.druid.indexing.coordinator.scaling.AutoScalingStrategy;
 import io.druid.indexing.coordinator.scaling.EC2AutoScalingStrategy;
@@ -139,6 +140,7 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(JettyServerInitializer.class).toInstance(new OverlordJettyServerInitializer());
             Jerseys.addResource(binder, IndexerCoordinatorResource.class);
+            Jerseys.addResource(binder, OldIndexerCoordinatorResource.class);
 
             LifecycleModule.register(binder, Server.class);
           }

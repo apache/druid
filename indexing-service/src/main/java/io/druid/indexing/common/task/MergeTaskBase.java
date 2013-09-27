@@ -125,7 +125,6 @@ public abstract class MergeTaskBase extends AbstractTask
     final File taskDir = toolbox.getTaskWorkDir();
 
     try {
-
       final long startTime = System.currentTimeMillis();
 
       log.info(

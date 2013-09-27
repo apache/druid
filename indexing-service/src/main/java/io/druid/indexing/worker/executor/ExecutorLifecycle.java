@@ -123,6 +123,7 @@ public class ExecutorLifecycle
               jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(taskStatus)
           );
 
+          statusFile.getParentFile().mkdirs();
           jsonMapper.writeValue(statusFile, taskStatus);
 
           return taskStatus;

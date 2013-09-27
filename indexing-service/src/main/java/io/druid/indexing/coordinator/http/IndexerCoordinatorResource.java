@@ -19,7 +19,6 @@
 
 package io.druid.indexing.coordinator.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Collections2;
@@ -89,7 +88,6 @@ public class IndexerCoordinatorResource
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
   private final TaskLogStreamer taskLogStreamer;
   private final JacksonConfigManager configManager;
-  private final ObjectMapper jsonMapper;
 
   private AtomicReference<WorkerSetupData> workerSetupDataRef = null;
 
@@ -98,21 +96,20 @@ public class IndexerCoordinatorResource
       TaskMaster taskMaster,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
       TaskLogStreamer taskLogStreamer,
-      JacksonConfigManager configManager,
-      ObjectMapper jsonMapper
+      JacksonConfigManager configManager
   ) throws Exception
   {
     this.taskMaster = taskMaster;
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
     this.taskLogStreamer = taskLogStreamer;
     this.configManager = configManager;
-    this.jsonMapper = jsonMapper;
   }
 
   @POST
   @Path("/merge")
   @Consumes("application/json")
   @Produces("application/json")
+  @Deprecated
   public Response doMerge(final Task task)
   {
     // legacy endpoint
@@ -123,6 +120,7 @@ public class IndexerCoordinatorResource
   @Path("/index")
   @Consumes("application/json")
   @Produces("application/json")
+  @Deprecated
   public Response doIndex(final Task task)
   {
     return taskPost(task);

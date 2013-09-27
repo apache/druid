@@ -72,28 +72,28 @@ public class IndexingServiceClient
       }
     }
 
-    runQuery("merge", new ClientAppendQuery(dataSource, segments));
+    runQuery(new ClientAppendQuery(dataSource, segments));
   }
 
   public void killSegments(String dataSource, Interval interval)
   {
-    runQuery("index", new ClientKillQuery(dataSource, interval));
+    runQuery(new ClientKillQuery(dataSource, interval));
   }
 
   public void upgradeSegment(DataSegment dataSegment)
   {
-    runQuery("task", new ClientConversionQuery(dataSegment));
+    runQuery(new ClientConversionQuery(dataSegment));
   }
 
   public void upgradeSegments(String dataSource, Interval interval)
   {
-    runQuery("task", new ClientConversionQuery(dataSource, interval));
+    runQuery(new ClientConversionQuery(dataSource, interval));
   }
 
-  private InputStream runQuery(String endpoint, Object queryObject)
+  private InputStream runQuery(Object queryObject)
   {
     try {
-      return client.post(new URL(String.format("%s/%s", baseUrl(), endpoint)))
+      return client.post(new URL(String.format("%s/task", baseUrl())))
                    .setContent("application/json", jsonMapper.writeValueAsBytes(queryObject))
                    .go(RESPONSE_HANDLER)
                    .get();
@@ -111,7 +111,7 @@ public class IndexingServiceClient
         throw new ISE("Cannot find instance of indexingService");
       }
 
-      return String.format("http://%s:%s/druid/indexer/v1", instance.getHost(), instance.getPort());
+      return String.format("http://%s/druid/indexer/v1", instance.getHost());
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
