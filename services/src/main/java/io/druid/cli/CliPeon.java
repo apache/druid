@@ -152,9 +152,10 @@ public class CliPeon extends GuiceRunnable
   {
     try {
       Injector injector = makeInjector();
-      Lifecycle lifecycle = initLifecycle(injector);
 
       try {
+        Lifecycle lifecycle = initLifecycle(injector);
+
         injector.getInstance(ExecutorLifecycle.class).join();
         lifecycle.stop();
       }

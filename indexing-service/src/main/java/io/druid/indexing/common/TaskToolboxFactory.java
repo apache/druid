@@ -68,7 +68,7 @@ public class TaskToolboxFactory
       @Processing ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoaderFactory segmentLoaderFactory,
-      @Json ObjectMapper objectMapper
+      ObjectMapper objectMapper
   )
   {
     this.config = config;
