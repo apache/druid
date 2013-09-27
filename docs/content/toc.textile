@@ -12,11 +12,10 @@ h1. Contents
 h2. Getting Started
 * "Tutorial: A First Look at Druid":./Tutorial:-A-First-Look-at-Druid.html
 * "Tutorial: The Druid Cluster":./Tutorial:-The-Druid-Cluster.html
-* "Loading Your Data":./Tutorial:-Webstream.html
+* "Loading Your Data":./Loading-Your-Data.html
 * "Querying Your Data":./Querying-your-data.html
 * "Booting a Production Cluster":./Booting-a-production-cluster.html
 * "Examples":./Examples.html
-* "Cluster Setup":Cluster-setup.html
 * "Configuration":Configuration.html
 
 h2. Data Ingestion

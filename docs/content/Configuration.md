@@ -21,59 +21,59 @@ The periodic time intervals (like “PT1M”) are [ISO8601 intervals](http://en.
 
 An example runtime.properties is as follows:
 
-    <code>
-    # S3 access
-    com.metamx.aws.accessKey=<S3 access key>
-    com.metamx.aws.secretKey=<S3 secret_key>
+```
+# S3 access
+com.metamx.aws.accessKey=<S3 access key>
+com.metamx.aws.secretKey=<S3 secret_key>
 
-    # thread pool size for servicing queries
-    druid.client.http.connections=30
+# thread pool size for servicing queries
+druid.client.http.connections=30
 
-    # JDBC connection string for metadata database
-    druid.database.connectURI=
-    druid.database.user=user
-    druid.database.password=password
-    # time between polling for metadata database
-    druid.database.poll.duration=PT1M
-    druid.database.segmentTable=prod_segments
+# JDBC connection string for metadata database
+druid.database.connectURI=
+druid.database.user=user
+druid.database.password=password
+# time between polling for metadata database
+druid.database.poll.duration=PT1M
+druid.database.segmentTable=prod_segments
 
-    # Path on local FS for storage of segments; dir will be created if needed
-    druid.paths.indexCache=/tmp/druid/indexCache
-    # Path on local FS for storage of segment metadata; dir will be created if needed
-    druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
+# Path on local FS for storage of segments; dir will be created if needed
+druid.paths.indexCache=/tmp/druid/indexCache
+# Path on local FS for storage of segment metadata; dir will be created if needed
+druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
 
-    druid.request.logging.dir=/tmp/druid/log
+druid.request.logging.dir=/tmp/druid/log
 
-    druid.server.maxSize=300000000000
+druid.server.maxSize=300000000000
 
-    # ZK quorum IPs
-    druid.zk.service.host=
-    # ZK path prefix for Druid-usage of zookeeper, Druid will create multiple paths underneath this znode
-    druid.zk.paths.base=/druid
-    # ZK path for discovery, the only path not to doc_page to anything
-    druid.zk.paths.discoveryPath=/druid/discoveryPath
+# ZK quorum IPs
+druid.zk.service.host=
+# ZK path prefix for Druid-usage of zookeeper, Druid will create multiple paths underneath this znode
+druid.zk.paths.base=/druid
+# ZK path for discovery, the only path not to doc_page to anything
+druid.zk.paths.discoveryPath=/druid/discoveryPath
 
-    # the host:port as advertised to clients
-    druid.host=someHostOrIPaddrWithPort
-    # the port on which to listen, this port should line up with the druid.host value
-    druid.port=8080
+# the host:port as advertised to clients
+druid.host=someHostOrIPaddrWithPort
+# the port on which to listen, this port should line up with the druid.host value
+druid.port=8080
 
-    com.metamx.emitter.logging=true
-    com.metamx.emitter.logging.level=debug
+com.metamx.emitter.logging=true
+com.metamx.emitter.logging.level=debug
 
-    druid.processing.formatString=processing_%s
-    druid.processing.numThreads=3
+druid.processing.formatString=processing_%s
+druid.processing.numThreads=3
 
 
-    druid.computation.buffer.size=100000000
+druid.computation.buffer.size=100000000
 
-    # S3 dest for realtime indexer
-    druid.pusher.s3.bucket=
-    druid.pusher.s3.baseKey=
+# S3 dest for realtime indexer
+druid.pusher.s3.bucket=
+druid.pusher.s3.baseKey=
 
-    druid.bard.cache.sizeInBytes=40000000
-    druid.master.merger.service=blah_blah
-    </code>
+druid.bard.cache.sizeInBytes=40000000
+druid.master.merger.service=blah_blah
+```
 
 Configuration groupings
 -----------------------

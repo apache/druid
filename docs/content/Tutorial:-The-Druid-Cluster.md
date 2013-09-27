@@ -14,6 +14,7 @@ If you followed the first tutorial, you should already have Druid downloaded. If
 You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.5.54-bin.tar.gz)
 
 and untar the contents within by issuing:
+
 ```bash
 tar -zxvf druid-services-*-bin.tar.gz
 cd druid-services-*
@@ -32,15 +33,18 @@ For deep storage, we have made a public S3 bucket (static.druid.io) available wh
 1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/)
 2. Install MySQL
 3. Create a druid user and database
+
 ```bash
 mysql -u root
 ```
+
 ```sql
 GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
 CREATE database druid;
 ```
 
 ### Setting up Zookeeper ###
+
 ```bash
 curl http://www.motorlogy.com/apache/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz -o zookeeper-3.4.5.tar.gz
 tar xzf zookeeper-3.4.5.tar.gz
@@ -55,6 +59,7 @@ cd ..
 Similar to the first tutorial, the data we will be loading is based on edits that have occurred on Wikipedia. Every time someone edits a page in Wikipedia, metadata is generated about the editor and edited page. Druid collects each individual event and packages them together in a container known as a [segment](https://github.com/metamx/druid/wiki/Segments). Segments contain data over some span of time. We've prebuilt a segment for this tutorial and will cover making your own segments in other [pages](https://github.com/metamx/druid/wiki/Loading-Your-Data).The segment we are going to work with has the following format:
 
 Dimensions (things to filter on):
+
 ```json
 "page"
 "language"
@@ -71,6 +76,7 @@ Dimensions (things to filter on):
 ```
 
 Metrics (things to aggregate over):
+
 ```json
 "count"
 "added"
@@ -98,7 +104,7 @@ To create the master config file:
 mkdir config/master
 ```
 
-Under the directory we just created, create the file ```runtime.properties``` with the following contents:
+Under the directory we just created, create the file `runtime.properties` with the following contents:
 
 ```
 druid.host=127.0.0.1:8082
@@ -146,7 +152,8 @@ To create the compute config file:
 mkdir config/compute
 ```
 
-Under the directory we just created, create the file ```runtime.properties``` with the following contents:
+Under the directory we just created, create the file `runtime.properties` with the following contents:
+
 ```
 druid.host=127.0.0.1:8081
 druid.port=8081
@@ -219,67 +226,17 @@ To start the broker node:
 ```bash
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/broker com.metamx.druid.http.BrokerMain
 ```
-<!--
-### Optional: Start a Realtime Node ###
-```
-druid.host=127.0.0.1:8083
-druid.port=8083
-druid.service=realtime
 
-# logging
-com.metamx.emitter.logging=true
-com.metamx.emitter.logging.level=info
-
-# zk
-druid.zk.service.host=localhost
-druid.zk.paths.base=/druid
-druid.zk.paths.discoveryPath=/druid/discoveryPath
-
-# processing
-druid.processing.buffer.sizeBytes=10000000
-
-# schema
-druid.realtime.specFile=realtime.spec
-
-# aws
-com.metamx.aws.accessKey=dummy_access_key
-com.metamx.aws.secretKey=dummy_secret_key
-
-# db
-druid.database.segmentTable=segments
-druid.database.user=druid
-druid.database.password=diurd
-druid.database.connectURI=jdbc:mysql://localhost:3306/druid
-druid.database.ruleTable=rules
-druid.database.configTable=config
-
-# Path on local FS for storage of segments; dir will be created if needed
-druid.paths.indexCache=/tmp/druid/indexCache
-
-# handoff
-druid.pusher.s3.bucket=dummy_s3_bucket
-druid.pusher.s3.baseKey=dummy_key
-```
-
-To start the realtime node:
-
-```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath services/target/druid-services-*-selfcontained.jar:config/realtime com.metamx.druid.realtime.RealtimeMain
-```
--->
 ## Loading the Data ##
 
 The MySQL dependency we introduced earlier on contains a 'segments' table that contains entries for segments that should be loaded into our cluster. The Druid master compares this table with segments that already exist in the cluster to determine what should be loaded and dropped. To load our wikipedia segment, we need to create an entry in our MySQL segment table.
 
 Usually, when new segments are created, these MySQL entries are created directly so you never have to do this by hand. For this tutorial, we can do this manually by going back into MySQL and issuing:
 
-```
+``` sql
 use druid;
-```
-
-``
 INSERT INTO segments (id, dataSource, created_date, start, end, partitioned, version, used, payload) VALUES ('wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z', 'wikipedia', '2013-08-08T21:26:23.799Z', '2013-08-01T00:00:00.000Z', '2013-08-02T00:00:00.000Z', '0', '2013-08-08T21:22:48.989Z', '1', '{\"dataSource\":\"wikipedia\",\"interval\":\"2013-08-01T00:00:00.000Z/2013-08-02T00:00:00.000Z\",\"version\":\"2013-08-08T21:22:48.989Z\",\"loadSpec\":{\"type\":\"s3_zip\",\"bucket\":\"static.druid.io\",\"key\":\"data/segments/wikipedia/20130801T000000.000Z_20130802T000000.000Z/2013-08-08T21_22_48.989Z/0/index.zip\"},\"dimensions\":\"dma_code,continent_code,geo,area_code,robot,country_name,network,city,namespace,anonymous,unpatrolled,page,postal_code,language,newpage,user,region_lookup\",\"metrics\":\"count,delta,variation,added,deleted\",\"shardSpec\":{\"type\":\"none\"},\"binaryVersion\":9,\"size\":24664730,\"identifier\":\"wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z\"}');
-``
+```
 
 If you look in your master node logs, you should, after a maximum of a minute or so, see logs of the following form:
 
@@ -294,7 +251,7 @@ When the segment completes downloading and ready for queries, you should see the
 2013-08-08 22:48:41,959 INFO [ZkCoordinator-0] com.metamx.druid.coordination.BatchDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z] at path[/druid/segments/127.0.0.1:8081/2013-08-08T22:48:41.959Z]
 ```
 
-At this point, we can query the segment. For more information on querying, see this[link](https://github.com/metamx/druid/wiki/Querying).
+At this point, we can query the segment. For more information on querying, see this [link](https://github.com/metamx/druid/wiki/Querying).
 
 ## Next Steps ##
 
