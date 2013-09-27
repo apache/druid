@@ -37,10 +37,21 @@ public class DruidMasterRuleRunner implements DruidMasterHelper
 
   private final DruidMaster master;
 
-  public DruidMasterRuleRunner(DruidMaster master, int replicantLifeTime, int replicantThrottleLimit)
+  public DruidMasterRuleRunner(DruidMaster master)
   {
+    this(
+        new ReplicationThrottler(
+            master.getDynamicConfigs().getReplicationThrottleLimit(),
+            master.getDynamicConfigs().getReplicantLifetime()
+        ),
+        master
+    );
+  }
+
+  public DruidMasterRuleRunner(ReplicationThrottler replicatorThrottler, DruidMaster master)
+  {
+    this.replicatorThrottler = replicatorThrottler;
     this.master = master;
-    this.replicatorThrottler = new ReplicationThrottler(replicantThrottleLimit, replicantLifeTime);
   }
 
   @Override

@@ -192,7 +192,11 @@ public class DruidMasterBalancerTest
                                     )
                                 )
                                 .withAvailableSegments(segments.values())
-                                .withMasterSegmentSettings(new MasterSegmentSettings.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
+                                .withDynamicConfigs(
+                                    new MasterDynamicConfig.Builder().withMaxSegmentsToMove(
+                                        MAX_SEGMENTS_TO_MOVE
+                                    ).build()
+                                )
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
@@ -264,9 +268,9 @@ public class DruidMasterBalancerTest
                                     )
                                 )
                                 .withAvailableSegments(segments.values())
-                                .withMasterSegmentSettings(
-                                    new MasterSegmentSettings.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
-                                                                       .build()
+                                .withDynamicConfigs(
+                                    new MasterDynamicConfig.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
+                                                                     .build()
                                 )
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
@@ -357,8 +361,8 @@ public class DruidMasterBalancerTest
                                     )
                                 )
                                 .withAvailableSegments(segments.values())
-                                .withMasterSegmentSettings(
-                                    new MasterSegmentSettings.Builder().withMaxSegmentsToMove(
+                                .withDynamicConfigs(
+                                    new MasterDynamicConfig.Builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE
                                     ).build()
                                 )

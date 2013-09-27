@@ -21,34 +21,36 @@ package io.druid.server.master;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class MasterSegmentSettings
+public class MasterDynamicConfig
 {
-  public static final String CONFIG_KEY = "master.dynamicConfigs";
-  private long millisToWaitBeforeDeleting = 15 * 60 * 1000L;
-  private long mergeBytesLimit = 100000000L;
-  private int mergeSegmentsLimit = Integer.MAX_VALUE;
-  private int maxSegmentsToMove = 5;
-  private boolean emitBalancingStats = false;
+  public static final String CONFIG_KEY = "master.config";
+
+  private final long millisToWaitBeforeDeleting;
+  private final long mergeBytesLimit;
+  private final int mergeSegmentsLimit;
+  private final int maxSegmentsToMove;
+  private final int replicantLifetime;
+  private final int replicationThrottleLimit;
+  private final boolean emitBalancingStats;
 
   @JsonCreator
-  public MasterSegmentSettings(
-      @JsonProperty("millisToWaitBeforeDeleting") Long millisToWaitBeforeDeleting,
-      @JsonProperty("mergeBytesLimit") Long mergeBytesLimit,
-      @JsonProperty("mergeSegmentsLimit") Integer mergeSegmentsLimit,
-      @JsonProperty("maxSegmentsToMove") Integer maxSegmentsToMove,
-      @JsonProperty("emitBalancingStats") Boolean emitBalancingStats
+  public MasterDynamicConfig(
+      @JsonProperty("millisToWaitBeforeDeleting") long millisToWaitBeforeDeleting,
+      @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
+      @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
+      @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
+      @JsonProperty("replicantLifetime") int replicantLifetime,
+      @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
+      @JsonProperty("emitBalancingStats") boolean emitBalancingStats
   )
   {
     this.maxSegmentsToMove = maxSegmentsToMove;
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
     this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.mergeBytesLimit = mergeBytesLimit;
+    this.replicantLifetime = replicantLifetime;
+    this.replicationThrottleLimit = replicationThrottleLimit;
     this.emitBalancingStats = emitBalancingStats;
-  }
-
-  public static String getConfigKey()
-  {
-    return CONFIG_KEY;
   }
 
   @JsonProperty
@@ -64,7 +66,7 @@ public class MasterSegmentSettings
   }
 
   @JsonProperty
-  public boolean isEmitBalancingStats()
+  public boolean emitBalancingStats()
   {
     return emitBalancingStats;
   }
@@ -81,25 +83,40 @@ public class MasterSegmentSettings
     return maxSegmentsToMove;
   }
 
+  @JsonProperty
+  public int getReplicantLifetime()
+  {
+    return replicantLifetime;
+  }
+
+  @JsonProperty
+  public int getReplicationThrottleLimit()
+  {
+    return replicationThrottleLimit;
+  }
+
   public static class Builder
   {
-    public static final String CONFIG_KEY = "master.dynamicConfigs";
     private long millisToWaitBeforeDeleting;
     private long mergeBytesLimit;
     private int mergeSegmentsLimit;
     private int maxSegmentsToMove;
+    private int replicantLifetime;
+    private int replicationThrottleLimit;
     private boolean emitBalancingStats;
 
     public Builder()
     {
-      this(15 * 60 * 1000L, 100000000L, Integer.MAX_VALUE, 5, false);
+      this(15 * 60 * 1000L, 100000000L, Integer.MAX_VALUE, 5, 15, 10, false);
     }
 
-    public Builder(
+    private Builder(
         long millisToWaitBeforeDeleting,
         long mergeBytesLimit,
         int mergeSegmentsLimit,
         int maxSegmentsToMove,
+        int replicantLifetime,
+        int replicationThrottleLimit,
         boolean emitBalancingStats
     )
     {
@@ -107,6 +124,8 @@ public class MasterSegmentSettings
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
+      this.replicantLifetime = replicantLifetime;
+      this.replicationThrottleLimit = replicationThrottleLimit;
       this.emitBalancingStats = emitBalancingStats;
     }
 
@@ -134,13 +153,27 @@ public class MasterSegmentSettings
       return this;
     }
 
-    public MasterSegmentSettings build()
+    public Builder withReplicantLifetime(int replicantLifetime)
     {
-      return new MasterSegmentSettings(
+      this.replicantLifetime = replicantLifetime;
+      return this;
+    }
+
+    public Builder withReplicationThrottleLimit(int replicationThrottleLimit)
+    {
+      this.replicationThrottleLimit = replicationThrottleLimit;
+      return this;
+    }
+
+    public MasterDynamicConfig build()
+    {
+      return new MasterDynamicConfig(
           millisToWaitBeforeDeleting,
           mergeBytesLimit,
           mergeSegmentsLimit,
           maxSegmentsToMove,
+          replicantLifetime,
+          replicationThrottleLimit,
           emitBalancingStats
       );
     }

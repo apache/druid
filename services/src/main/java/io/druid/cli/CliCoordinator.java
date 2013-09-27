@@ -44,6 +44,7 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.server.http.BackwardsCompatiableInfoResource;
 import io.druid.server.http.InfoResource;
+import io.druid.server.http.MasterDynamicConfigsResource;
 import io.druid.server.http.MasterRedirectInfo;
 import io.druid.server.http.MasterResource;
 import io.druid.server.http.RedirectFilter;
@@ -111,6 +112,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, BackwardsCompatiableInfoResource.class);
             Jerseys.addResource(binder, InfoResource.class);
             Jerseys.addResource(binder, MasterResource.class);
+            Jerseys.addResource(binder, MasterDynamicConfigsResource.class);
 
             LifecycleModule.register(binder, Server.class);
           }

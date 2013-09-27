@@ -99,9 +99,9 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
 
       for (int i = 0; i < timelineObjects.size(); i++) {
         if (!segmentsToMerge.add(timelineObjects.get(i))
-            || segmentsToMerge.getByteCount() > params.getMasterSegmentSettings().getMergeBytesLimit()
-            || segmentsToMerge.getSegmentCount() >= params.getMasterSegmentSettings().getMergeSegmentsLimit()) {
-          i -= segmentsToMerge.backtrack(params.getMasterSegmentSettings().getMergeBytesLimit());
+            || segmentsToMerge.getByteCount() > params.getMasterDynamicConfig().getMergeBytesLimit()
+            || segmentsToMerge.getSegmentCount() >= params.getMasterDynamicConfig().getMergeSegmentsLimit()) {
+          i -= segmentsToMerge.backtrack(params.getMasterDynamicConfig().getMergeBytesLimit());
 
           if (segmentsToMerge.getSegmentCount() > 1) {
             stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
@@ -117,7 +117,7 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
       }
 
       // Finish any timelineObjects to merge that may have not hit threshold
-      segmentsToMerge.backtrack(params.getMasterSegmentSettings().getMergeBytesLimit());
+      segmentsToMerge.backtrack(params.getMasterDynamicConfig().getMergeBytesLimit());
       if (segmentsToMerge.getSegmentCount() > 1) {
         stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
       }
