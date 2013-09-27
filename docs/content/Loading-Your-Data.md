@@ -58,7 +58,7 @@ Instructions for booting a Zookeeper and then Kafka cluster are available [here]
 
 1. Create a valid configuration file similar to this called config/realtime/runtime.properties:
 
-  ```
+  ```properties
   druid.host=0.0.0.0:8080
   druid.port=8080
 
@@ -91,7 +91,6 @@ Instructions for booting a Zookeeper and then Kafka cluster are available [here]
   druid.database.password=diurd
   druid.database.connectURI=
   druid.host=127.0.0.1:8080
-
   ```
 
 2. Create a valid realtime configuration file similar to this called realtime.spec:
@@ -239,7 +238,7 @@ If you've already setup a realtime node, be aware that although you can run mult
 
 1. Setup a configuration file called config/master/runtime.properties similar to:
 
-  ```bash
+  ```properties
   druid.host=0.0.0.0:8081
   druid.port=8081
 
@@ -294,7 +293,7 @@ If you've already setup a realtime node, be aware that although you can run mult
 
 1. Create a configuration file in config/compute/runtime.properties similar to:
 
-  ```bash
+  ```properties
   druid.host=0.0.0.0:8082
   druid.port=8082
 
@@ -404,7 +403,9 @@ Now its time to run the Hadoop [Batch-ingestion](Batch-ingestion.html) job, Hado
 2. Now run the job, with the config pointing at batchConfig.json:
 
   ```bash
-  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=realtime.spec -classpath lib/* com.metamx.druid.indexer.HadoopDruidIndexerMain batchConfig.json
+  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
+       -Ddruid.realtime.specFile=realtime.spec -classpath lib/* \
+       com.metamx.druid.indexer.HadoopDruidIndexerMain batchConfig.json
   ```
 
 You can now move on to [Querying Your Data](Querying-Your-Data.html)!
