@@ -20,54 +20,26 @@
 package io.druid.cli;
 
 import com.google.common.base.Throwables;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import io.druid.initialization.LogLevelAdjuster;
-
-import java.util.List;
 
 /**
  */
-public abstract class ServerRunnable implements Runnable
+public abstract class ServerRunnable extends GuiceRunnable
 {
-  private final Logger log;
-
-  private Injector baseInjector;
-
   public ServerRunnable(Logger log)
   {
-    this.log = log;
+    super(log);
   }
-
-  @Inject
-  public void configure(Injector injector)
-  {
-    this.baseInjector = injector;
-  }
-
-  protected abstract List<Object> getModules();
 
   @Override
   public void run()
   {
+    final Injector injector = makeInjector();
+    final Lifecycle lifecycle = initLifecycle(injector);
+
     try {
-      LogLevelAdjuster.register();
-
-      final Injector injector = Initialization.makeInjectorWithModules(
-          baseInjector, getModules()
-      );
-      final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
-
-      try {
-        lifecycle.start();
-      }
-      catch (Throwable t) {
-        log.error(t, "Error when starting up.  Failing.");
-        System.exit(1);
-      }
-
       lifecycle.join();
     }
     catch (Exception e) {

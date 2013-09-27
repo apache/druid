@@ -17,9 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.client.indexing;
+package io.druid.curator.discovery;
 
-import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
@@ -28,21 +27,18 @@ import io.druid.client.selector.Server;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
-*/
-public class IndexingServiceSelector implements DiscoverySelector<Server>
+ */
+public class ServerDiscoverySelector implements DiscoverySelector<Server>
 {
-  private static final Logger log = new Logger(IndexingServiceSelector.class);
+  private static final Logger log = new Logger(ServerDiscoverySelector.class);
 
   private final ServiceProvider serviceProvider;
 
-  @Inject
-  public IndexingServiceSelector(
-      @Nullable @IndexingService ServiceProvider serviceProvider
-  ) {
+  public ServerDiscoverySelector(ServiceProvider serviceProvider)
+  {
     this.serviceProvider = serviceProvider;
   }
 
@@ -54,7 +50,12 @@ public class IndexingServiceSelector implements DiscoverySelector<Server>
       instance = serviceProvider.getInstance();
     }
     catch (Exception e) {
-      log.info(e, "");
+      log.info(e, "Exception getting instance");
+      return null;
+    }
+
+    if (instance == null) {
+      log.error("No server instance found");
       return null;
     }
 

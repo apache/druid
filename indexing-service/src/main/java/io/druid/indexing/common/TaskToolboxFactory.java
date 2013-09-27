@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.ServerView;
+import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Processing;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;

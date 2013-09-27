@@ -22,7 +22,6 @@ package io.druid.cli;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -35,6 +34,7 @@ import io.airlift.command.Option;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.PolyBind;
@@ -52,13 +52,13 @@ import io.druid.indexing.coordinator.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.executor.ChatHandlerResource;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
-import io.druid.initialization.LogLevelAdjuster;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.S3DataSegmentKiller;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.server.initialization.JettyServerInitializer;
+import org.eclipse.jetty.server.Server;
 
 import java.io.File;
 import java.util.Arrays;
@@ -71,7 +71,7 @@ import java.util.List;
     description = "Runs a Peon, this is an individual forked \"task\" used as part of the indexing service. "
                   + "This should rarely, if ever, be used directly."
 )
-public class CliPeon implements Runnable
+public class CliPeon extends GuiceRunnable
 {
   @Arguments(description = "task.json status.json", required = true)
   public List<String> taskAndStatusFile;
@@ -79,74 +79,71 @@ public class CliPeon implements Runnable
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String nodeType = "indexer-executor";
 
-  private Injector injector;
-
-  @Inject
-  public void configure(Injector injector)
-  {
-    this.injector = injector;
-  }
-
   private static final Logger log = new Logger(CliPeon.class);
 
-  protected Injector getInjector()
+  public CliPeon()
   {
-    return Initialization.makeInjectorWithModules(
-        injector,
-        ImmutableList.<Object>of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                PolyBind.createChoice(
-                    binder,
-                    "druid.indexer.task.chathandler.type",
-                    Key.get(ChatHandlerProvider.class),
-                    Key.get(NoopChatHandlerProvider.class)
-                );
-                final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
-                    binder, Key.get(ChatHandlerProvider.class)
-                );
-                handlerProviderBinder.addBinding("curator").to(EventReceivingChatHandlerProvider.class);
-                handlerProviderBinder.addBinding("noop").to(NoopChatHandlerProvider.class);
+    super(log);
+  }
 
-                binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
+  @Override
+  protected List<Object> getModules()
+  {
+    return ImmutableList.<Object>of(
+        new Module()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.task.chathandler.type",
+                Key.get(ChatHandlerProvider.class),
+                Key.get(NoopChatHandlerProvider.class)
+            );
+            final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(ChatHandlerProvider.class)
+            );
+            handlerProviderBinder.addBinding("curator").to(EventReceivingChatHandlerProvider.class);
+            handlerProviderBinder.addBinding("noop").to(NoopChatHandlerProvider.class);
 
-                JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
-                JsonConfigProvider.bind(binder, "druid.worker.taskActionClient.retry", RetryPolicyConfig.class);
+            binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
 
-                binder.bind(TaskActionClientFactory.class)
-                      .to(RemoteTaskActionClientFactory.class)
-                      .in(LazySingleton.class);
-                binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
+            JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
+            JsonConfigProvider.bind(binder, "druid.worker.taskActionClient.retry", RetryPolicyConfig.class);
 
-                binder.bind(DataSegmentKiller.class).to(S3DataSegmentKiller.class).in(LazySingleton.class);
+            binder.bind(TaskActionClientFactory.class)
+                  .to(RemoteTaskActionClientFactory.class)
+                  .in(LazySingleton.class);
+            binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
-                binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
-                binder.bind(ExecutorLifecycleConfig.class).toInstance(
-                    new ExecutorLifecycleConfig()
-                        .setTaskFile(new File(taskAndStatusFile.get(0)))
-                        .setStatusFile(new File(taskAndStatusFile.get(1)))
-                );
+            binder.bind(DataSegmentKiller.class).to(S3DataSegmentKiller.class).in(LazySingleton.class);
 
-                binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);
-                binder.bind(QuerySegmentWalker.class).to(ThreadPoolTaskRunner.class);
-                binder.bind(ThreadPoolTaskRunner.class).in(ManageLifecycle.class);
+            binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
+            binder.bind(ExecutorLifecycleConfig.class).toInstance(
+                new ExecutorLifecycleConfig()
+                    .setTaskFile(new File(taskAndStatusFile.get(0)))
+                    .setStatusFile(new File(taskAndStatusFile.get(1)))
+            );
 
-                // Override the default SegmentLoaderConfig because we don't actually care about the
-                // configuration based locations.  This will override them anyway.  This is also stopping
-                // configuration of other parameters, but I don't think that's actually a problem.
-                // Note, if that is actually not a problem, then that probably means we have the wrong abstraction.
-                binder.bind(SegmentLoaderConfig.class)
-                      .toInstance(new SegmentLoaderConfig().withLocations(Arrays.<StorageLocationConfig>asList()));
+            binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);
+            binder.bind(QuerySegmentWalker.class).to(ThreadPoolTaskRunner.class);
+            binder.bind(ThreadPoolTaskRunner.class).in(ManageLifecycle.class);
 
-                binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
-                Jerseys.addResource(binder, ChatHandlerResource.class);
-                binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
-              }
-            }
-        )
+            // Override the default SegmentLoaderConfig because we don't actually care about the
+            // configuration based locations.  This will override them anyway.  This is also stopping
+            // configuration of other parameters, but I don't think that's actually a problem.
+            // Note, if that is actually not a problem, then that probably means we have the wrong abstraction.
+            binder.bind(SegmentLoaderConfig.class)
+                  .toInstance(new SegmentLoaderConfig().withLocations(Arrays.<StorageLocationConfig>asList()));
+
+            binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
+            Jerseys.addResource(binder, ChatHandlerResource.class);
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
+
+            LifecycleModule.register(binder, Server.class);
+          }
+        }
     );
   }
 
@@ -154,13 +151,11 @@ public class CliPeon implements Runnable
   public void run()
   {
     try {
-      LogLevelAdjuster.register();
-
-      final Injector injector = getInjector();
-      final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
+      Injector injector = makeInjector();
 
       try {
-        lifecycle.start();
+        Lifecycle lifecycle = initLifecycle(injector);
+
         injector.getInstance(ExecutorLifecycle.class).join();
         lifecycle.stop();
       }

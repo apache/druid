@@ -37,10 +37,6 @@ public class WorkerConfig
   private String version = null;
 
   @JsonProperty
-  @NotNull
-  private String overlordService = null;
-
-  @JsonProperty
   @Min(1)
   private int capacity = Runtime.getRuntime().availableProcessors() - 1;
 
@@ -52,11 +48,6 @@ public class WorkerConfig
   public String getVersion()
   {
     return version;
-  }
-
-  public String getOverlordService()
-  {
-    return overlordService;
   }
 
   public int getCapacity()

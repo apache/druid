@@ -19,6 +19,8 @@
 
 package io.druid.server.initialization;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
@@ -28,6 +30,7 @@ import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
+import com.google.inject.Singleton;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.sun.jersey.api.core.DefaultResourceConfig;
@@ -39,7 +42,9 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.JSR311Resource;
+import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
 import org.eclipse.jetty.server.Connector;
@@ -95,7 +100,8 @@ public class JettyServerModule extends JerseyServletModule
     }
   }
 
-  @Provides @LazySingleton
+  @Provides
+  @LazySingleton
   public Server getServer(Injector injector, Lifecycle lifecycle, @Self DruidNode node, ServerConfig config)
   {
     JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
@@ -131,6 +137,15 @@ public class JettyServerModule extends JerseyServletModule
         }
     );
     return server;
+  }
+
+  @Provides
+  @Singleton
+  public JacksonJsonProvider getJacksonJsonProvider(@Json ObjectMapper objectMapper)
+  {
+    final JacksonJsonProvider provider = new JacksonJsonProvider();
+    provider.setMapper(objectMapper);
+    return provider;
   }
 
   private static Server makeJettyServer(@Self DruidNode node, ServerConfig config)

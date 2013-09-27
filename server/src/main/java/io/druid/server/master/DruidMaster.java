@@ -161,7 +161,7 @@ public class DruidMaster
     this.exec = scheduledExecutorFactory.create(1, "Master-Exec--%d");
 
     this.leaderLatch = new AtomicReference<>(null);
-    this.segmentSettingsAtomicReference= new AtomicReference<>(null);
+    this.segmentSettingsAtomicReference = new AtomicReference<>(null);
     this.loadManagementPeons = loadQueuePeonMap;
   }
 
@@ -471,10 +471,13 @@ public class DruidMaster
         serverInventoryView.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
-        segmentSettingsAtomicReference = configManager.watch(MasterSegmentSettings.CONFIG_KEY, MasterSegmentSettings.class,new MasterSegmentSettings.Builder().build());
+        segmentSettingsAtomicReference = configManager.watch(
+            MasterSegmentSettings.CONFIG_KEY,
+            MasterSegmentSettings.class,
+            new MasterSegmentSettings.Builder().build()
+        );
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
         if (indexingServiceClient != null) {
-
           masterRunnables.add(
               Pair.of(
                   new MasterIndexingServiceRunnable(

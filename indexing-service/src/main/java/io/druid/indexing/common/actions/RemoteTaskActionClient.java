@@ -27,8 +27,8 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.ToStringResponseHandler;
-import io.druid.client.indexing.IndexingServiceSelector;
 import io.druid.client.selector.Server;
+import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.task.Task;
@@ -42,7 +42,7 @@ public class RemoteTaskActionClient implements TaskActionClient
 {
   private final Task task;
   private final HttpClient httpClient;
-  private final IndexingServiceSelector serviceProvider;
+  private final ServerDiscoverySelector selector;
   private final RetryPolicyFactory retryPolicyFactory;
   private final ObjectMapper jsonMapper;
 
@@ -51,14 +51,14 @@ public class RemoteTaskActionClient implements TaskActionClient
   public RemoteTaskActionClient(
       Task task,
       HttpClient httpClient,
-      IndexingServiceSelector serviceProvider,
+      ServerDiscoverySelector selector,
       RetryPolicyFactory retryPolicyFactory,
       ObjectMapper jsonMapper
   )
   {
     this.task = task;
     this.httpClient = httpClient;
-    this.serviceProvider = serviceProvider;
+    this.selector = selector;
     this.retryPolicyFactory = retryPolicyFactory;
     this.jsonMapper = jsonMapper;
   }
@@ -127,19 +127,11 @@ public class RemoteTaskActionClient implements TaskActionClient
 
   private URI getServiceUri() throws Exception
   {
-    final Server instance = serviceProvider.pick();
+    final Server instance = selector.pick();
     if (instance == null) {
       throw new ISE("Cannot find instance of indexer to talk to!");
     }
 
-    return new URI(
-        instance.getScheme(),
-        null,
-        instance.getHost(),
-        instance.getPort(),
-        "/druid/indexer/v1/action",
-        null,
-        null
-    );
+    return new URI(String.format("%s://%s%s", instance.getScheme(), instance.getHost(), "/druid/indexer/v1/action"));
   }
 }

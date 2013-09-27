@@ -22,6 +22,7 @@ package io.druid.indexer;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.timeline.DataSegment;
@@ -48,6 +49,7 @@ public class HadoopDruidIndexerJob implements Jobby
   private IndexGeneratorJob indexJob;
   private volatile List<DataSegment> publishedSegments = null;
 
+  @Inject
   public HadoopDruidIndexerJob(
       HadoopDruidIndexerConfig config
   )

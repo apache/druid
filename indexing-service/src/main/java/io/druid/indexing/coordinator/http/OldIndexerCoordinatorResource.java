@@ -19,7 +19,6 @@
 
 package io.druid.indexing.coordinator.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.indexing.common.tasklogs.TaskLogStreamer;
@@ -39,10 +38,9 @@ public class OldIndexerCoordinatorResource extends IndexerCoordinatorResource
       TaskMaster taskMaster,
       TaskStorageQueryAdapter taskStorageQueryAdapter,
       TaskLogStreamer taskLogStreamer,
-      JacksonConfigManager configManager,
-      ObjectMapper jsonMapper
+      JacksonConfigManager configManager
   ) throws Exception
   {
-    super(taskMaster, taskStorageQueryAdapter, taskLogStreamer, configManager, jsonMapper);
+    super(taskMaster, taskStorageQueryAdapter, taskLogStreamer, configManager);
   }
 }
