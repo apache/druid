@@ -42,7 +42,7 @@ public abstract class DruidMasterConfig
   @Default("PT1800s")
   public abstract Duration getMasterSegmentMergerPeriod();
 
-  @Config("druid.master.merger.on")
+  @Config("druid.master.merge.on")
   public boolean isMergeSegments()
   {
     return false;

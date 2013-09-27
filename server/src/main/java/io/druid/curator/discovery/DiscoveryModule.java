@@ -121,7 +121,7 @@ public class DiscoveryModule implements Module
   public static void registerKey(Binder binder, Key<DruidNode> key)
   {
     DruidBinders.discoveryAnnouncementBinder(binder).addBinding().toInstance(new KeyHolder<>(key));
-    LifecycleModule.registerKey(binder, key);
+    LifecycleModule.register(binder, ServiceAnnouncer.class);
   }
 
   @Override
@@ -134,7 +134,6 @@ public class DiscoveryModule implements Module
     // Build the binder so that it will at a minimum inject an empty set.
     DruidBinders.discoveryAnnouncementBinder(binder);
 
-    // We bind this eagerly so that it gets instantiated and registers stuff with Lifecycle as a side-effect
     binder.bind(ServiceAnnouncer.class)
           .to(Key.get(CuratorServiceAnnouncer.class, Names.named(NAME)))
           .in(LazySingleton.class);

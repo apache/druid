@@ -29,7 +29,7 @@ public class DruidServerConfig
 {
   @JsonProperty
   @Min(0)
-  private long maxSize = -1;
+  private long maxSize = 0;
 
   @JsonProperty
   private String tier = "_default_tier";

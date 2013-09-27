@@ -34,6 +34,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.guice.annotations.Json;
 import io.druid.indexing.coordinator.setup.EC2NodeData;
 import io.druid.indexing.coordinator.setup.GalaxyUserData;
 import io.druid.indexing.coordinator.setup.WorkerSetupData;
@@ -55,7 +56,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
 
   @Inject
   public EC2AutoScalingStrategy(
-      ObjectMapper jsonMapper,
+      @Json ObjectMapper jsonMapper,
       AmazonEC2 amazonEC2Client,
       SimpleResourceManagementConfig config,
       Supplier<WorkerSetupData> workerSetupDataRef
