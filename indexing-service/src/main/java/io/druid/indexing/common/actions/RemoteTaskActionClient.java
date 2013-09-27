@@ -132,14 +132,6 @@ public class RemoteTaskActionClient implements TaskActionClient
       throw new ISE("Cannot find instance of indexer to talk to!");
     }
 
-    return new URI(
-        instance.getScheme(),
-        null,
-        instance.getHost(),
-        instance.getPort(),
-        "/druid/indexer/v1/action",
-        null,
-        null
-    );
+    return new URI(String.format("%s://%s%s", instance.getScheme(), instance.getHost(), "/druid/indexer/v1/action"));
   }
 }

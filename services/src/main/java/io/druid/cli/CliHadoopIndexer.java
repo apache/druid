@@ -52,7 +52,7 @@ import java.util.List;
 )
 public class CliHadoopIndexer extends GuiceRunnable
 {
-  @Arguments(description = "A JSON object or the path to a file that contains a JSON object")
+  @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
   private String argumentSpec;
 
   private static final Logger log = new Logger(CliHadoopIndexer.class);
@@ -78,8 +78,6 @@ public class CliHadoopIndexer extends GuiceRunnable
           @LazySingleton
           public HadoopDruidIndexerConfig getHadoopDruidIndexerConfig()
           {
-            Preconditions.checkNotNull(argumentSpec, "argumentSpec");
-
             try {
               if (argumentSpec.startsWith("{")) {
                 return HadoopDruidIndexerConfig.fromString(argumentSpec);
