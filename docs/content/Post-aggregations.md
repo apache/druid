@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Druid. If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
 
@@ -13,83 +13,63 @@ Supported functions are `+`, `-`, `*`, and `/`
 
 The grammar for an arithmetic post aggregation is:
 
-    <code>postAggregation : {
-        "type"  : "arithmetic",
-        "name"  : <output_name>,
-        "fn"    : <arithmetic_function>,
-        "fields": [<post_aggregator>, <post_aggregator>, ...]
-    }</code>
+```json
+postAggregation : {
+  "type"  : "arithmetic",
+  "name"  : <output_name>,
+  "fn"    : <arithmetic_function>,
+  "fields": [<post_aggregator>, <post_aggregator>, ...]
+}
+```
 
 ### Field accessor post-aggregator
 
-This returns the value produced by the specified [aggregator|Aggregations](aggregator|Aggregations.html).
+This returns the value produced by the specified [aggregator](Aggregations.html).
 
-`fieldName` refers to the output name of the aggregator given in the [aggregations|Aggregations](aggregations|Aggregations.html) portion of the query.
+`fieldName` refers to the output name of the aggregator given in the [aggregations](Aggregations.html) portion of the query.
 
-    <code>field_accessor : {
-        "type"      : "fieldAccess",
-        "fieldName" : <aggregator_name>
-    }</code>
+```json
+{ "type" : "fieldAccess", "fieldName" : <aggregator_name> }
+```
 
 ### Constant post-aggregator
 
 The constant post-aggregator always returns the specified value.
 
-    <code>constant : {
-        "type"  : "constant",
-        "name"  : <output_name>,
-        "value" : <numerical_value>,
-    }</code>
+```json
+{ "type"  : "constant", "name"  : <output_name>, "value" : <numerical_value> }
+```
 
 ### Example Usage
 
-In this example, let’s calculate a simple percentage using post aggregators. Let’s imagine our data set has a metric called “total”.
+In this example, let’s calculate a simple percentage using post aggregators. Let’s imagine our data set has a metric called "total".
 
 The format of the query JSON is as follows:
 
-    <code>
-    {
-        ...
-        "aggregations" : [
-            {
-                "type" : "count",
-                "name" : "rows"
-            },
-            {
-                "type"      : "doubleSum",
-                "name"      : "tot",
-                "fieldName" : "total"
-            }
-        ],
-        "postAggregations" : {
-            "type"   : "arithmetic",
-            "name"   : "average",
-            "fn"     : "*",
-            "fields" : [
-                {
-                    "type"   : "arithmetic",
-                    "name"   : "div",
-                    "fn"     : "/",
-                    "fields" : [
-                        {
-                            "type"      : "fieldAccess",
-                            "name"      : "tot",
-                            "fieldName" : "tot"
-                         },
-                         {
-                            "type"      : "fieldAccess",
-                            "name"      : "rows",
-                            "fieldName" : "rows"
-                         }
-                    ]
-                },
-                {
-                    "type" : "constant",
-                    "name": "const",
-                    "value" : 100
-                }
-            ]
-        }
-        ...
-    }
-    </code>
+```json
+{
+  ...
+  "aggregations" : [
+    { "type" : "count", "name" : "rows" },
+    { "type" : "doubleSum", "name" : "tot", "fieldName" : "total" }
+  ],
+  "postAggregations" : {
+    "type"   : "arithmetic",
+    "name"   : "average",
+    "fn"     : "*",
+    "fields" : [
+       { "type"   : "arithmetic",
+         "name"   : "div",
+         "fn"     : "/",
+         "fields" : [
+           { "type" : "fieldAccess", "name" : "tot", "fieldName" : "tot" },
+           { "type" : "fieldAccess", "name" : "rows", "fieldName" : "rows" }
+         ]
+       },
+       { "type" : "constant", "name": "const", "value" : 100 }
+    ]
+  }
+  ...
+}
+
+```

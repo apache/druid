@@ -1,7 +1,7 @@
 ---
-layout: default
+layout: doc_page
 ---
-Tasks are run on workers and always operate on a single datasource. Once an indexer coordinator node accepts a task, a lock is created for the datasource and interval specified in the task. Tasks do not need to explicitly release locks, they are released upon task completion. Tasks may potentially release locks early if they desire. Tasks ids are unique by naming them using UUIDs or the timestamp in which the task was created. Tasks are also part of a “task group”, which is a set of tasks that can share interval locks.
+Tasks are run on workers and always operate on a single datasource. Once an indexer coordinator node accepts a task, a lock is created for the datasource and interval specified in the task. Tasks do not need to explicitly release locks, they are released upon task completion. Tasks may potentially release locks early if they desire. Tasks ids are unique by naming them using UUIDs or the timestamp in which the task was created. Tasks are also part of a "task group", which is a set of tasks that can share interval locks.
 
 There are several different types of tasks.
 

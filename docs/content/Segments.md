@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Segments
 ========
@@ -14,36 +14,28 @@ Naming Convention
 Identifiers for segments are typically constructed using the segment datasource, interval start time (in ISO 8601 format), interval end time (in ISO 8601 format), and a version. If data is additionally sharded beyond a time range, the segment identifier will also contain a partition number.
 
 An example segment identifier may be:
-datasource\_intervalStart\_intervalEnd\_version\_partitionNum
+datasource_intervalStart_intervalEnd_version_partitionNum
 
 Segment Components
 ------------------
 
 A segment is compromised of several files, listed below.
 
-### `version.bin`
+* `version.bin`
 
-4 bytes representing the current segment version as an integer. E.g., for v9 segments, the version is 0x0, 0x0, 0x0, 0x9
+    4 bytes representing the current segment version as an integer. E.g., for v9 segments, the version is 0x0, 0x0, 0x0, 0x9
 
-### `meta.smoosh`
+* `meta.smoosh`
 
-A file with metadata (filenames and offsets) about the contents of the other `smoosh` files
+    A file with metadata (filenames and offsets) about the contents of the other `smoosh` files
 
-### `XXXXX.smoosh`
+* `XXXXX.smoosh`
 
-There are some number of these files, which are concatenated binary data
+    There are some number of these files, which are concatenated binary data
 
-The `smoosh` files represent multiple files “smooshed” together in order to minimize the number of file descriptors that must be open to house the data. They are files of up to 2GB in size (to match the limit of a memory mapped ByteBuffer in Java). The `smoosh` files house individual files for each of the columns in the data as well as an `index.drd` file with extra metadata about the segment.
+    The `smoosh` files represent multiple files "smooshed" together in order to minimize the number of file descriptors that must be open to house the data. They are files of up to 2GB in size (to match the limit of a memory mapped ByteBuffer in Java). The `smoosh` files house individual files for each of the columns in the data as well as an `index.drd` file with extra metadata about the segment.
 
-There is also a special column called `__time` that refers to the time column of the segment. This will hopefully become less and less special as the code evolves, but for now it’s as special as my Mommy always told me I am.
-
-### `index.drd`
-
-The `index.drd` file houses 3 pieces of data in order
-
-1.  The names of all of the columns of the data
-2.  The names of the “dimensions” of the data (these are the dictionary-encoded, string columns. This is here to support some legacy APIs and will be superfluous in the future)
-3.  The data interval represented by this segment stored as the start and end timestamps as longs
+    There is also a special column called `__time` that refers to the time column of the segment. This will hopefully become less and less special as the code evolves, but for now it’s as special as my Mommy always told me I am.
 
 Format of a column
 ------------------

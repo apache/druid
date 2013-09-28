@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {% include site_head.html %}
+
+    <link rel="stylesheet" href="css/docs.css">
+  </head>
+  <body>
+    {% include page_header.html %}
+
+    <div class="container">
+      <div class="page-header">
+	<h1>Documentation</h1>
+      </div>
+
+      <div class="row">
+	<div class="col-md-3 toc" id="toc">
+	</div>
+
+	<div class="col-md-9 doc-content">
+	  {{ content }}
+	</div>
+      </div>
+    </div>
+    
+    {% include page_footer.html %}
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+    <script>
+      $(function(){
+        $("#toc").load("toc.html");
+      });
+    </script>
+  </body>
+</html>
+

@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 We are not experts on Cassandra, if anything is incorrect about our portrayal, please let us know on the mailing list or via some other means.  We will fix this page.
 

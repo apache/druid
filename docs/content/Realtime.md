@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Realtime
 ========
@@ -23,38 +23,38 @@ Configuration
 
 Realtime nodes take a mix of base server configuration and spec files that describe how to connect, process and expose the realtime feed. See [Configuration](Configuration.html) for information about general server configuration.
 
-### Realtime “specFile”
+### Realtime "specFile"
 
-The property `druid.realtime.specFile` has the path of a file (absolute or relative path and file name) with realtime specifications in it. This “specFile” should be a JSON Array of JSON objects like the following:
+The property `druid.realtime.specFile` has the path of a file (absolute or relative path and file name) with realtime specifications in it. This "specFile" should be a JSON Array of JSON objects like the following:
 
-    <code>
-    [{
-      "schema" : { "dataSource":"dataSourceName",
-                   "aggregators":[ {"type":"count", "name":"events"},
-                           {"type":"doubleSum","name":"outColumn","fieldName":"inColumn"} ],
-                   "indexGranularity":"minute",
+```json
+[{
+  "schema" : { "dataSource":"dataSourceName",
+               "aggregators":[ {"type":"count", "name":"events"},
+                               {"type":"doubleSum","name":"outColumn","fieldName":"inColumn"} ],
+               "indexGranularity":"minute",
                "shardSpec" : { "type": "none" } },
-      "config" : { "maxRowsInMemory" : 500000,
-                   "intermediatePersistPeriod" : "PT10m" },
-      "firehose" : { "type" : "kafka-0.7.2",
-                     "consumerProps" : { "zk.connect" : "zk_connect_string",
-                                         "zk.connectiontimeout.ms" : "15000",
-                                         "zk.sessiontimeout.ms" : "15000",
-                                         "zk.synctime.ms" : "5000",
-                                         "groupid" : "consumer-group",
-                                         "fetch.size" : "1048586",
-                                         "autooffset.reset" : "largest",
-                                         "autocommit.enable" : "false" },
-                     "feed" : "your_kafka_topic",
-                     "parser" : { "timestampSpec" : { "column" : "timestamp", "format" : "iso" },
-                                  "data" : { "format" : "json" },
-                                  "dimensionExclusions" : ["value"] } },
-      "plumber" : { "type" : "realtime",
-                    "windowPeriod" : "PT10m",
-                    "segmentGranularity":"hour",
-                    "basePersistDirectory" : "/tmp/realtime/basePersist" }
-    }]
-    </code>
+  "config" : { "maxRowsInMemory" : 500000,
+               "intermediatePersistPeriod" : "PT10m" },
+  "firehose" : { "type" : "kafka-0.7.2",
+                 "consumerProps" : { "zk.connect" : "zk_connect_string",
+                                     "zk.connectiontimeout.ms" : "15000",
+                                     "zk.sessiontimeout.ms" : "15000",
+                                     "zk.synctime.ms" : "5000",
+                                     "groupid" : "consumer-group",
+                                     "fetch.size" : "1048586",
+                                     "autooffset.reset" : "largest",
+                                     "autocommit.enable" : "false" },
+                 "feed" : "your_kafka_topic",
+                 "parser" : { "timestampSpec" : { "column" : "timestamp", "format" : "iso" },
+                              "data" : { "format" : "json" },
+                              "dimensionExclusions" : ["value"] } },
+  "plumber" : { "type" : "realtime",
+                "windowPeriod" : "PT10m",
+                "segmentGranularity":"hour",
+                "basePersistDirectory" : "/tmp/realtime/basePersist" }
+}]
+```
 
 This is a JSON Array so you can give more than one realtime stream to a given node. The number you can put in the same process depends on the exact configuration. In general, it is best to think of each realtime stream handler as requiring 2-threads: 1 thread for data consumption and aggregation, 1 thread for incremental persists and other background tasks.
 
@@ -68,7 +68,7 @@ This describes the data schema for the output Druid segment. More information ab
 |-----|----|-----------|--------|
 |aggregators|Array of Objects|The list of aggregators to use to aggregate colliding rows together.|yes|
 |dataSource|String|The name of the dataSource that the segment belongs to.|yes|
-|indexGranularity|String|The granularity of the data inside the segment. E.g. a value of “minute” will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows.|yes|
+|indexGranularity|String|The granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows.|yes|
 |segmentGranularity|String|The granularity of the segment as a whole. This is generally larger than the index granularity and describes the rate at which the realtime server will push segments out for historical servers to take over.|yes|
 |shardSpec|Object|This describes the shard that is represented by this server. This must be specified properly in order to have multiple realtime nodes indexing the same data stream in a sharded fashion.|no|
 
@@ -94,7 +94,8 @@ Constraints
 
 The following tables summarizes constraints between settings in the spec file for the Realtime subsystem.
 
-|*. Name |*. Effect |*. Minimum |*. Recommended |
+|Name|Effect|Minimum|Recommended|
+|----|------|-------|-----------|
 | windowPeriod| when reading an InputRow, events with timestamp older than now minus this window are discarded | time jitter tolerance | use this to reject outliers |
 | segmentGranularity| time granularity (minute, hour, day, week, month) for loading data at query time | equal to indexGranularity| more than indexGranularity|
 | indexGranularity| time granularity (minute, hour, day, week, month) of indexes | less than segmentGranularity| minute, hour, day, week, month |
@@ -115,8 +116,8 @@ Extending the code
 
 Realtime integration is intended to be extended in two ways:
 
-1.  Connect to data streams from varied systems ([Firehose](https://github.com/metamx/druid/blob/master/realtime/src/main/java/com/metamx/druid/realtime/FirehoseFactory.java))
-2.  Adjust the publishing strategy to match your needs ([Plumber](https://github.com/metamx/druid/blob/master/realtime/src/main/java/com/metamx/druid/realtime/PlumberSchool.java))
+1.  Connect to data streams from varied systems ([Firehose](https://github.com/metamx/druid/blob/druid-0.5.x/realtime/src/main/java/com/metamx/druid/realtime/firehose/FirehoseFactory.java))
+2.  Adjust the publishing strategy to match your needs ([Plumber](https://github.com/metamx/druid/blob/druid-0.5.x/realtime/src/main/java/com/metamx/druid/realtime/plumber/PlumberSchool.java))
 
 The expectations are that the former will be very common and something that users of Druid will do on a fairly regular basis. Most users will probably never have to deal with the latter form of customization. Indeed, we hope that all potential use cases can be packaged up as part of Druid proper without requiring proprietary customization.
 
@@ -124,34 +125,34 @@ Given those expectations, adding a firehose is straightforward and completely en
 
 We will do our best to accept contributions from the community of new Firehoses and Plumbers, but we also understand the requirement for being able to plug in your own proprietary implementations. The model for doing this is by embedding the druid code in another project and writing your own `main()` method that initializes a RealtimeNode object and registers your proprietary objects with it.
 
-    <code>
-    public class MyRealtimeMain
-    {
-      private static final Logger log = new Logger(MyRealtimeMain.class);
+```java
+public class MyRealtimeMain
+{
+  private static final Logger log = new Logger(MyRealtimeMain.class);
 
-      public static void main(String[] args) throws Exception
-      {
-        LogLevelAdjuster.register();
+  public static void main(String[] args) throws Exception
+  {
+    LogLevelAdjuster.register();
 
-        Lifecycle lifecycle = new Lifecycle();
+    Lifecycle lifecycle = new Lifecycle();
 
-        lifecycle.addManagedInstance(
-            RealtimeNode.builder()
-                        .build()
-                        .registerJacksonSubtype(foo.bar.MyFirehose.class)
-        );
+    lifecycle.addManagedInstance(
+    RealtimeNode.builder()
+                    .build()
+                    .registerJacksonSubtype(foo.bar.MyFirehose.class)
+    );
 
-        try {
-          lifecycle.start();
-        }
-        catch (Throwable t) {
-          log.info(t, "Throwable caught at startup, committing seppuku");
-          System.exit(2);
-        }
-
-        lifecycle.join();
-      }
+    try {
+      lifecycle.start();
     }
-    </code>
+    catch (Throwable t) {
+      log.info(t, "Throwable caught at startup, committing seppuku");
+      System.exit(2);
+    }
+
+    lifecycle.join();
+  }
+}
+```
 
 Pluggable pieces of the system are either handled by a setter on the RealtimeNode object, or they are configuration driven and need to be setup to allow for [Jackson polymorphic deserialization](http://wiki.fasterxml.com/JacksonPolymorphicDeserialization) and registered via the relevant methods on the RealtimeNode object.

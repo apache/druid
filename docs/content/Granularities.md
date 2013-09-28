@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 The granularity field determines how data gets bucketed across the time dimension, i.e how it gets aggregated by hour, day, minute, etc.
 
@@ -10,8 +10,9 @@ It can be specified either as a string for simple granularities or as an object 
 Simple granularities are specified as a string and bucket timestamps by their UTC time (i.e. days start at 00:00 UTC).
 
 Supported granularity strings are: `all`, `none`, `minute`, `fifteen_minute`, `thirty_minute`, `hour` and `day`
-\* **`all`** buckets everything into a single bucket
-\* **`none`** does not bucket data (it actually uses the granularity of the index - minimum here is `none` which means millisecond granularity). Using `none` in a [timeseries query|TimeSeriesQuery](timeseries query|TimeSeriesQuery.html) is currently not recommended (the system will try to generate 0 values for all milliseconds that didn’t exist, which is often a lot).
+
+* `all` buckets everything into a single bucket
+* `none` does not bucket data (it actually uses the granularity of the index - minimum here is `none` which means millisecond granularity). Using `none` in a [TimeSeriesQuery](TimeSeriesQuery.html) is currently not recommended (the system will try to generate 0 values for all milliseconds that didn’t exist, which is often a lot).
 
 ### Duration Granularities
 
@@ -19,11 +20,15 @@ Duration granularities are specified as an exact duration in milliseconds and ti
 
 They also support specifying an optional origin, which defines where to start counting time buckets from (defaults to 1970-01-01T00:00:00Z).
 
-    <code>{"type": "duration", "duration": "7200000"}</code>
+```
+{"type": "duration", "duration": "7200000"}
+```
 
 This chunks up every 2 hours.
 
-    <code>{"type": "duration", "duration": "3600000", "origin": "2012-01-01T00:30:00Z"}</code>
+```
+{"type": "duration", "duration": "3600000", "origin": "2012-01-01T00:30:00Z"}
+```
 
 This chunks up every hour on the half-hour.
 
@@ -38,11 +43,15 @@ By default years start on the first of January, months start on the first of the
 Time zone is optional (defaults to UTC)
 Origin is optional (defaults to 1970-01-01T00:00:00 in the given time zone)
 
-    <code>{"type": "period", "period": "P2D", "timeZone": "America/Los_Angeles"}</code>
+```
+{"type": "period", "period": "P2D", "timeZone": "America/Los_Angeles"}
+```
 
 This will bucket by two day chunks in the Pacific timezone.
 
-    <code>{"type": "period", "period": "P3M", "timeZone": "America/Los_Angeles", "origin": "2012-02-01T00:00:00-08:00"}</code>
+```
+{"type": "period", "period": "P3M", "timeZone": "America/Los_Angeles", "origin": "2012-02-01T00:00:00-08:00"}
+```
 
 This will bucket by 3 month chunks in the Pacific timezone where the three-month quarters are defined as starting from February.
 

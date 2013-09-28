@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 A having clause is a JSON object identifying which rows from a groupBy query should be returned, by specifying conditions on aggregated values.
 
@@ -17,12 +17,13 @@ Numeric filters can be used as the base filters for more complex boolean express
 The equalTo filter will match rows with a specific aggregate value.
 The grammar for an `equalTo` filter is as follows:
 
-    <code>"having": {
-        "type": "equalTo",
-        "aggregation": <aggregate_metric>,
-        "value": <numeric_value>
-    }
-    </code>
+```json
+{
+    "type": "equalTo",
+    "aggregation": <aggregate_metric>,
+    "value": <numeric_value>
+}
+```
 
 This is the equivalent of `HAVING <aggregate> = <value>`.
 
@@ -31,12 +32,13 @@ This is the equivalent of `HAVING <aggregate> = <value>`.
 The greaterThan filter will match rows with aggregate values greater than the given value.
 The grammar for a `greaterThan` filter is as follows:
 
-    <code>"having": {
-        "type": "greaterThan",
-        "aggregation": <aggregate_metric>,
-        "value": <numeric_value>
-    }
-    </code>
+```json
+{
+    "type": "greaterThan",
+    "aggregation": <aggregate_metric>,
+    "value": <numeric_value>
+}
+```
 
 This is the equivalent of `HAVING <aggregate> > <value>`.
 
@@ -45,12 +47,13 @@ This is the equivalent of `HAVING <aggregate> > <value>`.
 The lessThan filter will match rows with aggregate values less than the specified value.
 The grammar for a `greaterThan` filter is as follows:
 
-    <code>"having": {
-        "type": "lessThan",
-        "aggregation": <aggregate_metric>,
-        "value": <numeric_value>
-    }
-    </code>
+```json
+{
+    "type": "lessThan",
+    "aggregation": <aggregate_metric>,
+    "value": <numeric_value>
+}
+```
 
 This is the equivalent of `HAVING <aggregate> < <value>`.
 
@@ -60,11 +63,12 @@ This is the equivalent of `HAVING <aggregate> < <value>`.
 
 The grammar for an AND filter is as follows:
 
-    <code>"having": {
-        "type": "and",
-        "havingSpecs": [<having clause>, <having clause>, ...]
-    }
-    </code>
+```json
+{
+    "type": "and",
+    "havingSpecs": [<having clause>, <having clause>, ...]
+}
+```
 
 The having clauses in `havingSpecs` can be any other having clause defined on this page.
 
@@ -72,11 +76,12 @@ The having clauses in `havingSpecs` can be any other having clause defined on th
 
 The grammar for an OR filter is as follows:
 
-    <code>"having": {
-        "type": "or",
-        "havingSpecs": [<having clause>, <having clause>, ...]
-    }
-    </code>
+```json
+{
+    "type": "or",
+    "havingSpecs": [<having clause>, <having clause>, ...]
+}
+```
 
 The having clauses in `havingSpecs` can be any other having clause defined on this page.
 
@@ -84,10 +89,11 @@ The having clauses in `havingSpecs` can be any other having clause defined on th
 
 The grammar for a NOT filter is as follows:
 
-    <code>"having": {
-        "type": "not",
-        "havingSpec": <having clause>
-    }
-    </code>
+```json
+{
+    "type": "not",
+    "havingSpec": <having clause>
+}
+```
 
 The having clause specified at `havingSpec` can be any other having clause defined on this page.
