@@ -49,6 +49,11 @@ public class Rename implements PropertyConverter
   @Override
   public Map<String, String> convert(Properties properties)
   {
-    return ImmutableMap.of(newProperty, properties.getProperty(property));
+    final String value = properties.getProperty(property);
+    if (value != null) {
+      return ImmutableMap.of(newProperty, value);
+    } else {
+      return ImmutableMap.of();
+    }
   }
 }

@@ -200,12 +200,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add("io.druid.cli.Main");
                               command.add("internal");
                               command.add("peon");
+                              command.add(taskFile.toString());
+                              command.add(statusFile.toString());
                               String nodeType = task.getNodeType();
                               if (nodeType != null) {
                                 command.add(String.format("--nodeType %s", nodeType));
                               }
-                              command.add(taskFile.toString());
-                              command.add(statusFile.toString());
 
                               jsonMapper.writeValue(taskFile, task);
 
