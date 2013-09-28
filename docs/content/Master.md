@@ -13,7 +13,7 @@ Before any unassigned segments are serviced by compute nodes, the available comp
 Rules
 -----
 
-Segments are loaded and dropped from the cluster based on a set of rules. Rules indicate how segments should be assigned to different compute node tiers and how many replicants of a segment should exist in each tier. Rules may also indicate when segments should be dropped entirely from the cluster. The master loads a set of rules from the database. Rules may be specific to a certain datasource and/or a doc_page set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The master will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule
+Segments are loaded and dropped from the cluster based on a set of rules. Rules indicate how segments should be assigned to different compute node tiers and how many replicants of a segment should exist in each tier. Rules may also indicate when segments should be dropped entirely from the cluster. The master loads a set of rules from the database. Rules may be specific to a certain datasource and/or a default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The master will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule
 
 For more information on rules, see [Rule Configuration](Rule-Configuration.html).
 
@@ -39,61 +39,91 @@ The master node exposes several HTTP endpoints for interactions.
 
 ### GET
 
-/info/master - returns the current true master of the cluster as a JSON object. E.g. A GET request to <IP>:8080/info/master will yield JSON of the form {[host]("IP"})
+* `/info/master`
 
-/info/cluster - returns JSON data about every node and segment in the cluster. E.g. A GET request to <IP>:8080/info/cluster will yield JSON data organized by nodes. Information about each node and each segment on each node will be returned.
+    Returns the current true master of the cluster as a JSON object. 
 
-/info/servers (optional param ?full) - returns all segments in the cluster if the full flag is not set, otherwise returns full metadata about all servers in the cluster
+* `/info/cluster`
 
-/info/servers/{serverName} - returns full metadata about a specific server
+    Returns JSON data about every node and segment in the cluster.  Information about each node and each segment on each node will be returned.
 
-/info/servers/{serverName}/segments (optional param ?full) - returns a list of all segments for a server if the full flag is not set, otherwise returns all segment metadata
+* `/info/servers`
 
-/info/servers/{serverName}/segments/{segmentId} - returns full metadata for a specific segment
+    Returns information about servers in the cluster.  Set the `?full` query parameter to get full metadata about all servers and their segments in the cluster.
 
-/info/segments (optional param ?full)- returns all segments in the cluster as a list if the full flag is not set, otherwise returns all metadata about segments in the cluster
+* `/info/servers/{serverName}`
 
-/info/segments/{segmentId} - returns full metadata for a specific segment
+    Returns full metadata about a specific server.
 
-/info/datasources (optional param ?full) - returns a list of datasources in the cluster if the full flag is not set, otherwise returns all the metadata for every datasource in the cluster
+* `/info/servers/{serverName}/segments`
 
-/info/datasources/{dataSourceName} - returns full metadata for a datasource
+    Returns a list of all segments for a server.  Set the `?full` query parameter to get all segment metadata included
 
-/info/datasources/{dataSourceName}/segments (optional param ?full) - returns a list of all segments for a datasource if the full flag is not set, otherwise returns full segment metadata for a datasource
+* `/info/servers/{serverName}/segments/{segmentId}`
 
-/info/datasources/{dataSourceName}/segments/{segmentId} - returns full segment metadata for a specific segment
+    Returns full metadata for a specific segment.
 
-/info/rules - returns all rules for all data sources in the cluster including the doc_page datasource.
+* `/info/segments`
 
-/info/rules/{dataSourceName} - returns all rules for a specified datasource
+    Returns all segments in the cluster as a list.  Set the `?full` flag to get all metadata about segments in the cluster
+
+* `/info/segments/{segmentId}`
+
+    Returns full metadata for a specific segment
+
+* `/info/datasources`
+
+    Returns a list of datasources in the cluster.  Set the `?full` flag to get all metadata for every datasource in the cluster
+
+* `/info/datasources/{dataSourceName}`
+
+    Returns full metadata for a datasource
+
+* `/info/datasources/{dataSourceName}/segments`
+
+    Returns a list of all segments for a datasource.  Set the `?full` flag to get full segment metadata for a datasource
+
+* `/info/datasources/{dataSourceName}/segments/{segmentId}`
+
+    Returns full segment metadata for a specific segment
+
+* `/info/rules`
+
+    Returns all rules for all data sources in the cluster including the default datasource.
+
+* `/info/rules/{dataSourceName}` 
+
+    Returns all rules for a specified datasource
 
 ### POST
 
-/info/rules/{dataSourceName} - POST with a list of rules in JSON form to update rules.
+* `/info/rules/{dataSourceName}`
+
+    POST with a list of rules in JSON form to update rules.
 
 The Master Console
 ------------------
 
 The Druid master exposes a web GUI for displaying cluster information and rule configuration. After the master starts, the console can be accessed at http://HOST:PORT/static/. There exists a full cluster view, as well as views for individual compute nodes, datasources and segments themselves. Segment information can be displayed in raw JSON form or as part of a sortable and filterable table.
 
-The master console also exposes an interface to creating and editing rules. All valid datasources configured in the segment database, along with a doc_page datasource, are available for configuration. Rules of different types can be added, deleted or edited.
+The master console also exposes an interface to creating and editing rules. All valid datasources configured in the segment database, along with a default datasource, are available for configuration. Rules of different types can be added, deleted or edited.
 
 FAQ
 ---
 
 1. **Do clients ever contact the master node?**
 
-The master is not involved in the lifecycle of a query.
+    The master is not involved in a query.
 
-Compute nodes never directly contact the master node. The Druid master tells the compute nodes to load/drop data via Zookeeper, but the compute nodes are completely unaware of the master.
+    Compute nodes never directly contact the master node. The Druid master tells the compute nodes to load/drop data via Zookeeper, but the compute nodes are completely unaware of the master.
 
-Brokers also never contact the master. Brokers base their understanding of the data topology on metadata exposed by the compute nodes via ZK and are completely unaware of the master.
+    Brokers also never contact the master. Brokers base their understanding of the data topology on metadata exposed by the compute nodes via ZK and are completely unaware of the master.
 
 2. **Does it matter if the master node starts up before or after other processes?**
 
-No. If the Druid master is not started up, no new segments will be loaded in the cluster and outdated segments will not be dropped. However, the master node can be started up at any time, and after a configurable delay, will start running master tasks.
+    No. If the Druid master is not started up, no new segments will be loaded in the cluster and outdated segments will not be dropped. However, the master node can be started up at any time, and after a configurable delay, will start running master tasks.
 
-This also means that if you have a working cluster and all of your masters die, the cluster will continue to function, it just won’t experience any changes to its data topology.
+    This also means that if you have a working cluster and all of your masters die, the cluster will continue to function, it just won’t experience any changes to its data topology.
 
 Running
 -------

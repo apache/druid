@@ -5,23 +5,23 @@ The orderBy field provides the functionality to sort and limit the set of result
 
 ### DefaultLimitSpec
 
-The doc_page limit spec takes a limit and the list of columns to do an orderBy operation over. The grammar is:
+The default limit spec takes a limit and the list of columns to do an orderBy operation over. The grammar is:
 
-    <code> 
-    {
-        "type"    : "doc_page",
-        "limit"   : <integer_value>,
-        "columns" : [list of OrderByColumnSpec],
-    }
-    </code>
+```json 
+{
+    "type"    : "default",
+    "limit"   : <integer_value>,
+    "columns" : [list of OrderByColumnSpec],
+}
+```
 
 #### OrderByColumnSpec
 
-OrderByColumnSpecs indicate how to do order by operations. Each order by condition can be a <code>String</code> or a map of the following form:
+OrderByColumnSpecs indicate how to do order by operations. Each order by condition can be a `jsonString` or a map of the following form:
 
-    <code> 
-    {
-        "dimension"    : "<Any dimension or metric>",
-        "direction"   : "ASCENDING OR DESCENDING"
-    }
-    </code>
+```json 
+{
+    "dimension" : <Any dimension or metric>,
+    "direction" : "ASCENDING OR DESCENDING"
+}
+```

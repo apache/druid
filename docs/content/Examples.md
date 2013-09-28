@@ -69,4 +69,4 @@ In another terminal window:
 ```
 
 
-The result of the client query is in JSON format. The client makes a REST request using the program `curl` which is usually installed on Linux, Unix, and OSX by doc_page.
+The result of the client query is in JSON format. The client makes a REST request using the program `curl` which is usually installed on Linux, Unix, and OSX by default.

@@ -92,7 +92,7 @@ Let's start up a few nodes and download our data. First things though, let's cre
 mkdir config
 ```
 
-If you are interested in learning more about Druid configuration files, check out this [link](https://github.com/metamx/druid/wiki/Configuration). Many aspects of Druid are customizable. For the purposes of this tutorial, we are going to use doc_page values for most things.
+If you are interested in learning more about Druid configuration files, check out this [link](https://github.com/metamx/druid/wiki/Configuration). Many aspects of Druid are customizable. For the purposes of this tutorial, we are going to use default values for most things.
 
 ### Start a Master Node ###
 

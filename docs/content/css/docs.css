@@ -5,7 +5,7 @@
 }
 
 .doc-content p {
-   padding: 8px 0 8px 0;
+   margin: 18px 0 18px 0;
 }
 
 /*** HACK: This is a horrible hack, but I have no clue why images don't want to stay in the container **/
@@ -19,6 +19,11 @@
 
 .doc-content pre code {
    background-color: transparent;
+}
+
+.doc-content table,
+.doc-content pre {
+   margin: 35px 0 35px 0;
 }
 
 .doc-content table,

@@ -1,12 +1,13 @@
 ---
 layout: doc_page
 ---
+
 For a comprehensive look at the architecture of Druid, read the [White Paper](http://static.druid.io/docs/druid.pdf).
 
 What is Druid?
 ==============
 
-Druid is a system built to allow fast (“real-time”) access to large sets of seldom-changing data. It was designed with the intent of being a service and maintaining 100% uptime in the face of code deployments, machine failures and other eventualities of a production system. It can be useful for back-office use cases as well, but design decisions were made explicitly targetting an always-up service.
+Druid is a system built to allow fast ("real-time") access to large sets of seldom-changing data. It was designed with the intent of being a service and maintaining 100% uptime in the face of code deployments, machine failures and other eventualities of a production system. It can be useful for back-office use cases as well, but design decisions were made explicitly targetting an always-up service.
 
 Druid currently allows for single-table queries in a similar manner to [Dremel](http://research.google.com/pubs/pub36632.html) and [PowerDrill](http://www.vldb.org/pvldb/vol5/p1436_alexanderhall_vldb2012.pdf). It adds to the mix
 
@@ -18,20 +19,21 @@ Druid currently allows for single-table queries in a similar manner to [Dremel](
 
 As far as a comparison of systems is concerned, Druid sits in between PowerDrill and Dremel on the spectrum of functionality. It implements almost everything Dremel offers (Dremel handles arbitrary nested data structures while Druid only allows for a single level of array-based nesting) and gets into some of the interesting data layout and compression methods from PowerDrill.
 
-Druid is a good fit for products that require real-time data ingestion of a single, large data stream. Especially if you are targetting no-downtime operation and are building your product on top of a time-oriented summarization of the incoming data stream. Druid is probably not the right solution if you care more about query flexibility and raw data access than query speed and no-downtime operation. When talking about query speed it is important to clarify what “fast” means, with Druid it is entirely within the realm of possibility (we have done it) to achieve queries that run in single-digit seconds across a 6TB data set.
+Druid is a good fit for products that require real-time data ingestion of a single, large data stream. Especially if you are targetting no-downtime operation and are building your product on top of a time-oriented summarization of the incoming data stream. Druid is probably not the right solution if you care more about query flexibility and raw data access than query speed and no-downtime operation. When talking about query speed it is important to clarify what "fast" means, with Druid it is entirely within the realm of possibility (we have done it) to achieve queries that run in single-digit seconds across a 6TB data set.
 
 ### Architecture
 
 Druid is architected as a grouping of systems each with a distinct role and together they form a working system. The name comes from the Druid class in many role-playing games: it is a shape-shifter, capable of taking many different forms to fulfill various different roles in a group.
 
 The node types that currently exist are:
-\* **Compute** nodes are the workhorses that handle storage and querying on “historical” data (non-realtime)
-\* **Realtime** nodes ingest data in real-time, they are in charge of listening to a stream of incoming data and making it available immediately inside the Druid system. As data they have ingested ages, they hand it off to the compute nodes.
-\* **Master** nodes act as coordinators. They look over the grouping of computes and make sure that data is available, replicated and in a generally “optimal” configuration.
-\* **Broker** nodes understand the topology of data across all of the other nodes in the cluster and re-write and route queries accordingly
-\* **Indexer** nodes form a cluster of workers to load batch and real-time data into the system as well as allow for alterations to the data stored in the system (also known as the Indexing Service)
 
-This separation allows each node to only care about what it is best at. By separating Compute and Realtime, we separate the memory concerns of listening on a real-time stream of data and processing it for entry into the system. By separating the Master and Broker, we separate the needs for querying from the needs for maintaining “good” data distribution across the cluster.
+* **Compute** nodes are the workhorses that handle storage and querying on "historical" data (non-realtime)
+* **Realtime** nodes ingest data in real-time, they are in charge of listening to a stream of incoming data and making it available immediately inside the Druid system. As data they have ingested ages, they hand it off to the compute nodes.
+* **Master** nodes act as coordinators. They look over the grouping of computes and make sure that data is available, replicated and in a generally "optimal" configuration.
+* **Broker** nodes understand the topology of data across all of the other nodes in the cluster and re-write and route queries accordingly
+* **Indexer** nodes form a cluster of workers to load batch and real-time data into the system as well as allow for alterations to the data stored in the system (also known as the Indexing Service)
+
+This separation allows each node to only care about what it is best at. By separating Compute and Realtime, we separate the memory concerns of listening on a real-time stream of data and processing it for entry into the system. By separating the Master and Broker, we separate the needs for querying from the needs for maintaining "good" data distribution across the cluster.
 
 All nodes can be run in some highly available fashion. Either as symmetric peers in a share-nothing cluster or as hot-swap failover nodes.
 
@@ -39,7 +41,7 @@ Aside from these nodes, there are 3 external dependencies to the system:
 
 1.  A running [ZooKeeper](http://zookeeper.apache.org/) cluster for cluster service discovery and maintenance of current data topology
 2.  A MySQL instance for maintenance of metadata about the data segments that should be served by the system
-3.  A “deep storage” LOB store/file system to hold the stored segments
+3.  A "deep storage" LOB store/file system to hold the stored segments
 
 ### Data Storage
 
@@ -53,9 +55,9 @@ Getting data into the Druid system requires an indexing process. This gives the 
     -   Bitmap compression
     -   RLE (on the roadmap, but not yet implemented)
 
-The output of the indexing process is stored in a “deep storage” LOB store/file system ([Deep Storage](Deep Storage.html) for information about potential options). Data is then loaded by compute nodes by first downloading the data to their local disk and then memory mapping it before serving queries.
+The output of the indexing process is stored in a "deep storage" LOB store/file system ([Deep Storage](Deep Storage.html) for information about potential options). Data is then loaded by compute nodes by first downloading the data to their local disk and then memory mapping it before serving queries.
 
-If a compute node dies, it will no longer serve its segments, but given that the segments are still available on the “deep storage” any other node can simply download the segment and start serving it. This means that it is possible to actually remove all compute nodes from the cluster and then re-provision them without any data loss. It also means that if the “deep storage” is not available, the nodes can continue to serve the segments they have already pulled down (i.e. the cluster goes stale, not down).
+If a compute node dies, it will no longer serve its segments, but given that the segments are still available on the "deep storage" any other node can simply download the segment and start serving it. This means that it is possible to actually remove all compute nodes from the cluster and then re-provision them without any data loss. It also means that if the "deep storage" is not available, the nodes can continue to serve the segments they have already pulled down (i.e. the cluster goes stale, not down).
 
 In order for a segment to exist inside of the cluster, an entry has to be added to a table in a MySQL instance. This entry is a self-describing bit of metadata about the segment, it includes things like the schema of the segment, the size, and the location on deep storage. These entries are what the Master uses to know what data **should** be available on the cluster.
 
@@ -65,7 +67,7 @@ In order for a segment to exist inside of the cluster, an entry has to be added 
 -   **Master** Can be run in a hot fail-over configuration. If no masters are running, then changes to the data topology will stop happening (no new data and no data balancing decisions), but the system will continue to run.
 -   **Broker** Can be run in parallel or in hot fail-over.
 -   **Realtime** Depending on the semantics of the delivery stream, multiple of these can be run in parallel processing the exact same stream. They periodically checkpoint to disk and eventually push out to the Computes. Steps are taken to be able to recover from process death, but loss of access to the local disk can result in data loss if this is the only method of adding data to the system.
--   **“deep storage” file system** If this is not available, new data will not be able to enter the cluster, but the cluster will continue operating as is.
+-   **"deep storage" file system** If this is not available, new data will not be able to enter the cluster, but the cluster will continue operating as is.
 -   **MySQL** If this is not available, the master will be unable to find out about new segments in the system, but it will continue with its current view of the segments that should exist in the cluster.
 -   **ZooKeeper** If this is not available, data topology changes will not be able to be made, but the Brokers will maintain their most recent view of the data topology and continue serving requests accordingly.
 
@@ -77,12 +79,8 @@ For filters at a more granular level than what the Broker can prune based on, th
 
 Once it knows the rows that match the current query, it can access the columns it cares about for those rows directly without having to load data that it is just going to throw away.
 
-The following diagram shows the data flow for queries without showing batch indexing:
-
-![Simple Data Flow](https://raw.github.com/metamx/druid/master/doc/data_flow_simple.png "Simple Data Flow")
-
 ### In-memory?
 
 Druid is not always and only in-memory. When we first built it, it is true that it was all in-memory all the time, but as time went on the price-performance tradeoff ended up swinging towards keeping all of our customers data in memory all the time a non-starter. We then added the ability to memory map data and allow the OS to handle paging data in and out of memory on demand. Our production cluster is primarily configured to operate with this memory mapping behavior and we are definitely over-subscribed in terms of memory available vs. data a node is serving.
 
-As you read some of the old blog posts or other literature about the project, you will see “in-memory” often touted as that is the history of where Druid came from, but the technical reality is that there is a spectrum of price vs. performance and being able to slide along it from all in-memory (high cost, great performance) to mostly on disk (low cost, low performance) is the important knob to be able to adjust.
+As you read some of the old blog posts or other literature about the project, you will see "in-memory" often touted as that is the history of where Druid came from, but the technical reality is that there is a spectrum of price vs. performance and being able to slide along it from all in-memory (high cost, great performance) to mostly on disk (low cost, low performance) is the important knob to be able to adjust.

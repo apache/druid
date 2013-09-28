@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+
 YourKit supports the Druid open source projects with its
 full-featured Java Profiler.
 YourKit, LLC is the creator of innovative and intelligent tools for profiling

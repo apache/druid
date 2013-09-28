@@ -6,7 +6,7 @@ Greetings! This tutorial will help clarify some core Druid concepts. We will use
 About the data
 --------------
 
-The data source we’ll be working with is Wikipedia edits. Each time an edit is made in Wikipedia, an event gets pushed to an IRC channel associated with the language of the Wikipedia page. We scrape IRC channels for several different languages and load this data into Druid.
+The data source we'll be working with is Wikipedia edits. Each time an edit is made in Wikipedia, an event gets pushed to an IRC channel associated with the language of the Wikipedia page. We scrape IRC channels for several different languages and load this data into Druid.
 
 Each event has a timestamp indicating the time of the edit (in UTC time), a list of dimensions indicating various metadata about the event (such as information about the user editing the page and where the user resides), and a list of metrics associated with the event (such as the number of characters added and deleted).
 
@@ -47,7 +47,7 @@ There are two ways to setup Druid: download a tarball, or [Build From Source](Bu
 
 ### Download a Tarball
 
-We’ve built a tarball that contains everything you’ll need. You’ll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.5.54-bin.tar.gz)
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.5.54-bin.tar.gz)
 Download this file to a directory of your choosing.
 
 You can extract the awesomeness within by issuing:
@@ -56,7 +56,7 @@ You can extract the awesomeness within by issuing:
 tar -zxvf druid-services-*-bin.tar.gz
 ```
 
-Not too lost so far right? That’s great! If you cd into the directory:
+Not too lost so far right? That's great! If you cd into the directory:
 
 ```
 cd druid-services-0.5.54
@@ -71,7 +71,7 @@ You should see a bunch of files:
 Running Example Scripts
 -----------------------
 
-Let’s start doing stuff. You can start a Druid [Realtime](Realtime.html) node by issuing:
+Let's start doing stuff. You can start a Druid [Realtime](Realtime.html) node by issuing:
 
 ```
 ./run_example_server.sh
@@ -90,13 +90,13 @@ Once the node starts up you will see a bunch of logs about setting up properties
 
 The Druid real time-node ingests events in an in-memory buffer. Periodically, these events will be persisted to disk. If you are interested in the details of our real-time architecture and why we persist indexes to disk, I suggest you read our [White Paper](http://static.druid.io/docs/druid.pdf).
 
-Okay, things are about to get real-time. To query the real-time node you’ve spun up, you can issue:
+Okay, things are about to get real-time. To query the real-time node you've spun up, you can issue:
 
 ```
 ./run_example_client.sh
 ```
 
-Select "wikipedia" once again. This script issues [GroupByQuery](GroupByQuery.html)s to the data we’ve been ingesting. The query looks like this:
+Select "wikipedia" once again. This script issues [GroupByQuery](GroupByQuery.html)s to the data we've been ingesting. The query looks like this:
 
 ```json
 {
@@ -137,7 +137,7 @@ The result looks something like this:
 ...
 ```
 
-This groupBy query is a bit complicated and we’ll return to it later. For the time being, just make sure you are getting some blocks of data back. If you are having problems, make sure you have [curl](http://curl.haxx.se/) installed. Control+C to break out of the client script.
+This groupBy query is a bit complicated and we'll return to it later. For the time being, just make sure you are getting some blocks of data back. If you are having problems, make sure you have [curl](http://curl.haxx.se/) installed. Control+C to break out of the client script.
 
 h2. Querying Druid
 
@@ -159,7 +159,7 @@ Druid queries are JSON blobs which are relatively painless to create programmati
 The [TimeBoundaryQuery](TimeBoundaryQuery.html) is one of the simplest Druid queries. To run the query, you can issue:
 
 ```
-curl -X POST ‘http://localhost:8083/druid/v2/?pretty’ -H 'content-type: application/json' -d @time_boundary_query.body
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json' -d @time_boundary_query.body
 ```
 
 We get something like this JSON back:
@@ -255,9 +255,9 @@ This gives us something like the following:
 Solving a Problem
 -----------------
 
-One of Druid’s main powers is to provide answers to problems, so let’s pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you’ve been going through this tutorial? To solve this problem, we have to return to the query we introduced at the very beginning of this tutorial, the [GroupByQuery](GroupByQuery.html). It would be nice if we could group by results by dimension value and somehow sort those results... and it turns out we can!
+One of Druid's main powers is to provide answers to problems, so let's pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you've been going through this tutorial? To solve this problem, we have to return to the query we introduced at the very beginning of this tutorial, the [GroupByQuery](GroupByQuery.html). It would be nice if we could group by results by dimension value and somehow sort those results... and it turns out we can!
 
-Let’s create the file:
+Let's create the file:
 
 ```
 group_by_query.body
@@ -272,7 +272,7 @@ and put the following in there:
   "granularity": "all", 
   "dimensions": [ "page" ], 
   "orderBy": {
-     "type": "doc_page", 
+     "type": "default", 
      "columns": [ { "dimension": "edit_count", "direction": "DESCENDING" } ], 
      "limit": 10
   }, 
@@ -284,7 +284,7 @@ and put the following in there:
 }
 ```
 
-Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [OrderBy](OrderBy.html) thing. Fear not, it turns out the new objects we’ve introduced to our query can help define the format of our results and provide an answer to our question.
+Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [OrderBy](OrderBy.html) thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
 
 If you issue the query:
 

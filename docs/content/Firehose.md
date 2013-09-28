@@ -11,7 +11,7 @@ We describe the configuration of the Kafka firehose from the example below, but 
 
 -   `consumerProps` is a map of properties for the Kafka consumer. The JSON object is converted into a Properties object and passed along to the Kafka consumer.
 -   `feed` is the feed that the Kafka consumer should read from.
--   `parser` represents a parser that knows how to convert from String representations into the required `InputRow` representation that Druid uses. This is a potentially reusable piece that can be found in many of the firehoses that are based on text streams. The spec in the example describes a JSON feed (new-line delimited objects), with a timestamp column called “timestamp” in ISO8601 format and that it should not include the dimension “value” when processing. More information about the options available for the parser are available [here](https://github.com/metamx/druid/wiki/Firehose#parsing-data).
+-   `parser` represents a parser that knows how to convert from String representations into the required `InputRow` representation that Druid uses. This is a potentially reusable piece that can be found in many of the firehoses that are based on text streams. The spec in the example describes a JSON feed (new-line delimited objects), with a timestamp column called "timestamp" in ISO8601 format and that it should not include the dimension "value" when processing. More information about the options available for the parser are available [here](https://github.com/metamx/druid/wiki/Firehose#parsing-data).
 
 Available Firehoses
 -------------------

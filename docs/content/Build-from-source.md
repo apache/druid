@@ -20,5 +20,6 @@ LICENSE			client			eclipse_formatting.xml	index-common		merger			realtime
 ```
 
 You can find the example executables in the examples/bin directory:
+
 * run_example_server.sh
 * run_example_client.sh

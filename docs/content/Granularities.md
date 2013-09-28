@@ -10,20 +10,25 @@ It can be specified either as a string for simple granularities or as an object 
 Simple granularities are specified as a string and bucket timestamps by their UTC time (i.e. days start at 00:00 UTC).
 
 Supported granularity strings are: `all`, `none`, `minute`, `fifteen_minute`, `thirty_minute`, `hour` and `day`
-\* **`all`** buckets everything into a single bucket
-\* **`none`** does not bucket data (it actually uses the granularity of the index - minimum here is `none` which means millisecond granularity). Using `none` in a [timeseries query|TimeSeriesQuery](timeseries query|TimeSeriesQuery.html) is currently not recommended (the system will try to generate 0 values for all milliseconds that didn’t exist, which is often a lot).
+
+* `all` buckets everything into a single bucket
+* `none` does not bucket data (it actually uses the granularity of the index - minimum here is `none` which means millisecond granularity). Using `none` in a [TimeSeriesQuery](TimeSeriesQuery.html) is currently not recommended (the system will try to generate 0 values for all milliseconds that didn’t exist, which is often a lot).
 
 ### Duration Granularities
 
 Duration granularities are specified as an exact duration in milliseconds and timestamps are returned as UTC.
 
-They also support specifying an optional origin, which defines where to start counting time buckets from (doc_pages to 1970-01-01T00:00:00Z).
+They also support specifying an optional origin, which defines where to start counting time buckets from (defaults to 1970-01-01T00:00:00Z).
 
-    <code>{"type": "duration", "duration": "7200000"}</code>
+```
+{"type": "duration", "duration": "7200000"}
+```
 
 This chunks up every 2 hours.
 
-    <code>{"type": "duration", "duration": "3600000", "origin": "2012-01-01T00:30:00Z"}</code>
+```
+{"type": "duration", "duration": "3600000", "origin": "2012-01-01T00:30:00Z"}
+```
 
 This chunks up every hour on the half-hour.
 
@@ -33,16 +38,20 @@ Period granularities are specified as arbitrary period combinations of years, mo
 
 They support specifying a time zone which determines where period boundaries start and also determines the timezone of the returned timestamps.
 
-By doc_page years start on the first of January, months start on the first of the month and weeks start on Mondays unless an origin is specified.
+By default years start on the first of January, months start on the first of the month and weeks start on Mondays unless an origin is specified.
 
-Time zone is optional (doc_pages to UTC)
-Origin is optional (doc_pages to 1970-01-01T00:00:00 in the given time zone)
+Time zone is optional (defaults to UTC)
+Origin is optional (defaults to 1970-01-01T00:00:00 in the given time zone)
 
-    <code>{"type": "period", "period": "P2D", "timeZone": "America/Los_Angeles"}</code>
+```
+{"type": "period", "period": "P2D", "timeZone": "America/Los_Angeles"}
+```
 
 This will bucket by two day chunks in the Pacific timezone.
 
-    <code>{"type": "period", "period": "P3M", "timeZone": "America/Los_Angeles", "origin": "2012-02-01T00:00:00-08:00"}</code>
+```
+{"type": "period", "period": "P3M", "timeZone": "America/Los_Angeles", "origin": "2012-02-01T00:00:00-08:00"}
+```
 
 This will bucket by 3 month chunks in the Pacific timezone where the three-month quarters are defined as starting from February.
 
