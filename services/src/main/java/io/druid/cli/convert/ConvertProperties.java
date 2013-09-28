@@ -85,6 +85,8 @@ public class ConvertProperties implements Runnable
       new Rename("druid.indexer.terminateResources.duration", "druid.indexer.autoscale.terminatePeriod"),
       new Rename("druid.indexer.terminateResources.originDateTime", "druid.indexer.autoscale.originTime"),
       new Rename("druid.indexer.autoscaling.strategy", "druid.indexer.autoscale.strategy"),
+      new Rename("druid.indexer.logs.s3bucket", "druid.indexer.logs.s3Bucket"),
+      new Rename("druid.indexer.logs.s3prefix", "druid.indexer.logs.s3Prefix"),
       new Rename("druid.indexer.maxWorkerIdleTimeMillisBeforeDeletion", "druid.indexer.autoscale.workerIdleTimeout"),
       new Rename("druid.indexer.maxScalingDuration", "druid.indexer.autoscale.scalingTimeout"),
       new Rename("druid.indexer.numEventsToTrack", "druid.indexer.autoscale.numEventsToTrack"),
@@ -122,7 +124,7 @@ public class ConvertProperties implements Runnable
     }
 
     File outFile = new File(outFilename);
-    if (!outFile.getParentFile().exists()) {
+    if (outFile.getParentFile() != null && !outFile.getParentFile().exists()) {
       outFile.getParentFile().mkdirs();
     }
 
@@ -144,8 +146,10 @@ public class ConvertProperties implements Runnable
       for (PropertyConverter converter : converters) {
         if (converter.canHandle(property)) {
           for (Map.Entry<String, String> entry : converter.convert(fromFile).entrySet()) {
-            ++count;
-            updatedProps.setProperty(entry.getKey(), entry.getValue());
+            if (entry.getValue() != null) {
+              ++count;
+              updatedProps.setProperty(entry.getKey(), entry.getValue());
+            }
           }
           handled = true;
         }

@@ -35,9 +35,16 @@ import io.druid.client.InventoryView;
 import io.druid.client.ServerView;
 import io.druid.guice.NoopSegmentPublisherProvider;
 import io.druid.guice.RealtimeModule;
+import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
+import io.druid.indexing.common.index.StaticS3FirehoseFactory;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
+import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
+import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
+import io.druid.segment.realtime.firehose.RabbitMQFirehoseFactory;
+import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 
@@ -88,7 +95,14 @@ public class CliRealtimeExample extends ServerRunnable
                         new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
                         new NamedType(FlightsFirehoseFactory.class, "flights"),
                         new NamedType(RandomFirehoseFactory.class, "rand"),
-                        new NamedType(WebFirehoseFactory.class, "webstream")
+                        new NamedType(WebFirehoseFactory.class, "webstream"),
+                        new NamedType(KafkaFirehoseFactory.class, "kafka"),
+                        new NamedType(RabbitMQFirehoseFactory.class, "rabbitmq"),
+                        new NamedType(ClippedFirehoseFactory.class, "clipped"),
+                        new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
+                        new NamedType(IrcFirehoseFactory.class, "irc"),
+                        new NamedType(StaticS3FirehoseFactory.class, "s3"),
+                        new NamedType(EventReceiverFirehoseFactory.class, "receiver")
                     )
             );
           }
