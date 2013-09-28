@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 This page describes how to use Riak-CS for deep storage instead of S3.  We are still setting up some of the peripheral stuff (file downloads, etc.).
 

@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Disclaimer: We are still in the process of finalizing the indexing service and these configs are prone to change at any time. We will announce when we feel the indexing service and the configurations described are stable.
 
@@ -21,27 +21,37 @@ The indexer coordinator node exposes HTTP endpoints where tasks can be submitted
 
 Tasks can be submitted via POST requests to:
 
-    http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task
+```
+http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task
+```
 
 Tasks can cancelled via POST requests to:
 
-    http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task/{taskId}/shutdown
+```
+http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task/{taskId}/shutdown
+```
 
 Issuing the cancel request once sends a graceful shutdown request. Graceful shutdowns may not stop a task right away, but instead issue a safe stop command at a point deemed least impactful to the system. Issuing the cancel request twice in succession will kill –9 the task.
 
 Task statuses can be retrieved via GET requests to:
 
-    http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task/{taskId}/status
+```
+http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task/{taskId}/status
+```
 
 Task segments can be retrieved via GET requests to:
 
-    http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task/{taskId}/segments
+```
+http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task/{taskId}/segments
+```
 
 When a task is submitted, the coordinator creates a lock over the data source and interval of the task. The coordinator also stores the task in a MySQL database table. The database table is read at startup time to bootstrap any tasks that may have been submitted to the coordinator but may not yet have been executed.
 
 The coordinator also exposes a simple UI to show what tasks are currently running on what nodes at
 
-    http://<COORDINATOR_IP>:<port>/static/console.html
+```
+http://<COORDINATOR_IP>:<port>/static/console.html
+```
 
 #### Task Execution
 
@@ -55,31 +65,34 @@ The Autoscaling mechanisms currently in place are tightly coupled with our deplo
 
 The Coordinator node controls the number of workers in the cluster according to a worker setup spec that is submitted via a POST request to the indexer at:
 
-    http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker/setup
+```
+http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker/setup
+```
 
 A sample worker setup spec is shown below:
 
-    <code>{
-      "minVersion":"some_version",
-      "minNumWorkers":"0",
-      "maxNumWorkers":"10",
-      "nodeData": {
-        "type":"ec2",
-        "amiId":"ami-someId",
-        "instanceType":"m1.xlarge",
-        "minInstances":"1",
-        "maxInstances":"1",
-        "securityGroupIds":["securityGroupIds"],
-        "keyName":"keyName"
-      },
-      "userData":{
-        "classType":"galaxy",
-        "env":"druid",
-        "version":"druid_version",
-        "type":"sample_cluster/worker"
-      }
-    }
-    </code>
+```
+{
+  "minVersion":"some_version",
+  "minNumWorkers":"0",
+  "maxNumWorkers":"10",
+  "nodeData": {
+    "type":"ec2",
+    "amiId":"ami-someId",
+    "instanceType":"m1.xlarge",
+    "minInstances":"1",
+    "maxInstances":"1",
+    "securityGroupIds":["securityGroupIds"],
+    "keyName":"keyName"
+  },
+  "userData":{
+    "classType":"galaxy",
+    "env":"druid",
+    "version":"druid_version",
+    "type":"sample_cluster/worker"
+  }
+}
+```
 
 Issuing a GET request at the same URL will return the current worker setup spec that is currently in place. The worker setup spec list above is just a sample and it is possible to write worker setup specs for other deployment environments. A description of the worker setup spec is shown below.
 
@@ -101,19 +114,21 @@ Indexer Coordinator nodes can be run using the `com.metamx.druid.indexing.coordi
 
 Indexer Coordinator nodes require [basic service configuration](https://github.com/metamx/druid/wiki/Configuration#basic-service-configuration). In addition, there are several extra configurations that are required.
 
-    -Ddruid.zk.paths.indexer.announcementsPath=/druid/indexer/announcements
-    -Ddruid.zk.paths.indexer.leaderLatchPath=/druid/indexer/leaderLatchPath
-    -Ddruid.zk.paths.indexer.statusPath=/druid/indexer/status
-    -Ddruid.zk.paths.indexer.tasksPath=/druid/demo/indexer/tasks
+```
+-Ddruid.zk.paths.indexer.announcementsPath=/druid/indexer/announcements
+-Ddruid.zk.paths.indexer.leaderLatchPath=/druid/indexer/leaderLatchPath
+-Ddruid.zk.paths.indexer.statusPath=/druid/indexer/status
+-Ddruid.zk.paths.indexer.tasksPath=/druid/demo/indexer/tasks
 
-    -Ddruid.indexer.runner=remote
-    -Ddruid.indexer.taskDir=/mnt/persistent/task/
-    -Ddruid.indexer.configTable=sample_config
-    -Ddruid.indexer.workerSetupConfigName=worker_setup
-    -Ddruid.indexer.strategy=ec2
-    -Ddruid.indexer.hadoopWorkingPath=/tmp/druid-indexing
-    -Ddruid.indexer.logs.s3bucket=some_bucket
-    -Ddruid.indexer.logs.s3prefix=some_prefix
+-Ddruid.indexer.runner=remote
+-Ddruid.indexer.taskDir=/mnt/persistent/task/
+-Ddruid.indexer.configTable=sample_config
+-Ddruid.indexer.workerSetupConfigName=worker_setup
+-Ddruid.indexer.strategy=ec2
+-Ddruid.indexer.hadoopWorkingPath=/tmp/druid-indexing
+-Ddruid.indexer.logs.s3bucket=some_bucket
+-Ddruid.indexer.logs.s3prefix=some_prefix
+```
 
 The indexing service requires some additional Zookeeper configs.
 
@@ -128,7 +143,7 @@ There’s several additional configs that are required to run tasks.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner`|Indicates whether tasks should be run locally or in a distributed environment. “local” or “remote”.|local|
+|`druid.indexer.runner`|Indicates whether tasks should be run locally or in a distributed environment. "local" or "remote".|local|
 |`druid.indexer.taskDir`|Intermediate temporary directory that tasks may use.|none|
 |`druid.indexer.configTable`|The MySQL config table where misc configs live.|none|
 |`druid.indexer.strategy`|The autoscaling strategy to use.|noop|
@@ -140,7 +155,9 @@ There’s several additional configs that are required to run tasks.
 
 The indexer console can be used to view pending tasks, running tasks, available workers, and recent worker creation and termination. The console can be accessed at:
 
-    http://<COORDINATOR_IP>:8080/static/console.html
+```
+http://<COORDINATOR_IP>:8080/static/console.html
+```
 
 Worker Node
 -----------
@@ -155,29 +172,31 @@ Worker nodes can be run using the `com.metamx.druid.indexing.worker.http.WorkerM
 
 Worker nodes require [basic service configuration](https://github.com/metamx/druid/wiki/Configuration#basic-service-configuration). In addition, there are several extra configurations that are required.
 
-    -Ddruid.worker.version=0
-    -Ddruid.worker.capacity=3
+```
+-Ddruid.worker.version=0
+-Ddruid.worker.capacity=3
 
-    -Ddruid.indexer.threads=3
-    -Ddruid.indexer.taskDir=/mnt/persistent/task/
-    -Ddruid.indexer.hadoopWorkingPath=/tmp/druid-indexing
+-Ddruid.indexer.threads=3
+-Ddruid.indexer.taskDir=/mnt/persistent/task/
+-Ddruid.indexer.hadoopWorkingPath=/tmp/druid-indexing
 
-    -Ddruid.worker.masterService=druid:sample_cluster:indexer
+-Ddruid.worker.masterService=druid:sample_cluster:indexer
 
-    -Ddruid.indexer.fork.hostpattern=<IP>:%d
-    -Ddruid.indexer.fork.startport=8080
-    -Ddruid.indexer.fork.main=com.metamx.druid.indexing.worker.executor.ExecutorMain
-    -Ddruid.indexer.fork.opts="-server -Xmx1g -Xms1g -XX:NewSize=256m -XX:MaxNewSize=256m"
-    -Ddruid.indexer.fork.property.druid.service=druid/sample_cluster/executor
+-Ddruid.indexer.fork.hostpattern=<IP>:%d
+-Ddruid.indexer.fork.startport=8080
+-Ddruid.indexer.fork.main=com.metamx.druid.indexing.worker.executor.ExecutorMain
+-Ddruid.indexer.fork.opts="-server -Xmx1g -Xms1g -XX:NewSize=256m -XX:MaxNewSize=256m"
+-Ddruid.indexer.fork.property.druid.service=druid/sample_cluster/executor
 
-    # These configs are the same configs you would set for basic service configuration, just with a different prefix
-    -Ddruid.indexer.fork.property.druid.monitoring.monitorSystem=false
-    -Ddruid.indexer.fork.property.druid.computation.buffer.size=268435456
-    -Ddruid.indexer.fork.property.druid.indexer.taskDir=/mnt/persistent/task/
-    -Ddruid.indexer.fork.property.druid.processing.formatString=processing-%s
-    -Ddruid.indexer.fork.property.druid.processing.numThreads=1
-    -Ddruid.indexer.fork.property.druid.server.maxSize=0
-    -Ddruid.indexer.fork.property.druid.request.logging.dir=request_logs/
+# These configs are the same configs you would set for basic service configuration, just with a different prefix
+-Ddruid.indexer.fork.property.druid.monitoring.monitorSystem=false
+-Ddruid.indexer.fork.property.druid.computation.buffer.size=268435456
+-Ddruid.indexer.fork.property.druid.indexer.taskDir=/mnt/persistent/task/
+-Ddruid.indexer.fork.property.druid.processing.formatString=processing-%s
+-Ddruid.indexer.fork.property.druid.processing.numThreads=1
+-Ddruid.indexer.fork.property.druid.server.maxSize=0
+-Ddruid.indexer.fork.property.druid.request.logging.dir=request_logs/
+```
 
 Many of the configurations for workers are similar to those for basic service configuration":https://github.com/metamx/druid/wiki/Configuration\#basic-service-configuration, but with a different config prefix. Below we describe the unique worker configs.
 

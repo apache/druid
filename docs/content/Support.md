@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Numerous backend engineers at [Metamarkets](http://www.metamarkets.com) work on Druid full-time. If you any questions about usage or code, feel free to contact any of us.
 

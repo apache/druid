@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 # Booting a Single Node Cluster #
 

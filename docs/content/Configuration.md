@@ -1,7 +1,7 @@
 ---
-layout: default
+layout: doc_page
 ---
-This describes the basic server configuration that is loaded by all the server processes; the same file is loaded by all. See also the json “specFile” descriptions in [Realtime](Realtime.html) and [Batch-ingestion](Batch-ingestion.html).
+This describes the basic server configuration that is loaded by all the server processes; the same file is loaded by all. See also the json "specFile" descriptions in [Realtime](Realtime.html) and [Batch-ingestion](Batch-ingestion.html).
 
 JVM Configuration Best Practices
 ================================
@@ -17,63 +17,63 @@ Basic Service Configuration
 
 Configuration of the various nodes is done via Java properties. These can either be provided as `-D` system properties on the java command line or they can be passed in via a file called `runtime.properties` that exists on the classpath. Note: as a future item, I’d like to consolidate all of the various configuration into a yaml/JSON based configuration files.
 
-The periodic time intervals (like “PT1M”) are [ISO8601 intervals](http://en.wikipedia.org/wiki/ISO_8601#Time_intervals)
+The periodic time intervals (like "PT1M") are [ISO8601 intervals](http://en.wikipedia.org/wiki/ISO_8601#Time_intervals)
 
 An example runtime.properties is as follows:
 
-    <code>
-    # S3 access
-    com.metamx.aws.accessKey=<S3 access key>
-    com.metamx.aws.secretKey=<S3 secret_key>
+```
+# S3 access
+com.metamx.aws.accessKey=<S3 access key>
+com.metamx.aws.secretKey=<S3 secret_key>
 
-    # thread pool size for servicing queries
-    druid.client.http.connections=30
+# thread pool size for servicing queries
+druid.client.http.connections=30
 
-    # JDBC connection string for metadata database
-    druid.database.connectURI=
-    druid.database.user=user
-    druid.database.password=password
-    # time between polling for metadata database
-    druid.database.poll.duration=PT1M
-    druid.database.segmentTable=prod_segments
+# JDBC connection string for metadata database
+druid.database.connectURI=
+druid.database.user=user
+druid.database.password=password
+# time between polling for metadata database
+druid.database.poll.duration=PT1M
+druid.database.segmentTable=prod_segments
 
-    # Path on local FS for storage of segments; dir will be created if needed
-    druid.paths.indexCache=/tmp/druid/indexCache
-    # Path on local FS for storage of segment metadata; dir will be created if needed
-    druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
+# Path on local FS for storage of segments; dir will be created if needed
+druid.paths.indexCache=/tmp/druid/indexCache
+# Path on local FS for storage of segment metadata; dir will be created if needed
+druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
 
-    druid.request.logging.dir=/tmp/druid/log
+druid.request.logging.dir=/tmp/druid/log
 
-    druid.server.maxSize=300000000000
+druid.server.maxSize=300000000000
 
-    # ZK quorum IPs
-    druid.zk.service.host=
-    # ZK path prefix for Druid-usage of zookeeper, Druid will create multiple paths underneath this znode
-    druid.zk.paths.base=/druid
-    # ZK path for discovery, the only path not to default to anything
-    druid.zk.paths.discoveryPath=/druid/discoveryPath
+# ZK quorum IPs
+druid.zk.service.host=
+# ZK path prefix for Druid-usage of zookeeper, Druid will create multiple paths underneath this znode
+druid.zk.paths.base=/druid
+# ZK path for discovery, the only path not to default to anything
+druid.zk.paths.discoveryPath=/druid/discoveryPath
 
-    # the host:port as advertised to clients
-    druid.host=someHostOrIPaddrWithPort
-    # the port on which to listen, this port should line up with the druid.host value
-    druid.port=8080
+# the host:port as advertised to clients
+druid.host=someHostOrIPaddrWithPort
+# the port on which to listen, this port should line up with the druid.host value
+druid.port=8080
 
-    com.metamx.emitter.logging=true
-    com.metamx.emitter.logging.level=debug
+com.metamx.emitter.logging=true
+com.metamx.emitter.logging.level=debug
 
-    druid.processing.formatString=processing_%s
-    druid.processing.numThreads=3
+druid.processing.formatString=processing_%s
+druid.processing.numThreads=3
 
 
-    druid.computation.buffer.size=100000000
+druid.computation.buffer.size=100000000
 
-    # S3 dest for realtime indexer
-    druid.pusher.s3.bucket=
-    druid.pusher.s3.baseKey=
+# S3 dest for realtime indexer
+druid.pusher.s3.bucket=
+druid.pusher.s3.baseKey=
 
-    druid.bard.cache.sizeInBytes=40000000
-    druid.master.merger.service=blah_blah
-    </code>
+druid.bard.cache.sizeInBytes=40000000
+druid.master.merger.service=blah_blah
+```
 
 Configuration groupings
 -----------------------
@@ -91,7 +91,7 @@ These properties are for connecting with S3 and using it to pull down segments. 
 
 ### JDBC connection
 
-These properties specify the jdbc connection and other configuration around the “segments table” database. The only processes that connect to the DB with these properties are the [Master](Master.html) and [Indexing service](Indexing-service.html). This is tested on MySQL.
+These properties specify the jdbc connection and other configuration around the "segments table" database. The only processes that connect to the DB with these properties are the [Master](Master.html) and [Indexing service](Indexing-service.html). This is tested on MySQL.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -142,7 +142,7 @@ These are properties that the compute nodes use
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.server.maxSize`|The maximum number of bytes worth of segment that the node wants assigned to it. This is not a limit that the compute nodes actually enforce, they just publish it to the master and trust the master to do the right thing|none|
-|`druid.server.type`|Specifies the type of the node. This is published via ZK and depending on the value the node will be treated specially by the Master/Broker. Allowed values are “realtime” or “historical”. This is a configuration parameter because the plan is to allow for a more configurable cluster composition. At the current time, all realtime nodes should just be “realtime” and all compute nodes should just be “compute”|none|
+|`druid.server.type`|Specifies the type of the node. This is published via ZK and depending on the value the node will be treated specially by the Master/Broker. Allowed values are "realtime" or "historical". This is a configuration parameter because the plan is to allow for a more configurable cluster composition. At the current time, all realtime nodes should just be "realtime" and all compute nodes should just be "compute"|none|
 
 ### Emitter Properties
 
@@ -150,7 +150,7 @@ The Druid servers emit various metrics and alerts via something we call an [Emit
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`com.metamx.emitter.logging`|Set to “true” to use the logging emitter|none|
+|`com.metamx.emitter.logging`|Set to "true" to use the logging emitter|none|
 |`com.metamx.emitter.logging.level`|Sets the level to log at|debug|
 |`com.metamx.emitter.logging.class`|Sets the class to log at|com.metamx.emiter.core.LoggingEmitter|
 
