@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Batch Data Ingestion
 ====================
@@ -18,52 +18,52 @@ HadoopDruidIndexer
 
 Located at `com.metamx.druid.indexer.HadoopDruidIndexerMain` can be run like
 
-    <code>
-    java -cp hadoop_config_path:druid_indexer_selfcontained_jar_path com.metamx.druid.indexer.HadoopDruidIndexerMain  <config_file>
-    </code>
+```
+java -cp hadoop_config_path:druid_indexer_selfcontained_jar_path com.metamx.druid.indexer.HadoopDruidIndexerMain  <config_file>
+```
 
-The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Time_intervals) of the data you are processing. The config\_file is a path to a file (the “specFile”) that contains JSON and an example looks like:
+The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Time_intervals) of the data you are processing. The config\_file is a path to a file (the "specFile") that contains JSON and an example looks like:
 
-    <code>
-    {
-      "dataSource": "the_data_source",
-      "timestampColumn": "ts",
-      "timestampFormat": "<iso, millis, posix, auto or any Joda time format>",
-      "dataSpec": {
-        "format": "<csv, tsv, or json>",
-        "columns": ["ts", "column_1", "column_2", "column_3", "column_4", "column_5"],
-        "dimensions": ["column_1", "column_2", "column_3"]
-      },
-      "granularitySpec": {
-        "type":"uniform",
-        "intervals":["<ISO8601 interval:http://en.wikipedia.org/wiki/ISO_8601#Time_intervals>"],
-        "gran":"day"
-      },
-      "pathSpec": { "type": "granularity",
-                    "dataGranularity": "hour",
-                    "inputPath": "s3n://billy-bucket/the/data/is/here",
-                    "filePattern": ".*" },
-      "rollupSpec": { "aggs": [
-                        { "type": "count", "name":"event_count" },
-                        { "type": "doubleSum", "fieldName": "column_4", "name": "revenue" },
-                        { "type": "longSum", "fieldName" : "column_5", "name": "clicks" }
-                      ],
-                      "rollupGranularity": "minute"},
-      "workingPath": "/tmp/path/on/hdfs",
-      "segmentOutputPath": "s3n://billy-bucket/the/segments/go/here",
-      "leaveIntermediate": "false",
-      "partitionsSpec": {
-        "targetPartitionSize": 5000000
-      },
-      "updaterJobSpec": {
-        "type":"db",
-        "connectURI":"jdbc:mysql://localhost:7980/test_db",
-        "user":"username",
-        "password":"passmeup",
-        "segmentTable":"segments"
-      }
-    }
-    </code>
+```
+{
+  "dataSource": "the_data_source",
+  "timestampColumn": "ts",
+  "timestampFormat": "<iso, millis, posix, auto or any Joda time format>",
+  "dataSpec": {
+    "format": "<csv, tsv, or json>",
+    "columns": ["ts", "column_1", "column_2", "column_3", "column_4", "column_5"],
+    "dimensions": ["column_1", "column_2", "column_3"]
+  },
+  "granularitySpec": {
+    "type":"uniform",
+    "intervals":["<ISO8601 interval:http://en.wikipedia.org/wiki/ISO_8601#Time_intervals>"],
+    "gran":"day"
+  },
+  "pathSpec": { "type": "granularity",
+                "dataGranularity": "hour",
+                "inputPath": "s3n://billy-bucket/the/data/is/here",
+                "filePattern": ".*" },
+  "rollupSpec": { "aggs": [
+                    { "type": "count", "name":"event_count" },
+                    { "type": "doubleSum", "fieldName": "column_4", "name": "revenue" },
+                    { "type": "longSum", "fieldName" : "column_5", "name": "clicks" }
+                  ],
+                  "rollupGranularity": "minute"},
+  "workingPath": "/tmp/path/on/hdfs",
+  "segmentOutputPath": "s3n://billy-bucket/the/segments/go/here",
+  "leaveIntermediate": "false",
+  "partitionsSpec": {
+    "targetPartitionSize": 5000000
+  },
+  "updaterJobSpec": {
+    "type":"db",
+    "connectURI":"jdbc:mysql://localhost:7980/test_db",
+    "user":"username",
+    "password":"passmeup",
+    "segmentTable":"segments"
+  }
+}
+```
 
 ### Hadoop indexer config
 
@@ -100,10 +100,12 @@ Is a type of data loader that expects data to be laid out in a specific path for
 
 For example, if the sample config were run with the interval 2012-06-01/2012-06-02, it would expect data at the paths
 
-    s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=00
-    s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=01
-    ...
-    s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=23
+```
+s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=00
+s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=01
+...
+s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=23
+```
 
 ### Rollup specification
 
@@ -116,7 +118,7 @@ The indexing process has the ability to roll data up as it processes the incomin
 
 ### Partitioning specification
 
-Segments are always partitioned based on timestamp (according to the granularitySpec) and may be further partitioned in some other way. For example, data for a day may be split by the dimension “last\_name” into two segments: one with all values from A-M and one with all values from N-Z.
+Segments are always partitioned based on timestamp (according to the granularitySpec) and may be further partitioned in some other way. For example, data for a day may be split by the dimension "last\_name" into two segments: one with all values from A-M and one with all values from N-Z.
 
 To use this option, the indexer must be given a target partition size. It can then find a good set of partition ranges on its own.
 
@@ -132,7 +134,7 @@ This is a specification of the properties that tell the job how to update metada
 
 |property|description|required?|
 |--------|-----------|---------|
-|type|“db” is the only value available|yes|
+|type|"db" is the only value available|yes|
 |connectURI|a valid JDBC url to MySQL|yes|
 |user|username for db|yes|
 |password|password for db|yes|

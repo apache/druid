@@ -64,6 +64,12 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
       @Override
       public String getHost()
       {
+        return String.format("%s:%d", getAddress(), getPort());
+      }
+
+      @Override
+      public String getAddress()
+      {
         return instance.getAddress();
       }
 

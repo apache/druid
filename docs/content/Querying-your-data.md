@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 # Setup #
 
@@ -8,93 +8,100 @@ Before we start querying druid, we're going to finish setting up a complete clus
 ## Booting a Broker Node ##
 
 1. Setup a config file at config/broker/runtime.properties that looks like this: 
-```
-druid.host=0.0.0.0:8083
-druid.port=8083
+
+    ```
+    druid.host=0.0.0.0:8083
+    druid.port=8083
  
-com.metamx.emitter.logging=true
+    com.metamx.emitter.logging=true
  
-druid.processing.formatString=processing_%s
-druid.processing.numThreads=1
-druid.processing.buffer.sizeBytes=10000000
+    druid.processing.formatString=processing_%s
+    druid.processing.numThreads=1
+    druid.processing.buffer.sizeBytes=10000000
  
-#emitting, opaque marker
-druid.service=example
+    #emitting, opaque marker
+    druid.service=example
  
-druid.request.logging.dir=/tmp/example/log
-druid.realtime.specFile=realtime.spec
-com.metamx.emitter.logging=true
-com.metamx.emitter.logging.level=debug
+    druid.request.logging.dir=/tmp/example/log
+    druid.realtime.specFile=realtime.spec
+    com.metamx.emitter.logging=true
+    com.metamx.emitter.logging.level=debug
  
-# below are dummy values when operating a realtime only node
-druid.processing.numThreads=3
+    # below are dummy values when operating a realtime only node
+    druid.processing.numThreads=3
  
-com.metamx.aws.accessKey=dummy_access_key
-com.metamx.aws.secretKey=dummy_secret_key
-druid.pusher.s3.bucket=dummy_s3_bucket
+    com.metamx.aws.accessKey=dummy_access_key
+    com.metamx.aws.secretKey=dummy_secret_key
+    druid.pusher.s3.bucket=dummy_s3_bucket
  
-druid.zk.service.host=localhost
-druid.server.maxSize=300000000000
-druid.zk.paths.base=/druid
-druid.database.segmentTable=prod_segments
-druid.database.user=druid
-druid.database.password=diurd
-druid.database.connectURI=jdbc:mysql://localhost:3306/druid
-druid.zk.paths.discoveryPath=/druid/discoveryPath
-druid.database.ruleTable=rules
-druid.database.configTable=config
+    druid.zk.service.host=localhost
+    druid.server.maxSize=300000000000
+    druid.zk.paths.base=/druid
+    druid.database.segmentTable=prod_segments
+    druid.database.user=druid
+    druid.database.password=diurd
+    druid.database.connectURI=jdbc:mysql://localhost:3306/druid
+    druid.zk.paths.discoveryPath=/druid/discoveryPath
+    druid.database.ruleTable=rules
+    druid.database.configTable=config
  
-# Path on local FS for storage of segments; dir will be created if needed
-druid.paths.indexCache=/tmp/druid/indexCache
-# Path on local FS for storage of segment metadata; dir will be created if needed
-druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
-druid.pusher.local.storageDirectory=/tmp/druid/localStorage
-druid.pusher.local=true
+    # Path on local FS for storage of segments; dir will be created if needed
+    druid.paths.indexCache=/tmp/druid/indexCache
+    # Path on local FS for storage of segment metadata; dir will be created if needed
+    druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
+    druid.pusher.local.storageDirectory=/tmp/druid/localStorage
+    druid.pusher.local=true
  
-# thread pool size for servicing queries
-druid.client.http.connections=30
-```
+    # thread pool size for servicing queries
+    druid.client.http.connections=30
+    ```
 
 2. Run the broker node:
-```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
--Ddruid.realtime.specFile=realtime.spec \
--classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/broker \
-com.metamx.druid.http.BrokerMain
-```
+
+    ```bash
+    java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
+    -Ddruid.realtime.specFile=realtime.spec \
+    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/broker \
+    com.metamx.druid.http.BrokerMain
+    ```
 
 ## Booting a Master Node ##
 
 1. Setup a config file at config/master/runtime.properties that looks like this: [https://gist.github.com/rjurney/5818870](https://gist.github.com/rjurney/5818870)
+
 2. Run the master node:
-```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
--classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/master \
-com.metamx.druid.http.MasterMain
-```
+
+    ```bash
+    java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
+    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/master \
+    com.metamx.druid.http.MasterMain
+    ```
 
 ## Booting a Realtime Node ##
 
 1. Setup a config file at config/realtime/runtime.properties that looks like this: [https://gist.github.com/rjurney/5818774](https://gist.github.com/rjurney/5818774)
 
 2. Setup a realtime.spec file like this: [https://gist.github.com/rjurney/5818779](https://gist.github.com/rjurney/5818779)
+
 3. Run the realtime node:
-```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
--Ddruid.realtime.specFile=realtime.spec \
--classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/realtime \
-com.metamx.druid.realtime.RealtimeMain
-```
+
+    ```bash
+    java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
+    -Ddruid.realtime.specFile=realtime.spec \
+    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/realtime \
+    com.metamx.druid.realtime.RealtimeMain
+    ```
 
 ## Booting a Compute Node ##
 
 1. Setup a config file at config/compute/runtime.properties that looks like this: [https://gist.github.com/rjurney/5818885](https://gist.github.com/rjurney/5818885)
 2. Run the compute node:
-```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
--classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/compute \
-com.metamx.druid.http.ComputeMain
-```
+
+    ```bash
+    java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
+    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/compute \
+    com.metamx.druid.http.ComputeMain
+    ```
 
 # Querying Your Data #
 
@@ -107,6 +114,7 @@ As a shared-nothing system, there are three ways to query druid, against the [Re
 ### Construct a Query ###
 
 For constructing this query, see: Querying against the realtime.spec
+
 ```json
 {
     "queryType": "groupBy",
@@ -125,57 +133,52 @@ For constructing this query, see: Querying against the realtime.spec
 ### Querying the Realtime Node ###
 
 Run our query against port 8080:
+
 ```bash
-curl -X POST "http://localhost:8080/druid/v2/?pretty" \
--H 'content-type: application/json' -d @query.body
+curl -X POST "http://localhost:8080/druid/v2/?pretty" -H 'content-type: application/json' -d @query.body
 ```
+
 See our result:
+
 ```json
 [ {
   "version" : "v1",
   "timestamp" : "2010-01-01T00:00:00.000Z",
-  "event" : {
-    "imps" : 5,
-    "wp" : 15000.0,
-    "rows" : 5
-  }
+  "event" : { "imps" : 5, "wp" : 15000.0, "rows" : 5 }
 } ]
 ```
 
 ### Querying the Compute Node ###
 Run the query against port 8082:
+
 ```bash
-curl -X POST "http://localhost:8082/druid/v2/?pretty" \
--H 'content-type: application/json' -d @query.body
+curl -X POST "http://localhost:8082/druid/v2/?pretty" -H 'content-type: application/json' -d @query.body
 ```
+
 And get (similar to):
+
 ```json
 [ {
   "version" : "v1",
   "timestamp" : "2010-01-01T00:00:00.000Z",
-  "event" : {
-    "imps" : 27,
-    "wp" : 77000.0,
-    "rows" : 9
-  }
+  "event" : { "imps" : 27, "wp" : 77000.0, "rows" : 9 }
 } ]
 ```
+
 ### Querying both Nodes via the Broker ###
 Run the query against port 8083:
+
 ```bash
-curl -X POST "http://localhost:8083/druid/v2/?pretty" \
--H 'content-type: application/json' -d @query.body
+curl -X POST "http://localhost:8083/druid/v2/?pretty" -H 'content-type: application/json' -d @query.body
 ```
+
 And get:
+
 ```json
 [ {
   "version" : "v1",
   "timestamp" : "2010-01-01T00:00:00.000Z",
-  "event" : {
-    "imps" : 5,
-    "wp" : 15000.0,
-    "rows" : 5
-  }
+  "event" : { "imps" : 5, "wp" : 15000.0, "rows" : 5 }
 } ]
 ```
 
@@ -189,9 +192,9 @@ How are we to know what queries we can run? Although [Querying](Querying.html) i
 [{
   "schema" : { "dataSource":"druidtest",
                "aggregators":[ {"type":"count", "name":"impressions"},
-                                  {"type":"doubleSum","name":"wp","fieldName":"wp"}],
+                               {"type":"doubleSum","name":"wp","fieldName":"wp"}],
                "indexGranularity":"minute",
-           "shardSpec" : { "type": "none" } },
+               "shardSpec" : { "type": "none" } },
   "config" : { "maxRowsInMemory" : 500000,
                "intermediatePersistPeriod" : "PT10m" },
   "firehose" : { "type" : "kafka-0.7.2",
@@ -221,6 +224,7 @@ How are we to know what queries we can run? Although [Querying](Querying.html) i
 ```json
 "dataSource":"druidtest"
 ```
+
 Our dataSource tells us the name of the relation/table, or 'source of data', to query in both our realtime.spec and query.body!
 
 ### aggregations ###
@@ -239,7 +243,7 @@ this matches up to the aggregators in the schema of our realtime.spec!
 
 ```json
 "aggregators":[ {"type":"count", "name":"impressions"},
-                                  {"type":"doubleSum","name":"wp","fieldName":"wp"}],
+                {"type":"doubleSum","name":"wp","fieldName":"wp"}],
 ```
 
 ### dimensions ###
@@ -277,48 +281,23 @@ Which gets us grouped data in return!
 [ {
   "version" : "v1",
   "timestamp" : "2010-01-01T00:00:00.000Z",
-  "event" : {
-    "imps" : 1,
-    "age" : "100",
-    "wp" : 1000.0,
-    "rows" : 1
-  }
+  "event" : { "imps" : 1, "age" : "100", "wp" : 1000.0, "rows" : 1 }
 }, {
   "version" : "v1",
   "timestamp" : "2010-01-01T00:00:00.000Z",
-  "event" : {
-    "imps" : 1,
-    "age" : "20",
-    "wp" : 3000.0,
-    "rows" : 1
-  }
+  "event" : { "imps" : 1, "age" : "20", "wp" : 3000.0, "rows" : 1 }
 }, {
   "version" : "v1",
   "timestamp" : "2010-01-01T00:00:00.000Z",
-  "event" : {
-    "imps" : 1,
-    "age" : "30",
-    "wp" : 4000.0,
-    "rows" : 1
-  }
+  "event" : { "imps" : 1, "age" : "30", "wp" : 4000.0, "rows" : 1 }
 }, {
   "version" : "v1",
   "timestamp" : "2010-01-01T00:00:00.000Z",
-  "event" : {
-    "imps" : 1,
-    "age" : "40",
-    "wp" : 5000.0,
-    "rows" : 1
-  }
+  "event" : { "imps" : 1, "age" : "40", "wp" : 5000.0, "rows" : 1 }
 }, {
   "version" : "v1",
   "timestamp" : "2010-01-01T00:00:00.000Z",
-  "event" : {
-    "imps" : 1,
-    "age" : "50",
-    "wp" : 2000.0,
-    "rows" : 1
-  }
+  "event" : { "imps" : 1, "age" : "50", "wp" : 2000.0, "rows" : 1 }
 } ]
 ```
 
@@ -331,11 +310,7 @@ Now that we've observed our dimensions, we can also filter:
     "queryType": "groupBy",
     "dataSource": "druidtest",
     "granularity": "all",
-    "filter": {
-        "type": "selector",
-        "dimension": "gender",
-        "value": "male"
-    },
+    "filter": { "type": "selector", "dimension": "gender", "value": "male" },
     "aggregations": [
         {"type": "count", "name": "rows"},
         {"type": "longSum", "name": "imps", "fieldName": "impressions"},
@@ -351,11 +326,7 @@ Which gets us just people aged 40:
 [ {
   "version" : "v1",
   "timestamp" : "2010-01-01T00:00:00.000Z",
-  "event" : {
-    "imps" : 3,
-    "wp" : 9000.0,
-    "rows" : 3
-  }
+  "event" : { "imps" : 3, "wp" : 9000.0, "rows" : 3 }
 } ]
 ```
 

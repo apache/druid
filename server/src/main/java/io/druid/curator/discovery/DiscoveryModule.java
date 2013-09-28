@@ -147,9 +147,9 @@ public class DiscoveryModule implements Module
       final Injector injector,
       final Set<KeyHolder<DruidNode>> nodesToAnnounce,
       final Lifecycle lifecycle
-  )
+  ) throws Exception
   {
-    lifecycle.addHandler(
+    lifecycle.addMaybeStartHandler(
         new Lifecycle.Handler()
         {
           private volatile List<DruidNode> nodes = null;
@@ -203,7 +203,7 @@ public class DiscoveryModule implements Module
                                .client(curator)
                                .build();
 
-    lifecycle.addHandler(
+    lifecycle.addMaybeStartHandler(
         new Lifecycle.Handler()
         {
           @Override

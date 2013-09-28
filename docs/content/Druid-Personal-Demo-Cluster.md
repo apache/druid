@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 # Druid Personal Demo Cluster (DPDC)
 

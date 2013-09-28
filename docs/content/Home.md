@@ -1,10 +1,11 @@
 ---
-layout: default
+layout: doc_page
 ---
+
 Druid is an open-source analytics datastore designed for realtime, exploratory, queries on large-scale data sets (100’s of Billions entries, 100’s TB data). Druid provides for cost effective, always-on, realtime data ingestion and arbitrary data exploration.
 
 -   Check out some [Examples](Examples.html)
--   Try out Druid with our Getting Started [Tutorial](https://github.com/metamx/druid/wiki/Tutorial%3A-A-First-Look-at-Druid)
+-   Try out Druid with our Getting Started [Tutorial](./Tutorial%3A-A-First-Look-at-Druid.html)
 -   Learn more by reading the [White Paper](http://static.druid.io/docs/druid.pdf)
 
 Why Druid?
@@ -24,25 +25,25 @@ We have more details about the general design of the system and why you might wa
 The data store world is vast, confusing and constantly in flux. This page is meant to help potential evaluators decide whether Druid is a good fit for the problem one needs to solve. If anything about it is incorrect please provide that feedback on the mailing list or via some other means, we will fix this page.
 
 #### When Druid?
-\* You need to do interactive, fast, exploration of large amounts of data
-\* You need analytics (not key value store)
-\* You have a lot of data (10s of Billions of events added per day, 10s of TB of data added per day)
-\* You want to do your analysis on data as it’s happening (realtime)
-\* Your store needs to be always-on, 24x7x365 and years into the future.
+* You need to do interactive, fast, exploration of large amounts of data
+* You need analytics (not key value store)
+* You have a lot of data (10s of Billions of events added per day, 10s of TB of data added per day)
+* You want to do your analysis on data as it’s happening (realtime)
+* Your store needs to be always-on, 24x7x365 and years into the future.
 
 #### Not Druid?
-\* The amount of data you have can easily be handled by MySql
-\* Your querying for individual entries or doing lookups (Not Analytics)
-\* Batch is good enough
-\* Canned queries is good enough
-\* Downtime is no big deal
+* The amount of data you have can easily be handled by MySql
+* Your querying for individual entries or doing lookups (Not Analytics)
+* Batch is good enough
+* Canned queries is good enough
+* Downtime is no big deal
 
 #### Druid vs…
-\* [Druid-vs-Impala-or-Shark](Druid-vs-Impala-or-Shark.html)
-\* [Druid-vs-Redshift](Druid-vs-Redshift.html)
-\* [Druid-vs-Vertica](Druid-vs-Vertica.html)
-\* [Druid-vs-Cassandra](Druid-vs-Cassandra.html)
-\* [Druid-vs-Hadoop](Druid-vs-Hadoop.html)
+* [Druid-vs-Impala-or-Shark](Druid-vs-Impala-or-Shark.html)
+* [Druid-vs-Redshift](Druid-vs-Redshift.html)
+* [Druid-vs-Vertica](Druid-vs-Vertica.html)
+* [Druid-vs-Cassandra](Druid-vs-Cassandra.html)
+* [Druid-vs-Hadoop](Druid-vs-Hadoop.html)
 
 Key Features
 ------------

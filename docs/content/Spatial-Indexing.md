@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc_page
 ---
 Note: This feature is highly experimental.
 

@@ -1,40 +1,42 @@
 ---
-layout: default
+layout: doc_page
 ---
 Greetings! This tutorial will help clarify some core Druid concepts. We will use a realtime dataset and issue some basic Druid queries. If you are ready to explore Druid, and learn a thing or two, read on!
 
 About the data
 --------------
 
-The data source we’ll be working with is Wikipedia edits. Each time an edit is made in Wikipedia, an event gets pushed to an IRC channel associated with the language of the Wikipedia page. We scrape IRC channels for several different languages and load this data into Druid.
+The data source we'll be working with is Wikipedia edits. Each time an edit is made in Wikipedia, an event gets pushed to an IRC channel associated with the language of the Wikipedia page. We scrape IRC channels for several different languages and load this data into Druid.
 
 Each event has a timestamp indicating the time of the edit (in UTC time), a list of dimensions indicating various metadata about the event (such as information about the user editing the page and where the user resides), and a list of metrics associated with the event (such as the number of characters added and deleted).
 
 Specifically. the data schema looks like so:
 
 Dimensions (things to filter on):
-\`\`\`json
-“page”
-“language”
-“user”
-“unpatrolled”
-“newPage”
-“robot”
-“anonymous”
-“namespace”
-“continent”
-“country”
-“region”
-“city”
-\`\`\`
+
+```json
+"page"
+"language"
+"user"
+"unpatrolled"
+"newPage"
+"robot"
+"anonymous"
+"namespace"
+"continent"
+"country"
+"region"
+"city"
+```
 
 Metrics (things to aggregate over):
-\`\`\`json
-“count”
-“added”
-“delta”
-“deleted”
-\`\`\`
+
+```json
+"count"
+"added"
+"delta"
+"deleted"
+```
 
 These metrics track the number of characters added, deleted, and changed.
 
@@ -45,120 +47,120 @@ There are two ways to setup Druid: download a tarball, or [Build From Source](Bu
 
 ### Download a Tarball
 
-We’ve built a tarball that contains everything you’ll need. You’ll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.5.54-bin.tar.gz)
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.5.54-bin.tar.gz)
 Download this file to a directory of your choosing.
 
 You can extract the awesomeness within by issuing:
 
-    tar -zxvf druid-services-*-bin.tar.gz
+```
+tar -zxvf druid-services-*-bin.tar.gz
+```
 
-Not too lost so far right? That’s great! If you cd into the directory:
+Not too lost so far right? That's great! If you cd into the directory:
 
-    cd druid-services-0.5.54
+```
+cd druid-services-0.5.54
+```
 
 You should see a bunch of files:
-\* run\_example\_server.sh
-\* run\_example\_client.sh
-\* LICENSE, config, examples, lib directories
+
+* run_example_server.sh
+* run_example_client.sh
+* LICENSE, config, examples, lib directories
 
 Running Example Scripts
 -----------------------
 
-Let’s start doing stuff. You can start a Druid [Realtime](Realtime.html) node by issuing:
+Let's start doing stuff. You can start a Druid [Realtime](Realtime.html) node by issuing:
 
-    ./run_example_server.sh
+```
+./run_example_server.sh
+```
 
-Select “wikipedia”.
+Select "wikipedia".
 
 Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
 
-    <code>
-    2013-07-19 21:54:05,154 INFO [main] com.metamx.druid.realtime.RealtimeNode - Starting Jetty
-    2013-07-19 21:54:05,154 INFO [main] org.mortbay.log - jetty-6.1.x
-    2013-07-19 21:54:05,171 INFO [chief-wikipedia] com.metamx.druid.realtime.plumber.RealtimePlumberSchool - Expect to run at [2013-07-19T22:03:00.000Z]
-    2013-07-19 21:54:05,246 INFO [main] org.mortbay.log - Started SelectChannelConnector@0.0.0.0:8083
-    </code>
+```
+2013-07-19 21:54:05,154 INFO [main] com.metamx.druid.realtime.RealtimeNode - Starting Jetty
+2013-07-19 21:54:05,154 INFO [main] org.mortbay.log - jetty-6.1.x
+2013-07-19 21:54:05,171 INFO [chief-wikipedia] com.metamx.druid.realtime.plumber.RealtimePlumberSchool - Expect to run at [2013-07-19T22:03:00.000Z]
+2013-07-19 21:54:05,246 INFO [main] org.mortbay.log - Started SelectChannelConnector@0.0.0.0:8083
+```
 
 The Druid real time-node ingests events in an in-memory buffer. Periodically, these events will be persisted to disk. If you are interested in the details of our real-time architecture and why we persist indexes to disk, I suggest you read our [White Paper](http://static.druid.io/docs/druid.pdf).
 
-Okay, things are about to get real(~~time). To query the real-time node you’ve spun up, you can issue:
-\<pre\>./run\_example\_client.sh\</pre\>
-Select “wikipedia” once again. This script issues ]s to the data we’ve been ingesting. The query looks like this:
-\`\`\`json
+Okay, things are about to get real-time. To query the real-time node you've spun up, you can issue:
+
+```
+./run_example_client.sh
+```
+
+Select "wikipedia" once again. This script issues [GroupByQuery](GroupByQuery.html)s to the data we've been ingesting. The query looks like this:
+
+```json
 {
- [queryType]("groupBy"),
- [dataSource]("wikipedia"),
- [granularity]("minute"),
- [dimensions]([)
- “page”
- ],
- [aggregations]([)
- {
- [type]("count"),
- [name]("rows")
- },
- {
- [type]("longSum"),
- [fieldName]("edit_count"),
- [name]("count")
- }
- ],
- [filter]({)
- [type]("selector"),
- [dimension]("namespace"),
- [value]("article")
- },
- [intervals]([)
- “2013-06-01T00:00/2020-01-01T00”
- ]
+   "queryType":"groupBy",
+   "dataSource":"wikipedia",
+   "granularity":"minute",
+   "dimensions":[ "page" ],
+   "aggregations":[
+      {"type":"count", "name":"rows"},
+      {"type":"longSum", "fieldName":"edit_count", "name":"count"}
+   ],
+   "filter":{ "type":"selector", "dimension":"namespace", "value":"article" },
+   "intervals":[ "2013-06-01T00:00/2020-01-01T00" ]
 }
-\`\`\`
-This is a **groupBy** query, which you may be familiar with from SQL. We are grouping, or aggregating, via the **dimensions** field: . We are **filtering** via the **“namespace”** dimension, to only look at edits on **“articles”**. Our **aggregations** are what we are calculating: a count of the number of data rows, and a count of the number of edits that have occurred.
+```
+
+This is a **groupBy** query, which you may be familiar with from SQL. We are grouping, or aggregating, via the `dimensions` field: `["page"]`. We are **filtering** via the `namespace` dimension, to only look at edits on `articles`. Our **aggregations** are what we are calculating: a count of the number of data rows, and a count of the number of edits that have occurred.
+
 The result looks something like this:
-\`\`\`json
+
+```json
 [
- {
- [version]() “v1”,
- [timestamp]() “2013-09-04T21:44:00.000Z”,
- [event]() {
- [count]() 0,
- [page]() “2013\\u201314\_Brentford\_F.C.*season",
- [rows]() 1
- }
- },
- {
- [version]() "v1",
- [timestamp]() "2013-09-04T21:44:00.000Z",
- [event]() {
- [count]() 0,
- [page]() "8e*00e9tape\_du\_Tour\_de\_France\_2013”,
- [rows]() 1
- }
- },
- {
- [version]() “v1”,
- [timestamp]() “2013-09-04T21:44:00.000Z”,
- [event]() {
- [count]() 0,
- [page]() “Agenda\_of\_the\_Tea\_Party\_movement”,
- [rows]() 1
- }
- },
-…
-\`\`\`
-This groupBy query is a bit complicated and we’ll return to it later. For the time being, just make sure you are getting some blocks of data back. If you are having problems, make sure you have [curl](http://curl.haxx.se/) installed. Control+C to break out of the client script.
+  {
+    "version": "v1",
+    "timestamp": "2013-09-04T21:44:00.000Z",
+    "event": { "count": 0, "page": "2013\u201314_Brentford_F.C._season", "rows": 1 }
+  },
+  {
+    "version": "v1",
+    "timestamp": "2013-09-04T21:44:00.000Z",
+    "event": { "count": 0, "page": "8e_\u00e9tape_du_Tour_de_France_2013", "rows": 1 }
+  },
+  {
+    "version": "v1",
+    "timestamp": "2013-09-04T21:44:00.000Z",
+    "event": { "count": 0, "page": "Agenda_of_the_Tea_Party_movement", "rows": 1 }
+  },
+...
+```
+
+This groupBy query is a bit complicated and we'll return to it later. For the time being, just make sure you are getting some blocks of data back. If you are having problems, make sure you have [curl](http://curl.haxx.se/) installed. Control+C to break out of the client script.
+
 h2. Querying Druid
+
 In your favorite editor, create the file:
-\<pre\>time\_boundary\_query.body\</pre\>
+
+```
+time_boundary_query.body
+```
+
 Druid queries are JSON blobs which are relatively painless to create programmatically, but an absolute pain to write by hand. So anyway, we are going to create a Druid query by hand. Add the following to the file you just created:
-\<pre\><code>
+
+```
 {
- [queryType]() “timeBoundary”,
- [dataSource]() “wikipedia”
+    "queryType": "timeBoundary", 
+    "dataSource": "wikipedia"
 }
-</code>\</pre\>
-The ] is one of the simplest Druid queries. To run the query, you can issue:
-\<pre\><code> curl~~X POST ‘http://localhost:8083/druid/v2/?pretty’ ~~H ‘content-type: application/json’~~d ```` time_boundary_query.body</code></pre>
+```
+
+The [TimeBoundaryQuery](TimeBoundaryQuery.html) is one of the simplest Druid queries. To run the query, you can issue:
+
+```
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json' -d @time_boundary_query.body
+```
 
 We get something like this JSON back:
 
@@ -171,186 +173,146 @@ We get something like this JSON back:
   }
 } ]
 ```
+
 As you can probably tell, the result is indicating the maximum and minimum timestamps we've seen thus far (summarized to a minutely granularity). Let's explore a bit further.
 
 Return to your favorite editor and create the file:
-<pre>timeseries_query.body</pre>
+
+```
+timeseries_query.body
+```
 
 We are going to make a slightly more complicated query, the [TimeseriesQuery](TimeseriesQuery.html). Copy and paste the following into the file:
-<pre><code>
+
+```
 {
     "queryType": "timeseries", 
     "dataSource": "wikipedia", 
-    "intervals": [
-        "2010-01-01/2020-01-01"
-    ], 
+    "intervals": [ "2010-01-01/2020-01-01" ], 
     "granularity": "all", 
     "aggregations": [
-        {
-            "type": "longSum", 
-            "fieldName": "count",
-            "name": "edit_count"
-        }, 
-        {
-            "type": "doubleSum", 
-            "fieldName": "added", 
-            "name": "chars_added"
-        }
+        {"type": "longSum", "fieldName": "count", "name": "edit_count"}, 
+        {"type": "doubleSum", "fieldName": "added", "name": "chars_added"}
     ]
 }
-</code></pre>
+```
 
 You are probably wondering, what are these [Granularities](Granularities.html) and [Aggregations](Aggregations.html) things? What the query is doing is aggregating some metrics over some span of time. 
 To issue the query and get some results, run the following in your command line:
-<pre><code>curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  ````timeseries\_query.body</code>
 
-</pre>
+```
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  ````timeseries_query.body
+```
+
 Once again, you should get a JSON blob of text back with your results, that looks something like this:
 
-\`\`\`json
+```json
 [ {
- “timestamp” : “2013-09-04T21:44:00.000Z”,
- “result” : {
- “chars\_added” : 312670.0,
- “edit\_count” : 733
- }
+ "timestamp" : "2013-09-04T21:44:00.000Z",
+ "result" : { "chars_added" : 312670.0, "edit_count" : 733 }
 } ]
-\`\`\`
+```
 
 If you issue the query again, you should notice your results updating.
 
 Right now all the results you are getting back are being aggregated into a single timestamp bucket. What if we wanted to see our aggregations on a per minute basis? What field can we change in the query to accomplish this?
 
-If you loudly exclaimed “we can change granularity to minute”, you are absolutely correct! We can specify different granularities to bucket our results, like so:
+If you loudly exclaimed "we can change granularity to minute", you are absolutely correct! We can specify different granularities to bucket our results, like so:
 
-    <code>
-    {
-        "queryType": "timeseries", 
-        "dataSource": "wikipedia", 
-        "intervals": [
-            "2010-01-01/2020-01-01"
-        ], 
-        "granularity": "minute", 
-        "aggregations": [
-            {
-                "type": "longSum", 
-                "fieldName": "count",
-                "name": "edit_count"
-            }, 
-            {
-                "type": "doubleSum", 
-                "fieldName": "added", 
-                "name": "chars_added"
-            }
-        ]
-    }
-    </code>
+```
+{
+  "queryType": "timeseries", 
+  "dataSource": "wikipedia", 
+  "intervals": [ "2010-01-01/2020-01-01" ], 
+  "granularity": "minute", 
+  "aggregations": [
+     {"type": "longSum", "fieldName": "count", "name": "edit_count"}, 
+     {"type": "doubleSum", "fieldName": "added", "name": "chars_added"}
+  ]
+}
+```
 
 This gives us something like the following:
 
-\`\`\`json
+```json
 [
  {
- “timestamp” : “2013-09-04T21:44:00.000Z”,
- “result” : {
- “chars\_added” : 30665.0,
- “edit\_count” : 128
- }
- }, {
- “timestamp” : “2013-09-04T21:45:00.000Z”,
- “result” : {
- “chars\_added” : 122637.0,
- “edit\_count” : 167
- }
- }, {
- “timestamp” : “2013-09-04T21:46:00.000Z”,
- “result” : {
- “chars\_added” : 78938.0,
- “edit\_count” : 159
- }
+   "timestamp" : "2013-09-04T21:44:00.000Z",
+   "result" : { "chars_added" : 30665.0, "edit_count" : 128 }
+ }, 
+ {
+   "timestamp" : "2013-09-04T21:45:00.000Z",
+   "result" : { "chars_added" : 122637.0, "edit_count" : 167 }
+ }, 
+ {
+   "timestamp" : "2013-09-04T21:46:00.000Z",
+   "result" : { "chars_added" : 78938.0, "edit_count" : 159 }
  },
-…
-\`\`\`
+...
+]
+```
 
 Solving a Problem
 -----------------
 
-One of Druid’s main powers is to provide answers to problems, so let’s pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you’ve been going through this tutorial? To solve this problem, we have to return to the query we introduced at the very beginning of this tutorial, the [GroupByQuery](GroupByQuery.html). It would be nice if we could group by results by dimension value and somehow sort those results… and it turns out we can!
+One of Druid's main powers is to provide answers to problems, so let's pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you've been going through this tutorial? To solve this problem, we have to return to the query we introduced at the very beginning of this tutorial, the [GroupByQuery](GroupByQuery.html). It would be nice if we could group by results by dimension value and somehow sort those results... and it turns out we can!
 
-Let’s create the file:
+Let's create the file:
 
-    group_by_query.body</pre>
-    and put the following in there:
-    <pre><code>
-    {
-        "queryType": "groupBy", 
-        "dataSource": "wikipedia", 
-        "granularity": "all", 
-        "dimensions": [
-            "page"
-        ], 
-        "orderBy": {
-            "type": "default", 
-            "columns": [
-                {
-                    "dimension": "edit_count", 
-                    "direction": "DESCENDING"
-                }
-            ], 
-            "limit": 10
-        }, 
-        "aggregations": [
-            {
-                "type": "longSum", 
-                "fieldName": "count", 
-                "name": "edit_count"
-            }
-        ], 
-        "filter": {
-            "type": "selector", 
-            "dimension": "country", 
-            "value": "United States"
-        }, 
-        "intervals": [
-            "2012-10-01T00:00/2020-01-01T00"
-        ]
-    }
-    </code>
+```
+group_by_query.body
+```
 
-Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [OrderBy](OrderBy.html) thing. Fear not, it turns out the new objects we’ve introduced to our query can help define the format of our results and provide an answer to our question.
+and put the following in there:
+
+```
+{
+  "queryType": "groupBy", 
+  "dataSource": "wikipedia", 
+  "granularity": "all", 
+  "dimensions": [ "page" ], 
+  "orderBy": {
+     "type": "default", 
+     "columns": [ { "dimension": "edit_count", "direction": "DESCENDING" } ], 
+     "limit": 10
+  }, 
+  "aggregations": [
+    {"type": "longSum", "fieldName": "count", "name": "edit_count"}
+  ], 
+  "filter": { "type": "selector", "dimension": "country", "value": "United States" }, 
+  "intervals": ["2012-10-01T00:00/2020-01-01T00"]
+}
+```
+
+Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [OrderBy](OrderBy.html) thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
 
 If you issue the query:
 
-    <code>curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d @group_by_query.body</code>
+```
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d @group_by_query.body
+```
 
 You should see an answer to our question. As an example, some results are shown below:
 
-\`\`\`json
+```json
 [
  {
- “version” : “v1”,
- “timestamp” : “2012-10-01T00:00:00.000Z”,
- “event” : {
- “page” : “RTC\_Transit”,
- “edit\_count” : 6
- }
- }, {
- “version” : “v1”,
- “timestamp” : “2012-10-01T00:00:00.000Z”,
- “event” : {
- “page” : “List\_of\_Deadly\_Women\_episodes”,
- “edit\_count” : 4
- }
- }, {
- “version” : “v1”,
- “timestamp” : “2012-10-01T00:00:00.000Z”,
- “event” : {
- “page” : “User\_talk:David\_Biddulph”,
- “edit\_count” : 4
- }
+   "version" : "v1",
+   "timestamp" : "2012-10-01T00:00:00.000Z",
+   "event" : { "page" : "RTC_Transit", "edit_count" : 6 }
+ }, 
+ {
+   "version" : "v1",
+   "timestamp" : "2012-10-01T00:00:00.000Z",
+   "event" : { "page" : "List_of_Deadly_Women_episodes", "edit_count" : 4 }
+ }, 
+ {
+   "version" : "v1",
+   "timestamp" : "2012-10-01T00:00:00.000Z",
+   "event" : { "page" : "User_talk:David_Biddulph", "edit_count" : 4 }
  },
-…
-\`\`\`
+...
+```
 
 Feel free to tweak other query parameters to answer other questions you may have about the data.
 
