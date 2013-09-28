@@ -26,7 +26,13 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
+import druid.examples.flights.FlightsFirehoseFactory;
+import druid.examples.rand.RandomFirehoseFactory;
+import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
+import druid.examples.web.WebFirehoseFactory;
 import io.druid.cli.QueryJettyServerInitializer;
+import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
+import io.druid.indexing.common.index.StaticS3FirehoseFactory;
 import io.druid.initialization.DruidModule;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.realtime.DbSegmentPublisher;
@@ -34,7 +40,11 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.NoopSegmentPublisher;
 import io.druid.segment.realtime.RealtimeManager;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
+import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
 import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
+import io.druid.segment.realtime.firehose.RabbitMQFirehoseFactory;
+import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
 
@@ -80,7 +90,17 @@ public class RealtimeModule implements DruidModule
     return Arrays.<Module>asList(
         new SimpleModule("RealtimeModule")
             .registerSubtypes(
-                new NamedType(KafkaFirehoseFactory.class, "kafka-0.7.2")
+                new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
+                new NamedType(FlightsFirehoseFactory.class, "flights"),
+                new NamedType(RandomFirehoseFactory.class, "rand"),
+                new NamedType(WebFirehoseFactory.class, "webstream"),
+                new NamedType(KafkaFirehoseFactory.class, "kafka-0.7.2"),
+                new NamedType(RabbitMQFirehoseFactory.class, "rabbitmq"),
+                new NamedType(ClippedFirehoseFactory.class, "clipped"),
+                new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
+                new NamedType(IrcFirehoseFactory.class, "irc"),
+                new NamedType(StaticS3FirehoseFactory.class, "s3"),
+                new NamedType(EventReceiverFirehoseFactory.class, "receiver")
             )
     );
   }
