@@ -53,7 +53,7 @@ public class DruidMasterBalancerProfiler
   Map<String, DataSegment> segments = Maps.newHashMap();
   ServiceEmitter emitter;
   DatabaseRuleManager manager;
-  PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"),3,"normal");
+  PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), 3, "normal");
   List<Rule> rules = ImmutableList.<Rule>of(loadRule);
 
   @Before
@@ -71,7 +71,7 @@ public class DruidMasterBalancerProfiler
   {
     Stopwatch watch = new Stopwatch();
     int numSegments = 55000;
-    int numServers=50;
+    int numServers = 50;
     EasyMock.expect(manager.getAllRules()).andReturn(ImmutableMap.<String, List<Rule>>of("test", rules)).anyTimes();
     EasyMock.expect(manager.getRules(EasyMock.<String>anyObject())).andReturn(rules).anyTimes();
     EasyMock.expect(manager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(rules).anyTimes();
@@ -89,9 +89,8 @@ public class DruidMasterBalancerProfiler
     List<DruidServer> serverList = Lists.newArrayList();
     Map<String, LoadQueuePeon> peonMap = Maps.newHashMap();
     List<ServerHolder> serverHolderList = Lists.newArrayList();
-    Map<String,DataSegment> segmentMap = Maps.newHashMap();
-    for (int i=0;i<numSegments;i++)
-    {
+    Map<String, DataSegment> segmentMap = Maps.newHashMap();
+    for (int i = 0; i < numSegments; i++) {
       segmentMap.put(
           "segment" + i,
           new DataSegment(
@@ -108,30 +107,26 @@ public class DruidMasterBalancerProfiler
       );
     }
 
-    for (int i=0;i<numServers;i++)
-    {
-      DruidServer server =EasyMock.createMock(DruidServer.class);
+    for (int i = 0; i < numServers; i++) {
+      DruidServer server = EasyMock.createMock(DruidServer.class);
       EasyMock.expect(server.getMetadata()).andReturn(null).anyTimes();
       EasyMock.expect(server.getCurrSize()).andReturn(30L).atLeastOnce();
       EasyMock.expect(server.getMaxSize()).andReturn(100L).atLeastOnce();
       EasyMock.expect(server.getTier()).andReturn("normal").anyTimes();
       EasyMock.expect(server.getName()).andReturn(Integer.toString(i)).atLeastOnce();
       EasyMock.expect(server.getHost()).andReturn(Integer.toString(i)).anyTimes();
-      if (i==0)
-      {
+      if (i == 0) {
         EasyMock.expect(server.getSegments()).andReturn(segmentMap).anyTimes();
-      }
-      else
-      {
+      } else {
         EasyMock.expect(server.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
       }
       EasyMock.expect(server.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
       EasyMock.replay(server);
 
       LoadQueuePeon peon = new LoadQueuePeonTester();
-      peonMap.put(Integer.toString(i),peon);
+      peonMap.put(Integer.toString(i), peon);
       serverHolderList.add(new ServerHolder(server, peon));
-          }
+    }
 
     DruidMasterRuntimeParams params =
         DruidMasterRuntimeParams.newBuilder()
@@ -150,27 +145,34 @@ public class DruidMasterBalancerProfiler
                                     peonMap
                                 )
                                 .withAvailableSegments(segmentMap.values())
-                                .withMasterSegmentSettings(new MasterSegmentSettings.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
+                                .withDynamicConfigs(
+                                    new MasterDynamicConfig.Builder().withMaxSegmentsToMove(
+                                        MAX_SEGMENTS_TO_MOVE
+                                    ).withReplicantLifetime(500)
+                                                                     .withReplicationThrottleLimit(5)
+                                                                     .build()
+                                )
                                 .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .withEmitter(emitter)
                                 .withDatabaseRuleManager(manager)
                                 .withReplicationManager(new ReplicationThrottler(2, 500))
                                 .withSegmentReplicantLookup(
-                                    SegmentReplicantLookup.make(new DruidCluster(
-                                        ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
-                                            "normal",
-                                            MinMaxPriorityQueue.orderedBy(DruidMasterBalancerTester.percentUsedComparator)
-                                                               .create(
-                                                                   serverHolderList
-                                                               )
+                                    SegmentReplicantLookup.make(
+                                        new DruidCluster(
+                                            ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
+                                                "normal",
+                                                MinMaxPriorityQueue.orderedBy(DruidMasterBalancerTester.percentUsedComparator)
+                                                                   .create(
+                                                                       serverHolderList
+                                                                   )
+                                            )
                                         )
-                                    )
                                     )
                                 )
                                 .build();
 
     DruidMasterBalancerTester tester = new DruidMasterBalancerTester(master);
-    DruidMasterRuleRunner runner = new DruidMasterRuleRunner(master,500,5);
+    DruidMasterRuleRunner runner = new DruidMasterRuleRunner(master);
     watch.start();
     DruidMasterRuntimeParams balanceParams = tester.run(params);
     DruidMasterRuntimeParams assignParams = runner.run(params);
@@ -178,56 +180,68 @@ public class DruidMasterBalancerProfiler
   }
 
 
-  public void profileRun(){
-  Stopwatch watch = new Stopwatch();
-  LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
-  LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
+  public void profileRun()
+  {
+    Stopwatch watch = new Stopwatch();
+    LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
+    LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
 
-  EasyMock.expect(druidServer1.getName()).andReturn("from").atLeastOnce();
-  EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
-  EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
-  EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
-  EasyMock.expect(druidServer1.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
-  EasyMock.replay(druidServer1);
+    EasyMock.expect(druidServer1.getName()).andReturn("from").atLeastOnce();
+    EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
+    EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
+    EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
+    EasyMock.expect(druidServer1.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.replay(druidServer1);
 
-  EasyMock.expect(druidServer2.getName()).andReturn("to").atLeastOnce();
-  EasyMock.expect(druidServer2.getTier()).andReturn("normal").anyTimes();
-  EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
-  EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
-  EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
-  EasyMock.expect(druidServer2.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
-  EasyMock.replay(druidServer2);
+    EasyMock.expect(druidServer2.getName()).andReturn("to").atLeastOnce();
+    EasyMock.expect(druidServer2.getTier()).andReturn("normal").anyTimes();
+    EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
+    EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
+    EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
+    EasyMock.expect(druidServer2.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.replay(druidServer2);
 
-  master.moveSegment(
-      EasyMock.<String>anyObject(),
-      EasyMock.<String>anyObject(),
-      EasyMock.<String>anyObject(),
-      EasyMock.<LoadPeonCallback>anyObject()
-  );
-  EasyMock.expectLastCall().anyTimes();
-  EasyMock.replay(master);
+    master.moveSegment(
+        EasyMock.<String>anyObject(),
+        EasyMock.<String>anyObject(),
+        EasyMock.<String>anyObject(),
+        EasyMock.<LoadPeonCallback>anyObject()
+    );
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.replay(master);
 
-  DruidMasterRuntimeParams params =
-      DruidMasterRuntimeParams.newBuilder()
-                              .withDruidCluster(
-                                  new DruidCluster(
-                                      ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
-                                          "normal",
-                                          MinMaxPriorityQueue.orderedBy(DruidMasterBalancerTester.percentUsedComparator)
-                                                             .create(
-                                                                 Arrays.asList(
-                                                                     new ServerHolder(druidServer1, fromPeon),
-                                                                     new ServerHolder(druidServer2, toPeon)
-                                                                 )
-                                                             )
-                                      )
-                                  )
-                              )
-                              .withLoadManagementPeons(ImmutableMap.<String, LoadQueuePeon>of("from", fromPeon, "to", toPeon))
-                              .withAvailableSegments(segments.values())
-                              .withMasterSegmentSettings(new MasterSegmentSettings.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
-                              .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
-                              .build();
+    DruidMasterRuntimeParams params =
+        DruidMasterRuntimeParams.newBuilder()
+                                .withDruidCluster(
+                                    new DruidCluster(
+                                        ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
+                                            "normal",
+                                            MinMaxPriorityQueue.orderedBy(DruidMasterBalancerTester.percentUsedComparator)
+                                                               .create(
+                                                                   Arrays.asList(
+                                                                       new ServerHolder(druidServer1, fromPeon),
+                                                                       new ServerHolder(druidServer2, toPeon)
+                                                                   )
+                                                               )
+                                        )
+                                    )
+                                )
+                                .withLoadManagementPeons(
+                                    ImmutableMap.<String, LoadQueuePeon>of(
+                                        "from",
+                                        fromPeon,
+                                        "to",
+                                        toPeon
+                                    )
+                                )
+                                .withAvailableSegments(segments.values())
+                                .withDynamicConfigs(
+                                    new MasterDynamicConfig.Builder().withMaxSegmentsToMove(
+                                        MAX_SEGMENTS_TO_MOVE
+                                    ).build()
+                                )
+                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                .build();
     DruidMasterBalancerTester tester = new DruidMasterBalancerTester(master);
     watch.start();
     DruidMasterRuntimeParams balanceParams = tester.run(params);

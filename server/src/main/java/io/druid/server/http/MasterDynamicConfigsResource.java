@@ -20,7 +20,7 @@
 package io.druid.server.http;
 
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.server.master.MasterSegmentSettings;
+import io.druid.server.master.MasterDynamicConfig;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -33,38 +33,38 @@ import javax.ws.rs.core.Response;
 /**
  */
 @Path("/master/config")
-public class MasterSegmentSettingsResource
+public class MasterDynamicConfigsResource
 {
   private final JacksonConfigManager manager;
 
   @Inject
-  public MasterSegmentSettingsResource(
+  public MasterDynamicConfigsResource(
       JacksonConfigManager manager
   )
   {
-    this.manager=manager;
+    this.manager = manager;
   }
+
   @GET
   @Produces("application/json")
   public Response getDynamicConfigs()
   {
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK)
-                                               .entity(
-                                                   manager.watch(MasterSegmentSettings.CONFIG_KEY,MasterSegmentSettings.class).get()
-                                               );
-    return builder.build();
+    return Response.ok(
+        manager.watch(
+            MasterDynamicConfig.CONFIG_KEY,
+            MasterDynamicConfig.class
+        ).get()
+    ).build();
   }
 
   @POST
   @Consumes("application/json")
-  public Response setDynamicConfigs(
-      final MasterSegmentSettings masterSegmentSettings
-  )
+  public Response setDynamicConfigs(final MasterDynamicConfig dynamicConfig)
   {
-    if (!manager.set(MasterSegmentSettings.CONFIG_KEY, masterSegmentSettings)) {
+    if (!manager.set(MasterDynamicConfig.CONFIG_KEY, dynamicConfig)) {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
-    return Response.status(Response.Status.OK).build();
+    return Response.ok().build();
   }
 
 }

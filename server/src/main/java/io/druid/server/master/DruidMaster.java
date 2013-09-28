@@ -84,6 +84,7 @@ public class DruidMaster
 
   private volatile boolean started = false;
   private volatile boolean master = false;
+  private volatile AtomicReference<MasterDynamicConfig> dynamicConfigs;
 
   private final DruidMasterConfig config;
   private final ZkPathsConfig zkPaths;
@@ -98,7 +99,6 @@ public class DruidMaster
   private final LoadQueueTaskMaster taskMaster;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final AtomicReference<LeaderLatch> leaderLatch;
-  private volatile AtomicReference<MasterSegmentSettings> segmentSettingsAtomicReference;
 
   @Inject
   public DruidMaster(
@@ -161,7 +161,7 @@ public class DruidMaster
     this.exec = scheduledExecutorFactory.create(1, "Master-Exec--%d");
 
     this.leaderLatch = new AtomicReference<>(null);
-    this.segmentSettingsAtomicReference = new AtomicReference<>(null);
+    this.dynamicConfigs = new AtomicReference<>(null);
     this.loadManagementPeons = loadQueuePeonMap;
   }
 
@@ -213,6 +213,11 @@ public class DruidMaster
     }
 
     return loadStatus;
+  }
+
+  public MasterDynamicConfig getDynamicConfigs()
+  {
+    return dynamicConfigs.get();
   }
 
   public void removeSegment(DataSegment segment)
@@ -471,10 +476,10 @@ public class DruidMaster
         serverInventoryView.start();
 
         final List<Pair<? extends MasterRunnable, Duration>> masterRunnables = Lists.newArrayList();
-        segmentSettingsAtomicReference = configManager.watch(
-            MasterSegmentSettings.CONFIG_KEY,
-            MasterSegmentSettings.class,
-            new MasterSegmentSettings.Builder().build()
+        dynamicConfigs = configManager.watch(
+            MasterDynamicConfig.CONFIG_KEY,
+            MasterDynamicConfig.class,
+            new MasterDynamicConfig.Builder().build()
         );
         masterRunnables.add(Pair.of(new MasterComputeManagerRunnable(), config.getMasterPeriod()));
         if (indexingServiceClient != null) {
@@ -663,7 +668,7 @@ public class DruidMaster
             DruidMasterRuntimeParams.newBuilder()
                                     .withStartTime(startTime)
                                     .withDatasources(databaseSegmentManager.getInventory())
-                                    .withMasterSegmentSettings(segmentSettingsAtomicReference.get())
+                                    .withDynamicConfigs(dynamicConfigs.get())
                                     .withEmitter(emitter)
                                     .build();
 
@@ -750,13 +755,11 @@ public class DruidMaster
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .withBalancerReferenceTimestamp(DateTime.now())
-                               .withMasterSegmentSettings(segmentSettingsAtomicReference.get())
+                               .withDynamicConfigs(dynamicConfigs.get())
                                .build();
                 }
               },
-              new DruidMasterRuleRunner(
-                  DruidMaster.this, config.getReplicantLifetime(), config.getReplicantThrottleLimit()
-              ),
+              new DruidMasterRuleRunner(DruidMaster.this),
               new DruidMasterCleanup(DruidMaster.this),
               new DruidMasterBalancer(DruidMaster.this),
               new DruidMasterLogger()

@@ -54,14 +54,6 @@ public abstract class DruidMasterConfig
     return false;
   }
 
-  @Config("druid.master.replicant.lifetime")
-  @Default("15")
-  public abstract int getReplicantLifetime();
-
-  @Config("druid.master.replicant.throttleLimit")
-  @Default("10")
-  public abstract int getReplicantThrottleLimit();
-
   @Config("druid.master.load.timeout")
   public Duration getLoadTimeoutDelay()
   {

@@ -46,7 +46,7 @@ public class DruidMasterRuntimeParams
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
-  private final MasterSegmentSettings masterSegmentSettings;
+  private final MasterDynamicConfig masterDynamicConfig;
   private final MasterStats stats;
   private final DateTime balancerReferenceTimestamp;
   private final BalancerStrategyFactory strategyFactory;
@@ -61,7 +61,7 @@ public class DruidMasterRuntimeParams
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
-      MasterSegmentSettings masterSegmentSettings,
+      MasterDynamicConfig masterDynamicConfig,
       MasterStats stats,
       DateTime balancerReferenceTimestamp,
       BalancerStrategyFactory strategyFactory
@@ -76,7 +76,7 @@ public class DruidMasterRuntimeParams
     this.loadManagementPeons = loadManagementPeons;
     this.replicationManager = replicationManager;
     this.emitter = emitter;
-    this.masterSegmentSettings = masterSegmentSettings;
+    this.masterDynamicConfig = masterDynamicConfig;
     this.stats = stats;
     this.balancerReferenceTimestamp = balancerReferenceTimestamp;
     this.strategyFactory = strategyFactory;
@@ -127,9 +127,9 @@ public class DruidMasterRuntimeParams
     return emitter;
   }
 
-  public MasterSegmentSettings getMasterSegmentSettings()
+  public MasterDynamicConfig getMasterDynamicConfig()
   {
-    return masterSegmentSettings;
+    return masterDynamicConfig;
   }
 
   public MasterStats getMasterStats()
@@ -149,7 +149,7 @@ public class DruidMasterRuntimeParams
 
   public boolean hasDeletionWaitTimeElapsed()
   {
-    return (System.currentTimeMillis() - getStartTime() > masterSegmentSettings.getMillisToWaitBeforeDeleting());
+    return (System.currentTimeMillis() - getStartTime() > masterDynamicConfig.getMillisToWaitBeforeDeleting());
   }
 
   public static Builder newBuilder()
@@ -169,7 +169,7 @@ public class DruidMasterRuntimeParams
         loadManagementPeons,
         replicationManager,
         emitter,
-        masterSegmentSettings,
+        masterDynamicConfig,
         stats,
         balancerReferenceTimestamp,
         strategyFactory
@@ -187,7 +187,7 @@ public class DruidMasterRuntimeParams
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
-    private MasterSegmentSettings masterSegmentSettings;
+    private MasterDynamicConfig masterDynamicConfig;
     private MasterStats stats;
     private DateTime balancerReferenceTimestamp;
     private BalancerStrategyFactory strategyFactory;
@@ -204,7 +204,7 @@ public class DruidMasterRuntimeParams
       this.replicationManager = null;
       this.emitter = null;
       this.stats = new MasterStats();
-      this.masterSegmentSettings = new MasterSegmentSettings.Builder().build();
+      this.masterDynamicConfig = new MasterDynamicConfig.Builder().build();
       this.balancerReferenceTimestamp = null;
       this.strategyFactory = new CostBalancerStrategyFactory();
     }
@@ -219,7 +219,7 @@ public class DruidMasterRuntimeParams
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
-        MasterSegmentSettings masterSegmentSettings,
+        MasterDynamicConfig masterDynamicConfig,
         MasterStats stats,
         DateTime balancerReferenceTimestamp,
         BalancerStrategyFactory strategyFactory
@@ -234,7 +234,7 @@ public class DruidMasterRuntimeParams
       this.loadManagementPeons = loadManagementPeons;
       this.replicationManager = replicationManager;
       this.emitter = emitter;
-      this.masterSegmentSettings = masterSegmentSettings;
+      this.masterDynamicConfig = masterDynamicConfig;
       this.stats = stats;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
       this.strategyFactory=strategyFactory;
@@ -252,7 +252,7 @@ public class DruidMasterRuntimeParams
           loadManagementPeons,
           replicationManager,
           emitter,
-          masterSegmentSettings,
+          masterDynamicConfig,
           stats,
           balancerReferenceTimestamp,
           strategyFactory
@@ -319,9 +319,9 @@ public class DruidMasterRuntimeParams
       return this;
     }
 
-    public Builder withMasterSegmentSettings(MasterSegmentSettings configs)
+    public Builder withDynamicConfigs(MasterDynamicConfig configs)
     {
-      this.masterSegmentSettings = configs;
+      this.masterDynamicConfig = configs;
       return this;
     }
 

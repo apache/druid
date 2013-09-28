@@ -93,18 +93,6 @@ public class DruidMasterTest
           {
             return null;
           }
-
-          @Override
-          public int getReplicantLifetime()
-          {
-            return 0;
-          }
-
-          @Override
-          public int getReplicantThrottleLimit()
-          {
-            return 0;
-          }
         },
         new ZkPathsConfig(){
 
