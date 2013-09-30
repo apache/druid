@@ -22,6 +22,7 @@ package io.druid.server.http;
 import com.google.inject.Inject;
 import io.druid.server.master.DruidMaster;
 import io.druid.server.master.LoadPeonCallback;
+import io.druid.server.master.MasterDynamicConfig;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -30,7 +31,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -113,8 +113,8 @@ public class MasterResource
   @GET
   @Path("/loadstatus")
   @Produces("application/json")
-  public Map<String, Double> getLoadStatus()
+  public Response getLoadStatus()
   {
-    return master.getLoadStatus();
+    return Response.ok(master.getLoadStatus()).build();
   }
 }
