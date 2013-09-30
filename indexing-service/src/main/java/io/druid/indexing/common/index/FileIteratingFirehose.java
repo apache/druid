@@ -20,6 +20,7 @@
 package io.druid.indexing.common.index;
 
 import com.google.common.base.Throwables;
+import io.druid.common.guava.Runnables;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.StringInputRowParser;
@@ -77,8 +78,7 @@ public abstract class FileIteratingFirehose<T> implements Firehose
   @Override
   public Runnable commit()
   {
-    // Do nothing.
-    return new Runnable() { public void run() {} };
+    return Runnables.getNoopRunnable();
   }
 
   @Override

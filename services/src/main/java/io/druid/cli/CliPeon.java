@@ -105,7 +105,7 @@ public class CliPeon extends GuiceRunnable
   protected List<Object> getModules()
   {
     return ImmutableList.<Object>of(
-        new DruidModule()
+        new Module()
         {
           @Override
           public void configure(Binder binder)
@@ -157,28 +157,6 @@ public class CliPeon extends GuiceRunnable
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
 
             LifecycleModule.register(binder, Server.class);
-          }
-
-          @Override
-          public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
-          {
-            return Arrays.<com.fasterxml.jackson.databind.Module>asList(
-                new SimpleModule("RealtimeModule")
-                    .registerSubtypes(
-                        new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
-                        new NamedType(FlightsFirehoseFactory.class, "flights"),
-                        new NamedType(RandomFirehoseFactory.class, "rand"),
-                        new NamedType(WebFirehoseFactory.class, "webstream"),
-                        new NamedType(KafkaFirehoseFactory.class, "kafka-0.7.2"),
-                        new NamedType(RabbitMQFirehoseFactory.class, "rabbitmq"),
-                        new NamedType(ClippedFirehoseFactory.class, "clipped"),
-                        new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
-                        new NamedType(IrcFirehoseFactory.class, "irc"),
-                        new NamedType(StaticS3FirehoseFactory.class, "s3"),
-                        new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
-                        new NamedType(LocalFirehoseFactory.class, "local")
-                    )
-            );
           }
         }
     );

@@ -19,43 +19,26 @@
 
 package io.druid.guice;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Key;
+import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
-import druid.examples.flights.FlightsFirehoseFactory;
-import druid.examples.rand.RandomFirehoseFactory;
-import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
-import druid.examples.web.WebFirehoseFactory;
 import io.druid.cli.QueryJettyServerInitializer;
-import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
-import io.druid.indexing.common.index.FileIteratingFirehose;
-import io.druid.indexing.common.index.LocalFirehoseFactory;
-import io.druid.indexing.common.index.StaticS3FirehoseFactory;
-import io.druid.initialization.DruidModule;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.realtime.DbSegmentPublisher;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.NoopSegmentPublisher;
 import io.druid.segment.realtime.RealtimeManager;
 import io.druid.segment.realtime.SegmentPublisher;
-import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
-import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
-import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
-import io.druid.segment.realtime.firehose.RabbitMQFirehoseFactory;
-import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
  */
-public class RealtimeModule implements DruidModule
+public class RealtimeModule implements Module
 {
   @Override
   public void configure(Binder binder)
@@ -66,7 +49,10 @@ public class RealtimeModule implements DruidModule
         Key.get(SegmentPublisher.class),
         Key.get(NoopSegmentPublisher.class)
     );
-    final MapBinder<String, SegmentPublisher> publisherBinder = PolyBind.optionBinder(binder, Key.get(SegmentPublisher.class));
+    final MapBinder<String, SegmentPublisher> publisherBinder = PolyBind.optionBinder(
+        binder,
+        Key.get(SegmentPublisher.class)
+    );
     publisherBinder.addBinding("db").to(DbSegmentPublisher.class);
     binder.bind(DbSegmentPublisher.class).in(LazySingleton.class);
 
@@ -84,27 +70,5 @@ public class RealtimeModule implements DruidModule
     binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
 
     LifecycleModule.register(binder, Server.class);
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Arrays.<Module>asList(
-        new SimpleModule("RealtimeModule")
-            .registerSubtypes(
-                new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
-                new NamedType(FlightsFirehoseFactory.class, "flights"),
-                new NamedType(RandomFirehoseFactory.class, "rand"),
-                new NamedType(WebFirehoseFactory.class, "webstream"),
-                new NamedType(KafkaFirehoseFactory.class, "kafka-0.7.2"),
-                new NamedType(RabbitMQFirehoseFactory.class, "rabbitmq"),
-                new NamedType(ClippedFirehoseFactory.class, "clipped"),
-                new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
-                new NamedType(IrcFirehoseFactory.class, "irc"),
-                new NamedType(StaticS3FirehoseFactory.class, "s3"),
-                new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
-                new NamedType(LocalFirehoseFactory.class, "local")
-            )
-    );
   }
 }
