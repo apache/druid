@@ -31,6 +31,8 @@ import java.util.Map;
  */
 public class TimestampSpec
 {
+  private static final String defaultFormat = "auto";
+
   private final String timestampColumn;
   private final String timestampFormat;
   private final Function<String, DateTime> timestampConverter;
@@ -42,8 +44,8 @@ public class TimestampSpec
   )
   {
     this.timestampColumn = timestampColumn;
-    this.timestampFormat = format;
-    this.timestampConverter = ParserUtils.createTimestampParser(format);
+    this.timestampFormat = format == null ? defaultFormat : format;
+    this.timestampConverter = ParserUtils.createTimestampParser(timestampFormat);
   }
 
   @JsonProperty("column")

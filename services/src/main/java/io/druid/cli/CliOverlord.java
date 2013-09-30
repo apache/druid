@@ -48,6 +48,7 @@ import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
+import io.druid.indexing.common.index.LocalFirehoseFactory;
 import io.druid.indexing.common.index.StaticS3FirehoseFactory;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskLogStreamer;
@@ -231,7 +232,8 @@ public class CliOverlord extends ServerRunnable
                         new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
                         new NamedType(IrcFirehoseFactory.class, "irc"),
                         new NamedType(StaticS3FirehoseFactory.class, "s3"),
-                        new NamedType(EventReceiverFirehoseFactory.class, "receiver")
+                        new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
+                        new NamedType(LocalFirehoseFactory.class, "local")
                     )
             );
           }

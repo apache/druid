@@ -32,6 +32,8 @@ import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
 import druid.examples.web.WebFirehoseFactory;
 import io.druid.cli.QueryJettyServerInitializer;
 import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
+import io.druid.indexing.common.index.FileIteratingFirehose;
+import io.druid.indexing.common.index.LocalFirehoseFactory;
 import io.druid.indexing.common.index.StaticS3FirehoseFactory;
 import io.druid.initialization.DruidModule;
 import io.druid.query.QuerySegmentWalker;
@@ -100,7 +102,8 @@ public class RealtimeModule implements DruidModule
                 new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
                 new NamedType(IrcFirehoseFactory.class, "irc"),
                 new NamedType(StaticS3FirehoseFactory.class, "s3"),
-                new NamedType(EventReceiverFirehoseFactory.class, "receiver")
+                new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
+                new NamedType(LocalFirehoseFactory.class, "local")
             )
     );
   }

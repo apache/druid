@@ -53,6 +53,7 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.index.ChatHandlerProvider;
 import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
 import io.druid.indexing.common.index.EventReceivingChatHandlerProvider;
+import io.druid.indexing.common.index.LocalFirehoseFactory;
 import io.druid.indexing.common.index.NoopChatHandlerProvider;
 import io.druid.indexing.common.index.StaticS3FirehoseFactory;
 import io.druid.indexing.coordinator.TaskRunner;
@@ -174,7 +175,8 @@ public class CliPeon extends GuiceRunnable
                         new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
                         new NamedType(IrcFirehoseFactory.class, "irc"),
                         new NamedType(StaticS3FirehoseFactory.class, "s3"),
-                        new NamedType(EventReceiverFirehoseFactory.class, "receiver")
+                        new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
+                        new NamedType(LocalFirehoseFactory.class, "local")
                     )
             );
           }

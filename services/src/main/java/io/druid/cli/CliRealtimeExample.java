@@ -36,6 +36,7 @@ import io.druid.client.ServerView;
 import io.druid.guice.NoopSegmentPublisherProvider;
 import io.druid.guice.RealtimeModule;
 import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
+import io.druid.indexing.common.index.LocalFirehoseFactory;
 import io.druid.indexing.common.index.StaticS3FirehoseFactory;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -102,7 +103,8 @@ public class CliRealtimeExample extends ServerRunnable
                         new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
                         new NamedType(IrcFirehoseFactory.class, "irc"),
                         new NamedType(StaticS3FirehoseFactory.class, "s3"),
-                        new NamedType(EventReceiverFirehoseFactory.class, "receiver")
+                        new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
+                        new NamedType(LocalFirehoseFactory.class, "local")
                     )
             );
           }
