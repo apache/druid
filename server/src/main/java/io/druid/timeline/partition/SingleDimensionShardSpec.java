@@ -106,12 +106,6 @@ public class SingleDimensionShardSpec implements ShardSpec
   }
 
   @Override
-  public boolean isInChunk(Map<String, String> dimensions)
-  {
-    return checkValue(dimensions.get(dimension));
-  }
-
-  @Override
   public boolean isInChunk(InputRow inputRow)
   {
     final List<String> values = inputRow.getDimension(dimension);
