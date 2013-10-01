@@ -32,6 +32,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.StringInputRowParser;
+import io.druid.segment.realtime.firehose.FileIteratingFirehose;
+import io.druid.segment.realtime.firehose.LineIteratorFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.jets3t.service.S3Service;
@@ -91,47 +93,48 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
     Preconditions.checkNotNull(s3Client, "null s3Client");
 
     return new FileIteratingFirehose<URI>(
+        new LineIteratorFactory<URI>()
+        {
+          @Override
+          public LineIterator make(URI nextURI) throws Exception
+          {
+            final String s3Bucket = nextURI.getAuthority();
+            final S3Object s3Object = new S3Object(
+                nextURI.getPath().startsWith("/")
+                ? nextURI.getPath().substring(1)
+                : nextURI.getPath()
+            );
+
+            log.info("Reading from bucket[%s] object[%s] (%s)", s3Bucket, s3Object.getKey(), nextURI);
+
+            try {
+              final InputStream innerInputStream = s3Client.getObject(s3Bucket, s3Object.getKey())
+                                                           .getDataInputStream();
+
+              final InputStream outerInputStream = s3Object.getKey().endsWith(".gz")
+                                                   ? new GZIPInputStream(innerInputStream)
+                                                   : innerInputStream;
+
+              return IOUtils.lineIterator(
+                  new BufferedReader(
+                      new InputStreamReader(outerInputStream, Charsets.UTF_8)
+                  )
+              );
+            }
+            catch (IOException e) {
+              log.error(
+                  e,
+                  "Exception reading from bucket[%s] object[%s]",
+                  s3Bucket,
+                  s3Object.getKey()
+              );
+
+              throw Throwables.propagate(e);
+            }
+          }
+        },
         Lists.newLinkedList(uris),
         parser
-    )
-    {
-      @Override
-      public LineIterator makeLineIterator(URI nextURI) throws Exception
-      {
-        final String s3Bucket = nextURI.getAuthority();
-        final S3Object s3Object = new S3Object(
-            nextURI.getPath().startsWith("/")
-            ? nextURI.getPath().substring(1)
-            : nextURI.getPath()
-        );
-
-        log.info("Reading from bucket[%s] object[%s] (%s)", s3Bucket, s3Object.getKey(), nextURI);
-
-        try {
-          final InputStream innerInputStream = s3Client.getObject(s3Bucket, s3Object.getKey())
-                                                       .getDataInputStream();
-
-          final InputStream outerInputStream = s3Object.getKey().endsWith(".gz")
-                                               ? new GZIPInputStream(innerInputStream)
-                                               : innerInputStream;
-
-          return IOUtils.lineIterator(
-              new BufferedReader(
-                  new InputStreamReader(outerInputStream, Charsets.UTF_8)
-              )
-          );
-        }
-        catch (IOException e) {
-          log.error(
-              e,
-              "Exception reading from bucket[%s] object[%s]",
-              s3Bucket,
-              s3Object.getKey()
-          );
-
-          throw Throwables.propagate(e);
-        }
-      }
-    };
+    );
   }
 }

@@ -28,7 +28,7 @@ import druid.examples.rand.RandomFirehoseFactory;
 import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
 import druid.examples.web.WebFirehoseFactory;
 import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
-import io.druid.indexing.common.index.LocalFirehoseFactory;
+import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.indexing.common.index.StaticS3FirehoseFactory;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;

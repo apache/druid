@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.index;
+package io.druid.segment.realtime.firehose;
 
 import com.google.common.base.Throwables;
 import io.druid.common.guava.Runnables;
@@ -32,27 +32,32 @@ import java.util.Queue;
 
 /**
  */
-public abstract class FileIteratingFirehose<T> implements Firehose
+public class FileIteratingFirehose<T> implements Firehose
 {
+  private final LineIteratorFactory<T> lineIteratorFactory;
   private final Queue<T> objectQueue;
   private final StringInputRowParser parser;
 
   private LineIterator lineIterator = null;
 
-  protected FileIteratingFirehose(Queue<T> objectQueue, StringInputRowParser parser)
+  public FileIteratingFirehose(
+      LineIteratorFactory lineIteratorFactory,
+      Queue<T> objectQueue,
+      StringInputRowParser parser
+  )
   {
+    this.lineIteratorFactory = lineIteratorFactory;
     this.objectQueue = objectQueue;
     this.parser = parser;
   }
-
-  public abstract LineIterator makeLineIterator(T val) throws Exception;
 
   @Override
   public boolean hasMore()
   {
     try {
       nextFile();
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -64,11 +69,12 @@ public abstract class FileIteratingFirehose<T> implements Firehose
   {
     try {
       nextFile();
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
-    if(lineIterator == null) {
+    if (lineIterator == null) {
       throw new NoSuchElementException();
     }
 
@@ -85,7 +91,7 @@ public abstract class FileIteratingFirehose<T> implements Firehose
   public void close() throws IOException
   {
     objectQueue.clear();
-    if(lineIterator != null) {
+    if (lineIterator != null) {
       lineIterator.close();
     }
   }
@@ -106,8 +112,9 @@ public abstract class FileIteratingFirehose<T> implements Firehose
       if (nextObj != null) {
 
         try {
-          lineIterator = makeLineIterator(nextObj);
-        } catch (Exception e) {
+          lineIterator = lineIteratorFactory.make(nextObj);
+        }
+        catch (Exception e) {
           throw Throwables.propagate(e);
         }
       }

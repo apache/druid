@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.index;
+package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -75,6 +75,14 @@ public class LocalFirehoseFactory implements FirehoseFactory
   public Firehose connect() throws IOException
   {
     return new FileIteratingFirehose<File>(
+        new LineIteratorFactory<File>()
+        {
+          @Override
+          public LineIterator make(File file) throws Exception
+          {
+            return FileUtils.lineIterator(file);
+          }
+        },
         Lists.<File>newLinkedList(
             Arrays.<File>asList(
                 baseDir.listFiles(
@@ -90,13 +98,6 @@ public class LocalFirehoseFactory implements FirehoseFactory
             )
         ),
         parser
-    )
-    {
-      @Override
-      public LineIterator makeLineIterator(File file) throws Exception
-      {
-        return FileUtils.lineIterator(file);
-      }
-    };
+    );
   }
 }
