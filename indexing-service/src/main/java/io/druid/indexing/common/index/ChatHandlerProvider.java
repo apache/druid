@@ -25,6 +25,8 @@ import com.google.common.base.Optional;
  */
 public interface ChatHandlerProvider
 {
+  public String getType();
+
   public void register(final String key, ChatHandler handler);
 
   public void unregister(final String key);

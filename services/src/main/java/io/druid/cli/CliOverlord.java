@@ -19,8 +19,6 @@
 
 package io.druid.cli;
 
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -29,11 +27,8 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.servlet.GuiceFilter;
+import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
-import druid.examples.flights.FlightsFirehoseFactory;
-import druid.examples.rand.RandomFirehoseFactory;
-import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
-import druid.examples.web.WebFirehoseFactory;
 import io.airlift.command.Command;
 import io.druid.guice.IndexingServiceModuleHelper;
 import io.druid.guice.JacksonConfigProvider;
@@ -47,8 +42,7 @@ import io.druid.guice.PolyBind;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
-import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
-import io.druid.indexing.common.index.StaticS3FirehoseFactory;
+import io.druid.indexing.common.index.ChatHandlerProvider;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskLogs;
@@ -77,12 +71,6 @@ import io.druid.indexing.coordinator.scaling.ResourceManagementStrategy;
 import io.druid.indexing.coordinator.scaling.SimpleResourceManagementConfig;
 import io.druid.indexing.coordinator.scaling.SimpleResourceManagementStrategy;
 import io.druid.indexing.coordinator.setup.WorkerSetupData;
-import io.druid.initialization.DruidModule;
-import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
-import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
-import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
-import io.druid.segment.realtime.firehose.RabbitMQFirehoseFactory;
-import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.initialization.JettyServerInitializer;
@@ -98,7 +86,6 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.GzipFilter;
 import org.eclipse.jetty.util.resource.ResourceCollection;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -120,7 +107,7 @@ public class CliOverlord extends ServerRunnable
   protected List<Object> getModules()
   {
     return ImmutableList.<Object>of(
-        new DruidModule()
+        new Module()
         {
           @Override
           public void configure(Binder binder)
@@ -145,6 +132,8 @@ public class CliOverlord extends ServerRunnable
             binder.bind(ResourceManagementSchedulerFactory.class)
                   .to(ResourceManagementSchedulerFactoryImpl.class)
                   .in(LazySingleton.class);
+
+            binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
 
             configureTaskStorage(binder);
             configureRunners(binder);
@@ -177,7 +166,10 @@ public class CliOverlord extends ServerRunnable
           private void configureRunners(Binder binder)
           {
             PolyBind.createChoice(
-                binder, "druid.indexer.runner.type", Key.get(TaskRunnerFactory.class), Key.get(ForkingTaskRunnerFactory.class)
+                binder,
+                "druid.indexer.runner.type",
+                Key.get(TaskRunnerFactory.class),
+                Key.get(ForkingTaskRunnerFactory.class)
             );
             final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(binder, Key.get(TaskRunnerFactory.class));
 
@@ -213,27 +205,6 @@ public class CliOverlord extends ServerRunnable
             binder.bind(NoopAutoScalingStrategy.class).in(LazySingleton.class);
 
             JsonConfigProvider.bind(binder, "druid.indexer.autoscale", SimpleResourceManagementConfig.class);
-          }
-
-          @Override
-          public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
-          {
-            return Arrays.<com.fasterxml.jackson.databind.Module>asList(
-                new SimpleModule("RealtimeModule")
-                    .registerSubtypes(
-                        new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
-                        new NamedType(FlightsFirehoseFactory.class, "flights"),
-                        new NamedType(RandomFirehoseFactory.class, "rand"),
-                        new NamedType(WebFirehoseFactory.class, "webstream"),
-                        new NamedType(KafkaFirehoseFactory.class, "kafka-0.7.2"),
-                        new NamedType(RabbitMQFirehoseFactory.class, "rabbitmq"),
-                        new NamedType(ClippedFirehoseFactory.class, "clipped"),
-                        new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
-                        new NamedType(IrcFirehoseFactory.class, "irc"),
-                        new NamedType(StaticS3FirehoseFactory.class, "s3"),
-                        new NamedType(EventReceiverFirehoseFactory.class, "receiver")
-                    )
-            );
           }
         }
     );

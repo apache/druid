@@ -57,20 +57,20 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   private static final EmittingLogger log = new EmittingLogger(EventReceiverFirehoseFactory.class);
   private static final int DEFAULT_BUFFER_SIZE = 100000;
 
-  private final String firehoseId;
+  private final String serviceName;
   private final int bufferSize;
   private final MapInputRowParser parser;
-  private final Optional<EventReceivingChatHandlerProvider> chatHandlerProvider;
+  private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   @JsonCreator
   public EventReceiverFirehoseFactory(
-      @JsonProperty("firehoseId") String firehoseId,
+      @JsonProperty("serviceName") String serviceName,
       @JsonProperty("bufferSize") Integer bufferSize,
       @JsonProperty("parser") MapInputRowParser parser,
-      @JacksonInject("chatHandlerProvider") EventReceivingChatHandlerProvider chatHandlerProvider
+      @JacksonInject ChatHandlerProvider chatHandlerProvider
   )
   {
-    this.firehoseId = Preconditions.checkNotNull(firehoseId, "firehoseId");
+    this.serviceName = Preconditions.checkNotNull(serviceName, "serviceName");
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
     this.parser = Preconditions.checkNotNull(parser, "parser");
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
@@ -79,21 +79,24 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   @Override
   public Firehose connect() throws IOException
   {
-    log.info("Connecting firehose: %s", firehoseId);
+    log.info("Connecting firehose: %s", serviceName);
 
     final EventReceiverFirehose firehose = new EventReceiverFirehose();
 
     if (chatHandlerProvider.isPresent()) {
-      chatHandlerProvider.get().register(firehoseId, firehose);
+      log.info("Found chathandler with type[%s]", chatHandlerProvider.get().getType());
+      chatHandlerProvider.get().register(serviceName, firehose);
+    } else {
+      log.info("No chathandler detected");
     }
 
     return firehose;
   }
 
   @JsonProperty
-  public String getFirehoseId()
+  public String getServiceName()
   {
-    return firehoseId;
+    return serviceName;
   }
 
   @JsonProperty
@@ -111,7 +114,9 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   public class EventReceiverFirehose implements ChatHandler, Firehose
   {
     private final BlockingQueue<InputRow> buffer;
+
     private final Object readLock = new Object();
+
     private volatile InputRow nextRow = null;
     private volatile boolean closed = false;
 
@@ -125,7 +130,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
     @Produces("application/json")
     public Response addAll(Collection<Map<String, Object>> events)
     {
-      log.debug("Adding %,d events to firehose: %s", events.size(), firehoseId);
+      log.debug("Adding %,d events to firehose: %s", events.size(), serviceName);
 
       final List<InputRow> rows = Lists.newArrayList();
       for (final Map<String, Object> event : events) {
@@ -146,7 +151,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
         }
 
         return Response.ok().entity(ImmutableMap.of("eventCount", events.size())).build();
-      } catch (InterruptedException e) {
+      }
+      catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw Throwables.propagate(e);
       }
@@ -167,7 +173,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
         }
 
         return nextRow != null;
-      }
+     }
     }
 
     @Override
@@ -205,7 +211,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
       closed = true;
 
       if (chatHandlerProvider.isPresent()) {
-        chatHandlerProvider.get().unregister(firehoseId);
+        chatHandlerProvider.get().unregister(serviceName);
       }
     }
   }
