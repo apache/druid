@@ -104,8 +104,10 @@ public class CliPeon extends GuiceRunnable
             final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
                 binder, Key.get(ChatHandlerProvider.class)
             );
-            handlerProviderBinder.addBinding("curator").to(EventReceivingChatHandlerProvider.class);
-            handlerProviderBinder.addBinding("noop").to(NoopChatHandlerProvider.class);
+            handlerProviderBinder.addBinding("receiver")
+                                 .to(EventReceivingChatHandlerProvider.class).in(LazySingleton.class);
+            handlerProviderBinder.addBinding("noop")
+                                 .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
 
             binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
 

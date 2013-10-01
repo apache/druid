@@ -27,6 +27,7 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.servlet.GuiceFilter;
+import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.guice.IndexingServiceModuleHelper;
@@ -41,6 +42,7 @@ import io.druid.guice.PolyBind;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
+import io.druid.indexing.common.index.ChatHandlerProvider;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskLogs;
@@ -131,6 +133,8 @@ public class CliOverlord extends ServerRunnable
                   .to(ResourceManagementSchedulerFactoryImpl.class)
                   .in(LazySingleton.class);
 
+            binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
+
             configureTaskStorage(binder);
             configureRunners(binder);
             configureAutoscale(binder);
@@ -162,7 +166,10 @@ public class CliOverlord extends ServerRunnable
           private void configureRunners(Binder binder)
           {
             PolyBind.createChoice(
-                binder, "druid.indexer.runner.type", Key.get(TaskRunnerFactory.class), Key.get(ForkingTaskRunnerFactory.class)
+                binder,
+                "druid.indexer.runner.type",
+                Key.get(TaskRunnerFactory.class),
+                Key.get(ForkingTaskRunnerFactory.class)
             );
             final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(binder, Key.get(TaskRunnerFactory.class));
 

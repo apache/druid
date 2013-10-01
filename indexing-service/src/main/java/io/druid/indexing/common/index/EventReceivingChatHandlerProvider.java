@@ -55,6 +55,12 @@ public class EventReceivingChatHandlerProvider implements ChatHandlerProvider
   }
 
   @Override
+  public String getType()
+  {
+    return "eventReceiving";
+  }
+
+  @Override
   public void register(final String service, ChatHandler handler)
   {
     final DruidNode node = makeDruidNode(service);
@@ -76,7 +82,6 @@ public class EventReceivingChatHandlerProvider implements ChatHandlerProvider
   @Override
   public void unregister(final String service)
   {
-
     log.info("Unregistering chat handler[%s]", service);
 
     final ChatHandler handler = handlers.get(service);
