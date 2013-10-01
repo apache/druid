@@ -23,16 +23,16 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
-import io.druid.data.input.InputRow;
 import io.druid.data.input.StringInputRowParser;
+import io.druid.segment.realtime.firehose.FileIteratingFirehose;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.jets3t.service.S3Service;
@@ -43,9 +43,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Queue;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -54,14 +54,11 @@ import java.util.zip.GZIPInputStream;
 @JsonTypeName("s3")
 public class StaticS3FirehoseFactory implements FirehoseFactory
 {
+  private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
+
   private final S3Service s3Client;
   private final StringInputRowParser parser;
   private final List<URI> uris;
-
-  private final long retryCount = 5;
-  private final long retryMillis = 5000;
-
-  private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
 
   @JsonCreator
   public StaticS3FirehoseFactory(
@@ -96,25 +93,21 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
   {
     Preconditions.checkNotNull(s3Client, "null s3Client");
 
-    return new Firehose()
-    {
-      LineIterator lineIterator = null;
-      final Queue<URI> objectQueue = Lists.newLinkedList(uris);
+    final LinkedList<URI> objectQueue = Lists.newLinkedList(uris);
 
-      // Rolls over our streams and iterators to the next file, if appropriate
-      private void maybeNextFile() throws Exception
-      {
-
-        if (lineIterator == null || !lineIterator.hasNext()) {
-
-          // Close old streams, maybe.
-          if (lineIterator != null) {
-            lineIterator.close();
+    return new FileIteratingFirehose(
+        new Iterator<LineIterator>()
+        {
+          @Override
+          public boolean hasNext()
+          {
+            return !objectQueue.isEmpty();
           }
 
-          // Open new streams, maybe.
-          final URI nextURI = objectQueue.poll();
-          if (nextURI != null) {
+          @Override
+          public LineIterator next()
+          {
+            final URI nextURI = objectQueue.poll();
 
             final String s3Bucket = nextURI.getAuthority();
             final S3Object s3Object = new S3Object(
@@ -125,7 +118,6 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
 
             log.info("Reading from bucket[%s] object[%s] (%s)", s3Bucket, s3Object.getKey(), nextURI);
 
-            int ntry = 0;
             try {
               final InputStream innerInputStream = s3Client.getObject(s3Bucket, s3Object.getKey())
                                                            .getDataInputStream();
@@ -134,75 +126,31 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
                                                    ? new GZIPInputStream(innerInputStream)
                                                    : innerInputStream;
 
-              lineIterator = IOUtils.lineIterator(
+              return IOUtils.lineIterator(
                   new BufferedReader(
                       new InputStreamReader(outerInputStream, Charsets.UTF_8)
                   )
               );
-            } catch(IOException e) {
+            }
+            catch (Exception e) {
               log.error(
                   e,
-                  "Exception reading from bucket[%s] object[%s] (try %d) (sleeping %d millis)",
+                  "Exception reading from bucket[%s] object[%s]",
                   s3Bucket,
-                  s3Object.getKey(),
-                  ntry,
-                  retryMillis
+                  s3Object.getKey()
               );
 
-              ntry ++;
-              if(ntry <= retryCount) {
-                Thread.sleep(retryMillis);
-              }
+              throw Throwables.propagate(e);
             }
-
           }
-        }
 
-      }
-
-      @Override
-      public boolean hasMore()
-      {
-        try {
-          maybeNextFile();
-        } catch(Exception e) {
-          throw Throwables.propagate(e);
-        }
-
-        return lineIterator != null && lineIterator.hasNext();
-      }
-
-      @Override
-      public InputRow nextRow()
-      {
-        try {
-          maybeNextFile();
-        } catch(Exception e) {
-          throw Throwables.propagate(e);
-        }
-
-        if(lineIterator == null) {
-          throw new NoSuchElementException();
-        }
-
-        return parser.parse(lineIterator.next());
-      }
-
-      @Override
-      public Runnable commit()
-      {
-        // Do nothing.
-        return new Runnable() { public void run() {} };
-      }
-
-      @Override
-      public void close() throws IOException
-      {
-        objectQueue.clear();
-        if(lineIterator != null) {
-          lineIterator.close();
-        }
-      }
-    };
+          @Override
+          public void remove()
+          {
+            throw new UnsupportedOperationException();
+          }
+        },
+        parser
+    );
   }
 }

@@ -43,6 +43,8 @@ import java.util.List;
 
 public class IndexTask extends AbstractTask
 {
+  private static final Logger log = new Logger(IndexTask.class);
+
   @JsonIgnore
   private final GranularitySpec granularitySpec;
 
@@ -63,8 +65,6 @@ public class IndexTask extends AbstractTask
 
   @JsonIgnore
   private final int rowFlushBoundary;
-
-  private static final Logger log = new Logger(IndexTask.class);
 
   @JsonCreator
   public IndexTask(
@@ -94,7 +94,7 @@ public class IndexTask extends AbstractTask
                              ? Lists.<SpatialDimensionSchema>newArrayList()
                              : spatialDimensions;
     this.aggregators = aggregators;
-    this.indexGranularity = indexGranularity;
+    this.indexGranularity = (indexGranularity == null) ? QueryGranularity.NONE : indexGranularity;
     this.targetPartitionSize = targetPartitionSize;
     this.firehoseFactory = firehoseFactory;
     this.rowFlushBoundary = rowFlushBoundary;
@@ -202,5 +202,4 @@ public class IndexTask extends AbstractTask
   {
     return rowFlushBoundary;
   }
-
 }

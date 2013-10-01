@@ -26,6 +26,12 @@ import com.google.common.base.Optional;
 public class NoopChatHandlerProvider implements ChatHandlerProvider
 {
   @Override
+  public String getType()
+  {
+    return "noop";
+  }
+
+  @Override
   public void register(String key, ChatHandler handler)
   {
     // do nothing

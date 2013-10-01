@@ -40,6 +40,7 @@ import io.druid.guice.DataSegmentPusherPullerModule;
 import io.druid.guice.DbConnectorModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
+import io.druid.guice.FirehoseModule;
 import io.druid.guice.HttpClientModule;
 import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
@@ -225,7 +226,8 @@ public class
         new JacksonConfigManagerModule(),
         new IndexingServiceDiscoveryModule(),
         new DataSegmentPusherPullerModule(),
-        new TaskLogsModule()
+        new TaskLogsModule(),
+        new FirehoseModule()
     );
 
     ModuleList actualModules = new ModuleList(baseInjector);

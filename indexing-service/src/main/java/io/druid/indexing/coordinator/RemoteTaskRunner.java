@@ -639,7 +639,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
                         log.info("Task[%s] just disappeared!", taskId);
                         taskRunnerWorkItem.setResult(TaskStatus.failure(taskRunnerWorkItem.getTask().getId()));
                       } else {
-                        log.warn("Task[%s] just disappeared but I didn't know about it?!", taskId);
+                        log.info("Task[%s] went bye bye.", taskId);
                       }
                       break;
                   }
