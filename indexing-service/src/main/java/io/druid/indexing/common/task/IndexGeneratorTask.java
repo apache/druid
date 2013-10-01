@@ -210,19 +210,11 @@ public class IndexGeneratorTask extends AbstractTask
    */
   private boolean shouldIndex(InputRow inputRow)
   {
-    if (!getImplicitLockInterval().get().contains(inputRow.getTimestampFromEpoch())) {
+    if (getImplicitLockInterval().get().contains(inputRow.getTimestampFromEpoch())) {
+      return schema.getShardSpec().isInChunk(inputRow);
+    } else {
       return false;
     }
-
-    final Map<String, String> eventDimensions = Maps.newHashMapWithExpectedSize(inputRow.getDimensions().size());
-    for (final String dim : inputRow.getDimensions()) {
-      final List<String> dimValues = inputRow.getDimension(dim);
-      if (dimValues.size() == 1) {
-        eventDimensions.put(dim, Iterables.getOnlyElement(dimValues));
-      }
-    }
-
-    return schema.getShardSpec().isInChunk(eventDimensions);
   }
 
   @JsonProperty("firehose")
