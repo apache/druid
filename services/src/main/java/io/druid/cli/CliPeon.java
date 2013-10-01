@@ -19,8 +19,6 @@
 
 package io.druid.cli;
 
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
@@ -30,10 +28,6 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import druid.examples.flights.FlightsFirehoseFactory;
-import druid.examples.rand.RandomFirehoseFactory;
-import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
-import druid.examples.web.WebFirehoseFactory;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
@@ -51,27 +45,18 @@ import io.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.index.ChatHandlerProvider;
-import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
 import io.druid.indexing.common.index.EventReceivingChatHandlerProvider;
-import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.indexing.common.index.NoopChatHandlerProvider;
-import io.druid.indexing.common.index.StaticS3FirehoseFactory;
 import io.druid.indexing.coordinator.TaskRunner;
 import io.druid.indexing.coordinator.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.executor.ChatHandlerResource;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
-import io.druid.initialization.DruidModule;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.S3DataSegmentKiller;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.StorageLocationConfig;
-import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
-import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
-import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
-import io.druid.segment.realtime.firehose.RabbitMQFirehoseFactory;
-import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
 
