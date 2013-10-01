@@ -33,7 +33,6 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.StringInputRowParser;
 import io.druid.segment.realtime.firehose.FileIteratingFirehose;
-import io.druid.segment.realtime.firehose.LineIteratorFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.jets3t.service.S3Service;
@@ -44,6 +43,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
@@ -92,12 +93,22 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
   {
     Preconditions.checkNotNull(s3Client, "null s3Client");
 
-    return new FileIteratingFirehose<URI>(
-        new LineIteratorFactory<URI>()
+    final LinkedList<URI> objectQueue = Lists.newLinkedList(uris);
+
+    return new FileIteratingFirehose(
+        new Iterator<LineIterator>()
         {
           @Override
-          public LineIterator make(URI nextURI) throws Exception
+          public boolean hasNext()
           {
+            return !objectQueue.isEmpty();
+          }
+
+          @Override
+          public LineIterator next()
+          {
+            final URI nextURI = objectQueue.poll();
+
             final String s3Bucket = nextURI.getAuthority();
             final S3Object s3Object = new S3Object(
                 nextURI.getPath().startsWith("/")
@@ -121,7 +132,7 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
                   )
               );
             }
-            catch (IOException e) {
+            catch (Exception e) {
               log.error(
                   e,
                   "Exception reading from bucket[%s] object[%s]",
@@ -132,8 +143,13 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
               throw Throwables.propagate(e);
             }
           }
+
+          @Override
+          public void remove()
+          {
+            throw new UnsupportedOperationException();
+          }
         },
-        Lists.newLinkedList(uris),
         parser
     );
   }

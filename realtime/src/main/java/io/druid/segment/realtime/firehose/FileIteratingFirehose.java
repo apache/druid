@@ -27,27 +27,25 @@ import io.druid.data.input.StringInputRowParser;
 import org.apache.commons.io.LineIterator;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
 /**
  */
-public class FileIteratingFirehose<T> implements Firehose
+public class FileIteratingFirehose implements Firehose
 {
-  private final LineIteratorFactory<T> lineIteratorFactory;
-  private final Queue<T> objectQueue;
+  private final Iterator<LineIterator> lineIterators;
   private final StringInputRowParser parser;
 
   private LineIterator lineIterator = null;
 
   public FileIteratingFirehose(
-      LineIteratorFactory lineIteratorFactory,
-      Queue<T> objectQueue,
+      Iterator<LineIterator> lineIterators,
       StringInputRowParser parser
   )
   {
-    this.lineIteratorFactory = lineIteratorFactory;
-    this.objectQueue = objectQueue;
+    this.lineIterators = lineIterators;
     this.parser = parser;
   }
 
@@ -55,30 +53,31 @@ public class FileIteratingFirehose<T> implements Firehose
   public boolean hasMore()
   {
     try {
-      nextFile();
+      return lineIterators.hasNext() || (lineIterator != null && lineIterator.hasNext());
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
-
-    return lineIterator != null && lineIterator.hasNext();
   }
 
   @Override
   public InputRow nextRow()
   {
     try {
-      nextFile();
+      if (lineIterator == null || !lineIterator.hasNext()) {
+        // Close old streams, maybe.
+        if (lineIterator != null) {
+          lineIterator.close();
+        }
+
+        lineIterator = lineIterators.next();
+      }
+
+      return parser.parse(lineIterator.next());
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
-
-    if (lineIterator == null) {
-      throw new NoSuchElementException();
-    }
-
-    return parser.parse(lineIterator.next());
   }
 
   @Override
@@ -90,34 +89,8 @@ public class FileIteratingFirehose<T> implements Firehose
   @Override
   public void close() throws IOException
   {
-    objectQueue.clear();
     if (lineIterator != null) {
       lineIterator.close();
-    }
-  }
-
-  // Rolls over our streams and iterators to the next file, if appropriate
-  private void nextFile() throws Exception
-  {
-
-    if (lineIterator == null || !lineIterator.hasNext()) {
-
-      // Close old streams, maybe.
-      if (lineIterator != null) {
-        lineIterator.close();
-      }
-
-      // Open new streams, maybe.
-      final T nextObj = objectQueue.poll();
-      if (nextObj != null) {
-
-        try {
-          lineIterator = lineIteratorFactory.make(nextObj);
-        }
-        catch (Exception e) {
-          throw Throwables.propagate(e);
-        }
-      }
     }
   }
 }

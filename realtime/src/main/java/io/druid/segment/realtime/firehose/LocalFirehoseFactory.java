@@ -21,6 +21,7 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -32,6 +33,8 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
 
 /**
  */
@@ -74,29 +77,47 @@ public class LocalFirehoseFactory implements FirehoseFactory
   @Override
   public Firehose connect() throws IOException
   {
-    return new FileIteratingFirehose<File>(
-        new LineIteratorFactory<File>()
+    final LinkedList<File> files = Lists.<File>newLinkedList(
+        Arrays.<File>asList(
+            baseDir.listFiles(
+                new FilenameFilter()
+                {
+                  @Override
+                  public boolean accept(File file, String name)
+                  {
+                    return name.contains(filter);
+                  }
+                }
+            )
+        )
+    );
+
+    return new FileIteratingFirehose(
+        new Iterator<LineIterator>()
         {
           @Override
-          public LineIterator make(File file) throws Exception
+          public boolean hasNext()
           {
-            return FileUtils.lineIterator(file);
+            return !files.isEmpty();
+          }
+
+          @Override
+          public LineIterator next()
+          {
+            try {
+              return FileUtils.lineIterator(files.poll());
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
+            }
+          }
+
+          @Override
+          public void remove()
+          {
+            throw new UnsupportedOperationException();
           }
         },
-        Lists.<File>newLinkedList(
-            Arrays.<File>asList(
-                baseDir.listFiles(
-                    new FilenameFilter()
-                    {
-                      @Override
-                      public boolean accept(File file, String name)
-                      {
-                        return name.contains(filter);
-                      }
-                    }
-                )
-            )
-        ),
         parser
     );
   }
