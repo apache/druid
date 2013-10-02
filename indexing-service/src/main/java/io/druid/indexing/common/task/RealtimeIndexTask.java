@@ -176,7 +176,7 @@ public class RealtimeIndexTask extends AbstractTask
 
     // Shed any locks we might have (e.g. if we were uncleanly killed and restarted) since we'll reacquire
     // them if we actually need them
-    for (final TaskLock taskLock : toolbox.getTaskActionClient().submit(new LockListAction())) {
+    for (final TaskLock taskLock : getTaskLocks(toolbox)) {
       toolbox.getTaskActionClient().submit(new LockReleaseAction(taskLock.getInterval()));
     }
 

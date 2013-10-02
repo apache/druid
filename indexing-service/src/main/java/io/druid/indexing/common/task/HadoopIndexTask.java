@@ -95,7 +95,7 @@ public class HadoopIndexTask extends AbstractTask
                                                        );
 
     // We should have a lock from before we started running
-    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
+    final TaskLock myLock =  Iterables.getOnlyElement(getTaskLocks(toolbox));
     log.info("Setting version to: %s", myLock.getVersion());
     configCopy.setVersion(myLock.getVersion());
 
