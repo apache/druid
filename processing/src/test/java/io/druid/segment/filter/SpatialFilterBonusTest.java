@@ -434,7 +434,7 @@ public class SpatialFilterBonusTest
         )
     );
     try {
-      TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory();
+      TimeseriesQueryRunnerFactory factory = TimeseriesQueryRunnerFactory.create();
       QueryRunner runner = new FinalizeResultsQueryRunner(
           factory.createRunner(segment),
           factory.getToolchest()
@@ -516,7 +516,7 @@ public class SpatialFilterBonusTest
         )
     );
     try {
-      TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory();
+      TimeseriesQueryRunnerFactory factory = TimeseriesQueryRunnerFactory.create();
       QueryRunner runner = new FinalizeResultsQueryRunner(
           factory.createRunner(segment),
           factory.getToolchest()

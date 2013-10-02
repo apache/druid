@@ -63,4 +63,4 @@ DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/config/realtime
 
 echo "Running command:"
 
-(set -x; java ${JAVA_ARGS} -classpath ${DRUID_CP}  io.druid.cli.Main druid server realtimeStandalone)
+(set -x; java ${JAVA_ARGS} -classpath ${DRUID_CP}  io.druid.cli.Main example realtime)

@@ -35,16 +35,16 @@ import java.util.concurrent.ConcurrentMap;
  * allows anyone with a reference to this object to obtain a particular {@link ChatHandler}. An embedded
  * {@link ServiceAnnouncer} will be used to advertise handlers on this host.
  */
-public class EventReceivingChatHandlerProvider implements ChatHandlerProvider
+public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
 {
-  private static final Logger log = new Logger(EventReceivingChatHandlerProvider.class);
+  private static final Logger log = new Logger(ServiceAnnouncingChatHandlerProvider.class);
 
   private final DruidNode node;
   private final ServiceAnnouncer serviceAnnouncer;
   private final ConcurrentMap<String, ChatHandler> handlers;
 
   @Inject
-  public EventReceivingChatHandlerProvider(
+  public ServiceAnnouncingChatHandlerProvider(
       @Self DruidNode node,
       ServiceAnnouncer serviceAnnouncer
   )
@@ -52,12 +52,6 @@ public class EventReceivingChatHandlerProvider implements ChatHandlerProvider
     this.node = node;
     this.serviceAnnouncer = serviceAnnouncer;
     this.handlers = Maps.newConcurrentMap();
-  }
-
-  @Override
-  public String getType()
-  {
-    return "eventReceiving";
   }
 
   @Override

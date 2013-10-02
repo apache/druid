@@ -27,14 +27,14 @@ import java.util.Set;
 
 /**
  */
-public class MergerWhitelist
+public class DatasourceWhitelist
 {
-  public static final String CONFIG_KEY = "merger.whitelist";
+  public static final String CONFIG_KEY = "master.whitelist";
 
   private final Set<String> dataSources;
 
   @JsonCreator
-  public MergerWhitelist(Set<String> dataSources)
+  public DatasourceWhitelist(Set<String> dataSources)
   {
     this.dataSources = Sets.newTreeSet(String.CASE_INSENSITIVE_ORDER);
     this.dataSources.addAll(dataSources);

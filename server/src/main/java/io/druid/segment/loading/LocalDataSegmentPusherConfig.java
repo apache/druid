@@ -28,7 +28,7 @@ import java.io.File;
 public class LocalDataSegmentPusherConfig
 {
   @JsonProperty
-  public File storageDirectory;
+  public File storageDirectory = new File("/tmp/druid/localStorage");
 
   public File getStorageDirectory()
   {

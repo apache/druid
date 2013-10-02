@@ -22,9 +22,9 @@ First create the schema above.  (I use a new keyspace called `druid`)
 Then, add the following properties to your properties file to enable a Cassandra 
 backend.
 
-    druid.pusher.cassandra=true
-    druid.pusher.cassandra.host=localhost:9160 
-    druid.pusher.cassandra.keyspace=druid
+    druid.storage.cassandra=true
+    druid.storage.cassandra.host=localhost:9160
+    druid.storage.cassandra.keyspace=druid
 
 Use the `druid-development@googlegroups.com` mailing list if you have questions,
 or feel free to reach out directly: `bone@alumni.brown.edu`.

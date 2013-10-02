@@ -50,7 +50,7 @@ public class DataSegmentPusherPullerModule implements Module
     bindDeepStorageHdfs(binder);
 
     PolyBind.createChoice(
-        binder, "druid.pusher.type", Key.get(DataSegmentPusher.class), Key.get(LocalDataSegmentPusher.class)
+        binder, "druid.storage.type", Key.get(DataSegmentPusher.class), Key.get(LocalDataSegmentPusher.class)
     );
   }
 
@@ -65,7 +65,7 @@ public class DataSegmentPusherPullerModule implements Module
             .addBinding("local")
             .to(LocalDataSegmentPusher.class)
             .in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.pusher", LocalDataSegmentPusherConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage", LocalDataSegmentPusherConfig.class);
   }
 
   private static void bindDeepStorageS3(Binder binder)
@@ -79,7 +79,7 @@ public class DataSegmentPusherPullerModule implements Module
             .addBinding("s3")
             .to(S3DataSegmentPusher.class)
             .in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.pusher", S3DataSegmentPusherConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentPusherConfig.class);
   }
 
   private static void bindDeepStorageHdfs(Binder binder)
@@ -95,6 +95,6 @@ public class DataSegmentPusherPullerModule implements Module
         .addBinding("hdfs")
         .to(HdfsDataSegmentPusher.class)
         .in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.pusher", HdfsDataSegmentPusherConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage", HdfsDataSegmentPusherConfig.class);
   }
 }

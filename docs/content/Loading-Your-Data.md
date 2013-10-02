@@ -81,7 +81,7 @@ Instructions for booting a Zookeeper and then Kafka cluster are available [here]
 
   com.metamx.aws.accessKey=dummy_access_key
   com.metamx.aws.secretKey=dummy_secret_key
-  druid.pusher.s3.bucket=dummy_s3_bucket
+  druid.storage.s3.bucket=dummy_s3_bucket
 
   druid.zk.service.host=localhost
   druid.server.maxSize=300000000000
@@ -262,7 +262,7 @@ If you've already setup a realtime node, be aware that although you can run mult
 
   com.metamx.aws.accessKey=dummy_access_key
   com.metamx.aws.secretKey=dummy_secret_key
-  druid.pusher.s3.bucket=dummy_s3_bucket
+  druid.storage.s3.bucket=dummy_s3_bucket
 
   druid.zk.service.host=localhost
   druid.server.maxSize=300000000000
@@ -316,7 +316,7 @@ If you've already setup a realtime node, be aware that although you can run mult
 
   com.metamx.aws.accessKey=dummy_access_key
   com.metamx.aws.secretKey=dummy_secret_key
-  druid.pusher.s3.bucket=dummy_s3_bucket
+  druid.storage.s3.bucket=dummy_s3_bucket
 
   druid.zk.service.host=localhost
   druid.server.maxSize=300000000000
@@ -334,8 +334,8 @@ If you've already setup a realtime node, be aware that although you can run mult
 # Path on local FS for storage of segment metadata; dir will be created if needed
   druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
 # Setup local storage mode
-  druid.pusher.local.storageDirectory=/tmp/druid/localStorage
-  druid.pusher.local=true
+  druid.storage.local.storageDirectory=/tmp/druid/localStorage
+  druid.storage.local=true
   ```
 
 2. Launch the compute node:

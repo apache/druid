@@ -31,7 +31,7 @@ public abstract class DruidMasterConfig
   public abstract String getHost();
 
   @Config("druid.master.startDelay")
-  @Default("PT600s")
+  @Default("PT60s")
   public abstract Duration getMasterStartDelay();
 
   @Config("druid.master.period")

@@ -25,12 +25,20 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.LockAcquireAction;
+import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import org.joda.time.Interval;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 public abstract class AbstractTask implements Task
 {
@@ -134,7 +142,9 @@ public abstract class AbstractTask implements Task
                   .toString();
   }
 
-  /** Start helper methods **/
+  /**
+   * Start helper methods *
+   */
   public static String joinId(Object... objects)
   {
     return ID_JOINER.join(objects);
@@ -173,5 +183,19 @@ public abstract class AbstractTask implements Task
   public int hashCode()
   {
     return id.hashCode();
+  }
+
+  protected Iterable<TaskLock> getTaskLocks(TaskToolbox toolbox) throws IOException
+  {
+    final List<TaskLock> locks = toolbox.getTaskActionClient().submit(new LockListAction());
+
+    if (locks.isEmpty()) {
+      return Arrays.asList(
+          toolbox.getTaskActionClient()
+                 .submit(new LockAcquireAction(getImplicitLockInterval().get()))
+      );
+    }
+
+    return locks;
   }
 }

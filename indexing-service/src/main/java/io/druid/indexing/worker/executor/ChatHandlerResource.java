@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import io.druid.indexing.common.index.ChatHandler;
 import io.druid.indexing.common.index.ChatHandlerProvider;
 
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
@@ -40,7 +39,6 @@ public class ChatHandlerResource
     this.handlers = handlers;
   }
 
-  @POST
   @Path("/chat/{id}")
   public Object doTaskChat(
       @PathParam("id") String handlerId

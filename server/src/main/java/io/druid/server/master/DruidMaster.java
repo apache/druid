@@ -486,7 +486,7 @@ public class DruidMaster
           masterRunnables.add(
               Pair.of(
                   new MasterIndexingServiceRunnable(
-                      makeIndexingServiceHelpers(configManager.watch(MergerWhitelist.CONFIG_KEY, MergerWhitelist.class))
+                      makeIndexingServiceHelpers(configManager.watch(DatasourceWhitelist.CONFIG_KEY, DatasourceWhitelist.class))
                   ),
                   config.getMasterSegmentMergerPeriod()
               )
@@ -559,7 +559,7 @@ public class DruidMaster
     }
   }
 
-  private List<DruidMasterHelper> makeIndexingServiceHelpers(final AtomicReference<MergerWhitelist> whitelistRef)
+  private List<DruidMasterHelper> makeIndexingServiceHelpers(final AtomicReference<DatasourceWhitelist> whitelistRef)
   {
     List<DruidMasterHelper> helpers = Lists.newArrayList();
 
@@ -597,11 +597,11 @@ public class DruidMaster
   public static class DruidMasterVersionConverter implements DruidMasterHelper
   {
     private final IndexingServiceClient indexingServiceClient;
-    private final AtomicReference<MergerWhitelist> whitelistRef;
+    private final AtomicReference<DatasourceWhitelist> whitelistRef;
 
     public DruidMasterVersionConverter(
         IndexingServiceClient indexingServiceClient,
-        AtomicReference<MergerWhitelist> whitelistRef
+        AtomicReference<DatasourceWhitelist> whitelistRef
     )
     {
       this.indexingServiceClient = indexingServiceClient;
@@ -611,7 +611,7 @@ public class DruidMaster
     @Override
     public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
     {
-      MergerWhitelist whitelist = whitelistRef.get();
+      DatasourceWhitelist whitelist = whitelistRef.get();
 
       for (DataSegment dataSegment : params.getAvailableSegments()) {
         if (whitelist == null || whitelist.contains(dataSegment.getDataSource())) {
