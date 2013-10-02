@@ -68,8 +68,8 @@ druid.processing.numThreads=3
 druid.computation.buffer.size=100000000
 
 # S3 dest for realtime indexer
-druid.pusher.s3.bucket=
-druid.pusher.s3.baseKey=
+druid.storage.s3.bucket=
+druid.storage.s3.baseKey=
 
 druid.bard.cache.sizeInBytes=40000000
 druid.master.merger.service=blah_blah
@@ -86,8 +86,8 @@ These properties are for connecting with S3 and using it to pull down segments. 
 |--------|-----------|-------|
 |`com.metamx.aws.accessKey`|The access key to use to access S3.|none|
 |`com.metamx.aws.secretKey`|The secret key to use to access S3.|none|
-|`druid.pusher.s3.bucket`|The bucket to store segments, this is used by Realtime and the Indexing service.|none|
-|`druid.pusher.s3.baseKey`|The base key to use when storing segments, this is used by Realtime and the Indexing service|none|
+|`druid.storage.s3.bucket`|The bucket to store segments, this is used by Realtime and the Indexing service.|none|
+|`druid.storage.s3.baseKey`|The base key to use when storing segments, this is used by Realtime and the Indexing service|none|
 
 ### JDBC connection
 

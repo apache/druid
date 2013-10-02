@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class CuratorDiscoveryConfig
 {
   @JsonProperty
-  private String path = null;
+  private String path = "/druid/discovery";
 
   public String getPath()
   {

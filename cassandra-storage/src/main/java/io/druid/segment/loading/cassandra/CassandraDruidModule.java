@@ -54,6 +54,6 @@ public class CassandraDruidModule implements DruidModule
             .addBinding("c*")
             .to(CassandraDataSegmentPusher.class)
             .in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.pusher", CassandraDataSegmentConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage", CassandraDataSegmentConfig.class);
   }
 }

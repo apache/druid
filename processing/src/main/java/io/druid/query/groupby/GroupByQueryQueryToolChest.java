@@ -37,6 +37,7 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -209,5 +210,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   public TypeReference<Row> getResultTypeReference()
   {
     return TYPE_REFERENCE;
+  }
+
+  @Override
+  public QueryRunner<Row> preMergeQueryDecoration(QueryRunner<Row> runner)
+  {
+    return new IntervalChunkingQueryRunner<Row>(runner, configSupplier.get().getChunkPeriod());
   }
 }

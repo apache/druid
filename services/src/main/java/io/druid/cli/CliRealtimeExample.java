@@ -27,10 +27,9 @@ import io.airlift.command.Command;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.ServerView;
-import io.druid.guice.NoopSegmentPublisherProvider;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.RealtimeModule;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 
@@ -64,11 +63,10 @@ public class CliRealtimeExample extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            binder.bind(SegmentPublisher.class).toProvider(NoopSegmentPublisherProvider.class);
-            binder.bind(DataSegmentPusher.class).to(NoopDataSegmentPusher.class);
-            binder.bind(DataSegmentAnnouncer.class).to(NoopDataSegmentAnnouncer.class);
-            binder.bind(InventoryView.class).to(NoopInventoryView.class);
-            binder.bind(ServerView.class).to(NoopServerView.class);
+            binder.bind(DataSegmentPusher.class).to(NoopDataSegmentPusher.class).in(LazySingleton.class);
+            binder.bind(DataSegmentAnnouncer.class).to(NoopDataSegmentAnnouncer.class).in(LazySingleton.class);
+            binder.bind(InventoryView.class).to(NoopInventoryView.class).in(LazySingleton.class);
+            binder.bind(ServerView.class).to(NoopServerView.class).in(LazySingleton.class);
           }
         }
     );

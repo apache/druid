@@ -17,41 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.groupby;
+package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.query.QueryConfig;
+import org.joda.time.Period;
 
 /**
  */
-public class GroupByQueryConfig extends QueryConfig
+public class QueryConfig
 {
   @JsonProperty
-  private boolean singleThreaded = false;
+  private Period chunkPeriod = Period.months(1);
 
-  @JsonProperty
-  private int maxIntermediateRows = 50000;
-
-  @JsonProperty
-  private int maxResults = 500000;
-
-  public boolean isSingleThreaded()
+  public Period getChunkPeriod()
   {
-    return singleThreaded;
-  }
-
-  public int getMaxIntermediateRows()
-  {
-    return maxIntermediateRows;
-  }
-
-  public void setMaxIntermediateRows(int maxIntermediateRows)
-  {
-    this.maxIntermediateRows = maxIntermediateRows;
-  }
-
-  public int getMaxResults()
-  {
-    return maxResults;
+    return chunkPeriod;
   }
 }

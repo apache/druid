@@ -52,11 +52,11 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
   private static final Logger log = new Logger(DruidMasterSegmentMerger.class);
 
   private final IndexingServiceClient indexingServiceClient;
-  private final AtomicReference<MergerWhitelist> whiteListRef;
+  private final AtomicReference<DatasourceWhitelist> whiteListRef;
 
   public DruidMasterSegmentMerger(
       IndexingServiceClient indexingServiceClient,
-      AtomicReference<MergerWhitelist> whitelistRef
+      AtomicReference<DatasourceWhitelist> whitelistRef
   )
   {
     this.indexingServiceClient = indexingServiceClient;
@@ -66,7 +66,7 @@ public class DruidMasterSegmentMerger implements DruidMasterHelper
   @Override
   public DruidMasterRuntimeParams run(DruidMasterRuntimeParams params)
   {
-    MergerWhitelist whitelist = whiteListRef.get();
+    DatasourceWhitelist whitelist = whiteListRef.get();
 
     MasterStats stats = new MasterStats();
     Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = Maps.newHashMap();

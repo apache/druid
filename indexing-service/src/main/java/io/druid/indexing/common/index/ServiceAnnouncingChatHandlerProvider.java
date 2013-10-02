@@ -55,12 +55,6 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
   }
 
   @Override
-  public String getType()
-  {
-    return "eventReceiving";
-  }
-
-  @Override
   public void register(final String service, ChatHandler handler)
   {
     final DruidNode node = makeDruidNode(service);
