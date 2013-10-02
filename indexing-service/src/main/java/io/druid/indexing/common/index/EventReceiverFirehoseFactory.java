@@ -49,7 +49,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Builds firehoses that accept events through the {@link EventReceiver} interface. Can also register these
- * firehoses with an {@link EventReceivingChatHandlerProvider}.
+ * firehoses with an {@link ServiceAnnouncingChatHandlerProvider}.
  */
 @JsonTypeName("receiver")
 public class EventReceiverFirehoseFactory implements FirehoseFactory
@@ -84,8 +84,9 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
     final EventReceiverFirehose firehose = new EventReceiverFirehose();
 
     if (chatHandlerProvider.isPresent()) {
-      log.info("Found chathandler with type[%s]", chatHandlerProvider.get().getType());
+      log.info("Found chathandler of class[%s]", chatHandlerProvider.get().getClass().getName());
       chatHandlerProvider.get().register(serviceName, firehose);
+      chatHandlerProvider.get().register(serviceName.replaceAll(".*:", ""), firehose); // rolf
     } else {
       log.info("No chathandler detected");
     }

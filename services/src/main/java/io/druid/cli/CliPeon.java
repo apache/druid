@@ -45,8 +45,9 @@ import io.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.index.ChatHandlerProvider;
-import io.druid.indexing.common.index.EventReceivingChatHandlerProvider;
+import io.druid.indexing.common.index.ServiceAnnouncingChatHandlerProvider;
 import io.druid.indexing.common.index.NoopChatHandlerProvider;
+import io.druid.indexing.common.index.ServiceAnnouncingChatHandlerProvider;
 import io.druid.indexing.coordinator.TaskRunner;
 import io.druid.indexing.coordinator.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.executor.ChatHandlerResource;
@@ -104,8 +105,8 @@ public class CliPeon extends GuiceRunnable
             final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
                 binder, Key.get(ChatHandlerProvider.class)
             );
-            handlerProviderBinder.addBinding("receiver")
-                                 .to(EventReceivingChatHandlerProvider.class).in(LazySingleton.class);
+            handlerProviderBinder.addBinding("announce")
+                                 .to(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
             handlerProviderBinder.addBinding("noop")
                                  .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
 
