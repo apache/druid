@@ -31,7 +31,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.coordinator.TaskRunner;
+import io.druid.indexing.overlord.TaskRunner;
 
 import java.io.File;
 import java.io.IOException;

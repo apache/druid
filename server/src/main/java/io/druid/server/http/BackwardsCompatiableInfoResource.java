@@ -24,7 +24,7 @@ import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseSegmentManager;
-import io.druid.server.master.DruidMaster;
+import io.druid.server.coordinator.DruidCoordinator;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.Path;
@@ -36,13 +36,13 @@ public class BackwardsCompatiableInfoResource extends InfoResource
 {
   @Inject
   public BackwardsCompatiableInfoResource(
-      DruidMaster master,
+      DruidCoordinator coordinator,
       InventoryView serverInventoryView,
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient
   )
   {
-    super(master, serverInventoryView, databaseSegmentManager, databaseRuleManager, indexingServiceClient);
+    super(coordinator, serverInventoryView, databaseSegmentManager, databaseRuleManager, indexingServiceClient);
   }
 }

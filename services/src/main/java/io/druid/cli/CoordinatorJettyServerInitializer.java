@@ -21,9 +21,9 @@ package io.druid.cli;
 
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.initialization.JettyServerInitializer;
-import io.druid.server.master.DruidMaster;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;
@@ -43,7 +43,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
   public void initialize(Server server, Injector injector)
   {
     ResourceHandler resourceHandler = new ResourceHandler();
-    resourceHandler.setResourceBase(DruidMaster.class.getClassLoader().getResource("static").toExternalForm());
+    resourceHandler.setResourceBase(DruidCoordinator.class.getClassLoader().getResource("static").toExternalForm());
 
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.setContextPath("/");
