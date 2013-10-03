@@ -87,7 +87,7 @@ public class TimeseriesQueryRunnerBonusTest
 
   private static List<Result<TimeseriesResultValue>> runTimeseriesCount(IncrementalIndex index)
   {
-    final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory();
+    final QueryRunnerFactory factory = TimeseriesQueryRunnerFactory.create();
     final QueryRunner<Result<TimeseriesResultValue>> runner = makeQueryRunner(
         factory,
         new IncrementalIndexSegment(index)

@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.inject.Inject;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
@@ -35,6 +36,7 @@ import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -47,7 +49,6 @@ import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
-import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -67,6 +68,14 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
   private static final TypeReference<Result<TimeseriesResultValue>> TYPE_REFERENCE =
       new TypeReference<Result<TimeseriesResultValue>>() {};
+
+  private final QueryConfig config;
+
+  @Inject
+  public TimeseriesQueryQueryToolChest(QueryConfig config)
+  {
+    this.config = config;
+  }
 
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> mergeResults(QueryRunner<Result<TimeseriesResultValue>> queryRunner)
@@ -251,7 +260,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
   {
-    return new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(runner, Period.months(1));
+    return new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(runner, config.getChunkPeriod());
   }
 
   public Ordering<Result<TimeseriesResultValue>> getOrdering()

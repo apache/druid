@@ -41,13 +41,19 @@ import io.druid.guice.PolyBind;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
+import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
+import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.index.ChatHandlerProvider;
-import io.druid.indexing.common.index.EventReceivingChatHandlerProvider;
 import io.druid.indexing.common.index.NoopChatHandlerProvider;
+import io.druid.indexing.common.index.ServiceAnnouncingChatHandlerProvider;
+import io.druid.indexing.coordinator.HeapMemoryTaskStorage;
+import io.druid.indexing.coordinator.IndexerDBCoordinator;
+import io.druid.indexing.coordinator.TaskQueue;
 import io.druid.indexing.coordinator.TaskRunner;
+import io.druid.indexing.coordinator.TaskStorage;
 import io.druid.indexing.coordinator.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.executor.ChatHandlerResource;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
@@ -104,8 +110,8 @@ public class CliPeon extends GuiceRunnable
             final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
                 binder, Key.get(ChatHandlerProvider.class)
             );
-            handlerProviderBinder.addBinding("receiver")
-                                 .to(EventReceivingChatHandlerProvider.class).in(LazySingleton.class);
+            handlerProviderBinder.addBinding("announce")
+                                 .to(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
             handlerProviderBinder.addBinding("noop")
                                  .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
 
@@ -114,9 +120,8 @@ public class CliPeon extends GuiceRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.worker.taskActionClient.retry", RetryPolicyConfig.class);
 
-            binder.bind(TaskActionClientFactory.class)
-                  .to(RemoteTaskActionClientFactory.class)
-                  .in(LazySingleton.class);
+            configureTaskActionClient(binder);
+
             binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
             binder.bind(DataSegmentKiller.class).to(S3DataSegmentKiller.class).in(LazySingleton.class);
@@ -144,6 +149,29 @@ public class CliPeon extends GuiceRunnable
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
 
             LifecycleModule.register(binder, Server.class);
+          }
+
+          private void configureTaskActionClient(Binder binder)
+          {
+            PolyBind.createChoice(
+                binder,
+                "druid.peon.mode",
+                Key.get(TaskActionClientFactory.class),
+                Key.get(RemoteTaskActionClientFactory.class)
+            );
+            final MapBinder<String, TaskActionClientFactory> taskActionBinder = PolyBind.optionBinder(
+                binder, Key.get(TaskActionClientFactory.class)
+            );
+            taskActionBinder.addBinding("local")
+                            .to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
+            // all of these bindings are so that we can run the peon in local mode
+            binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
+            binder.bind(TaskQueue.class).in(LazySingleton.class);
+            binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
+            binder.bind(IndexerDBCoordinator.class).in(LazySingleton.class);
+            taskActionBinder.addBinding("remote")
+                            .to(RemoteTaskActionClientFactory.class).in(LazySingleton.class);
+
           }
         }
     );

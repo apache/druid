@@ -19,10 +19,12 @@
 
 package io.druid.query.timeseries;
 
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -37,13 +39,31 @@ import java.util.concurrent.ExecutorService;
 public class TimeseriesQueryRunnerFactory
     implements QueryRunnerFactory<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
-  private static final TimeseriesQueryQueryToolChest toolChest = new TimeseriesQueryQueryToolChest();
-  private static final TimeseriesQueryEngine engine = new TimeseriesQueryEngine();
+  public static TimeseriesQueryRunnerFactory create()
+  {
+    return new TimeseriesQueryRunnerFactory(
+        new TimeseriesQueryQueryToolChest(new QueryConfig()),
+        new TimeseriesQueryEngine()
+    );
+  }
+
+  private final TimeseriesQueryQueryToolChest toolChest;
+  private final TimeseriesQueryEngine engine;
+
+  @Inject
+  public TimeseriesQueryRunnerFactory(
+      TimeseriesQueryQueryToolChest toolChest,
+      TimeseriesQueryEngine engine
+  )
+  {
+    this.toolChest = toolChest;
+    this.engine = engine;
+  }
 
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> createRunner(final Segment segment)
   {
-    return new TimeseriesQueryRunner(segment);
+    return new TimeseriesQueryRunner(engine, segment.asStorageAdapter());
   }
 
   @Override
@@ -64,11 +84,13 @@ public class TimeseriesQueryRunnerFactory
 
   private static class TimeseriesQueryRunner implements QueryRunner<Result<TimeseriesResultValue>>
   {
+    private final TimeseriesQueryEngine engine;
     private final StorageAdapter adapter;
 
-    public TimeseriesQueryRunner(Segment segment)
+    private TimeseriesQueryRunner(TimeseriesQueryEngine engine, StorageAdapter adapter)
     {
-      this.adapter = segment.asStorageAdapter();
+      this.engine = engine;
+      this.adapter = adapter;
     }
 
     @Override

@@ -53,7 +53,6 @@ import io.druid.query.search.search.SearchQueryConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
-import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -257,7 +256,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   public QueryRunner<Result<SearchResultValue>> preMergeQueryDecoration(QueryRunner<Result<SearchResultValue>> runner)
   {
     return new SearchThresholdAdjustingQueryRunner(
-        new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, Period.months(1)),
+        new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, config.getChunkPeriod()),
         config
     );
   }

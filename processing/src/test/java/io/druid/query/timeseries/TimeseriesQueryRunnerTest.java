@@ -60,7 +60,9 @@ public class TimeseriesQueryRunnerTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.makeQueryRunners(new TimeseriesQueryRunnerFactory());
+    return QueryRunnerTestHelper.makeQueryRunners(
+        TimeseriesQueryRunnerFactory.create()
+    );
   }
 
   private final QueryRunner runner;
@@ -81,7 +83,10 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
-                                      Arrays.asList(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
+                                      Arrays.asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexDoubleSum
+                                      )
                                   )
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .build();
@@ -271,7 +276,13 @@ public class TimeseriesQueryRunnerTest
                                           )
                                       )
                                   )
-                                  .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles")))
+                                  .granularity(
+                                      new PeriodGranularity(
+                                          new Period("P1D"),
+                                          null,
+                                          DateTimeZone.forID("America/Los_Angeles")
+                                      )
+                                  )
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
@@ -375,50 +386,56 @@ public class TimeseriesQueryRunnerTest
 
   @Test
   public void testTimeseriesGranularityNotAlignedOnSegmentBoundariesWithFilter()
-    {
-      TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
-                                     .dataSource(QueryRunnerTestHelper.dataSource)
-                                     .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
-                                     .granularity(new PeriodGranularity(new Period("P7D"), null, DateTimeZone.forID("America/Los_Angeles")))
-                                     .intervals(
-                                         Arrays.asList(
-                                             new Interval(
-                                                 "2011-01-12T00:00:00.000-08:00/2011-01-20T00:00:00.000-08:00"
-                                             )
-                                         )
-                                     )
-                                     .aggregators(
-                                         Arrays.<AggregatorFactory>asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory(
-                                                 "idx",
-                                                 "index"
-                                             )
-                                         )
-                                     )
-                                     .build();
+  {
+    TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                                   .dataSource(QueryRunnerTestHelper.dataSource)
+                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .granularity(
+                                       new PeriodGranularity(
+                                           new Period("P7D"),
+                                           null,
+                                           DateTimeZone.forID("America/Los_Angeles")
+                                       )
+                                   )
+                                   .intervals(
+                                       Arrays.asList(
+                                           new Interval(
+                                               "2011-01-12T00:00:00.000-08:00/2011-01-20T00:00:00.000-08:00"
+                                           )
+                                       )
+                                   )
+                                   .aggregators(
+                                       Arrays.<AggregatorFactory>asList(
+                                           QueryRunnerTestHelper.rowsCount,
+                                           new LongSumAggregatorFactory(
+                                               "idx",
+                                               "index"
+                                           )
+                                       )
+                                   )
+                                   .build();
 
-      List<Result<TimeseriesResultValue>> expectedResults1 = Arrays.asList(
-          new Result<TimeseriesResultValue>(
-              new DateTime("2011-01-06T00:00:00.000-08:00", DateTimeZone.forID("America/Los_Angeles")),
-              new TimeseriesResultValue(
-                  ImmutableMap.<String, Object>of("rows", 13L, "idx", 6071L)
-              )
-          ),
-          new Result<TimeseriesResultValue>(
-              new DateTime("2011-01-13T00:00:00.000-08:00", DateTimeZone.forID("America/Los_Angeles")),
-              new TimeseriesResultValue(
-                  ImmutableMap.<String, Object>of("rows", 91L, "idx", 33382L)
-              )
-          )
-      );
+    List<Result<TimeseriesResultValue>> expectedResults1 = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-01-06T00:00:00.000-08:00", DateTimeZone.forID("America/Los_Angeles")),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 6071L)
+            )
+        ),
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-01-13T00:00:00.000-08:00", DateTimeZone.forID("America/Los_Angeles")),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of("rows", 91L, "idx", 33382L)
+            )
+        )
+    );
 
-      Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-          runner.run(query1),
-          Lists.<Result<TimeseriesResultValue>>newArrayList()
-      );
-      TestHelper.assertExpectedResults(expectedResults1, results1);
-    }
+    Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
+        runner.run(query1),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults1, results1);
+  }
 
   @Test
   public void testTimeseriesWithVaryingGranWithFilter()
@@ -588,7 +605,12 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
         .filters(new RegexDimFilter(QueryRunnerTestHelper.providerDimension, "^.p.*$")) // spot and upfront
         .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(Arrays.<AggregatorFactory>asList(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexLongSum))
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.indexLongSum
+            )
+        )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
@@ -1341,7 +1363,11 @@ public class TimeseriesQueryRunnerTest
                                                      .value("spot")
                                                      .build(),
                                                Druids.newOrDimFilterBuilder()
-                                                     .fields(QueryRunnerTestHelper.qualityDimension, "automotive", "business")
+                                                     .fields(
+                                                         QueryRunnerTestHelper.qualityDimension,
+                                                         "automotive",
+                                                         "business"
+                                                     )
                                                      .build()
                                            )
                                        )

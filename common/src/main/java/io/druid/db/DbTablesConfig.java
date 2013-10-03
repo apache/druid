@@ -33,8 +33,9 @@ public class DbTablesConfig
     return new DbTablesConfig(base, null, null, null, null, null, null);
   }
 
-  @JsonProperty
-  @NotNull
+  private static String defaultBase = "druid";
+
+  @JsonProperty("base")
   private final String base;
 
   @JsonProperty("segments")
@@ -66,7 +67,7 @@ public class DbTablesConfig
       @JsonProperty("taskLock") String taskLockTable
   )
   {
-    this.base = base;
+    this.base = (base == null) ? defaultBase : base;
     this.segmentsTable = makeTableName(segmentsTable, "segments");
     this.rulesTable = makeTableName(rulesTable, "rules");
     this.configTable = makeTableName(configTable, "config");

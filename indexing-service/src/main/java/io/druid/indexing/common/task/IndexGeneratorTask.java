@@ -104,7 +104,7 @@ public class IndexGeneratorTask extends AbstractTask
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     // We should have a lock from before we started running
-    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
+    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
 
     // We know this exists
     final Interval interval = getImplicitLockInterval().get();
