@@ -500,7 +500,17 @@ public class RealtimePlumberSchool implements PlumberSchool
 
       private void bootstrapSinksFromDisk()
       {
-        for (File sinkDir : computeBaseDir(schema).listFiles()) {
+        File baseDir = computeBaseDir(schema);
+        if (baseDir == null || !baseDir.exists()) {
+          return;
+        }
+
+        File[] files = baseDir.listFiles();
+        if (files == null) {
+          return;
+        }
+
+        for (File sinkDir : files) {
           Interval sinkInterval = new Interval(sinkDir.getName().replace("_", "/"));
 
           //final File[] sinkFiles = sinkDir.listFiles();

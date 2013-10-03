@@ -21,6 +21,7 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.metamx.common.logger.Logger;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -120,7 +121,14 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
     boolean exclusive = config.isExclusive();
     boolean autoDelete = config.isAutoDelete();
 
-    final Connection connection = connectionFactory.newConnection();
+    final Connection connection;
+    try {
+      connection = connectionFactory.newConnection();
+    } catch (Exception e) {
+      log.error("Unable to find a RabbitMQ broker. Are you sure you have one running?");
+      throw Throwables.propagate(e);
+    }
+
     connection.addShutdownListener(new ShutdownListener()
     {
       @Override
