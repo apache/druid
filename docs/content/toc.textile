@@ -43,9 +43,9 @@ h2. Architecture
 * "Design":./Design.html
 * "Segments":./Segments.html
 * Node Types
-** "Compute":./Compute.html
+** "Historical":./Historical.html
 ** "Broker":./Broker.html
-** "Master":./Master.html
+** "Coordinator":./Coordinator.html
 *** "Rule Configuration":./Rule-Configuration.html
 ** "Realtime":./Realtime.html
 *** "Firehose":./Firehose.html

@@ -25,9 +25,9 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.coordinator.IndexerDBCoordinator;
-import io.druid.indexing.coordinator.TaskLockbox;
-import io.druid.indexing.coordinator.TaskQueue;
+import io.druid.indexing.overlord.IndexerDBCoordinator;
+import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.TaskQueue;
 import io.druid.timeline.DataSegment;
 
 import java.util.List;

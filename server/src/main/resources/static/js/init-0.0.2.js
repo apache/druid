@@ -100,8 +100,8 @@ $(document).ready(function() {
   }
 
   // Execution stuff
-  $.get('/info/master', function(data) {
-    $("#master").html('Current Cluster Master: ' + data.host);
+  $.get('/info/coordinator', function(data) {
+    $("#coordinator").html('Current Cluster Coordinator: ' + data.host);
   });
 
   $('#move_segment').submit(function() {
@@ -120,7 +120,7 @@ $(document).ready(function() {
 
 /*
     $.ajax({
-      url:"/master/move",
+      url:"/coordinator/move",
       type: "POST",
       data: JSON.stringify(data),
       contentType:"application/json; charset=utf-8",
@@ -154,7 +154,7 @@ $(document).ready(function() {
     }
 
     $.ajax({
-      url:"/master/drop",
+      url:"/coordinator/drop",
       type: "POST",
       data: JSON.stringify(data),
       contentType:"application/json; charset=utf-8",

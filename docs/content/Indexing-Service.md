@@ -57,7 +57,7 @@ http://<COORDINATOR_IP>:<port>/static/console.html
 
 The coordinator retrieves worker setup metadata from the Druid [MySQL](MySQL.html) config table. This metadata contains information about the version of workers to create, the maximum and minimum number of workers in the cluster at one time, and additional information required to automatically create workers.
 
-Tasks are assigned to workers by creating entries under specific /tasks paths associated with a worker, similar to how the Druid master node assigns segments to compute nodes. See [Worker Configuration](Indexing-Service#configuration-1). Once a worker picks up a task, it deletes the task entry and announces a task status under a /status path associated with the worker. Tasks are submitted to a worker until the worker hits capacity. If all workers in a cluster are at capacity, the indexer coordinator node automatically creates new worker resources.
+Tasks are assigned to workers by creating entries under specific /tasks paths associated with a worker, similar to how the Druid coordinator node assigns segments to historical nodes. See [Worker Configuration](Indexing-Service#configuration-1). Once a worker picks up a task, it deletes the task entry and announces a task status under a /status path associated with the worker. Tasks are submitted to a worker until the worker hits capacity. If all workers in a cluster are at capacity, the indexer coordinator node automatically creates new worker resources.
 
 #### Autoscaling
 
@@ -180,7 +180,7 @@ Worker nodes require [basic service configuration](https://github.com/metamx/dru
 -Ddruid.indexer.taskDir=/mnt/persistent/task/
 -Ddruid.indexer.hadoopWorkingPath=/tmp/druid-indexing
 
--Ddruid.worker.masterService=druid:sample_cluster:indexer
+-Ddruid.worker.coordinatorService=druid:sample_cluster:indexer
 
 -Ddruid.indexer.fork.hostpattern=<IP>:%d
 -Ddruid.indexer.fork.startport=8080
@@ -205,7 +205,7 @@ Many of the configurations for workers are similar to those for basic service co
 |`druid.worker.version`|Version identifier for the worker.|0|
 |`druid.worker.capacity`|Maximum number of tasks the worker can accept.|1|
 |`druid.indexer.threads`|Number of processing threads per worker.|1|
-|`druid.worker.masterService`|Name of the indexer coordinator used for service discovery.|none|
+|`druid.worker.coordinatorService`|Name of the indexer coordinator used for service discovery.|none|
 |`druid.indexer.fork.hostpattern`|The format of the host name.|none|
 |`druid.indexer.fork.startport`|Port in which child JVM starts from.|none|
 |`druid.indexer.fork.opts`|JVM options for child JVMs.|none|

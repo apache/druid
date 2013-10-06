@@ -14,9 +14,9 @@ This guide walks you through the steps to create the cluster and then how to cre
 
 ## What’s in this Druid Demo Cluster?
 
-1. A single "Master" node.  This node co-locates the [Master](Master.html) process, the [Broker](Broker.html) process, Zookeeper, and the MySQL instance. You can read more about Druid architecture [Design](Design.html).
+1. A single "Coordinator" node.  This node co-locates the [Coordinator](Coordinator.html) process, the [Broker](Broker.html) process, Zookeeper, and the MySQL instance. You can read more about Druid architecture [Design](Design.html).
 
-1. Three compute nodes; these compute nodes, have been pre-configured to work with the Master node and should automatically load up the Wikipedia edit stream data (no specific setup is required). 
+1. Three historical nodes; these historical nodes, have been pre-configured to work with the Coordinator node and should automatically load up the Wikipedia edit stream data (no specific setup is required).
 
 ## Setup Instructions
 1. Log in to your AWS account: Start by logging into the [Console page](https://console.aws.amazon.com) of your AWS account; if you don’t have one, follow this link to sign up for one [http://aws.amazon.com/](http://aws.amazon.com/).
@@ -54,19 +54,19 @@ This guide walks you through the steps to create the cluster and then how to cre
 
 ![CloudFormations](images/demo/setup-09-events.png)
 
-1. Get the IP address of your Druid Master Node:
+1. Get the IP address of your Druid Coordinator Node:
    1. Go to the following URL: [https://console.aws.amazon.com/ec2](https://console.aws.amazon.com/ec2)
    1. Click **Instances** in the left pane – you should see something similar to the following figure. 
-   1. Select the **DruidMaster** instance
-   1. Your IP address is right under the heading: **EC2 Instance: DruidMaster**. Select and copy that entire line, which ends with `amazonaws.com`.
+   1. Select the **DruidCoordinator** instance
+   1. Your IP address is right under the heading: **EC2 Instance: DruidCoordinator**. Select and copy that entire line, which ends with `amazonaws.com`.
 
 ![EC2 Instances](images/demo/setup-10-ip.png)
 
 ## Querying Data
 
-1. Use the following URL to bring up the Druid Demo Cluster query interface (replace **IPAddressDruidMaster** with the actual druid master IP Address):
+1. Use the following URL to bring up the Druid Demo Cluster query interface (replace **IPAddressDruidCoordinator** with the actual druid coordinator IP Address):
 
-**`http://IPAddressDruidMaster:8082/druid/v3/demoServlet`**
+**`http://IPAddressDruidCoordinator:8082/druid/v3/demoServlet`**
 
 As you can see from the image below, there are default values in the Dimensions and Granularity fields. Clicking **Execute** will produce a basic query result. 
 ![Demo Query Interface](images/demo/query-1.png)

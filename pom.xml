@@ -356,7 +356,7 @@
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
-                <artifactId>antlr4-master</artifactId>
+                <artifactId>antlr4-coordinator</artifactId>
                 <version>4.0</version>
             </dependency>
             <dependency>

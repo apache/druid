@@ -94,14 +94,14 @@ mkdir config
 
 If you are interested in learning more about Druid configuration files, check out this [link](https://github.com/metamx/druid/wiki/Configuration). Many aspects of Druid are customizable. For the purposes of this tutorial, we are going to use default values for most things.
 
-### Start a Master Node ###
+### Start a Coordinator Node ###
 
-Master nodes are in charge of load assignment and distribution. Master nodes monitor the status of the cluster and command compute nodes to assign and drop segments.
+Coordinator nodes are in charge of load assignment and distribution. Coordinator nodes monitor the status of the cluster and command historical nodes to assign and drop segments.
 
-To create the master config file:
+To create the coordinator config file:
 
 ```
-mkdir config/master
+mkdir config/coordinator
 ```
 
 Under the directory we just created, create the file `runtime.properties` with the following contents:
@@ -109,7 +109,7 @@ Under the directory we just created, create the file `runtime.properties` with t
 ```
 druid.host=127.0.0.1:8082
 druid.port=8082
-druid.service=master
+druid.service=coordinator
 
 # logging
 com.metamx.emitter.logging=true
@@ -132,24 +132,24 @@ druid.database.connectURI=jdbc:mysql://localhost:3306/druid
 druid.database.ruleTable=rules
 druid.database.configTable=config
 
-# master runtime configs
-druid.master.startDelay=PT60S
+# coordinator runtime configs
+druid.coordinator.startDelay=PT60S
 ```
 
-To start the master node:
+To start the coordinator node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/master com.metamx.druid.http.MasterMain
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/coordinator io.druid.cli.Main server coordinator
 ```
 
-### Start a Compute Node ###
+### Start a historical node ###
 
-Compute nodes are the workhorses of a cluster and are in charge of loading historical segments and making them available for queries. Our Wikipedia segment will be downloaded by a compute node.
+historical nodes are the workhorses of a cluster and are in charge of loading historical segments and making them available for queries. Our Wikipedia segment will be downloaded by a historical node.
 
-To create the compute config file:
+To create the historical config file:
 
 ```
-mkdir config/compute
+mkdir config/historical
 ```
 
 Under the directory we just created, create the file `runtime.properties` with the following contents:
@@ -157,7 +157,7 @@ Under the directory we just created, create the file `runtime.properties` with t
 ```
 druid.host=127.0.0.1:8081
 druid.port=8081
-druid.service=compute
+druid.service=historical
 
 # logging
 com.metamx.emitter.logging=true
@@ -185,15 +185,15 @@ druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
 druid.server.maxSize=100000000
 ```
 
-To start the compute node:
+To start the historical node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/compute com.metamx.druid.http.ComputeMain
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/historical io.druid.cli.Main server historical
 ```
 
 ### Start a Broker Node ###
 
-Broker nodes are responsible for figuring out which compute and/or realtime nodes correspond to which queries. They also merge partial results from these nodes in a scatter/gather fashion.
+Broker nodes are responsible for figuring out which historical and/or realtime nodes correspond to which queries. They also merge partial results from these nodes in a scatter/gather fashion.
 
 To create the broker config file:
 
@@ -229,7 +229,7 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/
 
 ## Loading the Data ##
 
-The MySQL dependency we introduced earlier on contains a 'segments' table that contains entries for segments that should be loaded into our cluster. The Druid master compares this table with segments that already exist in the cluster to determine what should be loaded and dropped. To load our wikipedia segment, we need to create an entry in our MySQL segment table.
+The MySQL dependency we introduced earlier on contains a 'segments' table that contains entries for segments that should be loaded into our cluster. The Druid coordinator compares this table with segments that already exist in the cluster to determine what should be loaded and dropped. To load our wikipedia segment, we need to create an entry in our MySQL segment table.
 
 Usually, when new segments are created, these MySQL entries are created directly so you never have to do this by hand. For this tutorial, we can do this manually by going back into MySQL and issuing:
 
@@ -238,14 +238,14 @@ use druid;
 INSERT INTO segments (id, dataSource, created_date, start, end, partitioned, version, used, payload) VALUES ('wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z', 'wikipedia', '2013-08-08T21:26:23.799Z', '2013-08-01T00:00:00.000Z', '2013-08-02T00:00:00.000Z', '0', '2013-08-08T21:22:48.989Z', '1', '{\"dataSource\":\"wikipedia\",\"interval\":\"2013-08-01T00:00:00.000Z/2013-08-02T00:00:00.000Z\",\"version\":\"2013-08-08T21:22:48.989Z\",\"loadSpec\":{\"type\":\"s3_zip\",\"bucket\":\"static.druid.io\",\"key\":\"data/segments/wikipedia/20130801T000000.000Z_20130802T000000.000Z/2013-08-08T21_22_48.989Z/0/index.zip\"},\"dimensions\":\"dma_code,continent_code,geo,area_code,robot,country_name,network,city,namespace,anonymous,unpatrolled,page,postal_code,language,newpage,user,region_lookup\",\"metrics\":\"count,delta,variation,added,deleted\",\"shardSpec\":{\"type\":\"none\"},\"binaryVersion\":9,\"size\":24664730,\"identifier\":\"wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z\"}');
 ```
 
-If you look in your master node logs, you should, after a maximum of a minute or so, see logs of the following form:
+If you look in your coordinator node logs, you should, after a maximum of a minute or so, see logs of the following form:
 
 ```
-2013-08-08 22:48:41,967 INFO [main-EventThread] com.metamx.druid.master.LoadQueuePeon - Server[/druid/loadQueue/127.0.0.1:8081] done processing [/druid/loadQueue/127.0.0.1:8081/wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z]
+2013-08-08 22:48:41,967 INFO [main-EventThread] com.metamx.druid.coordinator.LoadQueuePeon - Server[/druid/loadQueue/127.0.0.1:8081] done processing [/druid/loadQueue/127.0.0.1:8081/wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z]
 2013-08-08 22:48:41,969 INFO [ServerInventoryView-0] com.metamx.druid.client.SingleServerInventoryView - Server[127.0.0.1:8081] added segment[wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z]
 ```
 
-When the segment completes downloading and ready for queries, you should see the following message on your compute node logs:
+When the segment completes downloading and ready for queries, you should see the following message on your historical node logs:
 
 ```
 2013-08-08 22:48:41,959 INFO [ZkCoordinator-0] com.metamx.druid.coordination.BatchDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z] at path[/druid/segments/127.0.0.1:8081/2013-08-08T22:48:41.959Z]

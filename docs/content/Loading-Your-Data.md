@@ -11,8 +11,8 @@ Each type of node needs its own config file and directory, so create them as sub
 ```bash
 mkdir config
 mkdir config/realtime
-mkdir config/master
-mkdir config/compute
+mkdir config/coordinator
+mkdir config/historical
 mkdir config/broker
 ```
 
@@ -211,7 +211,7 @@ GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
 CREATE database druid;
 ```
 
-The [Master](Master.html) node will create the tables it needs based on its configuration.
+The [Coordinator](Coordinator.html) node will create the tables it needs based on its configuration.
 
 ### Make sure you have ZooKeeper Running ###
 
@@ -232,11 +232,11 @@ cp conf/zoo_sample.cfg conf/zoo.cfg
 cd ..
 ```
 
-### Launch a Master Node ###
+### Launch a Coordinator Node ###
 
-If you've already setup a realtime node, be aware that although you can run multiple node types on one physical computer, you must assign them unique ports. Having used 8080 for the [Realtime](Realtime.html) node, we use 8081 for the [Master](Master.html).
+If you've already setup a realtime node, be aware that although you can run multiple node types on one physical computer, you must assign them unique ports. Having used 8080 for the [Realtime](Realtime.html) node, we use 8081 for the [Coordinator](Coordinator.html).
 
-1. Setup a configuration file called config/master/runtime.properties similar to:
+1. Setup a configuration file called config/coordinator/runtime.properties similar to:
 
   ```properties
   druid.host=0.0.0.0:8081
@@ -251,7 +251,7 @@ If you've already setup a realtime node, be aware that although you can run mult
   # emitting, opaque marker
   druid.service=example
 
-  druid.master.startDelay=PT60s
+  druid.coordinator.startDelay=PT60s
   druid.request.logging.dir=/tmp/example/log
   druid.realtime.specFile=realtime.spec
   com.metamx.emitter.logging=true
@@ -281,17 +281,17 @@ If you've already setup a realtime node, be aware that although you can run mult
   druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
   ```
 
-2. Launch the [Master](Master.html) node
+2. Launch the [Coordinator](Coordinator.html) node
 
   ```bash
   java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-  -classpath lib/*:config/master \
-  com.metamx.druid.http.MasterMain
+  -classpath lib/*:config/coordinator \
+  com.metamx.druid.http.CoordinatorMain
   ```
 
-### Launch a Compute/Historical Node ###
+### Launch a Historical Node ###
 
-1. Create a configuration file in config/compute/runtime.properties similar to:
+1. Create a configuration file in config/historical/runtime.properties similar to:
 
   ```properties
   druid.host=0.0.0.0:8082
@@ -338,12 +338,12 @@ If you've already setup a realtime node, be aware that although you can run mult
   druid.storage.local=true
   ```
 
-2. Launch the compute node:
+2. Launch the historical node:
 
   ```bash
   java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-  -classpath lib/*:config/compute \
-  com.metamx.druid.http.ComputeMain
+  -classpath lib/*:config/historical \
+  io.druid.cli.Main server historical
   ```
 
 ### Create a File of Records ###
@@ -360,7 +360,7 @@ We can use the same records we have been, in a file called records.json:
 
 ### Run the Hadoop Job ###
 
-Now its time to run the Hadoop [Batch-ingestion](Batch-ingestion.html) job, HadoopDruidIndexer, which will fill a historical [Compute](Compute.html) node with data. First we'll need to configure the job.
+Now its time to run the Hadoop [Batch-ingestion](Batch-ingestion.html) job, HadoopDruidIndexer, which will fill a historical [Historical](Historical.html) node with data. First we'll need to configure the job.
 
 1. Create a config called batchConfig.json similar to:
 

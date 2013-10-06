@@ -3,7 +3,7 @@ layout: doc_page
 ---
 # Setup #
 
-Before we start querying druid, we're going to finish setting up a complete cluster on localhost. In [Loading Your Data](Loading-Your-Data.html) we setup a [Realtime](Realtime.html), [Compute](Compute.html) and [Master](Master.html) node. If you've already completed that tutorial, you need only follow the directions for 'Booting a Broker Node'.
+Before we start querying druid, we're going to finish setting up a complete cluster on localhost. In [Loading Your Data](Loading-Your-Data.html) we setup a [Realtime](Realtime.html), [Historical](Historical.html) and [Coordinator](Coordinator.html) node. If you've already completed that tutorial, you need only follow the directions for 'Booting a Broker Node'.
 
 ## Booting a Broker Node ##
 
@@ -65,16 +65,16 @@ Before we start querying druid, we're going to finish setting up a complete clus
     com.metamx.druid.http.BrokerMain
     ```
 
-## Booting a Master Node ##
+## Booting a Coordinator Node ##
 
-1. Setup a config file at config/master/runtime.properties that looks like this: [https://gist.github.com/rjurney/5818870](https://gist.github.com/rjurney/5818870)
+1. Setup a config file at config/coordinator/runtime.properties that looks like this: [https://gist.github.com/rjurney/5818870](https://gist.github.com/rjurney/5818870)
 
-2. Run the master node:
+2. Run the coordinator node:
 
     ```bash
     java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/master \
-    com.metamx.druid.http.MasterMain
+    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/coordinator \
+    io.druid.cli.Main server coordinator
     ```
 
 ## Booting a Realtime Node ##
@@ -92,15 +92,15 @@ Before we start querying druid, we're going to finish setting up a complete clus
     com.metamx.druid.realtime.RealtimeMain
     ```
 
-## Booting a Compute Node ##
+## Booting a historical node ##
 
-1. Setup a config file at config/compute/runtime.properties that looks like this: [https://gist.github.com/rjurney/5818885](https://gist.github.com/rjurney/5818885)
-2. Run the compute node:
+1. Setup a config file at config/historical/runtime.properties that looks like this: [https://gist.github.com/rjurney/5818885](https://gist.github.com/rjurney/5818885)
+2. Run the historical node:
 
     ```bash
     java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/compute \
-    com.metamx.druid.http.ComputeMain
+    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/historical \
+    io.druid.cli.Main server historical
     ```
 
 # Querying Your Data #
@@ -109,7 +109,7 @@ Now that we have a complete cluster setup on localhost, we need to load data. To
 
 ## Querying Different Nodes ##
 
-As a shared-nothing system, there are three ways to query druid, against the [Realtime](Realtime.html), [Compute](Compute.html) or [Broker](Broker.html) node. Querying a Realtime node returns only realtime data, querying a compute node returns only historical segments. Querying the broker will query both realtime and compute segments and compose an overall result for the query. This is the normal mode of operation for queries in druid.
+As a shared-nothing system, there are three ways to query druid, against the [Realtime](Realtime.html), [Historical](Historical.html) or [Broker](Broker.html) node. Querying a Realtime node returns only realtime data, querying a historical node returns only historical segments. Querying the broker will query both realtime and historical segments and compose an overall result for the query. This is the normal mode of operation for queries in druid.
 
 ### Construct a Query ###
 
@@ -148,7 +148,7 @@ See our result:
 } ]
 ```
 
-### Querying the Compute Node ###
+### Querying the historical node ###
 Run the query against port 8082:
 
 ```bash

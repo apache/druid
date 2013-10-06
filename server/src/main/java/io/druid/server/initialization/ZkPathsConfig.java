@@ -60,10 +60,10 @@ public abstract class ZkPathsConfig
     return defaultPath("loadQueue");
   }
 
-  @Config("druid.zk.paths.masterPath")
-  public String getMasterPath()
+  @Config("druid.zk.paths.coordinatorPath")
+  public String getCoordinatorPath()
   {
-    return defaultPath("master");
+    return defaultPath("coordinator");
   }
 
   @Config("druid.zk.paths.indexer.announcementsPath")

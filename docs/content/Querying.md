@@ -4,7 +4,7 @@ layout: doc_page
 Querying
 ========
 
-Queries are made using an HTTP REST style request to a [Broker](Broker.html), [Compute](Compute.html), or [Realtime](Realtime.html) node. The query is expressed in JSON and each of these node types expose the same REST query interface.
+Queries are made using an HTTP REST style request to a [Broker](Broker.html), [Historical](Historical.html), or [Realtime](Realtime.html) node. The query is expressed in JSON and each of these node types expose the same REST query interface.
 
 We start by describing an example query with additional comments that mention possible variations. Query operators are also summarized in a table below.
 

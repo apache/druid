@@ -3,9 +3,9 @@ layout: doc_page
 ---
 Druid uses ZooKeeper (ZK) for management of current cluster state. The operations that happen over ZK are
 
-1.  [Master](Master.html) leader election
-2.  Segment "publishing" protocol from [Compute](Compute.html) and [Realtime](Realtime.html)
-3.  Segment load/drop protocol between [Master](Master.html) and [Compute](Compute.html)
+1.  [Coordinator](Coordinator.html) leader election
+2.  Segment "publishing" protocol from [Historical](Historical.html) and [Realtime](Realtime.html)
+3.  Segment load/drop protocol between [Coordinator](Coordinator.html) and [Historical](Historical.html)
 
 ### Property Configuration
 
@@ -24,7 +24,7 @@ druid.zk.paths.propertiesPath=${druid.zk.paths.base}/properties
 druid.zk.paths.announcementsPath=${druid.zk.paths.base}/announcements
 druid.zk.paths.servedSegmentsPath=${druid.zk.paths.base}/servedSegments
 druid.zk.paths.loadQueuePath=${druid.zk.paths.base}/loadQueue
-druid.zk.paths.masterPath=${druid.zk.paths.base}/master
+druid.zk.paths.coordinatorPath=${druid.zk.paths.base}/coordinator
 druid.zk.paths.indexer.announcementsPath=${druid.zk.paths.base}/indexer/announcements
 druid.zk.paths.indexer.tasksPath=${druid.zk.paths.base}/indexer/tasks
 druid.zk.paths.indexer.statusPath=${druid.zk.paths.base}/indexer/status
@@ -37,19 +37,19 @@ NOTE: We also use Curator’s service discovery module to expose some services v
 druid.zk.paths.discoveryPath
 ```
 
-### Master Leader Election
+### Coordinator Leader Election
 
 We use the Curator LeadershipLatch recipe to do leader election at path
 
 ```
-${druid.zk.paths.masterPath}/_MASTER
+${druid.zk.paths.coordinatorPath}/_COORDINATOR
 ```
 
-### Segment "publishing" protocol from Compute and Realtime
+### Segment "publishing" protocol from Historical and Realtime
 
 The `announcementsPath` and `servedSegmentsPath` are used for this.
 
-All [Compute](Compute.html) and [Realtime](Realtime.html) nodes publish themselves on the `announcementsPath`, specifically, they will create an ephemeral znode at
+All [Historical](Historical.html) and [Realtime](Realtime.html) nodes publish themselves on the `announcementsPath`, specifically, they will create an ephemeral znode at
 
 ```
 ${druid.zk.paths.announcementsPath}/${druid.host}
@@ -67,16 +67,16 @@ And as they load up segments, they will attach ephemeral znodes that look like
 ${druid.zk.paths.servedSegmentsPath}/${druid.host}/_segment_identifier_
 ```
 
-Nodes like the [Master](Master.html) and [Broker](Broker.html) can then watch these paths to see which nodes are currently serving which segments.
+Nodes like the [Coordinator](Coordinator.html) and [Broker](Broker.html) can then watch these paths to see which nodes are currently serving which segments.
 
-### Segment load/drop protocol between Master and Compute
+### Segment load/drop protocol between Coordinator and Historical
 
 The `loadQueuePath` is used for this.
 
-When the [Master](Master.html) decides that a [Compute](Compute.html) node should load or drop a segment, it writes an ephemeral znode to
+When the [Coordinator](Coordinator.html) decides that a [Historical](Historical.html) node should load or drop a segment, it writes an ephemeral znode to
 
 ```
-${druid.zk.paths.loadQueuePath}/_host_of_compute_node/_segment_identifier
+${druid.zk.paths.loadQueuePath}/_host_of_historical_node/_segment_identifier
 ```
 
-This node will contain a payload that indicates to the Compute node what it should do with the given segment. When the Compute node is done with the work, it will delete the znode in order to signify to the Master that it is complete.
+This node will contain a payload that indicates to the historical node what it should do with the given segment. When the historical node is done with the work, it will delete the znode in order to signify to the Coordinator that it is complete.

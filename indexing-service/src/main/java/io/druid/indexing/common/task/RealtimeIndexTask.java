@@ -271,7 +271,7 @@ public class RealtimeIndexTask extends AbstractTask
 
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
     // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip and
-    // NOTE: descriptor.json to mismatch, or it can cause compute nodes to load different instances of the
+    // NOTE: descriptor.json to mismatch, or it can cause historical nodes to load different instances of the
     // NOTE: "same" segment.
     realtimePlumberSchool.setDataSegmentPusher(toolbox.getSegmentPusher());
     realtimePlumberSchool.setConglomerate(toolbox.getQueryRunnerFactoryConglomerate());
