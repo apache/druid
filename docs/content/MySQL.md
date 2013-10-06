@@ -8,7 +8,7 @@ Segments Table
 
 This is dictated by the `druid.database.segmentTable` property (Note that these properties are going to change in the next stable version after 0.4.12).
 
-This table stores metadata about the segments that are available in the system. The table is polled by the [Master](Master.html) to determine the set of segments that should be available for querying in the system. The table has two main functional columns, the other columns are for indexing purposes.
+This table stores metadata about the segments that are available in the system. The table is polled by the [Coordinator](Coordinator.html) to determine the set of segments that should be available for querying in the system. The table has two main functional columns, the other columns are for indexing purposes.
 
 The `used` column is a boolean "tombstone". A 1 means that the segment should be "used" by the cluster (i.e. it should be loaded and available for requests). A 0 means that the segment should not be actively loaded into the cluster. We do this as a means of removing segments from the cluster without actually removing their metadata (which allows for simpler rolling back if that is ever an issue).
 
@@ -36,7 +36,7 @@ Note that the format of this blob can and will change from time-to-time.
 Rule Table
 ----------
 
-The rule table is used to store the various rules about where segments should land. These rules are used by the [Master](Master.html) when making segment (re-)allocation decisions about the cluster.
+The rule table is used to store the various rules about where segments should land. These rules are used by the [Coordinator](Coordinator.html) when making segment (re-)allocation decisions about the cluster.
 
 Config Table
 ------------

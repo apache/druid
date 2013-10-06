@@ -27,13 +27,13 @@ Druid is architected as a grouping of systems each with a distinct role and toge
 
 The node types that currently exist are:
 
-* **Compute** nodes are the workhorses that handle storage and querying on "historical" data (non-realtime)
-* **Realtime** nodes ingest data in real-time, they are in charge of listening to a stream of incoming data and making it available immediately inside the Druid system. As data they have ingested ages, they hand it off to the compute nodes.
-* **Master** nodes act as coordinators. They look over the grouping of computes and make sure that data is available, replicated and in a generally "optimal" configuration.
+* **Historical** nodes are the workhorses that handle storage and querying on "historical" data (non-realtime)
+* **Realtime** nodes ingest data in real-time, they are in charge of listening to a stream of incoming data and making it available immediately inside the Druid system. As data they have ingested ages, they hand it off to the historical nodes.
+* **Coordinator** nodes look over the grouping of historical nodes and make sure that data is available, replicated and in a generally "optimal" configuration.
 * **Broker** nodes understand the topology of data across all of the other nodes in the cluster and re-write and route queries accordingly
 * **Indexer** nodes form a cluster of workers to load batch and real-time data into the system as well as allow for alterations to the data stored in the system (also known as the Indexing Service)
 
-This separation allows each node to only care about what it is best at. By separating Compute and Realtime, we separate the memory concerns of listening on a real-time stream of data and processing it for entry into the system. By separating the Master and Broker, we separate the needs for querying from the needs for maintaining "good" data distribution across the cluster.
+This separation allows each node to only care about what it is best at. By separating Historical and Realtime, we separate the memory concerns of listening on a real-time stream of data and processing it for entry into the system. By separating the Coordinator and Broker, we separate the needs for querying from the needs for maintaining "good" data distribution across the cluster.
 
 All nodes can be run in some highly available fashion. Either as symmetric peers in a share-nothing cluster or as hot-swap failover nodes.
 
@@ -55,27 +55,27 @@ Getting data into the Druid system requires an indexing process. This gives the 
     -   Bitmap compression
     -   RLE (on the roadmap, but not yet implemented)
 
-The output of the indexing process is stored in a "deep storage" LOB store/file system ([Deep Storage](Deep Storage.html) for information about potential options). Data is then loaded by compute nodes by first downloading the data to their local disk and then memory mapping it before serving queries.
+The output of the indexing process is stored in a "deep storage" LOB store/file system ([Deep Storage](Deep Storage.html) for information about potential options). Data is then loaded by historical nodes by first downloading the data to their local disk and then memory mapping it before serving queries.
 
-If a compute node dies, it will no longer serve its segments, but given that the segments are still available on the "deep storage" any other node can simply download the segment and start serving it. This means that it is possible to actually remove all compute nodes from the cluster and then re-provision them without any data loss. It also means that if the "deep storage" is not available, the nodes can continue to serve the segments they have already pulled down (i.e. the cluster goes stale, not down).
+If a historical node dies, it will no longer serve its segments, but given that the segments are still available on the "deep storage" any other node can simply download the segment and start serving it. This means that it is possible to actually remove all historical nodes from the cluster and then re-provision them without any data loss. It also means that if the "deep storage" is not available, the nodes can continue to serve the segments they have already pulled down (i.e. the cluster goes stale, not down).
 
-In order for a segment to exist inside of the cluster, an entry has to be added to a table in a MySQL instance. This entry is a self-describing bit of metadata about the segment, it includes things like the schema of the segment, the size, and the location on deep storage. These entries are what the Master uses to know what data **should** be available on the cluster.
+In order for a segment to exist inside of the cluster, an entry has to be added to a table in a MySQL instance. This entry is a self-describing bit of metadata about the segment, it includes things like the schema of the segment, the size, and the location on deep storage. These entries are what the Coordinator uses to know what data **should** be available on the cluster.
 
 ### Fault Tolerance
 
--   **Compute** As discussed above, if a compute node dies, another compute node can take its place and there is no fear of data loss
--   **Master** Can be run in a hot fail-over configuration. If no masters are running, then changes to the data topology will stop happening (no new data and no data balancing decisions), but the system will continue to run.
+-   **Historical** As discussed above, if a historical node dies, another historical node can take its place and there is no fear of data loss
+-   **Coordinator** Can be run in a hot fail-over configuration. If no coordinators are running, then changes to the data topology will stop happening (no new data and no data balancing decisions), but the system will continue to run.
 -   **Broker** Can be run in parallel or in hot fail-over.
--   **Realtime** Depending on the semantics of the delivery stream, multiple of these can be run in parallel processing the exact same stream. They periodically checkpoint to disk and eventually push out to the Computes. Steps are taken to be able to recover from process death, but loss of access to the local disk can result in data loss if this is the only method of adding data to the system.
+-   **Realtime** Depending on the semantics of the delivery stream, multiple of these can be run in parallel processing the exact same stream. They periodically checkpoint to disk and eventually push out to the Historical nodes. Steps are taken to be able to recover from process death, but loss of access to the local disk can result in data loss if this is the only method of adding data to the system.
 -   **"deep storage" file system** If this is not available, new data will not be able to enter the cluster, but the cluster will continue operating as is.
--   **MySQL** If this is not available, the master will be unable to find out about new segments in the system, but it will continue with its current view of the segments that should exist in the cluster.
+-   **MySQL** If this is not available, the coordinator will be unable to find out about new segments in the system, but it will continue with its current view of the segments that should exist in the cluster.
 -   **ZooKeeper** If this is not available, data topology changes will not be able to be made, but the Brokers will maintain their most recent view of the data topology and continue serving requests accordingly.
 
 ### Query processing
 
-A query first enters the Broker, where the broker will match the query with the data segments that are known to exist. It will then pick a set of machines that are serving those segments and rewrite the query for each server to specify the segment(s) targetted. The Compute/Realtime nodes will take in the query, process them and return results. The Broker then takes the results and merges them together to get the final answer, which it returns. In this way, the broker can prune all of the data that doesn’t match a query before ever even looking at a single row of data.
+A query first enters the Broker, where the broker will match the query with the data segments that are known to exist. It will then pick a set of machines that are serving those segments and rewrite the query for each server to specify the segment(s) targetted. The Historical/Realtime nodes will take in the query, process them and return results. The Broker then takes the results and merges them together to get the final answer, which it returns. In this way, the broker can prune all of the data that doesn’t match a query before ever even looking at a single row of data.
 
-For filters at a more granular level than what the Broker can prune based on, the indexing structures inside each segment allows the compute nodes to figure out which (if any) rows match the filter set before looking at any row of data. It can do all of the boolean algebra of the filter on the bitmap indices and never actually look directly at a row of data.
+For filters at a more granular level than what the Broker can prune based on, the indexing structures inside each segment allows the historical nodes to figure out which (if any) rows match the filter set before looking at any row of data. It can do all of the boolean algebra of the filter on the bitmap indices and never actually look directly at a row of data.
 
 Once it knows the rows that match the current query, it can access the columns it cares about for those rows directly without having to load data that it is just going to throw away.
 

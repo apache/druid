@@ -21,7 +21,7 @@ package io.druid.indexing.common.actions;
 
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.coordinator.TaskStorage;
+import io.druid.indexing.overlord.TaskStorage;
 
 import java.io.IOException;
 

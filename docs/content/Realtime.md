@@ -4,7 +4,7 @@ layout: doc_page
 Realtime
 ========
 
-Realtime nodes provide a realtime index. Data indexed via these nodes is immediately available for querying. Realtime nodes will periodically build segments representing the data they’ve collected over some span of time and hand these segments off to [Compute](Compute.html) nodes.
+Realtime nodes provide a realtime index. Data indexed via these nodes is immediately available for querying. Realtime nodes will periodically build segments representing the data they’ve collected over some span of time and hand these segments off to [Historical](Historical.html) nodes.
 
 Running
 -------

@@ -20,7 +20,7 @@ function domToConfig(configDiv) {
 }
 
 function getConfigs() {
-  $.getJSON("/master/config", function(data) {
+  $.getJSON("/coordinator/config", function(data) {
     $('#config_list').empty();
 
     $.each(data, function (key, value) {
@@ -72,7 +72,7 @@ $(document).ready(function() {
 
         $.ajax({
           type: 'POST',
-          url:'/master/config',
+          url:'/coordinator/config',
           data: JSON.stringify(configs),
           contentType:"application/json; charset=utf-8",
           dataType:"json",

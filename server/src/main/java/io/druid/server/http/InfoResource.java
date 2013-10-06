@@ -33,8 +33,8 @@ import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseSegmentManager;
-import io.druid.server.master.DruidMaster;
-import io.druid.server.master.rules.Rule;
+import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -96,7 +96,7 @@ public class InfoResource
         }
       };
 
-  private final DruidMaster master;
+  private final DruidCoordinator coordinator;
   private final InventoryView serverInventoryView;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final DatabaseRuleManager databaseRuleManager;
@@ -105,7 +105,7 @@ public class InfoResource
 
   @Inject
   public InfoResource(
-      DruidMaster master,
+      DruidCoordinator coordinator,
       InventoryView serverInventoryView,
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
@@ -113,7 +113,7 @@ public class InfoResource
       IndexingServiceClient indexingServiceClient
   )
   {
-    this.master = master;
+    this.coordinator = coordinator;
     this.serverInventoryView = serverInventoryView;
     this.databaseSegmentManager = databaseSegmentManager;
     this.databaseRuleManager = databaseRuleManager;
@@ -121,12 +121,12 @@ public class InfoResource
   }
 
   @GET
-  @Path("/master")
+  @Path("/coordinator")
   @Produces("application/json")
   public Response getMaster()
   {
     return Response.status(Response.Status.OK)
-                   .entity(master.getCurrentMaster())
+                   .entity(coordinator.getCurrentLeader())
                    .build();
   }
 

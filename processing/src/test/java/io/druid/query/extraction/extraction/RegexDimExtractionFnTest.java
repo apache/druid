@@ -32,12 +32,12 @@ import java.util.Set;
 public class RegexDimExtractionFnTest
 {
   private static final String[] paths = {
-      "/druid/prod/compute",
-      "/druid/prod/bard",
-      "/druid/prod/master",
-      "/druid/demo-east/compute",
-      "/druid/demo-east/bard",
-      "/druid/demo-east/master",
+      "/druid/prod/historical",
+      "/druid/prod/broker",
+      "/druid/prod/coordinator",
+      "/druid/demo/historical",
+      "/druid/demo/broker",
+      "/druid/demo/coordinator",
       "/dash/aloe",
       "/dash/baloo"
   };
@@ -80,7 +80,7 @@ public class RegexDimExtractionFnTest
 
     Assert.assertEquals(4, extracted.size());
     Assert.assertTrue(extracted.contains("druid/prod"));
-    Assert.assertTrue(extracted.contains("druid/demo-east"));
+    Assert.assertTrue(extracted.contains("druid/demo"));
     Assert.assertTrue(extracted.contains("dash/aloe"));
     Assert.assertTrue(extracted.contains("dash/baloo"));
   }

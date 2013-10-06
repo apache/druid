@@ -21,7 +21,7 @@ package io.druid.indexing.common.actions;
 
 import com.google.inject.Inject;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.coordinator.TaskStorage;
+import io.druid.indexing.overlord.TaskStorage;
 
 /**
  */

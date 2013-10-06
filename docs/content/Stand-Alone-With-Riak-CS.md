@@ -22,9 +22,9 @@ We started with a minimal CentOS installation but you can use any other compatib
 1. A Kafka Broker
 1. A single-node Zookeeper ensemble
 1. A single-node Riak-CS cluster
-1. A Druid [Master](Master.html)
+1. A Druid [Coordinator](Coordinator.html)
 1. A Druid [Broker](Broker.html)
-1. A Druid [Compute](Compute.html)
+1. A Druid [Historical](Historical.html)
 1. A Druid [Realtime](Realtime.html)
 
 This just walks through getting the relevant software installed and running.  You will then need to configure the [Realtime](Realtime.html) node to take in your data.

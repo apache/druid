@@ -74,7 +74,7 @@ public class RedirectFilter implements Filter
       log.debug("Forwarding request to [%s]", url);
 
       if (url == null) {
-        // We apparently have no master, so let's do a Service Unavailable
+        // We apparently have no coordinator, so let's do a Service Unavailable
         response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
         return;
       }

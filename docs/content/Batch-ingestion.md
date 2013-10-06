@@ -140,4 +140,4 @@ This is a specification of the properties that tell the job how to update metada
 |password|password for db|yes|
 |segmentTable|table to use in DB|yes|
 
-These properties should parrot what you have configured for your [Master](Master.html).
+These properties should parrot what you have configured for your [Coordinator](Coordinator.html).
