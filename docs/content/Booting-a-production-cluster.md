@@ -3,7 +3,7 @@ layout: doc_page
 ---
 # Booting a Single Node Cluster #
 
-[Loading Your Data](Loading-Your-Data.html) and [Querying Your Data](Querying-Your-Data.html) contain recipes to boot a small druid cluster on localhost. Here we will boot a small cluster on EC2. You can checkout the code, or download a tarball from [here](http://static.druid.io/artifacts/druid-services-0.5.51-SNAPSHOT-bin.tar.gz).
+[Loading Your Data](Loading-Your-Data.html) and [Querying Your Data](Querying-Your-Data.html) contain recipes to boot a small druid cluster on localhost. Here we will boot a small cluster on EC2. You can checkout the code, or download a tarball from [here](http://static.druid.io/artifacts/druid-services-0.6.0-bin.tar.gz).
 
 The [ec2 run script](https://github.com/metamx/druid/blob/master/examples/bin/run_ec2.sh), run_ec2.sh, is located at 'examples/bin' if you have checked out the code, or at the root of the project if you've downloaded a tarball. The scripts rely on the [Amazon EC2 API Tools](http://aws.amazon.com/developertools/351), and you will need to set three environment variables:
 
