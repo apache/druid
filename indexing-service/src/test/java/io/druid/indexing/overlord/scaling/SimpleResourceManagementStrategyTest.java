@@ -65,7 +65,7 @@ public class SimpleResourceManagementStrategyTest
     autoScalingStrategy = EasyMock.createMock(AutoScalingStrategy.class);
     workerSetupData = new AtomicReference<WorkerSetupData>(
         new WorkerSetupData(
-            "0", 0, 2, null, null
+            "0", 0, 2, null, null, null
         )
     );
 
@@ -237,7 +237,7 @@ public class SimpleResourceManagementStrategyTest
   @Test
   public void testDoSuccessfulTerminate() throws Exception
   {
-    workerSetupData.set(new WorkerSetupData("0", 0, 1, null, null));
+    workerSetupData.set(new WorkerSetupData("0", 0, 1, null, null, null));
 
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList());
@@ -267,7 +267,7 @@ public class SimpleResourceManagementStrategyTest
   @Test
   public void testSomethingTerminating() throws Exception
   {
-    workerSetupData.set(new WorkerSetupData("0", 0, 1, null, null));
+    workerSetupData.set(new WorkerSetupData("0", 0, 1, null, null, null));
 
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList("ip")).times(2);
