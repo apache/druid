@@ -47,7 +47,7 @@ There are two ways to setup Druid: download a tarball, or [Build From Source](Bu
 
 ### Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.5.54-bin.tar.gz)
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.0-bin.tar.gz)
 Download this file to a directory of your choosing.
 
 You can extract the awesomeness within by issuing:
@@ -59,7 +59,7 @@ tar -zxvf druid-services-*-bin.tar.gz
 Not too lost so far right? That's great! If you cd into the directory:
 
 ```
-cd druid-services-0.5.54
+cd druid-services-0.6.0
 ```
 
 You should see a bunch of files:
@@ -82,10 +82,12 @@ Select "wikipedia".
 Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
 
 ```
-2013-07-19 21:54:05,154 INFO [main] com.metamx.druid.realtime.RealtimeNode - Starting Jetty
-2013-07-19 21:54:05,154 INFO [main] org.mortbay.log - jetty-6.1.x
-2013-07-19 21:54:05,171 INFO [chief-wikipedia] com.metamx.druid.realtime.plumber.RealtimePlumberSchool - Expect to run at [2013-07-19T22:03:00.000Z]
-2013-07-19 21:54:05,246 INFO [main] org.mortbay.log - Started SelectChannelConnector@0.0.0.0:8083
+2013-09-04 19:33:11,922 INFO [main] org.eclipse.jetty.server.AbstractConnector - Started SelectChannelConnector@0.0.0.0:8083
+2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - irc connection to server [irc.wikimedia.org] established
+2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - Joining channel #en.wikipedia
+2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - Joining channel #fr.wikipedia
+2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - Joining channel #de.wikipedia
+2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - Joining channel #ja.wikipedia
 ```
 
 The Druid real time-node ingests events in an in-memory buffer. Periodically, these events will be persisted to disk. If you are interested in the details of our real-time architecture and why we persist indexes to disk, I suggest you read our [White Paper](http://static.druid.io/docs/druid.pdf).
