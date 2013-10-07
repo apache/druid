@@ -31,6 +31,7 @@ public class WorkerSetupData
   private final String minVersion;
   private final int minNumWorkers;
   private final int maxNumWorkers;
+  private final String availabilityZone;
   private final EC2NodeData nodeData;
   private final GalaxyUserData userData;
 
@@ -39,6 +40,7 @@ public class WorkerSetupData
       @JsonProperty("minVersion") String minVersion,
       @JsonProperty("minNumWorkers") int minNumWorkers,
       @JsonProperty("maxNumWorkers") int maxNumWorkers,
+      @JsonProperty("availabilityZone") String availabilityZone,
       @JsonProperty("nodeData") EC2NodeData nodeData,
       @JsonProperty("userData") GalaxyUserData userData
   )
@@ -46,6 +48,7 @@ public class WorkerSetupData
     this.minVersion = minVersion;
     this.minNumWorkers = minNumWorkers;
     this.maxNumWorkers = maxNumWorkers;
+    this.availabilityZone = availabilityZone;
     this.nodeData = nodeData;
     this.userData = userData;
   }
@@ -69,6 +72,12 @@ public class WorkerSetupData
   }
 
   @JsonProperty
+  public String getAvailabilityZone()
+  {
+    return availabilityZone;
+  }
+
+  @JsonProperty
   public EC2NodeData getNodeData()
   {
     return nodeData;
@@ -87,6 +96,7 @@ public class WorkerSetupData
            "minVersion='" + minVersion + '\'' +
            ", minNumWorkers=" + minNumWorkers +
            ", maxNumWorkers=" + maxNumWorkers +
+           ", availabilityZone=" + availabilityZone +
            ", nodeData=" + nodeData +
            ", userData=" + userData +
            '}';
