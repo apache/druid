@@ -37,7 +37,7 @@ There are two ways to setup Druid: download a tarball, or [Build From Source](Bu
 
 h3. Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.5.50-bin.tar.gz)
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.0-bin.tar.gz)
 Download this file to a directory of your choosing.
 You can extract the awesomeness within by issuing:
 
@@ -48,7 +48,7 @@ tar zxvf druid-services-*-bin.tar.gz
 Not too lost so far right? That's great! If you cd into the directory:
 
 ```
-cd druid-services-0.5.50
+cd druid-services-0.6.0
 ```
 
 You should see a bunch of files:
@@ -68,9 +68,8 @@ Select "webstream".
 Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
 
 ```
-2013-07-19 21:54:05,154 INFO com.metamx.druid.realtime.RealtimeNode~~ Starting Jetty
-2013-07-19 21:54:05,154 INFO org.mortbay.log - jetty-6.1.x
-2013-07-19 21:54:05,171 INFO com.metamx.druid.realtime.plumber.RealtimePlumberSchool - Expect to run at
+Jul 19, 2013 21:54:05 PM com.sun.jersey.guice.spi.container.GuiceComponentProviderFactory getComponentProvider
+INFO: Binding io.druid.server.StatusResource to GuiceManagedComponentProvider with the scope "Undefined"
 2013-07-19 21:54:05,246 INFO org.mortbay.log - Started SelectChannelConnector@0.0.0.0:8083
 ```
 

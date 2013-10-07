@@ -6,7 +6,7 @@ MySQL is an external dependency of Druid. We use it to store various metadata ab
 Segments Table
 --------------
 
-This is dictated by the `druid.database.segmentTable` property (Note that these properties are going to change in the next stable version after 0.4.12).
+This is dictated by the `druid.db.tables.segments` property.
 
 This table stores metadata about the segments that are available in the system. The table is polled by the [Coordinator](Coordinator.html) to determine the set of segments that should be available for querying in the system. The table has two main functional columns, the other columns are for indexing purposes.
 

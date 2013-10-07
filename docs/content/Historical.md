@@ -31,7 +31,7 @@ For every query that a historical node services, it will log the query and repor
 
 Running
 -------
-
+p
 Historical nodes can be run using the `io.druid.cli.Main` class with program arguments "server historical".
 
 Configuration

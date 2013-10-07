@@ -7,101 +7,24 @@ Before we start querying druid, we're going to finish setting up a complete clus
 
 ## Booting a Broker Node ##
 
-1. Setup a config file at config/broker/runtime.properties that looks like this: 
+1. Setup a config file at config/broker/runtime.properties that looks like this:
 
     ```
-    druid.host=0.0.0.0:8083
-    druid.port=8083
- 
-    com.metamx.emitter.logging=true
- 
-    druid.processing.formatString=processing_%s
-    druid.processing.numThreads=1
-    druid.processing.buffer.sizeBytes=10000000
- 
-    #emitting, opaque marker
-    druid.service=example
- 
-    druid.request.logging.dir=/tmp/example/log
-    druid.realtime.specFile=realtime.spec
-    com.metamx.emitter.logging=true
-    com.metamx.emitter.logging.level=debug
- 
-    # below are dummy values when operating a realtime only node
-    druid.processing.numThreads=3
- 
-    com.metamx.aws.accessKey=dummy_access_key
-    com.metamx.aws.secretKey=dummy_secret_key
-    druid.storage.s3.bucket=dummy_s3_bucket
- 
+    druid.host=localhost
+    druid.service=broker
+    druid.port=8080
+
     druid.zk.service.host=localhost
-    druid.server.maxSize=300000000000
-    druid.zk.paths.base=/druid
-    druid.database.segmentTable=prod_segments
-    druid.database.user=druid
-    druid.database.password=diurd
-    druid.database.connectURI=jdbc:mysql://localhost:3306/druid
-    druid.zk.paths.discoveryPath=/druid/discoveryPath
-    druid.database.ruleTable=rules
-    druid.database.configTable=config
- 
-    # Path on local FS for storage of segments; dir will be created if needed
-    druid.paths.indexCache=/tmp/druid/indexCache
-    # Path on local FS for storage of segment metadata; dir will be created if needed
-    druid.paths.segmentInfoCache=/tmp/druid/segmentInfoCache
-    druid.storage.local.storageDirectory=/tmp/druid/localStorage
-    druid.storage.local=true
- 
-    # thread pool size for servicing queries
-    druid.client.http.connections=30
+
     ```
 
 2. Run the broker node:
 
     ```bash
-    java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-    -Ddruid.realtime.specFile=realtime.spec \
-    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/broker \
-    com.metamx.druid.http.BrokerMain
+    java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/broker io.druid.cli.Main server broker
     ```
 
-## Booting a Coordinator Node ##
-
-1. Setup a config file at config/coordinator/runtime.properties that looks like this: [https://gist.github.com/rjurney/5818870](https://gist.github.com/rjurney/5818870)
-
-2. Run the coordinator node:
-
-    ```bash
-    java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/coordinator \
-    io.druid.cli.Main server coordinator
-    ```
-
-## Booting a Realtime Node ##
-
-1. Setup a config file at config/realtime/runtime.properties that looks like this: [https://gist.github.com/rjurney/5818774](https://gist.github.com/rjurney/5818774)
-
-2. Setup a realtime.spec file like this: [https://gist.github.com/rjurney/5818779](https://gist.github.com/rjurney/5818779)
-
-3. Run the realtime node:
-
-    ```bash
-    java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-    -Ddruid.realtime.specFile=realtime.spec \
-    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/realtime \
-    com.metamx.druid.realtime.RealtimeMain
-    ```
-
-## Booting a historical node ##
-
-1. Setup a config file at config/historical/runtime.properties that looks like this: [https://gist.github.com/rjurney/5818885](https://gist.github.com/rjurney/5818885)
-2. Run the historical node:
-
-    ```bash
-    java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-    -classpath services/target/druid-services-0.5.50-SNAPSHOT-selfcontained.jar:config/historical \
-    io.druid.cli.Main server historical
-    ```
+With the Broker node and the other Druid nodes types up and running, you have a fully functional Druid Cluster and are ready to query your data!
 
 # Querying Your Data #
 
@@ -109,7 +32,7 @@ Now that we have a complete cluster setup on localhost, we need to load data. To
 
 ## Querying Different Nodes ##
 
-As a shared-nothing system, there are three ways to query druid, against the [Realtime](Realtime.html), [Historical](Historical.html) or [Broker](Broker.html) node. Querying a Realtime node returns only realtime data, querying a historical node returns only historical segments. Querying the broker will query both realtime and historical segments and compose an overall result for the query. This is the normal mode of operation for queries in druid.
+As a shared-nothing system, there are three ways to query druid, against the [Realtime](Realtime.html), [Historical](Historical.html) or [Broker](Broker.html) node. Querying a Realtime node returns only realtime data, querying a historical node returns only historical segments. Querying the broker may query both realtime and historical segments and compose an overall result for the query. This is the normal mode of operation for queries in Druid.
 
 ### Construct a Query ###
 
@@ -148,7 +71,7 @@ See our result:
 } ]
 ```
 
-### Querying the historical node ###
+### Querying the Historical node ###
 Run the query against port 8082:
 
 ```bash
@@ -165,7 +88,7 @@ And get (similar to):
 } ]
 ```
 
-### Querying both Nodes via the Broker ###
+### Querying the Broker ###
 Run the query against port 8083:
 
 ```bash
@@ -184,39 +107,72 @@ And get:
 
 Now that we know what nodes can be queried (although you should usually use the broker node), lets learn how to know what queries are available.
 
-## Querying Against the realtime.spec ##
+## Examining the realtime.spec ##
 
 How are we to know what queries we can run? Although [Querying](Querying.html) is a helpful index, to get a handle on querying our data we need to look at our [Realtime](Realtime.html) node's realtime.spec file:
 
 ```json
-[{
-  "schema" : { "dataSource":"druidtest",
-               "aggregators":[ {"type":"count", "name":"impressions"},
-                               {"type":"doubleSum","name":"wp","fieldName":"wp"}],
-               "indexGranularity":"minute",
-               "shardSpec" : { "type": "none" } },
-  "config" : { "maxRowsInMemory" : 500000,
-               "intermediatePersistPeriod" : "PT10m" },
-  "firehose" : { "type" : "kafka-0.7.2",
-                 "consumerProps" : { "zk.connect" : "localhost:2181",
-                                     "zk.connectiontimeout.ms" : "15000",
-                                     "zk.sessiontimeout.ms" : "15000",
-                                     "zk.synctime.ms" : "5000",
-                                     "groupid" : "topic-pixel-local",
-                                     "fetch.size" : "1048586",
-                                     "autooffset.reset" : "largest",
-                                     "autocommit.enable" : "false" },
-                 "feed" : "druidtest",
-                 "parser" : { "timestampSpec" : { "column" : "utcdt", "format" : "iso" },
-                              "data" : { "format" : "json" },
-                              "dimensionExclusions" : ["wp"] } },
-  "plumber" : { "type" : "realtime",
-                "windowPeriod" : "PT10m",
-                "segmentGranularity":"hour",
-                "basePersistDirectory" : "/tmp/realtime/basePersist",
-                "rejectionPolicy": {"type": "messageTime"} }
-
-}]
+[
+  {
+    "schema": {
+      "dataSource": "druidtest",
+      "aggregators": [
+        {
+          "type": "count",
+          "name": "impressions"
+        },
+        {
+          "type": "doubleSum",
+          "name": "wp",
+          "fieldName": "wp"
+        }
+      ],
+      "indexGranularity": "minute",
+      "shardSpec": {
+        "type": "none"
+      }
+    },
+    "config": {
+      "maxRowsInMemory": 500000,
+      "intermediatePersistPeriod": "PT10m"
+    },
+    "firehose": {
+      "type": "kafka-0.7.2",
+      "consumerProps": {
+        "zk.connect": "localhost:2181",
+        "zk.connectiontimeout.ms": "15000",
+        "zk.sessiontimeout.ms": "15000",
+        "zk.synctime.ms": "5000",
+        "groupid": "topic-pixel-local",
+        "fetch.size": "1048586",
+        "autooffset.reset": "largest",
+        "autocommit.enable": "false"
+      },
+      "feed": "druidtest",
+      "parser": {
+        "timestampSpec": {
+          "column": "utcdt",
+          "format": "iso"
+        },
+        "data": {
+          "format": "json"
+        },
+        "dimensionExclusions": [
+          "wp"
+        ]
+      }
+    },
+    "plumber": {
+      "type": "realtime",
+      "windowPeriod": "PT10m",
+      "segmentGranularity": "hour",
+      "basePersistDirectory": "\/tmp\/realtime\/basePersist",
+      "rejectionPolicy": {
+        "type": "messageTime"
+      }
+    }
+  }
+]
 ```
 
 ### dataSource ###
@@ -330,7 +286,7 @@ Which gets us just people aged 40:
 } ]
 ```
 
-Check out [Filters](Filters.html) for more.
+Check out [Filters](Filters.html) for more information.
 
 ## Learn More ##
 
