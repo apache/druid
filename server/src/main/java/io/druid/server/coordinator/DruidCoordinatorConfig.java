@@ -31,7 +31,7 @@ public abstract class DruidCoordinatorConfig
   public abstract String getHost();
 
   @Config("druid.coordinator.startDelay")
-  @Default("PT60s")
+  @Default("PT120s")
   public abstract Duration getCoordinatorStartDelay();
 
   @Config("druid.coordinator.period")

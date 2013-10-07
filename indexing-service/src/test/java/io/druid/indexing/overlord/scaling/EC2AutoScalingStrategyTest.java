@@ -99,6 +99,7 @@ public class EC2AutoScalingStrategyTest
             "0",
             0,
             1,
+            "",
             new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.<String>newArrayList(), "foo"),
             new GalaxyUserData("env", "version", "type")
         )
