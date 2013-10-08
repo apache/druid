@@ -7,7 +7,7 @@
             {"type": "longSum", "fieldName": "deleted", "name": "deleted"},
             {"type": "longSum", "fieldName": "delta", "name": "delta"}
         ],
-        "indexGranularity": "minute",
+        "indexGranularity": "second",
         "shardSpec": {"type": "none"}
 	    },
 
