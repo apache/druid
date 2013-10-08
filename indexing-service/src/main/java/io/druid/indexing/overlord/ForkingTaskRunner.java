@@ -46,6 +46,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.tasklogs.TaskLogPusher;
 import io.druid.indexing.common.tasklogs.TaskLogStreamer;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
+import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.server.DruidNode;
 import org.apache.commons.io.FileUtils;
 
@@ -84,6 +85,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   @Inject
   public ForkingTaskRunner(
       ForkingTaskRunnerConfig config,
+      WorkerConfig workerConfig,
       Properties props,
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
@@ -96,7 +98,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     this.jsonMapper = jsonMapper;
     this.node = node;
 
-    this.exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(config.maxForks()));
+    this.exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(workerConfig.getCapacity()));
   }
 
   @Override
