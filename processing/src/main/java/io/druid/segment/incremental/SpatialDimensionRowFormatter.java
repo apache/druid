@@ -30,6 +30,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Floats;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.SpatialDimensionSchema;
 
 import java.util.Arrays;
 import java.util.List;

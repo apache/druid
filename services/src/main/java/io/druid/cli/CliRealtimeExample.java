@@ -109,6 +109,12 @@ public class CliRealtimeExample extends ServerRunnable
   private static class NoopDataSegmentPusher implements DataSegmentPusher
   {
     @Override
+    public String getPathForHadoop(String dataSource)
+    {
+      return dataSource;
+    }
+
+    @Override
     public DataSegment push(File file, DataSegment segment) throws IOException
     {
       return segment;
