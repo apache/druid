@@ -1,7 +1,7 @@
 ---
 layout: doc_page
 ---
-Note: It is recommended that the master console is used to configure rules. However, the master node does have HTTP endpoints to programmatically configure rules.
+Note: It is recommended that the coordinator console is used to configure rules. However, the coordinator node does have HTTP endpoints to programmatically configure rules.
 
 Load Rules
 ----------
@@ -22,7 +22,7 @@ Interval load rules are of the form:
 
 * `type` - this should always be "loadByInterval"
 * `interval` - A JSON Object representing ISO-8601 Intervals
-* `tier` - the configured compute node tier
+* `tier` - the configured historical node tier
 
 ### Period Load Rule
 
@@ -38,7 +38,7 @@ Period load rules are of the form:
 
 * `type` - this should always be "loadByPeriod"
 * `period` - A JSON Object representing ISO-8601 Periods
-* `tier` - the configured compute node tier
+* `tier` - the configured historical node tier
 
 The interval of a segment will be compared against the specified period. The rule matches if the period overlaps the interval.
 

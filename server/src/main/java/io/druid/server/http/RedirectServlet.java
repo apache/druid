@@ -21,7 +21,7 @@ package io.druid.server.http;
 
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import org.mortbay.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.DefaultServlet;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;

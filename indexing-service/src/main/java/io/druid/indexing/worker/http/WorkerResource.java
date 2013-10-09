@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.indexing.coordinator.ForkingTaskRunner;
+import io.druid.indexing.overlord.ForkingTaskRunner;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;

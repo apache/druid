@@ -58,12 +58,18 @@ public class ConvertProperties implements Runnable
       new Rename("druid.database.user", "druid.db.connector.user"),
       new Rename("druid.database.password", "druid.db.connector.password"),
       new Rename("com.metamx.emitter", "druid.emitter"),
+      new Rename("com.metamx.emitter.logging", "druid.emitter.logging"),
       new Rename("com.metamx.emitter.logging.level", "druid.emitter.logging.logLevel"),
+      new Rename("com.metamx.emitter.http", "druid.emitter.http"),
+      new Rename("com.metamx.emitter.http.url", "druid.emitter.http.url"),
       new Rename("com.metamx.druid.emitter.period", "druid.emitter.emissionPeriod"),
+      new PrefixRename("com.metamx.emitter", "druid.emitter"),
+      new PrefixRename("com.metamx.druid.emitter", "druid.emitter"),
       new IndexCacheConverter(),
       new Rename("druid.paths.segmentInfoCache", "druid.segmentCache.infoPath"),
       new Rename("com.metamx.aws.accessKey", "druid.s3.accessKey"),
       new Rename("com.metamx.aws.secretKey", "druid.s3.secretKey"),
+      new Rename("druid.bard.maxIntervalDuration", "druid.query.chunkDuration"),
       new PrefixRename("druid.bard.cache", "druid.broker.cache"),
       new Rename("druid.client.http.connections", "druid.broker.http.numConnections"),
       new Rename("com.metamx.query.groupBy.maxResults", "druid.query.groupBy.maxResults"),
@@ -102,11 +108,13 @@ public class ConvertProperties implements Runnable
       new Rename("druid.worker.taskActionClient.retry.minWaitMillis", "druid.worker.taskActionClient.retry.minWait"),
       new Rename("druid.worker.taskActionClient.retry.maxWaitMillis", "druid.worker.taskActionClient.retry.maxWait"),
       new Rename("druid.master.merger.service", "druid.selectors.indexing.serviceName"),
-      new Rename("druid.master.merger.on", "druid.master.merge.on"),
+      new Rename("druid.master.merger.on", "druid.coordinator.merge.on"),
+      new PrefixRename("druid.master", "druid.coordinator"),
+      new PrefixRename("druid.pusher", "druid.storage"),
       new DataSegmentPusherDefaultConverter(),
-      new Rename("druid.pusher.hdfs.storageDirectory", "druid.pusher.storageDirectory"),
-      new Rename("druid.pusher.cassandra.host", "druid.pusher.host"),
-      new Rename("druid.pusher.cassandra.keySpace", "druid.pusher.keySpace")
+      new Rename("druid.pusher.hdfs.storageDirectory", "druid.storage.storageDirectory"),
+      new Rename("druid.pusher.cassandra.host", "druid.storage.host"),
+      new Rename("druid.pusher.cassandra.keySpace", "druid.storage.keySpace")
   );
 
   @Option(name = "-f", title = "file", description = "The properties file to convert", required = true)

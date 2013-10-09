@@ -47,11 +47,12 @@
         <module>examples</module>
         <module>indexing-hadoop</module>
         <module>indexing-service</module>
-        <module>realtime</module>
         <module>server</module>
         <module>services</module>
         <module>processing</module>
         <module>cassandra-storage</module>
+        <module>hdfs-storage</module>
+        <module>s3-extensions</module>
     </modules>
 
     <dependencyManagement>
@@ -59,7 +60,7 @@
             <dependency>
                 <groupId>io.druid</groupId>
                 <artifactId>druid-api</artifactId>
-                <version>1.0.0-SNAPSHOT</version>
+                <version>0.1.0-SNAPSHOT</version>
             </dependency>
 
             <!-- Compile Scope -->
@@ -122,7 +123,7 @@
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk</artifactId>
-                <version>1.3.27</version>
+                <version>1.6.0.1</version>
                 <exclusions>
                     <exclusion>
                         <groupId>javax.mail</groupId>
@@ -146,7 +147,7 @@
             <dependency>
                 <groupId>io.airlift</groupId>
                 <artifactId>airline</artifactId>
-                <version>0.5</version>
+                <version>0.6</version>
             </dependency>
             <dependency>
                 <groupId>org.skife.config</groupId>
@@ -172,17 +173,6 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-x-discovery</artifactId>
                 <version>${apache.curator.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-core</artifactId>
-                <version>0.20.2</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.mortbay.jetty</groupId>
-                        <artifactId>servlet-api-2.5</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>it.uniroma3.mat</groupId>
@@ -300,11 +290,6 @@
                 <version>1.17.1</version>
             </dependency>
             <dependency>
-                <groupId>net.java.dev.jets3t</groupId>
-                <artifactId>jets3t</artifactId>
-                <version>0.8.1</version>
-            </dependency>
-            <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
                 <version>8.1.11.v20130520</version>
@@ -356,7 +341,7 @@
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
-                <artifactId>antlr4-master</artifactId>
+                <artifactId>antlr4-coordinator</artifactId>
                 <version>4.0</version>
             </dependency>
             <dependency>
@@ -394,8 +379,28 @@
                 <artifactId>aether-api</artifactId>
                 <version>0.9.0.M2</version>
             </dependency>
-
-
+            <dependency>
+                <groupId>kafka</groupId>
+                <artifactId>core-kafka</artifactId>
+                <version>0.7.2-mmx1</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>log4j</groupId>
+                        <artifactId>log4j</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.rabbitmq</groupId>
+                <artifactId>amqp-client</artifactId>
+                <version>3.1.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-core</artifactId>
+                <version>1.0.3</version>
+                <scope>provided</scope>
+            </dependency>
 
             <!-- Test Scope -->
             <dependency>

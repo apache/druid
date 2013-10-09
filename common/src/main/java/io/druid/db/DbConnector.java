@@ -215,7 +215,7 @@ public class DbConnector
   public void createConfigTable()
   {
     if (config.get().isCreateTables()) {
-      createRuleTable(dbi, dbTables.get().getConfigTable());
+      createConfigTable(dbi, dbTables.get().getConfigTable());
     }
   }
 

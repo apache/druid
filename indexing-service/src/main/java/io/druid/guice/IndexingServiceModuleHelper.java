@@ -20,8 +20,8 @@
 package io.druid.guice;
 
 import com.google.inject.Binder;
-import io.druid.indexing.coordinator.config.ForkingTaskRunnerConfig;
-import io.druid.indexing.coordinator.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
+import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 
 /**
  */

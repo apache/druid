@@ -26,17 +26,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import druid.examples.flights.FlightsFirehoseFactory;
-import druid.examples.rand.RandomFirehoseFactory;
-import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
-import druid.examples.web.WebFirehoseFactory;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
+import io.druid.guice.Binders;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -47,30 +43,30 @@ import io.druid.guice.PolyBind;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
+import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
+import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.index.ChatHandlerProvider;
 import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
-import io.druid.indexing.common.index.EventReceivingChatHandlerProvider;
 import io.druid.indexing.common.index.NoopChatHandlerProvider;
-import io.druid.indexing.common.index.StaticS3FirehoseFactory;
-import io.druid.indexing.coordinator.TaskRunner;
-import io.druid.indexing.coordinator.ThreadPoolTaskRunner;
+import io.druid.indexing.common.index.ServiceAnnouncingChatHandlerProvider;
+import io.druid.indexing.overlord.HeapMemoryTaskStorage;
+import io.druid.indexing.overlord.IndexerDBCoordinator;
+import io.druid.indexing.overlord.TaskQueue;
+import io.druid.indexing.overlord.TaskRunner;
+import io.druid.indexing.overlord.TaskStorage;
+import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.executor.ChatHandlerResource;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.initialization.DruidModule;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.loading.DataSegmentKiller;
-import io.druid.segment.loading.S3DataSegmentKiller;
+import io.druid.segment.loading.OmniDataSegmentKiller;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.StorageLocationConfig;
-import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
-import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
-import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
-import io.druid.segment.realtime.firehose.RabbitMQFirehoseFactory;
-import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
 
@@ -118,20 +114,23 @@ public class CliPeon extends GuiceRunnable
             final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
                 binder, Key.get(ChatHandlerProvider.class)
             );
-            handlerProviderBinder.addBinding("curator").to(EventReceivingChatHandlerProvider.class);
-            handlerProviderBinder.addBinding("noop").to(NoopChatHandlerProvider.class);
+            handlerProviderBinder.addBinding("announce")
+                                 .to(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
+            handlerProviderBinder.addBinding("noop")
+                                 .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
 
             binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
 
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.worker.taskActionClient.retry", RetryPolicyConfig.class);
 
-            binder.bind(TaskActionClientFactory.class)
-                  .to(RemoteTaskActionClientFactory.class)
-                  .in(LazySingleton.class);
+            configureTaskActionClient(binder);
+
             binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
-            binder.bind(DataSegmentKiller.class).to(S3DataSegmentKiller.class).in(LazySingleton.class);
+            // Build it to make it bind even if nothing binds to it.
+            Binders.dataSegmentKillerBinder(binder);
+            binder.bind(DataSegmentKiller.class).to(OmniDataSegmentKiller.class).in(LazySingleton.class);
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
             binder.bind(ExecutorLifecycleConfig.class).toInstance(
@@ -158,24 +157,35 @@ public class CliPeon extends GuiceRunnable
             LifecycleModule.register(binder, Server.class);
           }
 
+          private void configureTaskActionClient(Binder binder)
+          {
+            PolyBind.createChoice(
+                binder,
+                "druid.peon.mode",
+                Key.get(TaskActionClientFactory.class),
+                Key.get(RemoteTaskActionClientFactory.class)
+            );
+            final MapBinder<String, TaskActionClientFactory> taskActionBinder = PolyBind.optionBinder(
+                binder, Key.get(TaskActionClientFactory.class)
+            );
+            taskActionBinder.addBinding("local")
+                            .to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
+            // all of these bindings are so that we can run the peon in local mode
+            binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
+            binder.bind(TaskQueue.class).in(LazySingleton.class);
+            binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
+            binder.bind(IndexerDBCoordinator.class).in(LazySingleton.class);
+            taskActionBinder.addBinding("remote")
+                            .to(RemoteTaskActionClientFactory.class).in(LazySingleton.class);
+
+          }
+
           @Override
           public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
           {
-            return Arrays.<com.fasterxml.jackson.databind.Module>asList(
-                new SimpleModule("RealtimeModule")
-                    .registerSubtypes(
-                        new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
-                        new NamedType(FlightsFirehoseFactory.class, "flights"),
-                        new NamedType(RandomFirehoseFactory.class, "rand"),
-                        new NamedType(WebFirehoseFactory.class, "webstream"),
-                        new NamedType(KafkaFirehoseFactory.class, "kafka-0.7.2"),
-                        new NamedType(RabbitMQFirehoseFactory.class, "rabbitmq"),
-                        new NamedType(ClippedFirehoseFactory.class, "clipped"),
-                        new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
-                        new NamedType(IrcFirehoseFactory.class, "irc"),
-                        new NamedType(StaticS3FirehoseFactory.class, "s3"),
-                        new NamedType(EventReceiverFirehoseFactory.class, "receiver")
-                    )
+            return Arrays.asList(
+                new SimpleModule("PeonModule")
+                    .registerSubtypes(new NamedType(EventReceiverFirehoseFactory.class, "receiver"))
             );
           }
         }

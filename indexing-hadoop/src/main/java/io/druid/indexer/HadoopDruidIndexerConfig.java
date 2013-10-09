@@ -21,7 +21,6 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -33,27 +32,31 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Module;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
-import com.metamx.common.MapUtils;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
-import io.druid.data.input.DataSpec;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.StringInputRowParser;
-import io.druid.data.input.TimestampSpec;
-import io.druid.data.input.ToLowercaseDataSpec;
+import io.druid.data.input.impl.DataSpec;
+import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.data.input.impl.TimestampSpec;
+import io.druid.data.input.impl.ToLowercaseDataSpec;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.annotations.Self;
 import io.druid.indexer.granularity.GranularitySpec;
 import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.indexer.updater.DbUpdaterJobSpec;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.initialization.Initialization;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.serde.Registererer;
-import io.druid.segment.serde.Registererers;
+import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
 import org.apache.hadoop.conf.Configuration;
@@ -65,11 +68,9 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.ISODateTimeFormat;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -83,11 +84,28 @@ public class HadoopDruidIndexerConfig
 
   public static final Splitter tabSplitter = Splitter.on("\t");
   public static final Joiner tabJoiner = Joiner.on("\t");
+
+  private static final Injector injector;
+
   public static final ObjectMapper jsonMapper;
 
   static {
-    jsonMapper = new DefaultObjectMapper();
-    jsonMapper.configure(JsonGenerator.Feature.ESCAPE_NON_ASCII, true);
+    injector = Initialization.makeInjectorWithModules(
+        Initialization.makeStartupInjector(),
+        ImmutableList.<Object>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bindInstance(
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", "localhost", -1)
+                );
+              }
+            }
+        )
+    );
+    jsonMapper = injector.getInstance(ObjectMapper.class);
   }
 
   public static enum IndexJobCounters

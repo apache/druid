@@ -67,12 +67,6 @@ public class NumberedShardSpec implements ShardSpec
   }
 
   @Override
-  public boolean isInChunk(Map<String, String> dimensions)
-  {
-    return true;
-  }
-
-  @Override
   public boolean isInChunk(InputRow inputRow)
   {
     return true;

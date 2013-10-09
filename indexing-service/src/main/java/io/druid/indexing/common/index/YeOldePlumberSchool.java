@@ -35,6 +35,7 @@ import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -150,7 +151,7 @@ public class YeOldePlumberSchool implements PlumberSchool
 
           final DataSegment segmentToUpload = theSink.getSegment()
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
-                                                     .withBinaryVersion(IndexIO.getVersionFromDir(fileToUpload));
+                                                     .withBinaryVersion(SegmentUtils.getVersionFromDir(fileToUpload));
 
           dataSegmentPusher.push(fileToUpload, segmentToUpload);
 

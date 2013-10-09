@@ -78,7 +78,7 @@ public class DeleteTask extends AbstractTask
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     // Strategy: Create an empty segment covering the interval to be deleted
-    final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
+    final TaskLock myLock =  Iterables.getOnlyElement(getTaskLocks(toolbox));
     final Interval interval = this.getImplicitLockInterval().get();
     final IncrementalIndex empty = new IncrementalIndex(0, QueryGranularity.NONE, new AggregatorFactory[0]);
     final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(interval, empty);

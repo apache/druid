@@ -20,7 +20,7 @@
 package io.druid.indexing.worker.executor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.indexing.coordinator.TaskRunner;
+import io.druid.indexing.overlord.TaskRunner;
 
 import java.io.File;
 

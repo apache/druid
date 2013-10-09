@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.guice.IndexingServiceModuleHelper;
@@ -32,8 +33,9 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
-import io.druid.indexing.coordinator.ForkingTaskRunner;
-import io.druid.indexing.coordinator.TaskRunner;
+import io.druid.indexing.common.index.ChatHandlerProvider;
+import io.druid.indexing.overlord.ForkingTaskRunner;
+import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
 import io.druid.indexing.worker.WorkerTaskMonitor;
@@ -75,6 +77,8 @@ public class CliMiddleManager extends ServerRunnable
 
             binder.bind(TaskRunner.class).to(ForkingTaskRunner.class);
             binder.bind(ForkingTaskRunner.class).in(LazySingleton.class);
+
+            binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
 
             binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
             binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);

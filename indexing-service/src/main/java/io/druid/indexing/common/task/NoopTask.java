@@ -22,6 +22,7 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import org.joda.time.DateTime;
@@ -33,11 +34,17 @@ import org.joda.time.Period;
 public class NoopTask extends AbstractTask
 {
   private static final Logger log = new Logger(NoopTask.class);
+  private static int defaultRunTime = 2500;
+
+  private final int runTime;
+  private final FirehoseFactory firehoseFactory;
 
   @JsonCreator
   public NoopTask(
       @JsonProperty("id") String id,
-      @JsonProperty("interval") Interval interval
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("runTime") int runTime,
+      @JsonProperty("firehose") FirehoseFactory firehoseFactory
   )
   {
     super(
@@ -45,6 +52,10 @@ public class NoopTask extends AbstractTask
         "none",
         interval == null ? new Interval(Period.days(1), new DateTime()) : interval
     );
+
+    this.runTime = (runTime == 0) ? defaultRunTime : runTime;
+
+    this.firehoseFactory = firehoseFactory;
   }
 
   @Override
@@ -53,14 +64,29 @@ public class NoopTask extends AbstractTask
     return "noop";
   }
 
+  @JsonProperty("runTime")
+  public int getRunTime()
+  {
+    return runTime;
+  }
+
+  @JsonProperty("firehose")
+  public FirehoseFactory getFirehoseFactory()
+  {
+    return firehoseFactory;
+  }
+
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final int sleepTime = 2500;
+    if (firehoseFactory != null) {
+      log.info("Connecting firehose");
+      firehoseFactory.connect();
+    }
 
     log.info("Running noop task[%s]", getId());
-    log.info("Sleeping for %,d millis.", sleepTime);
-    Thread.sleep(sleepTime);
+    log.info("Sleeping for %,d millis.", runTime);
+    Thread.sleep(runTime);
     log.info("Woke up!");
     return TaskStatus.success(getId());
   }

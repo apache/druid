@@ -33,12 +33,13 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.StringInputRowParser;
+import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.SegmentUtils;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.timeline.DataSegment;
@@ -136,7 +137,7 @@ public class IndexGeneratorJob implements Jobby
       config.addInputPaths(job);
       config.intoConfiguration(job);
 
-      job.setJarByClass(IndexGeneratorJob.class);
+      JobHelper.setupClasspath(config, job);
 
       job.submit();
       log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
@@ -446,7 +447,7 @@ public class IndexGeneratorJob implements Jobby
           dimensionNames,
           metricNames,
           config.getShardSpec(bucket).getActualSpec(),
-          IndexIO.getVersionFromDir(mergedBase),
+          SegmentUtils.getVersionFromDir(mergedBase),
           size
       );
 

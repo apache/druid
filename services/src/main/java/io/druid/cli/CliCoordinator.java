@@ -42,17 +42,18 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
+import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.DruidCoordinatorConfig;
+import io.druid.server.coordinator.LoadQueueTaskMaster;
 import io.druid.server.http.BackwardsCompatiableInfoResource;
+import io.druid.server.http.CoordinatorDynamicConfigsResource;
+import io.druid.server.http.CoordinatorRedirectInfo;
+import io.druid.server.http.CoordinatorResource;
 import io.druid.server.http.InfoResource;
-import io.druid.server.http.MasterRedirectInfo;
-import io.druid.server.http.MasterResource;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.http.RedirectServlet;
 import io.druid.server.initialization.JettyServerInitializer;
-import io.druid.server.master.DruidMaster;
-import io.druid.server.master.DruidMasterConfig;
-import io.druid.server.master.LoadQueueTaskMaster;
 import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
 
@@ -62,7 +63,7 @@ import java.util.List;
  */
 @Command(
     name = "coordinator",
-    description = "Runs the Coordinator, see https://github.com/metamx/druid/wiki/Master for a description."
+    description = "Runs the Coordinator, see http://druid.io/docs/0.6.0/Coordinator.html for a description."
 )
 public class CliCoordinator extends ServerRunnable
 {
@@ -82,7 +83,7 @@ public class CliCoordinator extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            ConfigProvider.bind(binder, DruidMasterConfig.class);
+            ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
             JsonConfigProvider.bind(binder, "druid.manager.segment", DatabaseSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
@@ -100,17 +101,18 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
 
-            binder.bind(RedirectInfo.class).to(MasterRedirectInfo.class).in(LazySingleton.class);
+            binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
 
-            binder.bind(DruidMaster.class);
+            binder.bind(DruidCoordinator.class);
 
-            LifecycleModule.register(binder, DruidMaster.class);
+            LifecycleModule.register(binder, DruidCoordinator.class);
             DiscoveryModule.register(binder, Self.class);
 
             binder.bind(JettyServerInitializer.class).toInstance(new CoordinatorJettyServerInitializer());
             Jerseys.addResource(binder, BackwardsCompatiableInfoResource.class);
             Jerseys.addResource(binder, InfoResource.class);
-            Jerseys.addResource(binder, MasterResource.class);
+            Jerseys.addResource(binder, CoordinatorResource.class);
+            Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
 
             LifecycleModule.register(binder, Server.class);
           }
@@ -118,7 +120,7 @@ public class CliCoordinator extends ServerRunnable
           @Provides
           @LazySingleton
           public LoadQueueTaskMaster getLoadQueueTaskMaster(
-              CuratorFramework curator, ObjectMapper jsonMapper, ScheduledExecutorFactory factory, DruidMasterConfig config
+              CuratorFramework curator, ObjectMapper jsonMapper, ScheduledExecutorFactory factory, DruidCoordinatorConfig config
           )
           {
             return new LoadQueueTaskMaster(curator, jsonMapper, factory.create(1, "Master-PeonExec--%d"), config);

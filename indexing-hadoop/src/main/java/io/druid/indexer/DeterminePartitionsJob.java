@@ -141,7 +141,7 @@ public class DeterminePartitionsJob implements Jobby
         groupByJob.setOutputKeyClass(BytesWritable.class);
         groupByJob.setOutputValueClass(NullWritable.class);
         groupByJob.setOutputFormatClass(SequenceFileOutputFormat.class);
-        groupByJob.setJarByClass(DeterminePartitionsJob.class);
+        JobHelper.setupClasspath(config, groupByJob);
 
         config.addInputPaths(groupByJob);
         config.intoConfiguration(groupByJob);
@@ -189,9 +189,9 @@ public class DeterminePartitionsJob implements Jobby
       dimSelectionJob.setOutputKeyClass(BytesWritable.class);
       dimSelectionJob.setOutputValueClass(Text.class);
       dimSelectionJob.setOutputFormatClass(DeterminePartitionsDimSelectionOutputFormat.class);
-      dimSelectionJob.setJarByClass(DeterminePartitionsJob.class);
       dimSelectionJob.setPartitionerClass(DeterminePartitionsDimSelectionPartitioner.class);
       dimSelectionJob.setNumReduceTasks(config.getGranularitySpec().bucketIntervals().size());
+      JobHelper.setupClasspath(config, dimSelectionJob);
 
       config.intoConfiguration(dimSelectionJob);
       FileOutputFormat.setOutputPath(dimSelectionJob, config.makeIntermediatePath());
@@ -486,7 +486,7 @@ public class DeterminePartitionsJob implements Jobby
 
     private Iterable<DimValueCount> combineRows(Iterable<Text> input)
     {
-      return new CombiningIterable<DimValueCount>(
+      return new CombiningIterable<>(
           Iterables.transform(
               input,
               new Function<Text, DimValueCount>()
@@ -758,14 +758,19 @@ public class DeterminePartitionsJob implements Jobby
 
       log.info("Chosen partitions:");
       for (ShardSpec shardSpec : chosenShardSpecs) {
-        log.info("  %s", shardSpec);
+        log.info("  %s", HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(shardSpec));
       }
 
+      System.out.println(HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(chosenShardSpecs));
+
       try {
-        HadoopDruidIndexerConfig.jsonMapper.writerWithType(new TypeReference<List<ShardSpec>>() {}).writeValue(
-            out,
-            chosenShardSpecs
-        );
+        HadoopDruidIndexerConfig.jsonMapper
+                                .writerWithType(
+                                    new TypeReference<List<ShardSpec>>()
+                                    {
+                                    }
+                                )
+                                .writeValue(out, chosenShardSpecs);
       }
       finally {
         Closeables.close(out, false);

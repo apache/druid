@@ -4,7 +4,7 @@ layout: doc_page
 Examples
 ========
 
-The examples on this page are setup in order to give you a feel for what Druid does in practice. They are quick demos of Druid based on [RealtimeStandaloneMain](https://github.com/metamx/druid/blob/master/examples/src/main/java/druid/examples/RealtimeStandaloneMain.java). While you wouldn’t run it this way in production you should be able to see how ingestion works and the kind of exploratory queries that are possible. Everything that can be done on your box here can be scaled out to 10’s of billions of events and terabytes of data per day in a production cluster while still giving the snappy responsive exploratory queries.
+The examples on this page are setup in order to give you a feel for what Druid does in practice. They are quick demos of Druid based on [CliRealtimeExample](https://github.com/metamx/druid/blob/master/services/src/main/java/io/druid/cli/CliRealtimeExample.java). While you wouldn’t run it this way in production you should be able to see how ingestion works and the kind of exploratory queries that are possible. Everything that can be done on your box here can be scaled out to 10’s of billions of events and terabytes of data per day in a production cluster while still giving the snappy responsive exploratory queries.
 
 Installing Standalone Druid
 ---------------------------
@@ -19,7 +19,7 @@ Clone Druid and build it:
 git clone https://github.com/metamx/druid.git druid
 cd druid
 git fetch --tags
-git checkout druid-0.4.30
+git checkout druid-0.6.0
 ./build.sh
 ```
 
@@ -49,7 +49,7 @@ This Example uses a feature of Twitter that allows for sampling of it’s stream
 
 ### What you’ll do
 
-See [Tutorial](Tutorial.html)
+See [Twitter Tutorial](Twitter-Tutorial.html)
 
 Rand Example
 ------------
@@ -67,6 +67,5 @@ In another terminal window:
 ``` bash
 ./run_example_client.sh # type rand when prompted
 ```
-
 
 The result of the client query is in JSON format. The client makes a REST request using the program `curl` which is usually installed on Linux, Unix, and OSX by default.

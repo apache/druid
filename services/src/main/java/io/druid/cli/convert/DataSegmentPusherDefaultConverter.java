@@ -54,16 +54,16 @@ public class DataSegmentPusherDefaultConverter implements PropertyConverter
     }
 
     if (type != null) {
-      return ImmutableMap.of("druid.pusher.type", type);
+      return ImmutableMap.of("druid.storage.type", type);
     }
 
     // It's an s3 property, which means we need to set the type and convert the other values.
     Map<String, String> retVal = Maps.newHashMap();
 
     retVal.put("druid.pusher.type", type);
-    retVal.putAll(new Rename("druid.pusher.s3.bucket", "druid.pusher.bucket").convert(props));
-    retVal.putAll(new Rename("druid.pusher.s3.baseKey", "druid.pusher.baseKey").convert(props));
-    retVal.putAll(new Rename("druid.pusher.s3.disableAcl", "druid.pusher.disableAcl").convert(props));
+    retVal.putAll(new Rename("druid.pusher.s3.bucket", "druid.storage.bucket").convert(props));
+    retVal.putAll(new Rename("druid.pusher.s3.baseKey", "druid.storage.baseKey").convert(props));
+    retVal.putAll(new Rename("druid.pusher.s3.disableAcl", "druid.storage.disableAcl").convert(props));
 
     return retVal;
   }

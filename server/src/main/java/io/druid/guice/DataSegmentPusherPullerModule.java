@@ -23,18 +23,11 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.HdfsDataSegmentPuller;
-import io.druid.segment.loading.HdfsDataSegmentPusher;
-import io.druid.segment.loading.HdfsDataSegmentPusherConfig;
 import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.loading.LocalDataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
 import io.druid.segment.loading.OmniSegmentLoader;
-import io.druid.segment.loading.S3DataSegmentPuller;
-import io.druid.segment.loading.S3DataSegmentPusher;
-import io.druid.segment.loading.S3DataSegmentPusherConfig;
 import io.druid.segment.loading.SegmentLoader;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  */
@@ -46,17 +39,15 @@ public class DataSegmentPusherPullerModule implements Module
     binder.bind(SegmentLoader.class).to(OmniSegmentLoader.class).in(LazySingleton.class);
 
     bindDeepStorageLocal(binder);
-    bindDeepStorageS3(binder);
-    bindDeepStorageHdfs(binder);
 
     PolyBind.createChoice(
-        binder, "druid.pusher.type", Key.get(DataSegmentPusher.class), Key.get(LocalDataSegmentPusher.class)
+        binder, "druid.storage.type", Key.get(DataSegmentPusher.class), Key.get(LocalDataSegmentPusher.class)
     );
   }
 
   private static void bindDeepStorageLocal(Binder binder)
   {
-    DruidBinders.dataSegmentPullerBinder(binder)
+    Binders.dataSegmentPullerBinder(binder)
                 .addBinding("local")
                 .to(LocalDataSegmentPuller.class)
                 .in(LazySingleton.class);
@@ -65,36 +56,6 @@ public class DataSegmentPusherPullerModule implements Module
             .addBinding("local")
             .to(LocalDataSegmentPusher.class)
             .in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.pusher", LocalDataSegmentPusherConfig.class);
-  }
-
-  private static void bindDeepStorageS3(Binder binder)
-  {
-    DruidBinders.dataSegmentPullerBinder(binder)
-                .addBinding("s3_zip")
-                .to(S3DataSegmentPuller.class)
-                .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class))
-            .addBinding("s3")
-            .to(S3DataSegmentPusher.class)
-            .in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.pusher", S3DataSegmentPusherConfig.class);
-  }
-
-  private static void bindDeepStorageHdfs(Binder binder)
-  {
-    DruidBinders.dataSegmentPullerBinder(binder)
-                .addBinding("hdfs")
-                .to(HdfsDataSegmentPuller.class)
-                .in(LazySingleton.class);
-
-    binder.bind(Configuration.class).toInstance(new Configuration());
-
-    PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class))
-        .addBinding("hdfs")
-        .to(HdfsDataSegmentPusher.class)
-        .in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.pusher", HdfsDataSegmentPusherConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage", LocalDataSegmentPusherConfig.class);
   }
 }

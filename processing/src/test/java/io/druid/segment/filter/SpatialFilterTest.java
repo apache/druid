@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.metamx.collections.spatial.search.RadiusBound;
 import com.metamx.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -46,7 +47,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.SpatialDimensionSchema;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
@@ -464,7 +464,7 @@ public class SpatialFilterTest
         )
     );
     try {
-      TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory();
+      TimeseriesQueryRunnerFactory factory = TimeseriesQueryRunnerFactory.create();
       QueryRunner runner = new FinalizeResultsQueryRunner(
           factory.createRunner(segment),
           factory.getToolchest()
@@ -546,7 +546,7 @@ public class SpatialFilterTest
         )
     );
     try {
-      TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory();
+      TimeseriesQueryRunnerFactory factory = TimeseriesQueryRunnerFactory.create();
       QueryRunner runner = new FinalizeResultsQueryRunner(
           factory.createRunner(segment),
           factory.getToolchest()

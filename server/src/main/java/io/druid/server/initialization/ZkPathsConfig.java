@@ -25,7 +25,10 @@ import org.skife.config.Config;
 public abstract class ZkPathsConfig
 {
   @Config("druid.zk.paths.base")
-  public abstract String getZkBasePath();
+  public String getZkBasePath()
+  {
+    return "druid";
+  }
 
   @Config("druid.zk.paths.propertiesPath")
   public String getPropertiesPath()
@@ -57,10 +60,10 @@ public abstract class ZkPathsConfig
     return defaultPath("loadQueue");
   }
 
-  @Config("druid.zk.paths.masterPath")
-  public String getMasterPath()
+  @Config("druid.zk.paths.coordinatorPath")
+  public String getCoordinatorPath()
   {
-    return defaultPath("master");
+    return defaultPath("coordinator");
   }
 
   @Config("druid.zk.paths.indexer.announcementsPath")

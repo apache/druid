@@ -63,6 +63,13 @@
             <artifactId>twitter4j-stream</artifactId>
             <version>3.0.3</version>
         </dependency>
+
+        <!-- For tests! -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

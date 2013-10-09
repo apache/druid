@@ -111,7 +111,6 @@ public class SingleDimensionShardSpecTest
         }
         )
         );
-        Assert.assertEquals(String.format("spec[%s], map[%s]", spec, pair.rhs), pair.lhs, spec.isInChunk(pair.rhs));
         Assert.assertEquals(String.format("spec[%s], row[%s]", spec, inputRow), pair.lhs, spec.isInChunk(inputRow));
       }
     }

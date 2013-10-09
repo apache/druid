@@ -22,11 +22,11 @@
             <outputDirectory>config/broker</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/config/master</directory>
+            <directory>../examples/config/coordinator</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>config/master</outputDirectory>
+            <outputDirectory>config/coordinator</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>../examples/config/realtime</directory>
@@ -36,11 +36,11 @@
             <outputDirectory>config/realtime</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/config/compute</directory>
+            <directory>../examples/config/historical</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>config/compute</outputDirectory>
+            <outputDirectory>config/historical</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>../examples/bin</directory>

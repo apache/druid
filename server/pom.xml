@@ -137,10 +137,6 @@
             <artifactId>jersey-guice</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.java.dev.jets3t</groupId>
-            <artifactId>jets3t</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
         </dependency>
@@ -165,39 +161,12 @@
             <artifactId>slf4j-log4j12</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.tesla.aether</groupId>
             <artifactId>tesla-aether</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.aether</groupId>
             <artifactId>aether-api</artifactId>
-        </dependency>
-
-
-        <!-- Dependencies required for jets3t b/c emr pom doesn't include them -->
-        <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>commons-httpclient</groupId>
-            <artifactId>commons-httpclient</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>com.jamesmurty.utils</groupId>
-            <artifactId>java-xmlbuilder</artifactId>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.antlr</groupId>
@@ -208,8 +177,8 @@
             <artifactId>spymemcached</artifactId>
         </dependency>
         <dependency>
-          <groupId>net.jpountz.lz4</groupId>
-          <artifactId>lz4</artifactId>
+            <groupId>net.jpountz.lz4</groupId>
+            <artifactId>lz4</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
@@ -222,6 +191,22 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlets</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>kafka</groupId>
+            <artifactId>core-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>com.ircclouds.irc</groupId>
+          <artifactId>irc-api</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>com.maxmind.geoip2</groupId>
+          <artifactId>geoip2</artifactId>
         </dependency>
 
         <!-- Tests -->

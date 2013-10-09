@@ -28,7 +28,7 @@ import com.google.common.io.Closeables;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.StringInputRowParser;
+import io.druid.data.input.impl.StringInputRowParser;
 
 import java.io.BufferedReader;
 import java.io.File;

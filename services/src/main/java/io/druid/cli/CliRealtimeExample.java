@@ -19,38 +19,22 @@
 
 package io.druid.cli;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Module;
 import com.metamx.common.logger.Logger;
-import druid.examples.flights.FlightsFirehoseFactory;
-import druid.examples.rand.RandomFirehoseFactory;
-import druid.examples.twitter.TwitterSpritzerFirehoseFactory;
-import druid.examples.web.WebFirehoseFactory;
 import io.airlift.command.Command;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.ServerView;
-import io.druid.guice.NoopSegmentPublisherProvider;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.RealtimeModule;
-import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
-import io.druid.indexing.common.index.StaticS3FirehoseFactory;
-import io.druid.initialization.DruidModule;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.realtime.SegmentPublisher;
-import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
-import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
-import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
-import io.druid.segment.realtime.firehose.RabbitMQFirehoseFactory;
-import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executor;
 
@@ -74,37 +58,15 @@ public class CliRealtimeExample extends ServerRunnable
   {
     return ImmutableList.<Object>of(
         new RealtimeModule(),
-        new DruidModule()
+        new Module()
         {
           @Override
           public void configure(Binder binder)
           {
-            binder.bind(SegmentPublisher.class).toProvider(NoopSegmentPublisherProvider.class);
-            binder.bind(DataSegmentPusher.class).to(NoopDataSegmentPusher.class);
-            binder.bind(DataSegmentAnnouncer.class).to(NoopDataSegmentAnnouncer.class);
-            binder.bind(InventoryView.class).to(NoopInventoryView.class);
-            binder.bind(ServerView.class).to(NoopServerView.class);
-          }
-
-          @Override
-          public List<Module> getJacksonModules()
-          {
-            return Arrays.<Module>asList(
-                new SimpleModule("RealtimeExampleModule")
-                    .registerSubtypes(
-                        new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
-                        new NamedType(FlightsFirehoseFactory.class, "flights"),
-                        new NamedType(RandomFirehoseFactory.class, "rand"),
-                        new NamedType(WebFirehoseFactory.class, "webstream"),
-                        new NamedType(KafkaFirehoseFactory.class, "kafka"),
-                        new NamedType(RabbitMQFirehoseFactory.class, "rabbitmq"),
-                        new NamedType(ClippedFirehoseFactory.class, "clipped"),
-                        new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
-                        new NamedType(IrcFirehoseFactory.class, "irc"),
-                        new NamedType(StaticS3FirehoseFactory.class, "s3"),
-                        new NamedType(EventReceiverFirehoseFactory.class, "receiver")
-                    )
-            );
+            binder.bind(DataSegmentPusher.class).to(NoopDataSegmentPusher.class).in(LazySingleton.class);
+            binder.bind(DataSegmentAnnouncer.class).to(NoopDataSegmentAnnouncer.class).in(LazySingleton.class);
+            binder.bind(InventoryView.class).to(NoopInventoryView.class).in(LazySingleton.class);
+            binder.bind(ServerView.class).to(NoopServerView.class).in(LazySingleton.class);
           }
         }
     );
@@ -146,6 +108,12 @@ public class CliRealtimeExample extends ServerRunnable
 
   private static class NoopDataSegmentPusher implements DataSegmentPusher
   {
+    @Override
+    public String getPathForHadoop(String dataSource)
+    {
+      return dataSource;
+    }
+
     @Override
     public DataSegment push(File file, DataSegment segment) throws IOException
     {

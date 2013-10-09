@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.FirehoseFactory;
+import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexer.granularity.GranularitySpec;
 import io.druid.indexing.common.TaskStatus;
@@ -33,7 +34,6 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SpawnTasksAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.incremental.SpatialDimensionSchema;
 import io.druid.segment.realtime.Schema;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -43,6 +43,8 @@ import java.util.List;
 
 public class IndexTask extends AbstractTask
 {
+  private static final Logger log = new Logger(IndexTask.class);
+
   @JsonIgnore
   private final GranularitySpec granularitySpec;
 
@@ -63,8 +65,6 @@ public class IndexTask extends AbstractTask
 
   @JsonIgnore
   private final int rowFlushBoundary;
-
-  private static final Logger log = new Logger(IndexTask.class);
 
   @JsonCreator
   public IndexTask(
@@ -94,7 +94,7 @@ public class IndexTask extends AbstractTask
                              ? Lists.<SpatialDimensionSchema>newArrayList()
                              : spatialDimensions;
     this.aggregators = aggregators;
-    this.indexGranularity = indexGranularity;
+    this.indexGranularity = (indexGranularity == null) ? QueryGranularity.NONE : indexGranularity;
     this.targetPartitionSize = targetPartitionSize;
     this.firehoseFactory = firehoseFactory;
     this.rowFlushBoundary = rowFlushBoundary;
@@ -202,5 +202,4 @@ public class IndexTask extends AbstractTask
   {
     return rowFlushBoundary;
   }
-
 }

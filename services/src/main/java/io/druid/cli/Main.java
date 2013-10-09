@@ -19,21 +19,13 @@
 
 package io.druid.cli;
 
-import com.google.inject.Binder;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import io.airlift.command.Cli;
 import io.airlift.command.Help;
 import io.airlift.command.ParseException;
 import io.druid.cli.convert.ConvertProperties;
-import io.druid.guice.DruidGuiceExtensions;
-import io.druid.guice.DruidSecondaryModule;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.jackson.JacksonModule;
-import io.druid.server.initialization.ConfigModule;
+import io.druid.initialization.Initialization;
 import io.druid.server.initialization.ExtensionsConfig;
-import io.druid.server.initialization.PropertiesModule;
 
 import java.util.List;
 
@@ -76,9 +68,9 @@ public class Main
     builder.withGroup("internal")
            .withDescription("Processes that Druid runs \"internally\", you should rarely use these directly")
            .withDefaultCommand(Help.class)
-           .withCommands(CliPeon.class);
+           .withCommands(CliPeon.class, CliInternalHadoopIndexer.class);
 
-    final Injector injector = makeStartupInjector();
+    final Injector injector = Initialization.makeStartupInjector();
     final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
     final List<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(config, CliCommandCreator.class);
 
@@ -89,7 +81,9 @@ public class Main
     final Cli<Runnable> cli = builder.build();
     try {
       final Runnable command = cli.parse(args);
-      injector.injectMembers(command);
+      if (! (command instanceof Help)) { // Hack to work around Help not liking being injected
+        injector.injectMembers(command);
+      }
       command.run();
     }
     catch (ParseException e) {
@@ -98,24 +92,5 @@ public class Main
       System.out.println("===");
       cli.parse(new String[]{"help"}).run();
     }
-  }
-
-  public static Injector makeStartupInjector()
-  {
-    return Guice.createInjector(
-        new DruidGuiceExtensions(),
-        new JacksonModule(),
-        new PropertiesModule("runtime.properties"),
-        new ConfigModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bind(DruidSecondaryModule.class);
-            JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
-          }
-        }
-    );
   }
 }

@@ -5,7 +5,7 @@
             {"type": "count", "name": "rows"},
             {"type": "doubleSum", "fieldName": "known_users", "name": "known_users"}
         ],
-        "indexGranularity": "minute",
+        "indexGranularity": "second",
         "shardSpec": {"type": "none"}
 	    },
 
