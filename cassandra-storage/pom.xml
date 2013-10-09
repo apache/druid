@@ -33,14 +33,17 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.metamx.druid</groupId>
-            <artifactId>druid-server</artifactId>
-            <version>${project.parent.version}</version>
+            <groupId>io.druid</groupId>
+            <artifactId>druid-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
             <artifactId>astyanax</artifactId>
             <version>1.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
         </dependency>
 
         <!-- Tests -->

@@ -22,10 +22,10 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Self;
-import io.druid.indexing.common.tasklogs.TaskLogPusher;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.server.DruidNode;
+import io.druid.tasklogs.TaskLogPusher;
 
 import java.util.Properties;
 

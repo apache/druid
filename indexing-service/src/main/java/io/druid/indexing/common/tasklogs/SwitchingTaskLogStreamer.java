@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
+import io.druid.tasklogs.TaskLogStreamer;
 
 import java.io.IOException;
 import java.io.InputStream;

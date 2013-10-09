@@ -43,11 +43,11 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.common.tasklogs.TaskLogPusher;
-import io.druid.indexing.common.tasklogs.TaskLogStreamer;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.server.DruidNode;
+import io.druid.tasklogs.TaskLogPusher;
+import io.druid.tasklogs.TaskLogStreamer;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

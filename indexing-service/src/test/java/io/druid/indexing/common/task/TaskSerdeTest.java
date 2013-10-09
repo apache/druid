@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.Granularity;
-import io.druid.data.input.JSONDataSpec;
+import io.druid.data.input.impl.JSONDataSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.granularity.UniformGranularitySpec;

@@ -32,7 +32,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.MapInputRowParser;
+import io.druid.data.input.impl.MapInputRowParser;
 
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;

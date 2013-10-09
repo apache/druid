@@ -31,7 +31,6 @@ import io.druid.common.config.JacksonConfigManager;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.common.tasklogs.TaskLogStreamer;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunner;
@@ -39,6 +38,7 @@ import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.scaling.ResourceManagementScheduler;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
+import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.timeline.DataSegment;
 
 import javax.ws.rs.Consumes;

@@ -128,6 +128,12 @@ public class TaskLifecycleTest
         new DataSegmentPusher()
         {
           @Override
+          public String getPathForHadoop(String dataSource)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
           public DataSegment push(File file, DataSegment segment) throws IOException
           {
             return segment;

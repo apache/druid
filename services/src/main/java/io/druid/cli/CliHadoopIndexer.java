@@ -19,29 +19,22 @@
 
 package io.druid.cli;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.CharStreams;
-import com.google.common.io.InputSupplier;
-import com.google.inject.Binder;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.metamx.common.lifecycle.Lifecycle;
+import com.google.api.client.util.Lists;
+import com.google.common.base.Joiner;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
-import io.druid.guice.LazySingleton;
-import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.indexer.HadoopDruidIndexerJob;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import io.airlift.command.Option;
+import io.druid.initialization.Initialization;
+import io.druid.server.initialization.ExtensionsConfig;
+import io.tesla.aether.internal.DefaultTeslaAether;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -50,87 +43,55 @@ import java.util.List;
     name = "hadoop",
     description = "Runs the batch Hadoop Druid Indexer, see https://github.com/metamx/druid/wiki/Batch-ingestion for a description."
 )
-public class CliHadoopIndexer extends GuiceRunnable
+public class CliHadoopIndexer implements Runnable
 {
+  private static final Logger log = new Logger(CliHadoopIndexer.class);
+
   @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
   private String argumentSpec;
 
-  private static final Logger log = new Logger(CliHadoopIndexer.class);
+  @Option(name = "hadoop", description = "The maven coordinates to the version of hadoop to run with. Defaults to org.apache.hadoop:hadoop-core:1.0.3")
+  private String hadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
 
-  public CliHadoopIndexer()
-  {
-    super(log);
-  }
-
-  @Override
-  protected List<Object> getModules()
-  {
-    return ImmutableList.<Object>of(
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bind(HadoopDruidIndexerJob.class).in(LazySingleton.class);
-          }
-
-          @Provides
-          @LazySingleton
-          public HadoopDruidIndexerConfig getHadoopDruidIndexerConfig()
-          {
-            try {
-              if (argumentSpec.startsWith("{")) {
-                return HadoopDruidIndexerConfig.fromString(argumentSpec);
-              } else if (argumentSpec.startsWith("s3://")) {
-                final Path s3nPath = new Path(String.format("s3n://%s", argumentSpec.substring("s3://".length())));
-                final FileSystem fs = s3nPath.getFileSystem(new Configuration());
-
-                String configString = CharStreams.toString(
-                    new InputSupplier<InputStreamReader>()
-                    {
-                      @Override
-                      public InputStreamReader getInput() throws IOException
-                      {
-                        return new InputStreamReader(fs.open(s3nPath));
-                      }
-                    }
-                );
-
-                return HadoopDruidIndexerConfig.fromString(configString);
-              } else {
-                return HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
-              }
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
-          }
-        }
-    );
-  }
+  @Inject
+  private ExtensionsConfig extensionsConfig = null;
 
   @Override
+  @SuppressWarnings("unchecked")
   public void run()
   {
     try {
-      Injector injector = makeInjector();
-      final HadoopDruidIndexerJob job = injector.getInstance(HadoopDruidIndexerJob.class);
+      final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
+      final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
+          aetherClient, hadoopCoordinates
+      );
+      final URL[] urLs = ((URLClassLoader) hadoopLoader).getURLs();
 
-      Lifecycle lifecycle = initLifecycle(injector);
+      final URL[] nonHadoopUrls = ((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs();
 
-      job.run();
+      List<URL> theURLS = Lists.newArrayList();
+      theURLS.addAll(Arrays.asList(urLs));
+      theURLS.addAll(Arrays.asList(nonHadoopUrls));
 
-      try {
-        lifecycle.stop();
-      }
-      catch (Throwable t) {
-        log.error(t, "Error when stopping. Failing.");
-        System.exit(1);
-      }
+      final URLClassLoader loader = new URLClassLoader(theURLS.toArray(new URL[theURLS.size()]), null);
+      Thread.currentThread().setContextClassLoader(loader);
 
+      System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(nonHadoopUrls));
+
+      final Class<?> mainClass = loader.loadClass(Main.class.getName());
+      final Method mainMethod = mainClass.getMethod("main", String[].class);
+
+      String[] args = new String[]{
+          "internal",
+          "hadoop-indexer",
+          argumentSpec
+      };
+
+      mainMethod.invoke(null, new Object[]{args});
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      log.error(e, "failure!!!!");
+      System.exit(1);
     }
   }
 
