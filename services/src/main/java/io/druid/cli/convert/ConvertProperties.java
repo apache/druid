@@ -85,7 +85,7 @@ public class ConvertProperties implements Runnable
       new Rename("druid.indexer.fork.startport", "druid.indexer.runner.startPort"),
       new Rename("druid.indexer.properties.prefixes", "druid.indexer.runner.allowedPrefixes"),
       new Rename("druid.indexer.taskAssignmentTimeoutDuration", "druid.indexer.runner.taskAssignmentTimeout"),
-      new Rename("druid.indexer.worker.version", "druid.indexer.runner.workerVersion"),
+      new Rename("druid.indexer.worker.version", "druid.indexer.runner.minWorkerVersion"),
       new Rename("druid.zk.maxNumBytes", "druid.indexer.runner.maxZnodeBytes"),
       new Rename("druid.indexer.provisionResources.duration", "druid.indexer.autoscale.provisionPeriod"),
       new Rename("druid.indexer.terminateResources.duration", "druid.indexer.autoscale.terminatePeriod"),

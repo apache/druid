@@ -45,7 +45,7 @@ public class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   }
 
   @Override
-  public String getWorkerVersion()
+  public String getMinWorkerVersion()
   {
     return "";
   }

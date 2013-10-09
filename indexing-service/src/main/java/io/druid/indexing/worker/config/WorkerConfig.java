@@ -30,11 +30,11 @@ public class WorkerConfig
 {
   @JsonProperty
   @NotNull
-  private String ip = null;
+  private String ip = "localhost";
 
   @JsonProperty
   @NotNull
-  private String version = null;
+  private String version = "0";
 
   @JsonProperty
   @Min(1)

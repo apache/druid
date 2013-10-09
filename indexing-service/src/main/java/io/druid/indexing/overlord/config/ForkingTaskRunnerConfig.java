@@ -30,10 +30,6 @@ import java.util.List;
 public class ForkingTaskRunnerConfig
 {
   @JsonProperty
-  @Min(1)
-  private int maxForks = 1;
-
-  @JsonProperty
   @NotNull
   private String taskDir = "/tmp/persistent";
 
@@ -68,11 +64,6 @@ public class ForkingTaskRunnerConfig
       "user.timezone",
       "file.encoding"
   );
-
-  public int maxForks()
-  {
-    return maxForks;
-  }
 
   public String getTaskDir()
   {
