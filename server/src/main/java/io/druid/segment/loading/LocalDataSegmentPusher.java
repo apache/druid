@@ -25,9 +25,9 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.common.utils.CompressionUtils;
-import io.druid.segment.IndexIO;
+import io.druid.segment.SegmentUtils;
 import io.druid.timeline.DataSegment;
+import io.druid.utils.CompressionUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,6 +52,12 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
+  public String getPathForHadoop(String dataSource)
+  {
+    return String.format("file://%s/%s", config.getStorageDirectory(), dataSource);
+  }
+
+  @Override
   public DataSegment push(File dataSegmentFile, DataSegment segment) throws IOException
   {
     File outDir = new File(config.getStorageDirectory(), DataSegmentPusherUtil.getStorageDir(segment));
@@ -65,7 +71,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       return createDescriptorFile(
           segment.withLoadSpec(makeLoadSpec(outDir))
                  .withSize(size)
-                 .withBinaryVersion(IndexIO.getVersionFromDir(dataSegmentFile)),
+                 .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
           outDir
       );
     }
@@ -78,7 +84,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     return createDescriptorFile(
         segment.withLoadSpec(makeLoadSpec(outFile))
                .withSize(size)
-               .withBinaryVersion(IndexIO.getVersionFromDir(dataSegmentFile)),
+               .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile)),
         outDir
     );
   }

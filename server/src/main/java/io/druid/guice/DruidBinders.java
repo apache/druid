@@ -27,7 +27,6 @@ import com.metamx.metrics.Monitor;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.server.DruidNode;
 
 /**
@@ -46,11 +45,6 @@ public class DruidBinders
     return MapBinder.newMapBinder(
         binder, new TypeLiteral<Class<? extends Query>>(){}, new TypeLiteral<QueryToolChest>(){}
     );
-  }
-
-  public static MapBinder<String, DataSegmentPuller> dataSegmentPullerBinder(Binder binder)
-  {
-    return MapBinder.newMapBinder(binder, String.class, DataSegmentPuller.class);
   }
 
   public static Multibinder<KeyHolder<DruidNode>> discoveryAnnouncementBinder(Binder binder)

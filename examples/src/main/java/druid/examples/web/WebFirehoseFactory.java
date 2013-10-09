@@ -25,11 +25,11 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import com.metamx.common.parsers.TimestampParser;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.common.guava.Runnables;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.utils.Runnables;
 import org.joda.time.DateTime;
 
 import java.io.IOException;

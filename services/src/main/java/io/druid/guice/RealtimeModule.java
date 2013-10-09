@@ -57,11 +57,7 @@ public class RealtimeModule implements Module
     binder.bind(DbSegmentPublisher.class).in(LazySingleton.class);
 
     JsonConfigProvider.bind(binder, "druid.realtime", RealtimeManagerConfig.class);
-    binder.bind(
-        new TypeLiteral<List<FireDepartment>>()
-        {
-        }
-    )
+    binder.bind(new TypeLiteral<List<FireDepartment>>(){})
           .toProvider(FireDepartmentsProvider.class)
           .in(LazySingleton.class);
 

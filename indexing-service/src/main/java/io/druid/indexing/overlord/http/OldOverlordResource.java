@@ -21,9 +21,9 @@ package io.druid.indexing.overlord.http;
 
 import com.google.inject.Inject;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.indexing.common.tasklogs.TaskLogStreamer;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
+import io.druid.tasklogs.TaskLogStreamer;
 
 import javax.ws.rs.Path;
 

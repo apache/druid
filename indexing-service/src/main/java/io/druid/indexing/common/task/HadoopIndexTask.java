@@ -32,9 +32,7 @@ import io.druid.indexer.HadoopDruidIndexerJob;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
-import io.druid.segment.loading.S3DataSegmentPusher;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
@@ -102,21 +100,7 @@ public class HadoopIndexTask extends AbstractTask
     // Set workingPath to some reasonable default
     configCopy.setJobOutputDir(toolbox.getConfig().getHadoopWorkingPath());
 
-    if (toolbox.getSegmentPusher() instanceof S3DataSegmentPusher) {
-      // Hack alert! Bypassing DataSegmentPusher...
-      S3DataSegmentPusher segmentPusher = (S3DataSegmentPusher) toolbox.getSegmentPusher();
-      String s3Path = String.format(
-          "s3n://%s/%s/%s",
-          segmentPusher.getConfig().getBucket(),
-          segmentPusher.getConfig().getBaseKey(),
-          getDataSource()
-      );
-
-      log.info("Setting segment output path to: %s", s3Path);
-      configCopy.setSegmentOutputDir(s3Path);
-    } else {
-      throw new IllegalStateException("Sorry, we only work with S3DataSegmentPushers! Bummer!");
-    }
+    configCopy.setSegmentOutputDir(toolbox.getSegmentPusher().getPathForHadoop(getDataSource()));
 
     HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(configCopy);
     configCopy.verify();

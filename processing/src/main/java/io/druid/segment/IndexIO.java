@@ -125,7 +125,7 @@ public class IndexIO
   public static QueryableIndex loadIndex(File inDir) throws IOException
   {
     init();
-    final int version = getVersionFromDir(inDir);
+    final int version = SegmentUtils.getVersionFromDir(inDir);
 
     final IndexLoader loader = indexLoaders.get(version);
 
@@ -187,7 +187,7 @@ public class IndexIO
 
   public static boolean convertSegment(File toConvert, File converted) throws IOException
   {
-    final int version = getVersionFromDir(toConvert);
+    final int version = SegmentUtils.getVersionFromDir(toConvert);
 
     switch (version) {
       case 1:
