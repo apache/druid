@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -33,7 +32,6 @@ import io.druid.data.input.InputRow;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -48,7 +46,6 @@ import org.joda.time.Interval;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class IndexGeneratorTask extends AbstractTask
@@ -126,6 +123,12 @@ public class IndexGeneratorTask extends AbstractTask
     final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<DataSegment>();
     final DataSegmentPusher wrappedDataSegmentPusher = new DataSegmentPusher()
     {
+      @Override
+      public String getPathForHadoop(String dataSource)
+      {
+        return toolbox.getSegmentPusher().getPathForHadoop(dataSource);
+      }
+
       @Override
       public DataSegment push(File file, DataSegment segment) throws IOException
       {

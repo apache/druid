@@ -22,6 +22,7 @@ package io.druid.server.sql;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
@@ -47,13 +48,12 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.methods.PostMethod;
-import org.apache.commons.httpclient.methods.StringRequestEntity;
 
 import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -141,12 +141,11 @@ public class SQLRunner
     String queryStr = jsonWriter.writeValueAsString(query);
     if(cmd.hasOption("v")) System.err.println(queryStr);
 
-    PostMethod req = new PostMethod("http://" + hostname + "/druid/v2/?pretty");
-    req.setRequestEntity(new StringRequestEntity(queryStr, "application/json", "utf-8"));
-    new HttpClient().executeMethod(req);
-
-    BufferedReader stdInput = new BufferedReader(new
-                     InputStreamReader(req.getResponseBodyAsStream()));
+    URL url = new URL(String.format("http://%s/druid/v2/?pretty", hostname));
+    final URLConnection urlConnection = url.openConnection();
+    urlConnection.addRequestProperty("content-type", "application/json");
+    urlConnection.getOutputStream().write(queryStr.getBytes(Charsets.UTF_8));
+    BufferedReader stdInput = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
 
     Object res = objectMapper.readValue(stdInput, typeRef);
 

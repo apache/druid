@@ -21,7 +21,7 @@ package io.druid.indexer;
 
 import com.metamx.common.RE;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.StringInputRowParser;
+import io.druid.data.input.impl.StringInputRowParser;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;

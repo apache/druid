@@ -67,4 +67,15 @@ public class ExtensionsConfig
   {
     return remoteRepositories;
   }
+
+  @Override
+  public String toString()
+  {
+    return "ExtensionsConfig{" +
+           "searchCurrentClassloader=" + searchCurrentClassloader +
+           ", coordinates=" + coordinates +
+           ", localRepository='" + localRepository + '\'' +
+           ", remoteRepositories=" + remoteRepositories +
+           '}';
+  }
 }

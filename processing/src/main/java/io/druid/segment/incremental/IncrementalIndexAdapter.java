@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.Rowboat;

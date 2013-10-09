@@ -1,1 +1,1 @@
-io.druid.segment.loading.cassandra.CassandraDruidModule
+io.druid.storage.cassandra.CassandraDruidModule

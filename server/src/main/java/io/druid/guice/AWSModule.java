@@ -23,13 +23,10 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.ProvisionException;
-import io.druid.segment.loading.AWSCredentialsConfig;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 /**
  */
@@ -50,27 +47,28 @@ public class AWSModule implements Module
 
   @Provides
   @LazySingleton
-  public org.jets3t.service.security.AWSCredentials  getJets3tAWSCredentials(AWSCredentialsConfig config)
-  {
-    return new org.jets3t.service.security.AWSCredentials(config.getAccessKey(), config.getSecretKey());
-  }
-
-  @Provides
-  @LazySingleton
-  public RestS3Service getRestS3Service(org.jets3t.service.security.AWSCredentials credentials)
-  {
-    try {
-      return new RestS3Service(credentials);
-    }
-    catch (S3ServiceException e) {
-      throw new ProvisionException("Unable to create a RestS3Service", e);
-    }
-  }
-
-  @Provides
-  @LazySingleton
   public AmazonEC2 getEc2Client(AWSCredentials credentials)
   {
     return new AmazonEC2Client(credentials);
   }
+
+  public static class AWSCredentialsConfig
+  {
+    @JsonProperty
+    private String accessKey = "";
+
+    @JsonProperty
+    private String secretKey = "";
+
+    public String getAccessKey()
+    {
+      return accessKey;
+    }
+
+    public String getSecretKey()
+    {
+      return secretKey;
+    }
+  }
+
 }
