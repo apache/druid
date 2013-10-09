@@ -1,18 +1,14 @@
 ---
 layout: doc_page
 ---
-In our last [tutorial](Tutorial:-The-Druid-Cluster.html), we setup a complete Druid cluster. We created all the Druid dependencies and loaded some batched data. Druid shards data into self contained chunks known as segments. Segments are the fundamental unit of storage in Druid and all Druid nodes only understand segments.
+In our last [tutorial](Tutorial:-The-Druid-Cluster.html), we setup a complete Druid cluster. We created all the Druid dependencies and loaded some batched data. Druid shards data into self-contained chunks known as [segments](Segments.html). Segments are the fundamental unit of storage in Druid and all Druid nodes only understand segments.
 
-In this tutorial, we will learn how to create segments using the final piece of the Druid Cluster, the [indexing service](Indexing-Service.html). The indexing service is a standalone service that accepts [tasks](Tasks.html) in the form of POST requests. Tasks often relate to indexing data, and hence, segments are often the final output of a task.
+In this tutorial, we will learn about batch ingestion (as opposed to real-time ingestion) and how to create segments using the final piece of the Druid Cluster, the [indexing service](Indexing-Service.html). The indexing service is a standalone service that accepts [tasks](Tasks.html) in the form of POST requests. The output of most tasks are segments.
 
 About the data
 --------------
 
-The data source we'll be working with is Wikipedia edits. Each time an edit is made in Wikipedia, an event gets pushed to an IRC channel associated with the language of the Wikipedia page. We scrape IRC channels for several different languages and load this data into Druid.
-
-Each event has a timestamp indicating the time of the edit (in UTC time), a list of dimensions indicating various metadata about the event (such as information about the user editing the page and where the user resides), and a list of metrics associated with the event (such as the number of characters added and deleted).
-
-Specifically. the data schema looks like so:
+The data source we'll be working with is Wikipedia edits once again. The data schema is the same as the previous tutorials:
 
 Dimensions (things to filter on):
 
@@ -39,297 +35,215 @@ Metrics (things to aggregate over):
 "delta"
 "deleted"
 ```
-
-These metrics track the number of characters added, deleted, and changed.
-
 Setting Up
 ----------
 
-There are two ways to setup Druid: download a tarball, or [Build From Source](Build From Source.html). You only need to do one of these.
+At this point, you should already have Druid downloaded and are comfortable with running a Druid cluster locally. If you are not, stop here and familiarize yourself with the first two tutorials.
 
-### Download a Tarball
+Let's start from our usual starting point in the tarball directory.
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.0-bin.tar.gz)
-Download this file to a directory of your choosing.
-
-You can extract the awesomeness within by issuing:
+Segments require data, so before we can build a Druid segment, we are going to need some raw data. Make sure that the following file exists:
 
 ```
-tar -zxvf druid-services-*-bin.tar.gz
+examples/indexing/wikipedia_data.json
 ```
 
-Not too lost so far right? That's great! If you cd into the directory:
+Open the file and make sure the following events exist:
 
 ```
-cd druid-services-0.6.0
+{"timestamp": "2013-08-31T01:02:33Z", "page": "Gypsy Danger", "language" : "en", "user" : "nuclear", "unpatrolled" : "true", "newPage" : "true", "robot": "false", "anonymous": "false", "namespace":"article", "continent":"North America", "country":"United States", "region":"Bay Area", "city":"San Francisco", "added": 57, "deleted": 200, "delta": -143}
+{"timestamp": "2013-08-31T03:32:45Z", "page": "Striker Eureka", "language" : "en", "user" : "speed", "unpatrolled" : "false", "newPage" : "true", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Australia", "country":"Australia", "region":"Dingo Land", "city":"Syndey", "added": 459, "deleted": 129, "delta": 330}
+{"timestamp": "2013-08-31T07:11:21Z", "page": "Cherno Alpha", "language" : "ru", "user" : "masterYi", "unpatrolled" : "false", "newPage" : "true", "robot": "true", "anonymous": "false", "namespace":"article", "continent":"Asia", "country":"Russia", "region":"Vodka Land", "city":"Moscow", "added": 123, "deleted": 12, "delta": 111}
+{"timestamp": "2013-08-31T11:58:39Z", "page": "Crimson Typhoon", "language" : "zh", "user" : "triplets", "unpatrolled" : "true", "newPage" : "false", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Asia", "country":"China", "region":"Shanxi", "city":"Taiyuan", "added": 905, "deleted": 5, "delta": 900}
+{"timestamp": "2013-08-31T12:41:27Z", "page": "Coyote Tango", "language" : "ja", "user" : "cancer", "unpatrolled" : "true", "newPage" : "false", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Asia", "country":"Japan", "region":"Kanto", "city":"Tokyo", "added": 1, "deleted": 10, "delta": -9}
 ```
 
-You should see a bunch of files:
+There are five data points spread across the day of 2013-08-31. Talk about big data right? Thankfully, we don't need a ton of data to introduce how batch ingestion works.
 
-* run_example_server.sh
-* run_example_client.sh
-* LICENSE, config, examples, lib directories
+In order to ingest and query this data, we are going to need to run a historical node, a coordinator node, and an indexing service to run the batch ingestion.
 
-Running Example Scripts
------------------------
+#### Starting a Local Indexing Service
 
-Let's start doing stuff. You can start a Druid [Realtime](Realtime.html) node by issuing:
+The simplest indexing service we can start up is to run an [overlord](Indexing-Service.html) node in local mode. You can do so by issuing:
 
-```
-./run_example_server.sh
+```bash
+java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/overlord io.druid.cli.Main server overlord
 ```
 
-Select "wikipedia".
-
-Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
-
+The overlord configurations should already exist in:
 ```
-2013-09-04 19:33:11,922 INFO [main] org.eclipse.jetty.server.AbstractConnector - Started SelectChannelConnector@0.0.0.0:8083
-2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - irc connection to server [irc.wikimedia.org] established
-2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - Joining channel #en.wikipedia
-2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - Joining channel #fr.wikipedia
-2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - Joining channel #de.wikipedia
-2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - Joining channel #ja.wikipedia
+config/overlord/runtime.properties
 ```
 
-The Druid real time-node ingests events in an in-memory buffer. Periodically, these events will be persisted to disk. If you are interested in the details of our real-time architecture and why we persist indexes to disk, I suggest you read our [White Paper](http://static.druid.io/docs/druid.pdf).
+The configurations for the overlord node are as follows:
+```
+druid.host=localhost
+druid.port=8087
+druid.service=overlord
 
-Okay, things are about to get real-time. To query the real-time node you've spun up, you can issue:
+druid.zk.service.host=localhost
+
+druid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
+druid.db.connector.user=druid
+druid.db.connector.password=diurd
+
+druid.selectors.indexing.serviceName=overlord
+druid.indexer.runner.javaOpts="-server -Xmx1g"
+druid.indexer.runner.startPort=8088
+druid.indexer.fork.property.druid.computation.buffer.size=268435456
+```
+
+If you are interested in reading more about these configurations, see [here](Indexing-Service.html).
+
+When the overlord node is ready for tasks, you should see a message like the following:
+```
+013-10-09 21:30:32,817 INFO [Thread-14] io.druid.indexing.overlord.TaskQueue - Waiting for work...
+```
+
+#### Starting Other Nodes
+
+Just in case you forgot how, let's start up the other nodes we require:
+
+Coordinator node:
+
+```bash
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/coordinator io.druid.cli.Main server coordinator
+```
+
+Historical node:
+```bash
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/historical io.druid.cli.Main server historical
+```
+
+Note: Historical, real-time and broker nodes share the same query interface. Hence, we do not explicitly need a broker node for this tutorial. All queries can go against the historical node directly.
+
+Once all the nodes are up and running, we are ready to index some data.
+
+Indexing the Data
+-----------------
+
+To index the data and build a Druid segment, we are going to need to submit a task to the indexing service. This task should already exist:
 
 ```
-./run_example_client.sh
+examples/indexing/index_task.json
 ```
 
-Select "wikipedia" once again. This script issues [GroupByQuery](GroupByQuery.html)s to the data we've been ingesting. The query looks like this:
+Open up the file to see the following:
 
-```json
+```
 {
-   "queryType":"groupBy",
-   "dataSource":"wikipedia",
-   "granularity":"minute",
-   "dimensions":[ "page" ],
-   "aggregations":[
-      {"type":"count", "name":"rows"},
-      {"type":"longSum", "fieldName":"edit_count", "name":"count"}
-   ],
-   "filter":{ "type":"selector", "dimension":"namespace", "value":"article" },
-   "intervals":[ "2013-06-01T00:00/2020-01-01T00" ]
+  "type" : "index",
+  "dataSource" : "wikipedia",
+  "granularitySpec" : {
+    "type" : "uniform",
+    "gran" : "DAY",
+    "intervals" : [ "2013-08-31/2013-09-01" ]
+  },
+  "aggregators" : [{
+     "type" : "count",
+     "name" : "edit_count"
+    }, {
+     "type" : "doubleSum",
+     "name" : "added",
+     "fieldName" : "added"
+    }, {
+     "type" : "doubleSum",
+     "name" : "deleted",
+     "fieldName" : "deleted"
+    }, {
+     "type" : "doubleSum",
+     "name" : "delta",
+     "fieldName" : "delta"
+  }],
+  "firehose" : {
+    "type" : "local",
+    "baseDir" : "examples/indexing",
+    "filter" : "wikipedia_data.json",
+    "parser" : {
+      "timestampSpec" : {
+        "column" : "timestamp"
+      },
+      "data" : {
+        "format" : "json",
+        "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
+      }
+    }
+  }
 }
 ```
 
-This is a **groupBy** query, which you may be familiar with from SQL. We are grouping, or aggregating, via the `dimensions` field: `["page"]`. We are **filtering** via the `namespace` dimension, to only look at edits on `articles`. Our **aggregations** are what we are calculating: a count of the number of data rows, and a count of the number of edits that have occurred.
+Okay, so what is happening here? The "type" field indicates the type of task we plan to run. In this case, it is a simple "index" task. The "granularitySpec" indicates that we are building a daily segment for 2013-08-31 to 2013-09-01. Next, the "aggregators" indicate which fields in our data set we plan to build metric columns for. The "fieldName" corresponds to the metric name in the raw data. The "name" corresponds to what our metric column is actually going to be called in the segment. Finally, we have a local "firehose" that is going to read data from disk. We tell the firehose where our data is located and the types of files we are looking to ingest. In our case, we only have a single data file.
 
-The result looks something like this:
+Let's send our task to the indexing service now:
 
-```json
-[
-  {
-    "version": "v1",
-    "timestamp": "2013-09-04T21:44:00.000Z",
-    "event": { "count": 0, "page": "2013\u201314_Brentford_F.C._season", "rows": 1 }
-  },
-  {
-    "version": "v1",
-    "timestamp": "2013-09-04T21:44:00.000Z",
-    "event": { "count": 0, "page": "8e_\u00e9tape_du_Tour_de_France_2013", "rows": 1 }
-  },
-  {
-    "version": "v1",
-    "timestamp": "2013-09-04T21:44:00.000Z",
-    "event": { "count": 0, "page": "Agenda_of_the_Tea_Party_movement", "rows": 1 }
-  },
+```
+curl -X 'POST' -H 'Content-Type:application/json' -d @examples/indexing/wikipedia_index_task.json localhost:8087/druid/indexer/v1/task
+```
+
+Issuing the request should return a task ID like so:
+
+```
+fjy$ curl -X 'POST' -H 'Content-Type:application/json' -d @examples/indexing/wikipedia_index_task.json localhost:8087/druid/indexer/v1/task
+{"task":"index_wikipedia_2013-10-09T21:30:32.802Z"}
+fjy$
+```
+
+In your indexing service logs, you should see the following:
+
+````
+2013-10-09 21:41:41,150 INFO [qtp300448720-21] io.druid.indexing.overlord.HeapMemoryTaskStorage - Inserting task index_wikipedia_2013-10-09T21:41:41.147Z with status: TaskStatus{id=index_wikipedia_2013-10-09T21:41:41.147Z, status=RUNNING, duration=-1}
+2013-10-09 21:41:41,151 INFO [qtp300448720-21] io.druid.indexing.overlord.TaskLockbox - Created new TaskLockPosse: TaskLockPosse{taskLock=TaskLock{groupId=index_wikipedia_2013-10-09T21:41:41.147Z, dataSource=wikipedia, interval=2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z, version=2013-10-09T21:41:41.151Z}, taskIds=[]}
 ...
-```
+013-10-09 21:41:41,215 INFO [pool-6-thread-1] io.druid.indexing.overlord.ForkingTaskRunner - Logging task index_wikipedia_2013-10-09T21:41:41.147Z_generator_2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z_0 output to: /tmp/persistent/index_wikipedia_2013-10-09T21:41:41.147Z_generator_2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z_0/b5099fdb-d6b0-4b81-9053-b2af70336a7e/log
+2013-10-09 21:41:45,017 INFO [qtp300448720-22] io.druid.indexing.common.actions.LocalTaskActionClient - Performing action for task[index_wikipedia_2013-10-09T21:41:41.147Z_generator_2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z_0]: LockListAction{}
 
-This groupBy query is a bit complicated and we'll return to it later. For the time being, just make sure you are getting some blocks of data back. If you are having problems, make sure you have [curl](http://curl.haxx.se/) installed. Control+C to break out of the client script.
+````
 
-h2. Querying Druid
-
-In your favorite editor, create the file:
-
-```
-time_boundary_query.body
-```
-
-Druid queries are JSON blobs which are relatively painless to create programmatically, but an absolute pain to write by hand. So anyway, we are going to create a Druid query by hand. Add the following to the file you just created:
+After a few seconds, the task should complete and you should see in the indexing service logs:
 
 ```
-{
-    "queryType": "timeBoundary", 
-    "dataSource": "wikipedia"
-}
+2013-10-09 21:41:45,765 INFO [pool-6-thread-1] io.druid.indexing.overlord.exec.TaskConsumer - Received SUCCESS status for task: IndexGeneratorTask{id=index_wikipedia_2013-10-09T21:41:41.147Z_generator_2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z_0, type=index_generator, dataSource=wikipedia, interval=Optional.of(2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z)}
 ```
 
-The [TimeBoundaryQuery](TimeBoundaryQuery.html) is one of the simplest Druid queries. To run the query, you can issue:
+Congratulations! The segment has completed building. Once a segment is built, a segment metadata entry is created in your MySQL table. The coordinator compares what is in the segment metadata table with what is in the cluster. A new entry in the metadata table will cause the coordinator to load the new segment in a minute or so.
+
+You should see the following logs on the coordinator:
 
 ```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json' -d @time_boundary_query.body
+2013-10-09 21:41:54,368 INFO [Coordinator-Exec--0] io.druid.server.coordinator.DruidCoordinatorLogger - [_default_tier] : Assigned 1 segments among 1 servers
+2013-10-09 21:41:54,369 INFO [Coordinator-Exec--0] io.druid.server.coordinator.DruidCoordinatorLogger - Load Queues:
+2013-10-09 21:41:54,369 INFO [Coordinator-Exec--0] io.druid.server.coordinator.DruidCoordinatorLogger - Server[localhost:8081, historical, _default_tier] has 1 left to load, 0 left to drop, 4,477 bytes queued, 4,477 bytes served.
 ```
 
-We get something like this JSON back:
+These logs indicate that the coordinator has assigned our new segment to the historical node to download and serve. If you look at the historical node logs, you should see:
 
-```json
+```
+2013-10-09 21:41:54,369 INFO [ZkCoordinator-0] io.druid.server.coordination.ZkCoordinator - Loading segment wikipedia_2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z_2013-10-09T21:41:41.151Z
+2013-10-09 21:41:54,369 INFO [ZkCoordinator-0] io.druid.segment.loading.LocalDataSegmentPuller - Unzipping local file[/tmp/druid/localStorage/wikipedia/2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z/2013-10-09T21:41:41.151Z/0/index.zip] to [/tmp/druid/indexCache/wikipedia/2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z/2013-10-09T21:41:41.151Z/0]
+2013-10-09 21:41:54,370 INFO [ZkCoordinator-0] io.druid.utils.CompressionUtils - Unzipping file[/tmp/druid/localStorage/wikipedia/2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z/2013-10-09T21:41:41.151Z/0/index.zip] to [/tmp/druid/indexCache/wikipedia/2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z/2013-10-09T21:41:41.151Z/0]
+2013-10-09 21:41:54,380 INFO [ZkCoordinator-0] io.druid.server.coordination.SingleDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z_2013-10-09T21:41:41.151Z] to path[/druid/servedSegments/localhost:8081/wikipedia_2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z_2013-10-09T21:41:41.151Z]
+```
+
+Once the segment is announced the segment is queryable. Now you should be able to query the data.
+
+Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) should yield:
+
+```
 [ {
-  "timestamp" : "2013-09-04T21:44:00.000Z",
+  "timestamp" : "2013-08-31T01:02:33.000Z",
   "result" : {
-    "minTime" : "2013-09-04T21:44:00.000Z",
-    "maxTime" : "2013-09-04T21:47:00.000Z"
+    "minTime" : "2013-08-31T01:02:33.000Z",
+    "maxTime" : "2013-08-31T12:41:27.000Z"
   }
 } ]
 ```
 
-As you can probably tell, the result is indicating the maximum and minimum timestamps we've seen thus far (summarized to a minutely granularity). Let's explore a bit further.
-
-Return to your favorite editor and create the file:
-
-```
-timeseries_query.body
-```
-
-We are going to make a slightly more complicated query, the [TimeseriesQuery](TimeseriesQuery.html). Copy and paste the following into the file:
-
-```
-{
-    "queryType": "timeseries", 
-    "dataSource": "wikipedia", 
-    "intervals": [ "2010-01-01/2020-01-01" ], 
-    "granularity": "all", 
-    "aggregations": [
-        {"type": "longSum", "fieldName": "count", "name": "edit_count"}, 
-        {"type": "doubleSum", "fieldName": "added", "name": "chars_added"}
-    ]
-}
-```
-
-You are probably wondering, what are these [Granularities](Granularities.html) and [Aggregations](Aggregations.html) things? What the query is doing is aggregating some metrics over some span of time. 
-To issue the query and get some results, run the following in your command line:
-
-```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  ````timeseries_query.body
-```
-
-Once again, you should get a JSON blob of text back with your results, that looks something like this:
-
-```json
-[ {
- "timestamp" : "2013-09-04T21:44:00.000Z",
- "result" : { "chars_added" : 312670.0, "edit_count" : 733 }
-} ]
-```
-
-If you issue the query again, you should notice your results updating.
-
-Right now all the results you are getting back are being aggregated into a single timestamp bucket. What if we wanted to see our aggregations on a per minute basis? What field can we change in the query to accomplish this?
-
-If you loudly exclaimed "we can change granularity to minute", you are absolutely correct! We can specify different granularities to bucket our results, like so:
-
-```
-{
-  "queryType": "timeseries", 
-  "dataSource": "wikipedia", 
-  "intervals": [ "2010-01-01/2020-01-01" ], 
-  "granularity": "minute", 
-  "aggregations": [
-     {"type": "longSum", "fieldName": "count", "name": "edit_count"}, 
-     {"type": "doubleSum", "fieldName": "added", "name": "chars_added"}
-  ]
-}
-```
-
-This gives us something like the following:
-
-```json
-[
- {
-   "timestamp" : "2013-09-04T21:44:00.000Z",
-   "result" : { "chars_added" : 30665.0, "edit_count" : 128 }
- }, 
- {
-   "timestamp" : "2013-09-04T21:45:00.000Z",
-   "result" : { "chars_added" : 122637.0, "edit_count" : 167 }
- }, 
- {
-   "timestamp" : "2013-09-04T21:46:00.000Z",
-   "result" : { "chars_added" : 78938.0, "edit_count" : 159 }
- },
-...
-]
-```
-
-Solving a Problem
------------------
-
-One of Druid's main powers is to provide answers to problems, so let's pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you've been going through this tutorial? To solve this problem, we have to return to the query we introduced at the very beginning of this tutorial, the [GroupByQuery](GroupByQuery.html). It would be nice if we could group by results by dimension value and somehow sort those results... and it turns out we can!
-
-Let's create the file:
-
-```
-group_by_query.body
-```
-
-and put the following in there:
-
-```
-{
-  "queryType": "groupBy", 
-  "dataSource": "wikipedia", 
-  "granularity": "all", 
-  "dimensions": [ "page" ], 
-  "orderBy": {
-     "type": "default", 
-     "columns": [ { "dimension": "edit_count", "direction": "DESCENDING" } ], 
-     "limit": 10
-  }, 
-  "aggregations": [
-    {"type": "longSum", "fieldName": "count", "name": "edit_count"}
-  ], 
-  "filter": { "type": "selector", "dimension": "country", "value": "United States" }, 
-  "intervals": ["2012-10-01T00:00/2020-01-01T00"]
-}
-```
-
-Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [OrderBy](OrderBy.html) thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
-
-If you issue the query:
-
-```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d @group_by_query.body
-```
-
-You should see an answer to our question. As an example, some results are shown below:
-
-```json
-[
- {
-   "version" : "v1",
-   "timestamp" : "2012-10-01T00:00:00.000Z",
-   "event" : { "page" : "RTC_Transit", "edit_count" : 6 }
- }, 
- {
-   "version" : "v1",
-   "timestamp" : "2012-10-01T00:00:00.000Z",
-   "event" : { "page" : "List_of_Deadly_Women_episodes", "edit_count" : 4 }
- }, 
- {
-   "version" : "v1",
-   "timestamp" : "2012-10-01T00:00:00.000Z",
-   "event" : { "page" : "User_talk:David_Biddulph", "edit_count" : 4 }
- },
-...
-```
-
-Feel free to tweak other query parameters to answer other questions you may have about the data.
-
 Next Steps
 ----------
 
-What to know even more information about the Druid Cluster? Check out [Tutorial: The Druid Cluster](Tutorial:-The-Druid-Cluster.html)
-
-Druid is even more fun if you load your own data into it! To learn how to load your data, see [Loading Your Data](Loading-Your-Data.html).
+This tutorial covered ingesting a small batch data set and loading it into Druid. In [Loading Your Data Part 2](Tutorial-Loading-Your-Data-Part-2.html), we will cover how to ingest data using Hadoop for larger data sets.
 
 Additional Information
 ----------------------
 
-This tutorial is merely showcasing a small fraction of what Druid can do. If you are interested in more information about Druid, including setting up a more sophisticated Druid cluster, please read the other links in our wiki.
-
-And thus concludes our journey! Hopefully you learned a thing or two about Druid real-time ingestion, querying Druid, and how Druid can be used to solve problems. If you have additional questions, feel free to post in our [google groups page](http://www.groups.google.com/forum/#!forum/druid-development).
+Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](http://www.groups.google.com/forum/#!forum/druid-development).

@@ -74,7 +74,102 @@ The Hadoop Index Task is used to index larger data sets that require the paralle
 |type|The task type, this should always be "index_hadoop".|yes|
 |config|See [Batch Ingestion](Batch-ingestion.html)|yes|
 
-#### Index Realtime Task
+#### Realtime Index Task
+
+The indexing service can also run real-time tasks. These tasks effectively transform a middle manager into a real-time node. We introduced real-time tasks as a way to programmatically add new real-time data sources without needing to manually add nodes. The grammar for the real-time task is as follows:
+
+```
+{
+  "type" : "index_realtime",
+  "id": "example,
+  "resource": {
+    "availabilityGroup" : "someGroup",
+    "requiredCapacity" : 1
+  },
+  "schema": {
+    "dataSource": "dataSourceName",
+    "aggregators": [
+      {
+        "type": "count",
+        "name": "events"
+      },
+      {
+        "type": "doubleSum",
+        "name": "outColumn",
+        "fieldName": "inColumn"
+      }
+    ],
+    "indexGranularity": "minute",
+    "shardSpec": {
+      "type": "none"
+    }
+  },
+  "firehose": {
+    "type": "kafka-0.7.2",
+    "consumerProps": {
+      "zk.connect": "zk_connect_string",
+      "zk.connectiontimeout.ms": "15000",
+      "zk.sessiontimeout.ms": "15000",
+      "zk.synctime.ms": "5000",
+      "groupid": "consumer-group",
+      "fetch.size": "1048586",
+      "autooffset.reset": "largest",
+      "autocommit.enable": "false"
+    },
+    "feed": "your_kafka_topic",
+    "parser": {
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "iso"
+      },
+      "data": {
+        "format": "json"
+      },
+      "dimensionExclusions": [
+        "value"
+      ]
+    }
+  },
+  "fireDepartmentConfig": {
+    "maxRowsInMemory": 500000,
+    "intermediatePersistPeriod": "PT10m"
+  },
+  "windowPeriod": "PT10m",
+  "segmentGranularity": "hour",
+  "rejectionPolicy": {
+    "type": "messageTime"
+  }
+}
+```
+
+Id:
+The ID of the task. Not required.
+
+Resource:
+A JSON object used for high availability purposes. Not required.
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|availabilityGroup|String|An uniqueness identifier for the task. Tasks with the same availability group will always run on different middle managers. Used mainly for replication. |yes|
+|requiredCapacity|Integer|How much middle manager capacity this task will take.|yes|
+
+Schema:
+See [Schema](Realtime.html#Schema).
+
+Fire Department Config:
+See [Config](Realtime.html#Config).
+
+Firehose:
+See [Firehose](Firehose.html).
+
+Window Period:
+See [Realtime](Realtime.html).
+
+Segment Granularity:
+See [Realtime](Realtime.html).
+
+Rejection Policy:
+See [Realtime](Realtime.html).
 
 Segment Merging Tasks
 ---------------------

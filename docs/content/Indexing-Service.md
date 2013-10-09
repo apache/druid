@@ -29,10 +29,10 @@ With the following JVM configuration:
 -Ddruid.zk.service.host=localhost
 
 -Ddruid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
--Ddruid.db.connector.user=driud
+-Ddruid.db.connector.user=druid
 -Ddruid.db.connector.password=diurd
 
--Ddruid.selectors.indexing.serviceName=indexer
+-Ddruid.selectors.indexing.serviceName=overlord
 -Ddruid.indexer.runner.javaOpts="-server -Xmx1g"
 -Ddruid.indexer.runner.startPort=8081
 -Ddruid.indexer.fork.property.druid.computation.buffer.size=268435456

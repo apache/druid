@@ -43,6 +43,13 @@
             <outputDirectory>config/historical</outputDirectory>
         </fileSet>
         <fileSet>
+            <directory>../examples/config/overlord</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>config/overlord</outputDirectory>
+        </fileSet>
+        <fileSet>
             <directory>../examples/bin</directory>
             <includes>
                 <include>*sh</include>
