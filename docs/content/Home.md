@@ -2,9 +2,8 @@
 layout: doc_page
 ---
 
-Druid is an open-source analytics datastore designed for realtime, exploratory, queries on large-scale data sets (100’s of Billions entries, 100’s TB data). Druid provides for cost effective, always-on, realtime data ingestion and arbitrary data exploration.
+Druid is an open-source analytics data store designed for real-time, exploratory, queries on large-scale data sets (100’s of Billions entries, 100’s TB data). Druid provides for cost effective, always-on, realtime data ingestion and arbitrary data exploration.
 
--   Check out some [Examples](Examples.html)
 -   Try out Druid with our Getting Started [Tutorial](./Tutorial%3A-A-First-Look-at-Druid.html)
 -   Learn more by reading the [White Paper](http://static.druid.io/docs/druid.pdf)
 

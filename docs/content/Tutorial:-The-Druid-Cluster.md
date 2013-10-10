@@ -1,13 +1,13 @@
 ---
 layout: doc_page
 ---
-Welcome back! In our first [tutorial](Tutorial:-A-First-Look-at-Druid.html), we introduced you to the most basic Druid setup: a single realtime node. We streamed in some data and queried it. Realtime nodes collect very recent data and periodically hand that data off to the rest of the Druid cluster. Some questions about the architecture must naturally come to mind. What does the rest of Druid cluster look like? How does Druid load available static data?
+Welcome back! In our first [tutorial](Tutorial%3A-A-First-Look-at-Druid.html), we introduced you to the most basic Druid setup: a single realtime node. We streamed in some data and queried it. Realtime nodes collect very recent data and periodically hand that data off to the rest of the Druid cluster. Some questions about the architecture must naturally come to mind. What does the rest of Druid cluster look like? How does Druid load available static data?
 
 This tutorial will hopefully answer these questions!
 
 In this tutorial, we will set up other types of Druid nodes as well as and external dependencies for a fully functional Druid cluster. The architecture of Druid is very much like the [Megazord](http://www.youtube.com/watch?v=7mQuHh1X4H4) from the popular 90s show Mighty Morphin' Power Rangers. Each Druid node has a specific purpose and the nodes come together to form a fully functional system.
 
-## Downloading Druid ##
+## Downloading Druid
 
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
@@ -20,15 +20,15 @@ tar -zxvf druid-services-*-bin.tar.gz
 cd druid-services-*
 ```
 
-You can also [Build From Source](Build-From-Source.html).
+You can also [Build From Source](Build-from-source.html).
 
-## External Dependencies ##
+## External Dependencies
 
 Druid requires 3 external dependencies. A "deep" storage that acts as a backup data repository, a relational database such as MySQL to hold configuration and metadata information, and [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster.
 
-For deep storage, we have made a public S3 bucket (static.druid.io) available where data for this particular tutorial can be downloaded. More on the data [later](Tutorial-Part-2.html#the-data).
+For deep storage, we have made a public S3 bucket (static.druid.io) available where data for this particular tutorial can be downloaded. More on the data later.
 
-### Setting up MySQL ###
+#### Setting up MySQL
 
 1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/)
 2. Install MySQL
@@ -43,7 +43,7 @@ GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
 CREATE database druid;
 ```
 
-### Setting up Zookeeper ###
+#### Setting up Zookeeper
 
 ```bash
 curl http://www.motorlogy.com/apache/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz -o zookeeper-3.4.5.tar.gz
@@ -54,9 +54,9 @@ cp conf/zoo_sample.cfg conf/zoo.cfg
 cd ..
 ```
 
-## The Data ##
+## The Data
 
-Similar to the first tutorial, the data we will be loading is based on edits that have occurred on Wikipedia. Every time someone edits a page in Wikipedia, metadata is generated about the editor and edited page. Druid collects each individual event and packages them together in a container known as a [segment](https://github.com/metamx/druid/wiki/Segments). Segments contain data over some span of time. We've prebuilt a segment for this tutorial and will cover making your own segments in other [pages](Loading-Your-Data.html).The segment we are going to work with has the following format:
+Similar to the first tutorial, the data we will be loading is based on edits that have occurred on Wikipedia. Every time someone edits a page in Wikipedia, metadata is generated about the editor and edited page. Druid collects each individual event and packages them together in a container known as a [segment](Segments.html). Segments contain data over some span of time. We've prebuilt a segment for this tutorial and will cover making your own segments in other [pages](Tutorial%3A-Loading-Your-Data-Part-1.html).The segment we are going to work with has the following format:
 
 Dimensions (things to filter on):
 
@@ -84,28 +84,28 @@ Metrics (things to aggregate over):
 "deleted"
 ```
 
-## The Cluster ##
+## The Cluster
 
-Let's start up a few nodes and download our data. First things though, let's create a config directory where we will store configs for our various nodes:
+Let's start up a few nodes and download our data. First things though, let's make sure we have config directory where we will store configs for our various nodes:
 
 ```
-mkdir config
+ls config
 ```
 
 If you are interested in learning more about Druid configuration files, check out this [link](Configuration.html). Many aspects of Druid are customizable. For the purposes of this tutorial, we are going to use default values for most things.
 
-### Start a Coordinator Node ###
+#### Start a Coordinator Node
 
 Coordinator nodes are in charge of load assignment and distribution. Coordinator nodes monitor the status of the cluster and command historical nodes to assign and drop segments.
 For more information about coordinator nodes, see [here](Coordinator.html).
 
-To create the coordinator config file:
+The coordinator config file should already exist at:
 
 ```
-mkdir config/coordinator
+config/coordinator
 ```
 
-Under the directory we just created, create the file `runtime.properties` with the following contents if it does not exist:
+In the directory, there should be a `runtime.properties` file with the following contents:
 
 ```
 druid.host=localhost
@@ -130,18 +130,18 @@ To start the coordinator node:
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/coordinator io.druid.cli.Main server coordinator
 ```
 
-### Start a historical node ###
+#### Start a Historical Node
 
 Historical nodes are the workhorses of a cluster and are in charge of loading historical segments and making them available for queries. Our Wikipedia segment will be downloaded by a historical node.
 For more information about Historical nodes, see [here](Historical.html).
 
-To create the historical config file:
+The historical config file should exist at:
 
 ```
-mkdir config/historical
+config/historical
 ```
 
-Under the directory we just created, create the file `runtime.properties` with the following contents:
+In the directory we just created, we should have the file `runtime.properties` with the following contents:
 
 ```
 druid.host=localhost
@@ -167,18 +167,18 @@ To start the historical node:
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/historical io.druid.cli.Main server historical
 ```
 
-### Start a Broker Node ###
+#### Start a Broker Node
 
 Broker nodes are responsible for figuring out which historical and/or realtime nodes correspond to which queries. They also merge partial results from these nodes in a scatter/gather fashion.
 For more information about Broker nodes, see [here](Broker.html).
 
-To create the broker config file:
+The broker config file should exist at:
 
 ```
-mkdir config/broker
+config/broker
 ```
 
-Under the directory we just created, create the file ```runtime.properties``` with the following contents:
+In the directory, there should be a `runtime.properties` file with the following contents:
 
 ```
 druid.host=localhost
@@ -194,7 +194,7 @@ To start the broker node:
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/broker io.druid.cli.Main server broker
 ```
 
-## Loading the Data ##
+## Loading the Data
 
 The MySQL dependency we introduced earlier on contains a 'segments' table that contains entries for segments that should be loaded into our cluster. The Druid coordinator compares this table with segments that already exist in the cluster to determine what should be loaded and dropped. To load our wikipedia segment, we need to create an entry in our MySQL segment table.
 
@@ -220,7 +220,8 @@ When the segment completes downloading and ready for queries, you should see the
 
 At this point, we can query the segment. For more information on querying, see this [link](Querying.html).
 
-## Next Steps ##
+Next Steps
+----------
 
-Now that you have an understanding of what the Druid clsuter looks like, why not load some of your own data?
-Check out the [Loading Your Own Data](Loading-Your-Data.html) section for more info!
+Now that you have an understanding of what the Druid cluster looks like, why not load some of your own data?
+Check out the next [tutorial](Tutorial%3A-Loading-Your-Data-Part-1.html) section for more info!

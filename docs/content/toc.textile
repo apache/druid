@@ -12,16 +12,22 @@ h1. Contents
 h2. Getting Started
 * "Tutorial: A First Look at Druid":./Tutorial:-A-First-Look-at-Druid.html
 * "Tutorial: The Druid Cluster":./Tutorial:-The-Druid-Cluster.html
-* "Loading Your Data":./Loading-Your-Data.html
-* "Querying Your Data":./Querying-your-data.html
+* "Tutorial: Loading Your Data Part 1":./Tutorial:-Loading-Your-Data-Part-1.html
+* "Tutorial: Loading Your Data Part 2":./Tutorial:-Loading-Your-Data-Part-2.html
+* "Tutorial: All About Queries":./Tutorial:-All-About-Queries.html
+
+h2. Evaluate Druid
+* "Cluster Setup":./Cluster-setup.html
 * "Booting a Production Cluster":./Booting-a-production-cluster.html
-* "Examples":./Examples.html
+
+h2. Configuration
 * "Configuration":Configuration.html
 
 h2. Data Ingestion
 * "Realtime":./Realtime.html
 * "Batch":./Batch-ingestion.html
 * "Indexing Service":./Indexing-Service.html
+** "Tasks":./Tasks.html
 
 h2. Querying
 * "Querying":./Querying.html

@@ -10,18 +10,27 @@
 Getting Started
 * [Tutorial: A First Look at Druid](Tutorial:-A-First-Look-at-Druid.html)
 * [Tutorial: The Druid Cluster](Tutorial:-The-Druid-Cluster.html)
-* [Loading Your Data](Loading-Your-Data.html)
-* [Querying Your Data](Querying-Your-Data.html)
-* [Booting a Production Cluster](Booting-a-Production-Cluster.html)
-* [Examples](Examples.html)
-* [Cluster Setup](Cluster-Setup.html)
-* [Configuration](Configuration.html)
+* [Tutorial: Loading Your Data Part 1](Tutorial:-Loading-Your-Data-Part-1.html)
+* [Tutorial: Loading Your Data Part 2](Tutorial:-Loading-Your-Data-Part-2.html)
+* [Tutorial: All About Queries](Tutorial:-All-About-Queries.html)
 --------------------------------------
+
+Evaluate Druid
+* [Cluster Setup](Cluster-setup.html)
+* [Booting a Production Cluster](Booting-a-production-cluster.html)
+--------------------------------------
+
+Configuration
+* [Configuration](Configuration.html)
+-------------------------------------
 
 Data Ingestion
 * [Realtime](Realtime.html)
-* [Batch|Batch Ingestion](Batch|Batch-Ingestion.html)
+* [Batch Ingestion](Batch-ingestion.html)
 * [Indexing Service](Indexing-Service.html)
+* [Indexing Service](Indexing-Service.html)
+*** ]
+*** [Tasks](Tasks.html)
 ----------------------------
 
 Querying
