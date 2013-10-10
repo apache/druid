@@ -1,22 +1,24 @@
 [
   {
     "schema": {
-      "dataSource": "druidtest",
-      "aggregators": [
-        {
-          "type": "count",
-          "name": "impressions"
-        },
-        {
-          "type": "doubleSum",
-          "name": "wp",
-          "fieldName": "wp"
-        }
-      ],
-      "indexGranularity": "minute",
-      "shardSpec": {
-        "type": "none"
-      }
+      "dataSource": "wikipedia",
+      "aggregators" : [{
+         "type" : "count",
+         "name" : "count"
+        }, {
+         "type" : "doubleSum",
+         "name" : "added",
+         "fieldName" : "added"
+        }, {
+         "type" : "doubleSum",
+         "name" : "deleted",
+         "fieldName" : "deleted"
+        }, {
+         "type" : "doubleSum",
+         "name" : "delta",
+         "fieldName" : "delta"
+      }],
+      "indexGranularity": "none"
     },
     "config": {
       "maxRowsInMemory": 500000,
@@ -29,23 +31,20 @@
         "zk.connectiontimeout.ms": "15000",
         "zk.sessiontimeout.ms": "15000",
         "zk.synctime.ms": "5000",
-        "groupid": "topic-pixel-local",
+        "groupid": "druid-example",
         "fetch.size": "1048586",
         "autooffset.reset": "largest",
         "autocommit.enable": "false"
       },
-      "feed": "druidtest",
+      "feed": "wikipedia",
       "parser": {
         "timestampSpec": {
-          "column": "utcdt",
-          "format": "iso"
+          "column": "timestamp"
         },
         "data": {
-          "format": "json"
-        },
-        "dimensionExclusions": [
-          "wp"
-        ]
+          "format": "json",
+          "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
+        }
       }
     },
     "plumber": {

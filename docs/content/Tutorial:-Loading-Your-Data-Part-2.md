@@ -1,26 +1,48 @@
 ---
 layout: doc_page
 ---
-Once you have a real-time node working, it is time to load your own data to see how Druid performs.
+In this tutorial we will cover more advanced/real-world ingestion topics.
 
-Druid can ingest data in three ways: via Kafka and a realtime node, via the indexing service, and via the Hadoop batch loader. Data is ingested in real-time using a [Firehose](Firehose.html).
+Druid can ingest streaming or batch data. Streaming data is ingested via the real-time node, and batch data is ingested via the Hadoop batch indexer. Druid also has a standalone ingestion service called the [indexing service](Indexing-Service.html).
 
-## Create Config Directories ##
-Each type of node needs its own config file and directory, so create them as subdirectories under the druid directory if they not already exist.
+The Data
+--------
+The data source we'll be using is (surprise!) Wikipedia edits. The data schema is still:
 
-```bash
-mkdir config
-mkdir config/realtime
-mkdir config/coordinator
-mkdir config/historical
-mkdir config/broker
+Dimensions (things to filter on):
+
+```json
+"page"
+"language"
+"user"
+"unpatrolled"
+"newPage"
+"robot"
+"anonymous"
+"namespace"
+"continent"
+"country"
+"region"
+"city"
 ```
 
-## Loading Data with Kafka ##
+Metrics (things to aggregate over):
 
-[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/druid-0.6.0/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in realtime without writing any code. To load data to a realtime node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
+```json
+"count"
+"added"
+"delta"
+"deleted"
+```
 
-### Booting Kafka ###
+Streaming Event Ingestion
+-------------------------
+
+With real-world data, we recommend having a message bus such as [Apache Kafka](http://kafka.apache.org/) sit between the data stream and the real-time node. The message bus provides higher availability for production environments. [Firehoses](Firehose.html) are the key abstraction for real-time ingestion.
+
+#### Setting up Kafka
+
+[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/druid-0.6.0/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in real-time without writing any code. To load data to a real-time node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
 
 Instructions for booting a Zookeeper and then Kafka cluster are available [here](http://kafka.apache.org/07/quickstart.html).
 
@@ -44,6 +66,7 @@ Instructions for booting a Zookeeper and then Kafka cluster are available [here]
   ```bash
   cat config/zookeeper.properties
   bin/zookeeper-server-start.sh config/zookeeper.properties
+
   # in a new console
   bin/kafka-server-start.sh config/server.properties
   ```
@@ -51,56 +74,55 @@ Instructions for booting a Zookeeper and then Kafka cluster are available [here]
 4. Launch the console producer (so you can type in JSON kafka messages in a bit)
 
   ```bash
-  bin/kafka-console-producer.sh --zookeeper localhost:2181 --topic druidtest
+  bin/kafka-console-producer.sh --zookeeper localhost:2181 --topic wikipedia
   ```
 
-### Launching a Realtime Node
+  When things are ready, you should see log messages such as:
 
-1. Create a valid configuration file similar to this called config/realtime/runtime.properties:
-
-  ```properties
-  druid.host=localhost
-  druid.service=example
-  druid.port=8080
-
-  druid.zk.service.host=localhost
-
-  druid.s3.accessKey=AKIAIMKECRUYKDQGR6YQ
-  druid.s3.secretKey=QyyfVZ7llSiRg6Qcrql1eEUG7buFpAK6T6engr1b
-
-  druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-  druid.db.connector.user=druid
-  druid.db.connector.password=diurd
-
-  druid.realtime.specFile=config/realtime/realtime.spec
-
-  druid.processing.buffer.sizeBytes=10000000
-
-  druid.processing.numThreads=3
+  ```
+  [2013-10-09 22:03:07,802] INFO zookeeper state changed (SyncConnected) (org.I0Itec.zkclient.ZkClient)
   ```
 
-2. Create a valid realtime configuration file similar to this called realtime.spec:
+#### Launch a Realtime Node
+
+You should be comfortable starting Druid nodes at this point. If not, it may be worthwhile to revisit the first few tutorials.
+
+1. Real-time nodes can be started with:
+
+```bash
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/indexing/wikipedia.spec -classpath lib/*:config/realtime io.druid.cli.Main server realtime
+```
+
+2. A realtime.spec should already exist for the data source in the Druid tarball. You should be able to find it at:
+
+```bash
+examples/indexing/wikipedia.spec
+```
+
+The contents of the file should match:
 
   ```json
   [
     {
       "schema": {
-        "dataSource": "druidtest",
-        "aggregators": [
-          {
-            "type": "count",
-            "name": "impressions"
-          },
-          {
-            "type": "doubleSum",
-            "name": "wp",
-            "fieldName": "wp"
-          }
-        ],
-        "indexGranularity": "minute",
-        "shardSpec": {
-          "type": "none"
-        }
+        "dataSource": "wikipedia",
+        "aggregators" : [{
+           "type" : "count",
+           "name" : "count"
+          }, {
+           "type" : "doubleSum",
+           "name" : "added",
+           "fieldName" : "added"
+          }, {
+           "type" : "doubleSum",
+           "name" : "deleted",
+           "fieldName" : "deleted"
+          }, {
+           "type" : "doubleSum",
+           "name" : "delta",
+           "fieldName" : "delta"
+        }],
+        "indexGranularity": "none"
       },
       "config": {
         "maxRowsInMemory": 500000,
@@ -113,23 +135,20 @@ Instructions for booting a Zookeeper and then Kafka cluster are available [here]
           "zk.connectiontimeout.ms": "15000",
           "zk.sessiontimeout.ms": "15000",
           "zk.synctime.ms": "5000",
-          "groupid": "topic-pixel-local",
+          "groupid": "druid-example",
           "fetch.size": "1048586",
           "autooffset.reset": "largest",
           "autocommit.enable": "false"
         },
-        "feed": "druidtest",
+        "feed": "wikipedia",
         "parser": {
           "timestampSpec": {
-            "column": "utcdt",
-            "format": "iso"
+            "column": "timestamp"
           },
           "data": {
-            "format": "json"
-          },
-          "dimensionExclusions": [
-            "wp"
-          ]
+            "format": "json",
+            "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
+          }
         }
       },
       "plumber": {
@@ -138,256 +157,163 @@ Instructions for booting a Zookeeper and then Kafka cluster are available [here]
         "segmentGranularity": "hour",
         "basePersistDirectory": "\/tmp\/realtime\/basePersist",
         "rejectionPolicy": {
-          "type": "messageTime"
+          "type": "none"
         }
       }
     }
   ]
   ```
 
-3. Launch the realtime node
-
-  ```bash
-  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-  -Ddruid.realtime.specFile=config/realtime/realtime.spec \
-  -classpath lib/*:config/realtime io.druid.cli.Main server realtime
-  ```
-
-4. Paste data into the Kafka console producer
+3. Let's copy and paste some data into the Kafka console producer
 
   ```json
-  {"utcdt": "2010-01-01T01:01:01", "wp": 1000, "gender": "male", "age": 100}
-  {"utcdt": "2010-01-01T01:01:02", "wp": 2000, "gender": "female", "age": 50}
-  {"utcdt": "2010-01-01T01:01:03", "wp": 3000, "gender": "male", "age": 20}
-  {"utcdt": "2010-01-01T01:01:04", "wp": 4000, "gender": "female", "age": 30}
-  {"utcdt": "2010-01-01T01:01:05", "wp": 5000, "gender": "male", "age": 40}
+  {"timestamp": "2013-08-31T01:02:33Z", "page": "Gypsy Danger", "language" : "en", "user" : "nuclear", "unpatrolled" : "true", "newPage" : "true", "robot": "false", "anonymous": "false", "namespace":"article", "continent":"North America", "country":"United States", "region":"Bay Area", "city":"San Francisco", "added": 57, "deleted": 200, "delta": -143}
+  {"timestamp": "2013-08-31T03:32:45Z", "page": "Striker Eureka", "language" : "en", "user" : "speed", "unpatrolled" : "false", "newPage" : "true", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Australia", "country":"Australia", "region":"Cantebury", "city":"Syndey", "added": 459, "deleted": 129, "delta": 330}
+  {"timestamp": "2013-08-31T07:11:21Z", "page": "Cherno Alpha", "language" : "ru", "user" : "masterYi", "unpatrolled" : "false", "newPage" : "true", "robot": "true", "anonymous": "false", "namespace":"article", "continent":"Asia", "country":"Russia", "region":"Oblast", "city":"Moscow", "added": 123, "deleted": 12, "delta": 111}
+  {"timestamp": "2013-08-31T11:58:39Z", "page": "Crimson Typhoon", "language" : "zh", "user" : "triplets", "unpatrolled" : "true", "newPage" : "false", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Asia", "country":"China", "region":"Shanxi", "city":"Taiyuan", "added": 905, "deleted": 5, "delta": 900}
+  {"timestamp": "2013-08-31T12:41:27Z", "page": "Coyote Tango", "language" : "ja", "user" : "stringer", "unpatrolled" : "true", "newPage" : "false", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Asia", "country":"Japan", "region":"Kanto", "city":"Tokyo", "added": 1, "deleted": 10, "delta": -9}
   ```
 
-5. Watch the events as they are ingested by Druid's realtime node
+  Disclaimer: We recognize the timestamps of these events aren't actually recent.
+
+5. Watch the events as they are ingested by Druid's real-time node:
 
   ```bash
   ...
-  2013-06-17 21:41:55,569 INFO [Global--0] com.metamx.emitter.core.LoggingEmitter - Event [{"feed":"metrics","timestamp":"2013-06-17T21:41:55.569Z","service":"example","host":"127.0.0.1","metric":"events/processed","value":5,"user2":"druidtest"}]
+  2013-10-10 05:13:18,976 INFO [chief-wikipedia] io.druid.server.coordination.BatchDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-31T01:00:00.000Z_2013-08-31T02:00:00.000Z_2013-08-31T01:00:00.000Z] at path[/druid/segments/localhost:8083/2013-10-10T05:13:18.972Z0]
+  2013-10-10 05:13:18,992 INFO [chief-wikipedia] io.druid.server.coordination.BatchDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-31T03:00:00.000Z_2013-08-31T04:00:00.000Z_2013-08-31T03:00:00.000Z] at path[/druid/segments/localhost:8083/2013-10-10T05:13:18.972Z0]
+  2013-10-10 05:13:18,997 INFO [chief-wikipedia] io.druid.server.coordination.BatchDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-31T07:00:00.000Z_2013-08-31T08:00:00.000Z_2013-08-31T07:00:00.000Z] at path[/druid/segments/localhost:8083/2013-10-10T05:13:18.972Z0]
+  2013-10-10 05:13:19,003 INFO [chief-wikipedia] io.druid.server.coordination.BatchDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-31T11:00:00.000Z_2013-08-31T12:00:00.000Z_2013-08-31T11:00:00.000Z] at path[/druid/segments/localhost:8083/2013-10-10T05:13:18.972Z0]
+  2013-10-10 05:13:19,008 INFO [chief-wikipedia] io.druid.server.coordination.BatchDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-31T12:00:00.000Z_2013-08-31T13:00:00.000Z_2013-08-31T12:00:00.000Z] at path[/druid/segments/localhost:8083/2013-10-10T05:13:18.972Z0]
   ...
   ```
 
-6. In a new console, edit a file called query.body:
-
-  ```json
-  {
-      "queryType": "groupBy",
-      "dataSource": "druidtest",
-      "granularity": "all",
-      "dimensions": [],
-      "aggregations": [
-          { "type": "count", "name": "rows" },
-          {"type": "longSum", "name": "imps", "fieldName": "impressions"},
-          {"type": "doubleSum", "name": "wp", "fieldName": "wp"}
-      ],
-      "intervals": ["2010-01-01T00:00/2020-01-01T00"]
-  }
-  ```
-
-7. Submit the query via curl
-
-  ```bash
-  curl -X POST "http://localhost:8080/druid/v2/?pretty" \
-  -H 'content-type: application/json' -d @query.body
-  ```
-
-8. View Result!
-
-  ```json
-  [ {
-    "timestamp" : "2010-01-01T01:01:00.000Z",
-    "result" : {
-      "imps" : 20,
-      "wp" : 60000.0,
-      "rows" : 5
-    }
-  } ]
-  ```
-
-Now you're ready for [Querying Your Data](Querying-Your-Data.html)!
-
-## Loading Data with the HadoopDruidIndexer ##
-
-Historical data can be loaded via a Hadoop job. 
-
-The setup for a single node, 'standalone' Hadoop cluster is available at [http://hadoop.apache.org/docs/stable/single_node_setup.html](http://hadoop.apache.org/docs/stable/single_node_setup.html).
-
-### Setup MySQL ###
-1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/)
-2. Install MySQL
-3. Create a druid user and database
-
-```bash
-mysql -u root
-```
-
-```sql
-GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
-CREATE database druid;
-```
-
-The [Coordinator](Coordinator.html) node will create the tables it needs based on its configuration.
-
-### Make sure you have ZooKeeper Running ###
-
-Make sure that you have a zookeeper instance running.  If you followed the instructions for Kafka, it is probably running.  If you are unsure if you have zookeeper running, try running
-
-```bash
-ps auxww | grep zoo | grep -v grep
-```
-
-If you get any result back, then zookeeper is most likely running.  If you haven't setup Kafka or do not have zookeeper running, then you can download it and start it up with
-
-```bash
-curl http://www.motorlogy.com/apache/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz -o zookeeper-3.4.5.tar.gz
-tar xzf zookeeper-3.4.5.tar.gz
-cd zookeeper-3.4.5
-cp conf/zoo_sample.cfg conf/zoo.cfg
-./bin/zkServer.sh start
-cd ..
-```
-
-### Launch a Coordinator Node ###
-
-If you've already setup a realtime node, be aware that although you can run multiple node types on one physical computer, you must assign them unique ports. Having used 8080 for the [Realtime](Realtime.html) node, we use 8081 for the [Coordinator](Coordinator.html).
-
-1. Setup a configuration file called config/coordinator/runtime.properties similar to:
-
-  ```properties
-  druid.host=localhost
-  druid.service=coordinator
-  druid.port=8081
-
-  druid.zk.service.host=localhost
-
-  druid.s3.accessKey=AKIAIMKECRUYKDQGR6YQ
-  druid.s3.secretKey=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
-
-  druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-  druid.db.connector.user=druid
-  druid.db.connector.password=diurd
-
-  druid.coordinator.startDelay=PT60s
-  ```
-
-2. Launch the [Coordinator](Coordinator.html) node
-
-  ```bash
-  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-  -classpath lib/*:config/coordinator \
-  io.druid.Cli.Main server coordinator
-  ```
-
-### Launch a Historical Node ###
-
-1. Create a configuration file in config/historical/runtime.properties similar to:
-
-  ```properties
-  druid.host=localhost
-  druid.service=historical
-  druid.port=8082
-
-  druid.zk.service.host=localhost
-
-  druid.s3.secretKey=QyyfVZ7llSiRg6Qcrql1eEUG7buFpAK6T6engr1b
-  druid.s3.accessKey=AKIAIMKECRUYKDQGR6YQ
-
-  druid.server.maxSize=100000000
-
-  druid.processing.buffer.sizeBytes=10000000
-
-  druid.segmentCache.infoPath=/tmp/druid/segmentInfoCache
-  druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 100000000}]
-  ```
-
-2. Launch the historical node:
-
-  ```bash
-  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-  -classpath lib/*:config/historical \
-  io.druid.cli.Main server historical
-  ```
-
-### Create a File of Records ###
-
-We can use the same records we have been, in a file called records.json:
+Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) to the real-time node should yield valid results:
 
 ```json
-{"utcdt": "2010-01-01T01:01:01", "wp": 1000, "gender": "male", "age": 100}
-{"utcdt": "2010-01-01T01:01:02", "wp": 2000, "gender": "female", "age": 50}
-{"utcdt": "2010-01-01T01:01:03", "wp": 3000, "gender": "male", "age": 20}
-{"utcdt": "2010-01-01T01:01:04", "wp": 4000, "gender": "female", "age": 30}
-{"utcdt": "2010-01-01T01:01:05", "wp": 5000, "gender": "male", "age": 40}
+[ {
+  "timestamp" : "2013-08-31T01:02:33.000Z",
+  "result" : {
+    "minTime" : "2013-08-31T01:02:33.000Z",
+    "maxTime" : "2013-08-31T12:41:27.000Z"
+  }
+} ]
 ```
 
-### Run the Hadoop Job ###
+Batch Ingestion
+---------------
+Druid is designed for large data volumes, and most real-world data sets require batch indexing be done through a Hadoop job.
 
-Now its time to run the Hadoop [Batch-ingestion](Batch-ingestion.html) job, HadoopDruidIndexer, which will fill a historical [Historical](Historical.html) node with data. First we'll need to configure the job.
+The setup for a single node, 'standalone' Hadoop cluster is available [here](http://hadoop.apache.org/docs/stable/single_node_setup.html).
 
-1. Create a config called batchConfig.json similar to:
+For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Your-Data-Part-1), but we are going to use Hadoop here for demonstration purposes.
+
+Our data is located at:
+
+```
+examples/indexing/wikipedia_data.json
+```
+
+The following events should exist in the file:
+
+```json
+{"timestamp": "2013-08-31T01:02:33Z", "page": "Gypsy Danger", "language" : "en", "user" : "nuclear", "unpatrolled" : "true", "newPage" : "true", "robot": "false", "anonymous": "false", "namespace":"article", "continent":"North America", "country":"United States", "region":"Bay Area", "city":"San Francisco", "added": 57, "deleted": 200, "delta": -143}
+{"timestamp": "2013-08-31T03:32:45Z", "page": "Striker Eureka", "language" : "en", "user" : "speed", "unpatrolled" : "false", "newPage" : "true", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Australia", "country":"Australia", "region":"Cantebury", "city":"Syndey", "added": 459, "deleted": 129, "delta": 330}
+{"timestamp": "2013-08-31T07:11:21Z", "page": "Cherno Alpha", "language" : "ru", "user" : "masterYi", "unpatrolled" : "false", "newPage" : "true", "robot": "true", "anonymous": "false", "namespace":"article", "continent":"Asia", "country":"Russia", "region":"Oblast", "city":"Moscow", "added": 123, "deleted": 12, "delta": 111}
+{"timestamp": "2013-08-31T11:58:39Z", "page": "Crimson Typhoon", "language" : "zh", "user" : "triplets", "unpatrolled" : "true", "newPage" : "false", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Asia", "country":"China", "region":"Shanxi", "city":"Taiyuan", "added": 905, "deleted": 5, "delta": 900}
+{"timestamp": "2013-08-31T12:41:27Z", "page": "Coyote Tango", "language" : "ja", "user" : "stringer", "unpatrolled" : "true", "newPage" : "false", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Asia", "country":"Japan", "region":"Kanto", "city":"Tokyo", "added": 1, "deleted": 10, "delta": -9}
+```
+
+#### Setup a Druid Cluster
+
+To index the data, we are going to need an indexing service, a historical node, and a coordinator node.
+
+To start the Indexing Service:
+
+```bash
+java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_path>:config/overlord io.druid.cli.Main server overlord
+```
+
+To start the Coordinator Node:
+
+```bash
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/coordinator io.druid.cli.Main server coordinator
+```
+
+To start the Historical Node:
+
+```bash
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/historical io.druid.cli.Main server historical
+```
+
+#### Index the Data
+
+Before indexing the data, make sure you have a valid Hadoop cluster running. To build our Druid segment, we are going to submit a [Hadoop index task](Tasks.html) to the indexing service. The grammar for the Hadoop index task is very similar to the index task of the last tutorial. The tutorial Hadoop index task should be located at:
+
+```
+examples/indexing/wikipedia_index_hadoop_task.json
+```
+
+Examining the contents of the file, you should find:
 
   ```json
   {
-    "dataSource": "druidtest",
-    "timestampColumn": "utcdt",
-    "timestampFormat": "iso",
-    "dataSpec": {
-      "format": "json",
-      "dimensions": [
-        "gender",
-        "age"
-      ]
-    },
-    "granularitySpec": {
-      "type": "uniform",
-      "intervals": [
-        "2010-01-01T01\/PT1H"
-      ],
-      "gran": "hour"
-    },
-    "pathSpec": {
-      "type": "static",
-      "paths": "\/druid\/records.json"
-    },
-    "rollupSpec": {
-      "aggs": [
-        {
-          "type": "count",
-          "name": "impressions"
-        },
-        {
-          "type": "doubleSum",
-          "name": "wp",
-          "fieldName": "wp"
-        }
-      ],
-      "rollupGranularity": "minute"
-    },
-    "workingPath": "\/tmp\/working_path",
-    "segmentOutputPath": "\/tmp\/segments",
-    "partitionsSpec": {
-      "targetPartitionSize": 5000000
-    },
-    "updaterJobSpec": {
-      "type": "db",
-      "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
-      "user": "druid",
-      "password": "diurd",
-      "segmentTable": "druid_segments"
+    "type" : "index_hadoop",
+    "config": {
+      "dataSource" : "wikipedia",
+      "timestampColumn" : "timestamp",
+      "timestampFormat" : "auto",
+      "dataSpec" : {
+        "format" : "json",
+        "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
+      },
+      "granularitySpec" : {
+        "type" : "uniform",
+        "gran" : "DAY",
+        "intervals" : [ "2013-08-31/2013-09-01" ]
+      },
+      "pathSpec" : {
+        "type" : "static",
+        "paths" : "examples/indexing/wikipedia_data.json"
+      },
+      "targetPartitionSize" : 5000000,
+      "rollupSpec" : {
+        "aggs": [{
+            "type" : "count",
+            "name" : "count"
+          }, {
+            "type" : "doubleSum",
+            "name" : "added",
+            "fieldName" : "added"
+          }, {
+            "type" : "doubleSum",
+            "name" : "deleted",
+            "fieldName" : "deleted"
+          }, {
+            "type" : "doubleSum",
+            "name" : "delta",
+            "fieldName" : "delta"
+        }],
+        "rollupGranularity" : "none"
+      }
     }
   }
   ```
 
-2. Now run the job, with the config pointing at batchConfig.json:
+If you are curious about what all this configuration means, see [here](Task.html)
+To submit the task:
 
-  ```bash
-  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
-       -classpath `echo lib/* | tr ' ' ':'` \
-       io.druid.cli.Main index hadoop batchConfig.json
-  ```
+```bash
+curl -X 'POST' -H 'Content-Type:application/json' -d @examples/indexing/wikipedia_index_hadoop_task.json localhost:8087/druid/indexer/v1/task
+```
 
-You can now move on to [Querying Your Data](Querying-Your-Data.html)!
+After the task is completed, the segment should be assigned to your historical node. You should be able to query the segment.
+
+Next Steps
+----------
+For more information on querying, check out this [tutorial](Tutorial%3A-All-About-Queries.html).
+
+Additional Information
+----------------------
+
+Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-development).

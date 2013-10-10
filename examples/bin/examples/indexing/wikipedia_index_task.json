@@ -8,7 +8,7 @@
   },
   "aggregators" : [{
      "type" : "count",
-     "name" : "edit_count"
+     "name" : "count"
     }, {
      "type" : "doubleSum",
      "name" : "added",
