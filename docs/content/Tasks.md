@@ -12,7 +12,7 @@ Segment Creation Tasks
 
 The Index Task is a simpler variation of the Index Hadoop task that is designed to be used for smaller data sets. The task executes within the indexing service and does not require an external Hadoop setup to use. The grammar of the index task is as follows:
 
-```
+```json
 {
   "type" : "index",
   "dataSource" : "example",
@@ -50,7 +50,7 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 |--------|-----------|---------|
 |type|The task type, this should always be "index".|yes|
 |id|The task ID.|no|
-|granularitySpec|See [granularitySpec](Tasks.html#Granularity-Spec)|yes|
+|granularitySpec|See [granularitySpec](Tasks.html)|yes|
 |spatialDimensions|Dimensions to build spatial indexes over. See [Spatial-Indexing](Spatial-Indexing.html)|no|
 |aggregators|The metrics to aggregate in the data set. For more info, see [Aggregations](Aggregations.html)|yes|
 |indexGranularity|The rollup granularity for timestamps.|no|
@@ -78,10 +78,10 @@ The Hadoop Index Task is used to index larger data sets that require the paralle
 
 The indexing service can also run real-time tasks. These tasks effectively transform a middle manager into a real-time node. We introduced real-time tasks as a way to programmatically add new real-time data sources without needing to manually add nodes. The grammar for the real-time task is as follows:
 
-```
+```json
 {
   "type" : "index_realtime",
-  "id": "example,
+  "id": "example",
   "resource": {
     "availabilityGroup" : "someGroup",
     "requiredCapacity" : 1
@@ -154,10 +154,10 @@ A JSON object used for high availability purposes. Not required.
 |requiredCapacity|Integer|How much middle manager capacity this task will take.|yes|
 
 Schema:
-See [Schema](Realtime.html#Schema).
+See [Schema](Realtime.html).
 
 Fire Department Config:
-See [Config](Realtime.html#Config).
+See [Config](Realtime.html).
 
 Firehose:
 See [Firehose](Firehose.html).
@@ -178,7 +178,7 @@ Segment Merging Tasks
 
 Append tasks append a list of segments together into a single segment (one after the other). The grammar is:
 
-```
+```json
 {
     "id": <task_id>,
     "dataSource": <task_datasource>,
@@ -190,7 +190,7 @@ Append tasks append a list of segments together into a single segment (one after
 
 Merge tasks merge a list of segments together. Any common timestamps are merged. The grammar is:
 
-```
+```json
 {
     "id": <task_id>,
     "dataSource": <task_datasource>,
@@ -205,7 +205,7 @@ Segment Destroying Tasks
 
 Delete tasks create empty segments with no data. The grammar is:
 
-```
+```json
 {
     "id": <task_id>,
     "dataSource": <task_datasource>,
@@ -217,7 +217,7 @@ Delete tasks create empty segments with no data. The grammar is:
 
 Kill tasks delete all information about a segment and removes it from deep storage. Killable segments must be disabled (used==0) in the Druid segment table. The available grammar is:
 
-```
+```json
 {
     "id": <task_id>,
     "dataSource": <task_datasource>,
@@ -232,7 +232,7 @@ Misc. Tasks
 
 These tasks convert segments from an existing older index version to the latest index version. The available grammar is:
 
-```
+```json
 {
     "id": <task_id>,
     "groupId" : <task_group_id>,
@@ -246,7 +246,7 @@ These tasks convert segments from an existing older index version to the latest 
 
 These tasks start, sleep for a time and are used only for testing. The available grammar is:
 
-```
+```json
 {
     "id": <optional_task_id>,
     "interval" : <optional_segment_interval>,

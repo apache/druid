@@ -6,7 +6,7 @@ The indexing service is a highly-available, distributed service that runs indexi
 The indexing service is composed of three main components: a peon component that can run a single task, a middle manager component that manages peons, and an overlord component that manages task distribution to middle managers.
 Overlords and middle managers may run on the same node or across multiple nodes while middle managers and peons always run on the same node.
 
-Most Basic Getting Started Configuration
+Quick Start
 ----------------------------------------
 Run:
 
@@ -149,7 +149,7 @@ http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker/setup
 
 A sample worker setup spec is shown below:
 
-```
+```json
 {
   "minVersion":"some_version",
   "minNumWorkers":"0",

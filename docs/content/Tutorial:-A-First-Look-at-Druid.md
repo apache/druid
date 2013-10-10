@@ -43,12 +43,11 @@ These metrics track the number of characters added, deleted, and changed.
 Setting Up
 ----------
 
-There are two ways to setup Druid: download a tarball, or [Build From Source](Build From Source.html). You only need to do one of these.
+There are two ways to setup Druid: download a tarball, or [Build From Source](Build-from-source.html). You only need to do one of these.
 
 ### Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.0-bin.tar.gz)
-Download this file to a directory of your choosing.
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.0-bin.tar.gz). Download this file to a directory of your choosing.
 
 You can extract the awesomeness within by issuing:
 
@@ -98,7 +97,7 @@ Okay, things are about to get real-time. To query the real-time node you've spun
 ./run_example_client.sh
 ```
 
-Select "wikipedia" once again. This script issues [GroupByQuery](GroupByQuery.html)s to the data we've been ingesting. The query looks like this:
+Select "wikipedia" once again. This script issues [GroupByQueries](GroupByQuery.html) to the data we've been ingesting. The query looks like this:
 
 ```json
 {
@@ -108,7 +107,7 @@ Select "wikipedia" once again. This script issues [GroupByQuery](GroupByQuery.ht
    "dimensions":[ "page" ],
    "aggregations":[
       {"type":"count", "name":"rows"},
-      {"type":"longSum", "fieldName":"edit_count", "name":"count"}
+      {"type":"longSum", "fieldName":"count", "name":"edit_count"}
    ],
    "filter":{ "type":"selector", "dimension":"namespace", "value":"article" },
    "intervals":[ "2013-06-01T00:00/2020-01-01T00" ]
@@ -151,7 +150,7 @@ time_boundary_query.body
 
 Druid queries are JSON blobs which are relatively painless to create programmatically, but an absolute pain to write by hand. So anyway, we are going to create a Druid query by hand. Add the following to the file you just created:
 
-```
+```json
 {
     "queryType": "timeBoundary", 
     "dataSource": "wikipedia"
@@ -186,7 +185,7 @@ timeseries_query.body
 
 We are going to make a slightly more complicated query, the [TimeseriesQuery](TimeseriesQuery.html). Copy and paste the following into the file:
 
-```
+```json
 {
     "queryType": "timeseries", 
     "dataSource": "wikipedia", 
@@ -221,7 +220,7 @@ Right now all the results you are getting back are being aggregated into a singl
 
 If you loudly exclaimed "we can change granularity to minute", you are absolutely correct! We can specify different granularities to bucket our results, like so:
 
-```
+```json
 {
   "queryType": "timeseries", 
   "dataSource": "wikipedia", 
@@ -267,7 +266,7 @@ group_by_query.body
 
 and put the following in there:
 
-```
+```json
 {
   "queryType": "groupBy", 
   "dataSource": "wikipedia", 
@@ -321,13 +320,13 @@ Feel free to tweak other query parameters to answer other questions you may have
 Next Steps
 ----------
 
-What to know even more information about the Druid Cluster? Check out [Tutorial: The Druid Cluster](Tutorial:-The-Druid-Cluster.html)
+What to know even more information about the Druid Cluster? Check out [Tutorial%3A The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html)
 
-Druid is even more fun if you load your own data into it! To learn how to load your data, see [Loading Your Data](Loading-Your-Data.html).
+Druid is even more fun if you load your own data into it! To learn how to load your data, see [Loading Your Data](Tutorial%3A-Loading-Your-Data-Part-1.html).
 
 Additional Information
 ----------------------
 
 This tutorial is merely showcasing a small fraction of what Druid can do. If you are interested in more information about Druid, including setting up a more sophisticated Druid cluster, please read the other links in our wiki.
 
-And thus concludes our journey! Hopefully you learned a thing or two about Druid real-time ingestion, querying Druid, and how Druid can be used to solve problems. If you have additional questions, feel free to post in our [google groups page](http://www.groups.google.com/forum/#!forum/druid-development).
+And thus concludes our journey! Hopefully you learned a thing or two about Druid real-time ingestion, querying Druid, and how Druid can be used to solve problems. If you have additional questions, feel free to post in our [google groups page](https://groups.google.com/forum/#!forum/druid-development).
