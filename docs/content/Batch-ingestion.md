@@ -1,66 +1,91 @@
 ---
 layout: doc_page
 ---
-Batch Data Ingestion
-====================
-
-There are two choices for batch data ingestion to your Druid cluster, you can use the [Indexing service](Indexing-service.html) or you can use the `HadoopDruidIndexer`. This page describes how to use the `HadoopDruidIndexer`.
+There are two choices for batch data ingestion to your Druid cluster, you can use the [Indexing service](Indexing-service.html) or you can use the `HadoopDruidIndexer`.
 
 Which should I use?
 -------------------
 
-The [Indexing service](Indexing-service.html) is a node that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the Database that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. Long-term, the indexing service is going to be the preferred method of ingesting data.
+The [Indexing service](Indexing-service.html) is a node that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the [database](MySQL.html) that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. Long-term, the indexing service is going to be the preferred method of ingesting data.
 
 The `HadoopDruidIndexer` runs hadoop jobs in order to separate and index data segments. It takes advantage of Hadoop as a job scheduling and distributed job execution platform. It is a simple method if you already have Hadoop running and don’t want to spend the time configuring and deploying the [Indexing service](Indexing service.html) just yet.
 
-HadoopDruidIndexer
-------------------
+Batch Ingestion using the HadoopDruidIndexer
+--------------------------------------------
 
 The HadoopDruidIndexer can be run like so:
 
 ```
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath hadoop_config_path:`echo lib/* | tr ' ' ':'` io.druid.cli.Main index hadoop <config_file>
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_path> io.druid.cli.Main index hadoop <config_file>
 ```
 
 The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Time_intervals) of the data you are processing. The config\_file is a path to a file (the "specFile") that contains JSON and an example looks like:
 
-```
+```json
 {
   "dataSource": "the_data_source",
   "timestampColumn": "ts",
   "timestampFormat": "<iso, millis, posix, auto or any Joda time format>",
   "dataSpec": {
     "format": "<csv, tsv, or json>",
-    "columns": ["ts", "column_1", "column_2", "column_3", "column_4", "column_5"],
-    "dimensions": ["column_1", "column_2", "column_3"]
+    "columns": [
+      "ts",
+      "column_1",
+      "column_2",
+      "column_3",
+      "column_4",
+      "column_5"
+    ],
+    "dimensions": [
+      "column_1",
+      "column_2",
+      "column_3"
+    ]
   },
   "granularitySpec": {
-    "type":"uniform",
-    "intervals":["<ISO8601 interval:http://en.wikipedia.org/wiki/ISO_8601#Time_intervals>"],
-    "gran":"day"
+    "type": "uniform",
+    "intervals": [
+      "<ISO8601 interval:http:\/\/en.wikipedia.org\/wiki\/ISO_8601#Time_intervals>"
+    ],
+    "gran": "day"
   },
-  "pathSpec": { "type": "granularity",
-                "dataGranularity": "hour",
-                "inputPath": "s3n://billy-bucket/the/data/is/here",
-                "filePattern": ".*" },
-  "rollupSpec": { "aggs": [
-                    { "type": "count", "name":"event_count" },
-                    { "type": "doubleSum", "fieldName": "column_4", "name": "revenue" },
-                    { "type": "longSum", "fieldName" : "column_5", "name": "clicks" }
-                  ],
-                  "rollupGranularity": "minute"},
-  "workingPath": "/tmp/path/on/hdfs",
-  "segmentOutputPath": "s3n://billy-bucket/the/segments/go/here",
+  "pathSpec": {
+    "type": "granularity",
+    "dataGranularity": "hour",
+    "inputPath": "s3n:\/\/billy-bucket\/the\/data\/is\/here",
+    "filePattern": ".*"
+  },
+  "rollupSpec": {
+    "aggs": [
+      {
+        "type": "count",
+        "name": "event_count"
+      },
+      {
+        "type": "doubleSum",
+        "fieldName": "column_4",
+        "name": "revenue"
+      },
+      {
+        "type": "longSum",
+        "fieldName": "column_5",
+        "name": "clicks"
+      }
+    ],
+    "rollupGranularity": "minute"
+  },
+  "workingPath": "\/tmp\/path\/on\/hdfs",
+  "segmentOutputPath": "s3n:\/\/billy-bucket\/the\/segments\/go\/here",
   "leaveIntermediate": "false",
   "partitionsSpec": {
     "targetPartitionSize": 5000000
   },
   "updaterJobSpec": {
-    "type":"db",
-    "connectURI":"jdbc:mysql://localhost:7980/test_db",
-    "user":"username",
-    "password":"passmeup",
-    "segmentTable":"segments"
+    "type": "db",
+    "connectURI": "jdbc:mysql:\/\/localhost:7980\/test_db",
+    "user": "username",
+    "password": "passmeup",
+    "segmentTable": "segments"
   }
 }
 ```
@@ -82,7 +107,6 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
 |leaveIntermediate|leave behind files in the workingPath when job completes or fails (debugging tool)|no|
 |partitionsSpec|a specification of how to partition each time bucket into segments, absence of this property means no partitioning will occur|no|
 |updaterJobSpec|a specification of how to update the metadata for the druid cluster these segments belong to|yes|
-|registererers|a list of serde handler classnames|no|
 
 ### Path specification
 
@@ -141,3 +165,67 @@ This is a specification of the properties that tell the job how to update metada
 |segmentTable|table to use in DB|yes|
 
 These properties should parrot what you have configured for your [Coordinator](Coordinator.html).
+
+Batch Ingestion Using the Indexing Service
+------------------------------------------
+
+Batch ingestion for the indexing service is done by submitting a [Hadoop Index Task](Tasks.html). The indexing service can be started by issuing:
+
+```
+java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/overlord io.druid.cli.Main server overlord
+```
+
+This will start up a very simple local indexing service. For more complex deployments of the indexing service, see [here](Indexing-Service.html).
+
+The schema of the Hadoop Index Task is very similar to the schema for the Hadoop Index Config. A sample Hadoop index task is shown below:
+
+```json
+{
+  "type" : "index_hadoop",
+  "config": {
+    "dataSource" : "example",
+    "timestampColumn" : "timestamp",
+    "timestampFormat" : "auto",
+    "dataSpec" : {
+      "format" : "json",
+      "dimensions" : ["dim1","dim2","dim3"]
+    },
+    "granularitySpec" : {
+      "type" : "uniform",
+      "gran" : "DAY",
+      "intervals" : [ "2013-08-31/2013-09-01" ]
+    },
+    "pathSpec" : {
+      "type" : "static",
+      "paths" : "data.json"
+    },
+    "targetPartitionSize" : 5000000,
+    "rollupSpec" : {
+      "aggs": [{
+          "type" : "count",
+          "name" : "count"
+        }, {
+          "type" : "doubleSum",
+          "name" : "added",
+          "fieldName" : "added"
+        }, {
+          "type" : "doubleSum",
+          "name" : "deleted",
+          "fieldName" : "deleted"
+        }, {
+          "type" : "doubleSum",
+          "name" : "delta",
+          "fieldName" : "delta"
+      }],
+      "rollupGranularity" : "none"
+    }
+  }
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|"index_hadoop"|yes|
+|config|a Hadoop Index Config|yes|
+
+The Hadoop Index Config submitted as part of an Hadoop Index Task is identical to the Hadoop Index Config used by the `HadoopBatchIndexer` except that three fields must be omitted: `segmentOutputPath`, `workingPath`, `updaterJobSpec`. The Indexing Service takes care of setting these fields internally.
+

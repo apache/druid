@@ -56,6 +56,7 @@ h2. Architecture
 ** "Realtime":./Realtime.html
 *** "Firehose":./Firehose.html
 *** "Plumber":./Plumber.html
+** "Indexing Service":./Indexing-Service.html
 * External Dependencies
 ** "Deep Storage":./Deep-Storage.html
 ** "MySQL":./MySQL.html

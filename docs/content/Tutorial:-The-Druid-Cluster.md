@@ -114,9 +114,6 @@ druid.port=8082
 
 druid.zk.service.host=localhost
 
-druid.s3.accessKey=AKIAIMKECRUYKDQGR6YQ
-druid.s3.secretKey=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
-
 druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
 druid.db.connector.user=druid
 druid.db.connector.password=diurd
@@ -150,6 +147,7 @@ druid.port=8081
 
 druid.zk.service.host=localhost
 
+# Dummy read only AWS account (used to download example data)
 druid.s3.secretKey=QyyfVZ7llSiRg6Qcrql1eEUG7buFpAK6T6engr1b
 druid.s3.accessKey=AKIAIMKECRUYKDQGR6YQ
 
@@ -219,6 +217,30 @@ When the segment completes downloading and ready for queries, you should see the
 ```
 
 At this point, we can query the segment. For more information on querying, see this [link](Querying.html).
+
+### Bonus Round: Start a Realtime Node
+
+To start the realtime node that was used in our first tutorial, you simply have to issue:
+
+```
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/wikipedia/wikipedia_realtime.spec -classpath lib/*:config/realtime io.druid.cli.Main server realtime
+```
+
+The configurations are located in `config/realtime/runtime.properties` and should contain the following:
+
+```
+druid.host=localhost
+druid.service=realtime
+druid.port=8083
+
+druid.zk.service.host=localhost
+
+druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
+druid.db.connector.user=druid
+druid.db.connector.password=diurd
+
+druid.processing.buffer.sizeBytes=10000000
+```
 
 Next Steps
 ----------

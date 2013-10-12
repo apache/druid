@@ -44,7 +44,6 @@ public class EmittingRequestLoggerProvider implements RequestLoggerProvider
   @Inject
   public void injectMe(Injector injector)
   {
-    System.out.println("YAYAYAYAYAYA!!!");
   }
 
   @Override

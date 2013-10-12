@@ -28,7 +28,6 @@ Data Ingestion
 * [Realtime](Realtime.html)
 * [Batch Ingestion](Batch-ingestion.html)
 * [Indexing Service](Indexing-Service.html)
-* [Indexing Service](Indexing-Service.html)
 *** ]
 *** [Tasks](Tasks.html)
 ----------------------------

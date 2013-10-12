@@ -38,9 +38,9 @@ public abstract class DruidCoordinatorConfig
   @Default("PT60s")
   public abstract Duration getCoordinatorPeriod();
 
-  @Config("druid.coordinator.period.segmentMerger")
+  @Config("druid.coordinator.period.indexingPeriod")
   @Default("PT1800s")
-  public abstract Duration getCoordinatorSegmentMergerPeriod();
+  public abstract Duration getCoordinatorIndexingPeriod();
 
   @Config("druid.coordinator.merge.on")
   public boolean isMergeSegments()

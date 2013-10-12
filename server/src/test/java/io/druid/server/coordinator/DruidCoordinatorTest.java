@@ -89,7 +89,7 @@ public class DruidCoordinatorTest
           }
 
           @Override
-          public Duration getCoordinatorSegmentMergerPeriod()
+          public Duration getCoordinatorIndexingPeriod()
           {
             return null;
           }

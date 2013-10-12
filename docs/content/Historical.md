@@ -6,6 +6,49 @@ Historical
 
 Historical nodes load up historical segments and expose them for querying.
 
+Quick Start
+-----------
+Run:
+
+```
+io.druid.cli.Main server historical
+```
+
+With the following JVM configuration:
+
+```
+-server
+-Xmx256m
+-Duser.timezone=UTC
+-Dfile.encoding=UTF-8
+
+druid.host=localhost
+druid.service=historical
+druid.port=8081
+
+druid.zk.service.host=localhost
+
+druid.server.maxSize=100000000
+
+druid.processing.buffer.sizeBytes=10000000
+
+druid.segmentCache.infoPath=/tmp/druid/segmentInfoCache
+druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 100000000}]```
+```
+
+Note: This will spin up a Historical node with the local filesystem as deep storage.
+
+JVM Configuration
+-----------------
+The historical module uses several of the default modules in [Configuration](Configuration.html) and has no uniques configs of its own.
+
+Running
+-------
+
+```
+io.druid.cli.Main server historical
+```
+
 Loading and Serving Segments
 ----------------------------
 
@@ -28,13 +71,3 @@ Querying Segments
 Please see [Querying](Querying.html) for more information on querying historical nodes.
 
 For every query that a historical node services, it will log the query and report metrics on the time taken to run the query.
-
-Running
--------
-p
-Historical nodes can be run using the `io.druid.cli.Main` class with program arguments "server historical".
-
-Configuration
--------------
-
-See [Configuration](Configuration.html).

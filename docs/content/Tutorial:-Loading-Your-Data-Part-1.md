@@ -1,9 +1,11 @@
 ---
 layout: doc_page
 ---
-In our last [tutorial](Tutorial%3A-The-Druid-Cluster.html), we setup a complete Druid cluster. We created all the Druid dependencies and loaded some batched data. Druid shards data into self-contained chunks known as [segments](Segments.html). Segments are the fundamental unit of storage in Druid and all Druid nodes only understand segments.
+In our last [tutorial](Tutorial%3A-The-Druid-Cluster.html), we set up a complete Druid cluster. We created all the Druid dependencies and loaded some batched data. Druid shards data into self-contained chunks known as [segments](Segments.html). Segments are the fundamental unit of storage in Druid and all Druid nodes only understand segments.
 
 In this tutorial, we will learn about batch ingestion (as opposed to real-time ingestion) and how to create segments using the final piece of the Druid Cluster, the [indexing service](Indexing-Service.html). The indexing service is a standalone service that accepts [tasks](Tasks.html) in the form of POST requests. The output of most tasks are segments.
+
+If you are interested more about ingesting your own data into Druid, skip to the next [tutorial](Tutorial%3A-Loading-Your-Data-Part-2.html).
 
 About the data
 --------------
@@ -38,7 +40,7 @@ Metrics (things to aggregate over):
 Setting Up
 ----------
 
-At this point, you should already have Druid downloaded and are comfortable with running a Druid cluster locally. If you are not, stop here and familiarize yourself with the first two tutorials.
+At this point, you should already have Druid downloaded and are comfortable with running a Druid cluster locally. If you are not, see [here](Tutiroal%3A-The-Druid-Cluster.html).
 
 Let's start from our usual starting point in the tarball directory.
 

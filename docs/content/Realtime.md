@@ -6,22 +6,46 @@ Realtime
 
 Realtime nodes provide a realtime index. Data indexed via these nodes is immediately available for querying. Realtime nodes will periodically build segments representing the data they’ve collected over some span of time and hand these segments off to [Historical](Historical.html) nodes.
 
-Running
--------
+Quick Start
+-----------
+Run:
 
-Realtime nodes can be run using the `com.metamx.druid.realtime.RealtimeMain` class.
+```
+io.druid.cli.Main server realtime
+```
 
-Segment Propagation
--------------------
+With the following JVM configuration:
 
-The segment propagation diagram for real-time data ingestion can be seen below:
+```
+-server
+-Xmx256m
+-Duser.timezone=UTC
+-Dfile.encoding=UTF-8
 
-![Segment Propagation](https://raw.github.com/metamx/druid/druid-0.5.4/doc/segment_propagation.png "Segment Propagation")
+druid.host=localhost
+druid.service=realtime
+druid.port=8083
 
-Configuration
--------------
+druid.zk.service.host=localhost
 
-Realtime nodes take a mix of base server configuration and spec files that describe how to connect, process and expose the realtime feed. See [Configuration](Configuration.html) for information about general server configuration.
+druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
+druid.db.connector.user=druid
+druid.db.connector.password=diurd
+
+druid.processing.buffer.sizeBytes=10000000
+```
+
+Note: This setup will not hand off segments to the rest of the cluster.
+
+JVM Configuration
+-----------------
+
+The realtime module uses several of the default modules in [Configuration](Configuration.html) and has the following set of configurations as well:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.realtime.specFile`|The file with realtime specifications in it.|none|
+|`druid.publish.type`|Choices:noop, db. After a real-time node completes building a segment after the window period, what does it do with it? For true handoff to occur, this should be set to "db".|noop|
 
 ### Realtime "specFile"
 
@@ -137,6 +161,20 @@ The following tables summarizes constraints between settings in the spec file fo
 The normal, expected use cases have the following overall constraints: `indexGranularity < intermediatePersistPeriod =< windowPeriod  < segmentGranularity`
 
 If the RealtimeNode process runs out of heap, try adjusting druid.computation.buffer.size property which specifies a size in bytes that must fit into the heap.
+
+Running
+-------
+
+```
+io.druid.cli.Main server realtime
+```
+
+Segment Propagation
+-------------------
+
+The segment propagation diagram for real-time data ingestion can be seen below:
+
+![Segment Propagation](https://raw.github.com/metamx/druid/druid-0.5.4/doc/segment_propagation.png "Segment Propagation")
 
 Requirements
 ------------

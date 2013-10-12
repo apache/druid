@@ -6,6 +6,8 @@ Druid uses ZooKeeper (ZK) for management of current cluster state. The operation
 1.  [Coordinator](Coordinator.html) leader election
 2.  Segment "publishing" protocol from [Historical](Historical.html) and [Realtime](Realtime.html)
 3.  Segment load/drop protocol between [Coordinator](Coordinator.html) and [Historical](Historical.html)
+4.  [Overlord](Indexing-Service.html) leader election
+5.  [Indexing Service](Indexing-Service.html) task management
 
 ### Property Configuration
 
@@ -30,6 +32,21 @@ druid.zk.paths.indexer.tasksPath=${druid.zk.paths.base}/indexer/tasks
 druid.zk.paths.indexer.statusPath=${druid.zk.paths.base}/indexer/status
 druid.zk.paths.indexer.leaderLatchPath=${druid.zk.paths.base}/indexer/leaderLatchPath
 ```
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.zk.paths.base`|Base Zookeeper path.|druid|
+|`druid.zk.paths.propertiesPath`|Zookeeper properties path.|druid/properties|
+|`druid.zk.paths.announcementsPath`|Druid node announcement path.|druid/announcements|
+|`druid.zk.paths.servedSegmentsPath`|Legacy path for where Druid nodes announce their segments.|druid/servedSegments|
+|`druid.zk.paths.liveSegmentsPath`|Current path for where Druid nodes announce their segments.|druid/segments|
+|`druid.zk.paths.loadQueuePath`|Entries here cause historical nodes to load and drop segments.|druid/loadQueue|
+|`druid.zk.paths.coordinatorPath`|Used by the coordinator for leader election.|druid/coordinator|
+|`druid.zk.paths.indexer.announcementsPath`|Middle managers announce themselves here.|druid/indexer/announcements|
+|`druid.zk.paths.indexer.tasksPath`|Used to assign tasks to middle managers.|druid/indexer/tasks|
+|`druid.zk.paths.indexer.statusPath`|Parent path for announcement of task statuses.|druid/indexer/status|
+|`druid.zk.paths.indexer.leaderLatchPath`|Used for Overlord leader election.|druid/indexer/leaderLatchPath|
+
 
 NOTE: We also use Curator’s service discovery module to expose some services via zookeeper. This also uses a zookeeper path, but this path is **not** affected by `druid.zk.paths.base` and **must** be specified separately. This property is
 

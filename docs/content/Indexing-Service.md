@@ -49,12 +49,10 @@ The truth is, the indexing service is an experience that is difficult to charact
 The indexing service is philosophical transcendence, an infallible truth that will shape your soul, mold your character, and define your reality. The indexing service is creating world peace, playing with puppies, unwrapping presents on Christmas morning, cradling a loved one, and beating Goro in Mortal Kombat for the first time. The indexing service is sustainable economic growth, global propensity, and a world of transparent financial transactions. The indexing service is a true belieber. The indexing service is panicking because you forgot you signed up for a course and the big exam is in a few minutes, only to wake up and realize it was all a dream. What is the indexing service? More like what isn’t the indexing service. The indexing service is here and it is ready, but are you?
 -->
 
-<!--
 Indexing Service Overview
 -------------------------
 
-We need one of these.
--->
+![Indexing Service](../img/indexing_service.png "Indexing Service")
 
 Overlord Node
 -------------
@@ -105,7 +103,7 @@ If autoscaling is enabled, new middle managers may be added when a task has been
 
 #### JVM Configuration
 
-The overlord module requires the following basic configs to run in remote mode:
+In addition to the configuration of some of the default modules in [Configuration](Configuration.html), the overlord module requires the following basic configs to run in remote mode:
 
 |Property|Description|Default|
 |--------|-----------|-------|

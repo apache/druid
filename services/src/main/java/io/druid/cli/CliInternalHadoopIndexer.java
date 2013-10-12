@@ -46,12 +46,6 @@ public class CliInternalHadoopIndexer implements Runnable
   public void run()
   {
     try {
-      System.out.println(
-          HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(
-              new SingleDimensionShardSpec("billy", "a", "b", 1)
-          )
-      );
-
       final HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(getHadoopDruidIndexerConfig());
       job.run();
     }

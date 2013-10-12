@@ -74,6 +74,8 @@ The Hadoop Index Task is used to index larger data sets that require the paralle
 |type|The task type, this should always be "index_hadoop".|yes|
 |config|See [Batch Ingestion](Batch-ingestion.html)|yes|
 
+The Hadoop Index Config submitted as part of an Hadoop Index Task is identical to the Hadoop Index Config used by the `HadoopBatchIndexer` except that three fields must be omitted: `segmentOutputPath`, `workingPath`, `updaterJobSpec`. The Indexing Service takes care of setting these fields internally.
+
 #### Realtime Index Task
 
 The indexing service can also run real-time tasks. These tasks effectively transform a middle manager into a real-time node. We introduced real-time tasks as a way to programmatically add new real-time data sources without needing to manually add nodes. The grammar for the real-time task is as follows:
