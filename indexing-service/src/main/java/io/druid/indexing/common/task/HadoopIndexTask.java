@@ -19,17 +19,27 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.inject.Binder;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Module;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.annotations.Self;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerConfigBuilder;
 import io.druid.indexer.HadoopDruidIndexerJob;
@@ -39,6 +49,8 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.initialization.Initialization;
+import io.druid.server.DruidNode;
+import io.druid.server.initialization.ExtensionsConfig;
 import io.druid.timeline.DataSegment;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.joda.time.DateTime;
@@ -54,6 +66,14 @@ public class HadoopIndexTask extends AbstractTask
 {
   private static final Logger log = new Logger(HadoopIndexTask.class);
   private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
+
+  private static final Injector injector;
+  private static final ExtensionsConfig extensionsConfig;
+
+  static {
+    injector = Initialization.makeStartupInjector();
+    extensionsConfig = injector.getInstance(ExtensionsConfig.class);
+  }
 
   @JsonIgnore
   private final HadoopDruidIndexerSchema schema;
@@ -118,7 +138,7 @@ public class HadoopIndexTask extends AbstractTask
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     // setup Hadoop
-    final DefaultTeslaAether aetherClient = new DefaultTeslaAether();
+    final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
     final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
         aetherClient, hadoopCoordinates
     );
