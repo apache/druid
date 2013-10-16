@@ -40,7 +40,8 @@ public class HadoopDruidIndexerConfigTest
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
-  public void testGranularitySpec() {
+  public void testGranularitySpec()
+  {
     final HadoopDruidIndexerConfig cfg;
 
     try {
@@ -54,7 +55,8 @@ public class HadoopDruidIndexerConfigTest
           + "}",
           HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -74,7 +76,8 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testGranularitySpecLegacy() {
+  public void testGranularitySpecLegacy()
+  {
     // Deprecated and replaced by granularitySpec, but still supported
     final HadoopDruidIndexerConfig cfg;
 
@@ -86,7 +89,8 @@ public class HadoopDruidIndexerConfigTest
           + "}",
           HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -106,40 +110,8 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testGranularitySpecPostConstructorIntervals() {
-    // Deprecated and replaced by granularitySpec, but still supported
-    final HadoopDruidIndexerConfig cfg;
-
-    try {
-      cfg = jsonMapper.readValue(
-          "{"
-          + "\"segmentGranularity\":\"day\""
-          + "}",
-          HadoopDruidIndexerConfig.class
-      );
-    } catch(Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    cfg.setIntervals(Lists.newArrayList(new Interval("2012-03-01/P1D")));
-
-    final UniformGranularitySpec granularitySpec = (UniformGranularitySpec) cfg.getGranularitySpec();
-
-    Assert.assertEquals(
-        "getIntervals",
-        Lists.newArrayList(new Interval("2012-03-01/P1D")),
-        granularitySpec.getIntervals()
-    );
-
-    Assert.assertEquals(
-        "getGranularity",
-        "DAY",
-        granularitySpec.getGranularity().toString()
-    );
-  }
-
-  @Test
-  public void testInvalidGranularityCombination() {
+  public void testInvalidGranularityCombination()
+  {
     boolean thrown = false;
     try {
       final HadoopDruidIndexerConfig cfg = jsonReadWriteRead(
@@ -154,7 +126,8 @@ public class HadoopDruidIndexerConfigTest
           + "}",
           HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       thrown = true;
     }
 
@@ -162,7 +135,8 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testPartitionsSpecAutoDimension() {
+  public void testPartitionsSpecAutoDimension()
+  {
     final HadoopDruidIndexerConfig cfg;
 
     try {
@@ -174,7 +148,8 @@ public class HadoopDruidIndexerConfigTest
           + "}",
           HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -200,7 +175,8 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testPartitionsSpecSpecificDimension() {
+  public void testPartitionsSpecSpecificDimension()
+  {
     final HadoopDruidIndexerConfig cfg;
 
     try {
@@ -213,7 +189,8 @@ public class HadoopDruidIndexerConfigTest
           + "}",
           HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -245,7 +222,8 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testPartitionsSpecLegacy() {
+  public void testPartitionsSpecLegacy()
+  {
     final HadoopDruidIndexerConfig cfg;
 
     try {
@@ -256,7 +234,8 @@ public class HadoopDruidIndexerConfigTest
           + "}",
           HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -288,7 +267,8 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testPartitionsSpecMaxPartitionSize() {
+  public void testPartitionsSpecMaxPartitionSize()
+  {
     final HadoopDruidIndexerConfig cfg;
 
     try {
@@ -302,7 +282,8 @@ public class HadoopDruidIndexerConfigTest
           + "}",
           HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -334,7 +315,8 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testInvalidPartitionsCombination() {
+  public void testInvalidPartitionsCombination()
+  {
     boolean thrown = false;
     try {
       final HadoopDruidIndexerConfig cfg = jsonReadWriteRead(
@@ -346,7 +328,8 @@ public class HadoopDruidIndexerConfigTest
           + "}",
           HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       thrown = true;
     }
 
@@ -382,7 +365,8 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testDefaultSettings() {
+  public void testDefaultSettings()
+  {
     final HadoopDruidIndexerConfig cfg;
 
     try {
@@ -390,7 +374,8 @@ public class HadoopDruidIndexerConfigTest
           "{}",
           HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -414,7 +399,8 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testNoCleanupOnFailure() {
+  public void testNoCleanupOnFailure()
+  {
     final HadoopDruidIndexerConfig cfg;
 
     try {
@@ -422,7 +408,8 @@ public class HadoopDruidIndexerConfigTest
           "{\"cleanupOnFailure\":false}",
           HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -435,23 +422,25 @@ public class HadoopDruidIndexerConfigTest
 
 
   @Test
-  public void shouldMakeHDFSCompliantSegmentOutputPath() {
+  public void shouldMakeHDFSCompliantSegmentOutputPath()
+  {
     final HadoopDruidIndexerConfig cfg;
 
     try {
       cfg = jsonReadWriteRead(
-              "{"
-                      + "\"dataSource\": \"source\","
-                      + " \"granularitySpec\":{"
-                      + "   \"type\":\"uniform\","
-                      + "   \"gran\":\"hour\","
-                      + "   \"intervals\":[\"2012-07-10/P1D\"]"
-                      + " },"
-                      + "\"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\""
-                      + "}",
-              HadoopDruidIndexerConfig.class
+          "{"
+          + "\"dataSource\": \"source\","
+          + " \"granularitySpec\":{"
+          + "   \"type\":\"uniform\","
+          + "   \"gran\":\"hour\","
+          + "   \"intervals\":[\"2012-07-10/P1D\"]"
+          + " },"
+          + "\"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\""
+          + "}",
+          HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -466,23 +455,25 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void shouldMakeDefaultSegmentOutputPathIfNotHDFS() {
+  public void shouldMakeDefaultSegmentOutputPathIfNotHDFS()
+  {
     final HadoopDruidIndexerConfig cfg;
 
     try {
       cfg = jsonReadWriteRead(
-              "{"
-                      + "\"dataSource\": \"the:data:source\","
-                      + " \"granularitySpec\":{"
-                      + "   \"type\":\"uniform\","
-                      + "   \"gran\":\"hour\","
-                      + "   \"intervals\":[\"2012-07-10/P1D\"]"
-                      + " },"
-                      + "\"segmentOutputPath\": \"/tmp/dru:id/data:test\""
-                      + "}",
-              HadoopDruidIndexerConfig.class
+          "{"
+          + "\"dataSource\": \"the:data:source\","
+          + " \"granularitySpec\":{"
+          + "   \"type\":\"uniform\","
+          + "   \"gran\":\"hour\","
+          + "   \"intervals\":[\"2012-07-10/P1D\"]"
+          + " },"
+          + "\"segmentOutputPath\": \"/tmp/dru:id/data:test\""
+          + "}",
+          HadoopDruidIndexerConfig.class
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
@@ -490,7 +481,10 @@ public class HadoopDruidIndexerConfigTest
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
     Path path = cfg.makeSegmentOutputPath(new LocalFileSystem(), bucket);
-    Assert.assertEquals("/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:version/4712", path.toString());
+    Assert.assertEquals(
+        "/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:version/4712",
+        path.toString()
+    );
 
   }
 

@@ -22,12 +22,13 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.metamx.common.Granularity;
 import io.druid.data.input.impl.JSONDataSpec;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.HadoopDruidIndexerConfig;
+import io.druid.indexer.HadoopDruidIndexerSchema;
 import io.druid.indexer.granularity.UniformGranularitySpec;
-import io.druid.indexer.path.StaticPathSpec;
 import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -338,17 +339,12 @@ public class TaskSerdeTest
   {
     final HadoopIndexTask task = new HadoopIndexTask(
         null,
-        new HadoopDruidIndexerConfig(
-            null,
+        new HadoopDruidIndexerSchema(
             "foo",
-            "timestamp",
-            "auto",
+            new TimestampSpec("timestamp", "auto"),
             new JSONDataSpec(ImmutableList.of("foo"), null),
-            null,
             new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P1D"))),
-            new StaticPathSpec("bar"),
-            null,
-            null,
+            ImmutableMap.<String, Object>of("paths", "bar"),
             null,
             null,
             null,
@@ -359,8 +355,11 @@ public class TaskSerdeTest
             false,
             new DataRollupSpec(ImmutableList.<AggregatorFactory>of(), QueryGranularity.NONE),
             null,
-            false
-        )
+            false,
+            null,
+            null
+        ),
+        null
     );
 
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
