@@ -93,7 +93,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller
               S3Object s3Obj = null;
 
               try {
-                s3Obj = s3Client.getObject(new S3Bucket(s3Coords.bucket), s3Coords.path);
+                s3Obj = s3Client.getObject(s3Coords.bucket, s3Coords.path);
 
                 InputStream in = null;
                 try {
