@@ -22,34 +22,50 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexer.HadoopDruidIndexerConfig;
+import io.druid.indexer.HadoopDruidIndexerConfigBuilder;
 import io.druid.indexer.HadoopDruidIndexerJob;
+import io.druid.indexer.HadoopDruidIndexerSchema;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.initialization.Initialization;
 import io.druid.timeline.DataSegment;
+import io.tesla.aether.internal.DefaultTeslaAether;
 import org.joda.time.DateTime;
 
+import java.io.File;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Arrays;
 import java.util.List;
 
 public class HadoopIndexTask extends AbstractTask
 {
-  @JsonIgnore
-  private final HadoopDruidIndexerConfig config;
-
   private static final Logger log = new Logger(HadoopIndexTask.class);
+  private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
+
+  @JsonIgnore
+  private final HadoopDruidIndexerSchema schema;
+
+  @JsonIgnore
+  private final String hadoopCoordinates;
 
   /**
-   * @param config is used by the HadoopDruidIndexerJob to set up the appropriate parameters
+   * @param schema is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *               for creating Druid index segments. It may be modified.
    *               <p/>
-   *               Here, we will ensure that the DbConnectorConfig field of the config is set to null, such that the
+   *               Here, we will ensure that the DbConnectorConfig field of the schema is set to null, such that the
    *               job does not push a list of published segments the database. Instead, we will use the method
    *               IndexGeneratorJob.getPublishedSegments() to simply return a list of the published
    *               segments, and let the indexing service report these segments to the database.
@@ -58,21 +74,24 @@ public class HadoopIndexTask extends AbstractTask
   @JsonCreator
   public HadoopIndexTask(
       @JsonProperty("id") String id,
-      @JsonProperty("config") HadoopDruidIndexerConfig config
+      @JsonProperty("config") HadoopDruidIndexerSchema schema,
+      @JsonProperty("hadoopCoordinates") String hadoopCoordinates
   )
   {
     super(
-        id != null ? id : String.format("index_hadoop_%s_%s", config.getDataSource(), new DateTime()),
-        config.getDataSource(),
-        JodaUtils.umbrellaInterval(config.getIntervals())
+        id != null ? id : String.format("index_hadoop_%s_%s", schema.getDataSource(), new DateTime()),
+        schema.getDataSource(),
+        JodaUtils.umbrellaInterval(JodaUtils.condenseIntervals(schema.getGranularitySpec().bucketIntervals()))
     );
 
-    // Some HadoopDruidIndexerConfig stuff doesn't make sense in the context of the indexing service
-    Preconditions.checkArgument(config.getSegmentOutputDir() == null, "segmentOutputPath must be absent");
-    Preconditions.checkArgument(config.getJobOutputDir() == null, "workingPath must be absent");
-    Preconditions.checkArgument(!config.isUpdaterJobSpecSet(), "updaterJobSpec must be absent");
 
-    this.config = config;
+    // Some HadoopDruidIndexerSchema stuff doesn't make sense in the context of the indexing service
+    Preconditions.checkArgument(schema.getSegmentOutputPath() == null, "segmentOutputPath must be absent");
+    Preconditions.checkArgument(schema.getWorkingPath() == null, "workingPath must be absent");
+    Preconditions.checkArgument(schema.getUpdaterJobSpec() == null, "updaterJobSpec must be absent");
+
+    this.schema = schema;
+    this.hadoopCoordinates = (hadoopCoordinates == null ? defaultHadoopCoordinates : hadoopCoordinates);
   }
 
   @Override
@@ -81,34 +100,64 @@ public class HadoopIndexTask extends AbstractTask
     return "index_hadoop";
   }
 
+
+  @JsonProperty("config")
+  public HadoopDruidIndexerSchema getSchema()
+  {
+    return schema;
+  }
+
+  @JsonProperty
+  public String getHadoopCoordinates()
+  {
+    return hadoopCoordinates;
+  }
+
+  @SuppressWarnings("unchecked")
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    // Copy config so we don't needlessly modify our provided one
-    // Also necessary to make constructor validations work upon serde-after-run
-    final HadoopDruidIndexerConfig configCopy = toolbox.getObjectMapper()
-                                                       .readValue(
-                                                           toolbox.getObjectMapper().writeValueAsBytes(config),
-                                                           HadoopDruidIndexerConfig.class
-                                                       );
+    // setup Hadoop
+    final DefaultTeslaAether aetherClient = new DefaultTeslaAether();
+    final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
+        aetherClient, hadoopCoordinates
+    );
+    final URL[] urLs = ((URLClassLoader) hadoopLoader).getURLs();
+
+    final URL[] nonHadoopUrls = ((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs();
+
+    List<URL> theURLS = Lists.newArrayList();
+    theURLS.addAll(Arrays.asList(urLs));
+    theURLS.addAll(Arrays.asList(nonHadoopUrls));
+
+    final URLClassLoader loader = new URLClassLoader(theURLS.toArray(new URL[theURLS.size()]), null);
+    Thread.currentThread().setContextClassLoader(loader);
+
+    System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(nonHadoopUrls));
+
+    final Class<?> mainClass = loader.loadClass(HadoopIndexTaskInnerProcessing.class.getName());
+    final Method mainMethod = mainClass.getMethod("runTask", String[].class);
 
     // We should have a lock from before we started running
-    final TaskLock myLock =  Iterables.getOnlyElement(getTaskLocks(toolbox));
+    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
     log.info("Setting version to: %s", myLock.getVersion());
-    configCopy.setVersion(myLock.getVersion());
 
-    // Set workingPath to some reasonable default
-    configCopy.setJobOutputDir(toolbox.getConfig().getHadoopWorkingPath());
+    String[] args = new String[]{
+        toolbox.getObjectMapper().writeValueAsString(schema),
+        myLock.getVersion(),
+        toolbox.getConfig().getHadoopWorkingPath(),
+        toolbox.getSegmentPusher().getPathForHadoop(getDataSource()),
+    };
 
-    configCopy.setSegmentOutputDir(toolbox.getSegmentPusher().getPathForHadoop(getDataSource()));
+    String segments = (String) mainMethod.invoke(null, new Object[]{args});
 
-    HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(configCopy);
-    configCopy.verify();
 
-    log.info("Starting a hadoop index generator job...");
-    if (job.run()) {
-      List<DataSegment> publishedSegments = job.getPublishedSegments();
-
+    if (segments != null) {
+      List<DataSegment> publishedSegments = toolbox.getObjectMapper().readValue(
+          segments, new TypeReference<List<DataSegment>>()
+      {
+      }
+      );
       // Request segment pushes
       toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(publishedSegments)));
 
@@ -117,12 +166,41 @@ public class HadoopIndexTask extends AbstractTask
     } else {
       return TaskStatus.failure(getId());
     }
-
   }
 
-  @JsonProperty
-  public HadoopDruidIndexerConfig getConfig()
+  public static class HadoopIndexTaskInnerProcessing
   {
-    return config;
+    public static String runTask(String[] args) throws Exception
+    {
+      final String schema = args[0];
+      final String version = args[1];
+      final String workingPath = args[2];
+      final String segmentOutputPath = args[3];
+
+      final HadoopDruidIndexerSchema theSchema = HadoopDruidIndexerConfig.jsonMapper
+                                                                         .readValue(
+                                                                             schema,
+                                                                             HadoopDruidIndexerSchema.class
+                                                                         );
+      final HadoopDruidIndexerConfig config =
+          new HadoopDruidIndexerConfigBuilder().withSchema(theSchema)
+                                               .withVersion(version)
+                                               .withWorkingPath(
+                                                   workingPath
+                                               )
+                                               .withSegmentOutputPath(
+                                                   segmentOutputPath
+                                               )
+                                               .build();
+
+      HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(config);
+
+      log.info("Starting a hadoop index generator job...");
+      if (job.run()) {
+        return HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(job.getPublishedSegments());
+      }
+
+      return null;
+    }
   }
 }

@@ -21,7 +21,6 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -68,7 +67,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.ISODateTimeFormat;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Collections;
@@ -80,13 +78,13 @@ import java.util.Set;
  */
 public class HadoopDruidIndexerConfig
 {
-  public static final Charset javaNativeCharset = Charset.forName("Unicode");
-
-  public static final Splitter tabSplitter = Splitter.on("\t");
-  public static final Joiner tabJoiner = Joiner.on("\t");
-
+  private static final Logger log = new Logger(HadoopDruidIndexerConfig.class);
   private static final Injector injector;
 
+  public static final String CONFIG_PROPERTY = "druid.indexer.config";
+  public static final Charset javaNativeCharset = Charset.forName("Unicode");
+  public static final Splitter tabSplitter = Splitter.on("\t");
+  public static final Joiner tabJoiner = Joiner.on("\t");
   public static final ObjectMapper jsonMapper;
 
   static {
@@ -113,85 +111,33 @@ public class HadoopDruidIndexerConfig
     INVALID_ROW_COUNTER
   }
 
-  public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
-  {
-    return jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
-  }
-
-  @SuppressWarnings("unchecked")
-  public static HadoopDruidIndexerConfig fromFile(File file)
-  {
-    try {
-      return fromMap((Map<String, Object>) jsonMapper.readValue(file, new TypeReference<Map<String, Object>>(){}));
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  public static HadoopDruidIndexerConfig fromString(String str)
-  {
-    try {
-      return fromMap(
-          (Map<String, Object>) jsonMapper.readValue(
-              str, new TypeReference<Map<String, Object>>()
-          {
-          }
-          )
-      );
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  public static HadoopDruidIndexerConfig fromConfiguration(Configuration conf)
-  {
-    final HadoopDruidIndexerConfig retVal = fromString(conf.get(CONFIG_PROPERTY));
-    retVal.verify();
-    return retVal;
-  }
-
-  private static final Logger log = new Logger(HadoopDruidIndexerConfig.class);
-
-  private static final String CONFIG_PROPERTY = "druid.indexer.config";
-
   private volatile String dataSource;
-  private volatile String timestampColumnName;
-  private volatile String timestampFormat;
+  private volatile TimestampSpec timestampSpec;
   private volatile DataSpec dataSpec;
-  @Deprecated
-  private volatile Granularity segmentGranularity;
   private volatile GranularitySpec granularitySpec;
   private volatile PathSpec pathSpec;
-  private volatile String jobOutputDir;
-  private volatile String segmentOutputDir;
-  private volatile String version = new DateTime().toString();
+  private volatile String workingPath;
+  private volatile String segmentOutputPath;
+  private volatile String version;
   private volatile PartitionsSpec partitionsSpec;
-  private volatile boolean leaveIntermediate = false;
-  private volatile boolean cleanupOnFailure = true;
-  private volatile Map<DateTime, List<HadoopyShardSpec>> shardSpecs = ImmutableMap.of();
-  private volatile boolean overwriteFiles = false;
+  private volatile boolean leaveIntermediate;
+  private volatile boolean cleanupOnFailure;
+  private volatile Map<DateTime, List<HadoopyShardSpec>> shardSpecs;
+  private volatile boolean overwriteFiles;
   private volatile DataRollupSpec rollupSpec;
   private volatile DbUpdaterJobSpec updaterJobSpec;
-  private volatile boolean ignoreInvalidRows = false;
+  private volatile boolean ignoreInvalidRows;
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
-      final @JsonProperty("intervals") List<Interval> intervals,
       final @JsonProperty("dataSource") String dataSource,
-      final @JsonProperty("timestampColumn") String timestampColumnName,
-      final @JsonProperty("timestampFormat") String timestampFormat,
+      final @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       final @JsonProperty("dataSpec") DataSpec dataSpec,
-      final @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       final @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
       final @JsonProperty("pathSpec") PathSpec pathSpec,
-      final @JsonProperty("workingPath") String jobOutputDir,
-      final @JsonProperty("segmentOutputPath") String segmentOutputDir,
+      final @JsonProperty("workingPath") String workingPath,
+      final @JsonProperty("segmentOutputPath") String segmentOutputPath,
       final @JsonProperty("version") String version,
-      final @JsonProperty("partitionDimension") String partitionDimension,
-      final @JsonProperty("targetPartitionSize") Long targetPartitionSize,
       final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
@@ -199,48 +145,51 @@ public class HadoopDruidIndexerConfig
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
       final @JsonProperty("rollupSpec") DataRollupSpec rollupSpec,
       final @JsonProperty("updaterJobSpec") DbUpdaterJobSpec updaterJobSpec,
-      final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows
+      final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
+      // These fields are deprecated and will be removed in the future
+      final @JsonProperty("timestampColumn") String timestampColumn,
+      final @JsonProperty("timestampFormat") String timestampFormat,
+      final @JsonProperty("intervals") List<Interval> intervals,
+      final @JsonProperty("segmentGranularity") Granularity segmentGranularity,
+      final @JsonProperty("partitionDimension") String partitionDimension,
+      final @JsonProperty("targetPartitionSize") Long targetPartitionSize
   )
   {
     this.dataSource = dataSource;
-    this.timestampColumnName = (timestampColumnName == null) ? null : timestampColumnName.toLowerCase();
-    this.timestampFormat = timestampFormat;
+    this.timestampSpec = (timestampSpec == null) ? new TimestampSpec(timestampColumn, timestampFormat) : timestampSpec;
     this.dataSpec = dataSpec;
-    this.granularitySpec = granularitySpec;
     this.pathSpec = pathSpec;
-    this.jobOutputDir = jobOutputDir;
-    this.segmentOutputDir = segmentOutputDir;
+    this.workingPath = workingPath;
+    this.segmentOutputPath = segmentOutputPath;
     this.version = version == null ? new DateTime().toString() : version;
-    this.partitionsSpec = partitionsSpec;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = (cleanupOnFailure == null ? true : cleanupOnFailure);
-    this.shardSpecs = shardSpecs;
+    this.shardSpecs = (shardSpecs == null ? ImmutableMap.<DateTime, List<HadoopyShardSpec>>of() : shardSpecs);
     this.overwriteFiles = overwriteFiles;
     this.rollupSpec = rollupSpec;
     this.updaterJobSpec = updaterJobSpec;
     this.ignoreInvalidRows = ignoreInvalidRows;
 
-    if(partitionsSpec != null) {
+    if (partitionsSpec != null) {
       Preconditions.checkArgument(
           partitionDimension == null && targetPartitionSize == null,
           "Cannot mix partitionsSpec with partitionDimension/targetPartitionSize"
       );
-
       this.partitionsSpec = partitionsSpec;
     } else {
       // Backwards compatibility
       this.partitionsSpec = new PartitionsSpec(partitionDimension, targetPartitionSize, null, false);
     }
 
-    if(granularitySpec != null) {
+    if (granularitySpec != null) {
       Preconditions.checkArgument(
           segmentGranularity == null && intervals == null,
           "Cannot mix granularitySpec with segmentGranularity/intervals"
       );
+      this.granularitySpec = granularitySpec;
     } else {
       // Backwards compatibility
-      this.segmentGranularity = segmentGranularity;
-      if(segmentGranularity != null && intervals != null) {
+      if (segmentGranularity != null && intervals != null) {
         this.granularitySpec = new UniformGranularitySpec(segmentGranularity, intervals);
       }
     }
@@ -251,21 +200,6 @@ public class HadoopDruidIndexerConfig
    */
   public HadoopDruidIndexerConfig()
   {
-  }
-
-  public List<Interval> getIntervals()
-  {
-    return JodaUtils.condenseIntervals(getGranularitySpec().bucketIntervals());
-  }
-
-  @Deprecated
-  public void setIntervals(List<Interval> intervals)
-  {
-    Preconditions.checkState(this.granularitySpec == null, "Cannot mix setIntervals with granularitySpec");
-    Preconditions.checkState(this.segmentGranularity != null, "Cannot use setIntervals without segmentGranularity");
-
-    // For backwards compatibility
-    this.granularitySpec = new UniformGranularitySpec(this.segmentGranularity, intervals);
   }
 
   @JsonProperty
@@ -279,31 +213,15 @@ public class HadoopDruidIndexerConfig
     this.dataSource = dataSource.toLowerCase();
   }
 
-  @JsonProperty("timestampColumn")
-  public String getTimestampColumnName()
-  {
-    return timestampColumnName;
-  }
-
-  public void setTimestampColumnName(String timestampColumnName)
-  {
-    this.timestampColumnName = timestampColumnName.toLowerCase();
-  }
-
-  @JsonProperty()
-  public String getTimestampFormat()
-  {
-    return timestampFormat;
-  }
-
-  public void setTimestampFormat(String timestampFormat)
-  {
-    this.timestampFormat = timestampFormat;
-  }
-
+  @JsonProperty
   public TimestampSpec getTimestampSpec()
   {
-    return new TimestampSpec(timestampColumnName, timestampFormat);
+    return timestampSpec;
+  }
+
+  public void setTimestampSpec(TimestampSpec timestampSpec)
+  {
+    this.timestampSpec = timestampSpec;
   }
 
   @JsonProperty
@@ -315,32 +233,6 @@ public class HadoopDruidIndexerConfig
   public void setDataSpec(DataSpec dataSpec)
   {
     this.dataSpec = new ToLowercaseDataSpec(dataSpec);
-  }
-
-  public StringInputRowParser getParser()
-  {
-    final List<String> dimensionExclusions;
-
-    if(getDataSpec().hasCustomDimensions()) {
-      dimensionExclusions = null;
-    } else {
-      dimensionExclusions = Lists.newArrayList();
-      dimensionExclusions.add(getTimestampColumnName());
-      dimensionExclusions.addAll(
-          Lists.transform(
-              getRollupSpec().getAggs(), new Function<AggregatorFactory, String>()
-          {
-            @Override
-            public String apply(AggregatorFactory aggregatorFactory)
-            {
-              return aggregatorFactory.getName();
-            }
-          }
-          )
-      );
-    }
-
-    return new StringInputRowParser(getTimestampSpec(), getDataSpec(), dimensionExclusions);
   }
 
   @JsonProperty
@@ -355,17 +247,6 @@ public class HadoopDruidIndexerConfig
   }
 
   @JsonProperty
-  public PartitionsSpec getPartitionsSpec()
-  {
-    return partitionsSpec;
-  }
-
-  public void setPartitionsSpec(PartitionsSpec partitionsSpec)
-  {
-    this.partitionsSpec = partitionsSpec;
-  }
-
-  @JsonProperty
   public PathSpec getPathSpec()
   {
     return pathSpec;
@@ -376,26 +257,26 @@ public class HadoopDruidIndexerConfig
     this.pathSpec = pathSpec;
   }
 
-  @JsonProperty("workingPath")
-  public String getJobOutputDir()
+  @JsonProperty
+  public String getWorkingPath()
   {
-    return jobOutputDir;
+    return workingPath;
   }
 
-  public void setJobOutputDir(String jobOutputDir)
+  public void setWorkingPath(String workingPath)
   {
-    this.jobOutputDir = jobOutputDir;
+    this.workingPath = workingPath;
   }
 
-  @JsonProperty("segmentOutputPath")
-  public String getSegmentOutputDir()
+  @JsonProperty
+  public String getSegmentOutputPath()
   {
-    return segmentOutputDir;
+    return segmentOutputPath;
   }
 
-  public void setSegmentOutputDir(String segmentOutputDir)
+  public void setSegmentOutputPath(String segmentOutputPath)
   {
-    this.segmentOutputDir = segmentOutputDir;
+    this.segmentOutputPath = segmentOutputPath;
   }
 
   @JsonProperty
@@ -409,29 +290,15 @@ public class HadoopDruidIndexerConfig
     this.version = version;
   }
 
-  public String getPartitionDimension()
+  @JsonProperty
+  public PartitionsSpec getPartitionsSpec()
   {
-    return partitionsSpec.getPartitionDimension();
+    return partitionsSpec;
   }
 
-  public boolean partitionByDimension()
+  public void setPartitionsSpec(PartitionsSpec partitionsSpec)
   {
-    return partitionsSpec.isDeterminingPartitions();
-  }
-
-  public Long getTargetPartitionSize()
-  {
-    return partitionsSpec.getTargetPartitionSize();
-  }
-
-  public long getMaxPartitionSize()
-  {
-    return partitionsSpec.getMaxPartitionSize();
-  }
-
-  public boolean isUpdaterJobSpecSet()
-  {
-    return (updaterJobSpec != null);
+    this.partitionsSpec = partitionsSpec;
   }
 
   @JsonProperty
@@ -509,6 +376,72 @@ public class HadoopDruidIndexerConfig
   public void setIgnoreInvalidRows(boolean ignoreInvalidRows)
   {
     this.ignoreInvalidRows = ignoreInvalidRows;
+  }
+
+  public List<Interval> getIntervals()
+  {
+    return JodaUtils.condenseIntervals(getGranularitySpec().bucketIntervals());
+  }
+
+  public String getPartitionDimension()
+  {
+    return partitionsSpec.getPartitionDimension();
+  }
+
+  public boolean partitionByDimension()
+  {
+    return partitionsSpec.isDeterminingPartitions();
+  }
+
+  public Long getTargetPartitionSize()
+  {
+    return partitionsSpec.getTargetPartitionSize();
+  }
+
+  public long getMaxPartitionSize()
+  {
+    return partitionsSpec.getMaxPartitionSize();
+  }
+
+  public boolean isUpdaterJobSpecSet()
+  {
+    return (updaterJobSpec != null);
+  }
+
+  public StringInputRowParser getParser()
+  {
+    final List<String> dimensionExclusions;
+
+    if (getDataSpec().hasCustomDimensions()) {
+      dimensionExclusions = null;
+    } else {
+      dimensionExclusions = Lists.newArrayList();
+      dimensionExclusions.add(timestampSpec.getTimestampColumn());
+      dimensionExclusions.addAll(
+          Lists.transform(
+              getRollupSpec().getAggs(), new Function<AggregatorFactory, String>()
+          {
+            @Override
+            public String apply(AggregatorFactory aggregatorFactory)
+            {
+              return aggregatorFactory.getName();
+            }
+          }
+          )
+      );
+    }
+
+    return new StringInputRowParser(getTimestampSpec(), getDataSpec(), dimensionExclusions);
+  }
+
+  public HadoopyShardSpec getShardSpec(Bucket bucket)
+  {
+    return shardSpecs.get(bucket.time).get(bucket.partitionNum);
+  }
+
+  public Job addInputPaths(Job job) throws IOException
+  {
+    return getPathSpec().addInputPaths(this, job);
   }
 
   /********************************************
@@ -590,11 +523,6 @@ public class HadoopDruidIndexerConfig
         );
   }
 
-  public HadoopyShardSpec getShardSpec(Bucket bucket)
-  {
-    return shardSpecs.get(bucket.time).get(bucket.partitionNum);
-  }
-
   /******************************************
    Path helper logic
    ******************************************/
@@ -606,7 +534,7 @@ public class HadoopDruidIndexerConfig
    */
   public Path makeIntermediatePath()
   {
-    return new Path(String.format("%s/%s/%s", getJobOutputDir(), dataSource, getVersion().replace(":", "")));
+    return new Path(String.format("%s/%s/%s", getWorkingPath(), getDataSource(), getVersion().replace(":", "")));
   }
 
   public Path makeSegmentPartitionInfoPath(Bucket bucket)
@@ -638,38 +566,33 @@ public class HadoopDruidIndexerConfig
     return new Path(makeDescriptorInfoDir(), String.format("%s.json", segment.getIdentifier().replace(":", "")));
   }
 
-	public Path makeSegmentOutputPath(FileSystem fileSystem, Bucket bucket)
-	{
-		final Interval bucketInterval = getGranularitySpec().bucketInterval(bucket.time).get();
-		if (fileSystem instanceof DistributedFileSystem)
-		{
-			return new Path(
-			    String.format(
-			        "%s/%s/%s_%s/%s/%s",
-			        getSegmentOutputDir(),
-			        dataSource,
-			        bucketInterval.getStart().toString(ISODateTimeFormat.basicDateTime()),
-			        bucketInterval.getEnd().toString(ISODateTimeFormat.basicDateTime()),
-			        getVersion().replace(":", "_"),
-			        bucket.partitionNum
-			        )
-      );
-		}
-		return new Path(
-		    String.format(
-		        "%s/%s/%s_%s/%s/%s",
-		        getSegmentOutputDir(),
-		        dataSource,
-		        bucketInterval.getStart().toString(),
-		        bucketInterval.getEnd().toString(),
-		        getVersion(),
-		        bucket.partitionNum
-		        ));
-	}
-
-  public Job addInputPaths(Job job) throws IOException
+  public Path makeSegmentOutputPath(FileSystem fileSystem, Bucket bucket)
   {
-    return pathSpec.addInputPaths(this, job);
+    final Interval bucketInterval = getGranularitySpec().bucketInterval(bucket.time).get();
+    if (fileSystem instanceof DistributedFileSystem) {
+      return new Path(
+          String.format(
+              "%s/%s/%s_%s/%s/%s",
+              getSegmentOutputPath(),
+              getDataSource(),
+              bucketInterval.getStart().toString(ISODateTimeFormat.basicDateTime()),
+              bucketInterval.getEnd().toString(ISODateTimeFormat.basicDateTime()),
+              getVersion().replace(":", "_"),
+              bucket.partitionNum
+          )
+      );
+    }
+    return new Path(
+        String.format(
+            "%s/%s/%s_%s/%s/%s",
+            getSegmentOutputPath(),
+            getDataSource(),
+            bucketInterval.getStart().toString(),
+            bucketInterval.getEnd().toString(),
+            getVersion(),
+            bucket.partitionNum
+        )
+    );
   }
 
   public void intoConfiguration(Job job)
@@ -677,7 +600,7 @@ public class HadoopDruidIndexerConfig
     Configuration conf = job.getConfiguration();
 
     try {
-      conf.set(CONFIG_PROPERTY, jsonMapper.writeValueAsString(this));
+      conf.set(HadoopDruidIndexerConfig.CONFIG_PROPERTY, HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(this));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -695,12 +618,11 @@ public class HadoopDruidIndexerConfig
 
     Preconditions.checkNotNull(dataSource, "dataSource");
     Preconditions.checkNotNull(dataSpec, "dataSpec");
-    Preconditions.checkNotNull(timestampColumnName, "timestampColumn");
-    Preconditions.checkNotNull(timestampFormat, "timestampFormat");
+    Preconditions.checkNotNull(timestampSpec, "timestampSpec");
     Preconditions.checkNotNull(granularitySpec, "granularitySpec");
     Preconditions.checkNotNull(pathSpec, "pathSpec");
-    Preconditions.checkNotNull(jobOutputDir, "workingPath");
-    Preconditions.checkNotNull(segmentOutputDir, "segmentOutputPath");
+    Preconditions.checkNotNull(workingPath, "workingPath");
+    Preconditions.checkNotNull(segmentOutputPath, "segmentOutputPath");
     Preconditions.checkNotNull(version, "version");
     Preconditions.checkNotNull(rollupSpec, "rollupSpec");
 

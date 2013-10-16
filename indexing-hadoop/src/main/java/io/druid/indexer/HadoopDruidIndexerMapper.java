@@ -38,7 +38,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   protected void setup(Context context)
       throws IOException, InterruptedException
   {
-    config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
+    config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
     parser = config.getParser();
   }
 

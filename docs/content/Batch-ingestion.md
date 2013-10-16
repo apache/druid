@@ -24,8 +24,10 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
 ```json
 {
   "dataSource": "the_data_source",
-  "timestampColumn": "ts",
-  "timestampFormat": "<iso, millis, posix, auto or any Joda time format>",
+  "timestampSpec" : {
+    "timestampColumn": "ts",
+    "timestampFormat": "<iso, millis, posix, auto or any Joda time format>"
+  },
   "dataSpec": {
     "format": "<csv, tsv, or json>",
     "columns": [
@@ -95,18 +97,17 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
 |property|description|required?|
 |--------|-----------|---------|
 |dataSource|name of the dataSource the data will belong to|yes|
-|timestampColumn|the column that is to be used as the timestamp column|yes|
-|timestampFormat|the format of timestamps; auto = either iso or millis, Joda time formats:http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html|yes|
-|dataSpec|a specification of the data format and an array that names all of the columns in the input data|yes|
-|dimensions|the columns that are to be used as dimensions|yes|
-|granularitySpec|the time granularity and interval to chunk segments up into|yes|
+|timestampSpec|includes the column that is to be used as the timestamp column and the format of the timestamps; auto = either iso or millis, Joda time formats can be found [here](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html).|yes|
+|dataSpec|a specification of the data format and an array that names all of the columns in the input data.|yes|
+|dimensions|the columns that are to be used as dimensions.|yes|
+|granularitySpec|the time granularity and interval to chunk segments up into.|yes|
 |pathSpec|a specification of where to pull the data in from|yes|
 |rollupSpec|a specification of the rollup to perform while processing the data|yes|
-|workingPath|the working path to use for intermediate results (results between Hadoop jobs)|yes|
-|segmentOutputPath|the path to dump segments into|yes|
-|leaveIntermediate|leave behind files in the workingPath when job completes or fails (debugging tool)|no|
-|partitionsSpec|a specification of how to partition each time bucket into segments, absence of this property means no partitioning will occur|no|
-|updaterJobSpec|a specification of how to update the metadata for the druid cluster these segments belong to|yes|
+|workingPath|the working path to use for intermediate results (results between Hadoop jobs).|yes|
+|segmentOutputPath|the path to dump segments into.|yes|
+|leaveIntermediate|leave behind files in the workingPath when job completes or fails (debugging tool).|no|
+|partitionsSpec|a specification of how to partition each time bucket into segments, absence of this property means no partitioning will occur.|no|
+|updaterJobSpec|a specification of how to update the metadata for the druid cluster these segments belong to.|yes|
 
 ### Path specification
 
@@ -118,9 +119,9 @@ Is a type of data loader that expects data to be laid out in a specific path for
 
 |property|description|required?|
 |--------|-----------|---------|
-|dataGranularity|specifies the granularity to expect the data at, e.g. hour means to expect directories `y=XXXX/m=XX/d=XX/H=XX`|yes|
-|inputPath|Base path to append the expected time path to|yes|
-|filePattern|Pattern that files should match to be included|yes|
+|dataGranularity|specifies the granularity to expect the data at, e.g. hour means to expect directories `y=XXXX/m=XX/d=XX/H=XX`.|yes|
+|inputPath|Base path to append the expected time path to.|yes|
+|filePattern|Pattern that files should match to be included.|yes|
 
 For example, if the sample config were run with the interval 2012-06-01/2012-06-02, it would expect data at the paths
 
@@ -138,7 +139,7 @@ The indexing process has the ability to roll data up as it processes the incomin
 |property|description|required?|
 |--------|-----------|---------|
 |aggs|specifies a list of aggregators to aggregate for each bucket (a bucket is defined by the tuple of the truncated timestamp and the dimensions). Aggregators available here are the same as available when querying.|yes|
-|rollupGranularity|The granularity to use when truncating incoming timestamps for bucketization|yes|
+|rollupGranularity|The granularity to use when truncating incoming timestamps for bucketization.|yes|
 
 ### Partitioning specification
 
@@ -158,11 +159,11 @@ This is a specification of the properties that tell the job how to update metada
 
 |property|description|required?|
 |--------|-----------|---------|
-|type|"db" is the only value available|yes|
-|connectURI|a valid JDBC url to MySQL|yes|
-|user|username for db|yes|
-|password|password for db|yes|
-|segmentTable|table to use in DB|yes|
+|type|"db" is the only value available.|yes|
+|connectURI|A valid JDBC url to MySQL.|yes|
+|user|Username for db.|yes|
+|password|password for db.|yes|
+|segmentTable|Table to use in DB.|yes|
 
 These properties should parrot what you have configured for your [Coordinator](Coordinator.html).
 
@@ -177,15 +178,17 @@ java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/ov
 
 This will start up a very simple local indexing service. For more complex deployments of the indexing service, see [here](Indexing-Service.html).
 
-The schema of the Hadoop Index Task is very similar to the schema for the Hadoop Index Config. A sample Hadoop index task is shown below:
+The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Config. A sample Hadoop index task is shown below:
 
 ```json
 {
   "type" : "index_hadoop",
   "config": {
     "dataSource" : "example",
-    "timestampColumn" : "timestamp",
-    "timestampFormat" : "auto",
+    "timestampSpec" : {
+      "timestampColumn" : "timestamp",
+      "timestampFormat" : "auto"
+    },
     "dataSpec" : {
       "format" : "json",
       "dimensions" : ["dim1","dim2","dim3"]
@@ -224,8 +227,23 @@ The schema of the Hadoop Index Task is very similar to the schema for the Hadoop
 
 |property|description|required?|
 |--------|-----------|---------|
-|type|"index_hadoop"|yes|
-|config|a Hadoop Index Config|yes|
+|type|This should be "index_hadoop".|yes|
+|config|A Hadoop Index Config.|yes|
 
 The Hadoop Index Config submitted as part of an Hadoop Index Task is identical to the Hadoop Index Config used by the `HadoopBatchIndexer` except that three fields must be omitted: `segmentOutputPath`, `workingPath`, `updaterJobSpec`. The Indexing Service takes care of setting these fields internally.
 
+To run the task:
+
+```
+curl -X 'POST' -H 'Content-Type:application/json' -d @example_index_hadoop_task.json localhost:8087/druid/indexer/v1/task
+```
+
+If the task succeeds, you should see in the logs of the indexing service:
+
+```
+2013-10-16 16:38:31,945 INFO [pool-6-thread-1] io.druid.indexing.overlord.exec.TaskConsumer - Task SUCCESS: HadoopIndexTask...
+```
+
+Having Problems?
+----------------
+Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-development).
