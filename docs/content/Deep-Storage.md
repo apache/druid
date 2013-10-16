@@ -12,21 +12,21 @@ S3-compatible deep storage is basically either S3 or something like riak-cs whic
 S3 configuration parameters are
 
 ```
-com.metamx.aws.accessKey=<S3 access key>
-com.metamx.aws.secretKey=<S3 secret_key>
-druid.storage.s3.bucket=<bucket to store in>
-druid.storage.s3.baseKey=<base key prefix to use, i.e. what directory>
+druid.s3.accessKey=<S3 access key>
+druid.s3.secretKey=<S3 secret_key>
+druid.storage.bucket=<bucket to store in>
+druid.storage.baseKey=<base key prefix to use, i.e. what directory>
 ```
 
 ## HDFS
 
 As of 0.4.0, HDFS can be used for storage of segments as well.  
 
-In order to use hdfs for deep storage, you need to set the following configuration on your realtime nodes.
+In order to use hdfs for deep storage, you need to set the following configuration on your real-time nodes.
 
 ```
-druid.storage.hdfs=true
-druid.storage.hdfs.storageDirectory=<directory for storing segments>
+druid.storage.type=hdfs
+druid.storage.storageDirectory=<directory for storing segments>
 ```
 
 If you are using the Hadoop indexer, set your output directory to be a location on Hadoop and it will work
@@ -36,13 +36,13 @@ If you are using the Hadoop indexer, set your output directory to be a location 
 
 A local mount can be used for storage of segments as well.  This allows you to use just your local file system or anything else that can be mount locally like NFS, Ceph, etc.
 
-In order to use a local mount for deep storage, you need to set the following configuration on your realtime nodes.
+In order to use a local mount for deep storage, you need to set the following configuration on your real-time nodes.
 
 ```
-druid.storage.local=true
-druid.storage.local.storageDirectory=<directory for storing segments>
+druid.storage.type=local
+druid.storage.storageDirectory=<directory for storing segments>
 ```
 
-Note that you should generally set `druid.storage.local.storageDirectory` to something different from `druid.paths.indexCache`.
+Note that you should generally set `druid.storage.storageDirectory` to something different from `druid.segmentCache.locations` and `druid.segmentCache.infoDir`.
 
 If you are using the Hadoop indexer in local mode, then just give it a local file as your output directory and it will work.
