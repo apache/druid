@@ -63,12 +63,16 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
     // This PathSpec breaks so many abstractions that we might as break some more
     Preconditions.checkState(
         config.getGranularitySpec() instanceof UniformGranularitySpec,
-        String.format("Cannot use %s without %s", GranularUnprocessedPathSpec.class.getSimpleName(), UniformGranularitySpec.class.getSimpleName())
+        String.format(
+            "Cannot use %s without %s",
+            GranularUnprocessedPathSpec.class.getSimpleName(),
+            UniformGranularitySpec.class.getSimpleName()
+        )
     );
 
     final Path betaInput = new Path(getInputPath());
     final FileSystem fs = betaInput.getFileSystem(job.getConfiguration());
-    final Granularity segmentGranularity = ((UniformGranularitySpec)config.getGranularitySpec()).getGranularity();
+    final Granularity segmentGranularity = ((UniformGranularitySpec) config.getGranularitySpec()).getGranularity();
 
     Map<DateTime, Long> inputModifiedTimes = new TreeMap<DateTime, Long>(
         Comparators.inverse(Comparators.<Comparable>comparable())
@@ -87,7 +91,11 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
       DateTime timeBucket = entry.getKey();
       long mTime = entry.getValue();
 
-      String bucketOutput = String.format("%s/%s", config.getSegmentOutputDir(), segmentGranularity.toPath(timeBucket));
+      String bucketOutput = String.format(
+          "%s/%s",
+          config.getSegmentOutputPath(),
+          segmentGranularity.toPath(timeBucket)
+      );
       for (FileStatus fileStatus : FSSpideringIterator.spiderIterable(fs, new Path(bucketOutput))) {
         if (fileStatus.getModificationTime() > mTime) {
           bucketsToRun.add(new Interval(timeBucket, segmentGranularity.increment(timeBucket)));

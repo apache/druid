@@ -46,6 +46,7 @@ public class HadoopDruidIndexerJob implements Jobby
 
   private final HadoopDruidIndexerConfig config;
   private final DbUpdaterJob dbUpdaterJob;
+
   private IndexGeneratorJob indexJob;
   private volatile List<DataSegment> publishedSegments = null;
 
