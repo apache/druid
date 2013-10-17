@@ -27,7 +27,7 @@ digraph g {
   
   subgraph cluster_mm1 {
     style="dotted"
-    mm1 [shape = "box" label = "Middle Manager" ]
+    mm1 [shape = "box" label = "Middle Manager 1" ]
     peon_11[label = "peon"]
     peon_12[label = "peon"]
     peon_13[label = "peon"]
