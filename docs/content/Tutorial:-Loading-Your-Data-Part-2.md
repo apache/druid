@@ -311,6 +311,8 @@ After the task is completed, the segment should be assigned to your historical n
 
 Next Steps
 ----------
+We demonstrated using the indexing service as a way to ingest data into Druid. Previous versions of Druid used the [HadoopDruidIndexer](Batch-ingestion.html) to ingest batch data. The `HadoopDruidIndexer` still remains a valid option for batch ingestion, however, we recommend using the indexing service as the preferred method of getting batch data into Druid.
+
 For more information on querying, check out this [tutorial](Tutorial%3A-All-About-Queries.html).
 
 Additional Information
