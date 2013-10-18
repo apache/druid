@@ -47,7 +47,7 @@ The data store world is vast, confusing and constantly in flux. This page is mea
 Key Features
 ------------
 
--   **Designed for Analytics** - Druid is built for exploratory analytics for OLAP workflows (streamalytics). It supports a variety of filters, aggregators and query types and provides a framework for plugging in new functionality. Users have leveraged Druid’s infrastructure to develop features such as top K queries and histograms.
+-   **Designed for Analytics** - Druid is built for exploratory analytics for OLAP workflows. It supports a variety of filters, aggregators and query types and provides a framework for plugging in new functionality. Users have leveraged Druid’s infrastructure to develop features such as top K queries and histograms.
 -   **Interactive Queries** - Druid’s low latency data ingestion architecture allows events to be queried milliseconds after they are created. Druid’s query latency is optimized by only reading and scanning exactly what is needed. Aggregate and filter on data without sitting around waiting for results.
 -   **Highly Available** - Druid is used to back SaaS implementations that need to be up all the time. Your data is still available and queryable during system updates. Scale up or down without data loss.
 -   **Scalable** - Existing Druid deployments handle billions of events and terabytes of data per day. Druid is designed to be petabyte scale.
