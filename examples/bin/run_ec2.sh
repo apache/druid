@@ -60,7 +60,7 @@ ssh -q -f -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ubuntu@${INSTANCE_
 echo "Prepared $INSTANCE_ADDRESS for druid."
 
 # Now to scp a tarball up that can run druid!
-if [ -f ../../services/target/druid-services-*-SNAPSHOT-bin.tar.gz ];
+if [ -f ../../services/target/druid-services-*-bin.tar.gz ];
 then
   echo "Uploading druid tarball to server..."
   scp -i ~/.ssh/druid-keypair -o StrictHostKeyChecking=no ../../services/target/druid-services-*-bin.tar.gz ubuntu@${INSTANCE_ADDRESS}:
