@@ -101,7 +101,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
 
     @Override
     public String getTypeName() {
-        return "float";
+        return "string";
     }
 
     @Override

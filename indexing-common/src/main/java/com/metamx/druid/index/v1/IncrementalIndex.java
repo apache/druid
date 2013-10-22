@@ -262,6 +262,22 @@ public class IncrementalIndex implements Iterable<Row>
                     }
                   };
                 }
+                else if (typeName.equals("string")) {
+                    return new ObjectColumnSelector<String>()
+                    {
+                        @Override
+                        public Class classOfObject()
+                        {
+                            return Object.class;
+                        }
+
+                        @Override
+                        public String get()
+                        {
+                            return in.getDimension(columnName).get(0);
+                        }
+                    };
+                }
 
                 final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
 
