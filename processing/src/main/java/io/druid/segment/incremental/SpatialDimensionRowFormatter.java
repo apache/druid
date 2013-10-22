@@ -134,6 +134,11 @@ public class SpatialDimensionRowFormatter
       }
 
       @Override
+      public Object getRaw(String dimension) {
+        return row.getRaw(dimension);
+      }
+
+      @Override
       public float getFloatMetric(String metric)
       {
         return row.getFloatMetric(metric);
