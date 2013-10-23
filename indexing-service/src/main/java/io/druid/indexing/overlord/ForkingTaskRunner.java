@@ -206,7 +206,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add(statusFile.toString());
                               String nodeType = task.getNodeType();
                               if (nodeType != null) {
-                                command.add(String.format("--nodeType %s", nodeType));
+                                command.add("--nodeType");
+                                command.add(nodeType);
                               }
 
                               jsonMapper.writeValue(taskFile, task);
