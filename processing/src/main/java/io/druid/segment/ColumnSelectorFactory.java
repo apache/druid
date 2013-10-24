@@ -24,6 +24,7 @@ package io.druid.segment;
  */
 public interface ColumnSelectorFactory
 {
+  public DimensionSelector makeDimensionSelector(String dimensionName);
   public FloatColumnSelector makeFloatColumnSelector(String columnName);
   public ObjectColumnSelector makeObjectColumnSelector(String columnName);
 }

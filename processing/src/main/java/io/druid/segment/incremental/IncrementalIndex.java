@@ -42,6 +42,7 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.serde.ComplexMetricExtractor;
@@ -255,6 +256,12 @@ public class IncrementalIndex implements Iterable<Row>
                     return extractor.extractValue(in, columnName);
                   }
                 };
+              }
+
+              @Override
+              public DimensionSelector makeDimensionSelector(String dimension) {
+                // we should implement this, but this is going to be rewritten soon anyways
+                throw new UnsupportedOperationException("Incremental index aggregation does not support dimension selectors");
               }
             }
         );
