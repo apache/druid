@@ -1,0 +1,41 @@
+// dot -Gnewrank -Tpng indexing_service.dot > indexing_service.png
+
+digraph g {
+  node [ fontname = "Helvetica Neue" ]
+  node [ fontname = "Helvetica Neue" ]
+  edge [ fontname = "Helvetica Neue Light Italic" fontsize = 12]
+
+  new_task[shape="plaintext" fontname="Helvetica Neue Light Italic"]
+  overlord[shape="box" label="Overlord"]
+  
+  new_task -> overlord
+  overlord -> zk_tasks:mm1:n [label = "new_task"]
+  zk_tasks:mm1 -> mm1 [label = "new_task"]
+
+  subgraph cluster_0 {
+    style = "dotted"
+    label = "ZooKeeper"
+    fontname = "Helvetica Neue" 
+
+    zk_status -> zk_tasks [style="invis"]
+
+    zk_status [fontname="Source Code Pro" shape = record label = "<status> /status | { <new_task> /new_task }"]
+    zk_tasks [fontname="Source Code Pro" shape=record label="<tasks> /tasks | {<mm1> /mm1 | <mm2> /mm2 | <mm3> /mm3}"]
+
+    { rank = same; zk_status zk_tasks }
+  }
+  
+  subgraph cluster_mm1 {
+    style="dotted"
+    mm1 [shape = "box" label = "Middle Manager 1" ]
+    peon_11[label = "peon"]
+    peon_12[label = "peon"]
+    peon_13[label = "peon"]
+    
+    mm1 -> peon_11 [label = "new_task"]
+    mm1 -> { peon_12; peon_13 }
+  }
+  
+  zk_status:new_task:s -> peon_11:e [label = "new_task_status" dir = back]
+  overlord:e -> zk_status:new_task:n [dir=back label="new_task_status"]
+}

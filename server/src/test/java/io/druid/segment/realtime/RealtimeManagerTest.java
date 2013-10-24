@@ -150,6 +150,12 @@ public class RealtimeManagerTest
       {
         return 0;
       }
+
+      @Override
+      public Object getRaw(String dimension)
+      {
+        return null;
+      }
     };
   }
 

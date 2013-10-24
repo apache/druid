@@ -44,6 +44,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
+import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.server.DruidNode;
 import io.druid.tasklogs.TaskLogPusher;
 import io.druid.tasklogs.TaskLogStreamer;
@@ -84,6 +85,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   @Inject
   public ForkingTaskRunner(
       ForkingTaskRunnerConfig config,
+      WorkerConfig workerConfig,
       Properties props,
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
@@ -96,7 +98,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     this.jsonMapper = jsonMapper;
     this.node = node;
 
-    this.exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(config.maxForks()));
+    this.exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(workerConfig.getCapacity()));
   }
 
   @Override
@@ -204,7 +206,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add(statusFile.toString());
                               String nodeType = task.getNodeType();
                               if (nodeType != null) {
-                                command.add(String.format("--nodeType %s", nodeType));
+                                command.add("--nodeType");
+                                command.add(nodeType);
                               }
 
                               jsonMapper.writeValue(taskFile, task);

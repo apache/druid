@@ -113,14 +113,14 @@ public class Initialization
     }
 
     for (String coordinate : config.getCoordinates()) {
-      log.info("Loading extension[%s]", coordinate);
+      log.info("Loading extension[%s] for class[%s]", coordinate, clazz.getName());
       try {
         URLClassLoader loader = getClassLoaderForCoordinates(aether, coordinate);
 
         final ServiceLoader<T> serviceLoader = ServiceLoader.load(clazz, loader);
 
         for (T module : serviceLoader) {
-          log.info("Adding extension module[%s]", module.getClass());
+          log.info("Adding extension module[%s] for class[%s]", module.getClass(), clazz.getName());
           retVal.add(module);
         }
       }

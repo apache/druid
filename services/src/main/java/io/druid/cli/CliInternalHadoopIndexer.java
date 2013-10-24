@@ -24,8 +24,8 @@ import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.druid.indexer.HadoopDruidIndexerConfig;
+import io.druid.indexer.HadoopDruidIndexerConfigBuilder;
 import io.druid.indexer.HadoopDruidIndexerJob;
-import io.druid.timeline.partition.SingleDimensionShardSpec;
 
 import java.io.File;
 
@@ -46,12 +46,6 @@ public class CliInternalHadoopIndexer implements Runnable
   public void run()
   {
     try {
-      System.out.println(
-          HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(
-              new SingleDimensionShardSpec("billy", "a", "b", 1)
-          )
-      );
-
       final HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(getHadoopDruidIndexerConfig());
       job.run();
     }
@@ -64,9 +58,9 @@ public class CliInternalHadoopIndexer implements Runnable
   {
     try {
       if (argumentSpec.startsWith("{")) {
-        return HadoopDruidIndexerConfig.fromString(argumentSpec);
+        return HadoopDruidIndexerConfigBuilder.fromString(argumentSpec);
       } else {
-        return HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
+        return HadoopDruidIndexerConfigBuilder.fromFile(new File(argumentSpec));
       }
     }
     catch (Exception e) {

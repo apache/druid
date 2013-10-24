@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -38,6 +39,7 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
@@ -76,7 +78,7 @@ public class ConfigManager
     final String configTable = dbTables.get().getConfigTable();
 
     this.selectStatement = String.format("SELECT payload FROM %s WHERE name = :name", configTable);
-    insertStatement = String.format(
+    this.insertStatement = String.format(
         "INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload",
         configTable
     );
@@ -186,19 +188,29 @@ public class ConfigManager
           @Override
           public byte[] withHandle(Handle handle) throws Exception
           {
-            return handle.createQuery(selectStatement)
-                         .bind("name", key)
-                         .map(
-                             new ResultSetMapper<byte[]>()
-                             {
-                               @Override
-                               public byte[] map(int index, ResultSet r, StatementContext ctx) throws SQLException
-                               {
-                                 return r.getBytes("payload");
-                               }
-                             }
-                         )
-                         .first();
+            List<byte[]> matched = handle.createQuery(selectStatement)
+                                     .bind("name", key)
+                                     .map(
+                                         new ResultSetMapper<byte[]>()
+                                         {
+                                           @Override
+                                           public byte[] map(int index, ResultSet r, StatementContext ctx)
+                                               throws SQLException
+                                           {
+                                             return r.getBytes("payload");
+                                           }
+                                         }
+                                     ).list();
+
+            if (matched.isEmpty()) {
+              return null;
+            }
+
+            if (matched.size() > 1) {
+              throw new ISE("Error! More than one matching entry[%d] found for [%s]?!", matched.size(), key);
+            }
+
+            return matched.get(0);
           }
         }
     );

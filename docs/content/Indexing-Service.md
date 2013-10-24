@@ -1,69 +1,145 @@
 ---
 layout: doc_page
 ---
-Disclaimer: We are still in the process of finalizing the indexing service and these configs are prone to change at any time. We will announce when we feel the indexing service and the configurations described are stable.
+The indexing service is a highly-available, distributed service that runs indexing related tasks. Indexing service [tasks](Tasks.html) create (and sometimes destroy) Druid [segments](Segments.html). The indexing service has a master/slave like architecture.
 
-The indexing service is a distributed task/job queue. It accepts requests in the form of [Tasks](Tasks.html) and executes those tasks across a set of worker nodes. Worker capacity can be automatically adjusted based on the number of tasks pending in the system. The indexing service is highly available, has built in retry logic, and can backup per task logs in deep storage.
+The indexing service is composed of three main components: a peon component that can run a single task, a middle manager component that manages peons, and an overlord component that manages task distribution to middle managers.
+Overlords and middle managers may run on the same node or across multiple nodes while middle managers and peons always run on the same node.
 
-The indexing service is composed of two main components, a coordinator node that manages task distribution and worker capacity, and worker nodes that execute tasks in separate JVMs.
+Quick Start
+----------------------------------------
+Run:
 
+```
+io.druid.cli.Main server overlord
+```
+
+With the following JVM configuration:
+
+```
+-server
+-Xmx2g
+-Duser.timezone=UTC
+-Dfile.encoding=UTF-8
+
+-Ddruid.host=localhost
+-Ddruid.port=8080
+-Ddruid.service=overlord
+
+-Ddruid.zk.service.host=localhost
+
+-Ddruid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
+-Ddruid.db.connector.user=druid
+-Ddruid.db.connector.password=diurd
+
+-Ddruid.selectors.indexing.serviceName=overlord
+-Ddruid.indexer.runner.javaOpts="-server -Xmx1g"
+-Ddruid.indexer.runner.startPort=8081
+-Ddruid.indexer.fork.property.druid.computation.buffer.size=268435456
+```
+
+You can now submit simple indexing tasks to the indexing service.
+
+<!--
 Preamble
 --------
 
 The truth is, the indexing service is an experience that is difficult to characterize with words. When they asked me to write this preamble, I was taken aback. I wasn’t quite sure what exactly to write or how to describe this… entity. I accepted the job, as much for the challenge and inner growth as the money, and took to the mountains for reflection. Six months later, I knew I had it, I was done and had achieved the next euphoric victory in the continuous struggle that plagues my life. But, enough about me. This is about the indexing service.
 
 The indexing service is philosophical transcendence, an infallible truth that will shape your soul, mold your character, and define your reality. The indexing service is creating world peace, playing with puppies, unwrapping presents on Christmas morning, cradling a loved one, and beating Goro in Mortal Kombat for the first time. The indexing service is sustainable economic growth, global propensity, and a world of transparent financial transactions. The indexing service is a true belieber. The indexing service is panicking because you forgot you signed up for a course and the big exam is in a few minutes, only to wake up and realize it was all a dream. What is the indexing service? More like what isn’t the indexing service. The indexing service is here and it is ready, but are you?
+-->
 
-Indexer Coordinator Node
-------------------------
+Indexing Service Overview
+-------------------------
 
-The indexer coordinator node exposes HTTP endpoints where tasks can be submitted by posting a JSON blob to specific endpoints. It can be started by launching IndexerCoordinatorMain.java. The indexer coordinator node can operate in local mode or remote mode. In local mode, the coordinator and worker run on the same host and port. In remote mode, worker processes run on separate hosts and ports.
+![Indexing Service](../img/indexing_service.png "Indexing Service")
 
-Tasks can be submitted via POST requests to:
+Overlord Node
+-------------
+
+The overlord node is responsible for accepting tasks, coordinating task distribution, creating locks around tasks, and returning statuses to callers.
+
+#### Usage
+
+Tasks are submitted to the overlord node in the form of JSON objects. Tasks can be submitted via POST requests to:
 
 ```
-http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task
+http://<OVERLORD_IP>:<port>/druid/indexer/v1/task
 ```
 
 Tasks can cancelled via POST requests to:
 
 ```
-http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task/{taskId}/shutdown
+http://<OVERLORD_IP>:<port>/druid/indexer/v1/task/{taskId}/shutdown
 ```
 
-Issuing the cancel request once sends a graceful shutdown request. Graceful shutdowns may not stop a task right away, but instead issue a safe stop command at a point deemed least impactful to the system. Issuing the cancel request twice in succession will kill –9 the task.
+Issuing the cancel request will kill –9 the task.
 
 Task statuses can be retrieved via GET requests to:
 
 ```
-http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task/{taskId}/status
+http://<OVERLORD_IP>:<port>/druid/indexer/v1/task/{taskId}/status
 ```
 
 Task segments can be retrieved via GET requests to:
 
 ```
-http://<COORDINATOR_IP>:<port>/druid/indexer/v1/task/{taskId}/segments
+http://<OVERLORD_IP>:<port>/druid/indexer/v1/task/{taskId}/segments
 ```
 
-When a task is submitted, the coordinator creates a lock over the data source and interval of the task. The coordinator also stores the task in a MySQL database table. The database table is read at startup time to bootstrap any tasks that may have been submitted to the coordinator but may not yet have been executed.
+#### Console
 
-The coordinator also exposes a simple UI to show what tasks are currently running on what nodes at
+The overlord console can be used to view pending tasks, running tasks, available workers, and recent worker creation and termination. The console can be accessed at:
 
 ```
-http://<COORDINATOR_IP>:<port>/static/console.html
+http://<OVERLORD_IP>:8080/console.html
 ```
-
-#### Task Execution
-
-The coordinator retrieves worker setup metadata from the Druid [MySQL](MySQL.html) config table. This metadata contains information about the version of workers to create, the maximum and minimum number of workers in the cluster at one time, and additional information required to automatically create workers.
-
-Tasks are assigned to workers by creating entries under specific /tasks paths associated with a worker, similar to how the Druid coordinator node assigns segments to historical nodes. See [Worker Configuration](Indexing-Service#configuration-1). Once a worker picks up a task, it deletes the task entry and announces a task status under a /status path associated with the worker. Tasks are submitted to a worker until the worker hits capacity. If all workers in a cluster are at capacity, the indexer coordinator node automatically creates new worker resources.
 
 #### Autoscaling
 
-The Autoscaling mechanisms currently in place are tightly coupled with our deployment infrastructure but the framework should be in place for other implementations. We are highly open to new implementations or extensions of the existing mechanisms. In our own deployments, worker nodes are Amazon AWS EC2 nodes and they are provisioned to register themselves in a [galaxy](https://github.com/ning/galaxy) environment.
+The Autoscaling mechanisms currently in place are tightly coupled with our deployment infrastructure but the framework should be in place for other implementations. We are highly open to new implementations or extensions of the existing mechanisms. In our own deployments, middle manager nodes are Amazon AWS EC2 nodes and they are provisioned to register themselves in a [galaxy](https://github.com/ning/galaxy) environment.
 
-The Coordinator node controls the number of workers in the cluster according to a worker setup spec that is submitted via a POST request to the indexer at:
+If autoscaling is enabled, new middle managers may be added when a task has been in pending state for too long. Middle managers may be terminated if they have not run any tasks for a period of time.
+
+#### JVM Configuration
+
+In addition to the configuration of some of the default modules in [Configuration](Configuration.html), the overlord module requires the following basic configs to run in remote mode:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.runner.type`|Choices "local" or "remote". Indicates whether tasks should be run locally or in a distributed environment.|local|
+|`druid.indexer.storage.type`|Choices are "local" or "db". Indicates whether incoming tasks should be stored locally (in heap) or in a database. Storing incoming tasks in a database allows for tasks to be bootstrapped if the overlord should fail.|local|
+
+The following configs only apply if the overlord is running in remote mode:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.runner.taskAssignmentTimeout`|How long to wait after a task as been assigned to a middle manager before throwing an error.|PT5M|
+|`druid.indexer.runner.minWorkerVersion`|The minimum middle manager version to send tasks to. |none|
+|`druid.indexer.runner.compressZnodes`|Indicates whether or not the overlord should expect middle managers to compress Znodes.|false|
+|`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
+
+There are additional configs for autoscaling (if it is enabled):
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.autoscale.doAutoscale`|If set to "true" autoscaling will be enabled.|false|
+|`druid.indexer.autoscale.provisionPeriod`|How often to check whether or not new middle managers should be added.|PT1M|
+|`druid.indexer.autoscale.terminatePeriod`|How often to check when middle managers should be removed.|PT1H|
+|`druid.indexer.autoscale.originTime`|The starting reference timestamp that the terminate period increments upon.|2012-01-01T00:55:00.000Z|
+|`druid.indexer.autoscale.strategy`|Choices are "noop" or "ec2". Sets the strategy to run when autoscaling is required.|noop|
+|`druid.indexer.autoscale.workerIdleTimeout`|How long can a worker be idle (not a run task) before it can be considered for termination.|PT10M|
+|`druid.indexer.autoscale.maxScalingDuration`|How long the overlord will wait around for a middle manager to show up before giving up.|PT15M|
+|`druid.indexer.autoscale.numEventsToTrack`|The number of autoscaling related events (node creation and termination) to track.|10|
+|`druid.indexer.autoscale.pendingTaskTimeout`|How long a task can be in "pending" state before the overlord tries to scale up.|PT30S|
+|`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling. Overrides dynamic configuration. |null|
+|`druid.indexer.autoscale.workerPort`|The port that middle managers will run on.|8080|
+
+#### Dynamic Configuration
+
+Overlord dynamic configuration is mainly for autoscaling. The overlord reads a worker setup spec as a JSON object from the Druid [MySQL](MySQL.html) config table. This object contains information about the version of middle managers to create, the maximum and minimum number of middle managers in the cluster at one time, and additional information required to automatically create middle managers.
+
+The JSON object can be submitted to the overlord via a POST request at:
 
 ```
 http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker/setup
@@ -71,7 +147,7 @@ http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker/setup
 
 A sample worker setup spec is shown below:
 
-```
+```json
 {
   "minVersion":"some_version",
   "minNumWorkers":"0",
@@ -94,7 +170,7 @@ A sample worker setup spec is shown below:
 }
 ```
 
-Issuing a GET request at the same URL will return the current worker setup spec that is currently in place. The worker setup spec list above is just a sample and it is possible to write worker setup specs for other deployment environments. A description of the worker setup spec is shown below.
+Issuing a GET request at the same URL will return the current worker setup spec that is currently in place. The worker setup spec list above is just a sample and it is possible to extend the code base for other deployment environments. A description of the worker setup spec is shown below.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -104,109 +180,85 @@ Issuing a GET request at the same URL will return the current worker setup spec 
 |`nodeData`|A JSON object that contains metadata about new nodes to create.|none|
 |`userData`|A JSON object that contains metadata about how the node should register itself on startup. This data is sent with node creation requests.|none|
 
-For more information about configuring Auto-scaling, see [Auto-Scaling Configuration](https://github.com/metamx/druid/wiki/Indexing-Service#auto-scaling-configuration).
+#### Running
+
+```
+io.druid.cli.Main server overlord
+```
+
+Note: When running the overlord in local mode, all middle manager and peon configurations must be provided as well.
+
+MiddleManager Node
+------------------
+
+The middle manager node is a worker node that executes submitted tasks. Middle Managers forward tasks to peons that run in separate JVMs. Each peon is capable of running only one task at a time, however, a middle manager may have multiple peons.
+
+#### JVM Configuration
+
+Middle managers pass their configurations down to their child peons. The middle manager module requires the following configs:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.worker.ip`|The IP of the worker.|localhost|
+|`druid.worker.version`|Version identifier for the middle manager.|0|
+|`druid.worker.capacity`|Maximum number of tasks the middle manager can accept.|Number of available processors - 1|
+|`druid.indexer.runner.compressZnodes`|Indicates whether or not the middle managers should compress Znodes.|false|
+|`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
+|`druid.indexer.runner.taskDir`|Temporary intermediate directory used during task execution.|/tmp/persistent|
+|`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
+|`druid.indexer.runner.javaOpts`|-X Java options to run the peon in its own JVM.|""|
+|`druid.indexer.runner.classpath`|Java classpath for the peon.|System.getProperty("java.class.path")|
+|`druid.indexer.runner.startPort`|The port that peons begin running on.|8080|
+|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|"com.metamx", "druid", "io.druid", "user.timezone","file.encoding"|
 
 #### Running
 
-Indexer Coordinator nodes can be run using the `com.metamx.druid.indexing.coordinator.http.IndexerCoordinatorMain` class.
-
-#### Configuration
-
-Indexer Coordinator nodes require [basic service configuration](https://github.com/metamx/druid/wiki/Configuration#basic-service-configuration). In addition, there are several extra configurations that are required.
-
 ```
--Ddruid.zk.paths.indexer.announcementsPath=/druid/indexer/announcements
--Ddruid.zk.paths.indexer.leaderLatchPath=/druid/indexer/leaderLatchPath
--Ddruid.zk.paths.indexer.statusPath=/druid/indexer/status
--Ddruid.zk.paths.indexer.tasksPath=/druid/demo/indexer/tasks
-
--Ddruid.indexer.runner=remote
--Ddruid.indexer.taskDir=/mnt/persistent/task/
--Ddruid.indexer.configTable=sample_config
--Ddruid.indexer.workerSetupConfigName=worker_setup
--Ddruid.indexer.strategy=ec2
--Ddruid.indexer.hadoopWorkingPath=/tmp/druid-indexing
--Ddruid.indexer.logs.s3bucket=some_bucket
--Ddruid.indexer.logs.s3prefix=some_prefix
+io.druid.cli.Main server middleManager
 ```
 
-The indexing service requires some additional Zookeeper configs.
+Peons
+-----
+Peons run a single task in a single JVM. Peons are a part of middle managers and should rarely (if ever) be run on their own.
+
+#### JVM Configuration
+Although peons inherit the configurations of their parent middle managers, explicit child peon configs can be set by prefixing them with:
+
+```
+druid.indexer.fork.property
+```
+
+Additional peon configs include:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.zk.paths.indexer.announcementsPath`|The base path where workers announce themselves.|none|
-|`druid.zk.paths.indexer.leaderLatchPath`|The base that coordinator nodes use to determine a leader.|none|
-|`druid.zk.paths.indexer.statusPath`|The base path where workers announce task statuses.|none|
-|`druid.zk.paths.indexer.tasksPath`|The base path where the coordinator assigns new tasks.|none|
+|`druid.peon.mode`|Choices are "local" and "remote". Setting this to local means you intend to run the peon as a standalone node (Not recommended).|remote|
+|`druid.indexer.baseDir`|Base temporary working directory.|/tmp|
+|`druid.indexer.baseTaskDir`|Base temporary working directory for tasks.|/tmp/persistent/tasks|
+|`druid.indexer.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|/tmp/druid-indexing|
+|`druid.indexer.defaultRowFlushBoundary`|Highest row count before persisting to disk. Used for indexing generating tasks.|50000|
+|`druid.indexer.task.chathandler.type`|Choices are "noop" and "announce". Certain tasks will use service discovery to announce an HTTP endpoint that events can be posted to.|noop|
 
-There’s several additional configs that are required to run tasks.
+If the peon is running in remote mode, there must be an overlord up and running. Running peons in remote mode require the following configurations:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner`|Indicates whether tasks should be run locally or in a distributed environment. "local" or "remote".|local|
-|`druid.indexer.taskDir`|Intermediate temporary directory that tasks may use.|none|
-|`druid.indexer.configTable`|The MySQL config table where misc configs live.|none|
-|`druid.indexer.strategy`|The autoscaling strategy to use.|noop|
-|`druid.indexer.hadoopWorkingPath`|Intermediate temporary hadoop working directory that certain index tasks may use.|none|
-|`druid.indexer.logs.s3bucket`|S3 bucket to store logs.|none|
-|`druid.indexer.logs.s3prefix`|S3 key prefix to store logs.|none|
-
-#### Console
-
-The indexer console can be used to view pending tasks, running tasks, available workers, and recent worker creation and termination. The console can be accessed at:
-
-```
-http://<COORDINATOR_IP>:8080/static/console.html
-```
-
-Worker Node
------------
-
-The worker node executes submitted tasks. Workers run tasks in separate JVMs.
+|`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with overlord.|PT1M|
+|`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with overlord.|PT10M|
+|`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with overlord.|10|
 
 #### Running
 
-Worker nodes can be run using the `com.metamx.druid.indexing.worker.http.WorkerMain` class. Worker nodes can automatically be created by the Indexer Coordinator as part of autoscaling.
-
-#### Configuration
-
-Worker nodes require [basic service configuration](https://github.com/metamx/druid/wiki/Configuration#basic-service-configuration). In addition, there are several extra configurations that are required.
+The peon should very rarely ever be run independent of the middle manager.
 
 ```
--Ddruid.worker.version=0
--Ddruid.worker.capacity=3
-
--Ddruid.indexer.threads=3
--Ddruid.indexer.taskDir=/mnt/persistent/task/
--Ddruid.indexer.hadoopWorkingPath=/tmp/druid-indexing
-
--Ddruid.worker.coordinatorService=druid:sample_cluster:indexer
-
--Ddruid.indexer.fork.hostpattern=<IP>:%d
--Ddruid.indexer.fork.startport=8080
--Ddruid.indexer.fork.main=com.metamx.druid.indexing.worker.executor.ExecutorMain
--Ddruid.indexer.fork.opts="-server -Xmx1g -Xms1g -XX:NewSize=256m -XX:MaxNewSize=256m"
--Ddruid.indexer.fork.property.druid.service=druid/sample_cluster/executor
-
-# These configs are the same configs you would set for basic service configuration, just with a different prefix
--Ddruid.indexer.fork.property.druid.monitoring.monitorSystem=false
--Ddruid.indexer.fork.property.druid.computation.buffer.size=268435456
--Ddruid.indexer.fork.property.druid.indexer.taskDir=/mnt/persistent/task/
--Ddruid.indexer.fork.property.druid.processing.formatString=processing-%s
--Ddruid.indexer.fork.property.druid.processing.numThreads=1
--Ddruid.indexer.fork.property.druid.server.maxSize=0
--Ddruid.indexer.fork.property.druid.request.logging.dir=request_logs/
+io.druid.cli.Main internal peon <task_file> <status_file>
 ```
 
-Many of the configurations for workers are similar to those for basic service configuration":https://github.com/metamx/druid/wiki/Configuration\#basic-service-configuration, but with a different config prefix. Below we describe the unique worker configs.
+The task file contains the task JSON object.
+The status file indicates where the task status will be output.
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.worker.version`|Version identifier for the worker.|0|
-|`druid.worker.capacity`|Maximum number of tasks the worker can accept.|1|
-|`druid.indexer.threads`|Number of processing threads per worker.|1|
-|`druid.worker.coordinatorService`|Name of the indexer coordinator used for service discovery.|none|
-|`druid.indexer.fork.hostpattern`|The format of the host name.|none|
-|`druid.indexer.fork.startport`|Port in which child JVM starts from.|none|
-|`druid.indexer.fork.opts`|JVM options for child JVMs.|none|
+Tasks
+-----
 
+See [Tasks](Tasks.html).

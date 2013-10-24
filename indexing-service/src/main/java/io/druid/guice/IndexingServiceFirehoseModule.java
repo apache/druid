@@ -17,28 +17,33 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.worker.executor;
+package io.druid.guice;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.indexing.overlord.TaskRunner;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
+import io.druid.initialization.DruidModule;
 
-import java.io.File;
+import java.util.List;
 
-public class ExecutorLifecycleFactory
+public class IndexingServiceFirehoseModule implements DruidModule
 {
-  private final File taskFile;
-  private final File statusFile;
-
-  public ExecutorLifecycleFactory(File taskFile, File statusFile)
+  @Override
+  public List<? extends Module> getJacksonModules()
   {
-    this.taskFile = taskFile;
-    this.statusFile = statusFile;
+    return ImmutableList.<Module>of(
+        new SimpleModule("IndexingServiceFirehoseModule")
+            .registerSubtypes(
+                new NamedType(EventReceiverFirehoseFactory.class, "receiver")
+            )
+    );
   }
 
-  public ExecutorLifecycle build(TaskRunner taskRunner, ObjectMapper jsonMapper)
+  @Override
+  public void configure(Binder binder)
   {
-    return new ExecutorLifecycle(
-        new ExecutorLifecycleConfig().setTaskFile(taskFile).setStatusFile(statusFile), taskRunner, jsonMapper
-    );
   }
 }

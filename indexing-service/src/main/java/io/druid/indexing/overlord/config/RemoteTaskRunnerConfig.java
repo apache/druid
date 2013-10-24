@@ -37,7 +37,7 @@ public class RemoteTaskRunnerConfig
   private boolean compressZnodes = false;
 
   @JsonProperty
-  private String workerVersion = null;
+  private String minWorkerVersion = null;
 
   @JsonProperty
   @Min(10 * 1024)
@@ -53,9 +53,9 @@ public class RemoteTaskRunnerConfig
     return compressZnodes;
   }
 
-  public String getWorkerVersion()
+  public String getMinWorkerVersion()
   {
-    return workerVersion;
+    return minWorkerVersion;
   }
 
   public long getMaxZnodeBytes()

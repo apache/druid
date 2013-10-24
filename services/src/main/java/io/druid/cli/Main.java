@@ -24,6 +24,7 @@ import io.airlift.command.Cli;
 import io.airlift.command.Help;
 import io.airlift.command.ParseException;
 import io.druid.cli.convert.ConvertProperties;
+import io.druid.cli.validate.DruidJsonValidator;
 import io.druid.initialization.Initialization;
 import io.druid.server.initialization.ExtensionsConfig;
 
@@ -58,7 +59,7 @@ public class Main
     builder.withGroup("tools")
            .withDescription("Various tools for working with Druid")
            .withDefaultCommand(Help.class)
-           .withCommands(ConvertProperties.class);
+           .withCommands(ConvertProperties.class, DruidJsonValidator.class);
 
     builder.withGroup("index")
                .withDescription("Run indexing for druid")

@@ -80,7 +80,7 @@ Okay, things are about to get real. To query the real-time node you've spun up, 
 ./run_example_client.sh
 ```
 
-Select "webstream" once again. This script issues [GroupByQuery](GroupByQuery.html)s to the data we've been ingesting. The query looks like this:
+Select "webstream" once again. This script issues [GroupByQueries](GroupByQuery.html) to the data we've been ingesting. The query looks like this:
 
 ```json
 {
@@ -304,15 +304,9 @@ You should see an answer to our question. For my stream, it looks like this:
 
 Feel free to tweak other query parameters to answer other questions you may have about the data.
 
-Next Steps
-----------
-
-What to know even more information about the Druid Cluster? Check out [Tutorial: The Druid Cluster](Tutorial:-The-Druid-Cluster.html)
-Druid is even more fun if you load your own data into it! To learn how to load your data, see [Loading Your Data](Loading-Your-Data.html).
-
 Additional Information
 ----------------------
 
 This tutorial is merely showcasing a small fraction of what Druid can do. If you are interested in more information about Druid, including setting up a more sophisticated Druid cluster, please read the other links in our wiki.
 
-And thus concludes our journey! Hopefully you learned a thing or two about Druid real-time ingestion, querying Druid, and how Druid can be used to solve problems. If you have additional questions, feel free to post in our [google groups page](http://www.groups.google.com/forum/#!forum/druid-development).
+And thus concludes our journey! Hopefully you learned a thing or two about Druid real-time ingestion, querying Druid, and how Druid can be used to solve problems. If you have additional questions, feel free to post in our [google groups page](https://groups.google.com/forum/#!forum/druid-development).

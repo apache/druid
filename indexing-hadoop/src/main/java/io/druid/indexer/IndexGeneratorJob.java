@@ -86,6 +86,7 @@ public class IndexGeneratorJob implements Jobby
   private static final Logger log = new Logger(IndexGeneratorJob.class);
 
   private final HadoopDruidIndexerConfig config;
+
   private IndexGeneratorStats jobStats;
 
   public IndexGeneratorJob(
@@ -243,7 +244,7 @@ public class IndexGeneratorJob implements Jobby
     protected void setup(Context context)
         throws IOException, InterruptedException
     {
-      config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
+      config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
 
       for (AggregatorFactory factory : config.getRollupSpec().getAggs()) {
         metricNames.add(factory.getName().toLowerCase());

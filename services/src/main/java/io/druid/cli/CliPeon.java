@@ -19,13 +19,12 @@
 
 package io.druid.cli;
 
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -33,6 +32,7 @@ import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
 import io.druid.guice.Binders;
+import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -49,7 +49,6 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.index.ChatHandlerProvider;
-import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
 import io.druid.indexing.common.index.NoopChatHandlerProvider;
 import io.druid.indexing.common.index.ServiceAnnouncingChatHandlerProvider;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
@@ -100,7 +99,7 @@ public class CliPeon extends GuiceRunnable
   protected List<Object> getModules()
   {
     return ImmutableList.<Object>of(
-        new DruidModule()
+        new Module()
         {
           @Override
           public void configure(Binder binder)
@@ -122,7 +121,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
 
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
-            JsonConfigProvider.bind(binder, "druid.worker.taskActionClient.retry", RetryPolicyConfig.class);
+            JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
 
             configureTaskActionClient(binder);
 
@@ -179,16 +178,8 @@ public class CliPeon extends GuiceRunnable
                             .to(RemoteTaskActionClientFactory.class).in(LazySingleton.class);
 
           }
-
-          @Override
-          public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
-          {
-            return Arrays.asList(
-                new SimpleModule("PeonModule")
-                    .registerSubtypes(new NamedType(EventReceiverFirehoseFactory.class, "receiver"))
-            );
-          }
-        }
+        },
+        new IndexingServiceFirehoseModule()
     );
   }
 

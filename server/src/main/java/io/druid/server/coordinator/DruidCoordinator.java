@@ -493,7 +493,7 @@ public class DruidCoordinator
                           )
                       )
                   ),
-                  config.getCoordinatorSegmentMergerPeriod()
+                  config.getCoordinatorIndexingPeriod()
               )
           );
         }
