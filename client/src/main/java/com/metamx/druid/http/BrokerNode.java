@@ -210,8 +210,8 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     final Lifecycle lifecycle = getLifecycle();
 
     final List<Monitor> monitors = getMonitors();
-    monitors.add(new CacheMonitor(queryCache));
-    monitors.add(new CacheMonitor(resultsCache));
+    monitors.add(new CacheMonitor(queryCache, "queryCache"));
+    monitors.add(new CacheMonitor(resultsCache, "resultsCache"));
     startMonitoring(monitors);
 
     final ExecutorService viewExec = Executors.newFixedThreadPool(
