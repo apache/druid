@@ -1,12 +1,13 @@
 package com.metamx.druid.aggregation;
 
 import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
-import com.metamx.druid.processing.FloatMetricSelector;
 
 import com.clearspring.analytics.stream.cardinality.AdaptiveCounting;
 import com.clearspring.analytics.stream.cardinality.ICardinality;
-import com.metamx.druid.processing.ObjectColumnSelector;
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.processing.ComplexMetricSelector;
 
+import java.io.IOException;
 import java.util.Comparator;
 
 public class CardinalityAggregator implements Aggregator
@@ -15,6 +16,7 @@ public class CardinalityAggregator implements Aggregator
 
     static Object combineValues(Object lhs, Object rhs)
     {
+        log.info("Combining values: %s, %s", lhs.toString(), rhs.toString());
         try {
             return ((ICardinality) lhs).merge((ICardinality) rhs);
         }
@@ -23,18 +25,20 @@ public class CardinalityAggregator implements Aggregator
         }
     }
 
-    private final ObjectColumnSelector selector;
+    private static final Logger log = new Logger(CardinalityAggregator.class);
+
+    private final ComplexMetricSelector<ICardinality> selector;
     private final String name;
     ICardinality card;
 
-    public CardinalityAggregator(String name, ObjectColumnSelector selector)
+    public CardinalityAggregator(String name, ComplexMetricSelector<ICardinality> selector)
     {
         this.name = name;
         this.selector = selector;
         this.card =  AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
     }
 
-    public CardinalityAggregator(String name, ObjectColumnSelector selector, ICardinality card)
+    public CardinalityAggregator(String name, ComplexMetricSelector<ICardinality> selector, ICardinality card)
     {
         this.name = name;
         this.selector = selector;
@@ -44,25 +48,32 @@ public class CardinalityAggregator implements Aggregator
     @Override
     public void aggregate()
     {
-        card.offer(selector.get());
+        ICardinality valueToAgg = selector.get();
+        try {
+            ICardinality mergedCardinality = card.merge(valueToAgg);
+            this.card = mergedCardinality;
+        }
+        catch (CardinalityMergeException e) {
+
+        }
     }
 
     @Override
     public void reset()
     {
-        this.card =  AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
+        this.card = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
     }
 
     @Override
     public Object get()
     {
-        return card.cardinality();
+        return card;
     }
 
     @Override
     public float getFloat()
     {
-        return (float) card.cardinality();
+        throw new UnsupportedOperationException("CardinalityAggregator does not support getFloat()");
     }
 
     @Override
@@ -74,14 +85,16 @@ public class CardinalityAggregator implements Aggregator
     @Override
     public Aggregator clone()
     {
-        ICardinality card = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
+        log.info("Will try to return clone");
         try {
-            card.merge(this.card);
+            ICardinality card = new AdaptiveCounting(this.card.getBytes());
+            return new CardinalityAggregator(this.name, this.selector, card);
         }
-        catch (CardinalityMergeException e) {
+        catch (IOException e) {
 
         }
-        return new CardinalityAggregator(this.name, this.selector, card);
+
+        return null;
     }
 
     @Override

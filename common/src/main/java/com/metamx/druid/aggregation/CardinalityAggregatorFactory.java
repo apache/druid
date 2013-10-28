@@ -1,11 +1,15 @@
 package com.metamx.druid.aggregation;
 
+import com.clearspring.analytics.stream.cardinality.AdaptiveCounting;
+import com.clearspring.analytics.stream.cardinality.ICardinality;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import com.metamx.common.logger.Logger;
 import com.metamx.druid.processing.ColumnSelectorFactory;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -14,7 +18,9 @@ import java.util.List;
  */
 public class CardinalityAggregatorFactory implements AggregatorFactory
 {
-    private static final byte[] CACHE_KEY = new byte[]{0x0};
+    private static final Logger log = new Logger(CardinalityAggregatorFactory.class);
+    private static final byte CACHE_TYPE_ID = 0x1;
+    private static final ICardinality card = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
 
     private final String fieldName;
     private final String name;
@@ -28,6 +34,8 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
         Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
         Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
 
+        log.info("New instance: name=%s, fieldName=%s", name, fieldName);
+
         this.name = name;
         this.fieldName = fieldName;
     }
@@ -35,13 +43,13 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
     @Override
     public Aggregator factorize(ColumnSelectorFactory metricFactory)
     {
-        return new CardinalityAggregator(name, metricFactory.makeObjectColumnSelector(fieldName));
+        return new CardinalityAggregator(name, metricFactory.makeComplexMetricSelector(fieldName));
     }
 
     @Override
     public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
     {
-        return new CardinalityBufferAggregator(metricFactory.makeObjectColumnSelector(fieldName));
+        return new CardinalityBufferAggregator(metricFactory.makeComplexMetricSelector(fieldName));
     }
 
     @Override
@@ -59,19 +67,21 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
     @Override
     public AggregatorFactory getCombiningFactory()
     {
-        return new LongSumAggregatorFactory(name, name);
+        log.info("Will create combining factory");
+        return new CardinalityAggregatorFactory(name, name);
     }
 
     @Override
     public Object deserialize(Object object)
     {
+        log.info("Deserialize: %s", object.getClass());
         return object;
     }
 
     @Override
     public Object finalizeComputation(Object object)
     {
-        return object;
+        return ((ICardinality)object).cardinality();
     }
 
     @JsonProperty
@@ -96,24 +106,25 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
     @Override
     public byte[] getCacheKey()
     {
-        return CACHE_KEY;
+        byte[] fieldNameBytes = fieldName.getBytes();
+        return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
     }
 
     @Override
     public String getTypeName() {
-        return "string";
+        return "cardinality";
     }
 
     @Override
     public int getMaxIntermediateSize()
     {
-        return Longs.BYTES;
+        return card.sizeof();
     }
 
     @Override
     public Object getAggregatorStartValue()
     {
-        return 0;
+        return AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
     }
 
     @Override
