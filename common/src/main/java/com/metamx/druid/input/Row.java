@@ -61,6 +61,14 @@ public interface Row
   public List<String> getDimension(String dimension);
 
   /**
+   * Returns the raw dimension value for the given column name. This is different from #getDimension which
+   * all values to strings before returning them.
+   * @param dimension the lowercase column name of the dimension requested
+   * @return the value of the provided column name
+   */
+  public Object getRaw(String dimension);
+
+  /**
    * Returns the float value of the given metric column.
    *
    * Column names are always all lowercase in order to support case-insensitive schemas.

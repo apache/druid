@@ -61,14 +61,15 @@ public class CardinalityMetricSerde extends ComplexMetricSerde {
 
         @Override
         public Object extractValue(InputRow inputRow, String metricName) {
-            ICardinality cardinalityCounter = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
-            final List<String> dimension = inputRow.getDimension(metricName);
-            Iterator<String> iterator = dimension.iterator();
-            while (iterator.hasNext()) {
-                cardinalityCounter.offer(iterator.next());
+            final Object value = inputRow.getRaw(metricName);
+            if (value instanceof ICardinality) {
+                return value;
             }
-
-            return cardinalityCounter;
+            else {
+                ICardinality card = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
+                card.offer(value);
+                return card;
+            }
         }
     };
 

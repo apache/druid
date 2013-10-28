@@ -76,6 +76,12 @@ public class SinkTest
       }
 
       @Override
+      public Object getRaw(String dimension)
+      {
+          return getDimension(dimension);
+      }
+
+      @Override
       public float getFloatMetric(String metric)
       {
         return 0;
@@ -106,6 +112,12 @@ public class SinkTest
       public List<String> getDimension(String dimension)
       {
         return Lists.newArrayList();
+      }
+
+      @Override
+      public Object getRaw(String dimension)
+      {
+          return getDimension(dimension);
       }
 
       @Override
