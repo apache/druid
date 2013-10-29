@@ -77,9 +77,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
             ByteBuffer buf = (ByteBuffer)object;
             int size = buf.capacity();
             byte[] bytes = new byte[size];
-            for (int i = 0; i < size; i++) {
-                bytes[i] = buf.get(i);
-            }
+            buf.get(bytes);
             return new AdaptiveCounting(bytes);
         }
         return object;

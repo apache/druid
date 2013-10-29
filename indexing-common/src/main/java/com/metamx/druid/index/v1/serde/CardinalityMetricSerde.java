@@ -25,9 +25,7 @@ public class CardinalityMetricSerde extends ComplexMetricSerde {
         @Override
         public ICardinality fromByteBuffer(ByteBuffer buffer, int numBytes) {
             byte[] bytes = new byte[numBytes];
-            for (int i = 0; i < numBytes; i++) {
-                bytes[i] = buffer.get(i);
-            }
+            buffer.get(bytes);
             return new AdaptiveCounting(bytes);
         }
 
