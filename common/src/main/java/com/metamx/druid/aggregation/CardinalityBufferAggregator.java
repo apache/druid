@@ -18,15 +18,13 @@ public class CardinalityBufferAggregator implements BufferAggregator
 
     public CardinalityBufferAggregator(ComplexMetricSelector<ICardinality> selector)
     {
-        log.info("New instance: selectorClass=%s", selector.getClass());
-
         this.selector = selector;
     }
 
     @Override
     public void init(ByteBuffer buf, int position)
     {
-        this.card = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
+        card = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
         try {
             byte[] bytes = card.getBytes();
             int size = card.sizeof();
@@ -35,7 +33,7 @@ public class CardinalityBufferAggregator implements BufferAggregator
             }
         }
         catch (IOException e) {
-
+            throw new RuntimeException("Failed to init: "+e);
         }
     }
 
@@ -57,10 +55,10 @@ public class CardinalityBufferAggregator implements BufferAggregator
             }
         }
         catch (CardinalityMergeException e) {
-
+            throw new RuntimeException("Failed to aggregate: "+e);
         }
         catch (IOException e) {
-
+            throw new RuntimeException("Failed to aggregate: "+e);
         }
     }
 
@@ -85,6 +83,6 @@ public class CardinalityBufferAggregator implements BufferAggregator
     @Override
     public void close()
     {
-        this.card = null;
+        card = null;
     }
 }

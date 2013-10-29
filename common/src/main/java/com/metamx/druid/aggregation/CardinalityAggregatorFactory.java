@@ -5,7 +5,6 @@ import com.clearspring.analytics.stream.cardinality.ICardinality;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.processing.ColumnSelectorFactory;
 
@@ -33,8 +32,6 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
     {
         Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
         Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
-
-        log.info("New instance: name=%s, fieldName=%s", name, fieldName);
 
         this.name = name;
         this.fieldName = fieldName;
@@ -67,14 +64,24 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
     @Override
     public AggregatorFactory getCombiningFactory()
     {
-        log.info("Will create combining factory");
         return new CardinalityAggregatorFactory(name, name);
     }
 
     @Override
     public Object deserialize(Object object)
     {
-        log.info("Deserialize: %s", object.getClass());
+        if (object instanceof byte[]) {
+            return new AdaptiveCounting((byte[])object);
+        }
+        else if (object instanceof ByteBuffer) {
+            ByteBuffer buf = (ByteBuffer)object;
+            int size = buf.capacity();
+            byte[] bytes = new byte[size];
+            for (int i = 0; i < size; i++) {
+                bytes[i] = buf.get(i);
+            }
+            return new AdaptiveCounting(bytes);
+        }
         return object;
     }
 

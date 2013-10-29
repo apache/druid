@@ -16,7 +16,6 @@ public class CardinalityAggregator implements Aggregator
 
     static Object combineValues(Object lhs, Object rhs)
     {
-        log.info("Combining values: %s, %s", lhs.toString(), rhs.toString());
         try {
             return ((ICardinality) lhs).merge((ICardinality) rhs);
         }
@@ -51,17 +50,17 @@ public class CardinalityAggregator implements Aggregator
         ICardinality valueToAgg = selector.get();
         try {
             ICardinality mergedCardinality = card.merge(valueToAgg);
-            this.card = mergedCardinality;
+            card = mergedCardinality;
         }
         catch (CardinalityMergeException e) {
-
+            throw new RuntimeException("Failed to aggregate: "+e);
         }
     }
 
     @Override
     public void reset()
     {
-        this.card = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
+        card = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
     }
 
     @Override
@@ -85,7 +84,6 @@ public class CardinalityAggregator implements Aggregator
     @Override
     public Aggregator clone()
     {
-        log.info("Will try to return clone");
         try {
             ICardinality card = new AdaptiveCounting(this.card.getBytes());
             return new CardinalityAggregator(this.name, this.selector, card);

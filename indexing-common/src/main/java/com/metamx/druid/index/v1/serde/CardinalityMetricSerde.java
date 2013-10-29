@@ -1,6 +1,5 @@
 package com.metamx.druid.index.v1.serde;
 
-
 import com.clearspring.analytics.stream.cardinality.AdaptiveCounting;
 import com.clearspring.analytics.stream.cardinality.ICardinality;
 import com.google.common.collect.Ordering;
@@ -14,8 +13,6 @@ import com.metamx.druid.kv.ObjectStrategy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.List;
 
 public class CardinalityMetricSerde extends ComplexMetricSerde {
 
@@ -41,10 +38,8 @@ public class CardinalityMetricSerde extends ComplexMetricSerde {
                 return bytes;
             }
             catch (IOException e) {
-
+                return null;
             }
-
-            return null;
         }
 
         @Override
