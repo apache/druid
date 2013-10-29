@@ -22,10 +22,12 @@ package io.druid.cli.convert;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.io.Closeables;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -33,7 +35,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
-import java.io.Writer;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -57,12 +58,16 @@ public class ConvertProperties implements Runnable
       new Rename("druid.database.connectURI", "druid.db.connector.connectURI"),
       new Rename("druid.database.user", "druid.db.connector.user"),
       new Rename("druid.database.password", "druid.db.connector.password"),
+      new Rename("druid.database.poll.duration", "druid.manager.segment.pollDuration"),
+      new Rename("druid.database.password", "druid.db.connector.password"),
       new Rename("com.metamx.emitter", "druid.emitter"),
       new Rename("com.metamx.emitter.logging", "druid.emitter.logging"),
       new Rename("com.metamx.emitter.logging.level", "druid.emitter.logging.logLevel"),
       new Rename("com.metamx.emitter.http", "druid.emitter.http"),
       new Rename("com.metamx.emitter.http.url", "druid.emitter.http.recipientBaseUrl"),
+      new Rename("com.metamx.emitter.period", "druid.emitter.emissionPeriod"),
       new Rename("com.metamx.druid.emitter.period", "druid.emitter.emissionPeriod"),
+      new Rename("com.metamx.metrics.emitter.period", "druid.emitter.emissionPeriod"),
       new PrefixRename("com.metamx.emitter", "druid.emitter"),
       new PrefixRename("com.metamx.druid.emitter", "druid.emitter"),
       new IndexCacheConverter(),
@@ -80,7 +85,6 @@ public class ConvertProperties implements Runnable
       new Rename("druid.indexer.fork.java", "druid.indexer.runner.javaCommand"),
       new Rename("druid.indexer.fork.opts", "druid.indexer.runner.javaOpts"),
       new Rename("druid.indexer.fork.classpath", "druid.indexer.runner.classpath"),
-      new Rename("druid.indexer.fork.main", "druid.indexer.runner.mainClass"),
       new Rename("druid.indexer.fork.hostpattern", "druid.indexer.runner.hostPattern"),
       new Rename("druid.indexer.fork.startport", "druid.indexer.runner.startPort"),
       new Rename("druid.indexer.properties.prefixes", "druid.indexer.runner.allowedPrefixes"),
@@ -110,6 +114,7 @@ public class ConvertProperties implements Runnable
       new Rename("druid.master.merger.service", "druid.selectors.indexing.serviceName"),
       new Rename("druid.master.period.segmentMerger", "druid.coordinator.period.indexingPeriod"),
       new Rename("druid.master.merger.on", "druid.coordinator.merge.on"),
+      new Rename("druid.master.period", "druid.coordinator.period"),
       new PrefixRename("druid.master", "druid.coordinator"),
       new PrefixRename("druid.pusher", "druid.storage"),
       new DataSegmentPusherDefaultConverter(),
@@ -139,8 +144,7 @@ public class ConvertProperties implements Runnable
 
     Properties fromFile = new Properties();
 
-    try (Reader in = new InputStreamReader(new FileInputStream(file), Charsets.UTF_8))
-    {
+    try (Reader in = new InputStreamReader(new FileInputStream(file), Charsets.UTF_8)) {
       fromFile.load(in);
     }
     catch (IOException e) {
@@ -157,6 +161,7 @@ public class ConvertProperties implements Runnable
           for (Map.Entry<String, String> entry : converter.convert(fromFile).entrySet()) {
             if (entry.getValue() != null) {
               ++count;
+              log.info("Converting [%s] to [%s]", property, entry.getKey());
               updatedProps.setProperty(entry.getKey(), entry.getValue());
             }
           }
@@ -165,6 +170,7 @@ public class ConvertProperties implements Runnable
       }
 
       if (!handled) {
+        log.info("Not converting [%s]", property);
         updatedProps.put(property, fromFile.getProperty(property));
       }
     }
@@ -173,12 +179,23 @@ public class ConvertProperties implements Runnable
         "druid.monitoring.monitors", "[\"io.druid.server.metrics.ServerMonitor\", \"com.metamx.metrics.SysMonitor\"]"
     );
 
-    try (Writer out = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8))
-    {
-      updatedProps.store(out, null);
+    BufferedWriter out = null;
+    try {
+      out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8));
+      for (Map.Entry<Object, Object> prop : updatedProps.entrySet()) {
+        out.write((String) prop.getKey());
+        out.write("=");
+        out.write((String) prop.getValue());
+        out.newLine();
+      }
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
+    }
+    finally {
+      if (out != null) {
+        Closeables.closeQuietly(out);
+      }
     }
 
     log.info("Completed!  Converted[%,d] properties.", count);

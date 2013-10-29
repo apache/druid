@@ -233,10 +233,10 @@ Additional peon configs include:
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.peon.mode`|Choices are "local" and "remote". Setting this to local means you intend to run the peon as a standalone node (Not recommended).|remote|
-|`druid.indexer.baseDir`|Base temporary working directory.|/tmp|
-|`druid.indexer.baseTaskDir`|Base temporary working directory for tasks.|/tmp/persistent/tasks|
-|`druid.indexer.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|/tmp/druid-indexing|
-|`druid.indexer.defaultRowFlushBoundary`|Highest row count before persisting to disk. Used for indexing generating tasks.|50000|
+|`druid.indexer.task.baseDir`|Base temporary working directory.|/tmp|
+|`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|/tmp/persistent/tasks|
+|`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|/tmp/druid-indexing|
+|`druid.indexer.task.defaultRowFlushBoundary`|Highest row count before persisting to disk. Used for indexing generating tasks.|50000|
 |`druid.indexer.task.chathandler.type`|Choices are "noop" and "announce". Certain tasks will use service discovery to announce an HTTP endpoint that events can be posted to.|noop|
 
 If the peon is running in remote mode, there must be an overlord up and running. Running peons in remote mode require the following configurations:

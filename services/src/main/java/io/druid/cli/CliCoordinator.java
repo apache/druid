@@ -85,7 +85,7 @@ public class CliCoordinator extends ServerRunnable
           {
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
-            JsonConfigProvider.bind(binder, "druid.manager.segment", DatabaseSegmentManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.manager.segments", DatabaseSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
 
             binder.bind(RedirectServlet.class).in(LazySingleton.class);
