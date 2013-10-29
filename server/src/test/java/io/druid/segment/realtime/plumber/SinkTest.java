@@ -80,6 +80,12 @@ public class SinkTest
       {
         return 0;
       }
+
+      @Override
+      public Object getRaw(String dimension)
+      {
+        return null;
+      }
     });
 
     FireHydrant currHydrant = sink.getCurrIndex();
@@ -112,6 +118,12 @@ public class SinkTest
       public float getFloatMetric(String metric)
       {
         return 0;
+      }
+
+      @Override
+      public Object getRaw(String dimension)
+      {
+        return null;
       }
     });
 

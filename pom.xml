@@ -23,7 +23,7 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.0-SNAPSHOT</version>
+    <version>0.6.1-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -60,7 +60,7 @@
             <dependency>
                 <groupId>io.druid</groupId>
                 <artifactId>druid-api</artifactId>
-                <version>0.1.0-SNAPSHOT</version>
+                <version>0.1.3</version>
             </dependency>
 
             <!-- Compile Scope -->
@@ -177,7 +177,7 @@
             <dependency>
                 <groupId>it.uniroma3.mat</groupId>
                 <artifactId>extendedset</artifactId>
-                <version>1.3.2</version>
+                <version>1.3.4</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>

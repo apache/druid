@@ -37,7 +37,6 @@ import io.druid.query.QueryRunner;
 import org.joda.time.Interval;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 public abstract class AbstractTask implements Task
@@ -189,13 +188,12 @@ public abstract class AbstractTask implements Task
   {
     final List<TaskLock> locks = toolbox.getTaskActionClient().submit(new LockListAction());
 
-    if (locks.isEmpty()) {
-      return Arrays.asList(
-          toolbox.getTaskActionClient()
-                 .submit(new LockAcquireAction(getImplicitLockInterval().get()))
-      );
+    if (locks.isEmpty() && getImplicitLockInterval().isPresent()) {
+      // In the Peon's local mode, the implicit lock interval is not pre-acquired, so we need to try it here.
+      toolbox.getTaskActionClient().submit(new LockAcquireAction(getImplicitLockInterval().get()));
+      return toolbox.getTaskActionClient().submit(new LockListAction());
+    } else {
+      return locks;
     }
-
-    return locks;
   }
 }

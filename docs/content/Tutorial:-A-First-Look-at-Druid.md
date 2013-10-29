@@ -320,7 +320,7 @@ Feel free to tweak other query parameters to answer other questions you may have
 Next Steps
 ----------
 
-What to know even more information about the Druid Cluster? Check out [Tutorial%3A The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html)
+What to know even more information about the Druid Cluster? Check out [The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html)
 
 Druid is even more fun if you load your own data into it! To learn how to load your data, see [Loading Your Data](Tutorial%3A-Loading-Your-Data-Part-1.html).
 

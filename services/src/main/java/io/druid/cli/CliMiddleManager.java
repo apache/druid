@@ -26,6 +26,7 @@ import com.google.inject.Provides;
 import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
+import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -101,7 +102,8 @@ public class CliMiddleManager extends ServerRunnable
                 config.getVersion()
             );
           }
-        }
+        },
+        new IndexingServiceFirehoseModule()
     );
   }
 }
