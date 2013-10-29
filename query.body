@@ -1,0 +1,15 @@
+{
+    "queryType": "groupBy",
+    "dataSource": "druidtest",
+    "granularity": "all",
+    "dimensions": ["age"],
+    "aggregations": [
+        {"type": "doubleSum", "fieldName": "wp", "name": "count wp"},
+        {"type": "min", "fieldName": "min_wp", "name": "min wp"},
+        {"type": "max", "fieldName": "max_wp", "name": "max wp"},
+		{"type": "cardinality", "fieldName": "card_wp", "name": "card wp"}
+    ],  
+    "intervals": ["2000-01-01T00:00/2020-01-01T00"],
+	"filters": [
+	]
+}

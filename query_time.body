@@ -1,0 +1,11 @@
+{
+    "queryType": "timeseries",
+    "dataSource": "druidtest",
+    "granularity": "hour",
+	"aggregations": [
+		{"type": "count", "fieldName": "count_wp", "name": "count"},
+		{"type": "longSum", "fieldName": "sum_wp", "name": "sum"},
+		{"type": "cardinality", "fieldName": "card_wp", "name": "card"}
+	],
+    "intervals": [ "2010-01-01T00:00:00.000/2014-01-03T00:00:00.000" ]
+}
