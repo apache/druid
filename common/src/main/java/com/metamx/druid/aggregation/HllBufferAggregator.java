@@ -2,22 +2,13 @@ package com.metamx.druid.aggregation;
 
 import com.metamx.druid.processing.ObjectColumnSelector;
 
-import com.metamx.druid.processing.ComplexMetricSelector;
-
 import java.nio.ByteBuffer;
-import com.metamx.common.logger.Logger;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
 import gnu.trove.map.hash.TIntByteHashMap;
-import gnu.trove.map.TIntByteMap;
 import gnu.trove.procedure.TIntByteProcedure;
 
 public class HllBufferAggregator implements BufferAggregator {
 
 	private final ObjectColumnSelector selector;
-	private static long time = 0;
-
 	public HllBufferAggregator(ObjectColumnSelector selector) {
 		this.selector = selector;
 	}
@@ -37,7 +28,6 @@ public class HllBufferAggregator implements BufferAggregator {
 	public void aggregate(ByteBuffer buf, int position) {
 		final ByteBuffer fb = buf;
 		final int fp = position;
-		// TODO Auto-generated method stub
 		TIntByteHashMap newobj = (TIntByteHashMap) (selector.get());
 		newobj.forEachEntry(new TIntByteProcedure() {
 			public boolean execute(int a, byte b) {

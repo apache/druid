@@ -10,11 +10,8 @@ import com.metamx.druid.processing.ColumnSelectorFactory;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import gnu.trove.map.hash.TIntByteHashMap;
-import gnu.trove.map.TIntByteMap;
 
 public class HllAggregatorFactory implements AggregatorFactory {
-
-	private static final byte CACHE_TYPE_ID = 0x2;
 
 	private final String fieldName;
 	private final String name;

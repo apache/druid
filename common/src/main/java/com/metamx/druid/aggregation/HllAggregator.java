@@ -1,10 +1,6 @@
 package com.metamx.druid.aggregation;
 
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
-
-import com.metamx.druid.aggregation.JavaScriptAggregator.ScriptAggregator;
 import com.metamx.druid.processing.ObjectColumnSelector;
 import com.google.common.hash.Hashing;
 
@@ -14,7 +10,6 @@ import gnu.trove.map.hash.TIntByteHashMap;
 import gnu.trove.map.TIntByteMap;
 import java.nio.ByteBuffer;
 
-import java.net.InetAddress;
 import org.apache.commons.codec.binary.Base64;
 import com.metamx.druid.aggregation.HllAggregatorFactory;
 
@@ -66,7 +61,6 @@ public class HllAggregator implements Aggregator {
 	@Override
 	public void aggregate() {
 
-		long start = System.nanoTime();
 		Object value = selector.get();
 		if (HllAggregatorFactory.context == HllAggregatorFactory.CONTEXT.COMPLEX) {
 
@@ -105,17 +99,13 @@ public class HllAggregator implements Aggregator {
 					.asLong();
 
 			final int bucket = (int) (id >>> (Long.SIZE - log2m));
-			final int zerolength = Long.numberOfLeadingZeros((id << this.log2m)
-					| (1 << (this.log2m - 1)) + 1) + 1;
+			final int zerolength = Long.numberOfLeadingZeros((id << log2m)
+					| (1 << (log2m - 1)) + 1) + 1;
 
 			if (ibMap.get(bucket) == ibMap.getNoEntryValue()
 					|| ibMap.get(bucket) < (byte) zerolength)
 				ibMap.put(bucket, (byte) zerolength);
 
-		}
-		int[] indexes = ibMap.keys();
-		for (int i = 0; i < indexes.length; i++) {
-			int index_i = indexes[i];
 		}
 	}
 

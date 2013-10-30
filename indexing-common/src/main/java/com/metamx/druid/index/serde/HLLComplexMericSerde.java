@@ -1,30 +1,20 @@
 package com.metamx.druid.index.serde;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 
-import com.metamx.druid.aggregation.HllAggregator;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.index.column.ColumnBuilder;
 import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.index.serde.ColumnPartSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetricExtractor;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
-import com.metamx.druid.kv.Indexed;
 import com.metamx.druid.kv.ObjectStrategy;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.kv.GenericIndexed;
-import com.metamx.druid.index.column.IndexedComplexColumn;
 import com.metamx.druid.index.serde.ComplexColumnPartSupplier;
 import gnu.trove.map.hash.TIntByteHashMap;
-import gnu.trove.map.TIntByteMap;
 
 public class HLLComplexMericSerde extends ComplexMetricSerde {
-  private static long desTime=0;
-  private static long sTime = 0;
-  
-
   @Override
   public String getTypeName() {
     return "hll";
