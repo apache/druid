@@ -21,7 +21,6 @@ import gnu.trove.map.hash.TIntByteHashMap;
 import gnu.trove.map.TIntByteMap;
 
 public class HLLComplexMericSerde extends ComplexMetricSerde {
-  private static final Logger log = new Logger(HLLComplexMericSerde.class);
   private static long desTime=0;
   private static long sTime = 0;
   
