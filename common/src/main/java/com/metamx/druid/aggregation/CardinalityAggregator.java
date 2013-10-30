@@ -4,6 +4,7 @@ import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
 
 import com.clearspring.analytics.stream.cardinality.AdaptiveCounting;
 import com.clearspring.analytics.stream.cardinality.ICardinality;
+import com.google.common.primitives.Longs;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.processing.ComplexMetricSelector;
 
@@ -12,7 +13,14 @@ import java.util.Comparator;
 
 public class CardinalityAggregator implements Aggregator
 {
-    static final Comparator COMPARATOR = LongSumAggregator.COMPARATOR;
+    static final Comparator COMPARATOR = new Comparator()
+    {
+        @Override
+        public int compare(Object o, Object o1)
+        {
+        return Longs.compare(((ICardinality) o).cardinality(), ((ICardinality) o1).cardinality());
+        }
+    };
 
     static Object combineValues(Object lhs, Object rhs)
     {
