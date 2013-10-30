@@ -34,8 +34,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryableNode;
 import com.metamx.druid.client.BrokerServerView;
-import com.metamx.druid.client.CachingClusteredClient;
-import com.metamx.druid.client.ResultsCachingClient;
+import com.metamx.druid.client.CachingClientConfig;
 import com.metamx.druid.client.cache.Cache;
 import com.metamx.druid.client.cache.CacheConfig;
 import com.metamx.druid.client.cache.CacheMonitor;
@@ -221,17 +220,11 @@ public class BrokerNode extends QueryableNode<BrokerNode>
         warehouse, getSmileMapper(), brokerHttpClient, getServerView(), viewExec
     );
 
-    final CachingClusteredClient baseClient = new CachingClusteredClient(warehouse, view, queryCache, getSmileMapper());
-    lifecycle.addManagedInstance(baseClient);
-
-    final ResultsCachingClient resultsClient = new ResultsCachingClient(
-        warehouse, view, resultsCache, getSmileMapper()
+    final CachingClientConfig clientConfig = new CachingClientConfig(
+        warehouse, view, getSmileMapper(), lifecycle, getEmitter(), queryCache, resultsCache
     );
-    lifecycle.addManagedInstance(resultsClient);
 
-    final ClientQuerySegmentWalker texasRanger = new ClientQuerySegmentWalker(
-        warehouse, getEmitter(), baseClient, resultsClient
-    );
+    final ClientQuerySegmentWalker texasRanger = new ClientQuerySegmentWalker(clientConfig);
 
     List<Module> theModules = Lists.newArrayList();
     theModules.add(new ClientServletModule(texasRanger, getInventoryView(), getJsonMapper()));

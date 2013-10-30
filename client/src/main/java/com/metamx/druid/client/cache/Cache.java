@@ -94,7 +94,7 @@ public interface Cache
     {
       return "NamedKey{" +
              "namespace='" + namespace + '\'' +
-             ", key=" + new String(key) +
+             ", key size=" + key.length +
              '}';
     }
   }
