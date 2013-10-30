@@ -65,7 +65,6 @@ import com.metamx.druid.loading.DataSegmentPusher;
 import com.metamx.druid.loading.S3DataSegmentKiller;
 import com.metamx.druid.utils.PropUtils;
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.Emitters;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.HttpClientConfig;
@@ -108,7 +107,6 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   private RestS3Service s3Service = null;
   private MonitorScheduler monitorScheduler = null;
   private HttpClient httpClient = null;
-  private ServiceEmitter emitter = null;
   private TaskConfig taskConfig = null;
   private WorkerConfig workerConfig = null;
   private DataSegmentPusher segmentPusher = null;
@@ -143,7 +141,6 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
   public void doInit() throws Exception
   {
     initializeHttpClient();
-    initializeEmitter();
     initializeS3Service();
     initializeMergerConfig();
     initializeServiceDiscovery();
@@ -173,7 +170,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     root.addFilter(GuiceFilter.class, "/druid/worker/v1/*", 0);
     root.addServlet(
         new ServletHolder(
-            new QueryServlet(getJsonMapper(), getSmileMapper(), taskRunner, emitter, getRequestLogger())
+            new QueryServlet(getJsonMapper(), getSmileMapper(), taskRunner, getEmitter(), getRequestLogger())
         ),
         "/druid/v2/*"
     );
@@ -186,7 +183,7 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
       final ScheduledExecutorFactory scheduledExecutorFactory = ScheduledExecutors.createFactory(lifecycle);
       final ScheduledExecutorService globalScheduledExec = scheduledExecutorFactory.create(1, "Global--%d");
       this.monitorScheduler = new MonitorScheduler(
-          configFactory.build(MonitorSchedulerConfig.class), globalScheduledExec, emitter, ImmutableList.<Monitor>of()
+          configFactory.build(MonitorSchedulerConfig.class), globalScheduledExec, getEmitter(), ImmutableList.<Monitor>of()
       );
       lifecycle.addManagedInstance(monitorScheduler);
     }
@@ -272,18 +269,6 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
     }
   }
 
-  private void initializeEmitter()
-  {
-    if (emitter == null) {
-      emitter = new ServiceEmitter(
-          PropUtils.getProperty(props, "druid.service"),
-          PropUtils.getProperty(props, "druid.host"),
-          Emitters.create(props, httpClient, getJsonMapper(), lifecycle)
-      );
-    }
-    EmittingLogger.registerEmitter(emitter);
-  }
-
   private void initializeS3Service() throws S3ServiceException
   {
     if (s3Service == null) {
@@ -331,13 +316,14 @@ public class ExecutorNode extends BaseServerNode<ExecutorNode>
               ),
               getJsonMapper()
           ),
-          emitter,
+          getEmitter(),
           s3Service,
           segmentPusher,
           dataSegmentKiller,
           getAnnouncer(),
           getServerView(),
           getConglomerate(),
+          getQueryExecutorService(),
           monitorScheduler,
           getJsonMapper()
       );

@@ -32,6 +32,7 @@ import com.metamx.druid.collect.StupidPool;
 import com.metamx.druid.input.MapBasedInputRow;
 import com.metamx.druid.input.MapBasedRow;
 import com.metamx.druid.input.Row;
+import com.metamx.druid.query.filter.DimFilters;
 import com.metamx.druid.query.group.GroupByQuery;
 import com.metamx.druid.query.group.GroupByQueryEngine;
 import com.metamx.druid.query.group.GroupByQueryEngineConfig;
@@ -111,6 +112,70 @@ public class IncrementalIndexStorageAdapterTest
 
     row = (MapBasedRow) results.get(1);
     Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1l), row.getEvent());
+  }
+
+  @Test
+  public void testFilterByNull() throws Exception
+  {
+    IncrementalIndex index = new IncrementalIndex(
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
+    );
+
+    index.add(
+        new MapBasedInputRow(
+            new DateTime().minus(1).getMillis(),
+            Lists.newArrayList("billy"),
+            ImmutableMap.<String, Object>of("billy", "hi")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            new DateTime().minus(1).getMillis(),
+            Lists.newArrayList("sally"),
+            ImmutableMap.<String, Object>of("sally", "bo")
+        )
+    );
+
+    GroupByQueryEngine engine = new GroupByQueryEngine(
+        new GroupByQueryEngineConfig()
+        {
+          @Override
+          public int getMaxIntermediateRows()
+          {
+            return 5;
+          }
+        },
+        new StupidPool<ByteBuffer>(
+            new Supplier<ByteBuffer>()
+            {
+              @Override
+              public ByteBuffer get()
+              {
+                return ByteBuffer.allocate(50000);
+              }
+            }
+        )
+    );
+
+    final Sequence<Row> rows = engine.process(
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(QueryGranularity.ALL)
+                    .setInterval(new Interval(0, new DateTime().getMillis()))
+                    .addDimension("billy")
+                    .addDimension("sally")
+                    .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                    .setDimFilter(DimFilters.dimEquals("sally", (String) null))
+                    .build(),
+        new IncrementalIndexStorageAdapter(index)
+    );
+
+    final ArrayList<Row> results = Sequences.toList(rows, Lists.<Row>newArrayList());
+
+    Assert.assertEquals(1, results.size());
+
+    MapBasedRow row = (MapBasedRow) results.get(0);
+    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1l), row.getEvent());
   }
 
 }

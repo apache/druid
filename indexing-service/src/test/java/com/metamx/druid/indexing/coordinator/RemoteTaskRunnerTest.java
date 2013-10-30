@@ -385,7 +385,7 @@ public class RemoteTaskRunnerTest
                   {
                     return null;
                   }
-                }, null, null, null, null, null, null, null, null, null, jsonMapper
+                }, null, null, null, null, null, null, null, null, null, null, jsonMapper
             ), Executors.newSingleThreadExecutor()
         ),
         Executors.newSingleThreadExecutor()

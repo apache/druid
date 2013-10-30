@@ -97,20 +97,12 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
     final List<Monitor> monitors = getMonitors();
     final QueryRunnerFactoryConglomerate conglomerate = getConglomerate();
 
-    final PrioritizedExecutorService innerExecutorService = PrioritizedExecutorService.create(
-        getLifecycle(),
-        getConfigFactory().buildWithReplacements(
-            ExecutorServiceConfig.class, ImmutableMap.of("base_path", "druid.processing")
-        )
-    );
-
-    final ExecutorService executorService = new MetricsEmittingExecutorService(
-        innerExecutorService,
+    final ServerManager serverManager = new ServerManager(
+        getSegmentLoader(),
+        conglomerate,
         emitter,
-        new ServiceMetricEvent.Builder()
+        getQueryExecutorService()
     );
-
-    final ServerManager serverManager = new ServerManager(getSegmentLoader(), conglomerate, emitter, executorService);
 
     final ZkCoordinator coordinator = new ZkCoordinator(
         getJsonMapper(),
@@ -206,5 +198,4 @@ public class ComputeNode extends BaseServerNode<ComputeNode>
       return new ComputeNode(props, lifecycle, jsonMapper, smileMapper, configFactory);
     }
   }
-
 }
