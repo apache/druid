@@ -34,7 +34,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.QueryableNode;
 import com.metamx.druid.client.BrokerServerView;
-import com.metamx.druid.client.CachingClusteredClient;
+import com.metamx.druid.client.CachingClientConfig;
 import com.metamx.druid.client.cache.Cache;
 import com.metamx.druid.client.cache.CacheConfig;
 import com.metamx.druid.client.cache.CacheMonitor;
@@ -43,7 +43,6 @@ import com.metamx.druid.client.cache.MapCacheConfig;
 import com.metamx.druid.client.cache.MemcachedCache;
 import com.metamx.druid.client.cache.MemcachedCacheConfig;
 import com.metamx.druid.curator.discovery.ServiceAnnouncer;
-import com.metamx.druid.curator.discovery.ServiceInstanceFactory;
 import com.metamx.druid.initialization.Initialization;
 import com.metamx.druid.initialization.ServiceDiscoveryConfig;
 import com.metamx.druid.jackson.DefaultObjectMapper;
@@ -76,13 +75,14 @@ public class BrokerNode extends QueryableNode<BrokerNode>
   public static final String CACHE_TYPE_LOCAL = "local";
   public static final String CACHE_TYPE_MEMCACHED = "memcached";
   public static final String CACHE_PROPERTY_PREFIX = "druid.bard.cache";
+  public static final String RESULTS_CACHE_PROPERTY_PREFIX = "druid.bard.results.cache";
 
   private final List<Module> extraModules = Lists.newArrayList();
   private final List<String> pathsForGuiceFilter = Lists.newArrayList();
 
   private QueryToolChestWarehouse warehouse = null;
   private HttpClient brokerHttpClient = null;
-  private Cache cache = null;
+  private Cache queryCache = null, resultsCache = null;
 
   private boolean useDiscovery = true;
 
@@ -126,15 +126,35 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     return this;
   }
 
-  public Cache getCache()
+  public Cache getQueryCache()
   {
     initializeCacheBroker();
-    return cache;
+    return queryCache;
   }
 
-  public BrokerNode setCache(Cache cache)
+  /**
+   * Sets cache for finalized results for queries
+   *
+   * @param resultsCache
+   *
+   * @return
+   */
+  public BrokerNode setResultsCache(Cache resultsCache)
   {
-    checkFieldNotSetAndSet("cache", cache);
+    checkFieldNotSetAndSet("resultsCache", resultsCache);
+    return this;
+  }
+
+  /**
+   * Sets cache for results from Servers
+   *
+   * @param queryCache
+   *
+   * @return
+   */
+  public BrokerNode setQueryCache(Cache queryCache)
+  {
+    checkFieldNotSetAndSet("queryCache", queryCache);
     return this;
   }
 
@@ -147,7 +167,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
   /**
    * This method allows you to specify more Guice modules to use primarily for injected extra Jersey resources.
    * I'd like to remove the Guice dependency for this, but I don't know how to set up Jersey without Guice...
-   *
+   * <p/>
    * This is deprecated because at some point in the future, we will eliminate the Guice dependency and anything
    * that uses this will break.  Use at your own risk.
    *
@@ -164,7 +184,7 @@ public class BrokerNode extends QueryableNode<BrokerNode>
 
   /**
    * This method is used to specify extra paths that the GuiceFilter should pay attention to.
-   *
+   * <p/>
    * This is deprecated for the same reason that addModule is deprecated.
    *
    * @param path the path that the GuiceFilter should pay attention to.
@@ -189,7 +209,8 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     final Lifecycle lifecycle = getLifecycle();
 
     final List<Monitor> monitors = getMonitors();
-    monitors.add(new CacheMonitor(cache));
+    monitors.add(new CacheMonitor(queryCache, "queryCache"));
+    monitors.add(new CacheMonitor(resultsCache, "resultsCache"));
     startMonitoring(monitors);
 
     final ExecutorService viewExec = Executors.newFixedThreadPool(
@@ -199,10 +220,11 @@ public class BrokerNode extends QueryableNode<BrokerNode>
         warehouse, getSmileMapper(), brokerHttpClient, getServerView(), viewExec
     );
 
-    final CachingClusteredClient baseClient = new CachingClusteredClient(warehouse, view, cache, getSmileMapper());
-    lifecycle.addManagedInstance(baseClient);
+    final CachingClientConfig clientConfig = new CachingClientConfig(
+        warehouse, view, getSmileMapper(), lifecycle, getEmitter(), queryCache, resultsCache
+    );
 
-    final ClientQuerySegmentWalker texasRanger = new ClientQuerySegmentWalker(warehouse, getEmitter(), baseClient);
+    final ClientQuerySegmentWalker texasRanger = new ClientQuerySegmentWalker(clientConfig);
 
     List<Module> theModules = Lists.newArrayList();
     theModules.add(new ClientServletModule(texasRanger, getInventoryView(), getJsonMapper()));
@@ -212,7 +234,11 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     final Context root = new Context(getServer(), "/", Context.SESSIONS);
     root.addServlet(new ServletHolder(new StatusServlet()), "/status");
     root.addServlet(
-        new ServletHolder(new QueryServlet(getJsonMapper(), getSmileMapper(), texasRanger, getEmitter(), getRequestLogger())),
+        new ServletHolder(
+            new QueryServlet(
+                getJsonMapper(), getSmileMapper(), texasRanger, getEmitter(), getRequestLogger()
+            )
+        ),
         "/druid/v2/*"
     );
     root.addFilter(GzipFilter.class, "/*", 0);
@@ -243,34 +269,51 @@ public class BrokerNode extends QueryableNode<BrokerNode>
     }
   }
 
+  /**
+   * Initializes both caches, one for query results and other for finalized results
+   */
   private void initializeCacheBroker()
   {
-    if (cache == null) {
-      String cacheType = getConfigFactory()
-          .build(CacheConfig.class)
-          .getType();
+    if (queryCache == null) {
+      setQueryCache(createCache(CACHE_PROPERTY_PREFIX));
+    }
+    if (resultsCache == null) {
+      setResultsCache(createCache(RESULTS_CACHE_PROPERTY_PREFIX));
+    }
 
-      if (cacheType.equals(CACHE_TYPE_LOCAL)) {
-        setCache(
-            MapCache.create(
-                getConfigFactory().buildWithReplacements(
-                    MapCacheConfig.class,
-                    ImmutableMap.of("prefix", CACHE_PROPERTY_PREFIX)
-                )
-            )
-        );
-      } else if (cacheType.equals(CACHE_TYPE_MEMCACHED)) {
-        setCache(
-            MemcachedCache.create(
-                getConfigFactory().buildWithReplacements(
-                    MemcachedCacheConfig.class,
-                    ImmutableMap.of("prefix", CACHE_PROPERTY_PREFIX)
-                )
-            )
-        );
-      } else {
-        throw new ISE("Unknown cache type [%s]", cacheType);
-      }
+  }
+
+  /**
+   * Creates a cache depending on config and prefix
+   *
+   * @param prefix {@link #RESULTS_CACHE_PROPERTY_PREFIX} or {@link #CACHE_PROPERTY_PREFIX}
+   *
+   * @return cache
+   */
+  private Cache createCache(String prefix)
+  {
+    String cacheType = getConfigFactory()
+        .build(CacheConfig.class)
+        .getType();
+
+    if (cacheType.equals(CACHE_TYPE_LOCAL)) {
+      return
+          MapCache.create(
+              getConfigFactory().buildWithReplacements(
+                  MapCacheConfig.class,
+                  ImmutableMap.of("prefix", prefix)
+              )
+          );
+    } else if (cacheType.equals(CACHE_TYPE_MEMCACHED)) {
+      return
+          MemcachedCache.create(
+              getConfigFactory().buildWithReplacements(
+                  MemcachedCacheConfig.class,
+                  ImmutableMap.of("prefix", prefix)
+              )
+          );
+    } else {
+      throw new ISE("Unknown cache type [%s]", cacheType);
     }
   }
 
@@ -329,9 +372,12 @@ public class BrokerNode extends QueryableNode<BrokerNode>
         jsonMapper = new DefaultObjectMapper();
         smileMapper = new DefaultObjectMapper(new SmileFactory());
         smileMapper.getJsonFactory().setCodec(smileMapper);
-      }
-      else if (jsonMapper == null || smileMapper == null) {
-        throw new ISE("Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.", jsonMapper, smileMapper);
+      } else if (jsonMapper == null || smileMapper == null) {
+        throw new ISE(
+            "Only jsonMapper[%s] or smileMapper[%s] was set, must set neither or both.",
+            jsonMapper,
+            smileMapper
+        );
       }
 
       if (lifecycle == null) {

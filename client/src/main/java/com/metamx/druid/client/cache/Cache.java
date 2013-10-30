@@ -88,5 +88,14 @@ public interface Cache
       result = 31 * result + Arrays.hashCode(key);
       return result;
     }
+
+    @Override
+    public String toString()
+    {
+      return "NamedKey{" +
+             "namespace='" + namespace + '\'' +
+             ", key size=" + key.length +
+             '}';
+    }
   }
 }

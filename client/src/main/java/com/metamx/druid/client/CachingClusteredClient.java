@@ -30,26 +30,19 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.LazySequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.common.logger.Logger;
 import com.metamx.druid.Query;
-import com.metamx.druid.TimelineObjectHolder;
-import com.metamx.druid.VersionedIntervalTimeline;
 import com.metamx.druid.aggregation.AggregatorFactory;
 import com.metamx.druid.client.cache.Cache;
 import com.metamx.druid.client.selector.QueryableDruidServer;
 import com.metamx.druid.client.selector.ServerSelector;
-import com.metamx.druid.partition.PartitionChunk;
 import com.metamx.druid.query.CacheStrategy;
 import com.metamx.druid.query.MetricManipulationFn;
-import com.metamx.druid.query.Queries;
 import com.metamx.druid.query.QueryRunner;
 import com.metamx.druid.query.QueryToolChest;
 import com.metamx.druid.query.QueryToolChestWarehouse;
@@ -82,17 +75,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   private final Cache cache;
   private final ObjectMapper objectMapper;
 
-  public CachingClusteredClient(
-      QueryToolChestWarehouse warehouse,
-      TimelineServerView serverView,
-      Cache cache,
-      ObjectMapper objectMapper
-  )
+  public CachingClusteredClient(CachingClientConfig clientConfig)
   {
-    this.warehouse = warehouse;
-    this.serverView = serverView;
-    this.cache = cache;
-    this.objectMapper = objectMapper;
+    this.warehouse = clientConfig.getWarehouse();
+    this.serverView = clientConfig.getServerView();
+    this.cache = clientConfig.getQueryCache();
+    this.objectMapper = clientConfig.getObjectMapper();
 
     serverView.registerSegmentCallback(
         Executors.newFixedThreadPool(
@@ -128,7 +116,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
 
     ImmutableMap.Builder<String, String> contextBuilder = new ImmutableMap.Builder<String, String>();
-
     final String priority = query.getContextValue("priority", "0");
     contextBuilder.put("priority", priority);
 
@@ -138,34 +125,11 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     contextBuilder.put("intermediate", "true");
 
     final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
-
-    VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
-    if (timeline == null) {
+    Set<Pair<ServerSelector, SegmentDescriptor>> segments = DruidUtils.getSegments(
+        rewrittenQuery, warehouse, serverView
+    );
+    if (segments == null) {
       return Sequences.empty();
-    }
-
-    // build set of segments to query
-    Set<Pair<ServerSelector, SegmentDescriptor>> segments = Sets.newLinkedHashSet();
-
-    List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
-
-    for (Interval interval : rewrittenQuery.getIntervals()) {
-      serversLookup.addAll(timeline.lookup(interval));
-    }
-
-    // Let tool chest filter out unneeded segments
-    final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
-        toolChest.filterSegments(query, serversLookup);
-
-    for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
-      for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
-        ServerSelector selector = chunk.getObject();
-        final SegmentDescriptor descriptor = new SegmentDescriptor(
-            holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
-        );
-
-        segments.add(Pair.of(selector, descriptor));
-      }
     }
 
     final byte[] queryCacheKey;
@@ -383,42 +347,4 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     );
   }
 
-  private static class CachePopulator
-  {
-    private final Cache cache;
-    private final ObjectMapper mapper;
-    private final Cache.NamedKey key;
-
-    public CachePopulator(Cache cache, ObjectMapper mapper, Cache.NamedKey key)
-    {
-      this.cache = cache;
-      this.mapper = mapper;
-      this.key = key;
-    }
-
-    public void populate(Iterable<Object> results)
-    {
-      try {
-        List<byte[]> bytes = Lists.newArrayList();
-        int size = 0;
-        for (Object result : results) {
-          final byte[] array = mapper.writeValueAsBytes(result);
-          size += array.length;
-          bytes.add(array);
-        }
-
-        byte[] valueBytes = new byte[size];
-        int offset = 0;
-        for (byte[] array : bytes) {
-          System.arraycopy(array, 0, valueBytes, offset, array.length);
-          offset += array.length;
-        }
-
-        cache.put(key, valueBytes);
-      }
-      catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
-    }
-  }
 }
