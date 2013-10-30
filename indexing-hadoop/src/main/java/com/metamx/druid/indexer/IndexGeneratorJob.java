@@ -78,6 +78,10 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import com.metamx.druid.index.v1.serde.ComplexMetrics;
+import com.metamx.druid.index.serde.HLLComplexMericSerde;
+
+
 /**
  */
 public class IndexGeneratorJob implements Jobby
@@ -256,6 +260,10 @@ public class IndexGeneratorJob implements Jobby
         BytesWritable key, Iterable<Text> values, final Context context
     ) throws IOException, InterruptedException
     {
+      try{
+        ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
+      }catch(Exception e){
+      }
       SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
       Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
 

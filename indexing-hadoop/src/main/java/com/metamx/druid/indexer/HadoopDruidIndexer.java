@@ -22,7 +22,8 @@ package com.metamx.druid.indexer;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.Lifecycle;
-
+import com.metamx.druid.index.v1.serde.ComplexMetrics;
+import com.metamx.druid.index.serde.HLLComplexMericSerde;
 import java.util.List;
 
 /**
@@ -46,6 +47,7 @@ public class HadoopDruidIndexer
 
     Lifecycle lifecycle = new Lifecycle();
     lifecycle.addManagedInstance(node);
+ ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
 
     try {
       lifecycle.start();

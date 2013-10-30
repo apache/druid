@@ -34,6 +34,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.fasterxml.jackson.databind.ser.std.MapSerializer;
+import com.fasterxml.jackson.databind.deser.std.MapDeserializer;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Throwables;
 import com.metamx.common.Granularity;
@@ -45,6 +47,10 @@ import org.joda.time.DateTimeZone;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.util.TimeZone;
+
+import gnu.trove.map.hash.TIntByteHashMap;
+import org.apache.commons.codec.binary.Base64;
+import java.nio.ByteBuffer;
 
 /**
  */
@@ -136,6 +142,7 @@ public class DefaultObjectMapper extends ObjectMapper
           }
         }
     );
+    
     serializerModule.addSerializer(ByteOrder.class, ToStringSerializer.instance);
     serializerModule.addDeserializer(
         ByteOrder.class,
@@ -153,6 +160,75 @@ public class DefaultObjectMapper extends ObjectMapper
           }
         }
     );
+
+    serializerModule.addDeserializer(
+        TIntByteHashMap.class, 
+        new JsonDeserializer<TIntByteHashMap>()
+        {
+          @Override
+          public TIntByteHashMap deserialize(
+              JsonParser jp,
+              DeserializationContext ctxt
+          ) throws IOException 
+          {
+            byte[] ibmapByte = Base64.decodeBase64(jp.getText());
+
+            ByteBuffer buffer = ByteBuffer.wrap(ibmapByte);
+            int keylength = buffer.getInt();
+            int valuelength = buffer.getInt();
+            if (keylength == 0) {
+              return (new TIntByteHashMap());
+            }
+            int[] keys = new int[keylength];
+            byte[] values = new byte[valuelength];
+
+            for (int i = 0; i < keylength; i++) {
+              keys[i] = buffer.getInt();
+            }
+            buffer.get(values);
+
+            return (new TIntByteHashMap(keys, values));
+          }
+        });
+
+    serializerModule.addSerializer(TIntByteHashMap.class,
+        new JsonSerializer<TIntByteHashMap>() {
+        @Override
+        public void serializeWithType(BaseEntity value, JsonGenerator jgen,
+          SerializerProvider provider, TypeSerializer typeSer)
+        throws IOException, JsonProcessingException {
+        serialize(value, jgen, provider);
+        }
+          @Override
+          public void serialize(TIntByteHashMap ibmap,
+            JsonGenerator jsonGenerator,
+            SerializerProvider serializerProvider)
+          throws IOException, JsonProcessingException {
+            int[] indexesResult = ibmap.keys();
+            byte[] valueResult = ibmap.values();
+            ByteBuffer buffer = ByteBuffer
+            .allocate(4 * indexesResult.length
+              + valueResult.length + 8);
+            byte[] result = new byte[4 * indexesResult.length
+            + valueResult.length + 8];
+            buffer.putInt((int) indexesResult.length);
+            buffer.putInt((int) valueResult.length);
+            for (int i = 0; i < indexesResult.length; i++) {
+              buffer.putInt(indexesResult[i]);
+            }
+
+            buffer.put(valueResult);
+            buffer.flip();
+            buffer.get(result);
+            String str = Base64.encodeBase64String(result);
+            jsonGenerator.writeString(str);
+          }
+        });
+
+
+
+
+
     registerModule(serializerModule);
     registerModule(new GuavaModule());
 

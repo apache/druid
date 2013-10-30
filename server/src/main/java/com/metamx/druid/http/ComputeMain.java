@@ -22,6 +22,8 @@ package com.metamx.druid.http;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.log.LogLevelAdjuster;
+import com.metamx.druid.index.v1.serde.ComplexMetrics;
+import com.metamx.druid.index.serde.HLLComplexMericSerde;
 
 /**
  */
@@ -38,6 +40,8 @@ public class ComputeMain
     lifecycle.addManagedInstance(
         ComputeNode.builder().build()
     );
+
+    ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
 
     try {
       lifecycle.start();

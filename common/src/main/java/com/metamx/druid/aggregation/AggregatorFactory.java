@@ -44,6 +44,7 @@ import java.util.List;
     @JsonSubTypes.Type(name="max", value=MaxAggregatorFactory.class),
     @JsonSubTypes.Type(name="min", value=MinAggregatorFactory.class),
     @JsonSubTypes.Type(name="javascript", value=JavaScriptAggregatorFactory.class),
+    @JsonSubTypes.Type(name="hll", value=HllAggregatorFactory.class),
     @JsonSubTypes.Type(name="histogram", value=HistogramAggregatorFactory.class)
 })
 public interface AggregatorFactory
