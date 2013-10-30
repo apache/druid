@@ -27,10 +27,9 @@ public class CardinalityBufferAggregator implements BufferAggregator
         card = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
         try {
             byte[] bytes = card.getBytes();
-            int size = card.sizeof();
-            for (int i = 0; i < size; i++) {
-                buf.put(position + i, bytes[i]);
-            }
+            ByteBuffer copy = buf.duplicate();
+            copy.position(position);
+            copy.put(bytes);
         }
         catch (IOException e) {
             throw new RuntimeException("Failed to init: "+e);
@@ -42,17 +41,16 @@ public class CardinalityBufferAggregator implements BufferAggregator
     {
         int size = card.sizeof();
         byte[] bytes = new byte[size];
-        for (int i = 0; i < size; i++) {
-            bytes[i] = buf.get(position + i);
-        }
+        ByteBuffer copy = buf.duplicate();
+        copy.position(position);
+        copy.get(bytes, 0, size);
         ICardinality cardinalityCounter = new AdaptiveCounting(bytes);
         ICardinality valueToAgg = selector.get();
         try {
             cardinalityCounter = cardinalityCounter.merge(valueToAgg);
             bytes = cardinalityCounter.getBytes();
-            for (int i = 0; i < size; i++) {
-                buf.put(position + i, bytes[i]);
-            }
+            copy.position(position);
+            copy.put(bytes);
         }
         catch (CardinalityMergeException e) {
             throw new RuntimeException("Failed to aggregate: "+e);
@@ -67,9 +65,9 @@ public class CardinalityBufferAggregator implements BufferAggregator
     {
         int size = card.sizeof();
         byte[] bytes = new byte[size];
-        for (int i = 0; i < size; i++) {
-            bytes[i] = buf.get(position + i);
-        }
+        ByteBuffer copy = buf.duplicate();
+        copy.position(position);
+        copy.get(bytes, 0, size);
         ICardinality cardinalityCounter = new AdaptiveCounting(bytes);
         return cardinalityCounter;
     }
