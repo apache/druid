@@ -21,6 +21,8 @@ package com.metamx.druid.http;
 
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
+import com.metamx.druid.index.v1.serde.CardinalityMetricSerde;
+import com.metamx.druid.index.v1.serde.ComplexMetrics;
 import com.metamx.druid.log.LogLevelAdjuster;
 
 /**
@@ -38,6 +40,10 @@ public class ComputeMain
     lifecycle.addManagedInstance(
         ComputeNode.builder().build()
     );
+
+    if (ComplexMetrics.getSerdeForType("cardinality") == null) {
+        ComplexMetrics.registerSerde("cardinality", new CardinalityMetricSerde());
+    }
 
     try {
       lifecycle.start();

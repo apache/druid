@@ -19,8 +19,6 @@
 
 package com.metamx.druid.kv;
 
-import com.clearspring.analytics.stream.cardinality.AdaptiveCounting;
-import com.clearspring.analytics.stream.cardinality.ICardinality;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;

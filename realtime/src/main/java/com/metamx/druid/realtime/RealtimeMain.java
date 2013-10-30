@@ -41,9 +41,9 @@ public class RealtimeMain
         RealtimeNode.builder().build()
     );
 
-      if (ComplexMetrics.getSerdeForType("cardinality") == null) {
-          ComplexMetrics.registerSerde("cardinality", new CardinalityMetricSerde());
-      }
+    if (ComplexMetrics.getSerdeForType("cardinality") == null) {
+        ComplexMetrics.registerSerde("cardinality", new CardinalityMetricSerde());
+    }
 
     try {
       lifecycle.start();

@@ -18,8 +18,7 @@ import java.util.List;
 public class CardinalityAggregatorFactory implements AggregatorFactory
 {
     private static final Logger log = new Logger(CardinalityAggregatorFactory.class);
-    private static final byte CACHE_TYPE_ID = 0x1;
-    private static final ICardinality card = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
+    private static final byte CACHE_TYPE_ID = 0x8;
 
     private final String fieldName;
     private final String name;
@@ -30,8 +29,8 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
         @JsonProperty("fieldName") final String fieldName
     )
     {
-        Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-        Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
+        Preconditions.checkArgument(fieldName != null && fieldName.length() > 0, "Must have a valid, non-null aggregator name");
+        Preconditions.checkArgument(fieldName != null && fieldName.length() > 0, "Must have a valid, non-null fieldName");
 
         this.name = name;
         this.fieldName = fieldName;
@@ -75,7 +74,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
         }
         else if (object instanceof ByteBuffer) {
             ByteBuffer buf = (ByteBuffer)object;
-            int size = buf.capacity();
+            int size = buf.remaining();
             byte[] bytes = new byte[size];
             buf.get(bytes);
             return new AdaptiveCounting(bytes);
@@ -123,7 +122,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
     @Override
     public int getMaxIntermediateSize()
     {
-        return card.sizeof();
+        return 65536;
     }
 
     @Override
