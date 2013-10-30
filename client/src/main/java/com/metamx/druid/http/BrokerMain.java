@@ -24,36 +24,33 @@ import com.metamx.common.logger.Logger;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.index.serde.HLLComplexMericSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetrics;
-import com.metamx.druid.aggregation.HllAggregatorFactory; 
+import com.metamx.druid.aggregation.HllAggregatorFactory;
 
 /**
  */
 
-public class BrokerMain
-{
-  private static final Logger log = new Logger(BrokerMain.class);
+public class BrokerMain {
+	private static final Logger log = new Logger(BrokerMain.class);
 
-  public static void main(String[] args) throws Exception
-  {
-    LogLevelAdjuster.register();
+	public static void main(String[] args) throws Exception {
+		LogLevelAdjuster.register();
 
-    Lifecycle lifecycle = new Lifecycle();
+		Lifecycle lifecycle = new Lifecycle();
 
-    lifecycle.addManagedInstance(
-        BrokerNode.builder().build()
-    );
+		lifecycle.addManagedInstance(BrokerNode.builder().build());
 
-    ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
-    HllAggregatorFactory.context = HllAggregatorFactory.CONTEXT.COMPLEX;
+		if (ComplexMetrics.getSerdeForType("hll") == null) {
+			ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
+		}
+		HllAggregatorFactory.context = HllAggregatorFactory.CONTEXT.COMPLEX;
 
-    try {
-      lifecycle.start();
-    }
-    catch (Throwable t) {
-      log.info(t, "Throwable caught at startup, committing seppuku");
-      System.exit(2);
-    }
+		try {
+			lifecycle.start();
+		} catch (Throwable t) {
+			log.info(t, "Throwable caught at startup, committing seppuku");
+			System.exit(2);
+		}
 
-    lifecycle.join();
-  }
+		lifecycle.join();
+	}
 }
