@@ -28,15 +28,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.CachePopulator;
-import io.druid.client.CachingClientConfig;
 import io.druid.client.CachingClusteredClient;
 import io.druid.client.DruidUtils;
 import io.druid.client.TimelineServerView;
@@ -64,15 +65,31 @@ import java.util.Set;
  */
 public class ClientQuerySegmentWalker implements QuerySegmentWalker
 {
+  private final QueryToolChestWarehouse warehouse;
+  private final TimelineServerView serverView;
+  private final Cache resultsCache;
+  private final ObjectMapper objectMapper;
+  private final ServiceEmitter emitter;
+
   private final CachingClusteredClient baseClient;
-  private final CachingClientConfig clientConfig;
 
   @Inject
-  public ClientQuerySegmentWalker(CachingClientConfig clientConfig)
+  public ClientQuerySegmentWalker(
+      QueryToolChestWarehouse warehouse,
+      TimelineServerView serverView,
+      ObjectMapper objectMapper,
+      ServiceEmitter emitter,
+      @Named("queryCache") Cache queryCache,
+      @Named("resultsCache") Cache resultsCache
+  )
   {
-    this.clientConfig = clientConfig;
-    this.baseClient = new CachingClusteredClient(clientConfig);
-    clientConfig.getLifecycle().addManagedInstance(baseClient);
+    this.warehouse = warehouse;
+    this.serverView = serverView;
+    this.resultsCache = resultsCache;
+    this.objectMapper = objectMapper;
+    this.emitter = emitter;
+
+    this.baseClient = new CachingClusteredClient(warehouse, serverView, queryCache, objectMapper);
   }
 
   @Override
@@ -89,15 +106,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
   private <T> QueryRunner<T> makeRunner(final Query<T> query)
   {
-    final QueryToolChest<T, Query<T>> toolChest = clientConfig.getWarehouse().getToolChest(query);
+    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     return
         new ResultsCachingClient<T>(
-            clientConfig,
+            warehouse, serverView, resultsCache, objectMapper,
             new FinalizeResultsQueryRunner<T>(
                 toolChest.postMergeQueryDecoration(
                     toolChest.mergeResults(
                         new MetricsEmittingQueryRunner<T>(
-                            clientConfig.getEmitter(),
+                            emitter,
                             new Function<Query<T>, ServiceMetricEvent.Builder>()
                             {
                               @Override
@@ -128,14 +145,17 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     private final QueryRunner<T> baseRunner;
 
     public ResultsCachingClient(
-        CachingClientConfig clientConfig,
+        QueryToolChestWarehouse warehouse,
+        TimelineServerView serverView,
+        Cache cache,
+        ObjectMapper objectMapper,
         QueryRunner<T> baseRunner
     )
     {
-      this.warehouse = clientConfig.getWarehouse();
-      this.serverView = clientConfig.getServerView();
-      this.cache = clientConfig.getResultsCache();
-      this.objectMapper = clientConfig.getObjectMapper();
+      this.warehouse = warehouse;
+      this.serverView = serverView;
+      this.cache = cache;
+      this.objectMapper = objectMapper;
 
       if (baseRunner == null) {
         Throwables.propagate(new ISE("Client cannot execute without baserunner."));

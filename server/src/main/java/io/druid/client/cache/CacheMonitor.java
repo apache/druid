@@ -29,9 +29,11 @@ import com.metamx.metrics.AbstractMonitor;
  */
 public class CacheMonitor extends AbstractMonitor
 {
-  private final Cache queryCache, resultsCache;
+  private final Cache queryCache;
+  private final Cache resultsCache;
 
-  private volatile CacheStats prevQueryCacheStats, prevResultsCacheStats = null;
+  private volatile CacheStats prevQueryCacheStats = null;
+  private volatile CacheStats prevResultsCacheStats = null;
 
   @Inject
   public CacheMonitor(
