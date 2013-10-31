@@ -37,9 +37,9 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.client.CacheClientUtils;
 import io.druid.client.CachePopulator;
 import io.druid.client.CachingClusteredClient;
-import io.druid.client.DruidUtils;
 import io.druid.client.TimelineServerView;
 import io.druid.client.cache.Cache;
 import io.druid.client.selector.ServerSelector;
@@ -250,7 +250,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       contextBuilder.put("intermediate", "true");
       final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
 
-      Set<Pair<ServerSelector, SegmentDescriptor>> segments = DruidUtils.getSegments(
+      Set<Pair<ServerSelector, SegmentDescriptor>> segments = CacheClientUtils.getSegments(
           rewrittenQuery, warehouse, serverView
       );
 

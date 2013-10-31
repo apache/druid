@@ -32,13 +32,14 @@ import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 /**
  * Utility class
  */
-public class DruidUtils
+public class CacheClientUtils
 {
   public static <T> Set<Pair<ServerSelector, SegmentDescriptor>> getSegments(
       Query<T> query,
@@ -51,7 +52,7 @@ public class DruidUtils
 
     VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
     if (timeline == null) {
-      return null;
+      return Collections.EMPTY_SET;
     }
 
     List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();

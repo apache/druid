@@ -134,10 +134,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     contextBuilder.put("intermediate", "true");
 
     final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
-    Set<Pair<ServerSelector, SegmentDescriptor>> segments = DruidUtils.getSegments(
+    Set<Pair<ServerSelector, SegmentDescriptor>> segments = CacheClientUtils.getSegments(
         rewrittenQuery, warehouse, serverView
     );
-    if (segments == null) {
+    if (segments.isEmpty()) {
       return Sequences.empty();
     }
 

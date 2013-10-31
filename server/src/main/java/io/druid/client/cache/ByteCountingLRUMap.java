@@ -57,7 +57,7 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
     this.logEvictionCount = logEvictionCount;
     this.sizeInBytes = sizeInBytes;
     if (sizeInBytes <= 0) {
-      Throwables.propagate(new ISE("sizeInBytes should be greater than 0."));
+      log.warn("The cache is DISABLED.");
     }
 
     logEvictions = logEvictionCount != 0;
