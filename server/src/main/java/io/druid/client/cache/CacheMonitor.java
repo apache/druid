@@ -20,6 +20,7 @@
 package io.druid.client.cache;
 
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
@@ -28,30 +29,38 @@ import com.metamx.metrics.AbstractMonitor;
  */
 public class CacheMonitor extends AbstractMonitor
 {
-  private final Cache cache;
+  private final Cache queryCache, resultsCache;
 
-  private volatile CacheStats prevCacheStats = null;
+  private volatile CacheStats prevQueryCacheStats, prevResultsCacheStats = null;
 
   @Inject
   public CacheMonitor(
-      Cache cache
+      @Named("queryCache") Cache queryCache,
+      @Named("resultsCache") Cache resultsCache
   )
   {
-    this.cache = cache;
+    this.queryCache = queryCache;
+    this.resultsCache = resultsCache;
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
+    prevQueryCacheStats = doMonitorCache(emitter, queryCache, "queryCache", prevQueryCacheStats);
+    prevResultsCacheStats = doMonitorCache(emitter, resultsCache, "resultsCache", prevResultsCacheStats);
+    return Boolean.TRUE;
+  }
+
+  public CacheStats doMonitorCache(ServiceEmitter emitter, Cache cache, String cacheName, CacheStats prevCacheStats)
+  {
     final CacheStats currCacheStats = cache.getStats();
     final CacheStats deltaCacheStats = currCacheStats.delta(prevCacheStats);
 
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    emitStats(emitter, "cache/delta", deltaCacheStats, builder);
-    emitStats(emitter, "cache/total", currCacheStats, builder);
+    emitStats(emitter, String.format("%s/delta", cacheName), deltaCacheStats, builder);
+    emitStats(emitter, String.format("%s/total", cacheName), currCacheStats, builder);
 
-    prevCacheStats = currCacheStats;
-    return true;
+    return currCacheStats;
   }
 
   private void emitStats(

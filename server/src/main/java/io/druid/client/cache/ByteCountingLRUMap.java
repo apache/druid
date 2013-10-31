@@ -19,6 +19,8 @@
 
 package io.druid.client.cache;
 
+import com.google.common.base.Throwables;
+import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 
 import java.nio.ByteBuffer;
@@ -26,7 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
-*/
+ */
 class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
 {
   private static final Logger log = new Logger(ByteCountingLRUMap.class);
@@ -54,6 +56,9 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
     super(initialSize, 0.75f, true);
     this.logEvictionCount = logEvictionCount;
     this.sizeInBytes = sizeInBytes;
+    if (sizeInBytes <= 0) {
+      Throwables.propagate(new ISE("sizeInBytes should be greater than 0."));
+    }
 
     logEvictions = logEvictionCount != 0;
     numBytes = 0;
