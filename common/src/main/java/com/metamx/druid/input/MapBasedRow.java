@@ -91,6 +91,11 @@ public class MapBasedRow implements Row
   }
 
   @Override
+  public Object getRaw(String dimension) {
+      return event.get(dimension);
+  }
+
+  @Override
   public float getFloatMetric(String metric)
   {
     Object metricValue = event.get(metric);
