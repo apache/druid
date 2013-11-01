@@ -63,6 +63,7 @@ import io.druid.server.initialization.ExtensionsConfig;
 import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.initialization.PropertiesModule;
 import io.druid.server.metrics.MetricsModule;
+import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.eclipse.aether.artifact.Artifact;
@@ -80,6 +81,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collections;
@@ -202,8 +205,40 @@ public class Initialization
     to nothingness.  Fortunately, the code that calls this is single-threaded and shouldn't hopefully be running
     alongside anything else that's grabbing System.out.  But who knows.
     */
+
+    List<String> remoteUriList = config.getRemoteRepositories();
+
+    List<Repository> remoteRepositories = Lists.newArrayList();
+    for (String uri : remoteUriList) {
+      try {
+        URI u = new URI(uri);
+        Repository r = new Repository(uri);
+
+        if(u.getUserInfo() != null) {
+          String[] auth = u.getUserInfo().split(":", 2);
+          if(auth.length == 2) {
+            r.setUsername(auth[0]);
+            r.setPassword(auth[1]);
+          } else {
+            log.warn(
+                "Invalid credentials in repository URI, expecting [<user>:<password>], got [%s] for [%s]",
+                u.getUserInfo(),
+                uri
+            );
+          }
+        }
+        remoteRepositories.add(r);
+      }
+      catch(URISyntaxException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+
     if (log.isTraceEnabled() || log.isDebugEnabled()) {
-      return new DefaultTeslaAether(config.getLocalRepository(), config.getRemoteRepositories());
+      return new DefaultTeslaAether(
+          config.getLocalRepository(),
+          remoteRepositories.toArray(new Repository[remoteRepositories.size()])
+      );
     }
 
     PrintStream oldOut = System.out;
@@ -230,7 +265,10 @@ public class Initialization
             }
           }
       ));
-      return new DefaultTeslaAether(config.getLocalRepository(), config.getRemoteRepositories());
+      return new DefaultTeslaAether(
+          config.getLocalRepository(),
+          remoteRepositories.toArray(new Repository[remoteRepositories.size()])
+      );
     }
     finally {
       System.setOut(oldOut);
