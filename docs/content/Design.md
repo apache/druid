@@ -25,13 +25,15 @@ Druid is a good fit for products that require real-time data ingestion of a sing
 
 Druid is architected as a grouping of systems each with a distinct role and together they form a working system. The name comes from the Druid class in many role-playing games: it is a shape-shifter, capable of taking many different forms to fulfill various different roles in a group.
 
+Each of the systems, or components, described below also has a dedicated page with more details. You can find the page in the menu on the left, or click the link in the component's description.
+
 The node types that currently exist are:
 
-* **Historical** nodes are the workhorses that handle storage and querying on "historical" data (non-realtime).
-* **Realtime** nodes ingest data in real-time. They are in charge of listening to a stream of incoming data and making it available immediately inside the Druid system. As data they have ingested ages, they hand it off to the historical nodes.
-* **Coordinator** nodes look over the grouping of historical nodes and make sure that data is available, replicated and in a generally "optimal" configuration.
-* **Broker** nodes understand the topology of data across all of the other nodes in the cluster and re-write and route queries accordingly.
-* **Indexer** nodes form a cluster of workers to load batch and real-time data into the system as well as allow for alterations to the data stored in the system (also known as the Indexing Service).
+* [**Historical**](Historical.html) nodes are the workhorses that handle storage and querying on "historical" data (non-realtime). Historical nodes download segments from deep storage, respond to the queries from broker nodes about these segments, and return results to the broker nodes. They announce themselves and the segments they are serving in Zookeeper, and also use Zookeeper to monitor for signals to load or drop new segments.
+* [**Realtime**](Realtime.html) nodes ingest data in real time. They are in charge of listening to a stream of incoming data and making it available immediately inside the Druid system. Real-time nodes respond to query requests from Broker nodes, returning query results to those nodes. Aged data is pushed from Realtime nodes to Historical nodes.
+* [**Coordinator**](Coordinator.html) nodes monitor the grouping of historical nodes to ensure that data is available, replicated and in a generally "optimal" configuration. They do this by reading segment metadata information from MySQL to determine what segments should be loaded in the cluster, using Zookeeper to determine what Historical nodes exist, and creating Zookeeper entries to tell Historical nodes to load and drop new segments.
+* [**Broker**](Broker.html) nodes receive queries from external clients and forward those queries to Realtime and Historical nodes. When Broker nodes receive results, they merge these results and return them to the caller. For knowing topology, Broker nodes use Zookeeper to determine what Realtime and Historical nodes exist.
+* [**Indexer**](Indexing-Service.html) nodes form a cluster of workers to load batch and real-time data into the system as well as allow for alterations to the data stored in the system (also known as the Indexing Service).
 
 This separation allows each node to only care about what it is best at. By separating Historical and Realtime, we separate the memory concerns of listening on a real-time stream of data and processing it for entry into the system. By separating the Coordinator and Broker, we separate the needs for querying from the needs for maintaining "good" data distribution across the cluster.
 
@@ -43,9 +45,9 @@ All nodes can be run in some highly available fashion, either as symmetric peers
 
 Aside from these nodes, there are 3 external dependencies to the system:
 
-1.  A running [ZooKeeper](http://zookeeper.apache.org/) cluster for cluster service discovery and maintenance of current data topology
-2.  A MySQL instance for maintenance of metadata about the data segments that should be served by the system
-3.  A "deep storage" LOB store/file system to hold the stored segments
+1.  A running [ZooKeeper](ZooKeeper.html) cluster for cluster service discovery and maintenance of current data topology
+2.  A [MySQL instance](MySQL.html) for maintenance of metadata about the data segments that should be served by the system
+3.  A ["deep storage" LOB store/file system](Deep-Storage.html) to hold the stored segments
 
 The following diagram shows how certain nodes and dependencies help manage the cluster by tracking and exchanging metadata. This management layer is illustrated in the following diagram:
 

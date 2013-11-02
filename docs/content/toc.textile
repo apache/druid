@@ -47,7 +47,6 @@ h2. Querying
 
 h2. Architecture
 * "Design":./Design.html
-** "Data Flow":./Data-Flow.html
 * "Segments":./Segments.html
 * Node Types
 ** "Historical":./Historical.html

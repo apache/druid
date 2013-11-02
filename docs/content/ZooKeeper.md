@@ -1,7 +1,7 @@
 ---
 layout: doc_page
 ---
-Druid uses ZooKeeper (ZK) for management of current cluster state. The operations that happen over ZK are
+Druid uses [ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of current cluster state. The operations that happen over ZK are
 
 1.  [Coordinator](Coordinator.html) leader election
 2.  Segment "publishing" protocol from [Historical](Historical.html) and [Realtime](Realtime.html)
