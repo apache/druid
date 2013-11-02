@@ -92,7 +92,7 @@ public class S3Utils
     final long maxSleepMillis = 60000;
     final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * new Random().nextGaussian(), 0), 2);
     final long sleepMillis = (long) (Math.min(maxSleepMillis, baseSleepMillis * Math.pow(2, nTry)) * fuzzyMultiplier);
-    System.out.println(String.format("S3 fail on try %d, retrying in %,dms.", nTry, sleepMillis));
+    log.warn("S3 fail on try %d, retrying in %,dms.", nTry, sleepMillis);
     Thread.sleep(sleepMillis);
   }
 
