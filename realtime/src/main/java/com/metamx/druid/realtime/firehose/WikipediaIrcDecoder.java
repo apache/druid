@@ -208,7 +208,13 @@ class WikipediaIrcDecoder implements IrcDecoder
           return ImmutableList.of();
         }
       }
-
+      
+      @Override
+      public Object getRawData(String dimension)
+      {
+        return getDimension(dimension);
+      }
+      
       @Override
       public float getFloatMetric(String metric)
       {

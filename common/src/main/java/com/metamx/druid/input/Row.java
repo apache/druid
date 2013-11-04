@@ -69,4 +69,6 @@ public interface Row
    * @return the float value for the provided column name.
    */
   public float getFloatMetric(String metric);
+
+  Object getRawData(String dimension);
 }
