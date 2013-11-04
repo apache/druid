@@ -1,14 +1,19 @@
 package com.metamx.druid.aggregation;
 
+import java.util.AbstractList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.nio.ByteBuffer;
 
+import org.apache.commons.codec.binary.Base64;
+
 import com.google.common.base.Preconditions;
+import com.metamx.common.logger.Logger;
 import com.metamx.druid.processing.ColumnSelectorFactory;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import gnu.trove.map.hash.TIntByteHashMap;
 
 public class HllAggregatorFactory implements AggregatorFactory {
@@ -20,13 +25,7 @@ public class HllAggregatorFactory implements AggregatorFactory {
 	static final int ARRLEN = 41;
 	public static final int HLL_LOBINS = 1024;
 	public static final int HLL_HIBINS = 65536;
-
-	public static enum CONTEXT {
-		ORIGNAL, COMPLEX
-	}
-
-	public static CONTEXT context = CONTEXT.ORIGNAL;
-
+	private static final Logger log = new Logger(HllAggregatorFactory.class);
 
 	@JsonCreator
 	public HllAggregatorFactory(@JsonProperty("name") String name,
@@ -43,7 +42,7 @@ public class HllAggregatorFactory implements AggregatorFactory {
 	@Override
 	public Aggregator factorize(ColumnSelectorFactory metricFactory) {
 		return new HllAggregator(name,
-				metricFactory.makeObjectColumnSelector(fieldName));
+				metricFactory.makeComplexMetricSelector(fieldName));
 	}
 
 	@Override
@@ -65,12 +64,38 @@ public class HllAggregatorFactory implements AggregatorFactory {
 
 	@Override
 	public AggregatorFactory getCombiningFactory() {
+		log.info("factory name:"+name);
 		return new HllAggregatorFactory(name, name);
 	}
 
 	@Override
 	public Object deserialize(Object object) {
-		return object;
+		
+		
+		log.info("class name:"+object.getClass()+":value "+object);
+		
+		String k = (String) object;
+		byte[] ibmapByte = Base64.decodeBase64(k);
+
+		TIntByteHashMap newIbMap;
+		ByteBuffer buffer = ByteBuffer.wrap(ibmapByte);
+		int keylength = buffer.getInt();
+		int valuelength = buffer.getInt();
+		if (keylength == 0) {
+			newIbMap = new TIntByteHashMap();
+		} else {
+			int[] keys = new int[keylength];
+			byte[] values = new byte[valuelength];
+
+			for (int i = 0; i < keylength; i++) {
+				keys[i] = buffer.getInt();
+			}
+			buffer.get(values);
+
+			newIbMap = new TIntByteHashMap(keys, values);
+		}
+		
+		return newIbMap;
 	}
 
 	@Override

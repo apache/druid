@@ -42,7 +42,6 @@ public class BrokerMain {
 		if (ComplexMetrics.getSerdeForType("hll") == null) {
 			ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
 		}
-		HllAggregatorFactory.context = HllAggregatorFactory.CONTEXT.COMPLEX;
 
 		try {
 			lifecycle.start();

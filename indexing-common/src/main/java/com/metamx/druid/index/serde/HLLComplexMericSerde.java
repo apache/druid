@@ -111,7 +111,7 @@ public class HLLComplexMericSerde extends ComplexMetricSerde {
 
       @Override
       public Object extractValue(InputRow inputRow, String metricName) {
-        return inputRow.getDimension(metricName);
+        return inputRow.getRawData(metricName);
       }
 
     }

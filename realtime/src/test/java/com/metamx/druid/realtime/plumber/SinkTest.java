@@ -29,7 +29,9 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
+
 import junit.framework.Assert;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
@@ -80,6 +82,11 @@ public class SinkTest
       {
         return 0;
       }
+
+	  @Override
+	  public Object getRawData(String dimension) {
+		return null;
+	  }
     });
 
     FireHydrant currHydrant = sink.getCurrIndex();
@@ -113,6 +120,11 @@ public class SinkTest
       {
         return 0;
       }
+
+	  @Override
+	  public Object getRawData(String dimension) {
+		return null;
+	  }
     });
 
     Assert.assertEquals(currHydrant, swapHydrant);

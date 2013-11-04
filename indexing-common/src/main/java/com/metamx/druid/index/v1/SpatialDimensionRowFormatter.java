@@ -120,7 +120,14 @@ public class SpatialDimensionRowFormatter
       {
         return finalDims;
       }
-
+      
+      @Override
+      public Object getRawData(String dimension)
+      {
+        return row.getRawData(dimension);
+      }
+      
+      
       @Override
       public long getTimestampFromEpoch()
       {

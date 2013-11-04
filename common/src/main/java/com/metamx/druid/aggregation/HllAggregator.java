@@ -1,6 +1,9 @@
 package com.metamx.druid.aggregation;
 
 import java.util.Comparator;
+
+import com.metamx.common.logger.Logger;
+import com.metamx.druid.processing.ComplexMetricSelector;
 import com.metamx.druid.processing.ObjectColumnSelector;
 import com.google.common.hash.Hashing;
 
@@ -8,20 +11,20 @@ import java.util.AbstractList;
 
 import gnu.trove.map.hash.TIntByteHashMap;
 import gnu.trove.map.TIntByteMap;
-import java.nio.ByteBuffer;
 
-import org.apache.commons.codec.binary.Base64;
-import com.metamx.druid.aggregation.HllAggregatorFactory;
 
 public class HllAggregator implements Aggregator {
 
 	private final String name;
-	private final ObjectColumnSelector selector;
+	private final ComplexMetricSelector selector;
 	private TIntByteHashMap ibMap;
 	public static final int log2m = 12;
 	public static final double alphaMM;
 	public static final int m;
 	private static long time = 0;
+	
+	private static final Logger log = new Logger(HllAggregator.class);
+	
 	static {
 		m = (int) Math.pow(2, log2m);
 		alphaMM = (0.7213 / (1 + 1.079 / m)) * m * m;
@@ -52,7 +55,7 @@ public class HllAggregator implements Aggregator {
 		return newIbMap;
 	}
 
-	public HllAggregator(String name, ObjectColumnSelector selector) {
+	public HllAggregator(String name, ComplexMetricSelector selector) {
 		this.name = name;
 		this.selector = selector;
 		this.ibMap = new TIntByteHashMap();
@@ -61,29 +64,10 @@ public class HllAggregator implements Aggregator {
 	@Override
 	public void aggregate() {
 
-		Object value = selector.get();
-		if (HllAggregatorFactory.context == HllAggregatorFactory.CONTEXT.COMPLEX) {
-
-			String k = (String) ((AbstractList) value).get(0);
-			byte[] ibmapByte = Base64.decodeBase64(k);
-
-			TIntByteHashMap newIbMap;
-			ByteBuffer buffer = ByteBuffer.wrap(ibmapByte);
-			int keylength = buffer.getInt();
-			int valuelength = buffer.getInt();
-			if (keylength == 0) {
-				newIbMap = new TIntByteHashMap();
-			} else {
-				int[] keys = new int[keylength];
-				byte[] values = new byte[valuelength];
-
-				for (int i = 0; i < keylength; i++) {
-					keys[i] = buffer.getInt();
-				}
-				buffer.get(values);
-
-				newIbMap = new TIntByteHashMap(keys, values);
-			}
+		Object value =  selector.get();
+		log.info("class name:"+value.getClass()+":value "+value);
+		if (value instanceof TIntByteHashMap) {
+			TIntByteHashMap newIbMap = (TIntByteHashMap) value;
 			int[] indexes = newIbMap.keys();
 			for (int i = 0; i < indexes.length; i++) {
 				int index_i = indexes[i];
