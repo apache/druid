@@ -27,6 +27,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.metamx.common.ISE;
@@ -40,6 +41,8 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.CacheClientUtils;
 import io.druid.client.CachePopulator;
 import io.druid.client.CachingClusteredClient;
+import io.druid.client.DruidServer;
+import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.client.cache.Cache;
 import io.druid.client.selector.ServerSelector;
@@ -52,6 +55,7 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.SegmentDescriptor;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -59,7 +63,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -137,6 +145,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   public static class ResultsCachingClient<T> implements QueryRunner<T>
   {
     private static final EmittingLogger log = new EmittingLogger(ResultsCachingClient.class);
+    private static final AtomicLong keyCounter = new AtomicLong();
+    private static final Map<String, List<Long>> segmentToKeyMap = new ConcurrentHashMap<>();
 
     private final QueryToolChestWarehouse warehouse;
     private final TimelineServerView serverView;
@@ -163,7 +173,23 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
       this.baseRunner = baseRunner;
 
-      // TODO: Register segment callback
+      serverView.registerSegmentCallback(
+          Executors.newFixedThreadPool(
+              1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("CCClient-ServerView-CB-%d").build()
+          ),
+          new ServerView.BaseSegmentCallback()
+          {
+            @Override
+            public ServerView.CallbackAction segmentRemoved(DruidServer server, DataSegment segment)
+            {
+              List<Long> nsList = segmentToKeyMap.get(segment.getIdentifier());
+              for (long ns : nsList) {
+                ResultsCachingClient.this.cache.close(String.valueOf(ns));
+              }
+              return ServerView.CallbackAction.CONTINUE;
+            }
+          }
+      );
     }
 
     /**
@@ -258,17 +284,24 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         return null;
       }
 
-      List<SegmentDescriptor> list = new ArrayList<SegmentDescriptor>();
+      long key = keyCounter.incrementAndGet();
+      List<String> list = new ArrayList<>();
       for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
-        list.add(segment.rhs);
+        String segmentId = segment.lhs.getSegment().getIdentifier();
+        synchronized (segmentToKeyMap) {
+          List<Long> keyList = segmentToKeyMap.get(segmentId);
+          if (keyList == null) {
+            keyList = Lists.newArrayList();
+          }
+          keyList.add(key);
+          segmentToKeyMap.put(segmentId, keyList);
+        }
+        list.add(segmentId);
       }
-
-      byte[] queryKey = warehouse.getToolChest(query).getCacheStrategy(query).computeCacheKey(query);
 
       try {
         byte[] bytes = objectMapper.writeValueAsBytes(list);
-        // TODO: need to have better namespace to assist segment callback
-        return new Cache.NamedKey(new String(queryKey), bytes);
+        return new Cache.NamedKey(String.valueOf(key), bytes);
       }
       catch (JsonProcessingException e) {
         e.printStackTrace();
