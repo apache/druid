@@ -9,12 +9,20 @@ import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.index.serde.ColumnPartSerde;
 import com.metamx.druid.index.v1.serde.ComplexMetricExtractor;
 import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
+import com.metamx.druid.index.v1.serde.ComplexMetrics;
 import com.metamx.druid.kv.ObjectStrategy;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.index.serde.ComplexColumnPartSupplier;
+
 import gnu.trove.map.hash.TIntByteHashMap;
 
 public class HLLComplexMericSerde extends ComplexMetricSerde {
+
+  public static void registerHllSerde(){
+	if (ComplexMetrics.getSerdeForType("hll") == null) {
+	  ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
+	}
+  }
   @Override
   public String getTypeName() {
     return "hll";

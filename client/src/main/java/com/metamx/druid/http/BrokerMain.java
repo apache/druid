@@ -23,8 +23,6 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.druid.log.LogLevelAdjuster;
 import com.metamx.druid.index.serde.HLLComplexMericSerde;
-import com.metamx.druid.index.v1.serde.ComplexMetrics;
-import com.metamx.druid.aggregation.HllAggregatorFactory;
 
 /**
  */
@@ -39,9 +37,7 @@ public class BrokerMain {
 
 		lifecycle.addManagedInstance(BrokerNode.builder().build());
 
-		if (ComplexMetrics.getSerdeForType("hll") == null) {
-			ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
-		}
+		HLLComplexMericSerde.registerHllSerde();
 
 		try {
 			lifecycle.start();

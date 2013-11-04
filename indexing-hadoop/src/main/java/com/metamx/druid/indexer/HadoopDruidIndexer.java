@@ -45,9 +45,7 @@ public class HadoopDruidIndexer {
 
 		Lifecycle lifecycle = new Lifecycle();
 		lifecycle.addManagedInstance(node);
-		if (ComplexMetrics.getSerdeForType("hll") == null) {
-	    	ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
-	    }
+		HLLComplexMericSerde.registerHllSerde();
 		try {
 			lifecycle.start();
 		} catch (Exception e) {
