@@ -36,8 +36,11 @@ If you want to take advantage of the maven-based classloader isolation but you a
 The trick to doing this is
 
 1) Specify a local directory for `druid.extensions.localRepository`
+
 2) Run the `tools pull-deps` command to pull all the specified dependencies down into your local repository
+
 3) Bundle up the local repository along with your other Druid stuff into whatever you use for a deployable artifact
+
 4) Run Your druid processes with `druid.extensions.remoteRepositories=[]` and a local repository set to wherever your bundled "local" repository is located
 
 The Druid processes will then only load up jars from the local repository and will not try to go out onto the internet to find the maven dependencies.
