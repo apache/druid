@@ -77,9 +77,10 @@ public class HllAggregator implements Aggregator {
 				}
 			}
 		} else {
+			log.info("value "+ selector.get() );
 			long id = Hashing
 					.murmur3_128()
-					.hashString((String) ((AbstractList) selector.get()).get(0))
+					.hashString((String) (selector.get()))
 					.asLong();
 
 			final int bucket = (int) (id >>> (Long.SIZE - log2m));
