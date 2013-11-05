@@ -17,37 +17,37 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
+package com.metamx.druid.aggregation;
 
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.index.v1.serde.ComplexMetricSerdes;
-import com.metamx.druid.log.LogLevelAdjuster;
+import com.metamx.druid.processing.ComplexMetricSelector;
 
-/**
- */
-public class RealtimeMain
+public class TestAdaptiveCountingComplexMetricSelector<T> implements ComplexMetricSelector<T>
 {
-  private static final Logger log = new Logger(RealtimeMain.class);
+  private final T[] metrics;
+  private final Class<T> clazz;
 
-  public static void main(String[] args) throws Exception
+  private int index = 0;
+
+  public TestAdaptiveCountingComplexMetricSelector(Class<T> clazz, T[] metrics)
   {
-    LogLevelAdjuster.register();
+    this.clazz = clazz;
+    this.metrics = metrics;
+  }
 
-    Lifecycle lifecycle = new Lifecycle();
+  @Override
+  public Class<T> classOfObject()
+  {
+    return clazz;
+  }
 
-    lifecycle.addManagedInstance(RealtimeNode.builder().build());
+  @Override
+  public T get()
+  {
+    return metrics[index];
+  }
 
-    ComplexMetricSerdes.registerDefaultSerdes();
-
-    try {
-      lifecycle.start();
-    }
-    catch (Throwable t) {
-      log.info(t, "Throwable caught at startup, committing seppuku");
-      System.exit(2);
-    }
-
-    lifecycle.join();
+  public void increment()
+  {
+    ++index;
   }
 }

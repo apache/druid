@@ -30,9 +30,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Floats;
 import com.metamx.common.ISE;
 import com.metamx.druid.input.InputRow;
-import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -120,14 +118,13 @@ public class SpatialDimensionRowFormatter
       {
         return finalDims;
       }
-      
+
       @Override
-      public Object getRawData(String dimension)
+      public Object getRaw(String dimension)
       {
-        return row.getRawData(dimension);
+        return row.getRaw(dimension);
       }
-      
-      
+
       @Override
       public long getTimestampFromEpoch()
       {
@@ -139,12 +136,6 @@ public class SpatialDimensionRowFormatter
       {
         List<String> retVal = spatialLookup.get(dimension);
         return (retVal == null) ? row.getDimension(dimension) : retVal;
-      }
-
-      @Override
-      public Object getRaw(String dimension)
-      {
-          return row.getRaw(dimension);
       }
 
       @Override

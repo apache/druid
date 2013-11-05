@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.index.v1.serde.ComplexMetrics;
-import com.metamx.druid.index.serde.HLLComplexMericSerde;
+import com.metamx.druid.index.v1.serde.ComplexMetricSerdes;
+
 import java.util.List;
 
 /**
@@ -46,7 +46,7 @@ public class HadoopDruidIndexerMain
 
     Lifecycle lifecycle = new Lifecycle();
     lifecycle.addManagedInstance(node);
-    HLLComplexMericSerde.registerHllSerde();
+    ComplexMetricSerdes.registerDefaultSerdes();
     try {
       lifecycle.start();
     }
@@ -77,7 +77,12 @@ public class HadoopDruidIndexerMain
                            "delimiter=delimiter of the data (only for tsv format)"
                        )
                    )
-                   .add(Pair.of("granularitySpec", "A JSON object indicating the Granularity that segments should be created at."))
+                   .add(
+                       Pair.of(
+                           "granularitySpec",
+                           "A JSON object indicating the Granularity that segments should be created at."
+                       )
+                   )
                    .add(
                        Pair.of(
                            "pathSpec",

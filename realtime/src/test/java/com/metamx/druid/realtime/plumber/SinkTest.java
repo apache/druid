@@ -29,9 +29,7 @@ import com.metamx.druid.input.InputRow;
 import com.metamx.druid.realtime.FireHydrant;
 import com.metamx.druid.realtime.Schema;
 import com.metamx.druid.shard.NoneShardSpec;
-
 import junit.framework.Assert;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
@@ -57,43 +55,40 @@ public class SinkTest
     final String version = new DateTime().toString();
     final Sink sink = new Sink(interval, schema, version);
 
-    sink.add(new InputRow()
-    {
-      @Override
-      public List<String> getDimensions()
-      {
-        return Lists.newArrayList();
-      }
+    sink.add(
+        new InputRow()
+        {
+          @Override
+          public List<String> getDimensions()
+          {
+            return Lists.newArrayList();
+          }
 
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return new DateTime("2013-01-01").getMillis();
-      }
+          @Override
+          public long getTimestampFromEpoch()
+          {
+            return new DateTime("2013-01-01").getMillis();
+          }
 
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return Lists.newArrayList();
-      }
+          @Override
+          public List<String> getDimension(String dimension)
+          {
+            return Lists.newArrayList();
+          }
 
-      @Override
-      public Object getRaw(String dimension)
-      {
-          return getDimension(dimension);
-      }
+          @Override
+          public float getFloatMetric(String metric)
+          {
+            return 0;
+          }
 
-      @Override
-      public float getFloatMetric(String metric)
-      {
-        return 0;
-      }
-
-	  @Override
-	  public Object getRawData(String dimension) {
-		return null;
-	  }
-    });
+          @Override
+          public Object getRaw(String dimension)
+          {
+            return null;
+          }
+        }
+    );
 
     FireHydrant currHydrant = sink.getCurrIndex();
     Assert.assertEquals(new Interval("2013-01-01/PT1M"), currHydrant.getIndex().getInterval());
@@ -101,43 +96,40 @@ public class SinkTest
 
     FireHydrant swapHydrant = sink.swap();
 
-    sink.add(new InputRow()
-    {
-      @Override
-      public List<String> getDimensions()
-      {
-        return Lists.newArrayList();
-      }
+    sink.add(
+        new InputRow()
+        {
+          @Override
+          public List<String> getDimensions()
+          {
+            return Lists.newArrayList();
+          }
 
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return new DateTime("2013-01-01").getMillis();
-      }
+          @Override
+          public long getTimestampFromEpoch()
+          {
+            return new DateTime("2013-01-01").getMillis();
+          }
 
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return Lists.newArrayList();
-      }
+          @Override
+          public List<String> getDimension(String dimension)
+          {
+            return Lists.newArrayList();
+          }
 
-      @Override
-      public Object getRaw(String dimension)
-      {
-          return getDimension(dimension);
-      }
+          @Override
+          public float getFloatMetric(String metric)
+          {
+            return 0;
+          }
 
-      @Override
-      public float getFloatMetric(String metric)
-      {
-        return 0;
-      }
-
-	  @Override
-	  public Object getRawData(String dimension) {
-		return null;
-	  }
-    });
+          @Override
+          public Object getRaw(String dimension)
+          {
+            return null;
+          }
+        }
+    );
 
     Assert.assertEquals(currHydrant, swapHydrant);
     Assert.assertNotSame(currHydrant, sink.getCurrIndex());

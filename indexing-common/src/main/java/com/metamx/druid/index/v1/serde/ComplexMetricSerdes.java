@@ -17,37 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package com.metamx.druid.realtime;
-
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.common.logger.Logger;
-import com.metamx.druid.index.v1.serde.ComplexMetricSerdes;
-import com.metamx.druid.log.LogLevelAdjuster;
+package com.metamx.druid.index.v1.serde;
 
 /**
  */
-public class RealtimeMain
+public class ComplexMetricSerdes
 {
-  private static final Logger log = new Logger(RealtimeMain.class);
-
-  public static void main(String[] args) throws Exception
+  public static void registerDefaultSerdes()
   {
-    LogLevelAdjuster.register();
+    registerHyperloglogSerde();
+    registerCardinalitySerde();
+  }
 
-    Lifecycle lifecycle = new Lifecycle();
-
-    lifecycle.addManagedInstance(RealtimeNode.builder().build());
-
-    ComplexMetricSerdes.registerDefaultSerdes();
-
-    try {
-      lifecycle.start();
+  public static void registerHyperloglogSerde()
+  {
+    if (ComplexMetrics.getSerdeForType("hll") == null) {
+      ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
     }
-    catch (Throwable t) {
-      log.info(t, "Throwable caught at startup, committing seppuku");
-      System.exit(2);
-    }
+  }
 
-    lifecycle.join();
+  public static void registerCardinalitySerde()
+  {
+    if (ComplexMetrics.getSerdeForType("cardinality") == null) {
+      ComplexMetrics.registerSerde("cardinality", new AdaptiveCountingComplexMetricsSerde());
+    }
   }
 }

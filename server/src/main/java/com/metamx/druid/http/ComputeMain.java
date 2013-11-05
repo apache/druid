@@ -21,32 +21,33 @@ package com.metamx.druid.http;
 
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.druid.index.v1.serde.CardinalityMetricSerde;
-import com.metamx.druid.index.v1.serde.ComplexMetrics;
+import com.metamx.druid.index.v1.serde.ComplexMetricSerdes;
 import com.metamx.druid.log.LogLevelAdjuster;
-import com.metamx.druid.index.serde.HLLComplexMericSerde;
 
 /**
  */
-public class ComputeMain {
-	private static final Logger log = new Logger(ComputeMain.class);
+public class ComputeMain
+{
+  private static final Logger log = new Logger(ComputeMain.class);
 
-	public static void main(String[] args) throws Exception {
-		LogLevelAdjuster.register();
+  public static void main(String[] args) throws Exception
+  {
+    LogLevelAdjuster.register();
 
-		Lifecycle lifecycle = new Lifecycle();
+    Lifecycle lifecycle = new Lifecycle();
 
-		lifecycle.addManagedInstance(ComputeNode.builder().build());
+    lifecycle.addManagedInstance(ComputeNode.builder().build());
 
-		HLLComplexMericSerde.registerHllSerde();
+    ComplexMetricSerdes.registerDefaultSerdes();
 
-		try {
-			lifecycle.start();
-		} catch (Throwable t) {
-			log.info(t, "Throwable caught at startup, committing seppuku");
-			System.exit(2);
-		}
+    try {
+      lifecycle.start();
+    }
+    catch (Throwable t) {
+      log.info(t, "Throwable caught at startup, committing seppuku");
+      System.exit(2);
+    }
 
-		lifecycle.join();
-	}
+    lifecycle.join();
+  }
 }

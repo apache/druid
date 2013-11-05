@@ -89,7 +89,7 @@ public class MapBasedRow implements Row
     }
   }
 
-  public Object getRawData(String dimension) {
+  public Object getRaw(String dimension) {
     return event.get(dimension);
   }
 

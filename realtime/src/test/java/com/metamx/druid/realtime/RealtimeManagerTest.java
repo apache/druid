@@ -36,9 +36,7 @@ import com.metamx.druid.realtime.plumber.Plumber;
 import com.metamx.druid.realtime.plumber.PlumberSchool;
 import com.metamx.druid.realtime.plumber.Sink;
 import com.metamx.druid.shard.NoneShardSpec;
-
 import junit.framework.Assert;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -150,7 +148,7 @@ public class RealtimeManagerTest
       @Override
       public Object getRaw(String dimension)
       {
-          return getDimension(dimension);
+        return getDimension(dimension);
       }
 
       @Override
@@ -158,11 +156,6 @@ public class RealtimeManagerTest
       {
         return 0;
       }
-
-	  @Override
-	  public Object getRawData(String dimension) {
-		  return null;
-	  }
     };
   }
 
