@@ -1,7 +1,7 @@
 ---
 ---
 
-* [Introduction|Home](Introduction|Home.html)
+* [Introduction|Home](Introduction|./)
 * [Download](Download.html)
 * [Support](Support.html)
 * [Contribute](Contribute.html)

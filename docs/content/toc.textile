@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="css/toc.css">
 
 h1. Contents
-* "Introduction":./Home.html
+* "Introduction":./
 * "Download":./Download.html
 * "Support":./Support.html
 * "Contribute":./Contribute.html
