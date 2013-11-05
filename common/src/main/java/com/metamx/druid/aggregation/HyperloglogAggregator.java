@@ -77,7 +77,6 @@ public class HyperloglogAggregator implements Aggregator
   public void aggregate()
   {
     final Object value = selector.get();
-    log.debug("class name:[%s]:value [%s]", value.getClass(), getName(), value);
 
     if (value instanceof TIntByteHashMap) {
       final TIntByteHashMap newIbMap = (TIntByteHashMap) value;
