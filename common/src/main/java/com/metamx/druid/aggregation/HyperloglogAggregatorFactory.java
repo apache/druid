@@ -81,6 +81,12 @@ public class HyperloglogAggregatorFactory implements AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return HyperloglogAggregator.combine(lhs, rhs);
   }
 

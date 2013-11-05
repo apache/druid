@@ -19,6 +19,7 @@
 
 package com.metamx.druid.aggregation;
 
+import gnu.trove.map.TIntByteMap;
 import gnu.trove.map.hash.TIntByteHashMap;
 import org.junit.Assert;
 import org.junit.Test;
@@ -88,7 +89,7 @@ public class HyperloglogAggregatorTest
 
   // Provides a nice printout of error rates as a function of cardinality
   //@Test
-  public void showErrorRate() throws Exception
+  public void benchmarkAggregation() throws Exception
   {
     final TestHllComplexMetricSelector selector = new TestHllComplexMetricSelector();
     final HyperloglogAggregatorFactory aggFactory = new HyperloglogAggregatorFactory("billy", "billyG");
@@ -115,6 +116,26 @@ public class HyperloglogAggregatorTest
       ++count;
       error = computeError(error, count, numThings, (Long) aggFactory.finalizeComputation(agg.get()), startTime);
     }
+  }
+
+  //@Test
+  public void benchmarkCombine() throws Exception
+  {
+    int count;
+    long totalTime = 0;
+
+    final TestHllComplexMetricSelector selector = new TestHllComplexMetricSelector();
+    TIntByteHashMap combined = new TIntByteHashMap();
+
+    for (count = 0; count < 1000000; ++count) {
+      final HyperloglogAggregator agg = new HyperloglogAggregator("billy", selector);
+      aggregate(selector, agg);
+
+      long start = System.nanoTime();
+      combined = (TIntByteHashMap) HyperloglogAggregator.combine(agg.get(), combined);
+      totalTime += System.nanoTime() - start;
+    }
+    System.out.printf("benchmarkCombine took %d ms%n", totalTime / 1000000);
   }
 
   private double computeError(double error, int count, long exactValue, long estimatedValue, long startTime)

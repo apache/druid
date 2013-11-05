@@ -78,6 +78,12 @@ public class AdaptiveCountingAggregatorFactory implements AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return AdaptiveCountingAggregator.combineValues(lhs, rhs);
   }
 

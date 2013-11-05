@@ -21,7 +21,6 @@ package com.metamx.druid.aggregation;
 
 import com.clearspring.analytics.stream.cardinality.AdaptiveCounting;
 import com.clearspring.analytics.stream.cardinality.ICardinality;
-import com.metamx.druid.processing.ComplexMetricSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,7 +28,10 @@ import java.util.Comparator;
 
 public class AdaptiveCountingAggregatorTest
 {
-  private void aggregate(TestAdaptiveCountingComplexMetricSelector<ICardinality> selector, AdaptiveCountingAggregator agg)
+  private void aggregate(
+      TestAdaptiveCountingComplexMetricSelector<ICardinality> selector,
+      AdaptiveCountingAggregator agg
+  )
   {
     agg.aggregate();
     selector.increment();
@@ -100,7 +102,7 @@ public class AdaptiveCountingAggregatorTest
 
   // Provides a nice printout of error rates as a function of cardinality
   //@Test
-  public void showErrorRate() throws Exception
+  public void benchmarkAggregation() throws Exception
   {
     final AdaptiveCountingAggregatorFactory aggFactory = new AdaptiveCountingAggregatorFactory("billy", "billyG");
 
@@ -117,7 +119,7 @@ public class AdaptiveCountingAggregatorTest
         icard.offer(i);
       }
 
-      final CardinalityComplexMetricSelector selector = new CardinalityComplexMetricSelector(icard);
+      final AdaptiveCountingComplexMetricSelector selector = new AdaptiveCountingComplexMetricSelector(icard);
       final AdaptiveCountingAggregator agg = new AdaptiveCountingAggregator("billy", selector);
 
       long startTime = System.currentTimeMillis();
@@ -132,6 +134,30 @@ public class AdaptiveCountingAggregatorTest
       ++count;
       error = computeError(error, count, numThings, (Long) aggFactory.finalizeComputation(agg.get()), startTime);
     }
+  }
+
+  //@Test
+  public void benchmarkCombine() throws Exception
+  {
+    int totalCardinality = 1000000;
+    int count;
+    long totalTime = 0;
+
+    ICardinality combined = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
+
+    for (count = 0; count < totalCardinality; ++count) {
+      final ICardinality icard = AdaptiveCounting.Builder.obyCount(Integer.MAX_VALUE).build();
+      icard.offer(count);
+      final AdaptiveCountingComplexMetricSelector selector = new AdaptiveCountingComplexMetricSelector(icard);
+
+      final AdaptiveCountingAggregator agg = new AdaptiveCountingAggregator("billy", selector);
+      aggregate(selector, agg);
+
+      long start = System.nanoTime();
+      combined = (ICardinality) AdaptiveCountingAggregator.combineValues(agg.get(), combined);
+      totalTime += System.nanoTime() - start;
+    }
+    System.out.printf("benchmarkCombine took %d ms%n", totalTime / 1000000);
   }
 
   private double computeError(double error, int count, long exactValue, long estimatedValue, long startTime)
@@ -151,13 +177,13 @@ public class AdaptiveCountingAggregatorTest
     return error;
   }
 
-
-  private static class CardinalityComplexMetricSelector implements ComplexMetricSelector<ICardinality>
+  private static class AdaptiveCountingComplexMetricSelector extends TestAdaptiveCountingComplexMetricSelector
   {
     private final ICardinality icard;
 
-    private CardinalityComplexMetricSelector(ICardinality icard)
+    public AdaptiveCountingComplexMetricSelector(ICardinality icard)
     {
+      super(ICardinality.class, null);
       this.icard = icard;
     }
 
