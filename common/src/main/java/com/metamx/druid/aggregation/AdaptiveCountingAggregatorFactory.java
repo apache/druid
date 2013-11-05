@@ -137,7 +137,7 @@ public class AdaptiveCountingAggregatorFactory implements AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "cardinality";
+    return "adaptiveCounting";
   }
 
   @Override

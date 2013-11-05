@@ -95,7 +95,7 @@ public class AdaptiveCountingComplexMetricsSerde extends ComplexMetricSerde
   @Override
   public String getTypeName()
   {
-    return "cardinality";
+    return "adaptiveCounting";
   }
 
   @Override

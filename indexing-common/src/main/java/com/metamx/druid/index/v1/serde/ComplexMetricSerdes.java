@@ -31,15 +31,15 @@ public class ComplexMetricSerdes
 
   public static void registerHyperloglogSerde()
   {
-    if (ComplexMetrics.getSerdeForType("hll") == null) {
-      ComplexMetrics.registerSerde("hll", new HLLComplexMericSerde());
+    if (ComplexMetrics.getSerdeForType("hyperloglog") == null) {
+      ComplexMetrics.registerSerde("hyperloglog", new HyperloglogComplexMetricSerde());
     }
   }
 
   public static void registerCardinalitySerde()
   {
-    if (ComplexMetrics.getSerdeForType("cardinality") == null) {
-      ComplexMetrics.registerSerde("cardinality", new AdaptiveCountingComplexMetricsSerde());
+    if (ComplexMetrics.getSerdeForType("adaptiveCounting") == null) {
+      ComplexMetrics.registerSerde("adaptiveCounting", new AdaptiveCountingComplexMetricsSerde());
     }
   }
 }

@@ -24,8 +24,6 @@ import com.metamx.druid.index.column.ValueType;
 import com.metamx.druid.index.serde.ColumnPartSerde;
 import com.metamx.druid.index.serde.ComplexColumnPartSerde;
 import com.metamx.druid.index.serde.ComplexColumnPartSupplier;
-import com.metamx.druid.index.v1.serde.ComplexMetricExtractor;
-import com.metamx.druid.index.v1.serde.ComplexMetricSerde;
 import com.metamx.druid.input.InputRow;
 import com.metamx.druid.kv.GenericIndexed;
 import com.metamx.druid.kv.ObjectStrategy;
@@ -34,18 +32,18 @@ import gnu.trove.map.hash.TIntByteHashMap;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class HLLComplexMericSerde extends ComplexMetricSerde
+public class HyperloglogComplexMetricSerde extends ComplexMetricSerde
 {
   @Override
   public String getTypeName()
   {
-    return "hll";
+    return "hyperloglog";
   }
 
   @Override
   public ComplexMetricExtractor getExtractor()
   {
-    return new HllComplexMetricExtractor();
+    return new HyperloglogComplexMetricExtractor();
   }
 
   @Override
@@ -53,17 +51,17 @@ public class HLLComplexMericSerde extends ComplexMetricSerde
   {
     GenericIndexed column = GenericIndexed.read(buffer, getObjectStrategy());
     builder.setType(ValueType.COMPLEX);
-    builder.setComplexColumn(new ComplexColumnPartSupplier("hll", column));
-    return new ComplexColumnPartSerde(column, "hll");
+    builder.setComplexColumn(new ComplexColumnPartSupplier("hyperloglog", column));
+    return new ComplexColumnPartSerde(column, "hyperloglog");
   }
 
   @Override
   public ObjectStrategy getObjectStrategy()
   {
-    return new HllObjectStrategy();
+    return new HyperloglogObjectStrategy();
   }
 
-  public static class HllObjectStrategy implements ObjectStrategy<TIntByteHashMap>
+  public static class HyperloglogObjectStrategy implements ObjectStrategy<TIntByteHashMap>
   {
     @Override
     public Class<? extends TIntByteHashMap> getClazz()
@@ -119,7 +117,7 @@ public class HLLComplexMericSerde extends ComplexMetricSerde
     }
   }
 
-  public static class HllComplexMetricExtractor implements ComplexMetricExtractor
+  public static class HyperloglogComplexMetricExtractor implements ComplexMetricExtractor
   {
     @Override
     public Class<?> extractedClass()
