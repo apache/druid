@@ -148,6 +148,12 @@ public class RealtimeManagerTest
       }
 
       @Override
+      public Object getRaw(String dimension)
+      {
+          return getDimension(dimension);
+      }
+
+      @Override
       public float getFloatMetric(String metric)
       {
         return 0;

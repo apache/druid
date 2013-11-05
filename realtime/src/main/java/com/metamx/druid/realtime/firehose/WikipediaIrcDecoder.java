@@ -216,6 +216,12 @@ class WikipediaIrcDecoder implements IrcDecoder
       }
       
       @Override
+      public Object getRaw(String dimension)
+      {
+          return getDimension(dimension);
+      }
+
+      @Override
       public float getFloatMetric(String metric)
       {
         return metrics.get(metric);
