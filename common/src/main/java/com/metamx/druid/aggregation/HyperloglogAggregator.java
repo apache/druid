@@ -78,6 +78,10 @@ public class HyperloglogAggregator implements Aggregator
   {
     final Object value = selector.get();
 
+    if (value == null) {
+      return;
+    }
+
     if (value instanceof TIntByteHashMap) {
       final TIntByteHashMap newIbMap = (TIntByteHashMap) value;
       final int[] indexes = newIbMap.keys();
