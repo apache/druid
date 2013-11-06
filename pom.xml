@@ -511,6 +511,8 @@
                     <configuration>
                         <systemPropertyVariables>
                             <user.timezone>UTC</user.timezone>
+                            <user.country>US</user.country>
+                            <user.language>en</user.language>
                         </systemPropertyVariables>
                     </configuration>
                 </plugin>
