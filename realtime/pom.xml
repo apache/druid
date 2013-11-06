@@ -110,13 +110,22 @@
             <artifactId>jsr305</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.4.5</version>
+        </dependency>
+        <dependency>
             <groupId>kafka</groupId>
-            <artifactId>core-kafka</artifactId>
-            <version>0.7.2-mmx1</version>
+            <artifactId>kafka</artifactId>
+            <version>0.8-SNAPSHOT</version>
             <exclusions>
                 <exclusion>
                     <groupId>log4j</groupId>
                     <artifactId>log4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.zookeeper</groupId>
+                    <artifactId>zookeeper</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
