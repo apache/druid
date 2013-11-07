@@ -309,7 +309,7 @@ public class ServerManagerTest
         )
     );
 
-    queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
+    Assert.assertTrue("Operation must complete within 100ms", queryNotifyLatch.await(100, TimeUnit.MILLISECONDS));
 
     Assert.assertEquals(1, factory.getSegmentReferences().size());
 
