@@ -123,11 +123,11 @@ There are additional configs for autoscaling (if it is enabled):
 
 |Property|Description|Default|
 |--------|-----------|-------|
+|`druid.indexer.autoscale.strategy`|Choices are "noop" or "ec2". Sets the strategy to run when autoscaling is required.|noop|
 |`druid.indexer.autoscale.doAutoscale`|If set to "true" autoscaling will be enabled.|false|
 |`druid.indexer.autoscale.provisionPeriod`|How often to check whether or not new middle managers should be added.|PT1M|
 |`druid.indexer.autoscale.terminatePeriod`|How often to check when middle managers should be removed.|PT1H|
 |`druid.indexer.autoscale.originTime`|The starting reference timestamp that the terminate period increments upon.|2012-01-01T00:55:00.000Z|
-|`druid.indexer.autoscale.strategy`|Choices are "noop" or "ec2". Sets the strategy to run when autoscaling is required.|noop|
 |`druid.indexer.autoscale.workerIdleTimeout`|How long can a worker be idle (not a run task) before it can be considered for termination.|PT10M|
 |`druid.indexer.autoscale.maxScalingDuration`|How long the overlord will wait around for a middle manager to show up before giving up.|PT15M|
 |`druid.indexer.autoscale.numEventsToTrack`|The number of autoscaling related events (node creation and termination) to track.|10|

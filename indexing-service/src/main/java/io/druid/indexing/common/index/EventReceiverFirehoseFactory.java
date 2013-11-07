@@ -33,6 +33,7 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.MapInputRowParser;
+import io.druid.indexing.common.config.EventReceiverFirehoseFactoryConfig;
 
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -62,15 +63,31 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   private final MapInputRowParser parser;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
+  @Deprecated
+  private final String oldServiceName;
+
   @JsonCreator
   public EventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
+      @JsonProperty("firehoseId") String firehoseId,
       @JsonProperty("bufferSize") Integer bufferSize,
       @JsonProperty("parser") MapInputRowParser parser,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider
+      @JacksonInject ChatHandlerProvider chatHandlerProvider,
+      @JacksonInject EventReceiverFirehoseFactoryConfig config
   )
   {
-    this.serviceName = Preconditions.checkNotNull(serviceName, "serviceName");
+    this.serviceName = serviceName;
+
+    // This code is here for backwards compatibility
+    if (serviceName == null) {
+      this.oldServiceName = String.format(
+          config.getFirehoseIdPrefix(),
+          Preconditions.checkNotNull(firehoseId, "firehoseId")
+      );
+    } else {
+      this.oldServiceName = null;
+    }
+
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
     this.parser = Preconditions.checkNotNull(parser, "parser");
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
@@ -86,7 +103,12 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
     if (chatHandlerProvider.isPresent()) {
       log.info("Found chathandler of class[%s]", chatHandlerProvider.get().getClass().getName());
       chatHandlerProvider.get().register(serviceName, firehose);
-      chatHandlerProvider.get().register(serviceName.replaceAll(".*:", ""), firehose); // rolf
+      chatHandlerProvider.get().register(serviceName.replaceAll(".*:", ""), firehose); // rofl
+
+      // backwards compatibility
+      if (oldServiceName != null) {
+        chatHandlerProvider.get().register(oldServiceName, firehose);
+      }
     } else {
       log.info("No chathandler detected");
     }
@@ -174,7 +196,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
         }
 
         return nextRow != null;
-     }
+      }
     }
 
     @Override
@@ -213,6 +235,11 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
 
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(serviceName);
+
+        // backwards compatibility
+        if (oldServiceName != null) {
+          chatHandlerProvider.get().unregister(oldServiceName);
+        }
       }
     }
   }
