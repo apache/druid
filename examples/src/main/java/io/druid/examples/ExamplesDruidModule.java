@@ -17,28 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.examples;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import io.druid.indexing.common.config.EventReceiverFirehoseFactoryConfig;
-import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
+import io.druid.examples.flights.FlightsFirehoseFactory;
+import io.druid.examples.rand.RandomFirehoseFactory;
+import io.druid.examples.twitter.TwitterSpritzerFirehoseFactory;
+import io.druid.examples.web.WebFirehoseFactory;
 import io.druid.initialization.DruidModule;
 
+import java.util.Arrays;
 import java.util.List;
 
-public class IndexingServiceFirehoseModule implements DruidModule
+/**
+ */
+public class ExamplesDruidModule implements DruidModule
 {
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.<Module>of(
-        new SimpleModule("IndexingServiceFirehoseModule")
+    return Arrays.<Module>asList(
+        new SimpleModule("ExamplesModule")
             .registerSubtypes(
-                new NamedType(EventReceiverFirehoseFactory.class, "receiver")
+                new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
+                new NamedType(FlightsFirehoseFactory.class, "flights"),
+                new NamedType(RandomFirehoseFactory.class, "rand"),
+                new NamedType(WebFirehoseFactory.class, "webstream")
             )
     );
   }
@@ -46,7 +53,6 @@ public class IndexingServiceFirehoseModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    // backwards compatibility
-    ConfigProvider.bind(binder, EventReceiverFirehoseFactoryConfig.class);
+
   }
 }

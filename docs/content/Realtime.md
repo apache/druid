@@ -187,8 +187,8 @@ Extending the code
 
 Realtime integration is intended to be extended in two ways:
 
-1.  Connect to data streams from varied systems ([Firehose](https://github.com/metamx/druid/blob/druid-0.6.1/realtime/src/main/java/com/metamx/druid/realtime/firehose/FirehoseFactory.java))
-2.  Adjust the publishing strategy to match your needs ([Plumber](https://github.com/metamx/druid/blob/druid-0.6.1/realtime/src/main/java/com/metamx/druid/realtime/plumber/PlumberSchool.java))
+1.  Connect to data streams from varied systems ([Firehose](https://github.com/metamx/druid/blob/druid-0.6.2/realtime/src/main/java/com/metamx/druid/realtime/firehose/FirehoseFactory.java))
+2.  Adjust the publishing strategy to match your needs ([Plumber](https://github.com/metamx/druid/blob/druid-0.6.2/realtime/src/main/java/com/metamx/druid/realtime/plumber/PlumberSchool.java))
 
 The expectations are that the former will be very common and something that users of Druid will do on a fairly regular basis. Most users will probably never have to deal with the latter form of customization. Indeed, we hope that all potential use cases can be packaged up as part of Druid proper without requiring proprietary customization.
 

@@ -9,7 +9,7 @@ There are two ways to setup Druid: download a tarball, or build it from source.
 
 h3. Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it "here":http://static.druid.io/artifacts/releases/druid-services-0.6.1-bin.tar.gz.
+We've built a tarball that contains everything you'll need. You'll find it "here":http://static.druid.io/artifacts/releases/druid-services-0.6.2-bin.tar.gz.
 Download this bad boy to a directory of your choosing.
 
 You can extract the awesomeness within by issuing:
@@ -61,12 +61,12 @@ Once the node starts up you will see a bunch of logs about setting up properties
 <pre><code>2013-05-17 23:04:40,934 INFO [main] org.mortbay.log - Started SelectChannelConnector@0.0.0.0:8080
 2013-05-17 23:04:40,935 INFO [main] com.metamx.common.lifecycle.Lifecycle$AnnotationBasedHandler - Invoking start method[public void com.metamx.druid.http.FileRequestLogger.start()] on object[com.metamx.druid.http.FileRequestLogger@42bb0406].
 2013-05-17 23:04:41,578 INFO [Twitter Stream consumer-1[Establishing connection]] twitter4j.TwitterStreamImpl - Connection established.
-2013-05-17 23:04:41,578 INFO [Twitter Stream consumer-1[Establishing connection]] druid.examples.twitter.TwitterSpritzerFirehoseFactory - Connected_to_Twitter
+2013-05-17 23:04:41,578 INFO [Twitter Stream consumer-1[Establishing connection]] io.druid.examples.twitter.TwitterSpritzerFirehoseFactory - Connected_to_Twitter
 2013-05-17 23:04:41,578 INFO [Twitter Stream consumer-1[Establishing connection]] twitter4j.TwitterStreamImpl - Receiving status stream.
 </code></pre>
 
 Periodically, you'll also see messages of the form:
-<pre><code>2013-05-17 23:04:59,793 INFO [chief-twitterstream] druid.examples.twitter.TwitterSpritzerFirehoseFactory - nextRow() has returned 1,000 InputRows
+<pre><code>2013-05-17 23:04:59,793 INFO [chief-twitterstream] io.druid.examples.twitter.TwitterSpritzerFirehoseFactory - nextRow() has returned 1,000 InputRows
 </code></pre>
 
 These messages indicate you are ingesting events. The Druid real time-node ingests events in an in-memory buffer. Periodically, these events will be persisted to disk. Persisting to disk generates a whole bunch of logs:

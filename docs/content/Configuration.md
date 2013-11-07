@@ -15,7 +15,7 @@ There are three JVM parameters that we set on all of our processes:
 Modules
 =======
 
-As of Druid v0.6.1, most core Druid functionality has been compartmentalized into modules. There are a set of default modules that may apply to any node type, and there are specific modules for the different node types. Default modules are __lazily instantiated__. Each module has its own set of configuration. This page will describe the configuration of the default modules.
+As of Druid v0.6, most core Druid functionality has been compartmentalized into modules. There are a set of default modules that may apply to any node type, and there are specific modules for the different node types. Default modules are __lazily instantiated__. Each module has its own set of configuration. This page will describe the configuration of the default modules.
 
 Configuration of the various modules is done via Java properties. These can either be provided as `-D` system properties on the java command line or they can be passed in via a file called `runtime.properties` that exists on the classpath.
 
@@ -27,7 +27,7 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.emitter`|Appending "logging" or "http" to this config will instantialize one of the emitter modules.|logging|
+|`druid.emitter`|Setting this value to either "logging" or "http" will instantialize one of the emitter modules.|logging|
 
 
 #### Logging Emitter Module
