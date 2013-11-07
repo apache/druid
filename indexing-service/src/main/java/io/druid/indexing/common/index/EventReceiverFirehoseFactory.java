@@ -63,9 +63,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   private final MapInputRowParser parser;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
-  @Deprecated
-  private final String firehoseId;
-
   @JsonCreator
   public EventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
@@ -82,9 +79,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
           config.getFirehoseIdPrefix(),
           Preconditions.checkNotNull(firehoseId, "firehoseId")
       );
-      this.firehoseId = serviceName;
-    } else {
-      this.firehoseId = null;
     }
 
     this.serviceName = Preconditions.checkNotNull(serviceName, "serviceName");
@@ -116,14 +110,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   public String getServiceName()
   {
     return serviceName;
-  }
-
-  // Backward compatible
-  @Deprecated
-  @JsonProperty
-  public String getFirehoseId()
-  {
-    return firehoseId;
   }
 
   @JsonProperty
