@@ -84,7 +84,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
           Preconditions.checkNotNull(firehoseId, "firehoseId")
       );
     } else {
-      this.serviceName = Preconditions.checkNotNull(serviceName, "serviceName");
+      this.serviceName = serviceName;
     }
     this.config = config;
 
@@ -120,11 +120,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   @JsonProperty("firehoseId")
   public String getFirehoseId()
   {
-    if (config != null) {
-      return serviceName.replaceFirst(String.format("%s:", config.getFirehoseIdPrefix()), "");
-    }
-
-    return null;
+    return serviceName.replaceFirst(String.format("%s:", config.getFirehoseIdPrefix()), "");
   }
 
   @JsonProperty
