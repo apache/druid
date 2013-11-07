@@ -64,7 +64,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   @Deprecated
-  private final String oldServiceName;
+  private final String firehoseId;
 
   @JsonCreator
   public EventReceiverFirehoseFactory(
@@ -76,17 +76,18 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
       @JacksonInject EventReceiverFirehoseFactoryConfig config
   )
   {
-    this.serviceName = serviceName;
-
     // This code is here for backwards compatibility
     if (serviceName == null) {
-      this.oldServiceName = String.format(
+      serviceName = String.format("%s:%s",
           config.getFirehoseIdPrefix(),
           Preconditions.checkNotNull(firehoseId, "firehoseId")
       );
+      this.firehoseId = serviceName;
     } else {
-      this.oldServiceName = null;
+      this.firehoseId = null;
     }
+
+    this.serviceName = Preconditions.checkNotNull(serviceName, "serviceName");
 
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
     this.parser = Preconditions.checkNotNull(parser, "parser");
@@ -104,11 +105,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
       log.info("Found chathandler of class[%s]", chatHandlerProvider.get().getClass().getName());
       chatHandlerProvider.get().register(serviceName, firehose);
       chatHandlerProvider.get().register(serviceName.replaceAll(".*:", ""), firehose); // rofl
-
-      // backwards compatibility
-      if (oldServiceName != null) {
-        chatHandlerProvider.get().register(oldServiceName, firehose);
-      }
     } else {
       log.info("No chathandler detected");
     }
@@ -120,6 +116,14 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   public String getServiceName()
   {
     return serviceName;
+  }
+
+  // Backward compatible
+  @Deprecated
+  @JsonProperty
+  public String getFirehoseId()
+  {
+    return firehoseId;
   }
 
   @JsonProperty
@@ -235,11 +239,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
 
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(serviceName);
-
-        // backwards compatibility
-        if (oldServiceName != null) {
-          chatHandlerProvider.get().unregister(oldServiceName);
-        }
       }
     }
   }
