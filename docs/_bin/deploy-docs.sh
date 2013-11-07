@@ -28,7 +28,6 @@ git clone git@github.com:druid-io/druid-io.github.io.git ${WORKING_DIR}
 
 DOC_DIR=${WORKING_DIR}/docs/${VERSION}/
 
-cp ${SCRIPT_DIR}/../_layouts/doc* ${WORKING_DIR}/_layouts/
 mkdir -p ${DOC_DIR}
 cp -r ${SCRIPT_DIR}/../content/* ${DOC_DIR}
 
