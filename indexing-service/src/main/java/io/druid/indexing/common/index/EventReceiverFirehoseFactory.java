@@ -83,11 +83,10 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
           config.getFirehoseIdPrefix(),
           Preconditions.checkNotNull(firehoseId, "firehoseId")
       );
-      this.config = config;
     } else {
       this.serviceName = Preconditions.checkNotNull(serviceName, "serviceName");
-      this.config = null;
     }
+    this.config = config;
 
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
     this.parser = Preconditions.checkNotNull(parser, "parser");
@@ -122,7 +121,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   public String getFirehoseId()
   {
     if (config != null) {
-      return serviceName.replaceFirst(config.getFirehoseIdPrefix(), "");
+      return serviceName.replaceFirst(String.format("%s:", config.getFirehoseIdPrefix()), "");
     }
 
     return null;
