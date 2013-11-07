@@ -40,6 +40,31 @@ The constant post-aggregator always returns the specified value.
 { "type"  : "constant", "name"  : <output_name>, "value" : <numerical_value> }
 ```
 
+### JavaScript post-aggregator
+
+Applies the provided JavaScript function to the given fields. Fields are passed as arguments to the JavaScript function in the given order.
+
+```json
+postAggregation : {
+  "type": "javascript",
+  "name": <output_name>,
+  "fieldNames" : [<aggregator_name>, <aggregator_name>, ...],
+  "function": <javascript function>
+}
+```
+
+Example JavaScript aggregator:
+
+```json
+{
+  "type": "javascript",
+  "name": "absPercent",
+  "fieldNames": ["delta", "total"],
+  "function": "function(delta, total) { return 100 * Math.abs(delta) / total; }"
+}
+```
+
+
 ### Example Usage
 
 In this example, let’s calculate a simple percentage using post aggregators. Let’s imagine our data set has a metric called "total".
