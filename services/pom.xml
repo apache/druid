@@ -34,11 +34,6 @@
     <dependencies>
         <dependency>
             <groupId>io.druid</groupId>
-            <artifactId>druid-examples</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.druid</groupId>
             <artifactId>druid-indexing-hadoop</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
@@ -50,11 +45,6 @@
         <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-server</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.druid</groupId>
-            <artifactId>druid-examples</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
