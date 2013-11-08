@@ -30,7 +30,7 @@
         <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
         <url>http://www.github.com/metamx/druid</url>
-      <tag>druid-0.6.9-SNAPSHOT</tag>
+      <tag>druid-0.6.10-SNAPSHOT</tag>
   </scm>
 
     <prerequisites>
@@ -68,7 +68,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.2.5</version>
+                <version>0.2.6</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
