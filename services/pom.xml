@@ -33,6 +33,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>airline</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-indexing-hadoop</artifactId>
             <version>${project.parent.version}</version>
@@ -46,15 +50,6 @@
             <groupId>io.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.druid</groupId>
-            <artifactId>druid-indexing-service</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>airline</artifactId>
         </dependency>
     </dependencies>
     <build>
