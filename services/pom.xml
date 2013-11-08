@@ -24,7 +24,7 @@
     <artifactId>druid-services</artifactId>
     <name>druid-services</name>
     <description>druid-services</description>
-    <version>0.6.2-SNAPSHOT</version>
+
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
