@@ -22,6 +22,8 @@ package io.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
+import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -148,7 +150,11 @@ public class TaskMaster
           leaderLifecycle.addManagedInstance(taskConsumer);
 
           if (taskRunner instanceof RemoteTaskRunner) {
-            resourceManagementScheduler = managementSchedulerFactory.build((RemoteTaskRunner) taskRunner);
+            final ScheduledExecutorFactory executorFactory = ScheduledExecutors.createFactory(leaderLifecycle);
+            resourceManagementScheduler = managementSchedulerFactory.build(
+                (RemoteTaskRunner) taskRunner,
+                executorFactory
+            );
             leaderLifecycle.addManagedInstance(resourceManagementScheduler);
           }
 
