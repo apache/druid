@@ -6,7 +6,7 @@ A version may be declared as a release candidate if it has been deployed to a si
 Release Candidate
 -----------------
 
-The current release candidate is tagged at version [0.6.4](https://github.com/metamx/druid/tree/druid-0.6.4).
+The current release candidate is tagged at version [0.6.5](https://github.com/metamx/druid/tree/druid-0.6.5).
 
 Stable Release
 --------------
