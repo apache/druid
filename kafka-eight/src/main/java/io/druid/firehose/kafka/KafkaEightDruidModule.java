@@ -38,7 +38,7 @@ public class KafkaEightDruidModule implements DruidModule
     return Arrays.<Module>asList(
         new SimpleModule("KafkaEightFirehoseModule")
             .registerSubtypes(
-                new NamedType(KafkaEightDruidModule.class, "kafka-0.8")
+                new NamedType(KafkaEightFirehoseFactory.class, "kafka-0.8")
             )
     );
   }
