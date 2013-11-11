@@ -22,6 +22,7 @@ package io.druid.cli;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.BrokerServerView;
@@ -29,7 +30,8 @@ import io.druid.client.CachingClusteredClient;
 import io.druid.client.TimelineServerView;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheMonitor;
-import io.druid.client.cache.CacheProvider;
+import io.druid.client.cache.QueryCacheProvider;
+import io.druid.client.cache.ResultsCacheProvider;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -77,8 +79,17 @@ public class CliBroker extends ServerRunnable
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
             binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
 
-            binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
-            JsonConfigProvider.bind(binder, "druid.broker.cache", CacheProvider.class);
+            binder.bind(Cache.class)
+                  .annotatedWith(Names.named("queryCache"))
+                  .toProvider(QueryCacheProvider.class)
+                  .in(ManageLifecycle.class);
+            JsonConfigProvider.bind(binder, "druid.broker.cache", QueryCacheProvider.class);
+
+            binder.bind(Cache.class)
+                  .annotatedWith(Names.named("resultsCache"))
+                  .toProvider(ResultsCacheProvider.class)
+                  .in(ManageLifecycle.class);
+            JsonConfigProvider.bind(binder, "druid.broker.results.cache", ResultsCacheProvider.class);
 
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
             binder.bind(JettyServerInitializer.class).to(BrokerJettyServerInitializer.class).in(LazySingleton.class);

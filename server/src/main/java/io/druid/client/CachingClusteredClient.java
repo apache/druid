@@ -30,9 +30,9 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.LazySequence;
@@ -54,9 +54,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.timeline.DataSegment;
-import io.druid.timeline.TimelineObjectHolder;
-import io.druid.timeline.VersionedIntervalTimeline;
-import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -85,7 +82,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   public CachingClusteredClient(
       QueryToolChestWarehouse warehouse,
       TimelineServerView serverView,
-      Cache cache,
+      @Named("queryCache")Cache cache,
       ObjectMapper objectMapper
   )
   {
@@ -128,7 +125,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
 
     ImmutableMap.Builder<String, String> contextBuilder = new ImmutableMap.Builder<String, String>();
-
     final String priority = query.getContextValue("priority", "0");
     contextBuilder.put("priority", priority);
 
@@ -138,34 +134,11 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     contextBuilder.put("intermediate", "true");
 
     final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
-
-    VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
-    if (timeline == null) {
+    Set<Pair<ServerSelector, SegmentDescriptor>> segments = CacheClientUtils.getSegments(
+        rewrittenQuery, warehouse, serverView
+    );
+    if (segments.isEmpty()) {
       return Sequences.empty();
-    }
-
-    // build set of segments to query
-    Set<Pair<ServerSelector, SegmentDescriptor>> segments = Sets.newLinkedHashSet();
-
-    List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
-
-    for (Interval interval : rewrittenQuery.getIntervals()) {
-      serversLookup.addAll(timeline.lookup(interval));
-    }
-
-    // Let tool chest filter out unneeded segments
-    final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
-        toolChest.filterSegments(query, serversLookup);
-
-    for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
-      for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
-        ServerSelector selector = chunk.getObject();
-        final SegmentDescriptor descriptor = new SegmentDescriptor(
-            holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
-        );
-
-        segments.add(Pair.of(selector, descriptor));
-      }
     }
 
     final byte[] queryCacheKey;
@@ -381,44 +354,5 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         .putInt(descriptor.getPartitionNumber())
         .put(queryCacheKey).array()
     );
-  }
-
-  private static class CachePopulator
-  {
-    private final Cache cache;
-    private final ObjectMapper mapper;
-    private final Cache.NamedKey key;
-
-    public CachePopulator(Cache cache, ObjectMapper mapper, Cache.NamedKey key)
-    {
-      this.cache = cache;
-      this.mapper = mapper;
-      this.key = key;
-    }
-
-    public void populate(Iterable<Object> results)
-    {
-      try {
-        List<byte[]> bytes = Lists.newArrayList();
-        int size = 0;
-        for (Object result : results) {
-          final byte[] array = mapper.writeValueAsBytes(result);
-          size += array.length;
-          bytes.add(array);
-        }
-
-        byte[] valueBytes = new byte[size];
-        int offset = 0;
-        for (byte[] array : bytes) {
-          System.arraycopy(array, 0, valueBytes, offset, array.length);
-          offset += array.length;
-        }
-
-        cache.put(key, valueBytes);
-      }
-      catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
-    }
   }
 }
