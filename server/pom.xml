@@ -184,10 +184,6 @@
             <artifactId>jetty-servlets</artifactId>
         </dependency>
         <dependency>
-            <groupId>kafka</groupId>
-            <artifactId>core-kafka</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.rabbitmq</groupId>
             <artifactId>amqp-client</artifactId>
         </dependency>

@@ -17,46 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.firehose.kafka;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import io.druid.data.input.ProtoBufInputRowParser;
 import io.druid.initialization.DruidModule;
-import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
-import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
-import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import io.druid.segment.realtime.firehose.RabbitMQFirehoseFactory;
-import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
  */
-public class FirehoseModule implements DruidModule
+public class KafkaEightDruidModule implements DruidModule
 {
-  @Override
-  public void configure(Binder binder)
-  {
-  }
-
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(
-        new SimpleModule("FirehoseModule")
+    return ImmutableList.of(
+        new SimpleModule("KafkaEightFirehoseModule")
             .registerSubtypes(
-                new NamedType(RabbitMQFirehoseFactory.class, "rabbitmq"),
-                new NamedType(ClippedFirehoseFactory.class, "clipped"),
-                new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
-                new NamedType(IrcFirehoseFactory.class, "irc"),
-                new NamedType(LocalFirehoseFactory.class, "local"),
-                new NamedType(ProtoBufInputRowParser.class, "protobuf")
+                new NamedType(KafkaEightFirehoseFactory.class, "kafka-0.8")
             )
     );
   }
 
+  @Override
+  public void configure(Binder binder)
+  {
+
+  }
 }
