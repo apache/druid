@@ -433,7 +433,7 @@ public class TaskLifecycleTest
 
     private MockIndexerDBCoordinator()
     {
-      super(null, null, null, null);
+      super(null, null, null);
     }
 
     @Override

@@ -29,7 +29,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import com.metamx.common.lifecycle.LifecycleStart;
+import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.db.DbConnector;
 import io.druid.db.DbTablesConfig;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -47,17 +50,31 @@ import java.util.Map;
 public class DbTaskStorage implements TaskStorage
 {
   private final ObjectMapper jsonMapper;
+  private final DbConnector dbConnector;
   private final DbTablesConfig dbTables;
   private final IDBI dbi;
 
   private static final EmittingLogger log = new EmittingLogger(DbTaskStorage.class);
 
   @Inject
-  public DbTaskStorage(ObjectMapper jsonMapper, DbTablesConfig dbTables, IDBI dbi)
+  public DbTaskStorage(ObjectMapper jsonMapper, DbConnector dbConnector, DbTablesConfig dbTables, IDBI dbi)
   {
     this.jsonMapper = jsonMapper;
+    this.dbConnector = dbConnector;
     this.dbTables = dbTables;
     this.dbi = dbi;
+  }
+
+  @LifecycleStart
+  public void start()
+  {
+    dbConnector.createTaskTables();
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    // do nothing
   }
 
   @Override
@@ -99,9 +116,10 @@ public class DbTaskStorage implements TaskStorage
             }
           }
       );
-    } catch (StatementException e) {
+    }
+    catch (StatementException e) {
       // Might be a duplicate task ID.
-      if(getTask(task.getId()).isPresent()) {
+      if (getTask(task.getId()).isPresent()) {
         throw new TaskExistsException(task.getId(), e);
       } else {
         throw e;
@@ -128,15 +146,15 @@ public class DbTaskStorage implements TaskStorage
                     dbTables.getTasksTable()
                 )
             )
-                  .bind("id", status.getId())
-                  .bind("active", status.isRunnable() ? 1 : 0)
-                  .bind("status_payload", jsonMapper.writeValueAsBytes(status))
-                  .execute();
+                         .bind("id", status.getId())
+                         .bind("active", status.isRunnable() ? 1 : 0)
+                         .bind("status_payload", jsonMapper.writeValueAsBytes(status))
+                         .execute();
           }
         }
     );
 
-    if(updated != 1) {
+    if (updated != 1) {
       throw new IllegalStateException(String.format("Active task not found: %s", status.getId()));
     }
   }
@@ -160,11 +178,11 @@ public class DbTaskStorage implements TaskStorage
                       .bind("id", taskid)
                       .list();
 
-            if(dbTasks.size() == 0) {
+            if (dbTasks.size() == 0) {
               return Optional.absent();
             } else {
               final Map<String, Object> dbStatus = Iterables.getOnlyElement(dbTasks);
-              return Optional.of(jsonMapper.readValue((byte[])dbStatus.get("payload"), Task.class));
+              return Optional.of(jsonMapper.readValue((byte[]) dbStatus.get("payload"), Task.class));
             }
           }
         }
@@ -190,11 +208,11 @@ public class DbTaskStorage implements TaskStorage
                       .bind("id", taskid)
                       .list();
 
-            if(dbStatuses.size() == 0) {
+            if (dbStatuses.size() == 0) {
               return Optional.absent();
             } else {
               final Map<String, Object> dbStatus = Iterables.getOnlyElement(dbStatuses);
-              return Optional.of(jsonMapper.readValue((byte[])dbStatus.get("status_payload"), TaskStatus.class));
+              return Optional.of(jsonMapper.readValue((byte[]) dbStatus.get("status_payload"), TaskStatus.class));
             }
           }
         }
@@ -224,13 +242,14 @@ public class DbTaskStorage implements TaskStorage
               final String id = row.get("id").toString();
 
               try {
-                final Task task = jsonMapper.readValue((byte[])row.get("payload"), Task.class);
-                final TaskStatus status = jsonMapper.readValue((byte[])row.get("status_payload"), TaskStatus.class);
+                final Task task = jsonMapper.readValue((byte[]) row.get("payload"), Task.class);
+                final TaskStatus status = jsonMapper.readValue((byte[]) row.get("status_payload"), TaskStatus.class);
 
                 if (status.isRunnable()) {
                   tasks.add(task);
                 }
-              } catch (Exception e) {
+              }
+              catch (Exception e) {
                 log.makeAlert(e, "Failed to parse task payload").addData("task", id).emit();
               }
             }
@@ -282,11 +301,11 @@ public class DbTaskStorage implements TaskStorage
 
     final Map<Long, TaskLock> taskLocks = getLocksWithIds(taskid);
 
-    for(final Map.Entry<Long, TaskLock> taskLockWithId : taskLocks.entrySet()) {
+    for (final Map.Entry<Long, TaskLock> taskLockWithId : taskLocks.entrySet()) {
       final long id = taskLockWithId.getKey();
       final TaskLock taskLock = taskLockWithId.getValue();
 
-      if(taskLock.equals(taskLockToRemove)) {
+      if (taskLock.equals(taskLockToRemove)) {
         log.info("Deleting TaskLock with id[%d]: %s", id, taskLock);
 
         dbi.withHandle(
@@ -380,8 +399,9 @@ public class DbTaskStorage implements TaskStorage
               public TaskAction apply(Map<String, Object> row)
               {
                 try {
-                  return jsonMapper.readValue((byte[])row.get("log_payload"), TaskAction.class);
-                } catch(Exception e) {
+                  return jsonMapper.readValue((byte[]) row.get("log_payload"), TaskAction.class);
+                }
+                catch (Exception e) {
                   throw Throwables.propagate(e);
                 }
               }
@@ -411,8 +431,8 @@ public class DbTaskStorage implements TaskStorage
                       .list();
 
             final Map<Long, TaskLock> retMap = Maps.newHashMap();
-            for(final Map<String, Object> row : dbTaskLocks) {
-              retMap.put((Long)row.get("id"), jsonMapper.readValue((byte[])row.get("lock_payload"), TaskLock.class));
+            for (final Map<String, Object> row : dbTaskLocks) {
+              retMap.put((Long) row.get("id"), jsonMapper.readValue((byte[]) row.get("lock_payload"), TaskLock.class));
             }
             return retMap;
           }

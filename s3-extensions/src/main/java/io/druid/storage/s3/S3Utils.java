@@ -58,7 +58,7 @@ public class S3Utils
   public static <T> T retryS3Operation(Callable<T> f) throws IOException, S3ServiceException, InterruptedException
   {
     int nTry = 0;
-    final int maxTries = 3;
+    final int maxTries = 10;
     while (true) {
       try {
         nTry++;
@@ -89,13 +89,10 @@ public class S3Utils
   private static void awaitNextRetry(Exception e, int nTry) throws InterruptedException
   {
     final long baseSleepMillis = 1000;
-    final double fuzziness = 0.2;
-    final long sleepMillis = Math.max(
-        baseSleepMillis,
-        (long) (baseSleepMillis * Math.pow(2, nTry) *
-                (1 + new Random().nextGaussian() * fuzziness))
-    );
-    log.info(e, "S3 fail on try %d, retrying in %,dms.", nTry, sleepMillis);
+    final long maxSleepMillis = 60000;
+    final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * new Random().nextGaussian(), 0), 2);
+    final long sleepMillis = (long) (Math.min(maxSleepMillis, baseSleepMillis * Math.pow(2, nTry)) * fuzzyMultiplier);
+    log.warn("S3 fail on try %d, retrying in %,dms.", nTry, sleepMillis);
     Thread.sleep(sleepMillis);
   }
 
