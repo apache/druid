@@ -3,11 +3,6 @@ layout: doc_page
 ---
 A Druid cluster consists of various node types that need to be set up depending on your use case. See our [Design](Design.html) docs for a description of the different node types.
 
-Setup Scripts
--------------
-
-One of our community members, [housejester](https://github.com/housejester/), contributed some scripts to help with setting up a cluster. Checkout the [github](https://github.com/housejester/druid-test-harness) and [wiki](https://github.com/housejester/druid-test-harness/wiki/Druid-Test-Harness).
-
 Minimum Physical Layout: Absolute Minimum
 -----------------------------------------
 
