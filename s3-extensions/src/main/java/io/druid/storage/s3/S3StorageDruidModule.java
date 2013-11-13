@@ -30,6 +30,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.security.AWSCredentials;
 
 import java.util.List;
 
@@ -60,14 +61,14 @@ public class S3StorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public org.jets3t.service.security.AWSCredentials  getJets3tAWSCredentials(AWSCredentialsConfig config)
+  public AWSCredentials getJets3tAWSCredentials(AWSCredentialsConfig config)
   {
-    return new org.jets3t.service.security.AWSCredentials(config.getAccessKey(), config.getSecretKey());
+    return new AWSCredentials(config.getAccessKey(), config.getSecretKey());
   }
 
   @Provides
   @LazySingleton
-  public RestS3Service getRestS3Service(org.jets3t.service.security.AWSCredentials credentials)
+  public RestS3Service getRestS3Service(AWSCredentials credentials)
   {
     try {
       return new RestS3Service(credentials);
