@@ -35,11 +35,15 @@
         <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-api</artifactId>
-        </dependency>
-        <dependency>
+          </dependency>
+          <dependency>
+              <groupId>net.java.dev.jets3t</groupId>
+              <artifactId>jets3t</artifactId>
+              <version>0.9.0</version>
+          </dependency>
+          <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-core</artifactId>
-            <version>1.0.3</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
