@@ -35,12 +35,18 @@
         <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-api</artifactId>
-          </dependency>
-          <dependency>
-              <groupId>net.java.dev.jets3t</groupId>
-              <artifactId>jets3t</artifactId>
-          </dependency>
-          <dependency>
+        </dependency>
+        <!-- override jets3t from hadoop-core -->
+        <dependency>
+            <groupId>net.java.dev.jets3t</groupId>
+            <artifactId>jets3t</artifactId>
+        </dependency>
+        <!-- override httpclient version from jets3t -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-core</artifactId>
             <scope>compile</scope>
