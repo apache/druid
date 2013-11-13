@@ -36,9 +36,15 @@
             <groupId>io.druid</groupId>
             <artifactId>druid-api</artifactId>
         </dependency>
+        <!-- override jets3t from hadoop-core -->
         <dependency>
             <groupId>net.java.dev.jets3t</groupId>
             <artifactId>jets3t</artifactId>
+        </dependency>
+        <!-- override httpclient version from jets3t -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
         </dependency>
         <dependency>
             <groupId>com.metamx</groupId>
