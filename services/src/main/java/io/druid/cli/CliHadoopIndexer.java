@@ -88,8 +88,8 @@ public class CliHadoopIndexer implements Runnable
       Thread.currentThread().setContextClassLoader(loader);
 
       final Set<URL> jobUrls = Sets.newHashSet();
-      jobUrls.addAll(extensionURLs);
       jobUrls.addAll(nonHadoopURLs);
+      jobUrls.addAll(extensionURLs);
 
       System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(jobUrls));
 
