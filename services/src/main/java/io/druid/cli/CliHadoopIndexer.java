@@ -41,7 +41,7 @@ import java.util.List;
  */
 @Command(
     name = "hadoop",
-    description = "Runs the batch Hadoop Druid Indexer, see http://druid.io/docs/0.6.14/Batch-ingestion.html for a description."
+    description = "Runs the batch Hadoop Druid Indexer, see http://druid.io/docs/0.6.15/Batch-ingestion.html for a description."
 )
 public class CliHadoopIndexer implements Runnable
 {
@@ -70,13 +70,13 @@ public class CliHadoopIndexer implements Runnable
       final URL[] nonHadoopUrls = ((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs();
 
       List<URL> theURLS = Lists.newArrayList();
-      theURLS.addAll(Arrays.asList(urLs));
       theURLS.addAll(Arrays.asList(nonHadoopUrls));
+      theURLS.addAll(Arrays.asList(urLs));
 
       final URLClassLoader loader = new URLClassLoader(theURLS.toArray(new URL[theURLS.size()]), null);
       Thread.currentThread().setContextClassLoader(loader);
 
-      System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(nonHadoopUrls));
+      System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(theURLS));
 
       final Class<?> mainClass = loader.loadClass(Main.class.getName());
       final Method mainMethod = mainClass.getMethod("main", String[].class);

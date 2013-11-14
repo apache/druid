@@ -134,13 +134,13 @@ public class HadoopIndexTask extends AbstractTask
     final URL[] nonHadoopUrls = ((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs();
 
     List<URL> theURLS = Lists.newArrayList();
-    theURLS.addAll(Arrays.asList(urLs));
     theURLS.addAll(Arrays.asList(nonHadoopUrls));
+    theURLS.addAll(Arrays.asList(urLs));
 
     final URLClassLoader loader = new URLClassLoader(theURLS.toArray(new URL[theURLS.size()]), null);
     Thread.currentThread().setContextClassLoader(loader);
 
-    System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(nonHadoopUrls));
+    System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(theURLS));
 
     final Class<?> mainClass = loader.loadClass(HadoopIndexTaskInnerProcessing.class.getName());
     final Method mainMethod = mainClass.getMethod("runTask", String[].class);
