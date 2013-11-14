@@ -19,7 +19,9 @@
 
 package io.druid.cli;
 
+import com.google.api.client.util.Sets;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
@@ -35,12 +37,13 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
 @Command(
     name = "hadoop",
-    description = "Runs the batch Hadoop Druid Indexer, see http://druid.io/docs/0.6.16/Batch-ingestion.html for a description."
+    description = "Runs the batch Hadoop Druid Indexer, see http://druid.io/docs/0.6.17/Batch-ingestion.html for a description."
 )
 public class CliHadoopIndexer implements Runnable
 {
@@ -66,24 +69,29 @@ public class CliHadoopIndexer implements Runnable
           aetherClient, hadoopCoordinates
       );
 
-      final List<URL> allURLs = com.google.common.collect.Lists.newArrayList();
-
-      final List<URL> nonHadoopURLs = com.google.common.collect.Lists.newArrayList();
+      final Set<URL> extensionURLs = Sets.newHashSet();
       for (String coordinate : extensionsConfig.getCoordinates()) {
         final ClassLoader coordinateLoader = Initialization.getClassLoaderForCoordinates(
             aetherClient, coordinate
         );
-        nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) coordinateLoader).getURLs()));
+        extensionURLs.addAll(Arrays.asList(((URLClassLoader) coordinateLoader).getURLs()));
       }
+
+      final Set<URL> nonHadoopURLs = Sets.newHashSet();
       nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()));
 
-      allURLs.addAll(nonHadoopURLs);
-      allURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+      final Set<URL> driverURLs = Sets.newHashSet();
+      driverURLs.addAll(nonHadoopURLs);
+      driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
 
-      final URLClassLoader loader = new URLClassLoader(allURLs.toArray(new URL[allURLs.size()]), null);
+      final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[driverURLs.size()]), null);
       Thread.currentThread().setContextClassLoader(loader);
 
-      System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(nonHadoopURLs));
+      final Set<URL> jobUrls = Sets.newHashSet();
+      jobUrls.addAll(extensionURLs);
+      jobUrls.addAll(nonHadoopURLs);
+
+      System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(jobUrls));
 
       final Class<?> mainClass = loader.loadClass(Main.class.getName());
       final Method mainMethod = mainClass.getMethod("main", String[].class);
