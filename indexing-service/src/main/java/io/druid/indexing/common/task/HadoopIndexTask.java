@@ -129,18 +129,25 @@ public class HadoopIndexTask extends AbstractTask
     final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
         aetherClient, hadoopCoordinates
     );
-    final URL[] urLs = ((URLClassLoader) hadoopLoader).getURLs();
 
-    final URL[] nonHadoopUrls = ((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs();
+    final List<URL> allURLs = Lists.newArrayList();
 
-    List<URL> theURLS = Lists.newArrayList();
-    theURLS.addAll(Arrays.asList(nonHadoopUrls));
-    theURLS.addAll(Arrays.asList(urLs));
+    final List<URL> nonHadoopURLs = Lists.newArrayList();
+    for (String coordinate : extensionsConfig.getCoordinates()) {
+      final ClassLoader coordinateLoader = Initialization.getClassLoaderForCoordinates(
+          aetherClient, coordinate
+      );
+      nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) coordinateLoader).getURLs()));
+    }
+    nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs()));
 
-    final URLClassLoader loader = new URLClassLoader(theURLS.toArray(new URL[theURLS.size()]), null);
+    allURLs.addAll(nonHadoopURLs);
+    allURLs.addAll(Arrays.asList( ((URLClassLoader) hadoopLoader).getURLs()));
+
+    final URLClassLoader loader = new URLClassLoader(allURLs.toArray(new URL[allURLs.size()]), null);
     Thread.currentThread().setContextClassLoader(loader);
 
-    System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(theURLS));
+    System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(nonHadoopURLs));
 
     final Class<?> mainClass = loader.loadClass(HadoopIndexTaskInnerProcessing.class.getName());
     final Method mainMethod = mainClass.getMethod("runTask", String[].class);

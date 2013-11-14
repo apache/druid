@@ -19,7 +19,6 @@
 
 package io.druid.cli;
 
-import com.google.api.client.util.Lists;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
@@ -50,7 +49,8 @@ public class CliHadoopIndexer implements Runnable
   @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
   private String argumentSpec;
 
-  @Option(name = "hadoop", description = "The maven coordinates to the version of hadoop to run with. Defaults to org.apache.hadoop:hadoop-core:1.0.3")
+  @Option(name = "hadoop",
+          description = "The maven coordinates to the version of hadoop to run with. Defaults to org.apache.hadoop:hadoop-core:1.0.3")
   private String hadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
 
   @Inject
@@ -65,18 +65,25 @@ public class CliHadoopIndexer implements Runnable
       final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
           aetherClient, hadoopCoordinates
       );
-      final URL[] urLs = ((URLClassLoader) hadoopLoader).getURLs();
 
-      final URL[] nonHadoopUrls = ((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs();
+      final List<URL> allURLs = com.google.common.collect.Lists.newArrayList();
 
-      List<URL> theURLS = Lists.newArrayList();
-      theURLS.addAll(Arrays.asList(nonHadoopUrls));
-      theURLS.addAll(Arrays.asList(urLs));
+      final List<URL> nonHadoopURLs = com.google.common.collect.Lists.newArrayList();
+      for (String coordinate : extensionsConfig.getCoordinates()) {
+        final ClassLoader coordinateLoader = Initialization.getClassLoaderForCoordinates(
+            aetherClient, coordinate
+        );
+        nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) coordinateLoader).getURLs()));
+      }
+      nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()));
 
-      final URLClassLoader loader = new URLClassLoader(theURLS.toArray(new URL[theURLS.size()]), null);
+      allURLs.addAll(nonHadoopURLs);
+      allURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+
+      final URLClassLoader loader = new URLClassLoader(allURLs.toArray(new URL[allURLs.size()]), null);
       Thread.currentThread().setContextClassLoader(loader);
 
-      System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(theURLS));
+      System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(nonHadoopURLs));
 
       final Class<?> mainClass = loader.loadClass(Main.class.getName());
       final Method mainMethod = mainClass.getMethod("main", String[].class);
