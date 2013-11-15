@@ -19,7 +19,6 @@
 
 package io.druid.cli;
 
-import com.google.api.client.util.Sets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
@@ -37,7 +36,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 /**
  */
@@ -69,7 +67,7 @@ public class CliHadoopIndexer implements Runnable
           aetherClient, hadoopCoordinates
       );
 
-      final Set<URL> extensionURLs = Sets.newHashSet();
+      final List<URL> extensionURLs = Lists.newArrayList();
       for (String coordinate : extensionsConfig.getCoordinates()) {
         final ClassLoader coordinateLoader = Initialization.getClassLoaderForCoordinates(
             aetherClient, coordinate
@@ -77,17 +75,18 @@ public class CliHadoopIndexer implements Runnable
         extensionURLs.addAll(Arrays.asList(((URLClassLoader) coordinateLoader).getURLs()));
       }
 
-      final Set<URL> nonHadoopURLs = Sets.newHashSet();
+      final List<URL> nonHadoopURLs = Lists.newArrayList();
       nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()));
 
-      final Set<URL> driverURLs = Sets.newHashSet();
+      final List<URL> driverURLs = Lists.newArrayList();
       driverURLs.addAll(nonHadoopURLs);
+      // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
       driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
 
       final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[driverURLs.size()]), null);
       Thread.currentThread().setContextClassLoader(loader);
 
-      final Set<URL> jobUrls = Sets.newHashSet();
+      final List<URL> jobUrls = Lists.newArrayList();
       jobUrls.addAll(nonHadoopURLs);
       jobUrls.addAll(extensionURLs);
 
