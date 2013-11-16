@@ -161,6 +161,7 @@ public class JettyServerModule extends JerseyServletModule
     connector.setPort(node.getPort());
     connector.setMaxIdleTime(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
     connector.setStatsOn(true);
+    connector.setAcceptors(config.getNumThreads());
 
     server.setConnectors(new Connector[]{connector});
 
