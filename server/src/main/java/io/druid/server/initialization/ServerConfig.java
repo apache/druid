@@ -31,7 +31,7 @@ public class ServerConfig
 {
   @JsonProperty
   @Min(1)
-  private int numThreads = 10;
+  private int numThreads = Runtime.getRuntime().availableProcessors() * 2;
 
   @JsonProperty
   @NotNull
