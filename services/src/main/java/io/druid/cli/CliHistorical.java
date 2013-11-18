@@ -32,8 +32,6 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.server.initialization.JettyServerInitializer;
-import io.druid.server.metrics.MetricsModule;
-import io.druid.server.metrics.ServerMonitor;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -66,7 +64,6 @@ public class CliHistorical extends ServerRunnable
             binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
             binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
 
-            MetricsModule.register(binder, ServerMonitor.class);
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("historical"));
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
 
