@@ -53,6 +53,7 @@ public class S3StorageDruidModule implements DruidModule
     Binders.dataSegmentKillerBinder(binder).addBinding("s3_zip").to(S3DataSegmentKiller.class).in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding("s3").to(S3DataSegmentPusher.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentPusherConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentKillerConfig.class);
 
     Binders.taskLogsBinder(binder).addBinding("s3").to(S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);

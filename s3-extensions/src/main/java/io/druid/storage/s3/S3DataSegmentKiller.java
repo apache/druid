@@ -27,6 +27,7 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.model.S3Object;
 
 import java.util.Map;
 
@@ -37,13 +38,16 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   private static final Logger log = new Logger(S3DataSegmentKiller.class);
 
   private final RestS3Service s3Client;
+  private final S3DataSegmentKillerConfig config;
 
   @Inject
   public S3DataSegmentKiller(
-      RestS3Service s3Client
+      RestS3Service s3Client,
+      S3DataSegmentKillerConfig config
   )
   {
     this.s3Client = s3Client;
+    this.config = config;
   }
 
   @Override
@@ -54,14 +58,36 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       String s3Bucket = MapUtils.getString(loadSpec, "bucket");
       String s3Path = MapUtils.getString(loadSpec, "key");
       String s3DescriptorPath = s3Path.substring(0, s3Path.lastIndexOf("/")) + "/descriptor.json";
+      final String s3ArchiveBucket = config.getArchiveBucket();
 
       if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
-        log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);
-        s3Client.deleteObject(s3Bucket, s3Path);
+        if (config.isArchive()) {
+          log.info("Archiving index file[s3://%s/%s] to [s3://%s/%s]",
+                   s3Bucket,
+                   s3Path,
+                   s3ArchiveBucket,
+                   s3Path
+          );
+          s3Client.moveObject(s3Bucket, s3Path, s3ArchiveBucket, new S3Object(s3Path), false);
+        } else {
+          log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);
+          s3Client.deleteObject(s3Bucket, s3Path);
+        }
       }
       if (s3Client.isObjectInBucket(s3Bucket, s3DescriptorPath)) {
-        log.info("Removing descriptor file[s3://%s/%s] from s3!", s3Bucket, s3DescriptorPath);
-        s3Client.deleteObject(s3Bucket, s3DescriptorPath);
+        if (config.isArchive()) {
+          log.info(
+              "Archiving descriptor file[s3://%s/%s] to [s3://%s/%s]",
+              s3Bucket,
+              s3DescriptorPath,
+              s3ArchiveBucket,
+              s3DescriptorPath
+          );
+          s3Client.moveObject(s3Bucket, s3DescriptorPath, s3ArchiveBucket, new S3Object(s3DescriptorPath), false);
+        } else {
+          log.info("Removing descriptor file[s3://%s/%s] from s3!", s3Bucket, s3DescriptorPath);
+          s3Client.deleteObject(s3Bucket, s3DescriptorPath);
+        }
       }
     }
     catch (ServiceException e) {
