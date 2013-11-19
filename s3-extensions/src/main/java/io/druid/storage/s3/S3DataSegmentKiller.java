@@ -58,7 +58,13 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       String s3Bucket = MapUtils.getString(loadSpec, "bucket");
       String s3Path = MapUtils.getString(loadSpec, "key");
       String s3DescriptorPath = s3Path.substring(0, s3Path.lastIndexOf("/")) + "/descriptor.json";
+
       final String s3ArchiveBucket = config.getArchiveBucket();
+
+      if(config.isArchive() && s3ArchiveBucket.isEmpty()) {
+        log.warn("S3 archive bucket not specified, refusing to delete segment [s3://%s/%s]", s3Bucket, s3Path);
+        return;
+      }
 
       if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
         if (config.isArchive()) {

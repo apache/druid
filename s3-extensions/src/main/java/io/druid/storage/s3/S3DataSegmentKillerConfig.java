@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class S3DataSegmentKillerConfig
 {
   @JsonProperty
-  public boolean archive = false;
+  public boolean archive = true;
 
   @JsonProperty
   public String archiveBucket = "";
