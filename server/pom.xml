@@ -188,6 +188,10 @@
             <artifactId>amqp-client</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.jodah</groupId>
+            <artifactId>lyra</artifactId>
+        </dependency>
+        <dependency>
           <groupId>com.ircclouds.irc</groupId>
           <artifactId>irc-api</artifactId>
         </dependency>

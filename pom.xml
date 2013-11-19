@@ -371,7 +371,12 @@
             <dependency>
                 <groupId>com.rabbitmq</groupId>
                 <artifactId>amqp-client</artifactId>
-                <version>3.1.1</version>
+                <version>3.2.1</version>
+            </dependency>
+            <dependency>
+                <groupId>net.jodah</groupId>
+                <artifactId>lyra</artifactId>
+                <version>0.3.1</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jets3t</groupId>

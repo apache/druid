@@ -26,7 +26,11 @@
             "routingKey": "#",
             "durable": "true",
             "exclusive": "false",
-            "autoDelete": "false"
+            "autoDelete": "false",
+
+            "maxRetries": "10",
+            "retryIntervalSeconds": "1",
+            "maxDurationSeconds": "300"
         },
         "parser" : {
             "timestampSpec" : { "column" : "utcdt", "format" : "iso" },
