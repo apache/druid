@@ -42,7 +42,7 @@ import java.util.List;
  */
 @Command(
     name = "historical",
-    description = "Runs a Historical node, see http://druid.io/docs/0.6.22/Historical.html for a description"
+    description = "Runs a Historical node, see http://druid.io/docs/0.6.23/Historical.html for a description"
 )
 public class CliHistorical extends ServerRunnable
 {
@@ -69,7 +69,7 @@ public class CliHistorical extends ServerRunnable
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("historical"));
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
             Jerseys.addResource(binder, QueryResource.class);
-
+            LifecycleModule.register(binder, QueryResource.class);
 
             LifecycleModule.register(binder, ZkCoordinator.class);
             LifecycleModule.register(binder, Server.class);

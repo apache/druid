@@ -53,7 +53,7 @@ import java.util.List;
  */
 @Command(
     name = "broker",
-    description = "Runs a broker node, see http://druid.io/docs/0.6.22/Broker.html for a description"
+    description = "Runs a broker node, see http://druid.io/docs/0.6.23/Broker.html for a description"
 )
 public class CliBroker extends ServerRunnable
 {
@@ -86,6 +86,7 @@ public class CliBroker extends ServerRunnable
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, ClientInfoResource.class);
+            LifecycleModule.register(binder, QueryResource.class);
 
             DiscoveryModule.register(binder, Self.class);
             MetricsModule.register(binder, CacheMonitor.class);

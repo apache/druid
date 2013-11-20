@@ -66,6 +66,7 @@ public class RealtimeModule implements Module
     binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("realtime"));
     binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
     Jerseys.addResource(binder, QueryResource.class);
+    LifecycleModule.register(binder, QueryResource.class);
 
     LifecycleModule.register(binder, Server.class);
   }
