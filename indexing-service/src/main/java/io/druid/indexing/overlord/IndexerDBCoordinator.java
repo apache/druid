@@ -28,6 +28,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+import io.druid.db.DbConnector;
 import io.druid.db.DbConnectorConfig;
 import io.druid.db.DbTablesConfig;
 import io.druid.timeline.DataSegment;
@@ -58,20 +59,17 @@ public class IndexerDBCoordinator
   private static final Logger log = new Logger(IndexerDBCoordinator.class);
 
   private final ObjectMapper jsonMapper;
-  private final DbConnectorConfig dbConnectorConfig;
   private final DbTablesConfig dbTables;
   private final IDBI dbi;
 
   @Inject
   public IndexerDBCoordinator(
       ObjectMapper jsonMapper,
-      DbConnectorConfig dbConnectorConfig,
       DbTablesConfig dbTables,
       IDBI dbi
   )
   {
     this.jsonMapper = jsonMapper;
-    this.dbConnectorConfig = dbConnectorConfig;
     this.dbTables = dbTables;
     this.dbi = dbi;
   }

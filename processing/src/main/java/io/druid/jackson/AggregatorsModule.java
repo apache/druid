@@ -34,6 +34,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
+import io.druid.query.aggregation.post.JavaScriptPostAggregator;
 
 /**
  */
@@ -63,7 +64,8 @@ public class AggregatorsModule extends SimpleModule
   @JsonSubTypes(value = {
       @JsonSubTypes.Type(name = "arithmetic", value = ArithmeticPostAggregator.class),
       @JsonSubTypes.Type(name = "fieldAccess", value = FieldAccessPostAggregator.class),
-      @JsonSubTypes.Type(name = "constant", value = ConstantPostAggregator.class)
+      @JsonSubTypes.Type(name = "constant", value = ConstantPostAggregator.class),
+      @JsonSubTypes.Type(name = "javascript", value = JavaScriptPostAggregator.class)
   })
   public static interface PostAggregatorMixin {}
 }

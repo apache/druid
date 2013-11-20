@@ -27,7 +27,6 @@ import io.druid.data.input.ProtoBufInputRowParser;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
-import io.druid.segment.realtime.firehose.KafkaFirehoseFactory;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.segment.realtime.firehose.RabbitMQFirehoseFactory;
 import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
@@ -50,7 +49,6 @@ public class FirehoseModule implements DruidModule
     return Arrays.<Module>asList(
         new SimpleModule("FirehoseModule")
             .registerSubtypes(
-                new NamedType(KafkaFirehoseFactory.class, "kafka-0.7.2"),
                 new NamedType(RabbitMQFirehoseFactory.class, "rabbitmq"),
                 new NamedType(ClippedFirehoseFactory.class, "clipped"),
                 new NamedType(TimedShutoffFirehoseFactory.class, "timed"),

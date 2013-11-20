@@ -93,7 +93,7 @@ import java.util.List;
  */
 @Command(
     name = "overlord",
-    description = "Runs an Overlord node, see https://github.com/metamx/druid/wiki/Indexing-Service for a description"
+    description = "Runs an Overlord node, see http://druid.io/docs/0.6.20/Indexing-Service.html for a description"
 )
 public class CliOverlord extends ServerRunnable
 {
@@ -160,7 +160,7 @@ public class CliOverlord extends ServerRunnable
             storageBinder.addBinding("local").to(HeapMemoryTaskStorage.class);
             binder.bind(HeapMemoryTaskStorage.class).in(LazySingleton.class);
 
-            storageBinder.addBinding("db").to(DbTaskStorage.class);
+            storageBinder.addBinding("db").to(DbTaskStorage.class).in(ManageLifecycle.class);
             binder.bind(DbTaskStorage.class).in(LazySingleton.class);
           }
 

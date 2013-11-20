@@ -200,7 +200,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
                     {
                       return input.getRunningTasks().isEmpty()
                              && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
-                                >= config.getWorkerIdleTimeout().getMillis();
+                                >= config.getWorkerIdleTimeout().toStandardDuration().getMillis();
                     }
                   }
               )

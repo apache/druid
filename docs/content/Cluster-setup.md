@@ -3,11 +3,6 @@ layout: doc_page
 ---
 A Druid cluster consists of various node types that need to be set up depending on your use case. See our [Design](Design.html) docs for a description of the different node types.
 
-Setup Scripts
--------------
-
-One of our community members, [housejester](https://github.com/housejester/), contributed some scripts to help with setting up a cluster. Checkout the [github](https://github.com/housejester/druid-test-harness) and [wiki](https://github.com/housejester/druid-test-harness/wiki/Druid-Test-Harness).
-
 Minimum Physical Layout: Absolute Minimum
 -----------------------------------------
 
@@ -19,7 +14,7 @@ Minimum Physical Layout: Experimental Testing with 4GB of RAM
 This layout can be used to load some data from deep storage onto a Druid compute node for the first time. A minimal physical layout for a 1 or 2 core machine with 4GB of RAM is:
 
 1. node1: [Coordinator](Coordinator.html) + metadata service + zookeeper + [Historical](Historical.html)
-2. transient nodes: [indexer](Batch-ingestion.html)
+2. transient nodes: [Indexing Service](Indexing-Service.html)
 
 This setup is only reasonable to prove that a configuration works. It would not be worthwhile to use this layout for performance measurement.
 
@@ -33,11 +28,11 @@ A minimal physical layout not constrained by cores that demonstrates parallel qu
 1. node1: [Coordinator](Coordinator.html) (m1.small)
 2. node2: metadata service (m1.small)
 3. node3: zookeeper (m1.small)
-4. node4: [[Broker]] (m1.small or m1.medium or m1.large)
+4. node4: [Broker](Broker.html) (m1.small or m1.medium or m1.large)
 5. node5: [Historical](Historical.html) (m1.small or m1.medium or m1.large)
 6. node6: [Historical](Historical.html) (m1.small or m1.medium or m1.large)
-7. node7: [[Realtime]] (m1.small or m1.medium or m1.large)
-8. transient nodes: [indexer](Batch-ingestion.html)
+7. node7: [Realtime](Realtime.html) (m1.small or m1.medium or m1.large)
+8. transient nodes: [Indexing Service](Indexing-Service.html)
 
 This layout naturally lends itself to adding more RAM and core to Compute nodes, and to adding many more Compute nodes. Depending on the actual load, the Master, metadata server, and Zookeeper might need to use larger machines.
 
@@ -55,12 +50,12 @@ An HA layout allows full rolling restarts and heavy volume:
 5. node5: zookeeper (c1.medium)
 6. node6: zookeeper (c1.medium)
 7. node7: zookeeper (c1.medium)
-8. node8: [[Broker]] (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
-9. node9: [[Broker]] (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge) (backup)
+8. node8: [Broker](Broker.html) (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
+9. node9: [Broker](Broker.html) (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge) (backup)
 10. node10: [Historical](Historical.html) (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
 11. node11: [Historical](Historical.html) (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
-12. node12: [[Realtime]] (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
-13. transient nodes: [indexer](Batch-ingestion.html)
+12. node12: [Realtime](Realtime.html) (m1.small or m1.medium or m1.large or m2.xlarge or m2.2xlarge or m2.4xlarge)
+13. transient nodes: [Indexing Service](Indexing-Service.html)
 
 Sizing for Cores and RAM
 ------------------------
