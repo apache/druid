@@ -57,6 +57,7 @@
         <module>s3-extensions</module>
         <module>kafka-seven</module>
         <module>kafka-eight</module>
+        <module>sample-agg</module>
     </modules>
 
     <dependencyManagement>
