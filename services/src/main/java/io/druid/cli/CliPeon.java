@@ -65,6 +65,7 @@ import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.OmniDataSegmentKiller;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.StorageLocationConfig;
+import io.druid.server.QueryResource;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
 
@@ -149,6 +150,7 @@ public class CliPeon extends GuiceRunnable
                   .toInstance(new SegmentLoaderConfig().withLocations(Arrays.<StorageLocationConfig>asList()));
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
+            Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, ChatHandlerResource.class);
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
 

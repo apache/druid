@@ -24,11 +24,13 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
+import io.druid.guice.Jerseys;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.NodeTypeConfig;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.server.QueryResource;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.server.initialization.JettyServerInitializer;
@@ -66,6 +68,8 @@ public class CliHistorical extends ServerRunnable
 
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("historical"));
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+            Jerseys.addResource(binder, QueryResource.class);
+
 
             LifecycleModule.register(binder, ZkCoordinator.class);
             LifecycleModule.register(binder, Server.class);
