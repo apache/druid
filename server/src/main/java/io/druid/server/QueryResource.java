@@ -37,22 +37,25 @@ import io.druid.guice.annotations.Smile;
 import io.druid.query.Query;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.log.RequestLogger;
-import org.eclipse.jetty.server.Request;
 import org.joda.time.DateTime;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
 /**
  */
-public class QueryServlet extends HttpServlet
+@Path("/druid/v2/")
+public class QueryResource
 {
-  private static final Logger log = new Logger(QueryServlet.class);
+  private static final Logger log = new Logger(QueryResource.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
 
   private final ObjectMapper jsonMapper;
@@ -62,7 +65,7 @@ public class QueryServlet extends HttpServlet
   private final RequestLogger requestLogger;
 
   @Inject
-  public QueryServlet(
+  public QueryResource(
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QuerySegmentWalker texasRanger,
@@ -77,8 +80,12 @@ public class QueryServlet extends HttpServlet
     this.requestLogger = requestLogger;
   }
 
-  @Override
-  protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
+  @POST
+  @Produces("application/json")
+  public void doPost(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse resp
+  ) throws ServletException, IOException
   {
     Query query = null;
     byte[] requestQuery = null;
@@ -111,7 +118,7 @@ public class QueryServlet extends HttpServlet
       out = resp.getOutputStream();
       jsonWriter.writeValue(out, results);
 
-      long requestTime = System.currentTimeMillis() - ((Request) req).getTimeStamp();
+      long requestTime = System.currentTimeMillis() - req.getSession().getCreationTime();
 
       emitter.emit(
           new ServiceMetricEvent.Builder()

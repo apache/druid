@@ -21,7 +21,6 @@ package io.druid.cli;
 
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
-import io.druid.server.QueryServlet;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -41,7 +40,6 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
   {
     final ServletContextHandler queries = new ServletContextHandler(ServletContextHandler.SESSIONS);
     queries.setResourceBase("/");
-    queries.addServlet(new ServletHolder(injector.getInstance(QueryServlet.class)), "/druid/v2/*");
 
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
