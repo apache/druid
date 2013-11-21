@@ -28,7 +28,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.11-SNAPSHOT</version>
+        <version>0.6.24-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -36,10 +36,23 @@
             <groupId>io.druid</groupId>
             <artifactId>druid-api</artifactId>
         </dependency>
+        <!-- override jets3t from hadoop-core -->
+        <dependency>
+            <groupId>net.java.dev.jets3t</groupId>
+            <artifactId>jets3t</artifactId>
+        </dependency>
+        <!-- override httpclient / httpcore version from jets3t -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-core</artifactId>
-            <version>1.0.3</version>
             <scope>compile</scope>
         </dependency>
         <dependency>

@@ -60,6 +60,7 @@ public class ConvertProperties implements Runnable
       new Rename("druid.database.password", "druid.db.connector.password"),
       new Rename("druid.database.poll.duration", "druid.manager.segment.pollDuration"),
       new Rename("druid.database.password", "druid.db.connector.password"),
+      new Rename("druid.database.validation", "druid.db.connector.useValidationQuery"),
       new Rename("com.metamx.emitter", "druid.emitter"),
       new Rename("com.metamx.emitter.logging", "druid.emitter.logging"),
       new Rename("com.metamx.emitter.logging.level", "druid.emitter.logging.logLevel"),

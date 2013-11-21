@@ -5,9 +5,7 @@
 
 h1. Contents
 * "Introduction":./
-* "Download":./Download.html
-* "Support":./Support.html
-* "Contribute":./Contribute.html
+* "Concepts and Terminology":./Concepts-and-Terminology.html
 
 h2. Getting Started
 * "Concepts and Terminology":./Concepts-and-Terminology.html
@@ -23,6 +21,9 @@ h2. Evaluate Druid
 
 h2. Configuration
 * "Configuration":Configuration.html
+
+h2. Extend Druid
+* "Modules":./Modules.html
 
 h2. Data Ingestion
 * "Realtime":./Realtime.html
@@ -58,7 +59,6 @@ h2. Architecture
 *** "Firehose":./Firehose.html
 *** "Plumber":./Plumber.html
 ** "Indexing Service":./Indexing-Service.html
-* "Modules":./Modules.html
 * External Dependencies
 ** "Deep Storage":./Deep-Storage.html
 ** "MySQL":./MySQL.html

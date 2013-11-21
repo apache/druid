@@ -42,6 +42,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.client.cache.Cache;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
+import io.druid.guice.annotations.Smile;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
@@ -86,7 +87,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       QueryToolChestWarehouse warehouse,
       TimelineServerView serverView,
       Cache cache,
-      ObjectMapper objectMapper
+      @Smile ObjectMapper objectMapper
   )
   {
     this.warehouse = warehouse;
@@ -276,7 +277,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                         }
 
                         return objectMapper.readValues(
-                            objectMapper.getJsonFactory().createJsonParser(cachedResult),
+                            objectMapper.getFactory().createParser(cachedResult),
                             cacheObjectClazz
                         );
                       }
