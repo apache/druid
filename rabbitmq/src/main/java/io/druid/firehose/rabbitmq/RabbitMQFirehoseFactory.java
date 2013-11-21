@@ -17,11 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment.realtime.firehose;
+package io.druid.firehose.rabbitmq;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.metamx.common.logger.Logger;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
