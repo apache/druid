@@ -25,7 +25,6 @@ import com.google.inject.Binder;
 import com.google.inject.util.Providers;
 import io.druid.initialization.DruidModule;
 import io.druid.query.QuerySegmentWalker;
-import io.druid.server.QueryServlet;
 import io.druid.server.log.EmittingRequestLoggerProvider;
 import io.druid.server.log.FileRequestLoggerProvider;
 import io.druid.server.log.RequestLogger;
@@ -41,7 +40,6 @@ public class QueryableModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(QueryServlet.class).in(LazySingleton.class);
     binder.bind(QuerySegmentWalker.class).toProvider(Providers.<QuerySegmentWalker>of(null));
     binder.bind(RequestLogger.class).toProvider(RequestLoggerProvider.class).in(ManageLifecycle.class);
     JsonConfigProvider.bind(binder, "druid.request.logging", RequestLoggerProvider.class);

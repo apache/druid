@@ -31,6 +31,7 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.NoopSegmentPublisher;
 import io.druid.segment.realtime.RealtimeManager;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.server.QueryResource;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
 
@@ -64,6 +65,8 @@ public class RealtimeModule implements Module
     binder.bind(QuerySegmentWalker.class).to(RealtimeManager.class).in(ManageLifecycle.class);
     binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("realtime"));
     binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+    Jerseys.addResource(binder, QueryResource.class);
+    LifecycleModule.register(binder, QueryResource.class);
 
     LifecycleModule.register(binder, Server.class);
   }
