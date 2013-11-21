@@ -292,7 +292,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     @Override
     public void close() throws IOException
     {
-      jp.close();
+      if(jp != null) {
+        jp.close();
+      }
     }
   }
 }
