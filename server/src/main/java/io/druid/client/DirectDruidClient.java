@@ -89,7 +89,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.httpClient = httpClient;
     this.host = host;
 
-    this.isSmile = this.objectMapper.getJsonFactory() instanceof SmileFactory;
+    this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
   }
 
@@ -269,7 +269,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     {
       if (jp == null) {
         try {
-          jp = objectMapper.getJsonFactory().createJsonParser(future.get());
+          jp = objectMapper.getFactory().createParser(future.get());
           if (jp.nextToken() != JsonToken.START_ARRAY) {
             throw new IAE("Next token wasn't a START_ARRAY, was[%s]", jp.getCurrentToken());
           } else {
