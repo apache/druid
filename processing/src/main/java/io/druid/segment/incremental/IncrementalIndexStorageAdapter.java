@@ -36,6 +36,7 @@ import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.data.Indexed;
@@ -243,7 +244,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         final String dimensionName = dimension.toLowerCase();
                         final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimensionName);
                         if (dimValLookup == null) {
-                          return null;
+                          return new NullDimensionSelector();
                         }
 
                         final int maxId = dimValLookup.size();
