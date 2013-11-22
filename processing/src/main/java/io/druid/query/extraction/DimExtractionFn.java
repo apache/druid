@@ -29,7 +29,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(name = "time", value = TimeDimExtractionFn.class),
     @JsonSubTypes.Type(name = "regex", value = RegexDimExtractionFn.class),
     @JsonSubTypes.Type(name = "partial", value = PartialDimExtractionFn.class),
-    @JsonSubTypes.Type(name = "searchQuery", value = SearchQuerySpecDimExtractionFn.class)
+    @JsonSubTypes.Type(name = "searchQuery", value = SearchQuerySpecDimExtractionFn.class),
+    @JsonSubTypes.Type(name = "javascript", value = JavascriptDimExtractionFn.class)
 })
 public interface DimExtractionFn
 {
