@@ -272,14 +272,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       final String dimensionName = dimension.toLowerCase();
                       final Column columnDesc = index.getColumn(dimensionName);
                       if (columnDesc == null) {
-                        return null;
+                        return new NullDimensionSelector();
                       }
 
                       final DictionaryEncodedColumn column = columnDesc.getDictionaryEncoding();
 
                       if (column == null) {
-                        return null;
-                      } else if (columnDesc.getCapabilities().hasMultipleValues()) {
+                        return new NullDimensionSelector();
+                      }
+                      else if (columnDesc.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override
@@ -674,14 +675,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       final String dimensionName = dimension.toLowerCase();
                       final Column column = index.getColumn(dimensionName);
                       if (column == null) {
-                        return null;
+                        return new NullDimensionSelector();
                       }
 
                       final DictionaryEncodedColumn dict = column.getDictionaryEncoding();
 
                       if (dict == null) {
                         return null;
-                      } else if (column.getCapabilities().hasMultipleValues()) {
+                      }
+                      else if (column.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override
@@ -926,33 +928,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
             }
           }
       );
-    }
-  }
-
-  private static class NullDimensionSelector implements DimensionSelector
-  {
-    @Override
-    public IndexedInts getRow()
-    {
-      return new SingleIndexedInts(0);
-    }
-
-    @Override
-    public int getValueCardinality()
-    {
-      return 1;
-    }
-
-    @Override
-    public String lookupName(int id)
-    {
-      return "";
-    }
-
-    @Override
-    public int lookupId(String name)
-    {
-      return 0;
     }
   }
 }
