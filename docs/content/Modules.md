@@ -54,6 +54,7 @@ Druid's extensions leverage Guice in order to add things at runtime.  Basically,
 1. Add Aggregators
 1. Add Complex metrics
 1. Add new Query types
+1. Add new Jersey resources
 
 
 Extensions are added to the system via an implementation of `io.druid.initialization.DruidModule`.
@@ -157,3 +158,10 @@ DruidBinders.queryRunnerFactoryBinder(binder)
 
 The first one binds the SegmentMetadataQueryQueryToolChest for usage when a SegmentMetadataQuery is used.  The second one does the same thing but for the QueryRunnerFactory instead.
 
+#### Adding new Jersey resources
+
+Adding new Jersey resources to a module requires calling the following code to bind the resource in the module:
+
+```java
+Jerseys.addResource(binder, NewResource.class);
+```
