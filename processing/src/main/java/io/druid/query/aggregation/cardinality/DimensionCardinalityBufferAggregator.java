@@ -49,14 +49,19 @@ public class DimensionCardinalityBufferAggregator implements BufferAggregator
     HyperLogLogPlus hll = (HyperLogLogPlus) get(buf, position);
 
     Object obj = selector.get();
-    if (obj instanceof HyperLogLogPlus) {
+    if (obj instanceof List) {
+      for (Object o : (List) obj) {
+        hll.offer(o);
+      }
+    }
+    else if (obj instanceof HyperLogLogPlus) {
       try {
         hll.addAll((HyperLogLogPlus) obj);
       } catch (CardinalityMergeException e) {
         throw Throwables.propagate(e);
       }
     } else {
-      throw new UnsupportedOperationException("Can only operate on HLL+ objects.");
+      throw new UnsupportedOperationException(String.format("Unexpected object type[%s].", obj.getClass()));
     }
 
     writeHll(buf, position, hll);
