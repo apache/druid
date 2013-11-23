@@ -50,6 +50,11 @@ public class DimensionCardinalityAggregator implements Aggregator
   public void aggregate()
   {
     Object obj = selector.get();
+    if (obj instanceof List) {
+      for (Object o : (List) obj) {
+        hllPlus.offer(o);
+      }
+    }
     if (obj instanceof HyperLogLogPlus) {
       try {
         hllPlus.addAll((HyperLogLogPlus) obj);
@@ -57,7 +62,7 @@ public class DimensionCardinalityAggregator implements Aggregator
         throw Throwables.propagate(e);
       }
     } else {
-      throw new UnsupportedOperationException("Can only operate on HLL+ objects.");
+      throw new UnsupportedOperationException(String.format("Unexpected object type[%s].", obj.getClass()));
     }
   }
 
