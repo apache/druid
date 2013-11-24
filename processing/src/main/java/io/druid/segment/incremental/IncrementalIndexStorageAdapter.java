@@ -416,11 +416,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                             public String get()
                             {
                               final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
+                              if (dimVals == null || dimVals.length == 0) {
+                                return null;
+                              }
                               if (dimVals.length == 1) {
                                 return dimVals[0];
-                              }
-                              if (dimVals.length == 0) {
-                                return null;
                               }
                               throw new UnsupportedOperationException(
                                   "makeObjectColumnSelector does not support multivalued columns"
