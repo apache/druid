@@ -29,9 +29,14 @@ public class DimensionCardinalityAggregator implements Aggregator
   {
     try {
       HyperLogLogPlus retVal = makeHllPlus();
-      log.info("retVal sizeof[%s], p[%s], sp[%s]", retVal.sizeof(), getField(retVal, "p"), getField(retVal, "sp"));
       HyperLogLogPlus fromBytes = HyperLogLogPlus.Builder.build(bytes);
-      log.info("fromBytes sizeof[%s], p[%s], sp[%s]", fromBytes.sizeof(), getField(fromBytes, "p"), getField(fromBytes, "sp"));
+      if (retVal.sizeof() != fromBytes.sizeof()) {
+        log.info(
+            "retVal[%s, %s, %s], fromBytes[%s, %s, %s]",
+            retVal.sizeof(), getField(retVal, "p"), getField(retVal, "sp"),
+            fromBytes.sizeof(), getField(fromBytes, "p"), getField(fromBytes, "sp")
+        );
+      }
       retVal.addAll(fromBytes);
       return retVal;
     } catch (IOException e) {
