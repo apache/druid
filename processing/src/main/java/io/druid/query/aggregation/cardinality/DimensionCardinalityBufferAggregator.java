@@ -60,6 +60,8 @@ public class DimensionCardinalityBufferAggregator implements BufferAggregator
       } catch (CardinalityMergeException e) {
         throw Throwables.propagate(e);
       }
+    } else if (obj instanceof String) {
+      hll.offer(obj);
     } else {
       throw new UnsupportedOperationException(String.format("Unexpected object type[%s].", obj.getClass()));
     }

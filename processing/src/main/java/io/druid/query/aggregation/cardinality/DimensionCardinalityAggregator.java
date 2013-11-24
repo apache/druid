@@ -55,12 +55,14 @@ public class DimensionCardinalityAggregator implements Aggregator
         hllPlus.offer(o);
       }
     }
-    if (obj instanceof HyperLogLogPlus) {
+    else if (obj instanceof HyperLogLogPlus) {
       try {
         hllPlus.addAll((HyperLogLogPlus) obj);
       } catch (CardinalityMergeException e) {
         throw Throwables.propagate(e);
       }
+    } else if (obj instanceof String) {
+      hllPlus.offer(obj);
     } else {
       throw new UnsupportedOperationException(String.format("Unexpected object type[%s].", obj.getClass()));
     }
