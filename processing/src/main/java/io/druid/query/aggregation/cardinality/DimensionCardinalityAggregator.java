@@ -24,8 +24,12 @@ public class DimensionCardinalityAggregator implements Aggregator
   static final HyperLogLogPlus fromBytes(byte[] bytes)
   {
     try {
-      return HyperLogLogPlus.Builder.build(bytes);
+      HyperLogLogPlus retVal = makeHllPlus();
+      retVal.addAll(HyperLogLogPlus.Builder.build(bytes));
+      return retVal;
     } catch (IOException e) {
+      throw Throwables.propagate(e);
+    } catch (CardinalityMergeException e) {
       throw Throwables.propagate(e);
     }
   }
