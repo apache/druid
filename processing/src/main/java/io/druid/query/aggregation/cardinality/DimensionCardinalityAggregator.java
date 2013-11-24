@@ -3,10 +3,12 @@ package io.druid.query.aggregation.cardinality;
 import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
 import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import com.google.common.base.Throwables;
+import com.metamx.common.logger.Logger;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.ObjectColumnSelector;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.List;
 
 /**
@@ -14,6 +16,8 @@ import java.util.List;
  */
 public class DimensionCardinalityAggregator implements Aggregator
 {
+  private static final Logger log = new Logger(DimensionCardinalityAggregator.class);
+
   static final int MAX_SIZE_BYTES = 1381;
 
   static final HyperLogLogPlus makeHllPlus()
@@ -25,13 +29,30 @@ public class DimensionCardinalityAggregator implements Aggregator
   {
     try {
       HyperLogLogPlus retVal = makeHllPlus();
-      retVal.addAll(HyperLogLogPlus.Builder.build(bytes));
+      log.info("retVal sizeof[%s], p[%s], sp[%s]", retVal.sizeof(), getField(retVal, "p"), getField(retVal, "sp"));
+      HyperLogLogPlus fromBytes = HyperLogLogPlus.Builder.build(bytes);
+      log.info("fromBytes sizeof[%s], p[%s], sp[%s]", fromBytes.sizeof(), getField(fromBytes, "p"), getField(fromBytes, "sp"));
+      retVal.addAll(fromBytes);
       return retVal;
     } catch (IOException e) {
       throw Throwables.propagate(e);
     } catch (CardinalityMergeException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  static final Object getField(HyperLogLogPlus hll, String field)
+  {
+    try {
+      Field declaredField = hll.getClass().getDeclaredField(field);
+      declaredField.setAccessible(true);
+      return declaredField.get(hll);
+    } catch (NoSuchFieldException e) {
+      throw Throwables.propagate(e);
+    } catch (IllegalAccessException e) {
+      throw Throwables.propagate(e);
+    }
+
   }
 
   private final String name;
