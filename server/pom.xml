@@ -229,6 +229,12 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <filtering>true</filtering>
+                <directory>${basedir}/src/main/resources</directory>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
