@@ -49,7 +49,10 @@ public class DimensionCardinalityBufferAggregator implements BufferAggregator
     HyperLogLogPlus hll = (HyperLogLogPlus) get(buf, position);
 
     Object obj = selector.get();
-    if (obj instanceof List) {
+    if (obj == null) {
+      hll.offer(obj);
+    }
+    else if (obj instanceof List) {
       for (Object o : (List) obj) {
         hll.offer(o);
       }

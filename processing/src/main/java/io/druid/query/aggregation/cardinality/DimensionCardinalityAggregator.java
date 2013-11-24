@@ -50,7 +50,10 @@ public class DimensionCardinalityAggregator implements Aggregator
   public void aggregate()
   {
     Object obj = selector.get();
-    if (obj instanceof List) {
+    if (obj == null) {
+      hllPlus.offer(obj);
+    }
+    else if (obj instanceof List) {
       for (Object o : (List) obj) {
         hllPlus.offer(o);
       }
