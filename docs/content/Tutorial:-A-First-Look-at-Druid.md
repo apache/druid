@@ -140,7 +140,8 @@ The result looks something like this:
 
 This groupBy query is a bit complicated and we'll return to it later. For the time being, just make sure you are getting some blocks of data back. If you are having problems, make sure you have [curl](http://curl.haxx.se/) installed. Control+C to break out of the client script.
 
-h2. Querying Druid
+Querying Druid
+--------------
 
 In your favorite editor, create the file:
 
