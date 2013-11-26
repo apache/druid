@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 /**
  */
@@ -35,9 +38,31 @@ public class StatusResource
   public Status doGet()
   {
     return new Status(
-        StatusResource.class.getPackage().getImplementationVersion(),
+        getMavenVersion("io.druid","druid-server"),
         new Memory(Runtime.getRuntime())
     );
+  }
+
+  private String getMavenVersion(String groupId, String artifactId){
+
+    Properties properties = new Properties();
+    try {
+      InputStream is = StatusResource.class.getClassLoader().getResourceAsStream(
+          String.format(
+              "META-INF/maven/%s/%s/pom.properties",
+              groupId,
+              artifactId
+          )
+      );
+      if (is == null) {
+        return null;
+      }
+      properties.load(is);
+    }
+    catch (IOException e) {
+//      e.printStackTrace();
+    }
+    return properties.getProperty("version");
   }
 
   public static class Status {
