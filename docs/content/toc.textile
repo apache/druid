@@ -8,7 +8,6 @@ h1. Contents
 * "Concepts and Terminology":./Concepts-and-Terminology.html
 
 h2. Getting Started
-* "Concepts and Terminology":./Concepts-and-Terminology.html
 * "Tutorial: A First Look at Druid":./Tutorial:-A-First-Look-at-Druid.html
 * "Tutorial: The Druid Cluster":./Tutorial:-The-Druid-Cluster.html
 * "Tutorial: Loading Your Data Part 1":./Tutorial:-Loading-Your-Data-Part-1.html
