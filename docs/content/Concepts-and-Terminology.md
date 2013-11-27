@@ -24,16 +24,16 @@ More definitions are available on the [design page](Design.html).
 
 * **Rollup** The aggregation of data that occurs at one or more stages, based on settings in a [configuration file](#specFile). 
 
-<a name="segment"></a>
+  <a name="segment"></a>
 * **Segment** A collection of (internal) records that are stored and processed together. Druid chunks data into segments representing a time interval, and these are stored and manipulated in the cluster.
 
 * **Shard** A sub-partition of the data, allowing multiple [segments](#segment) to represent the data in a certain time interval. Sharding occurs along time partitions to better handle amounts of data that exceed certain limits on segment size, although sharding along dimensions may also occur to optimize efficiency.
 
-<a name="specfile"></a>
+  <a name="specfile"></a>
 * **specFile** The specification for services in JSON format; see [Realtime](Realtime.html) and [Batch-ingestion](Batch-ingestion.html)
 
-<a name="timeseries"></a>
+  <a name="timeseries"></a>
 * **Timeseries Data** Data points which are ordered in time. The closing value of a financial index or the number of tweets per hour with a certain hashtag are examples of timeseries data.
 
-<a name="timestamp"></a>
+  <a name="timestamp"></a>
 * **Timestamp** An absolute position on a timeline, given in a standard alpha-numerical format such as with UTC time. [Timeseries data](#timeseries) points can be ordered by timestamp, and in Druid, they are.
