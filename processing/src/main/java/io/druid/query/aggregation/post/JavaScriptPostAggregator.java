@@ -57,7 +57,7 @@ public class JavaScriptPostAggregator implements PostAggregator
 
     final ScriptableObject scope = context.initStandardObjects();
 
-    final org.mozilla.javascript.Function fn = context.compileFunction(scope, function, "aggregate", 1, null);
+    final org.mozilla.javascript.Function fn = context.compileFunction(scope, function, "fn", 1, null);
     Context.exit();
 
 
