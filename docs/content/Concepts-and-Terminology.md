@@ -16,7 +16,7 @@ More definitions are available on the [design page](Design.html).
 
 * **Dimensions** Aspects or categories of data, such as languages or locations. For example, with *language* and *country* as the type of dimension, values could be "English" or "Mandarin" for language, or "USA" or "China" for country. In Druid, dimensions can serve as filters for narrowing down hits (for example, language = "English" or country = "China").
 
-* **Ephemeral node** A Zookeeper node (or "znode") that exists only for the time it is needed to complete the process for which it was created. In a Druid cluster, ephemeral nodes are typically used in work such as assigning [segments](#segment) to certain nodes.
+* **Ephemeral Node** A Zookeeper node (or "znode") that exists only for the time it is needed to complete the process for which it was created. In a Druid cluster, ephemeral nodes are typically used in work such as assigning [segments](#segment) to certain nodes.
 
 * **Granularity** The time interval corresponding to aggregation by time. Druid configuration settings specify the granularity of [timestamp](#timestamp) buckets in a [segment](#segment) (for example, by minute or by hour), as well as the granularity of the segment itself. The latter is essentially the overall range of absolute time covered by the segment. In queries, granularity settings control the summarization of findings.
 
