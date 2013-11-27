@@ -178,7 +178,7 @@ Segment Propagation
 
 The segment propagation diagram for real-time data ingestion can be seen below:
 
-![Segment Propagation](https://raw.github.com/metamx/druid/druid-0.5.4/doc/segment_propagation.png "Segment Propagation")
+![Segment Propagation](../img/segmentPropagation.png "Segment Propagation")
 
 Requirements
 ------------
