@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment.realtime.firehose;
+package io.druid.firehose.rabbitmq;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -32,6 +32,11 @@ public class RabbitMQFirehoseConfig
   private boolean durable = false;
   private boolean exclusive = false;
   private boolean autoDelete = false;
+
+  // Lyra (auto reconnect) properties
+  private int maxRetries = 100;
+  private int retryIntervalSeconds = 2;
+  private long maxDurationSeconds = 5 * 60;
 
   @JsonProperty
   public String getQueue()
@@ -97,5 +102,32 @@ public class RabbitMQFirehoseConfig
   public void setAutoDelete(boolean autoDelete)
   {
     this.autoDelete = autoDelete;
+  }
+
+  @JsonProperty
+  public int getMaxRetries() {
+    return maxRetries;
+  }
+
+  public void setMaxRetries(int maxRetries) {
+    this.maxRetries = maxRetries;
+  }
+
+  @JsonProperty
+  public int getRetryIntervalSeconds() {
+    return retryIntervalSeconds;
+  }
+
+  public void setRetryIntervalSeconds(int retryIntervalSeconds) {
+    this.retryIntervalSeconds = retryIntervalSeconds;
+  }
+
+  @JsonProperty
+  public long getMaxDurationSeconds() {
+    return maxDurationSeconds;
+  }
+
+  public void setMaxDurationSeconds(int maxDurationSeconds) {
+    this.maxDurationSeconds = maxDurationSeconds;
   }
 }

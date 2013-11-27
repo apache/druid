@@ -184,10 +184,6 @@
             <artifactId>jetty-servlets</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.rabbitmq</groupId>
-            <artifactId>amqp-client</artifactId>
-        </dependency>
-        <dependency>
           <groupId>com.ircclouds.irc</groupId>
           <artifactId>irc-api</artifactId>
         </dependency>
