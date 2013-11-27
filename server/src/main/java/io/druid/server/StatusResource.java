@@ -20,12 +20,19 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.inject.Injector;
+import io.druid.initialization.DruidModule;
+import io.druid.initialization.Initialization;
+import io.druid.server.initialization.ExtensionsConfig;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -38,22 +45,44 @@ public class StatusResource
   public Status doGet()
   {
     return new Status(
-        getMavenVersion("io.druid","druid-server"),
+        getVersion("/druid-server.version"),
+        getVersion("/druid-api.version"),
+        getExtensionVersions(),
         new Memory(Runtime.getRuntime())
     );
   }
 
-  private String getMavenVersion(String groupId, String artifactId){
+  /**
+   * Load the extensions list and return the implementation-versions
+   *
+   * @return map of extensions loaded with their respective implementation versions.
+   */
+  private Map<String, String> getExtensionVersions()
+  {
+    final Injector injector = Initialization.makeStartupInjector();
+    final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
+    final List<DruidModule> druidModules = Initialization.getFromExtensions(config, DruidModule.class);
+    Map<String, String> moduleVersions = new HashMap<>();
+    for (DruidModule module : druidModules) {
+      Package pkg = module.getClass().getPackage();
+      moduleVersions.put(pkg.getImplementationTitle(), pkg.getImplementationVersion());
+    }
+    return moduleVersions;
+  }
+
+  /**
+   * Load properties files from the classpath and return version number
+   *
+   * @param versionFile
+   *
+   * @return version number
+   */
+  private String getVersion(String versionFile)
+  {
 
     Properties properties = new Properties();
     try {
-      InputStream is = StatusResource.class.getClassLoader().getResourceAsStream(
-          String.format(
-              "META-INF/maven/%s/%s/pom.properties",
-              groupId,
-              artifactId
-          )
-      );
+      InputStream is = StatusResource.class.getResourceAsStream(versionFile);
       if (is == null) {
         return null;
       }
@@ -65,20 +94,42 @@ public class StatusResource
     return properties.getProperty("version");
   }
 
-  public static class Status {
-    final String version;
+  public static class Status
+  {
+    final String serverVersion;
+    final String apiVersion;
+    final Map<String, String> extensionsVersion;
     final Memory memory;
 
-    public Status(String version, Memory memory)
+    public Status(
+        String serverVersion,
+        String apiVersion,
+        Map<String, String> extensionsVersion,
+        Memory memory
+    )
     {
-      this.version = version;
+      this.serverVersion = serverVersion;
+      this.apiVersion = apiVersion;
+      this.extensionsVersion = extensionsVersion;
       this.memory = memory;
     }
 
     @JsonProperty
-    public String getVersion()
+    public String getServerVersion()
     {
-      return version;
+      return serverVersion;
+    }
+
+    @JsonProperty
+    public String getApiVersion()
+    {
+      return apiVersion;
+    }
+
+    @JsonProperty
+    public Map<String, String> getExtensionsVersion()
+    {
+      return extensionsVersion;
     }
 
     @JsonProperty
@@ -88,13 +139,15 @@ public class StatusResource
     }
   }
 
-  public static class Memory {
+  public static class Memory
+  {
     final long maxMemory;
     final long totalMemory;
     final long freeMemory;
     final long usedMemory;
 
-    public Memory(Runtime runtime) {
+    public Memory(Runtime runtime)
+    {
       maxMemory = runtime.maxMemory();
       totalMemory = runtime.totalMemory();
       freeMemory = runtime.freeMemory();
