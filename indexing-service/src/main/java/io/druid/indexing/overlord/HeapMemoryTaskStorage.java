@@ -128,7 +128,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<Task> getRunningTasks()
+  public List<Task> getActiveTasks()
   {
     giant.lock();
 

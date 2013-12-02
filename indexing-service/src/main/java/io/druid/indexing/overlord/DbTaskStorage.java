@@ -220,7 +220,7 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<Task> getRunningTasks()
+  public List<Task> getActiveTasks()
   {
     return dbi.withHandle(
         new HandleCallback<List<Task>>()
