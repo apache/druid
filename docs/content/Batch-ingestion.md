@@ -202,7 +202,7 @@ The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Co
       "type" : "static",
       "paths" : "data.json"
     },
-    "targetPartitionSize" : 5000000,
+    "targetPartitionSi:qze" : 5000000,
     "rollupSpec" : {
       "aggs": [{
           "type" : "count",
