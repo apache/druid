@@ -14,7 +14,6 @@ public class Version implements Runnable {
   public void run()
   {
     System.out.println("Druid version " + Initialization.class.getPackage().getImplementationVersion());
-    System.out.println("Druid API version " + DruidModule.class.getPackage().getImplementationVersion());
 
     ExtensionsConfig config = Initialization.makeStartupInjector().getInstance(ExtensionsConfig.class);
 
