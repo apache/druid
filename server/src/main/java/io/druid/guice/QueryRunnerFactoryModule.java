@@ -31,6 +31,8 @@ import io.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchQueryRunnerFactory;
 import io.druid.query.search.search.SearchQuery;
+import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryRunnerFactory;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -49,6 +51,7 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
                   .put(TimeBoundaryQuery.class, TimeBoundaryQueryRunnerFactory.class)
                   .put(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
                   .put(GroupByQuery.class, GroupByQueryRunnerFactory.class)
+                  .put(SelectQuery.class, SelectQueryRunnerFactory.class)
                   .build();
 
   @Override

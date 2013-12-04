@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
 import com.metamx.common.collect.MoreIterators;
 import com.metamx.common.guava.FunctionalIterable;
@@ -75,6 +76,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public Indexed<String> getAvailableDimensions()
   {
     return index.getAvailableDimensions();
+  }
+
+  @Override
+  public Iterable<String> getAvailableMetrics()
+  {
+    return Sets.difference(Sets.newHashSet(index.getColumnNames()), Sets.newHashSet(index.getAvailableDimensions()));
   }
 
   @Override
@@ -234,6 +241,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public void reset()
                     {
                       cursorOffset = initOffset.clone();
+                    }
+
+                    @Override
+                    public TimestampColumnSelector makeTimestampColumnSelector()
+                    {
+                      return new TimestampColumnSelector()
+                      {
+                        @Override
+                        public long getTimestamp()
+                        {
+                          return index.getTimeColumn().getGenericColumn().getLongSingleValueRow(cursorOffset.getOffset());
+                        }
+                      };
                     }
 
                     @Override
@@ -618,6 +638,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public void reset()
                     {
                       currRow = initRow;
+                    }
+
+                    @Override
+                    public TimestampColumnSelector makeTimestampColumnSelector()
+                    {
+                      return new TimestampColumnSelector()
+                      {
+                        @Override
+                        public long getTimestamp()
+                        {
+                          return timestamps.getLongSingleValueRow(currRow);
+                        }
+                      };
                     }
 
                     @Override

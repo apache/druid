@@ -1,3 +1,4 @@
+
 /*
  * Druid - a distributed column store.
  * Copyright (C) 2012, 2013  Metamarkets Group Inc.
@@ -38,6 +39,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.TimestampColumnSelector;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListIndexed;
@@ -85,6 +87,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public Indexed<String> getAvailableDimensions()
   {
     return new ListIndexed<String>(index.getDimensions(), String.class);
+  }
+
+  @Override
+  public Iterable<String> getAvailableMetrics()
+  {
+    return index.getMetricNames();
   }
 
   @Override
@@ -235,6 +243,19 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                         done = cursorMap.size() == 0 || !baseIter.hasNext();
 
+                      }
+
+                      @Override
+                      public TimestampColumnSelector makeTimestampColumnSelector()
+                      {
+                        return new TimestampColumnSelector()
+                        {
+                          @Override
+                          public long getTimestamp()
+                          {
+                            return currEntry.getKey().getTimestamp();
+                          }
+                        };
                       }
 
                       @Override
