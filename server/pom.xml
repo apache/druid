@@ -224,17 +224,9 @@
             <artifactId>caliper</artifactId>
             <scope>test</scope>
         </dependency>
-
-
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <filtering>true</filtering>
-                <directory>${basedir}/src/main/resources</directory>
-            </resource>
-        </resources>
         <plugins>
             <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -245,6 +237,14 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.antlr</groupId>
