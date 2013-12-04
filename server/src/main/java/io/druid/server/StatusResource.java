@@ -45,7 +45,7 @@ public class StatusResource
   public Status doGet()
   {
     return new Status(
-        getVersion("/druid-server.version"),
+        Initialization.class.getPackage().getImplementationVersion(),
         getVersion("/druid-api.version"),
         getExtensionVersions(),
         new Memory(Runtime.getRuntime())

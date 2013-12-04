@@ -1,3 +1,0 @@
-version=${pom.version}
-groupId=${pom.groupId}
-artifactId=${pom.artifactId}
