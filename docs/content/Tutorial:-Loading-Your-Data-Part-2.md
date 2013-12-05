@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Tutorial: Loading Your Data (Part 2)
 In this tutorial we will cover more advanced/real-world ingestion topics.
 
 Druid can ingest streaming or batch data. Streaming data is ingested via the real-time node, and batch data is ingested via the Hadoop batch indexer. Druid also has a standalone ingestion service called the [indexing service](Indexing-Service.html).
