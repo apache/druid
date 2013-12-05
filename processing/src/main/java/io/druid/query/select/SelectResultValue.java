@@ -20,6 +20,7 @@
 package io.druid.query.select;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -33,44 +34,42 @@ import java.util.Map;
  */
 public class SelectResultValue implements Iterable<EventHolder>
 {
-  private final List<EventHolder> value;
+  private final Map<String, Integer> pagingIdentifiers;
+  private final List<EventHolder> events;
 
   @JsonCreator
   public SelectResultValue(
-      List<?> value
-  )
+      @JsonProperty("pagingIdentifiers") Map<String, Integer> pagingIdentifiers,
+      @JsonProperty("events") List<EventHolder> events)
   {
-    this.value = (value == null) ? Lists.<EventHolder>newArrayList() : Lists.transform(
-        value,
-        new Function<Object, EventHolder>()
-        {
-          @Override
-          public EventHolder apply(Object input)
-          {
-            if (input instanceof EventHolder) {
-              return (EventHolder) input;
-            } else if (input instanceof Map) {
-              long timestamp = (long) ((Map) input).remove("timestamp");
-              EventHolder retVal = new EventHolder(timestamp);
-              retVal.putAll((Map) input);
-              return retVal;
-            } else {
-              throw new ISE("Unknown type : %s", input.getClass());
-            }
-          }
-        }
-    );
+    this.pagingIdentifiers = pagingIdentifiers;
+    this.events = events;
   }
 
-  @JsonValue
-  public List<EventHolder> getBaseObject()
+  public SelectResultValue(
+      Object pagingIdentifiers,
+      List<?> events
+  )
   {
-    return value;
+    this.pagingIdentifiers = null;
+    this.events = null;
+  }
+
+  @JsonProperty
+  public Map<String, Integer> getPagingIdentifiers()
+  {
+    return pagingIdentifiers;
+  }
+
+  @JsonProperty
+  public List<EventHolder> getEvents()
+  {
+    return events;
   }
 
   @Override
   public Iterator<EventHolder> iterator()
   {
-    return value.iterator();
+    return events.iterator();
   }
 }

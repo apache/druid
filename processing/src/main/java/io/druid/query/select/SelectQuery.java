@@ -37,7 +37,8 @@ import java.util.Map;
 @JsonTypeName("select")
 public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
 {
-  private static final PagingSpec defaultPagingSpec = new PagingSpec(0, 10);
+  // TODO: remove this
+  private static final PagingSpec defaultPagingSpec = new PagingSpec(null, 5);
 
   private final DimFilter dimFilter;
   private final QueryGranularity granularity;
@@ -148,6 +149,4 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
            ", pagingSpec=" + pagingSpec +
            '}';
   }
-
-
 }

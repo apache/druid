@@ -232,6 +232,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
+                    public void advanceTo(int offset)
+                    {
+                      int count = 0;
+                      while (count < offset && !isDone()) {
+                        advance();
+                        count++;
+                      }
+                    }
+
+                    @Override
                     public boolean isDone()
                     {
                       return !cursorOffset.withinBounds();
@@ -251,7 +261,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         @Override
                         public long getTimestamp()
                         {
-                          return index.getTimeColumn().getGenericColumn().getLongSingleValueRow(cursorOffset.getOffset());
+                          return index.getTimeColumn()
+                                      .getGenericColumn()
+                                      .getLongSingleValueRow(cursorOffset.getOffset());
                         }
                       };
                     }
@@ -269,8 +281,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (column == null) {
                         return null;
-                      }
-                      else if (columnDesc.getCapabilities().hasMultipleValues()) {
+                      } else if (columnDesc.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override
@@ -629,6 +640,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
+                    public void advanceTo(int offset)
+                    {
+                      currRow += offset;
+                    }
+
+                    @Override
                     public boolean isDone()
                     {
                       return currRow >= timestamps.length() || timestamps.getLongSingleValueRow(currRow) >= nextBucket;
@@ -666,8 +683,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (dict == null) {
                         return null;
-                      }
-                      else if (column.getCapabilities().hasMultipleValues()) {
+                      } else if (column.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override

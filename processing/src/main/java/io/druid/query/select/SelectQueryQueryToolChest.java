@@ -24,7 +24,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.guava.MergeSequence;
@@ -42,7 +41,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
@@ -53,7 +51,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -179,7 +176,11 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           @Override
           public Object apply(final Result<SelectResultValue> input)
           {
-            return Arrays.asList(input.getTimestamp().getMillis(), input.getValue().getBaseObject());
+            return Arrays.asList(
+                input.getTimestamp().getMillis(),
+                input.getValue().getPagingIdentifiers(),
+                input.getValue().getEvents()
+            );
           }
         };
       }
@@ -201,7 +202,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
             return new Result<SelectResultValue>(
                 timestamp,
-                new SelectResultValue(Lists.newArrayList(resultIter))
+                new SelectResultValue(resultIter.next(), Lists.newArrayList(resultIter.next()))
             );
           }
         };

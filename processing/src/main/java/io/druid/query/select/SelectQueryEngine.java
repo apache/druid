@@ -29,10 +29,13 @@ import io.druid.query.Result;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.TimestampColumnSelector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
+import org.joda.time.DateTime;
 
 import java.util.Iterator;
 import java.util.List;
@@ -42,7 +45,7 @@ import java.util.Map;
  */
 public class SelectQueryEngine
 {
-  public Sequence<Result<SelectResultValue>> process(final SelectQuery query, final StorageAdapter adapter)
+  public Sequence<Result<SelectResultValue>> process(final SelectQuery query, final Segment segment)
   {
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<Result<SelectResultValue>, Iterator<Result<SelectResultValue>>>()
@@ -50,6 +53,8 @@ public class SelectQueryEngine
           @Override
           public Iterator<Result<SelectResultValue>> make()
           {
+            final StorageAdapter adapter = segment.asStorageAdapter();
+
             final Iterable<String> dims;
             if (query.getDimensions() == null || query.getDimensions().isEmpty()) {
               dims = adapter.getAvailableDimensions();
@@ -75,7 +80,11 @@ public class SelectQueryEngine
                   public Result<SelectResultValue> apply(Cursor cursor)
                   {
                     final TimestampColumnSelector timestampColumnSelector = cursor.makeTimestampColumnSelector();
-                    final SelectResultValueBuilder builder = new SelectResultValueBuilder(cursor.getTime(), query.getPagingSpec().getThreshold());
+                    final SelectResultValueBuilder builder = new SelectResultValueBuilder(
+                        cursor.getTime(),
+                        query.getPagingSpec()
+                             .getThreshold()
+                    );
 
                     final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
                     for (String dim : dims) {
@@ -89,8 +98,20 @@ public class SelectQueryEngine
                       metSelectors.put(metric, metricSelector);
                     }
 
-                    while (!cursor.isDone()) {
-                      final EventHolder theEvent = new EventHolder(timestampColumnSelector.getTimestamp());
+                    int startOffset;
+                    if (query.getPagingSpec().getPagingIdentifiers() == null) {
+                      startOffset = 0;
+                    } else {
+                      Integer offset = query.getPagingSpec().getPagingIdentifiers().get(segment.getIdentifier());
+                      startOffset = (offset == null) ? 0 : offset;
+                    }
+
+                    cursor.advanceTo(startOffset);
+
+                    int offset = 0;
+                    while (!cursor.isDone() && offset < query.getPagingSpec().getThreshold()) {
+                      final Map<String, Object> theEvent = Maps.newLinkedHashMap();
+                      theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.getTimestamp()));
 
                       for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
                         final String dim = dimSelector.getKey();
@@ -115,8 +136,15 @@ public class SelectQueryEngine
                         theEvent.put(metric, selector.get());
                       }
 
-                      builder.addEntry(theEvent);
+                      builder.addEntry(
+                          new EventHolder(
+                              segment.getIdentifier(),
+                              startOffset + offset,
+                              theEvent
+                          )
+                      );
                       cursor.advance();
+                      offset++;
                     }
 
                     return builder.build();

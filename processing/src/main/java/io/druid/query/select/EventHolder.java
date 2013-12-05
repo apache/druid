@@ -1,6 +1,26 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package io.druid.query.select;
 
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
 import org.joda.time.DateTime;
 
@@ -10,40 +30,44 @@ import java.util.Map;
  */
 public class EventHolder
 {
-  private final long timestamp;
-  private final Map<String, Object> entries = Maps.newLinkedHashMap();
+  public static final String timestampKey = "timestamp";
 
-  public EventHolder(long timestamp)
+  private final String segmentId;
+  private final int offset;
+  private final Map<String, Object> event;
+
+  @JsonCreator
+  public EventHolder(
+      @JsonProperty("segmentId") String segmentId,
+      @JsonProperty("offset") int offset,
+      @JsonProperty("event") Map<String, Object> event
+  )
   {
-    this.timestamp = timestamp;
+    this.segmentId = segmentId;
+    this.offset = offset;
+    this.event = event;
   }
 
-  public void put(String key, Object val)
+  public DateTime getTimestamp()
   {
-    entries.put(key, val);
+    return (DateTime) event.get(timestampKey);
   }
 
-  public void putAll(Map<String, Object> data)
+  @JsonProperty
+  public String getSegmentId()
   {
-    entries.putAll(data);
+    return segmentId;
   }
 
-  public Object get(String key)
+  @JsonProperty
+  public int getOffset()
   {
-    return entries.get(key);
+    return offset;
   }
 
-  public long getTimestamp()
+  @JsonProperty
+  public Map<String, Object> getEvent()
   {
-    return timestamp;
-  }
-
-  @JsonValue
-  public Map<String, Object> getBaseObject()
-  {
-    Map<String, Object> retVal = Maps.newLinkedHashMap();
-    retVal.put("timestamp", new DateTime(timestamp));
-    retVal.putAll(entries);
-    return retVal;
+    return event;
   }
 }

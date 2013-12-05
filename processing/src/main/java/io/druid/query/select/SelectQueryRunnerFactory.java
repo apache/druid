@@ -29,6 +29,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
+import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 
@@ -63,7 +64,7 @@ public class SelectQueryRunnerFactory
   @Override
   public QueryRunner<Result<SelectResultValue>> createRunner(final Segment segment)
   {
-    return new SelectQueryRunner(engine, segment.asStorageAdapter());
+    return new SelectQueryRunner(engine, segment);
   }
 
   @Override
@@ -85,12 +86,12 @@ public class SelectQueryRunnerFactory
   private static class SelectQueryRunner implements QueryRunner<Result<SelectResultValue>>
   {
     private final SelectQueryEngine engine;
-    private final StorageAdapter adapter;
+    private final Segment segment;
 
-    private SelectQueryRunner(SelectQueryEngine engine, StorageAdapter adapter)
+    private SelectQueryRunner(SelectQueryEngine engine, Segment segment)
     {
       this.engine = engine;
-      this.adapter = adapter;
+      this.segment = segment;
     }
 
     @Override
@@ -100,7 +101,7 @@ public class SelectQueryRunnerFactory
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), SelectQuery.class);
       }
 
-      return engine.process((SelectQuery) input, adapter);
+      return engine.process((SelectQuery) input, segment);
     }
   }
 }

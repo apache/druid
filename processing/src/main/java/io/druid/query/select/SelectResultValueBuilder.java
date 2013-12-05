@@ -20,6 +20,7 @@
 package io.druid.query.select;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.primitives.Longs;
 import io.druid.query.Result;
@@ -27,6 +28,7 @@ import org.joda.time.DateTime;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -37,7 +39,17 @@ public class SelectResultValueBuilder
     @Override
     public int compare(EventHolder o1, EventHolder o2)
     {
-      return Longs.compare(o1.getTimestamp(), o2.getTimestamp());
+      int retVal = Longs.compare(o1.getTimestamp().getMillis(), o2.getTimestamp().getMillis());
+
+      if (retVal == 0) {
+        retVal = o1.getSegmentId().compareTo(o2.getSegmentId());
+      }
+
+      if (retVal == 0) {
+        retVal = Integer.compare(o1.getOffset(), o2.getOffset());
+      }
+
+      return retVal;
     }
   };
 
@@ -55,26 +67,27 @@ public class SelectResultValueBuilder
     instantiatePQueue(threshold, comparator);
   }
 
-  public SelectResultValueBuilder addEntry(
+  public void addEntry(
       EventHolder event
   )
   {
     pQueue.add(event);
-
-    return this;
   }
 
   public Result<SelectResultValue> build()
   {
-        // Pull out top aggregated values
+    // Pull out top aggregated values
     List<EventHolder> values = Lists.newArrayListWithCapacity(pQueue.size());
+    Map<String, Integer> pagingIdentifiers = Maps.newHashMap();
     while (!pQueue.isEmpty()) {
-      values.add(pQueue.remove());
+      EventHolder event = pQueue.remove();
+      pagingIdentifiers.put(event.getSegmentId(), event.getOffset());
+      values.add(event);
     }
 
     return new Result<SelectResultValue>(
         timestamp,
-        new SelectResultValue(values)
+        new SelectResultValue(pagingIdentifiers, values)
     );
   }
 
