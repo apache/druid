@@ -158,7 +158,7 @@ DruidBinders.queryRunnerFactoryBinder(binder)
 
 The first one binds the SegmentMetadataQueryQueryToolChest for usage when a SegmentMetadataQuery is used.  The second one does the same thing but for the QueryRunnerFactory instead.
 
-#### Adding new Jersey resources
+### Adding new Jersey resources
 
 Adding new Jersey resources to a module requires calling the following code to bind the resource in the module:
 

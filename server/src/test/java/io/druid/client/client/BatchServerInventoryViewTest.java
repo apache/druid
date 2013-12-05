@@ -198,7 +198,8 @@ public class BatchServerInventoryViewTest
   private void waitForSync() throws Exception
   {
     Stopwatch stopwatch = new Stopwatch().start();
-    while (Iterables.get(batchServerInventoryView.getInventory(), 0).getSegments().size() != testSegments.size()) {
+    while (!Iterables.isEmpty(batchServerInventoryView.getInventory())
+           && Iterables.get(batchServerInventoryView.getInventory(), 0).getSegments().size() != testSegments.size()) {
       Thread.sleep(500);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 5000) {
         throw new ISE("BatchServerInventoryView is not updating");

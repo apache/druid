@@ -27,7 +27,7 @@ druid.host=localhost
 druid.service=realtime
 druid.port=8083
 
-druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.23"]
+druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.26"]
 
 
 druid.zk.service.host=localhost
@@ -49,7 +49,7 @@ The realtime module uses several of the default modules in [Configuration](Confi
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.realtime.specFile`|The file with realtime specifications in it.|none|
-|`druid.publish.type`|Choices:noop, db. After a real-time node completes building a segment after the window period, what does it do with it? For true handoff to occur, this should be set to "db".|noop|
+|`druid.publish.type`|Choices:noop, db. After a real-time node completes building a segment after the window period, what does it do with it? For true handoff to occur, this should be set to "db".|db|
 
 ### Realtime "specFile"
 

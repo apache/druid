@@ -28,7 +28,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.24-SNAPSHOT</version>
+        <version>0.6.27-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -182,10 +182,6 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlets</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.rabbitmq</groupId>
-            <artifactId>amqp-client</artifactId>
         </dependency>
         <dependency>
           <groupId>com.ircclouds.irc</groupId>
