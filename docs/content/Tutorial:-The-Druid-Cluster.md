@@ -13,7 +13,7 @@ In this tutorial, we will set up other types of Druid nodes as well as and exter
 
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
-You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.6.24-bin.tar.gz)
+You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.6.26-bin.tar.gz)
 
 and untar the contents within by issuing:
 
@@ -149,7 +149,7 @@ druid.port=8081
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.24"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.26"]
 
 # Dummy read only AWS account (used to download example data)
 druid.s3.secretKey=QyyfVZ7llSiRg6Qcrql1eEUG7buFpAK6T6engr1b
@@ -159,7 +159,6 @@ druid.server.maxSize=100000000
 
 druid.processing.buffer.sizeBytes=10000000
 
-druid.segmentCache.infoPath=/tmp/druid/segmentInfoCache
 druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 100000000}]
 ```
 
@@ -239,7 +238,7 @@ druid.port=8083
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.24","io.druid.extensions:druid-kafka-seven:0.6.24"]
+druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.26","io.druid.extensions:druid-kafka-seven:0.6.26"]
 
 # Change this config to db to hand off to the rest of the Druid cluster
 druid.publish.type=noop

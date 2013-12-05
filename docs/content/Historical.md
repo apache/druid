@@ -32,7 +32,6 @@ druid.server.maxSize=100000000
 
 druid.processing.buffer.sizeBytes=10000000
 
-druid.segmentCache.infoPath=/tmp/druid/segmentInfoCache
 druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 100000000}]```
 ```
 

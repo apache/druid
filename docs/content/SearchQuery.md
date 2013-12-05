@@ -3,26 +3,27 @@ layout: doc_page
 ---
 A search query returns dimension values that match the search specification.
 
-    <code>{
-      "queryType": "search",
-      "dataSource": "sample_datasource",
-      "granularity": "day",
-      "searchDimensions": [
-        "dim1",
-        "dim2"
-      ],
-      "query": {
-        "type": "insensitive_contains",
-        "value": "Ke"
-      },
-      "sort" : {
-        "type": "lexicographic"
-      },
-      "intervals": [
-        "2013-01-01T00:00:00.000/2013-01-03T00:00:00.000"
-      ]
-    }
-    </code>
+```json
+{
+  "queryType": "search",
+  "dataSource": "sample_datasource",
+  "granularity": "day",
+  "searchDimensions": [
+    "dim1",
+    "dim2"
+  ],
+  "query": {
+    "type": "insensitive_contains",
+    "value": "Ke"
+  },
+  "sort" : {
+    "type": "lexicographic"
+  },
+  "intervals": [
+    "2013-01-01T00:00:00.000/2013-01-03T00:00:00.000"
+  ]
+}
+```
 
 There are several main parts to a search query:
 
@@ -40,32 +41,33 @@ There are several main parts to a search query:
 
 The format of the result is:
 
-    <code>[
+```json
+[
+  {
+    "timestamp": "2012-01-01T00:00:00.000Z",
+    "result": [
       {
-        "timestamp": "2012-01-01T00:00:00.000Z",
-        "result": [
-          {
-            "dimension": "dim1",
-            "value": "Ke$ha"
-          },
-          {
-            "dimension": "dim2",
-            "value": "Ke$haForPresident"
-          }
-        ]
+        "dimension": "dim1",
+        "value": "Ke$ha"
       },
       {
-        "timestamp": "2012-01-02T00:00:00.000Z",
-        "result": [
-          {
-            "dimension": "dim1",
-            "value": "SomethingThatContainsKe"
-          },
-          {
-            "dimension": "dim2",
-            "value": "SomethingElseThatContainsKe"
-          }      
-        ]
+        "dimension": "dim2",
+        "value": "Ke$haForPresident"
       }
     ]
-    </code>
+  },
+  {
+    "timestamp": "2012-01-02T00:00:00.000Z",
+    "result": [
+      {
+        "dimension": "dim1",
+        "value": "SomethingThatContainsKe"
+      },
+      {
+        "dimension": "dim2",
+        "value": "SomethingElseThatContainsKe"
+      }
+    ]
+  }
+]
+```

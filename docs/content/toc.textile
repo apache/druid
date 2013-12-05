@@ -36,11 +36,12 @@ h2. Querying
 ** "Aggregations":./Aggregations.html
 ** "Post Aggregations":./Post-aggregations.html
 ** "Granularities":./Granularities.html
+** "DimensionSpecs":./DimensionSpecs.html
 * Query Types
 ** "GroupByQuery":./GroupByQuery.html
 *** "OrderBy":./OrderBy.html
 *** "Having":./Having.html
-** "SearchQuery":./Having.html
+** "SearchQuery":./SearchQuery.html
 *** "SearchQuerySpec":./SearchQuerySpec.html
 ** "SegmentMetadataQuery":./SegmentMetadataQuery.html
 ** "TimeBoundaryQuery":./TimeBoundaryQuery.html
