@@ -96,7 +96,7 @@ public class FlushingPlumber extends RealtimePlumber
     log.info(
         "Abandoning segment %s at %s",
         sink.getSegment().getIdentifier(),
-        new DateTime().plusMillis(flushDuration.toPeriod().getMillis())
+        new DateTime().plusMillis(flushDuration.getMillis())
     );
 
     ScheduledExecutors.scheduleWithFixedDelay(
