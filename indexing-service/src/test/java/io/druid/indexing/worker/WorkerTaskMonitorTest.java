@@ -122,7 +122,7 @@ public class WorkerTaskMonitorTest
         new ThreadPoolTaskRunner(
             new TaskToolboxFactory(
                 new TaskConfig(tmp.toString(), null, null, 0),
-                null, null, null, null, null, null, null, null, null, new SegmentLoaderFactory(
+                null, null, null, null, null, null, null, null, null, null, new SegmentLoaderFactory(
                 new OmniSegmentLoader(
                     ImmutableMap.<String, DataSegmentPuller>of(
                         "local",

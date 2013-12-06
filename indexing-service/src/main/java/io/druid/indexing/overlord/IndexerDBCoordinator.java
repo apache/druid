@@ -28,8 +28,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.db.DbConnector;
-import io.druid.db.DbConnectorConfig;
 import io.druid.db.DbTablesConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
@@ -213,6 +211,24 @@ public class IndexerDBCoordinator
     return true;
   }
 
+  public void moveSegments(final Set<DataSegment> segments) throws IOException
+  {
+    dbi.inTransaction(
+        new TransactionCallback<Void>()
+        {
+          @Override
+          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+          {
+            for(final DataSegment segment : segments) {
+              moveSegment(handle, segment);
+            }
+
+            return null;
+          }
+        }
+    );
+  }
+
   public void deleteSegments(final Set<DataSegment> segments) throws IOException
   {
     dbi.inTransaction(
@@ -235,8 +251,25 @@ public class IndexerDBCoordinator
   {
     handle.createStatement(
         String.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable())
-    ).bind("id", segment.getIdentifier())
+    )
+          .bind("id", segment.getIdentifier())
           .execute();
+  }
+
+  private void moveSegment(final Handle handle, final DataSegment segment) throws IOException
+  {
+    try {
+      handle.createStatement(
+          String.format("UPDATE %s SET payload = :payload WHERE id = :id", dbTables.getSegmentsTable())
+      )
+            .bind("id", segment.getIdentifier())
+            .bind("payload", jsonMapper.writeValueAsString(segment))
+            .execute();
+    }
+    catch (IOException e) {
+      log.error(e, "Exception inserting into DB");
+      throw e;
+    }
   }
 
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)

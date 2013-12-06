@@ -65,6 +65,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPuller;
@@ -156,6 +157,14 @@ public class TaskLifecycleTest
           public void kill(DataSegment segments) throws SegmentLoadingException
           {
 
+          }
+        },
+        new DataSegmentMover()
+        {
+          @Override
+          public DataSegment move(DataSegment dataSegment) throws SegmentLoadingException
+          {
+            return dataSegment;
           }
         },
         null, // segment announcer

@@ -19,10 +19,11 @@
 
 package io.druid.storage.s3;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
-import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;
@@ -31,24 +32,25 @@ import org.jets3t.service.model.S3Object;
 
 import java.util.Map;
 
-/**
- */
-public class S3DataSegmentKiller implements DataSegmentKiller
+public class S3DataSegmentMover implements DataSegmentMover
 {
   private static final Logger log = new Logger(S3DataSegmentKiller.class);
 
   private final RestS3Service s3Client;
+  private final S3DataSegmentMoverConfig config;
 
   @Inject
-  public S3DataSegmentKiller(
-      RestS3Service s3Client
+  public S3DataSegmentMover(
+      RestS3Service s3Client,
+      S3DataSegmentMoverConfig config
   )
   {
     this.s3Client = s3Client;
+    this.config = config;
   }
 
   @Override
-  public void kill(DataSegment segment) throws SegmentLoadingException
+  public DataSegment move(DataSegment segment) throws SegmentLoadingException
   {
     try {
       Map<String, Object> loadSpec = segment.getLoadSpec();
@@ -56,17 +58,42 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       String s3Path = MapUtils.getString(loadSpec, "key");
       String s3DescriptorPath = s3Path.substring(0, s3Path.lastIndexOf("/")) + "/descriptor.json";
 
+      final String s3ArchiveBucket = config.getArchiveBucket();
+
+      if (s3ArchiveBucket.isEmpty()) {
+        log.warn("S3 archive bucket not specified, refusing to move segment [s3://%s/%s]", s3Bucket, s3Path);
+        return segment;
+      }
+
       if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
-        log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);
-        s3Client.deleteObject(s3Bucket, s3Path);
+        log.info(
+            "Moving index file[s3://%s/%s] to [s3://%s/%s]",
+            s3Bucket,
+            s3Path,
+            s3ArchiveBucket,
+            s3Path
+        );
+        s3Client.moveObject(s3Bucket, s3Path, s3ArchiveBucket, new S3Object(s3Path), false);
       }
       if (s3Client.isObjectInBucket(s3Bucket, s3DescriptorPath)) {
-        log.info("Removing descriptor file[s3://%s/%s] from s3!", s3Bucket, s3DescriptorPath);
-        s3Client.deleteObject(s3Bucket, s3DescriptorPath);
+        log.info(
+            "Moving descriptor file[s3://%s/%s] to [s3://%s/%s]",
+            s3Bucket,
+            s3DescriptorPath,
+            s3ArchiveBucket,
+            s3DescriptorPath
+        );
+        s3Client.moveObject(s3Bucket, s3DescriptorPath, s3ArchiveBucket, new S3Object(s3DescriptorPath), false);
       }
+
+      return segment.withLoadSpec(
+          ImmutableMap.<String, Object>builder()
+                      .putAll(loadSpec)
+                      .put("bucket", s3ArchiveBucket).build()
+      );
     }
     catch (ServiceException e) {
-      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]", segment.getIdentifier());
+      throw new SegmentLoadingException(e, "Unable to move segment[%s]", segment.getIdentifier());
     }
   }
 }
