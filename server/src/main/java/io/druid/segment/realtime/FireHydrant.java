@@ -33,11 +33,12 @@ public class FireHydrant
 
   public FireHydrant(
       IncrementalIndex index,
-      int count
+      int count,
+      String segmentIdentifier
   )
   {
     this.index = index;
-    this.adapter = new IncrementalIndexSegment(index);
+    this.adapter = new IncrementalIndexSegment(index, segmentIdentifier);
     this.count = count;
   }
 
