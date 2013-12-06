@@ -9,6 +9,7 @@ import io.druid.segment.IndexGranularity;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.Schema;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -83,6 +84,8 @@ public class FlushingPlumber extends RealtimePlumber
 
   protected void flushAfterDuration(final long truncatedTime, final Sink sink)
   {
+    log.info("Abandoning segment at %s", new DateTime().plusMillis(flushDuration.toPeriod().getMillis()));
+    
     ScheduledExecutors.scheduleWithFixedDelay(
         flushScheduledExec,
         flushDuration,
