@@ -156,7 +156,7 @@ public class FlushingPlumber extends RealtimePlumber
                 for (Map.Entry<Long, Sink> entry : getSinks().entrySet()) {
                   final Long intervalStart = entry.getKey();
                   if (intervalStart < minTimestamp) {
-                    log.info("Adding entry[%s] for merge and push.", entry);
+                    log.info("Adding entry[%s] to flush.", entry);
                     sinksToPush.add(entry);
                   }
                 }
@@ -166,7 +166,7 @@ public class FlushingPlumber extends RealtimePlumber
                 }
 
                 if (stopped) {
-                  log.info("Stopping merge-n-push overseer thread");
+                  log.info("Stopping flusher thread");
                   return ScheduledExecutors.Signal.STOP;
                 } else {
                   return ScheduledExecutors.Signal.REPEAT;
