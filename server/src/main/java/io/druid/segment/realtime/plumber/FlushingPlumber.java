@@ -79,7 +79,6 @@ public class FlushingPlumber extends RealtimePlumber
     computeBaseDir(getSchema()).mkdirs();
     initializeExecutors();
     bootstrapSinksFromDisk();
-    startPersistThread();
   }
 
   protected void flushAfterDuration(final long truncatedTime, final Sink sink)
