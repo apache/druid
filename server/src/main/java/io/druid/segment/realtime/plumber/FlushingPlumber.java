@@ -74,7 +74,7 @@ public class FlushingPlumber extends RealtimePlumber
   @Override
   public void startJob()
   {
-    log.info("Starting job");
+    log.info("Starting job for %s", getSchema().getDataSource());
 
     computeBaseDir(getSchema()).mkdirs();
     initializeExecutors();
