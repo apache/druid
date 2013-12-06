@@ -517,7 +517,7 @@ public class RealtimePlumber implements Plumber
                           sinkInterval.getStart(),
                           sinkInterval.getEnd(),
                           versioningPolicy.getVersion(sinkInterval),
-                          new NoneShardSpec()
+                          schema.getShardSpec()
                       ),
                       IndexIO.loadIndex(segmentDir)
                   ),
