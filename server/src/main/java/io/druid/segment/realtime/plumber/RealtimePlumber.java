@@ -134,9 +134,24 @@ public class RealtimePlumber implements Plumber
     return schema;
   }
 
-  public ScheduledExecutorService getScheduledExecutor()
+  public Period getWindowPeriod()
   {
-    return scheduledExecutor;
+    return windowPeriod;
+  }
+
+  public IndexGranularity getSegmentGranularity()
+  {
+    return segmentGranularity;
+  }
+
+  public VersioningPolicy getVersioningPolicy()
+  {
+    return versioningPolicy;
+  }
+
+  public RejectionPolicy getRejectionPolicy()
+  {
+    return rejectionPolicy;
   }
 
   public Map<Long, Sink> getSinks()
