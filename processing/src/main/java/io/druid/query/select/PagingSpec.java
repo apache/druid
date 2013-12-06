@@ -52,4 +52,13 @@ public class PagingSpec
   {
     return threshold;
   }
+
+  @Override
+  public String toString()
+  {
+    return "PagingSpec{" +
+           "pagingIdentifiers=" + pagingIdentifiers +
+           ", threshold=" + threshold +
+           '}';
+  }
 }

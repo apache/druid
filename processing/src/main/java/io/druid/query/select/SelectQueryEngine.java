@@ -118,7 +118,9 @@ public class SelectQueryEngine
                         final DimensionSelector selector = dimSelector.getValue();
                         final IndexedInts vals = selector.getRow();
 
-                        if (vals.size() <= 1) {
+                        if (vals.size() == 0) {
+                          continue;
+                        } else if (vals.size() <= 1) {
                           final String dimVal = selector.lookupName(vals.get(0));
                           theEvent.put(dim, dimVal);
                         } else {

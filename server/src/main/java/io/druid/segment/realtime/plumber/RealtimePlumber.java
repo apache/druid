@@ -43,6 +43,7 @@ import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
+import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
@@ -495,7 +496,16 @@ public class RealtimePlumber implements Plumber
 
           hydrants.add(
               new FireHydrant(
-                  new QueryableIndexSegment(null, IndexIO.loadIndex(segmentDir)),
+                  new QueryableIndexSegment(
+                      DataSegment.makeDataSegmentIdentifier(
+                          schema.getDataSource(),
+                          sinkInterval.getStart(),
+                          sinkInterval.getEnd(),
+                          versioningPolicy.getVersion(sinkInterval),
+                          new NoneShardSpec()
+                      ),
+                      IndexIO.loadIndex(segmentDir)
+                  ),
                   Integer.parseInt(segmentDir.getName())
               )
           );
@@ -646,7 +656,12 @@ public class RealtimePlumber implements Plumber
           new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
       );
 
-      indexToPersist.swapSegment(new QueryableIndexSegment(null, IndexIO.loadIndex(persistedFile)));
+      indexToPersist.swapSegment(
+          new QueryableIndexSegment(
+              indexToPersist.getSegment().getIdentifier(),
+              IndexIO.loadIndex(persistedFile)
+          )
+      );
 
       return numRows;
     }
