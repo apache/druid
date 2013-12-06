@@ -182,7 +182,7 @@ public class FlushingPlumber extends RealtimePlumber
     log.info("Stopping job");
 
     for (final Map.Entry<Long, Sink> entry : getSinks().entrySet()) {
-      flushAfterDuration(entry.getKey(), entry.getValue());
+      abandonSegment(entry.getKey(), entry.getValue());
     }
     shutdownExecutors();
 
