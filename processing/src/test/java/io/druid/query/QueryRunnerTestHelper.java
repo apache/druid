@@ -110,7 +110,7 @@ public class QueryRunnerTestHelper
     return Arrays.asList(
         new Object[][]{
             {
-                makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex))
+                makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, null))
             },
             {
                 makeQueryRunner(factory, new QueryableIndexSegment(null, mMappedTestIndex))
