@@ -84,8 +84,12 @@ public class FlushingPlumber extends RealtimePlumber
 
   protected void flushAfterDuration(final long truncatedTime, final Sink sink)
   {
-    log.info("Abandoning segment at %s", new DateTime().plusMillis(flushDuration.toPeriod().getMillis()));
-    
+    log.info(
+        "Abandoning segment %s at %s",
+        sink.getSegment().getIdentifier(),
+        new DateTime().plusMillis(flushDuration.toPeriod().getMillis())
+    );
+
     ScheduledExecutors.scheduleWithFixedDelay(
         flushScheduledExec,
         flushDuration,
