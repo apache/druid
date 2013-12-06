@@ -1,5 +1,6 @@
 package io.druid.segment.realtime.plumber;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -13,7 +14,10 @@ import org.joda.time.Period;
 
 import java.io.File;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -22,6 +26,14 @@ public class FlushingPlumber extends RealtimePlumber
   private static final EmittingLogger log = new EmittingLogger(FlushingPlumber.class);
 
   private final Duration flushDuration;
+
+  private final ScheduledExecutorService flushScheduledExec = Executors.newScheduledThreadPool(
+      1,
+      new ThreadFactoryBuilder()
+          .setDaemon(true)
+          .setNameFormat("flushing_scheduled_%d")
+          .build()
+  );
 
   public FlushingPlumber(
       Duration flushDuration,
@@ -61,6 +73,8 @@ public class FlushingPlumber extends RealtimePlumber
   @Override
   public void startJob()
   {
+    log.info("Starting job");
+
     computeBaseDir(getSchema()).mkdirs();
     initializeExecutors();
     bootstrapSinksFromDisk();
@@ -70,28 +84,29 @@ public class FlushingPlumber extends RealtimePlumber
   protected void flushAfterDuration(final long truncatedTime, final Sink sink)
   {
     ScheduledExecutors.scheduleWithFixedDelay(
-        getScheduledExecutor(),
+        flushScheduledExec,
         flushDuration,
-        new Runnable()
+        new Callable<ScheduledExecutors.Signal>()
         {
           @Override
-          public void run()
+          public ScheduledExecutors.Signal call() throws Exception
           {
+            log.info("Abandoning segment %s", sink.getSegment().getIdentifier());
             abandonSegment(truncatedTime, sink);
+            return ScheduledExecutors.Signal.STOP;
           }
         }
-
     );
   }
 
   @Override
   public void finishJob()
   {
-    log.info("Shutting down...");
+    log.info("Stopping job");
 
     for (final Map.Entry<Long, Sink> entry : getSinks().entrySet()) {
       flushAfterDuration(entry.getKey(), entry.getValue());
     }
-    shutdownScheduledExecutor();
+    shutdownExecutors();
   }
 }

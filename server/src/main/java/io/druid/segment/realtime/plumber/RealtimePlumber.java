@@ -401,7 +401,7 @@ public class RealtimePlumber implements Plumber
       }
     }
 
-    shutdownScheduledExecutor();
+    shutdownExecutors();
 
     stopped = true;
   }
@@ -428,7 +428,7 @@ public class RealtimePlumber implements Plumber
     }
   }
 
-  protected void shutdownScheduledExecutor()
+  protected void shutdownExecutors()
   {
     // scheduledExecutor is shutdown here, but persistExecutor is shutdown when the
     // ServerView sends it a new segment callback
