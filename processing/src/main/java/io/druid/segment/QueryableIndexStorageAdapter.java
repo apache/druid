@@ -261,9 +261,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         @Override
                         public long getTimestamp()
                         {
-                          return index.getTimeColumn()
-                                      .getGenericColumn()
-                                      .getLongSingleValueRow(cursorOffset.getOffset());
+                          return timestamps.getLongSingleValueRow(cursorOffset.getOffset());
                         }
                       };
                     }
