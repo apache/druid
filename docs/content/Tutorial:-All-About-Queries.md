@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Tutorial: All About Queries
 Hello! This tutorial is meant to provide a more in-depth look into Druid queries. The tutorial is somewhat incomplete right now but we hope to add more content to it in the near future.
 
 Setup

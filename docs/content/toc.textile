@@ -3,8 +3,8 @@
 
 <link rel="stylesheet" href="css/toc.css">
 
-h1. Contents
-* "Introduction":./
+h1. Introduction
+* "About Druid":./
 * "Concepts and Terminology":./Concepts-and-Terminology.html
 
 h2. Getting Started
@@ -59,6 +59,8 @@ h2. Architecture
 *** "Firehose":./Firehose.html
 *** "Plumber":./Plumber.html
 ** "Indexing Service":./Indexing-Service.html
+*** "Middle Manager":./Middlemanager.html
+*** "Peon":./Peons.html
 * External Dependencies
 ** "Deep Storage":./Deep-Storage.html
 ** "MySQL":./MySQL.html

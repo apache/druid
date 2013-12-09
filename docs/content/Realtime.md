@@ -27,7 +27,7 @@ druid.host=localhost
 druid.service=realtime
 druid.port=8083
 
-druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.25"]
+druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.26"]
 
 
 druid.zk.service.host=localhost
@@ -178,7 +178,7 @@ Segment Propagation
 
 The segment propagation diagram for real-time data ingestion can be seen below:
 
-![Segment Propagation](https://raw.github.com/metamx/druid/druid-0.5.4/doc/segment_propagation.png "Segment Propagation")
+![Segment Propagation](../img/segmentPropagation.png "Segment Propagation")
 
 Requirements
 ------------
