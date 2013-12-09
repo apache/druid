@@ -14,15 +14,11 @@ h2. Getting Started
 * "Tutorial: Loading Your Data Part 2":./Tutorial:-Loading-Your-Data-Part-2.html
 * "Tutorial: All About Queries":./Tutorial:-All-About-Queries.html
 
-h2. Evaluate Druid
+h2. Operations
 * "Cluster Setup":./Cluster-setup.html
-* "Booting a Production Cluster":./Booting-a-production-cluster.html
-
-h2. Configuration
 * "Configuration":Configuration.html
-
-h2. Extend Druid
-* "Modules":./Modules.html
+* "Extending Druid":./Modules.html
+* "Booting a Production Cluster":./Booting-a-production-cluster.html
 
 h2. Data Ingestion
 * "Realtime":./Realtime.html
