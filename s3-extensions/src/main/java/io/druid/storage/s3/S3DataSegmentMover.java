@@ -56,7 +56,7 @@ public class S3DataSegmentMover implements DataSegmentMover
       Map<String, Object> loadSpec = segment.getLoadSpec();
       String s3Bucket = MapUtils.getString(loadSpec, "bucket");
       String s3Path = MapUtils.getString(loadSpec, "key");
-      String s3DescriptorPath = s3Path.substring(0, s3Path.lastIndexOf("/")) + "/descriptor.json";
+      String s3DescriptorPath = S3Utils.descriptorPathForSegmentPath(s3Path);
 
       final String s3ArchiveBucket = config.getArchiveBucket();
 

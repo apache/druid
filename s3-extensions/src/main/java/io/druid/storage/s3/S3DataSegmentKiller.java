@@ -27,7 +27,6 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Object;
 
 import java.util.Map;
 
@@ -54,7 +53,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       Map<String, Object> loadSpec = segment.getLoadSpec();
       String s3Bucket = MapUtils.getString(loadSpec, "bucket");
       String s3Path = MapUtils.getString(loadSpec, "key");
-      String s3DescriptorPath = s3Path.substring(0, s3Path.lastIndexOf("/")) + "/descriptor.json";
+      String s3DescriptorPath = S3Utils.descriptorPathForSegmentPath(s3Path);
 
       if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
         log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);

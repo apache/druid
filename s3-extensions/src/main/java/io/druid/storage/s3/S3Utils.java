@@ -96,4 +96,8 @@ public class S3Utils
     return true;
   }
 
+  public static String descriptorPathForSegmentPath(String s3Path)
+  {
+    return s3Path.substring(0, s3Path.lastIndexOf("/")) + "/descriptor.json";
+  }
 }
