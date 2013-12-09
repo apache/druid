@@ -70,4 +70,48 @@ public class EventHolder
   {
     return event;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    EventHolder that = (EventHolder) o;
+
+    if (offset != that.offset) {
+      return false;
+    }
+    if (!Maps.difference(event, ((EventHolder) o).event).areEqual()) {
+      return false;
+    }
+    if (segmentId != null ? !segmentId.equals(that.segmentId) : that.segmentId != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = segmentId != null ? segmentId.hashCode() : 0;
+    result = 31 * result + offset;
+    result = 31 * result + (event != null ? event.hashCode() : 0);
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "EventHolder{" +
+           "segmentId='" + segmentId + '\'' +
+           ", offset=" + offset +
+           ", event=" + event +
+           '}';
+  }
 }

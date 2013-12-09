@@ -29,7 +29,6 @@ import io.druid.query.Result;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.TimestampColumnSelector;
@@ -79,12 +78,13 @@ public class SelectQueryEngine
                   @Override
                   public Result<SelectResultValue> apply(Cursor cursor)
                   {
-                    final TimestampColumnSelector timestampColumnSelector = cursor.makeTimestampColumnSelector();
                     final SelectResultValueBuilder builder = new SelectResultValueBuilder(
                         cursor.getTime(),
                         query.getPagingSpec()
                              .getThreshold()
                     );
+
+                    final TimestampColumnSelector timestampColumnSelector = cursor.makeTimestampColumnSelector();
 
                     final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
                     for (String dim : dims) {
@@ -118,9 +118,7 @@ public class SelectQueryEngine
                         final DimensionSelector selector = dimSelector.getValue();
                         final IndexedInts vals = selector.getRow();
 
-                        if (vals.size() == 0) {
-                          continue;
-                        } else if (vals.size() <= 1) {
+                        if (vals.size() == 1) {
                           final String dimVal = selector.lookupName(vals.get(0));
                           theEvent.put(dim, dimVal);
                         } else {

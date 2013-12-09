@@ -21,19 +21,22 @@ package io.druid.query.select;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.primitives.Ints;
 
+import java.nio.ByteBuffer;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  */
 public class PagingSpec
 {
-  private final Map<String, Integer> pagingIdentifiers;
+  private final LinkedHashMap<String, Integer> pagingIdentifiers;
   private final int threshold;
 
   @JsonCreator
   public PagingSpec(
-      @JsonProperty("pagingIdentifiers") Map<String, Integer> pagingIdentifiers,
+      @JsonProperty("pagingIdentifiers") LinkedHashMap<String, Integer> pagingIdentifiers,
       @JsonProperty("threshold") int threshold
   )
   {
@@ -51,6 +54,39 @@ public class PagingSpec
   public int getThreshold()
   {
     return threshold;
+  }
+
+  public byte[] getCacheKey()
+  {
+    final byte[][] pagingKeys = new byte[pagingIdentifiers.size()][];
+    final byte[][] pagingValues = new byte[pagingIdentifiers.size()][];
+
+    int index = 0;
+    int pagingKeysSize = 0;
+    int pagingValuesSize = 0;
+    for (Map.Entry<String, Integer> entry : pagingIdentifiers.entrySet()) {
+      pagingKeys[index] = entry.getKey().getBytes();
+      pagingValues[index] = ByteBuffer.allocate(Ints.BYTES).putInt(entry.getValue()).array();
+      pagingKeysSize += pagingKeys[index].length;
+      pagingValuesSize += Ints.BYTES;
+      index++;
+    }
+
+    final byte[] thresholdBytes = ByteBuffer.allocate(Ints.BYTES).putInt(threshold).array();
+
+    final ByteBuffer queryCacheKey = ByteBuffer.allocate(pagingKeysSize + pagingValuesSize + thresholdBytes.length);
+
+    for (byte[] pagingKey : pagingKeys) {
+      queryCacheKey.put(pagingKey);
+    }
+
+    for (byte[] pagingValue : pagingValues) {
+      queryCacheKey.put(pagingValue);
+    }
+
+    queryCacheKey.put(thresholdBytes);
+
+    return queryCacheKey.array();
   }
 
   @Override

@@ -19,6 +19,7 @@
 
 package io.druid.query.select;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
@@ -29,9 +30,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
-import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
-import io.druid.segment.StorageAdapter;
 
 import java.util.concurrent.ExecutorService;
 
@@ -40,10 +39,10 @@ import java.util.concurrent.ExecutorService;
 public class SelectQueryRunnerFactory
     implements QueryRunnerFactory<Result<SelectResultValue>, SelectQuery>
 {
-  public static SelectQueryRunnerFactory create()
+  public static SelectQueryRunnerFactory create(ObjectMapper jsonMapper)
   {
     return new SelectQueryRunnerFactory(
-        new SelectQueryQueryToolChest(new QueryConfig()),
+        new SelectQueryQueryToolChest(new QueryConfig(), jsonMapper),
         new SelectQueryEngine()
     );
   }

@@ -20,11 +20,12 @@
 package io.druid.query.select;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
@@ -51,6 +52,8 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -70,11 +73,13 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       };
 
   private final QueryConfig config;
+  private final ObjectMapper jsonMapper;
 
   @Inject
-  public SelectQueryQueryToolChest(QueryConfig config)
+  public SelectQueryQueryToolChest(QueryConfig config, ObjectMapper jsonMapper)
   {
     this.config = config;
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
@@ -154,12 +159,58 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
         final byte[] granularityBytes = query.getGranularity().cacheKey();
 
-        return ByteBuffer
-            .allocate(1 + granularityBytes.length + filterBytes.length)
+        final Set<String> dimensions = Sets.newTreeSet();
+        if (query.getDimensions() != null) {
+          dimensions.addAll(query.getDimensions());
+        }
+
+        final byte[][] dimensionsBytes = new byte[dimensions.size()][];
+        int dimensionsBytesSize = 0;
+        int index = 0;
+        for (String dimension : dimensions) {
+          dimensionsBytes[index] = dimension.getBytes();
+          dimensionsBytesSize += dimensionsBytes[index].length;
+          ++index;
+        }
+
+
+        final Set<String> metrics = Sets.newTreeSet();
+        if (query.getMetrics() != null) {
+          dimensions.addAll(query.getMetrics());
+        }
+
+        final byte[][] metricBytes = new byte[metrics.size()][];
+        int metricBytesSize = 0;
+        index = 0;
+        for (String metric : metrics) {
+          metricBytes[index] = metric.getBytes();
+          metricBytesSize += metricBytes[index].length;
+          ++index;
+        }
+
+        final ByteBuffer queryCacheKey = ByteBuffer
+            .allocate(
+                1
+                + granularityBytes.length
+                + filterBytes.length
+                + query.getPagingSpec().getCacheKey().length
+                + dimensionsBytesSize
+                + metricBytesSize
+            )
             .put(SELECT_QUERY)
             .put(granularityBytes)
             .put(filterBytes)
-            .array();
+            .put(query.getPagingSpec().getCacheKey());
+
+        for (byte[] dimensionsByte : dimensionsBytes) {
+          queryCacheKey.put(dimensionsByte);
+        }
+
+        for (byte[] metricByte : metricBytes) {
+          queryCacheKey.put(metricByte);
+        }
+
+        return queryCacheKey.array();
       }
 
       @Override
@@ -202,7 +253,18 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
             return new Result<SelectResultValue>(
                 timestamp,
-                new SelectResultValue(resultIter.next(), Lists.newArrayList(resultIter.next()))
+                new SelectResultValue(
+                    (Map<String, Integer>) jsonMapper.convertValue(
+                        resultIter.next(), new TypeReference<Map<String, Integer>>()
+                    {
+                    }
+                    ),
+                    (List<EventHolder>) jsonMapper.convertValue(
+                        resultIter.next(), new TypeReference<List<EventHolder>>()
+                    {
+                    }
+                    )
+                )
             );
           }
         };

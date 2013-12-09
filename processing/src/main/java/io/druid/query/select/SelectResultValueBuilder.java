@@ -78,7 +78,7 @@ public class SelectResultValueBuilder
   {
     // Pull out top aggregated values
     List<EventHolder> values = Lists.newArrayListWithCapacity(pQueue.size());
-    Map<String, Integer> pagingIdentifiers = Maps.newHashMap();
+    Map<String, Integer> pagingIdentifiers = Maps.newLinkedHashMap();
     while (!pQueue.isEmpty()) {
       EventHolder event = pQueue.remove();
       pagingIdentifiers.put(event.getSegmentId(), event.getOffset());

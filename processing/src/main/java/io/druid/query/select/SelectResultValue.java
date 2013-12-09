@@ -26,6 +26,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -46,15 +47,6 @@ public class SelectResultValue implements Iterable<EventHolder>
     this.events = events;
   }
 
-  public SelectResultValue(
-      Object pagingIdentifiers,
-      List<?> events
-  )
-  {
-    this.pagingIdentifiers = null;
-    this.events = null;
-  }
-
   @JsonProperty
   public Map<String, Integer> getPagingIdentifiers()
   {
@@ -71,5 +63,46 @@ public class SelectResultValue implements Iterable<EventHolder>
   public Iterator<EventHolder> iterator()
   {
     return events.iterator();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SelectResultValue that = (SelectResultValue) o;
+
+    if (events != null ? !events.equals(that.events) : that.events != null) {
+      return false;
+    }
+    if (pagingIdentifiers != null
+        ? !pagingIdentifiers.equals(that.pagingIdentifiers)
+        : that.pagingIdentifiers != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = pagingIdentifiers != null ? pagingIdentifiers.hashCode() : 0;
+    result = 31 * result + (events != null ? events.hashCode() : 0);
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SelectResultValue{" +
+           "pagingIdentifiers=" + pagingIdentifiers +
+           ", events=" + events +
+           '}';
   }
 }
