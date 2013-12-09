@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Tutorial: The Druid Cluster
 Welcome back! In our first [tutorial](Tutorial%3A-A-First-Look-at-Druid.html), we introduced you to the most basic Druid setup: a single realtime node. We streamed in some data and queried it. Realtime nodes collect very recent data and periodically hand that data off to the rest of the Druid cluster. Some questions about the architecture must naturally come to mind. What does the rest of Druid cluster look like? How does Druid load available static data?
 
 This tutorial will hopefully answer these questions!
