@@ -373,11 +373,11 @@ public class TaskQueue
         if(didPersistStatus) {
           log.info("Task done: %s", task);
           taskLockbox.unlock(task);
-          workMayBeAvailable.signalAll();
         } else {
           log.warn("Status could not be persisted! Reinserting task: %s", task.getId());
           queue.add(task);
         }
+        workMayBeAvailable.signalAll();
       }
     }
     finally {

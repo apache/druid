@@ -59,6 +59,8 @@ h2. Architecture
 *** "Firehose":./Firehose.html
 *** "Plumber":./Plumber.html
 ** "Indexing Service":./Indexing-Service.html
+*** "Middle Manager":./Middlemanager.html
+*** "Peon":./Peons.html
 * External Dependencies
 ** "Deep Storage":./Deep-Storage.html
 ** "MySQL":./MySQL.html
