@@ -86,7 +86,9 @@ borrow ideas from current generation search infrastructure
 This paper describes the architecture of Druid, explores the various design
 decisions made in creating an always-on production system that powers a hosted
 service, and attempts to help inform anyone who faces a similar problem about a
-potential method of solving it. Druid is deployed in production at several technology companies\footnote{\href{http://druid.io/druid.html}{http://druid.io/druid.html}}.
+potential method of solving it. Druid is deployed in production at several
+technology
+companies\footnote{\href{http://druid.io/druid.html}{http://druid.io/druid.html}}.
 
 The structure of the paper is as follows: we first describe the problem in
 Section \ref{sec:problem-definition}.  Next, we detail system architecture from
@@ -105,7 +107,7 @@ large quantities of transactional events (log data). This form of timeseries dat
 commonly found in OLAP workflows and the nature of the data tends to be very
 append heavy. For example, consider the data shown in
 Table~\ref{tab:sample_data}.  Table~\ref{tab:sample_data} contains data for
-edits that have occured on Wikipedia. Each time a user edits a page in
+edits that have occurred on Wikipedia. Each time a user edits a page in
 Wikipedia, an event is generated that contains metadata about the edit. This
 metadata is comprised of 3 distinct components. First, there is a timestamp
 column indicating when the edit was made. Next, there are a set dimension
@@ -135,45 +137,46 @@ characters that were added by people from Calgary over the span of a month?”. 
 want queries over any arbitrary combination of dimensions to return with
 sub-second latencies.
 
-The need for Druid was faciliated by the fact that existing open source
+The need for Druid was facilitated by the fact that existing open source
 Relational Database Management Systems and NoSQL key/value stores were unable
 to provide a low latency data ingestion and query platform for interactive
-applications \cite{tschetter2011druid}. In the early days of Metamarkets, the
-company was focused on building a web-based dashboard that would allow users to
-arbitrary explore and visualize event streams. Interactivity was very important
-to us and long delays in updating data visualizations makes for a poor user experience.
+applications \cite{tschetter2011druid}. In the early days of Metamarkets, we
+were focused on building a hosted dashboard that would allow users to arbitrary
+explore and visualize event streams.  The data store powering the dashboard
+needed to return queries fast enough that the data visualizations built on top
+of it could update provide users with an interactive experience. 
 
 In addition to the query latency needs, the system had to be multi-tenant and
-highly available. Downtime is costly and many businesses cannot afford to wait
-if a system is unavailable in the face of software upgrades or network failure.
+highly available. The Metamarkets product is used in a highly concurrent
+environment. Downtime is costly and many businesses cannot afford to wait if a
+system is unavailable in the face of software upgrades or network failure.
 Downtime for startups, who often do not have internal operations teams, can
-determine business success and failure.  
+determine whether a business succeeds or fails.  
 
-Finally, another key problem that Metamarkets faced in the early stages of the
-company was to allow users and alerting systems to be able to make business
-decisions in real-time. The time from when an event is created to when that
+Finally, another key problem that Metamarkets faced in its early days was to
+allow users and alerting systems to be able to make business decisions in
+"real-time". The time from when an event is created to when that
 event is queryable determines how fast users and systems are able to react to
-potentially catastrophic occurences in their systems. Popular open source data
-warehousing systems such as Hadoop were unable the sub-second data ingestion
+potentially catastrophic occurrences in their systems. Popular open source data
+warehousing systems such as Hadoop were unable to provide the sub-second data ingestion
 latencies we required. 
 
 The problems of data exploration, ingestion, and availability span multiple
 industries. Since Druid was open sourced in October 2012, it been deployed as a
 video, network monitoring, operations monitoring, and online advertising
-analytics platform.
+analytics platform in multiple companies.
 
 \section{Architecture}
 \label{sec:architecture}
 A Druid cluster consists of different types of nodes and each node type is
-designed to perform a very specific set of things. We believe this design
-allows for a separation of functionality concerns and simplifies the
-architecture and complexity of the system.  There is minimal interaction
-between the different node types and hence, intra-cluster communication
-failures have minimal impact on data availability. The different node types
-operate fairly independent of each other. To solve complex data analysis
-problems, the node types come together to form a fully working system.  The
-name Druid comes from the Druid class in many role-playing games: it is a
-shape-shifter, capable of taking many different forms to fulfill various
+designed to perform a specific set of things. We believe this design separates
+concerns and simplifies the complexity of the system.  There is minimal
+interaction between the different node types and hence, intra-cluster
+communication failures have minimal impact on data availability.  The different
+node types operate fairly independent of each other and to solve complex data
+analysis problems, they come together to form a fully working system.
+The name Druid comes from the Druid class in many role-playing games: it is a
+shape-shifter, capable of taking on many different forms to fulfill various
 different roles in a group.  The composition of and flow of data in a Druid
 cluster are shown in Figure~\ref{fig:cluster}.
 
@@ -213,30 +216,30 @@ still be queried. Figure~\ref{fig:realtime_flow} illustrates the process.
 \caption{Real-time nodes first buffer events in memory. After some period of
 time, in-memory indexes are persisted to disk. After another period of time,
 all persisted indexes are merged together and handed off. Queries on data hit
-both the in-memory index and the persisted indexes.}
+the in-memory index and the persisted indexes.}
 \label{fig:realtime_flow}
 \end{figure}
 
-On a periodic basis, each real-time node will schedule a background task
-that searches for all locally persisted indexes. The task merges these indexes
+On a periodic basis, each real-time node will schedule a background task that
+searches for all locally persisted indexes. The task merges these indexes
 together and builds an immutable block of data that contains all the events
 that have ingested by a real-time node for some span of time. We refer to this
-block of data as a "segment". During the hand-off stage, a real-time node
+block of data as a "segment". During the handoff stage, a real-time node
 uploads this segment to a permanent backup storage, typically a distributed
 file system such as S3 \cite{decandia2007dynamo} or HDFS
 \cite{shvachko2010hadoop}, which Druid refers to as "deep storage". The ingest,
-persist, merge, and handoff steps are fluid; there is no data loss during this
-process.  
+persist, merge, and handoff steps are fluid; there is no data loss during any
+of the processes.
 
-To better understand the flow of data
-through a real-time node, consider the following example. First, we start a
-real-time node at 13:37. The node will announce that it is serving a segment of
-data for a period of time from 13:00 to 14:00 and will only accept events with
-timestamps in this time range.  Every 10 minutes (the persist period is
+To better understand the flow of data through a real-time node, consider the
+following example. First, we start a real-time node at 13:37. The node will
+only accept events for the current hour or the next hour. When the node begins
+ingesting events, it will announce that it is serving a segment of data for a
+time window from 13:00 to 14:00.  Every 10 minutes (the persist period is
 configurable), the node will flush and persist its in-memory buffer to disk.
 Near the end of the hour, the node will likely see events with timestamps from
-14:00 to 15:00. When this occurs, the real-time node prepares to serve data for
-the next hour and creates a new in-memory index. The node then announces that it is also
+14:00 to 15:00. When this occurs, the node prepares to serve data for the next
+hour and creates a new in-memory index. The node then announces that it is also
 serving a segment for data from 14:00 to 15:00.  The node does not immediately
 merge the indexes it persisted from 13:00 to 14:00, instead it waits for a
 configurable window period for straggling events from 13:00 to 14:00 to come
@@ -245,7 +248,7 @@ delivery. At the end of the window period, the real-time node merges all
 persisted indexes from 13:00 to 14:00 into a single immutable segment and hands
 the segment off.  Once this segment is loaded and queryable somewhere else in
 the Druid cluster, the real-time node flushes all information about the data it
-has collected for 13:00 to 14:00 and unannounces it is serving this data. This
+collected for 13:00 to 14:00 and unannounces it is serving this data. This
 process is shown in Figure~\ref{fig:realtime_timeline}. 
 
 \begin{figure*}
@@ -259,11 +262,11 @@ real-time node operations are configurable.}
 
 \subsubsection{Availability and Scalability}
 Real-time nodes are a consumer of data and require a corresponding producer to
-provide the data stream.  Typically, for data durability purposes, a message
+provide the data stream.  Commonly, for data durability purposes, a message
 bus such as Kafka \cite{kreps2011kafka} sits between the producer and the
 real-time node as shown in Figure~\ref{fig:realtime_pipeline}. Real-time nodes
 ingest data by reading events from the message bus. The time from event
-creation to event consumption is typically on the order of hundreds of
+creation to event consumption is ordinarily on the order of hundreds of
 milliseconds.
 
 \begin{figure}
@@ -273,12 +276,12 @@ milliseconds.
 \label{fig:realtime_pipeline}
 \end{figure}
 
-The purpose of the message bus in Figure~\ref{fig:realtime_pipeline} is two-fold.
-First, the message bus acts as a buffer for incoming events. A message bus such
-as Kafka maintains offsets indicating the position in an event stream that a
-consumer (a real-time node) has read up to and consumers can programatically
-update these offsets. Typically, real-time nodes update this offset each time
-they persist their in-memory buffers to disk. This means that in a fail and
+The purpose of the message bus in Figure~\ref{fig:realtime_pipeline} is
+two-fold.  First, the message bus acts as a buffer for incoming events. A
+message bus such as Kafka maintains offsets indicating the position in an event
+stream that a consumer (a real-time node) has read up to and consumers can
+programmatically update these offsets. Typically, real-time nodes update this
+offset each time they persist their in-memory buffers to disk. In a fail and
 recover scenario, if a node has not lost disk, it can reload all persisted
 indexes from disk and continue reading events from the last offset it
 committed. Ingesting events from a recently committed offset greatly reduces a
@@ -290,11 +293,11 @@ multiple real-time nodes can read events. Multiple real-time nodes can ingest
 the same set of events from the bus, thus creating a replication of events. In
 a scenario where a node completely fails and does not recover, replicated
 streams ensure that no data is lost. A single ingestion endpoint also allows
-for data streams for be partitioned such that multiple real-time nodes may each
+for data streams for be partitioned such that multiple real-time nodes each
 ingest a portion of a stream. This allows additional real-time nodes to be
-seamlessly added. In practice, this model has allowed the largest production
-Druid cluster that runs real-time nodes be able to consume raw data at
-approximately 500 MB/s (150,000 events/s or 2 TB/hour).
+seamlessly added. In practice, this model has allowed one of the largest
+production Druid clusters to be able to consume raw data at approximately 500
+MB/s (150,000 events/s or 2 TB/hour).
 
 \subsection{Historical Nodes}
 Historical nodes encapsulate the functionality to load and serve the immutable
@@ -309,16 +312,16 @@ segments.
 Similar to real-time nodes, historical nodes announce their online state and
 the data they are serving in Zookeeper. Instructions to load and drop segments
 are sent over Zookeeper and contain information about where the segment is
-located in deep storage and about how to decompress and process the segment.
-Before a historical node downloads a particular segment from deep storage, it
-first checks a local cache that maintains information about what segments
-already exist on the node.  If information about a segment is not present, the
-historical node will proceed to download the segment from deep storage.  This
-process is shown in Figure~\ref{fig:historical_download}. Once processing is
-complete, the segment is announced in Zookeeper.  At this point, the
-segment is queryable. The local cache also allows for historical nodes to be
-quickly updated and restarted. On startup, the node examines its cache and
-immediately serves whatever data it finds.
+located in deep storage and how to decompress and process the segment.  Before
+a historical node downloads a particular segment from deep storage, it first
+checks a local cache that maintains information about what segments already
+exist on the node.  If information about a segment is not present in the cache,
+the historical node will proceed to download the segment from deep storage.
+This process is shown in Figure~\ref{fig:historical_download}. Once processing
+is complete, the segment is announced in Zookeeper.  At this point, the segment
+is queryable. The local cache also allows for historical nodes to be quickly
+updated and restarted. On startup, the node examines its cache and immediately
+serves whatever data it finds.
 
 \begin{figure}
 \centering
@@ -329,7 +332,7 @@ immediately serves whatever data it finds.
 
 Historical nodes can support read consistency because they only deal with
 immutable data. Immutable data blocks also enable a simple parallelization
-model: historical nodes scan and aggregate immutable blocks concurrently
+model: historical nodes can scan and aggregate immutable blocks concurrently
 without blocking.
  
 \subsubsection{Tiers}
@@ -351,7 +354,7 @@ If Zookeeper becomes unavailable, historical nodes are no longer able to serve
 new data and drop outdated data, however, because the queries are served over
 HTTP, historical nodes are still be able to respond to query requests for
 the data they are currently serving. This means that Zookeeper outages do not
-affect data availability on historical nodes. 
+impact current data availability on historical nodes. 
 
 \subsection{Broker Nodes}
 Broker nodes act as query routers to historical and real-time nodes. Broker
@@ -363,25 +366,26 @@ a final consolidated result to the caller.
 
 \subsubsection{Caching}
 \label{sec:caching}
-Broker nodes contain a cache with a LRU \cite{o1993lru, kim2001lrfu} cache
+Broker nodes contain a cache with a LRU \cite{o1993lru, kim2001lrfu}
 invalidation strategy. The cache can use local heap memory or an external
-distributed store such as memcached \cite{fitzpatrick2004distributed}. Each
-time a broker node receives a query, it first maps the query to a set of
-segments. Results for certain segments may already exist in the cache and there
-is no need to recompute them. For any results that do not exist in the cache,
-the broker node will forward the query to the historical and real-time nodes.
-Once the historical nodes return their results, the broker will cache these
-results on a per segment basis for future use. This process is illustrated in
-Figure~\ref{fig:caching}. Real-time data is never cached and hence requests for
-real-time data will always be forwarded to real-time nodes.  Real-time data is
-perpetually changing and caching the results would be unreliable.
+distributed key/value store such as memcached
+\cite{fitzpatrick2004distributed}. Each time a broker node receives a query, it
+first maps the query to a set of segments. Results for certain segments may
+already exist in the cache and there is no need to recompute them. For any
+results that do not exist in the cache, the broker node will forward the query
+to the correct historical and real-time nodes.  Once historical nodes return
+their results, the broker will cache these results on a per segment basis for
+future use. This process is illustrated in Figure~\ref{fig:caching}. Real-time
+data is never cached and hence requests for real-time data will always be
+forwarded to real-time nodes.  Real-time data is perpetually changing and
+caching the results would be unreliable.
 
 \begin{figure*}
 \centering
 \includegraphics[width = 4.5in]{caching}
 \caption{Broker nodes cache per segment results. Every Druid query is mapped to
-a set of segments. If segment results do not live in the cache, queries are
-forwarded down to historical and real-time nodes.}
+a set of segments. Queries often combine cached segment results with those that
+need tobe computed on historical and real-time nodes.}
 \label{fig:caching}
 \end{figure*}
 
@@ -391,18 +395,18 @@ results already exist in the cache.
 
 \subsubsection{Availability}
 In the event of a total Zookeeper outage, data is still queryable.  If broker
-nodes are unable to communicate to Zookeeper, they use their last known segment
-to node mapping and continue forwarding queries down to real-time and
-historical nodes. Broker nodes make the assumption that the structure of the
-cluster is the same as it was before the outage. In practice, this availability
-model has allowed our Druid cluster to continue serving queries for several
-hours while we diagnosed Zookeeper outages. 
+nodes are unable to communicate to Zookeeper, they use their last known view of
+the cluster and continue to forward queries to real-time and historical nodes.
+Broker nodes make the assumption that the structure of the cluster is the same
+as it was before the outage. In practice, this availability model has allowed
+our Druid cluster to continue serving queries for several hours while we
+diagnosed Zookeeper outages. 
 
 \subsection{Coordinator Nodes}
-The Druid coordinator nodes are primarily in charge of data management and
+Druid coordinator nodes are primarily in charge of data management and
 distribution on historical nodes. The coordinator nodes tell historical nodes
-to load new data, drop outdated data, replicate data, and move data for load
-balancing. Druid uses a multi-version concurrency control swapping protocol for
+to load new data, drop outdated data, replicate data, and move data to load
+balance. Druid uses a multi-version concurrency control swapping protocol for
 managing immutable segments in order to maintain stable views.  If any
 immutable segment contains data that is wholly obseleted by newer segments, the
 outdated segment is dropped from the cluster. Coordinator nodes undergo a
@@ -412,8 +416,8 @@ functionality. The remaining coordinator nodes act as redundant backups.
 A coordinator node runs periodically to determine the current state of the
 cluster. It makes decisions by comparing the expected state of the cluster with
 the actual state of the cluster at the time of the run. As with all Druid
-nodes, coordinator nodes maintains a Zookeeper connection for current cluster
-information. The coordinator nodes also maintain a connection to a MySQL
+nodes, coordinator nodes maintain a Zookeeper connection for current cluster
+information. Coordinator nodes also maintain a connection to a MySQL
 database that contains additional operational parameters and configurations.
 One of the key pieces of information located in the MySQL database is a table
 that contains a list of all segments that should be served by historical nodes.
@@ -433,7 +437,7 @@ segments that are older.
 
 The coordinator nodes load a set of rules from a rule table in the MySQL
 database. Rules may be specific to a certain data source and/or a default set
-of rules may be configured. The master will cycle through all available
+of rules may be configured. The coordinator node will cycle through all available
 segments and match each segment with the first rule that applies to it.
 
 \subsubsection{Load Balancing}
@@ -457,31 +461,30 @@ scope of this paper and may be discussed in future literature.
 Coordinator nodes may tell different historical nodes to load copies of the
 same segment. The number of replicates in each tier of the historical compute
 cluster is fully configurable. Setups that require high levels of fault
-tolerance can be configured to have a high number of replicates. Replicated
+tolerance can be configured to have a high number of replicas. Replicated
 segments are treated the same as the originals and follow the same load
-distribution algorithms. By replicating segments, single historical node
-failures are transparent in the Druid cluster. We use this property to our
-advantage for software upgrades. We can seamlessly take a historical node
-offline, update it, bring it back up, and repeat the process for every
-historical node in a cluster. Over the last two years, we have never taken
-downtime in our Druid cluster for software upgrades.
+distribution algorithm. By replicating segments, single historical node
+failures are transparent in the Druid cluster. We use this property for
+software upgrades. We can seamlessly take a historical node offline, update it,
+bring it back up, and repeat the process for every historical node in a
+cluster. Over the last two years, we have never taken downtime in our Druid
+cluster for software upgrades.
 
 \subsubsection{Availability}
 Druid coordinator nodes have two external dependencies: Zookeeper and MySQL.
 Coordinator nodes rely on Zookeeper to determine what historical nodes already
 exist in the cluster. If Zookeeper becomes unavailable, the coordinator will no
-longer be able to assign, balance, and drop segments. These operations do not
-affect data availability at all and all data in the historical cluster should
-still be queryable.
+longer be able to send instructions to assign, balance, and drop segments.
+However, these operations do not affect data availability at all.
 
 The design principle for responding to MySQL and Zookeeper failures is the
 same: if an external dependency responsible for coordination fails, the cluster
 maintains the status quo. Druid uses MySQL to store operational management
 information and segment metadata information about what segments should exist
 in the cluster.  If MySQL goes down, this information becomes unavailable to
-coordinator nodes. However, this does not mean data itself is not available. If
+coordinator nodes. However, this does not mean data itself is unavailable. If
 coordinator nodes cannot communicate to MySQL, they will cease to assign new
-segments and drop outdated ones. Historical and real-time nodes are still
+segments and drop outdated ones. Broker, historical and real-time nodes are still
 queryable during MySQL outages.
 
 \section{Storage Format}
@@ -519,18 +522,19 @@ timestamp), the advantages storing aggregate information as columns rather than
 rows are well documented \cite{abadi2008column}. Column storage allows for more
 efficient CPU usage as only what is needed is actually loaded and scanned. In a
 row oriented data store, all columns associated with a row must be scanned as
-part of an aggregation. The additional scan time can introduce performance
-degradations as high as 250\% \cite{bear2012vertica}.
+part of an aggregation. The additional scan time can introduce signficant performance
+degradations \cite{abadi2008column}.
 
 Druid has multiple column types to represent various data formats. Depending on
 the column type, different compression methods are used to reduce the cost of
 storing a column in memory and on disk. In the example given in
 Table~\ref{tab:sample_data}, the page, user, gender, and city columns only
-contain strings. String columns can be dictionary encoded. Dictionary encoding
-is a common method to compress data and has been used in other data stores such
-as PowerDrill \cite{hall2012processing}. In the example in
-Table~\ref{tab:sample_data}, we can map each publisher to an unique
-integer identifier.
+contain strings. Storing strings directly is unnecessarily costly and string
+columns can be dictionary encoded instead. Dictionary encoding is a common
+method to compress data and has been used in other data stores such as
+PowerDrill \cite{hall2012processing}. In the example in
+Table~\ref{tab:sample_data}, we can map each publisher to an unique integer
+identifier.
 \begin{verbatim}
 Justin Bieber   -> 0
 Ke$ha -> 1
@@ -559,16 +563,16 @@ Characters Removed -> [25, 42, 17, 170]
 In this case, we compress the raw values as opposed to their dictionary
 representations.
 
-\subsection{Inverted Indices}
-In most real world data analytic workflows, queries are issued for the
-aggregated results for some set of metrics where some set of dimension
-specifications are met. For example, "how many Wikipedia edits were done by
-users in San Francisco who are also male"? These queries are filtering the data
-based on some a boolean expression of dimension values. In many real world data
-sets, string columns are typically dimension columns and metric columns are
-typically numeric columns. Druid creates additional lookup indices for string
-columns such that only those rows that pertain to a particular query filter are
-ever scanned.
+\subsection{Indices for Filtering Data}
+In most real world OLAP workflows, queries are issued for the aggregated
+results for some set of metrics where some set of dimension specifications are
+met. An example query may ask "How many Wikipedia edits were done by users in
+San Francisco who are also male?". This query is filtering the Wikipedia data
+set in Table~\ref{tab:sample_data} based on a Boolean expression of dimension
+values. In many real world data sets, dimension columns contain strings and
+metric columns contain numeric values. Druid creates additional lookup
+indices for string columns such that only those rows that pertain to a
+particular query filter are ever scanned.
 
 Let us consider the page column in
 Table~\ref{tab:sample_data}. For each unique page in
@@ -627,21 +631,21 @@ alternative.
 \subsection{Storage Engine}
 Druid’s persistence components allows for different storage engines to be
 plugged in, similar to Dynamo \cite{decandia2007dynamo}. These storage engines
-may store data in in-memory structures such as the JVM heap or in memory-mapped
-structures. The ability to swap storage engines allows for Druid to be
-configured depending on a particular application’s specifications. An in-memory
-storage engine may be operationally more expensive than a memory-mapped storage
-engine but could be a better alternative if performance is critical. By
-default, a memory-mapped storage engine is used.
+may store data in an entirely in-memory structure such as the JVM heap or in
+memory-mapped structures. The ability to swap storage engines allows for Druid
+to be configured depending on a particular application’s specifications. An
+in-memory storage engine may be operationally more expensive than a
+memory-mapped storage engine but could be a better alternative if performance
+is critical. By default, a memory-mapped storage engine is used.
 
-Druid relies on the operating system to page segments in and out of memory.
-Given that segments can only be scanned if they are loaded in memory, a
-memory-mapped storage engine allows recent segments to retain in memory whereas
-segments that are never queried are paged out of memory. The main drawback with
-using the memory-mapped storage engine is in the event a query requires more
-segments to be paged into memory than a given node has capacity for. In this
-case, query performance will suffer from the cost of paging segments in and out
-of memory.
+When using a memory-mapped storage engine, Druid relies on the operating system
+to page segments in and out of memory.  Given that segments can only be scanned
+if they are loaded in memory, a memory-mapped storage engine allows recent
+segments to retain in memory whereas segments that are never queried are paged
+out. The main drawback with using the memory-mapped storage engine is when a
+query requires more segments to be paged into memory than a given node has
+capacity for. In this case, query performance will suffer from the cost of
+paging segments in and out of memory.
 
 \section{Query API}
 \label{sec:query-api}
@@ -674,21 +678,18 @@ A sample count query over a week of data is shown below:
     "value"       : "Ke$ha"
   },
   "granularity"   : "day",
-  "aggregations"  : [
-    {
+  "aggregations"  : [ {
       "type"      : "count",
       "name"      : "rows"
-    }
-  ]
+   } ]
 }
 \end{verbatim}
 
-The query shown above will return a count of the number of rows in the \emph{wikipedia} datasource
+The query shown above will return a count of the number of rows in the Wikipedia datasource
 from 2013-01-01 to 2013-01-08, filtered for only those rows where the value of the "page" dimension is 
 equal to "Ke\$ha". The results will be bucketed by day and will be a JSON array of the following form:
 \begin{verbatim}
-[
-  {
+[ {
     "timestamp": "2012-01-01T00:00:00.000Z",
     "result": {
       "rows": 393298
@@ -706,8 +707,7 @@ equal to "Ke\$ha". The results will be bucketed by day and will be a JSON array 
     "result": {
       "rows": 1337
     }
-  }
-]
+} ]
 \end{verbatim}
 
 Druid supports many types of aggregations including double sums, long sums,
@@ -727,13 +727,6 @@ To illustrate Druid's performance, we conducted a series of experiments that
 focused on measuring Druid's query and data ingestion capabilities.
 
 \subsection{Query Performance}
-\begin{figure}
-\centering
-\includegraphics[width = 2.8in]{cluster_scan_rate}
-\caption{Druid cluster scan rate with lines indicating linear scaling
-  from 25 nodes.}
-\label{fig:cluster_scan_rate}
-\end{figure}
 To benchmark Druid query performance, we created a large test cluster with 6TB
 of uncompressed data, representing tens of billions of fact rows. The data set
 contained more than a dozen dimensions, with cardinalities ranging from the
@@ -760,13 +753,6 @@ Please note:
 \item A memory-mapped storage engine was used (the machine was configured to memory map the data
   instead of loading it into the Java heap.)
 \end{itemize}
-
-\begin{figure}
-\centering
-\includegraphics[width = 2.8in]{core_scan_rate}
-\caption{Druid core scan rate.}
-\label{fig:core_scan_rate}
-\end{figure}
 
 \begin{table*}
   \centering
@@ -796,6 +782,21 @@ speedup up to 50 nodes: the core scan rates in Figure~\ref{fig:core_scan_rate}
 remain nearly constant.  The increase in speed of a parallel computing system
 is often limited by the time needed for the sequential operations of the
 system, in accordance with Amdahl's law \cite{amdahl1967validity}.
+
+\begin{figure}
+\centering
+\includegraphics[width = 2.8in]{cluster_scan_rate}
+\caption{Druid cluster scan rate with lines indicating linear scaling
+  from 25 nodes.}
+\label{fig:cluster_scan_rate}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width = 2.8in]{core_scan_rate}
+\caption{Druid core scan rate.}
+\label{fig:core_scan_rate}
+\end{figure}
 
 The first query listed in Table~\ref{tab:sql_queries} is a simple
 count, achieving scan rates of 33M rows/second/core. We believe
@@ -832,10 +833,11 @@ single metric. 4 out of the 5 dimensions have a cardinality less than 100, and
 we varied the cardinality of the final dimension. The results of varying the
 cardinality of a dimension is shown in
 Figure~\ref{fig:throughput_vs_cardinality}.
+
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{throughput_vs_cardinality}
-\caption{When we Vary the cardinality of a single dimension, we can see monotonically decreasing throughput.}
+\caption{When we vary the cardinality of a single dimension, we can see monotonically decreasing throughput.}
 \label{fig:throughput_vs_cardinality}
 \end{figure}
 
@@ -843,6 +845,7 @@ In Figure~\ref{fig:throughput_vs_num_dims}, we instead vary the number of
 dimensions in our data set. Each dimension has a cardinality less than 100. We
 can see a similar decline in ingestion throughput as the number of dimensions
 increases.
+
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{throughput_vs_num_dims}
@@ -860,7 +863,8 @@ in the results, leading to a graph that is not strictly decreasing. These
 results are shown in Figure~\ref{fig:throughput_vs_num_metrics}. For most real
 world data sets, the number of metrics tends to be less than the number of
 dimensions.  Hence, we can see that introducing a few new metrics does not
-substantially impact the ingestion latency.
+impact the ingestion latency as severely as in the other graphs.
+
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{throughput_vs_num_metrics}
@@ -884,22 +888,28 @@ algorithms mentioned in PowerDrill.
 Although Druid builds on many of the same principles as other distributed
 columnar data stores \cite{fink2012distributed}, many of these data stores are
 designed to be more generic key-value stores \cite{stonebraker2005c} and do not
-support computation directly in the storage layer.  These data stores remain
-popular solutions in the traditional data warehousing space.  Other popular
-systems designed for some of the same use cases that Druid is designed to solve
-include in-memory databases such as SAP’s HANA \cite{farber2012sap} and VoltDB
-\cite{voltdb2010voltdb}. Druid is a front-office system designed such that
-user-facing dashboards can be built on top of it. Similar to
-\cite{paraccel2013}, Druid has analytical features built in. The main features
-Druid offers over traditional data warehousing solutions are real-time data
-ingestion, interactive queries and interactive query latencies. In terms of
-real-time ingestion and processing of data, Trident/Storm \cite{marz2013storm}
-and Streaming Spark \cite{zaharia2012discretized} are other popular real-time
-computation systems, although they lack the data storage capabilities of Druid.
-Spark/Shark \cite{engle2012shark} are also doing similar work in the area of
-fast data analysis on large scale data sets. Cloudera Impala
-\cite{cloudera2013} is another system focused on optimizing querying
-performance, but more so in Hadoop environments.
+support computation directly in the storage layer.  There are also other data
+stores designed for some of the same of the data warehousing issues that Druid
+is meant to solve. These systems include include in-memory databases such as
+SAP’s HANA \cite{farber2012sap} and VoltDB \cite{voltdb2010voltdb}. These data
+stores lack Druid's low latency ingestion characteristics. Similar to
+\cite{paraccel2013}, Druid has analytical features built in, however, it is
+much easier to do system wide rolling software updates in Druid (with no
+downtime).  
+
+Druid's low latency data ingestion features share some similarities with
+Trident/Storm \cite{marz2013storm} and Streaming Spark
+\cite{zaharia2012discretized}, however, both systems are focused on stream
+processing whereas Druid is focused on ingestion and aggregation. Stream
+processors are great complements to Druid as a means of pre-processing the data
+before the data enters Druid.
+
+There are a class of systems that specialize in queries on top of cluster
+computing frameworks.  Shark \cite{engle2012shark} is such a system for queries
+on top of Spark, and Cloudera's Impala \cite{cloudera2013} is another system
+focused on optimizing query performance on top of HDFS. Druid historical nodes
+download data locally and only work with native Druid indexes. We believe this
+setup allows for faster query latencies.
 
 Druid leverages a unique combination of algorithms in its
 architecture. Although we believe no other data store has the same set
@@ -911,12 +921,12 @@ stores \cite{macnicol2004sybase}.
 \label{sec:conclusions}
 In this paper, we presented Druid, a distributed, column-oriented, real-time
 analytical data store. Druid is designed to power high performance applications
-and is optimized for low query latencies. Druid ingests data in real-time and
-is fault-tolerant. We discussed Druid performance benchmarks on billion row
-data sets. We summarized key architecture aspects such as the storage format,
-query language, and general execution. In the future, we plan to cover the
-different algorithms we’ve developed for Druid and how other systems may plug
-into Druid in greater detail.
+and is optimized for low query latencies. Druid supports streaming data
+ingestion and is fault-tolerant. We discussed how Druid performance was able to
+scan 27 billion rows in a second. We summarized key architecture aspects such
+as the storage format, query language, and general execution. In the future, we
+plan to cover the different algorithms we’ve developed for Druid and how other
+systems may plug into Druid in greater detail.
 
 \balance
 
@@ -924,8 +934,7 @@ into Druid in greater detail.
 \label{sec:acknowledgements}
 Druid could not have been built without the help of many great engineers at
 Metamarkets and in the community.  We want to thank everyone that has
-contributed to the Druid codebase for their invaluable support. In particular
-we want to thank Steve Harris for providing feedback on improving this paper.
+contributed to the Druid codebase for their invaluable support. 
 
 % The following two commands are all you need in the
 % initial runs of your .tex file to
