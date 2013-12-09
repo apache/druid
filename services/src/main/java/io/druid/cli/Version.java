@@ -20,11 +20,7 @@
 package io.druid.cli;
 
 import io.airlift.command.Command;
-import io.druid.initialization.DruidModule;
-import io.druid.initialization.Initialization;
-import io.druid.server.initialization.ExtensionsConfig;
-
-import java.lang.StringBuilder;
+import io.druid.server.StatusResource;
 
 @Command(
     name = "version",
@@ -32,33 +28,9 @@ import java.lang.StringBuilder;
 )
 public class Version implements Runnable
 {
-  private static final String NL = "\n";
   @Override
   public void run()
   {
-    StringBuilder output = new StringBuilder();
-    output.append("Druid version ").append(NL);
-    output.append(Initialization.class.getPackage().getImplementationVersion()).append(NL).append(NL);
-
-    ExtensionsConfig config = Initialization.makeStartupInjector().getInstance(ExtensionsConfig.class);
-
-    output.append("Registered Druid Modules").append(NL);
-
-    for (DruidModule module : Initialization.getFromExtensions(config, DruidModule.class)) {
-      String artifact = module.getClass().getPackage().getImplementationTitle();
-      String version = module.getClass().getPackage().getImplementationVersion();
-
-      if (artifact != null) {
-        output.append(
-            String.format("  - %s (%s-%s)", module.getClass().getCanonicalName(), artifact, version)
-        ).append(NL);
-      } else {
-        output.append(
-            String.format("  - %s", module.getClass().getCanonicalName())
-        ).append(NL);
-      }
-    }
-
-    System.out.println(output.toString());
+    System.out.println(StatusResource.getStatus());
   }
 }

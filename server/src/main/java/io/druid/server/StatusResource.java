@@ -28,12 +28,8 @@ import io.druid.server.initialization.ExtensionsConfig;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 
 /**
  */
@@ -43,6 +39,11 @@ public class StatusResource
   @GET
   @Produces("application/json")
   public Status doGet()
+  {
+    return getStatus();
+  }
+
+  public static Status getStatus()
   {
     return new Status(
         Initialization.class.getPackage().getImplementationVersion(),
@@ -56,52 +57,127 @@ public class StatusResource
    *
    * @return map of extensions loaded with their respective implementation versions.
    */
-  private Map<String, String> getExtensionVersions()
+  private static List<ModuleVersion> getExtensionVersions()
   {
     final Injector injector = Initialization.makeStartupInjector();
     final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
     final List<DruidModule> druidModules = Initialization.getFromExtensions(config, DruidModule.class);
-    Map<String, String> moduleVersions = new HashMap<>();
+
+    List<ModuleVersion> moduleVersions = new ArrayList<>();
     for (DruidModule module : druidModules) {
-      Package pkg = module.getClass().getPackage();
-      moduleVersions.put(pkg.getImplementationTitle(), pkg.getImplementationVersion());
+
+      String artifact = module.getClass().getPackage().getImplementationTitle();
+      String version = module.getClass().getPackage().getImplementationVersion();
+
+      ModuleVersion moduleVersion;
+      if (artifact != null) {
+        moduleVersion = new ModuleVersion(module.getClass().getCanonicalName(), artifact, version);
+      } else {
+        moduleVersion = new ModuleVersion(module.getClass().getCanonicalName());
+      }
+
+      moduleVersions.add(moduleVersion);
     }
     return moduleVersions;
   }
 
   public static class Status
   {
-    final String serverVersion;
-    final Map<String, String> extensionsVersion;
+    final String version;
+    final List<ModuleVersion> modules;
     final Memory memory;
 
     public Status(
-        String serverVersion,
-        Map<String, String> extensionsVersion,
-        Memory memory
+        String version, List<ModuleVersion> modules, Memory memory
     )
     {
-      this.serverVersion = serverVersion;
-      this.extensionsVersion = extensionsVersion;
+      this.version = version;
+      this.modules = modules;
       this.memory = memory;
     }
 
     @JsonProperty
-    public String getServerVersion()
+    public String getVersion()
     {
-      return serverVersion;
+      return version;
     }
 
     @JsonProperty
-    public Map<String, String> getExtensionsVersion()
+    public List<ModuleVersion> getModules()
     {
-      return extensionsVersion;
+      return modules;
     }
 
     @JsonProperty
     public Memory getMemory()
     {
       return memory;
+    }
+
+    @Override
+    public String toString()
+    {
+      final String NL = "\n";
+      StringBuilder output = new StringBuilder();
+      output.append(String.format("Druid version - %s", version)).append(NL).append(NL);
+
+      if (modules.size() > 0) {
+        output.append("Registered Druid Modules").append(NL);
+      } else {
+        output.append("No Druid Modules loaded !");
+      }
+
+      for (ModuleVersion moduleVersion : modules) {
+        output.append(moduleVersion).append(NL);
+      }
+      return output.toString();
+    }
+  }
+
+  public static class ModuleVersion
+  {
+    final String name;
+    final String artifact;
+    final String version;
+
+    public ModuleVersion(String name)
+    {
+      this(name, "", "");
+    }
+
+    public ModuleVersion(String name, String artifact, String version)
+    {
+      this.name = name;
+      this.artifact = artifact;
+      this.version = version;
+    }
+
+    @JsonProperty
+    public String getName()
+    {
+      return name;
+    }
+
+    @JsonProperty
+    public String getArtifact()
+    {
+      return artifact;
+    }
+
+    @JsonProperty
+    public String getVersion()
+    {
+      return version;
+    }
+
+    @Override
+    public String toString()
+    {
+      if (artifact.isEmpty()) {
+        return String.format("  - %s ", name);
+      } else {
+        return String.format("  - %s (%s-%s)", name, artifact, version);
+      }
     }
   }
 
@@ -143,5 +219,6 @@ public class StatusResource
     {
       return usedMemory;
     }
+
   }
 }

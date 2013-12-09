@@ -45,12 +45,6 @@ public class Main
            .withDefaultCommand(Help.class)
            .withCommands(Help.class, Version.class);
 
-    Runnable cmd = builder.build().parse(args);
-    if (cmd instanceof Version) {
-      Logger.getRootLogger().setLevel(Level.OFF);
-    }
-
-
     builder.withGroup("server")
            .withDescription("Run one of the Druid server types.")
            .withDefaultCommand(Help.class)
