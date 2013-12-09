@@ -46,14 +46,13 @@ public class StatusResource
   {
     return new Status(
         Initialization.class.getPackage().getImplementationVersion(),
-        getVersion("/druid-api.version"),
         getExtensionVersions(),
         new Memory(Runtime.getRuntime())
     );
   }
 
   /**
-   * Load the extensions list and return the implementation-versions
+   * Load the unique extensions and return their implementation-versions
    *
    * @return map of extensions loaded with their respective implementation versions.
    */
@@ -70,46 +69,19 @@ public class StatusResource
     return moduleVersions;
   }
 
-  /**
-   * Load properties files from the classpath and return version number
-   *
-   * @param versionFile
-   *
-   * @return version number
-   */
-  private String getVersion(String versionFile)
-  {
-
-    Properties properties = new Properties();
-    try {
-      InputStream is = StatusResource.class.getResourceAsStream(versionFile);
-      if (is == null) {
-        return null;
-      }
-      properties.load(is);
-    }
-    catch (IOException e) {
-//      e.printStackTrace();
-    }
-    return properties.getProperty("version");
-  }
-
   public static class Status
   {
     final String serverVersion;
-    final String apiVersion;
     final Map<String, String> extensionsVersion;
     final Memory memory;
 
     public Status(
         String serverVersion,
-        String apiVersion,
         Map<String, String> extensionsVersion,
         Memory memory
     )
     {
       this.serverVersion = serverVersion;
-      this.apiVersion = apiVersion;
       this.extensionsVersion = extensionsVersion;
       this.memory = memory;
     }
@@ -118,12 +90,6 @@ public class StatusResource
     public String getServerVersion()
     {
       return serverVersion;
-    }
-
-    @JsonProperty
-    public String getApiVersion()
-    {
-      return apiVersion;
     }
 
     @JsonProperty
