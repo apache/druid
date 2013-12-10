@@ -144,14 +144,14 @@ applications \cite{tschetter2011druid}. In the early days of Metamarkets, we
 were focused on building a hosted dashboard that would allow users to arbitrary
 explore and visualize event streams.  The data store powering the dashboard
 needed to return queries fast enough that the data visualizations built on top
-of it could update provide users with an interactive experience. 
+of it could provide users with an interactive experience. 
 
 In addition to the query latency needs, the system had to be multi-tenant and
 highly available. The Metamarkets product is used in a highly concurrent
 environment. Downtime is costly and many businesses cannot afford to wait if a
 system is unavailable in the face of software upgrades or network failure.
-Downtime for startups, who often do not have internal operations teams, can
-determine whether a business succeeds or fails.  
+Downtime for startups, who often lack proper internal operations management, can
+determine business success or failure.  
 
 Finally, another key problem that Metamarkets faced in its early days was to
 allow users and alerting systems to be able to make business decisions in
@@ -170,15 +170,15 @@ analytics platform in multiple companies.
 \label{sec:architecture}
 A Druid cluster consists of different types of nodes and each node type is
 designed to perform a specific set of things. We believe this design separates
-concerns and simplifies the complexity of the system.  There is minimal
-interaction between the different node types and hence, intra-cluster
-communication failures have minimal impact on data availability.  The different
-node types operate fairly independent of each other and to solve complex data
-analysis problems, they come together to form a fully working system.
-The name Druid comes from the Druid class in many role-playing games: it is a
-shape-shifter, capable of taking on many different forms to fulfill various
-different roles in a group.  The composition of and flow of data in a Druid
-cluster are shown in Figure~\ref{fig:cluster}.
+concerns and simplifies the complexity of the system.  The different node types
+operate fairly independent of each other and there is minimal interaction
+between them. Hence, intra-cluster communication failures have minimal impact
+on data availability.  To solve complex data analysis problems, the different
+node types come together to form a fully working system.  The name Druid comes
+from the Druid class in many role-playing games: it is a shape-shifter, capable
+of taking on many different forms to fulfill various different roles in a
+group.  The composition of and flow of data in a Druid cluster are shown in
+Figure~\ref{fig:cluster}.
 
 \begin{figure*}
 \centering
@@ -213,10 +213,10 @@ still be queried. Figure~\ref{fig:realtime_flow} illustrates the process.
 \begin{figure} 
 \centering 
 \includegraphics[width = 2.8in]{realtime_flow}
-\caption{Real-time nodes first buffer events in memory. After some period of
-time, in-memory indexes are persisted to disk. After another period of time,
-all persisted indexes are merged together and handed off. Queries on data hit
-the in-memory index and the persisted indexes.}
+\caption{Real-time nodes first buffer events in memory. On a periodic basis,
+the in-memory index is persisted to disk. On another periodic basis, all
+persisted indexes are merged together and handed off. Queries for data will hit the
+in-memory index and the persisted indexes.}
 \label{fig:realtime_flow}
 \end{figure}
 
@@ -332,7 +332,7 @@ serves whatever data it finds.
 
 Historical nodes can support read consistency because they only deal with
 immutable data. Immutable data blocks also enable a simple parallelization
-model: historical nodes can scan and aggregate immutable blocks concurrently
+model: historical nodes can concurrently scan and aggregate immutable blocks
 without blocking.
  
 \subsubsection{Tiers}
@@ -385,7 +385,7 @@ caching the results would be unreliable.
 \includegraphics[width = 4.5in]{caching}
 \caption{Broker nodes cache per segment results. Every Druid query is mapped to
 a set of segments. Queries often combine cached segment results with those that
-need tobe computed on historical and real-time nodes.}
+need to be computed on historical and real-time nodes.}
 \label{fig:caching}
 \end{figure*}
 
@@ -399,7 +399,7 @@ nodes are unable to communicate to Zookeeper, they use their last known view of
 the cluster and continue to forward queries to real-time and historical nodes.
 Broker nodes make the assumption that the structure of the cluster is the same
 as it was before the outage. In practice, this availability model has allowed
-our Druid cluster to continue serving queries for several hours while we
+our Druid cluster to continue serving queries for a significant period of time while we
 diagnosed Zookeeper outages. 
 
 \subsection{Coordinator Nodes}
@@ -564,9 +564,9 @@ In this case, we compress the raw values as opposed to their dictionary
 representations.
 
 \subsection{Indices for Filtering Data}
-In most real world OLAP workflows, queries are issued for the aggregated
-results for some set of metrics where some set of dimension specifications are
-met. An example query may ask "How many Wikipedia edits were done by users in
+In many real world OLAP workflows, queries are issued for the aggregated
+results of some set of metrics where some set of dimension specifications are
+met. An example query may be asked is: "How many Wikipedia edits were done by users in
 San Francisco who are also male?". This query is filtering the Wikipedia data
 set in Table~\ref{tab:sample_data} based on a Boolean expression of dimension
 values. In many real world data sets, dimension columns contain strings and
@@ -712,7 +712,7 @@ equal to "Ke\$ha". The results will be bucketed by day and will be a JSON array 
 
 Druid supports many types of aggregations including double sums, long sums,
 minimums, maximums, and several others. Druid also supports complex aggregations
-such as cardinality estimation and approxmiate quantile estimation.  The
+such as cardinality estimation and approximate quantile estimation.  The
 results of aggregations can be combined in mathematical expressions to form
 other aggregations. The query API is highly customizable and can be extended to
 filter and group results based on almost any arbitrary condition.  It is beyond
@@ -892,10 +892,9 @@ support computation directly in the storage layer.  There are also other data
 stores designed for some of the same of the data warehousing issues that Druid
 is meant to solve. These systems include include in-memory databases such as
 SAP’s HANA \cite{farber2012sap} and VoltDB \cite{voltdb2010voltdb}. These data
-stores lack Druid's low latency ingestion characteristics. Similar to
-\cite{paraccel2013}, Druid has analytical features built in, however, it is
-much easier to do system wide rolling software updates in Druid (with no
-downtime).  
+stores lack Druid's low latency ingestion characteristics. Druid also has
+native analytical features baked in, similar to \cite{paraccel2013}, however,
+Druid allows system wide rolling software updates with no downtime.  
 
 Druid's low latency data ingestion features share some similarities with
 Trident/Storm \cite{marz2013storm} and Streaming Spark
