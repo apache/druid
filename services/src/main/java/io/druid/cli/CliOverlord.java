@@ -70,6 +70,7 @@ import io.druid.indexing.overlord.scaling.ResourceManagementStrategy;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementConfig;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementStrategy;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
+import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.initialization.JettyServerInitializer;
@@ -166,6 +167,8 @@ public class CliOverlord extends ServerRunnable
 
           private void configureRunners(Binder binder)
           {
+            JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
+
             PolyBind.createChoice(
                 binder,
                 "druid.indexer.runner.type",
