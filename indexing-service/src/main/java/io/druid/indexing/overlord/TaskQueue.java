@@ -100,7 +100,7 @@ public class TaskQueue
       // Get all running tasks and their locks
       final Multimap<TaskLock, Task> tasksByLock = ArrayListMultimap.create();
 
-      for (final Task task : taskStorage.getRunningTasks()) {
+      for (final Task task : taskStorage.getActiveTasks()) {
         try {
           final List<TaskLock> taskLocks = taskStorage.getLocks(task.getId());
 
