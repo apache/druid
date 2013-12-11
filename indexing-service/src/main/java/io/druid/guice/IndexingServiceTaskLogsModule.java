@@ -36,7 +36,7 @@ public class IndexingServiceTaskLogsModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(NoopTaskLogs.class));
+    PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
 
     final MapBinder<String, TaskLogs> taskLogBinder = Binders.taskLogsBinder(binder);
     taskLogBinder.addBinding("noop").to(NoopTaskLogs.class).in(LazySingleton.class);
