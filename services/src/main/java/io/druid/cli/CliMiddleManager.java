@@ -28,6 +28,7 @@ import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
+import io.druid.guice.IndexingServiceTaskLogsModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -103,7 +104,8 @@ public class CliMiddleManager extends ServerRunnable
             );
           }
         },
-        new IndexingServiceFirehoseModule()
+        new IndexingServiceFirehoseModule(),
+        new IndexingServiceTaskLogsModule()
     );
   }
 }

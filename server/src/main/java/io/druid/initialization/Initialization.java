@@ -52,7 +52,6 @@ import io.druid.guice.QueryableModule;
 import io.druid.guice.ServerModule;
 import io.druid.guice.ServerViewModule;
 import io.druid.guice.StorageNodeModule;
-import io.druid.guice.TaskLogsModule;
 import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
@@ -299,7 +298,6 @@ public class Initialization
         new JacksonConfigManagerModule(),
         new IndexingServiceDiscoveryModule(),
         new DataSegmentPusherPullerModule(),
-        new TaskLogsModule(),
         new FirehoseModule()
     );
 
