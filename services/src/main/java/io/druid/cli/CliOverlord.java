@@ -32,6 +32,7 @@ import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
+import io.druid.guice.IndexingServiceTaskLogsModule;
 import io.druid.guice.JacksonConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -70,6 +71,7 @@ import io.druid.indexing.overlord.scaling.ResourceManagementStrategy;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementConfig;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementStrategy;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
+import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.initialization.JettyServerInitializer;
@@ -93,7 +95,7 @@ import java.util.List;
  */
 @Command(
     name = "overlord",
-    description = "Runs an Overlord node, see http://druid.io/docs/0.6.26/Indexing-Service.html for a description"
+    description = "Runs an Overlord node, see http://druid.io/docs/0.6.30/Indexing-Service.html for a description"
 )
 public class CliOverlord extends ServerRunnable
 {
@@ -166,6 +168,8 @@ public class CliOverlord extends ServerRunnable
 
           private void configureRunners(Binder binder)
           {
+            JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
+
             PolyBind.createChoice(
                 binder,
                 "druid.indexer.runner.type",
@@ -208,7 +212,8 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.autoscale", SimpleResourceManagementConfig.class);
           }
         },
-        new IndexingServiceFirehoseModule()
+        new IndexingServiceFirehoseModule(),
+        new IndexingServiceTaskLogsModule()
     );
   }
 

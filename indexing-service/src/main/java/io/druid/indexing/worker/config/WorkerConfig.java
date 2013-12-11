@@ -38,7 +38,7 @@ public class WorkerConfig
 
   @JsonProperty
   @Min(1)
-  private int capacity = Runtime.getRuntime().availableProcessors() - 1;
+  private int capacity = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
 
   public String getIp()
   {

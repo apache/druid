@@ -17,35 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.cli;
+package io.druid.indexing.common.config;
 
-import com.google.common.collect.ImmutableList;
-import com.metamx.common.logger.Logger;
-import io.airlift.command.Command;
-import io.druid.guice.RealtimeModule;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
+import javax.validation.constraints.NotNull;
+import java.io.File;
 
-/**
- */
-@Command(
-    name = "realtime",
-    description = "Runs a realtime node, see http://druid.io/docs/0.6.30/Realtime.html for a description"
-)
-public class CliRealtime extends ServerRunnable
+public class FileTaskLogsConfig
 {
-  private static final Logger log = new Logger(CliBroker.class);
+  @JsonProperty
+  @NotNull
+  private File directory = new File("log");
 
-  public CliRealtime()
+  public File getDirectory()
   {
-    super(log);
-  }
-
-  @Override
-  protected List<Object> getModules()
-  {
-    return ImmutableList.<Object>of(
-        new RealtimeModule()
-    );
+    return directory;
   }
 }

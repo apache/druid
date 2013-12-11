@@ -19,33 +19,18 @@
 
 package io.druid.cli;
 
-import com.google.common.collect.ImmutableList;
-import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
-import io.druid.guice.RealtimeModule;
+import io.druid.server.StatusResource;
 
-import java.util.List;
-
-/**
- */
 @Command(
-    name = "realtime",
-    description = "Runs a realtime node, see http://druid.io/docs/0.6.30/Realtime.html for a description"
+    name = "version",
+    description = "Returns Druid version information"
 )
-public class CliRealtime extends ServerRunnable
+public class Version implements Runnable
 {
-  private static final Logger log = new Logger(CliBroker.class);
-
-  public CliRealtime()
-  {
-    super(log);
-  }
-
   @Override
-  protected List<Object> getModules()
+  public void run()
   {
-    return ImmutableList.<Object>of(
-        new RealtimeModule()
-    );
+    System.out.println(StatusResource.getStatus());
   }
 }
