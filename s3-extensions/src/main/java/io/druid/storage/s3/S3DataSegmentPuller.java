@@ -160,14 +160,11 @@ public class S3DataSegmentPuller implements DataSegmentPuller
           }
       );
     }
-    catch (InterruptedException e) {
+    catch (S3ServiceException | IOException e) {
+      throw new SegmentLoadingException(e, "S3 fail! Key[%s]", coords);
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
-    }
-    catch (IOException e) {
-      throw new SegmentLoadingException(e, "S3 fail! Key[%s]", coords);
-    }
-    catch (S3ServiceException e) {
-      throw new SegmentLoadingException(e, "S3 fail! Key[%s]", coords);
     }
   }
 
@@ -188,11 +185,11 @@ public class S3DataSegmentPuller implements DataSegmentPuller
       );
       return objDetails.getLastModifiedDate().getTime();
     }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
     catch (S3ServiceException | IOException e) {
       throw new SegmentLoadingException(e, e.getMessage());
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
     }
   }
 
