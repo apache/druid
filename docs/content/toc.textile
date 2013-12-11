@@ -3,7 +3,7 @@
 
 <link rel="stylesheet" href="css/toc.css">
 
-h1. Introduction
+h2. Introduction
 * "About Druid":./
 * "Concepts and Terminology":./Concepts-and-Terminology.html
 
