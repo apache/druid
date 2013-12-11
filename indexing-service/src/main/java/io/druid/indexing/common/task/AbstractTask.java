@@ -23,21 +23,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockListAction;
-import io.druid.indexing.common.actions.SegmentListUsedAction;
-import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import org.joda.time.Interval;
 
 import java.io.IOException;
-import java.util.List;
 
 public abstract class AbstractTask implements Task
 {
@@ -55,26 +49,22 @@ public abstract class AbstractTask implements Task
   @JsonIgnore
   private final String dataSource;
 
-  @JsonIgnore
-  private final Optional<Interval> interval;
-
-  protected AbstractTask(String id, String dataSource, Interval interval)
+  protected AbstractTask(String id, String dataSource)
   {
-    this(id, id, new TaskResource(id, 1), dataSource, interval);
+    this(id, id, new TaskResource(id, 1), dataSource);
   }
 
-  protected AbstractTask(String id, String groupId, String dataSource, Interval interval)
+  protected AbstractTask(String id, String groupId, String dataSource)
   {
-    this(id, groupId, new TaskResource(id, 1), dataSource, interval);
+    this(id, groupId, new TaskResource(id, 1), dataSource);
   }
 
-  protected AbstractTask(String id, String groupId, TaskResource taskResource, String dataSource, Interval interval)
+  protected AbstractTask(String id, String groupId, TaskResource taskResource, String dataSource)
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.groupId = Preconditions.checkNotNull(groupId, "groupId");
     this.taskResource = Preconditions.checkNotNull(taskResource, "resource");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.interval = Optional.fromNullable(interval);
   }
 
   @JsonProperty
@@ -111,23 +101,10 @@ public abstract class AbstractTask implements Task
     return dataSource;
   }
 
-  @JsonProperty("interval")
-  @Override
-  public Optional<Interval> getImplicitLockInterval()
-  {
-    return interval;
-  }
-
   @Override
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
     return null;
-  }
-
-  @Override
-  public TaskStatus preflight(TaskActionClient taskActionClient) throws Exception
-  {
-    return TaskStatus.running(id);
   }
 
   @Override
@@ -137,7 +114,6 @@ public abstract class AbstractTask implements Task
                   .add("id", id)
                   .add("type", getType())
                   .add("dataSource", dataSource)
-                  .add("interval", getImplicitLockInterval())
                   .toString();
   }
 
@@ -147,11 +123,6 @@ public abstract class AbstractTask implements Task
   public static String joinId(Object... objects)
   {
     return ID_JOINER.join(objects);
-  }
-
-  public SegmentListUsedAction defaultListUsedAction()
-  {
-    return new SegmentListUsedAction(getDataSource(), getImplicitLockInterval().get());
   }
 
   public TaskStatus success()
@@ -186,14 +157,6 @@ public abstract class AbstractTask implements Task
 
   protected Iterable<TaskLock> getTaskLocks(TaskToolbox toolbox) throws IOException
   {
-    final List<TaskLock> locks = toolbox.getTaskActionClient().submit(new LockListAction());
-
-    if (locks.isEmpty() && getImplicitLockInterval().isPresent()) {
-      // In the Peon's local mode, the implicit lock interval is not pre-acquired, so we need to try it here.
-      toolbox.getTaskActionClient().submit(new LockAcquireAction(getImplicitLockInterval().get()));
-      return toolbox.getTaskActionClient().submit(new LockListAction());
-    } else {
-      return locks;
-    }
+    return toolbox.getTaskActionClient().submit(new LockListAction());
   }
 }

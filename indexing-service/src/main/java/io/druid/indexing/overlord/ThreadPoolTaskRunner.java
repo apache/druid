@@ -78,16 +78,10 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   }
 
   @Override
-  public void bootstrap(List<Task> tasks)
-  {
-    // do nothing
-  }
-
-  @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     final TaskToolbox toolbox = toolboxFactory.build(task);
-    final ListenableFuture<TaskStatus> statusFuture = exec.submit(new ExecutorServiceTaskRunnerCallable(task, toolbox));
+    final ListenableFuture<TaskStatus> statusFuture = exec.submit(new ThreadPoolTaskRunnerCallable(task, toolbox));
 
     final TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(task, statusFuture);
     runningItems.add(taskRunnerWorkItem);
@@ -131,6 +125,12 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   public Collection<TaskRunnerWorkItem> getPendingTasks()
   {
     return ImmutableList.of();
+  }
+
+  @Override
+  public Collection<TaskRunnerWorkItem> getKnownTasks()
+  {
+    return ImmutableList.copyOf(runningItems);
   }
 
   @Override
@@ -185,12 +185,12 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     return queryRunner == null ? new NoopQueryRunner<T>() : queryRunner;
   }
 
-  private static class ExecutorServiceTaskRunnerCallable implements Callable<TaskStatus>
+  private static class ThreadPoolTaskRunnerCallable implements Callable<TaskStatus>
   {
     private final Task task;
     private final TaskToolbox toolbox;
 
-    public ExecutorServiceTaskRunnerCallable(Task task, TaskToolbox toolbox)
+    public ThreadPoolTaskRunnerCallable(Task task, TaskToolbox toolbox)
     {
       this.task = task;
       this.toolbox = toolbox;

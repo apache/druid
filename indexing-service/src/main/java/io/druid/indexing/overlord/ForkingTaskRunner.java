@@ -102,12 +102,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
-  public void bootstrap(List<Task> tasks)
-  {
-    // do nothing
-  }
-
-  @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     synchronized (tasks) {
@@ -355,6 +349,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
         }
       }
       return ret;
+    }
+  }
+
+  @Override
+  public Collection<TaskRunnerWorkItem> getKnownTasks()
+  {
+    synchronized (tasks) {
+      return Lists.<TaskRunnerWorkItem>newArrayList(tasks.values());
     }
   }
 

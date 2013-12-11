@@ -30,8 +30,9 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockListAction;
+import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexableAdapter;
@@ -44,7 +45,7 @@ import org.joda.time.Interval;
 
 import java.io.File;
 
-public class DeleteTask extends AbstractTask
+public class DeleteTask extends AbstractFixedIntervalTask
 {
   private static final Logger log = new Logger(DeleteTask.class);
 
@@ -78,8 +79,7 @@ public class DeleteTask extends AbstractTask
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     // Strategy: Create an empty segment covering the interval to be deleted
-    final TaskLock myLock =  Iterables.getOnlyElement(getTaskLocks(toolbox));
-    final Interval interval = this.getImplicitLockInterval().get();
+    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
     final IncrementalIndex empty = new IncrementalIndex(0, QueryGranularity.NONE, new AggregatorFactory[0]);
     final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(interval, empty);
 

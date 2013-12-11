@@ -23,56 +23,54 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Optional;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
+import org.joda.time.Interval;
 
-import java.util.List;
-
-public class SpawnTasksAction implements TaskAction<Void>
+public class LockTryAcquireAction implements TaskAction<Optional<TaskLock>>
 {
   @JsonIgnore
-  private final List<Task> newTasks;
+  private final Interval interval;
 
   @JsonCreator
-  public SpawnTasksAction(
-      @JsonProperty("newTasks") List<Task> newTasks
+  public LockTryAcquireAction(
+      @JsonProperty("interval") Interval interval
   )
   {
-    this.newTasks = ImmutableList.copyOf(newTasks);
+    this.interval = interval;
   }
 
   @JsonProperty
-  public List<Task> getNewTasks()
+  public Interval getInterval()
   {
-    return newTasks;
+    return interval;
   }
 
-  public TypeReference<Void> getReturnTypeReference()
+  public TypeReference<Optional<TaskLock>> getReturnTypeReference()
   {
-    return new TypeReference<Void>() {};
+    return new TypeReference<Optional<TaskLock>>()
+    {
+    };
   }
 
   @Override
-  public Void perform(Task task, TaskActionToolbox toolbox)
+  public Optional<TaskLock> perform(Task task, TaskActionToolbox toolbox)
   {
-    for(final Task newTask : newTasks) {
-      toolbox.getTaskQueue().add(newTask);
-    }
-
-    return null;
+    return toolbox.getTaskLockbox().tryLock(task, interval);
   }
 
   @Override
   public boolean isAudited()
   {
-    return true;
+    return false;
   }
 
   @Override
   public String toString()
   {
-    return "SpawnTasksAction{" +
-           "newTasks=" + newTasks +
+    return "LockTryAcquireAction{" +
+           "interval=" + interval +
            '}';
   }
 }

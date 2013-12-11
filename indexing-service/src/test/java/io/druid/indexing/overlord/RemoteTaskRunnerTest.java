@@ -312,8 +312,6 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(existingTasks.contains("first"));
     Assert.assertTrue(existingTasks.contains("second"));
 
-    remoteTaskRunner.bootstrap(Arrays.<Task>asList(TestMergeTask.createDummyTask("second")));
-
     Set<String> runningTasks = Sets.newHashSet(
         Iterables.transform(
             remoteTaskRunner.getRunningTasks(),
@@ -343,8 +341,6 @@ public class RemoteTaskRunnerTest
 
     doSetup();
 
-    remoteTaskRunner.bootstrap(Arrays.<Task>asList(task));
-
     ListenableFuture<TaskStatus> future = remoteTaskRunner.run(task);
 
     TaskStatus status = future.get();
@@ -356,7 +352,6 @@ public class RemoteTaskRunnerTest
   public void testWorkerRemoved() throws Exception
   {
     doSetup();
-    remoteTaskRunner.bootstrap(Lists.<Task>newArrayList());
     Future<TaskStatus> future = remoteTaskRunner.run(task);
 
     Assert.assertTrue(taskAnnounced(task.getId()));
