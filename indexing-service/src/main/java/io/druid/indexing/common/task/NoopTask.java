@@ -25,9 +25,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.TaskActionClient;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.Period;
 
 /**
  */
@@ -42,19 +41,16 @@ public class NoopTask extends AbstractTask
   @JsonCreator
   public NoopTask(
       @JsonProperty("id") String id,
-      @JsonProperty("interval") Interval interval,
       @JsonProperty("runTime") int runTime,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory
   )
   {
     super(
         id == null ? String.format("noop_%s", new DateTime()) : id,
-        "none",
-        interval == null ? new Interval(Period.days(1), new DateTime()) : interval
+        "none"
     );
 
     this.runTime = (runTime == 0) ? defaultRunTime : runTime;
-
     this.firehoseFactory = firehoseFactory;
   }
 
@@ -74,6 +70,12 @@ public class NoopTask extends AbstractTask
   public FirehoseFactory getFirehoseFactory()
   {
     return firehoseFactory;
+  }
+
+  @Override
+  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  {
+    return true;
   }
 
   @Override

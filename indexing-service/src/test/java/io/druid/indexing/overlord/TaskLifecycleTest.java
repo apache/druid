@@ -53,12 +53,12 @@ import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
-import io.druid.indexing.common.task.AbstractTask;
+import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
 import io.druid.indexing.common.task.KillTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
-import io.druid.indexing.overlord.exec.TaskConsumer;
+import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -96,7 +96,6 @@ public class TaskLifecycleTest
   private MockIndexerDBCoordinator mdc = null;
   private TaskActionClientFactory tac = null;
   private TaskToolboxFactory tb = null;
-  private TaskConsumer tc = null;
   TaskStorageQueryAdapter tsqa = null;
 
   private static final Ordering<DataSegment> byIntervalOrdering = new Ordering<DataSegment>()
@@ -109,18 +108,19 @@ public class TaskLifecycleTest
   };
 
   @Before
-  public void setUp()
+  public void setUp() throws Exception
   {
-    EmittingLogger.registerEmitter(EasyMock.createMock(ServiceEmitter.class));
+    final ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
+    EmittingLogger.registerEmitter(emitter);
 
     tmp = Files.createTempDir();
 
+    final TaskQueueConfig tqc = new DefaultObjectMapper().readValue("{\"startDelay\":\"PT0S\"}", TaskQueueConfig.class);
     ts = new HeapMemoryTaskStorage();
+    tsqa = new TaskStorageQueryAdapter(ts);
     tl = new TaskLockbox(ts);
-    tq = new TaskQueue(ts, tl);
     mdc = newMockMDC();
-    tac = new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tq, tl, mdc, newMockEmitter()));
-
+    tac = new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tl, mdc, newMockEmitter()));
     tb = new TaskToolboxFactory(
         new TaskConfig(tmp.toString(), null, null, 50000),
         tac,
@@ -171,14 +171,9 @@ public class TaskLifecycleTest
         ),
         new DefaultObjectMapper()
     );
-
     tr = new ThreadPoolTaskRunner(tb);
-
-    tc = new TaskConsumer(tq, tr, tac, newMockEmitter());
-    tsqa = new TaskStorageQueryAdapter(ts);
-
+    tq = new TaskQueue(tqc, ts, tr, tac, tl, emitter);
     tq.start();
-    tc.start();
   }
 
   @After
@@ -190,7 +185,6 @@ public class TaskLifecycleTest
     catch (Exception e) {
       // suppress
     }
-    tc.stop();
     tq.stop();
   }
 
@@ -216,13 +210,13 @@ public class TaskLifecycleTest
         -1
     );
 
-    final Optional<TaskStatus> preRunTaskStatus = tsqa.getSameGroupMergedStatus(indexTask.getId());
+    final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
     Assert.assertTrue("pre run task status not present", !preRunTaskStatus.isPresent());
 
     final TaskStatus mergedStatus = runTask(indexTask);
     final TaskStatus status = ts.getStatus(indexTask.getId()).get();
     final List<DataSegment> publishedSegments = byIntervalOrdering.sortedCopy(mdc.getPublished());
-    final List<DataSegment> loggedSegments = byIntervalOrdering.sortedCopy(tsqa.getSameGroupNewSegments(indexTask.getId()));
+    final List<DataSegment> loggedSegments = byIntervalOrdering.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
 
     Assert.assertEquals("statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
     Assert.assertEquals("merged statusCode", TaskStatus.Status.SUCCESS, mergedStatus.getStatusCode());
@@ -264,11 +258,9 @@ public class TaskLifecycleTest
         -1
     );
 
-    final TaskStatus mergedStatus = runTask(indexTask);
-    final TaskStatus status = ts.getStatus(indexTask.getId()).get();
+    final TaskStatus status = runTask(indexTask);
 
-    Assert.assertEquals("statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
-    Assert.assertEquals("merged statusCode", TaskStatus.Status.FAILED, mergedStatus.getStatusCode());
+    Assert.assertEquals("statusCode", TaskStatus.Status.FAILED, status.getStatusCode());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
   }
@@ -300,7 +292,13 @@ public class TaskLifecycleTest
   @Test
   public void testSimple() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", new TaskResource("id1", 1), "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractFixedIntervalTask(
+        "id1",
+        "id1",
+        new TaskResource("id1", 1),
+        "ds",
+        new Interval("2012-01-01/P1D")
+    )
     {
       @Override
       public String getType()
@@ -337,7 +335,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadInterval() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
       @Override
       public String getType()
@@ -371,7 +369,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadVersion() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
       @Override
       public String getType()
@@ -411,7 +409,7 @@ public class TaskLifecycleTest
     TaskStatus status;
 
     try {
-      while ((status = tsqa.getSameGroupMergedStatus(task.getId()).get()).isRunnable()) {
+      while ((status = tsqa.getStatus(task.getId()).get()).isRunnable()) {
         if (System.currentTimeMillis() > startTime + 10 * 1000) {
           throw new ISE("Where did the task go?!: %s", task.getId());
         }

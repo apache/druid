@@ -37,12 +37,15 @@ import io.druid.indexer.HadoopDruidIndexerSchema;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.initialization.Initialization;
 import io.druid.server.initialization.ExtensionsConfig;
 import io.druid.timeline.DataSegment;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -51,7 +54,7 @@ import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.List;
 
-public class HadoopIndexTask extends AbstractTask
+public class HadoopIndexTask extends AbstractFixedIntervalTask
 {
   private static final Logger log = new Logger(HadoopIndexTask.class);
   private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
@@ -88,9 +91,13 @@ public class HadoopIndexTask extends AbstractTask
     super(
         id != null ? id : String.format("index_hadoop_%s_%s", schema.getDataSource(), new DateTime()),
         schema.getDataSource(),
-        JodaUtils.umbrellaInterval(JodaUtils.condenseIntervals(schema.getGranularitySpec().bucketIntervals()))
+        JodaUtils.umbrellaInterval(
+            JodaUtils.condenseIntervals(
+                schema.getGranularitySpec()
+                      .bucketIntervals()
+            )
+        )
     );
-
 
     // Some HadoopDruidIndexerSchema stuff doesn't make sense in the context of the indexing service
     Preconditions.checkArgument(schema.getSegmentOutputPath() == null, "segmentOutputPath must be absent");
@@ -106,7 +113,6 @@ public class HadoopIndexTask extends AbstractTask
   {
     return "index_hadoop";
   }
-
 
   @JsonProperty("config")
   public HadoopDruidIndexerSchema getSchema()

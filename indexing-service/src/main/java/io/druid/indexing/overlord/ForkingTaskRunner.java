@@ -102,12 +102,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
-  public void bootstrap(List<Task> tasks)
-  {
-    // do nothing
-  }
-
-  @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     synchronized (tasks) {
@@ -115,7 +109,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
         tasks.put(
             task.getId(),
             new ForkingTaskRunnerWorkItem(
-                task,
+                task.getId(),
                 exec.submit(
                     new Callable<TaskStatus>()
                     {
@@ -359,6 +353,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
+  public Collection<TaskRunnerWorkItem> getKnownTasks()
+  {
+    synchronized (tasks) {
+      return Lists.<TaskRunnerWorkItem>newArrayList(tasks.values());
+    }
+  }
+
+  @Override
   public Collection<ZkWorker> getWorkers()
   {
     return ImmutableList.of();
@@ -425,11 +427,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     private volatile ProcessHolder processHolder = null;
 
     private ForkingTaskRunnerWorkItem(
-        Task task,
+        String taskId,
         ListenableFuture<TaskStatus> statusFuture
     )
     {
-      super(task, statusFuture);
+      super(taskId, statusFuture);
     }
   }
 

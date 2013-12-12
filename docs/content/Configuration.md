@@ -308,20 +308,28 @@ This module is used to configure the [Indexing Service](Indexing-Service.html) t
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.logs.type`|Choices:noop, S3. Where to store task logs|noop|
+|`druid.indexer.logs.type`|Choices:noop, s3, file. Where to store task logs|file|
 
-#### Noop Task Logs
+#### File Task Logs
 
-No task logs are actually stored.
+Store task logs in the local filesystem.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.logs.directory`|Local filesystem path.|log|
 
 #### S3 Task Logs
 
-Store Task Logs in S3.
+Store task logs in S3.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.logs.s3Bucket`|S3 bucket name.|none|
 |`druid.indexer.logs.s3Prefix`|S3 key prefix.|none|
+
+#### Noop Task Logs
+
+No task logs are actually stored.
 
 ### Firehose Module
 

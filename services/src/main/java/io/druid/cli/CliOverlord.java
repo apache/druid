@@ -44,6 +44,7 @@ import io.druid.guice.PolyBind;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.index.ChatHandlerProvider;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
@@ -54,11 +55,10 @@ import io.druid.indexing.overlord.IndexerDBCoordinator;
 import io.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskMaster;
-import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunnerFactory;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
-import io.druid.indexing.overlord.http.OldOverlordResource;
+import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.http.OverlordRedirectInfo;
 import io.druid.indexing.overlord.http.OverlordResource;
 import io.druid.indexing.overlord.scaling.AutoScalingStrategy;
@@ -115,6 +115,8 @@ public class CliOverlord extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
+
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
 
             binder.bind(TaskLogStreamer.class).to(SwitchingTaskLogStreamer.class).in(LazySingleton.class);
@@ -128,7 +130,6 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(TaskActionClientFactory.class).to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
-            binder.bind(TaskQueue.class).in(LazySingleton.class); // Lifecycle managed by TaskMaster instead
             binder.bind(IndexerDBCoordinator.class).in(LazySingleton.class);
             binder.bind(TaskLockbox.class).in(LazySingleton.class);
             binder.bind(TaskStorageQueryAdapter.class).in(LazySingleton.class);
@@ -147,7 +148,6 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(JettyServerInitializer.class).toInstance(new OverlordJettyServerInitializer());
             Jerseys.addResource(binder, OverlordResource.class);
-            Jerseys.addResource(binder, OldOverlordResource.class);
 
             LifecycleModule.register(binder, Server.class);
           }

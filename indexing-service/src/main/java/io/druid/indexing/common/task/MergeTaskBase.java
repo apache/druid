@@ -27,7 +27,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -41,9 +40,8 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockAcquireAction;
-import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.segment.IndexIO;
 import io.druid.timeline.DataSegment;
@@ -53,14 +51,13 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
  */
-public abstract class MergeTaskBase extends AbstractTask
+public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 {
   @JsonIgnore
   private final List<DataSegment> segments;
@@ -186,9 +183,12 @@ public abstract class MergeTaskBase extends AbstractTask
    * we are operating on every segment that overlaps the chosen interval.
    */
   @Override
-  public TaskStatus preflight(TaskActionClient taskActionClient)
+  public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    try {
+    // Try to acquire lock
+    if (!super.isReady(taskActionClient)) {
+      return false;
+    } else {
       final Function<DataSegment, String> toIdentifier = new Function<DataSegment, String>()
       {
         @Override
@@ -199,7 +199,10 @@ public abstract class MergeTaskBase extends AbstractTask
       };
 
       final Set<String> current = ImmutableSet.copyOf(
-          Iterables.transform(taskActionClient.submit(defaultListUsedAction()), toIdentifier)
+          Iterables.transform(
+              taskActionClient.submit(new SegmentListUsedAction(getDataSource(), getInterval())),
+              toIdentifier
+          )
       );
       final Set<String> requested = ImmutableSet.copyOf(Iterables.transform(segments, toIdentifier));
 
@@ -219,10 +222,7 @@ public abstract class MergeTaskBase extends AbstractTask
         );
       }
 
-      return TaskStatus.running(getId());
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
+      return true;
     }
   }
 
@@ -241,7 +241,7 @@ public abstract class MergeTaskBase extends AbstractTask
     return Objects.toStringHelper(this)
                   .add("id", getId())
                   .add("dataSource", getDataSource())
-                  .add("interval", getImplicitLockInterval())
+                  .add("interval", getInterval())
                   .add("segments", segments)
                   .toString();
   }

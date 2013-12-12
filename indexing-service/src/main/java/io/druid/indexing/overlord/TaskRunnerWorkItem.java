@@ -19,11 +19,9 @@
 
 package io.druid.indexing.overlord;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
 
@@ -32,36 +30,35 @@ import org.joda.time.DateTimeComparator;
  */
 public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 {
-  private final Task task;
+  private final String taskId;
   private final ListenableFuture<TaskStatus> result;
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
 
   public TaskRunnerWorkItem(
-      Task task,
+      String taskId,
       ListenableFuture<TaskStatus> result
   )
   {
-    this(task, result, new DateTime(), new DateTime());
+    this(taskId, result, new DateTime(), new DateTime());
   }
 
   public TaskRunnerWorkItem(
-      Task task,
+      String taskId,
       ListenableFuture<TaskStatus> result,
       DateTime createdTime,
       DateTime queueInsertionTime
   )
   {
-    this.task = task;
+    this.taskId = taskId;
     this.result = result;
     this.createdTime = createdTime;
     this.queueInsertionTime = queueInsertionTime;
   }
 
-  @JsonProperty
-  public Task getTask()
+  public String getTaskId()
   {
-    return task;
+    return taskId;
   }
 
   public ListenableFuture<TaskStatus> getResult()
@@ -69,13 +66,11 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
     return result;
   }
 
-  @JsonProperty
   public DateTime getCreatedTime()
   {
     return createdTime;
   }
 
-  @JsonProperty
   public DateTime getQueueInsertionTime()
   {
     return queueInsertionTime;
@@ -83,7 +78,7 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
 
   public TaskRunnerWorkItem withQueueInsertionTime(DateTime time)
   {
-    return new TaskRunnerWorkItem(task, result, createdTime, time);
+    return new TaskRunnerWorkItem(taskId, result, createdTime, time);
   }
 
   @Override
@@ -91,7 +86,7 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
   {
     return ComparisonChain.start()
                           .compare(createdTime, taskRunnerWorkItem.getCreatedTime(), DateTimeComparator.getInstance())
-                          .compare(task.getId(), taskRunnerWorkItem.getTask().getId())
+                          .compare(taskId, taskRunnerWorkItem.getTaskId())
                           .result();
   }
 
@@ -99,9 +94,10 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
   public String toString()
   {
     return "TaskRunnerWorkItem{" +
-           "task=" + task +
+           "taskId='" + taskId + '\'' +
            ", result=" + result +
            ", createdTime=" + createdTime +
+           ", queueInsertionTime=" + queueInsertionTime +
            '}';
   }
 }

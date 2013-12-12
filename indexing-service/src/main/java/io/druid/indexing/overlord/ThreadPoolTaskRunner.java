@@ -19,7 +19,7 @@
 
 package io.druid.indexing.overlord;
 
-import com.google.common.base.Function;
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -46,7 +46,6 @@ import org.joda.time.Interval;
 
 import java.io.File;
 import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -58,7 +57,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
 {
   private final TaskToolboxFactory toolboxFactory;
   private final ListeningExecutorService exec;
-  private final Set<TaskRunnerWorkItem> runningItems = new ConcurrentSkipListSet<TaskRunnerWorkItem>();
+  private final Set<ThreadPoolTaskRunnerWorkItem> runningItems = new ConcurrentSkipListSet<>();
 
   private static final EmittingLogger log = new EmittingLogger(ThreadPoolTaskRunner.class);
 
@@ -67,7 +66,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       TaskToolboxFactory toolboxFactory
   )
   {
-    this.toolboxFactory = toolboxFactory;
+    this.toolboxFactory = Preconditions.checkNotNull(toolboxFactory, "toolboxFactory");
     this.exec = MoreExecutors.listeningDecorator(Execs.singleThreaded("task-runner-%d"));
   }
 
@@ -78,18 +77,11 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   }
 
   @Override
-  public void bootstrap(List<Task> tasks)
-  {
-    // do nothing
-  }
-
-  @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     final TaskToolbox toolbox = toolboxFactory.build(task);
-    final ListenableFuture<TaskStatus> statusFuture = exec.submit(new ExecutorServiceTaskRunnerCallable(task, toolbox));
-
-    final TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(task, statusFuture);
+    final ListenableFuture<TaskStatus> statusFuture = exec.submit(new ThreadPoolTaskRunnerCallable(task, toolbox));
+    final ThreadPoolTaskRunnerWorkItem taskRunnerWorkItem = new ThreadPoolTaskRunnerWorkItem(task, statusFuture);
     runningItems.add(taskRunnerWorkItem);
     Futures.addCallback(
         statusFuture, new FutureCallback<TaskStatus>()
@@ -115,7 +107,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   public void shutdown(final String taskid)
   {
     for (final TaskRunnerWorkItem runningItem : runningItems) {
-      if (runningItem.getTask().getId().equals(taskid)) {
+      if (runningItem.getTaskId().equals(taskid)) {
         runningItem.getResult().cancel(true);
       }
     }
@@ -124,13 +116,19 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   @Override
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
-    return ImmutableList.copyOf(runningItems);
+    return ImmutableList.<TaskRunnerWorkItem>copyOf(runningItems);
   }
 
   @Override
   public Collection<TaskRunnerWorkItem> getPendingTasks()
   {
     return ImmutableList.of();
+  }
+
+  @Override
+  public Collection<TaskRunnerWorkItem> getKnownTasks()
+  {
+    return ImmutableList.<TaskRunnerWorkItem>copyOf(runningItems);
   }
 
   @Override
@@ -155,18 +153,8 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   {
     QueryRunner<T> queryRunner = null;
 
-    final List<Task> runningTasks = Lists.transform(
-        ImmutableList.copyOf(getRunningTasks()), new Function<TaskRunnerWorkItem, Task>()
-    {
-      @Override
-      public Task apply(TaskRunnerWorkItem o)
-      {
-        return o.getTask();
-      }
-    }
-    );
-
-    for (final Task task : runningTasks) {
+    for (final ThreadPoolTaskRunnerWorkItem taskRunnerWorkItem : ImmutableList.copyOf(runningItems)) {
+      final Task task = taskRunnerWorkItem.getTask();
       if (task.getDataSource().equals(query.getDataSource())) {
         final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
 
@@ -185,12 +173,31 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     return queryRunner == null ? new NoopQueryRunner<T>() : queryRunner;
   }
 
-  private static class ExecutorServiceTaskRunnerCallable implements Callable<TaskStatus>
+  private static class ThreadPoolTaskRunnerWorkItem extends TaskRunnerWorkItem
+  {
+    private final Task task;
+
+    private ThreadPoolTaskRunnerWorkItem(
+        Task task,
+        ListenableFuture<TaskStatus> result
+    )
+    {
+      super(task.getId(), result);
+      this.task = task;
+    }
+
+    public Task getTask()
+    {
+      return task;
+    }
+  }
+
+  private static class ThreadPoolTaskRunnerCallable implements Callable<TaskStatus>
   {
     private final Task task;
     private final TaskToolbox toolbox;
 
-    public ExecutorServiceTaskRunnerCallable(Task task, TaskToolbox toolbox)
+    public ThreadPoolTaskRunnerCallable(Task task, TaskToolbox toolbox)
     {
       this.task = task;
       this.toolbox = toolbox;
@@ -241,11 +248,6 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
         log.error(e, "Uncaught Exception during callback for task[%s]", task);
         throw Throwables.propagate(e);
       }
-    }
-
-    public TaskRunnerWorkItem getTaskRunnerWorkItem()
-    {
-      return new TaskRunnerWorkItem(task, null);
     }
   }
 }

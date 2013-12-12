@@ -17,65 +17,59 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.actions;
+package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Throwables;
-import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.task.Task;
+import io.druid.indexing.common.actions.LockTryAcquireAction;
+import io.druid.indexing.common.actions.TaskActionClient;
 import org.joda.time.Interval;
 
-public class LockAcquireAction implements TaskAction<TaskLock>
+public abstract class AbstractFixedIntervalTask extends AbstractTask
 {
   @JsonIgnore
   private final Interval interval;
 
-  @JsonCreator
-  public LockAcquireAction(
-      @JsonProperty("interval") Interval interval
+  protected AbstractFixedIntervalTask(
+      String id,
+      String dataSource,
+      Interval interval
   )
   {
+    this(id, id, new TaskResource(id, 1), dataSource, interval);
+  }
+
+  protected AbstractFixedIntervalTask(
+      String id,
+      String groupId,
+      String dataSource,
+      Interval interval
+  )
+  {
+    this(id, groupId, new TaskResource(id, 1), dataSource, interval);
+  }
+
+  protected AbstractFixedIntervalTask(
+      String id,
+      String groupId,
+      TaskResource taskResource,
+      String dataSource,
+      Interval interval
+  )
+  {
+    super(id, groupId, taskResource, dataSource);
     this.interval = interval;
+  }
+
+  @Override
+  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  {
+    return taskActionClient.submit(new LockTryAcquireAction(interval)).isPresent();
   }
 
   @JsonProperty
   public Interval getInterval()
   {
     return interval;
-  }
-
-  public TypeReference<TaskLock> getReturnTypeReference()
-  {
-    return new TypeReference<TaskLock>()
-    {
-    };
-  }
-
-  @Override
-  public TaskLock perform(Task task, TaskActionToolbox toolbox)
-  {
-    try {
-      return toolbox.getTaskLockbox().lock(task, interval);
-    }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return false;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "LockAcquireAction{" +
-           "interval=" + interval +
-           '}';
   }
 }
