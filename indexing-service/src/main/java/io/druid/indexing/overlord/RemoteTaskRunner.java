@@ -298,6 +298,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     if (!started) {
       log.info("This TaskRunner is stopped. Ignoring shutdown command for task: %s", taskId);
     } else if (pendingTasks.remove(taskId) != null) {
+      pendingTaskPayloads.remove(taskId);
       log.info("Removed task from pending queue: %s", taskId);
     } else if (completeTasks.containsKey(taskId)) {
       cleanup(completeTasks.get(taskId).getWorker().getHost(), taskId);
