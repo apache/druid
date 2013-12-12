@@ -135,18 +135,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     for (final Interval bucket : granularitySpec.bucketIntervals()) {
       final List<ShardSpec> shardSpecs;
       if (targetPartitionSize > 0) {
-        shardSpecs = determinePartitions(
-            toolbox,
-            new Schema(
-                getDataSource(),
-                spatialDimensions,
-                aggregators,
-                indexGranularity,
-                new NoneShardSpec() // Dummy shardSpec, won't be used
-            ),
-            bucket,
-            targetPartitionSize
-        );
+        shardSpecs = determinePartitions(bucket, targetPartitionSize);
       } else {
         shardSpecs = ImmutableList.<ShardSpec>of(new NoneShardSpec());
       }
@@ -170,8 +159,6 @@ public class IndexTask extends AbstractFixedIntervalTask
   }
 
   private List<ShardSpec> determinePartitions(
-      final TaskToolbox toolbox,
-      final Schema schema,
       final Interval interval,
       final int targetPartitionSize
   ) throws IOException
