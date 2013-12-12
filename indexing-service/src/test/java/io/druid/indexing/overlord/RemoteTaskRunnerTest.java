@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.emitter.EmittingLogger;
@@ -55,7 +55,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
@@ -303,16 +302,13 @@ public class RemoteTaskRunnerTest
 
     doSetup();
 
-    Set<String> existingTasks = Sets.newHashSet();
+    final Set<String> existingTasks = Sets.newHashSet();
     for (ZkWorker zkWorker : remoteTaskRunner.getWorkers()) {
       existingTasks.addAll(zkWorker.getRunningTasks().keySet());
     }
+    Assert.assertEquals("existingTasks", ImmutableSet.of("first", "second"), existingTasks);
 
-    Assert.assertTrue(existingTasks.size() == 2);
-    Assert.assertTrue(existingTasks.contains("first"));
-    Assert.assertTrue(existingTasks.contains("second"));
-
-    Set<String> runningTasks = Sets.newHashSet(
+    final Set<String> runningTasks = Sets.newHashSet(
         Iterables.transform(
             remoteTaskRunner.getRunningTasks(),
             new Function<RemoteTaskRunnerWorkItem, String>()
@@ -325,10 +321,7 @@ public class RemoteTaskRunnerTest
             }
         )
     );
-
-    Assert.assertTrue(runningTasks.size() == 1);
-    Assert.assertTrue(runningTasks.contains("second"));
-    Assert.assertFalse(runningTasks.contains("first"));
+    Assert.assertEquals("runningTasks", ImmutableSet.of("first", "second"), runningTasks);
   }
 
   @Test
