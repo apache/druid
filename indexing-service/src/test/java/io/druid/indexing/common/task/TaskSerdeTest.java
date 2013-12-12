@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -26,6 +27,7 @@ import com.metamx.common.Granularity;
 import io.druid.data.input.impl.JSONDataSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
+import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopDruidIndexerSchema;
 import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.indexer.rollup.DataRollupSpec;
@@ -35,12 +37,15 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.IndexGranularity;
 import io.druid.segment.realtime.Schema;
+import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Test;
+
+import java.io.File;
 
 public class TaskSerdeTest
 {
@@ -55,11 +60,14 @@ public class TaskSerdeTest
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
         10000,
-        null,
+        new LocalFirehoseFactory(new File("lol"), "rofl", null),
         -1
     );
 
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
+      jsonMapper.registerModule(jacksonModule);
+    }
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -72,6 +80,8 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
+    Assert.assertTrue(task.getFirehoseFactory() instanceof LocalFirehoseFactory);
+    Assert.assertTrue(task2.getFirehoseFactory() instanceof LocalFirehoseFactory);
   }
 
   @Test
