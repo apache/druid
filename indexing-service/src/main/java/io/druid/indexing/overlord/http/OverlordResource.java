@@ -70,9 +70,7 @@ public class OverlordResource
         public Map<String, Object> apply(TaskRunnerWorkItem input)
         {
           return new ImmutableMap.Builder<String, Object>()
-              .put("id", input.getTask().getId())
-              .put("dataSource", input.getTask().getDataSource())
-              .put("nodeType", input.getTask().getNodeType() == null ? "" : input.getTask().getNodeType())
+              .put("id", input.getTaskId())
               .put("createdTime", input.getCreatedTime())
               .put("queueInsertionTime", input.getQueueInsertionTime())
               .build();

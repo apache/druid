@@ -219,7 +219,7 @@ public class RemoteTaskRunnerTest
         )
     );
 
-    Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTask().getId().equals("rt2"));
+    Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTaskId().equals("rt2"));
   }
 
   @Test
@@ -266,7 +266,7 @@ public class RemoteTaskRunnerTest
         )
     );
 
-    Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTask().getId().equals("rt2"));
+    Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTaskId().equals("rt2"));
   }
 
   @Test
@@ -280,7 +280,7 @@ public class RemoteTaskRunnerTest
 
     Assert.assertTrue(workerRunningTask(task.getId()));
 
-    Assert.assertTrue(remoteTaskRunner.getRunningTasks().iterator().next().getTask().getId().equals("task"));
+    Assert.assertTrue(remoteTaskRunner.getRunningTasks().iterator().next().getTaskId().equals("task"));
 
     cf.delete().forPath(joiner.join(statusPath, task.getId()));
 
@@ -320,7 +320,7 @@ public class RemoteTaskRunnerTest
               @Override
               public String apply(RemoteTaskRunnerWorkItem input)
               {
-                return input.getTask().getId();
+                return input.getTaskId();
               }
             }
         )

@@ -117,6 +117,14 @@ public class TaskMaster
                    .emit();
               }
               leaderLifecycle.addManagedInstance(taskRunner);
+              if (taskRunner instanceof RemoteTaskRunner) {
+                final ScheduledExecutorFactory executorFactory = ScheduledExecutors.createFactory(leaderLifecycle);
+                resourceManagementScheduler = managementSchedulerFactory.build(
+                    (RemoteTaskRunner) taskRunner,
+                    executorFactory
+                );
+                leaderLifecycle.addManagedInstance(resourceManagementScheduler);
+              }
               leaderLifecycle.addManagedInstance(taskQueue);
               leaderLifecycle.addHandler(
                   new Lifecycle.Handler()
@@ -134,14 +142,6 @@ public class TaskMaster
                     }
                   }
               );
-              if (taskRunner instanceof RemoteTaskRunner) {
-                final ScheduledExecutorFactory executorFactory = ScheduledExecutors.createFactory(leaderLifecycle);
-                resourceManagementScheduler = managementSchedulerFactory.build(
-                    (RemoteTaskRunner) taskRunner,
-                    executorFactory
-                );
-                leaderLifecycle.addManagedInstance(resourceManagementScheduler);
-              }
               try {
                 leaderLifecycle.start();
                 leading = true;

@@ -394,20 +394,6 @@ public class TaskLockbox
   }
 
   /**
-   * Removes all locks from this lockbox.
-   */
-  public void clear()
-  {
-    giant.lock();
-
-    try {
-      running.clear();
-    } finally {
-      giant.unlock();
-    }
-  }
-
-  /**
    * Return the currently-active lock posses for some task.
    *
    * @param task task for which to locate locks

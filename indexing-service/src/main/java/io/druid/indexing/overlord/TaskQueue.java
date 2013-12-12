@@ -221,7 +221,7 @@ public class TaskQueue
         // Task futures available from the taskRunner
         final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures = Maps.newHashMap();
         for (final TaskRunnerWorkItem workItem : taskRunner.getKnownTasks()) {
-          runnerTaskFutures.put(workItem.getTask().getId(), workItem.getResult());
+          runnerTaskFutures.put(workItem.getTaskId(), workItem.getResult());
         }
         // Attain futures for all active tasks (assuming they are ready to run).
         for (final Task task : tasks) {
