@@ -220,7 +220,7 @@ public class OverlordResource
             final Map<String, Object> retMap;
 
             // It would be great to verify that this worker is actually supposed to be running the task before
-            // actually doing the task.  Some ideas for how that could be done would be using some sort of attempt_id
+            // actually doing the action.  Some ideas for how that could be done would be using some sort of attempt_id
             // or token that gets passed around.
 
             try {
