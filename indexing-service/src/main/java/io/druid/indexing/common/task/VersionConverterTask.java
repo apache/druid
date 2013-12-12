@@ -29,7 +29,6 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
@@ -219,12 +218,6 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
     public String getType()
     {
       return "version_converter_sub";
-    }
-
-    @Override
-    public boolean isReady(TaskActionClient taskActionClient) throws Exception
-    {
-      return taskActionClient.submit(new LockTryAcquireAction(segment.getInterval())).isPresent();
     }
 
     @Override

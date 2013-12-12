@@ -30,9 +30,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
-import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexableAdapter;
@@ -81,13 +79,13 @@ public class DeleteTask extends AbstractFixedIntervalTask
     // Strategy: Create an empty segment covering the interval to be deleted
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
     final IncrementalIndex empty = new IncrementalIndex(0, QueryGranularity.NONE, new AggregatorFactory[0]);
-    final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(interval, empty);
+    final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(getInterval(), empty);
 
     // Create DataSegment
     final DataSegment segment =
         DataSegment.builder()
                    .dataSource(this.getDataSource())
-                   .interval(interval)
+                   .interval(getInterval())
                    .version(myLock.getVersion())
                    .shardSpec(new NoneShardSpec())
                    .build();

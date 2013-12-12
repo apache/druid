@@ -160,7 +160,7 @@ public class IndexTask extends AbstractFixedIntervalTask
                 indexGranularity,
                 shardSpec
             ),
-            interval,
+            getInterval(),
             myLock.getVersion()
         );
         segments.add(segment);

@@ -40,7 +40,6 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
@@ -52,7 +51,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -202,7 +200,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 
       final Set<String> current = ImmutableSet.copyOf(
           Iterables.transform(
-              taskActionClient.submit(new SegmentListUsedAction(getDataSource(), interval)),
+              taskActionClient.submit(new SegmentListUsedAction(getDataSource(), getInterval())),
               toIdentifier
           )
       );
@@ -243,7 +241,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     return Objects.toStringHelper(this)
                   .add("id", getId())
                   .add("dataSource", getDataSource())
-                  .add("interval", interval)
+                  .add("interval", getInterval())
                   .add("segments", segments)
                   .toString();
   }

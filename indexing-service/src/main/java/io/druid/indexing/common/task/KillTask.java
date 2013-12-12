@@ -28,10 +28,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentListUnusedAction;
 import io.druid.indexing.common.actions.SegmentNukeAction;
-import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -64,12 +62,6 @@ public class KillTask extends AbstractFixedIntervalTask
   }
 
   @Override
-  public boolean isReady(TaskActionClient taskActionClient) throws Exception
-  {
-    return taskActionClient.submit(new LockTryAcquireAction(interval)).isPresent();
-  }
-
-  @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     // Confirm we have a lock (will throw if there isn't exactly one element)
@@ -79,8 +71,8 @@ public class KillTask extends AbstractFixedIntervalTask
       throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
     }
 
-    if (!myLock.getInterval().equals(interval)) {
-      throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), interval);
+    if (!myLock.getInterval().equals(getInterval())) {
+      throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getInterval());
     }
 
     // List unused segments

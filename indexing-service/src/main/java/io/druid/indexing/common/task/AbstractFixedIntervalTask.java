@@ -28,7 +28,7 @@ import org.joda.time.Interval;
 public abstract class AbstractFixedIntervalTask extends AbstractTask
 {
   @JsonIgnore
-  final Interval interval;
+  private final Interval interval;
 
   protected AbstractFixedIntervalTask(
       String id,
