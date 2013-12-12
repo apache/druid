@@ -1,6 +1,9 @@
 ---
 layout: doc_page
 ---
+
+# Setting Up a Druid Cluster
+
 A Druid cluster consists of various node types that need to be set up depending on your use case. See our [Design](Design.html) docs for a description of the different node types.
 
 Minimum Physical Layout: Absolute Minimum
@@ -74,7 +77,7 @@ Local disk ("ephemeral" on AWS EC2) for caching is recommended over network moun
 Setup
 -----
 
-Setting up a cluster is essentially just firing up all of the nodes you want with the proper [[configuration]]. One thing to be aware of is that there are a few properties in the configuration that potentially need to be set individually for each process:
+Setting up a cluster is essentially just firing up all of the nodes you want with the proper [configuration](Configuration.html). One thing to be aware of is that there are a few properties in the configuration that potentially need to be set individually for each process:
 
 ```
 druid.server.type=historical|realtime
