@@ -41,6 +41,7 @@ import io.druid.indexer.granularity.GranularitySpec;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -149,12 +150,13 @@ public class IndexTask extends AbstractFixedIntervalTask
                 indexGranularity,
                 shardSpec
             ),
-            getInterval(),
+            bucket,
             myLock.getVersion()
         );
         segments.add(segment);
       }
     }
+    toolbox.getTaskActionClient().submit(new SegmentInsertAction(segments));
     return TaskStatus.success(getId());
   }
 
