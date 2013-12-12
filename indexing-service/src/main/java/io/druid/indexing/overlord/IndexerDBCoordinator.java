@@ -211,7 +211,7 @@ public class IndexerDBCoordinator
     return true;
   }
 
-  public void moveSegments(final Set<DataSegment> segments) throws IOException
+  public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
   {
     dbi.inTransaction(
         new TransactionCallback<Void>()
@@ -220,7 +220,7 @@ public class IndexerDBCoordinator
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
             for(final DataSegment segment : segments) {
-              moveSegment(handle, segment);
+              updatePayload(handle, segment);
             }
 
             return null;
@@ -256,7 +256,7 @@ public class IndexerDBCoordinator
           .execute();
   }
 
-  private void moveSegment(final Handle handle, final DataSegment segment) throws IOException
+  private void updatePayload(final Handle handle, final DataSegment segment) throws IOException
   {
     try {
       handle.createStatement(

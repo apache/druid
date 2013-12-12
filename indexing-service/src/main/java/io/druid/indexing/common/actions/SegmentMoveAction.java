@@ -46,7 +46,7 @@ public class SegmentMoveAction implements TaskAction<Void>
       throw new ISE("Segments not covered by locks for task: %s", task.getId());
     }
 
-    toolbox.getIndexerDBCoordinator().moveSegments(segments);
+    toolbox.getIndexerDBCoordinator().updateSegmentMetadata(segments);
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
