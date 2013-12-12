@@ -15,9 +15,9 @@ h2. Getting Started
 * "Tutorial: All About Queries":./Tutorial:-All-About-Queries.html
 
 h2. Operations
-* "Cluster Setup":./Cluster-setup.html
 * "Configuration":Configuration.html
 * "Extending Druid":./Modules.html
+* "Cluster Setup":./Cluster-setup.html
 * "Booting a Production Cluster":./Booting-a-production-cluster.html
 
 h2. Data Ingestion
