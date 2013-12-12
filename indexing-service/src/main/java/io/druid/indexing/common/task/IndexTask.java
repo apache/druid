@@ -334,6 +334,8 @@ public class IndexTask extends AbstractFixedIntervalTask
                                    : toolbox.getConfig().getDefaultRowFlushBoundary();
 
     try {
+      plumber.startJob();
+
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
