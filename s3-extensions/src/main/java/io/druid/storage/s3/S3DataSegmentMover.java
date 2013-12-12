@@ -34,7 +34,7 @@ import java.util.Map;
 
 public class S3DataSegmentMover implements DataSegmentMover
 {
-  private static final Logger log = new Logger(S3DataSegmentKiller.class);
+  private static final Logger log = new Logger(S3DataSegmentMover.class);
 
   private final RestS3Service s3Client;
   private final S3DataSegmentMoverConfig config;
