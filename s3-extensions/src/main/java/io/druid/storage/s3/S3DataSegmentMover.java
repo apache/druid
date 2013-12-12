@@ -61,8 +61,7 @@ public class S3DataSegmentMover implements DataSegmentMover
       final String s3ArchiveBucket = config.getArchiveBucket();
 
       if (s3ArchiveBucket.isEmpty()) {
-        log.warn("S3 archive bucket not specified, refusing to move segment [s3://%s/%s]", s3Bucket, s3Path);
-        return segment;
+        throw new SegmentLoadingException("S3 archive bucket not specified");
       }
 
       if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
