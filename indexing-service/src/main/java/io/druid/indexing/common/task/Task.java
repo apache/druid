@@ -100,6 +100,8 @@ public interface Task
    * actions must be idempotent, since this method may be executed multiple times. This typically runs on the
    * coordinator. If this method throws an exception, the task should be considered a failure.
    *
+   * This method must be idempotent, as it may be run multiple times per task.
+   *
    * @param taskActionClient action client for this task (not the full toolbox)
    *
    * @return true if ready, false if not ready yet

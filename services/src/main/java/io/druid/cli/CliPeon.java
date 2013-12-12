@@ -53,7 +53,6 @@ import io.druid.indexing.common.index.NoopChatHandlerProvider;
 import io.druid.indexing.common.index.ServiceAnnouncingChatHandlerProvider;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerDBCoordinator;
-import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
