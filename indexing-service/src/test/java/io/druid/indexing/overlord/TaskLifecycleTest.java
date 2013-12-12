@@ -119,10 +119,8 @@ public class TaskLifecycleTest
     ts = new HeapMemoryTaskStorage();
     tsqa = new TaskStorageQueryAdapter(ts);
     tl = new TaskLockbox(ts);
-    tac = new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tl, mdc, newMockEmitter()));
-    tr = new ThreadPoolTaskRunner(tb);
-    tq = new TaskQueue(tqc, ts, tr, tac, tl, emitter);
     mdc = newMockMDC();
+    tac = new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tl, mdc, newMockEmitter()));
     tb = new TaskToolboxFactory(
         new TaskConfig(tmp.toString(), null, null, 50000),
         tac,
@@ -173,6 +171,8 @@ public class TaskLifecycleTest
         ),
         new DefaultObjectMapper()
     );
+    tr = new ThreadPoolTaskRunner(tb);
+    tq = new TaskQueue(tqc, ts, tr, tac, tl, emitter);
     tq.start();
   }
 
@@ -258,11 +258,9 @@ public class TaskLifecycleTest
         -1
     );
 
-    final TaskStatus mergedStatus = runTask(indexTask);
-    final TaskStatus status = ts.getStatus(indexTask.getId()).get();
+    final TaskStatus status = runTask(indexTask);
 
-    Assert.assertEquals("statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
-    Assert.assertEquals("merged statusCode", TaskStatus.Status.FAILED, mergedStatus.getStatusCode());
+    Assert.assertEquals("statusCode", TaskStatus.Status.FAILED, status.getStatusCode());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
   }

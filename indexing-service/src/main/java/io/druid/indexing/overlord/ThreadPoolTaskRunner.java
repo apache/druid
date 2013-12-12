@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -65,7 +66,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       TaskToolboxFactory toolboxFactory
   )
   {
-    this.toolboxFactory = toolboxFactory;
+    this.toolboxFactory = Preconditions.checkNotNull(toolboxFactory, "toolboxFactory");
     this.exec = MoreExecutors.listeningDecorator(Execs.singleThreaded("task-runner-%d"));
   }
 
