@@ -1161,6 +1161,28 @@ public class TimeseriesQueryRunnerTest
   }
 
   @Test
+  public void testTimeseriesWithFilterOnNonExistentDimensionSkipBuckets()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.dayGran)
+        .filters("bobby", "billy")
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .context(ImmutableMap.of("skipEmptyBuckets", "true"))
+        .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList();
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
   public void testTimeseriesWithNullFilterOnNonExistentDimension()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()

@@ -56,10 +56,16 @@ public class TimeseriesQueryEngine
                   private final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
                   private final List<PostAggregator> postAggregatorSpecs = query.getPostAggregatorSpecs();
 
+                  private final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
+
                   @Override
                   public Result<TimeseriesResultValue> apply(Cursor cursor)
                   {
                     Aggregator[] aggregators = QueryRunnerHelper.makeAggregators(cursor, aggregatorSpecs);
+
+                    if (skipEmptyBuckets && cursor.isDone()) {
+                      return null;
+                    }
 
                     while (!cursor.isDone()) {
                       for (Aggregator aggregator : aggregators) {
