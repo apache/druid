@@ -368,6 +368,9 @@ public class OverlordResource
   @Produces("application/json")
   public Response getScalingState()
   {
+    if (!taskMaster.getResourceManagementScheduler().isPresent()) {
+      return Response.ok().build();
+    }
     return asLeaderWith(
         taskMaster.getResourceManagementScheduler(),
         new Function<ResourceManagementScheduler, Response>()

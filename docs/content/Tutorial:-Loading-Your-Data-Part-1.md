@@ -94,6 +94,7 @@ druid.db.connector.user=druid
 druid.db.connector.password=diurd
 
 druid.selectors.indexing.serviceName=overlord
+druid.indexer.queue.startDelay=PT0M
 druid.indexer.runner.javaOpts="-server -Xmx1g"
 druid.indexer.runner.startPort=8088
 druid.indexer.fork.property.druid.computation.buffer.size=268435456
@@ -246,17 +247,19 @@ Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) should yield:
 } ]
 ```
 
-Problems?
----------
+Console
+--------
 
-If you decide to reuse the local firehose to ingest your own data and if you run into problems, you can read the individual task logs at:
+The indexing service overlord has a console located as:
 
 ```bash
-<Current working directory>/log/<task_id>.log
-
+localhost:8087/console.html
 ```
 
-One thing to note is that the log file will only exist once the task completes with either SUCCESS or FAILURE.
+On this console, you can look at statuses and logs of recently submitted and completed tasks.
+
+If you decide to reuse the local firehose to ingest your own data and if you run into problems, you can use the console to read the individual task logs.
+
 Task logs can be stored locally or uploaded to [Deep Storage](Deep-Storage.html). More information about how to configure this is [here](Configuration.html).
 
 Most common data ingestion problems are around timestamp formats and other malformed data issues.
