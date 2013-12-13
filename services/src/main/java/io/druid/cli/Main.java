@@ -27,6 +27,8 @@ import io.druid.cli.convert.ConvertProperties;
 import io.druid.cli.validate.DruidJsonValidator;
 import io.druid.initialization.Initialization;
 import io.druid.server.initialization.ExtensionsConfig;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 import java.util.List;
 
@@ -41,7 +43,7 @@ public class Main
 
     builder.withDescription("Druid command-line runner.")
            .withDefaultCommand(Help.class)
-           .withCommands(Help.class);
+           .withCommands(Help.class, Version.class);
 
     builder.withGroup("server")
            .withDescription("Run one of the Druid server types.")

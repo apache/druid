@@ -38,6 +38,7 @@ import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -130,8 +131,7 @@ public class RealtimeIndexTask extends AbstractTask
             ), 1
         )
         : taskResource,
-        schema.getDataSource(),
-        null
+        schema.getDataSource()
     );
 
     this.schema = schema;
@@ -165,6 +165,12 @@ public class RealtimeIndexTask extends AbstractTask
     } else {
       return null;
     }
+  }
+
+  @Override
+  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  {
+    return true;
   }
 
   @Override

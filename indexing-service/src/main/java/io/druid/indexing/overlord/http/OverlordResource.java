@@ -70,14 +70,7 @@ public class OverlordResource
         public Map<String, Object> apply(TaskRunnerWorkItem input)
         {
           return new ImmutableMap.Builder<String, Object>()
-              .put("id", input.getTask().getId())
-              .put("dataSource", input.getTask().getDataSource())
-              .put("interval",
-                   !input.getTask().getImplicitLockInterval().isPresent()
-                   ? ""
-                   : input.getTask().getImplicitLockInterval().get()
-              )
-              .put("nodeType", input.getTask().getNodeType() == null ? "" : input.getTask().getNodeType())
+              .put("id", input.getTaskId())
               .put("createdTime", input.getCreatedTime())
               .put("queueInsertionTime", input.getQueueInsertionTime())
               .build();
@@ -151,7 +144,7 @@ public class OverlordResource
   @Produces("application/json")
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
-    return optionalTaskResponse(taskid, "status", taskStorageQueryAdapter.getSameGroupMergedStatus(taskid));
+    return optionalTaskResponse(taskid, "status", taskStorageQueryAdapter.getStatus(taskid));
   }
 
   @GET
@@ -159,7 +152,7 @@ public class OverlordResource
   @Produces("application/json")
   public Response getTaskSegments(@PathParam("taskid") String taskid)
   {
-    final Set<DataSegment> segments = taskStorageQueryAdapter.getSameGroupNewSegments(taskid);
+    final Set<DataSegment> segments = taskStorageQueryAdapter.getInsertedSegments(taskid);
     return Response.ok().entity(segments).build();
   }
 
@@ -169,13 +162,13 @@ public class OverlordResource
   public Response doShutdown(@PathParam("taskid") final String taskid)
   {
     return asLeaderWith(
-        taskMaster.getTaskRunner(),
-        new Function<TaskRunner, Response>()
+        taskMaster.getTaskQueue(),
+        new Function<TaskQueue, Response>()
         {
           @Override
-          public Response apply(TaskRunner taskRunner)
+          public Response apply(TaskQueue taskQueue)
           {
-            taskRunner.shutdown(taskid);
+            taskQueue.shutdown(taskid);
             return Response.ok(ImmutableMap.of("task", taskid)).build();
           }
         }
@@ -225,7 +218,7 @@ public class OverlordResource
             final Map<String, Object> retMap;
 
             // It would be great to verify that this worker is actually supposed to be running the task before
-            // actually doing the task.  Some ideas for how that could be done would be using some sort of attempt_id
+            // actually doing the action.  Some ideas for how that could be done would be using some sort of attempt_id
             // or token that gets passed around.
 
             try {

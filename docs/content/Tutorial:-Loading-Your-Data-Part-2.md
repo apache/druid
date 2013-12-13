@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Tutorial: Loading Your Data (Part 2)
 In this tutorial we will cover more advanced/real-world ingestion topics.
 
 Druid can ingest streaming or batch data. Streaming data is ingested via the real-time node, and batch data is ingested via the Hadoop batch indexer. Druid also has a standalone ingestion service called the [indexing service](Indexing-Service.html).
@@ -42,7 +44,7 @@ With real-world data, we recommend having a message bus such as [Apache Kafka](h
 
 #### Setting up Kafka
 
-[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/druid-0.6.26/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in real-time without writing any code. To load data to a real-time node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
+[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/druid-0.6.33/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in real-time without writing any code. To load data to a real-time node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
 
 Instructions for booting a Zookeeper and then Kafka cluster are available [here](http://kafka.apache.org/07/quickstart.html).
 

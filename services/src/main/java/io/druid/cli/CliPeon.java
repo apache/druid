@@ -53,7 +53,6 @@ import io.druid.indexing.common.index.NoopChatHandlerProvider;
 import io.druid.indexing.common.index.ServiceAnnouncingChatHandlerProvider;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerDBCoordinator;
-import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
@@ -174,7 +173,6 @@ public class CliPeon extends GuiceRunnable
                             .to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
             // all of these bindings are so that we can run the peon in local mode
             binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
-            binder.bind(TaskQueue.class).in(LazySingleton.class);
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
             binder.bind(IndexerDBCoordinator.class).in(LazySingleton.class);
             taskActionBinder.addBinding("remote")

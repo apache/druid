@@ -1,6 +1,9 @@
 ---
 layout: doc_page
 ---
+
+# Extending Druid With Custom Modules
+
 Druid version 0.6 introduces a new module system that allows for the addition of extensions at runtime.
 
 ## Specifying extensions

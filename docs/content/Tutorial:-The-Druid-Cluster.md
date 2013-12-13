@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Tutorial: The Druid Cluster
 Welcome back! In our first [tutorial](Tutorial%3A-A-First-Look-at-Druid.html), we introduced you to the most basic Druid setup: a single realtime node. We streamed in some data and queried it. Realtime nodes collect very recent data and periodically hand that data off to the rest of the Druid cluster. Some questions about the architecture must naturally come to mind. What does the rest of Druid cluster look like? How does Druid load available static data?
 
 This tutorial will hopefully answer these questions!
@@ -11,7 +13,7 @@ In this tutorial, we will set up other types of Druid nodes as well as and exter
 
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
-You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.6.26-bin.tar.gz)
+You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.6.33-bin.tar.gz)
 
 and untar the contents within by issuing:
 
@@ -147,7 +149,7 @@ druid.port=8081
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.26"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.33"]
 
 # Dummy read only AWS account (used to download example data)
 druid.s3.secretKey=QyyfVZ7llSiRg6Qcrql1eEUG7buFpAK6T6engr1b
@@ -236,7 +238,7 @@ druid.port=8083
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.26","io.druid.extensions:druid-kafka-seven:0.6.26"]
+druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.33","io.druid.extensions:druid-kafka-seven:0.6.33"]
 
 # Change this config to db to hand off to the rest of the Druid cluster
 druid.publish.type=noop
@@ -251,5 +253,5 @@ druid.processing.buffer.sizeBytes=10000000
 
 Next Steps
 ----------
-If you are intested in how data flows through the different Druid components, check out the [Druid data flow architecture](Design.html). Now that you have an understanding of what the Druid cluster looks like, why not load some of your own data?
+If you are interested in how data flows through the different Druid components, check out the [Druid data flow architecture](Design.html). Now that you have an understanding of what the Druid cluster looks like, why not load some of your own data?
 Check out the next [tutorial](Tutorial%3A-Loading-Your-Data-Part-1.html) section for more info!

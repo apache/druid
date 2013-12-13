@@ -19,13 +19,19 @@
 
 package io.druid.indexing.common.config;
 
-import org.skife.config.Config;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- */
-@Deprecated
-public abstract class EventReceiverFirehoseFactoryConfig
+import javax.validation.constraints.NotNull;
+import java.io.File;
+
+public class FileTaskLogsConfig
 {
-  @Config("druid.indexer.firehoseId.prefix")
-  public abstract String getFirehoseIdPrefix();
+  @JsonProperty
+  @NotNull
+  private File directory = new File("log");
+
+  public File getDirectory()
+  {
+    return directory;
+  }
 }

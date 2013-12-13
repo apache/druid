@@ -138,7 +138,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     catch (ServiceException e) {
       throw new IOException(e);
     }
-    catch (InterruptedException e) {
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }

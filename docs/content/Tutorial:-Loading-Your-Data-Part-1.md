@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Tutorial: Loading Your Data (Part 1)
 In our last [tutorial](Tutorial%3A-The-Druid-Cluster.html), we set up a complete Druid cluster. We created all the Druid dependencies and loaded some batched data. Druid shards data into self-contained chunks known as [segments](Segments.html). Segments are the fundamental unit of storage in Druid and all Druid nodes only understand segments.
 
 In this tutorial, we will learn about batch ingestion (as opposed to real-time ingestion) and how to create segments using the final piece of the Druid Cluster, the [indexing service](Indexing-Service.html). The indexing service is a standalone service that accepts [tasks](Tasks.html) in the form of POST requests. The output of most tasks are segments.
@@ -243,6 +245,21 @@ Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) should yield:
   }
 } ]
 ```
+
+Problems?
+---------
+
+If you decide to reuse the local firehose to ingest your own data and if you run into problems, you can read the individual task logs at:
+
+```bash
+<Current working directory>/log/<task_id>.log
+
+```
+
+One thing to note is that the log file will only exist once the task completes with either SUCCESS or FAILURE.
+Task logs can be stored locally or uploaded to [Deep Storage](Deep-Storage.html). More information about how to configure this is [here](Configuration.html).
+
+Most common data ingestion problems are around timestamp formats and other malformed data issues.
 
 Next Steps
 ----------

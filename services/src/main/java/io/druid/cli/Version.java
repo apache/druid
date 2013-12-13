@@ -17,23 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.config;
+package io.druid.cli;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.db.DbConnectorConfig;
-import org.skife.config.Config;
+import io.airlift.command.Command;
+import io.druid.server.StatusResource;
 
-public abstract class IndexerDbConnectorConfig extends DbConnectorConfig
+@Command(
+    name = "version",
+    description = "Returns Druid version information"
+)
+public class Version implements Runnable
 {
-  @JsonProperty("taskTable")
-  @Config("druid.database.taskTable")
-  public abstract String getTaskTable();
-
-  @JsonProperty("taskLockTable")
-  @Config("druid.database.taskLockTable")
-  public abstract String getTaskLockTable();
-
-  @JsonProperty("taskLogTable")
-  @Config("druid.database.taskLogTable")
-  public abstract String getTaskLogTable();
+  @Override
+  public void run()
+  {
+    System.out.println(StatusResource.getStatus());
+  }
 }

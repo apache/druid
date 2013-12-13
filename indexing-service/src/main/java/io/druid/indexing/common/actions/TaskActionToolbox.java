@@ -27,7 +27,6 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerDBCoordinator;
 import io.druid.indexing.overlord.TaskLockbox;
-import io.druid.indexing.overlord.TaskQueue;
 import io.druid.timeline.DataSegment;
 
 import java.util.List;
@@ -35,28 +34,20 @@ import java.util.Set;
 
 public class TaskActionToolbox
 {
-  private final TaskQueue taskQueue;
   private final TaskLockbox taskLockbox;
   private final IndexerDBCoordinator indexerDBCoordinator;
   private final ServiceEmitter emitter;
 
   @Inject
   public TaskActionToolbox(
-      TaskQueue taskQueue,
       TaskLockbox taskLockbox,
       IndexerDBCoordinator indexerDBCoordinator,
       ServiceEmitter emitter
   )
   {
-    this.taskQueue = taskQueue;
     this.taskLockbox = taskLockbox;
     this.indexerDBCoordinator = indexerDBCoordinator;
     this.emitter = emitter;
-  }
-
-  public TaskQueue getTaskQueue()
-  {
-    return taskQueue;
   }
 
   public TaskLockbox getTaskLockbox()

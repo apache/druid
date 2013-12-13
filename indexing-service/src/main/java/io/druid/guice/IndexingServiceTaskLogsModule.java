@@ -23,22 +23,27 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
+import io.druid.indexing.common.config.FileTaskLogsConfig;
+import io.druid.indexing.common.tasklogs.FileTaskLogs;
 import io.druid.tasklogs.NoopTaskLogs;
 import io.druid.tasklogs.TaskLogPusher;
 import io.druid.tasklogs.TaskLogs;
 
 /**
  */
-public class TaskLogsModule implements Module
+public class IndexingServiceTaskLogsModule implements Module
 {
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(NoopTaskLogs.class));
+    PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
 
     final MapBinder<String, TaskLogs> taskLogBinder = Binders.taskLogsBinder(binder);
     taskLogBinder.addBinding("noop").to(NoopTaskLogs.class).in(LazySingleton.class);
+    taskLogBinder.addBinding("file").to(FileTaskLogs.class).in(LazySingleton.class);
     binder.bind(NoopTaskLogs.class).in(LazySingleton.class);
+    binder.bind(FileTaskLogs.class).in(LazySingleton.class);
+    JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
 
     binder.bind(TaskLogPusher.class).to(TaskLogs.class);
   }

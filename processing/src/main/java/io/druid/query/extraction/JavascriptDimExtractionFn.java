@@ -51,7 +51,8 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
           cx = contextFactory.enterContext();
         }
 
-        return Context.toString(fn.call(cx, scope, scope, new String[]{input}));
+        final Object res = fn.call(cx, scope, scope, new String[]{input});
+        return res != null ? Context.toString(res) : null;
       }
     };
   }

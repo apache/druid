@@ -20,6 +20,7 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.initialization.Initialization;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -34,17 +35,25 @@ public class StatusResource
   @Produces("application/json")
   public Status doGet()
   {
+    return getStatus();
+  }
+
+  public static Status getStatus()
+  {
     return new Status(
-        StatusResource.class.getPackage().getImplementationVersion(),
+        Initialization.class.getPackage().getImplementationVersion(),
         new Memory(Runtime.getRuntime())
     );
   }
 
-  public static class Status {
+  public static class Status
+  {
     final String version;
     final Memory memory;
 
-    public Status(String version, Memory memory)
+    public Status(
+        String version, Memory memory
+    )
     {
       this.version = version;
       this.memory = memory;
@@ -61,15 +70,71 @@ public class StatusResource
     {
       return memory;
     }
+
+    @Override
+    public String toString()
+    {
+      final String NL = System.getProperty("line.separator");
+      return String.format("Druid version - %s", version) + NL;
+    }
   }
 
-  public static class Memory {
+  public static class ModuleVersion
+  {
+    final String name;
+    final String artifact;
+    final String version;
+
+    public ModuleVersion(String name)
+    {
+      this(name, "", "");
+    }
+
+    public ModuleVersion(String name, String artifact, String version)
+    {
+      this.name = name;
+      this.artifact = artifact;
+      this.version = version;
+    }
+
+    @JsonProperty
+    public String getName()
+    {
+      return name;
+    }
+
+    @JsonProperty
+    public String getArtifact()
+    {
+      return artifact;
+    }
+
+    @JsonProperty
+    public String getVersion()
+    {
+      return version;
+    }
+
+    @Override
+    public String toString()
+    {
+      if (artifact.isEmpty()) {
+        return String.format("  - %s ", name);
+      } else {
+        return String.format("  - %s (%s-%s)", name, artifact, version);
+      }
+    }
+  }
+
+  public static class Memory
+  {
     final long maxMemory;
     final long totalMemory;
     final long freeMemory;
     final long usedMemory;
 
-    public Memory(Runtime runtime) {
+    public Memory(Runtime runtime)
+    {
       maxMemory = runtime.maxMemory();
       totalMemory = runtime.totalMemory();
       freeMemory = runtime.freeMemory();
@@ -99,5 +164,6 @@ public class StatusResource
     {
       return usedMemory;
     }
+
   }
 }
