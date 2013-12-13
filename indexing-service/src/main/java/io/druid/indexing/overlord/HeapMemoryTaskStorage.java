@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.api.client.util.Lists;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
@@ -26,6 +27,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -34,6 +36,7 @@ import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
@@ -154,14 +157,22 @@ public class HeapMemoryTaskStorage implements TaskStorage
     giant.lock();
 
     try {
-      final ImmutableList.Builder<TaskStatus> listBuilder = ImmutableList.builder();
+      final List<TaskStatus> returns = Lists.newArrayList();
       final long recent = System.currentTimeMillis() - RECENCY_THRESHOLD;
-      for(final TaskStuff taskStuff : tasks.values()) {
+      final Ordering<TaskStuff> createdDateDesc = new Ordering<TaskStuff>()
+      {
+        @Override
+        public int compare(TaskStuff a, TaskStuff b)
+        {
+          return a.getCreatedDate().compareTo(b.getCreatedDate());
+        }
+      }.reverse();
+      for(final TaskStuff taskStuff : createdDateDesc.sortedCopy(tasks.values())) {
         if(taskStuff.getStatus().isComplete() && taskStuff.getCreatedDate().getMillis() > recent) {
-          listBuilder.add(taskStuff.getStatus());
+          returns.add(taskStuff.getStatus());
         }
       }
-      return listBuilder.build();
+      return returns;
     } finally {
       giant.unlock();
     }

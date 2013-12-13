@@ -285,7 +285,7 @@ public class DbTaskStorage implements TaskStorage
             final List<Map<String, Object>> dbTasks =
                 handle.createQuery(
                     String.format(
-                        "SELECT id, status_payload FROM %s WHERE active = 0 AND created_date >= :recent ORDER BY created_date",
+                        "SELECT id, status_payload FROM %s WHERE active = 0 AND created_date >= :recent ORDER BY created_date DESC",
                         dbTables.getTasksTable()
                     )
                 ).bind("recent", recent.toString()).list();

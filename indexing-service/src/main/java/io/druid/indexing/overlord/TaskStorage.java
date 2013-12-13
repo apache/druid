@@ -84,8 +84,8 @@ public interface TaskStorage
 
   /**
    * Returns a list of recently finished task statuses as stored in the storage facility. No particular order
-   * is guaranteed. No particular standard of "recent" is guaranteed, and in fact, this method is permitted to
-   * simply return nothing.
+   * is guaranteed, but implementations are encouraged to return tasks in descending order of creation. No particular
+   * standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
    */
   public List<TaskStatus> getRecentlyFinishedTaskStatuses();
 
