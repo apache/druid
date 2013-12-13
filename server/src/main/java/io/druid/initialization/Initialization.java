@@ -101,6 +101,16 @@ public class Initialization
       "io.druid",
       "com.metamx.druid"
   );
+  private static List loadedDruidModules = Lists.newArrayList();
+
+  /**
+  * @return List of {@link DruidModule}, once loaded.
+  */
+  public static List getLoadedDruidModules()
+  {
+    return loadedDruidModules;
+  }
+  
 
   public synchronized static <T> List<T> getFromExtensions(ExtensionsConfig config, Class<T> clazz)
   {
@@ -129,6 +139,10 @@ public class Initialization
       catch (Exception e) {
         throw Throwables.propagate(e);
       }
+    }
+
+    if (clazz.equals(DruidModule.class)){
+      loadedDruidModules.addAll(retVal);
     }
 
     return retVal;
