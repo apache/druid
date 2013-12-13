@@ -294,6 +294,20 @@ public class TaskLifecycleTest
   }
 
   @Test
+  public void testNoopTask() throws Exception
+  {
+    final Task noopTask = new DefaultObjectMapper().readValue(
+        "{\"type\":\"noop\", \"runTime\":\"100\"}\"",
+        Task.class
+    );
+    final TaskStatus status = runTask(noopTask);
+
+    Assert.assertEquals("statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
+    Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
+    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+  }
+
+  @Test
   public void testNeverReadyTask() throws Exception
   {
     final Task neverReadyTask = new DefaultObjectMapper().readValue(
