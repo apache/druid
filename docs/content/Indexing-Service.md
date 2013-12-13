@@ -56,6 +56,7 @@ With the following JVM configuration:
 -Ddruid.db.connector.password=diurd
 
 -Ddruid.selectors.indexing.serviceName=overlord
+-Ddruid.indexer.queue.startDelay=PT0M
 -Ddruid.indexer.runner.javaOpts="-server -Xmx1g"
 -Ddruid.indexer.runner.startPort=8081
 -Ddruid.indexer.fork.property.druid.computation.buffer.size=268435456
