@@ -104,6 +104,9 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   {
     final Column column = index.getColumn(dimension.toLowerCase());
     if (column == null) {
+      if (value == null || "".equals(value)) {
+        return ImmutableConciseSet.complement(new ImmutableConciseSet(), getNumRows());
+      }
       return new ImmutableConciseSet();
     }
     if (!column.getCapabilities().hasBitmapIndexes()) {

@@ -1161,6 +1161,48 @@ public class TimeseriesQueryRunnerTest
   }
 
   @Test
+  public void testTimeseriesWithNullFilterOnNonExistentDimension()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.dayGran)
+        .filters("bobby", null)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 13L,
+                    "index", 6626.151596069336,
+                    "addRowsIndexConstant", 6640.151596069336
+                )
+            )
+        ),
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 13L,
+                    "index", 5833.2095947265625,
+                    "addRowsIndexConstant", 5847.2095947265625
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
   public void testTimeseriesWithNonExistentFilter()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
