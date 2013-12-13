@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.coordinator;
+package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
@@ -25,6 +25,14 @@ import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.server.coordinator.CoordinatorStats;
+import io.druid.server.coordinator.DruidCluster;
+import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import io.druid.server.coordinator.LoadPeonCallback;
+import io.druid.server.coordinator.LoadQueuePeon;
+import io.druid.server.coordinator.ServerHolder;
+import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -69,7 +77,7 @@ public class DruidCoordinatorCleanup implements DruidCoordinatorHelper
                     segment, new LoadPeonCallback()
                 {
                   @Override
-                  protected void execute()
+                  public void execute()
                   {
                   }
                 }

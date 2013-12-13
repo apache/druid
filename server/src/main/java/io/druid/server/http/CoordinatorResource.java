@@ -61,7 +61,7 @@ public class CoordinatorResource
             new LoadPeonCallback()
             {
               @Override
-              protected void execute()
+              public void execute()
               {
                 return;
               }
@@ -91,7 +91,7 @@ public class CoordinatorResource
             segmentToDrop.getFromServer(), segmentToDrop.getSegmentName(), new LoadPeonCallback()
         {
           @Override
-          protected void execute()
+          public void execute()
           {
             return;
           }

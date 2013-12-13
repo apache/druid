@@ -50,6 +50,13 @@ import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.guice.ManageLifecycle;
 import io.druid.segment.IndexIO;
+import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanup;
+import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
+import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
+import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
@@ -310,7 +317,7 @@ public class DruidCoordinator
           new LoadPeonCallback()
           {
             @Override
-            protected void execute()
+            public void execute()
             {
               try {
                 if (curator.checkExists().forPath(toServedSegPath) != null &&

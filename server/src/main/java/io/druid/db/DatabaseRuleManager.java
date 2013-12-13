@@ -31,9 +31,11 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import io.druid.client.DruidServer;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
+import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.PeriodLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
@@ -86,10 +88,9 @@ public class DatabaseRuleManager
               }
 
               final List<Rule> defaultRules = Arrays.<Rule>asList(
-                  new PeriodLoadRule(
-                      new Period("P5000Y"),
-                      2,
-                      "_default_tier"
+                  new ForeverLoadRule(
+                      DruidServer.DEFAULT_NUM_REPLICANTS,
+                      DruidServer.DEFAULT_TIER
                   )
               );
               final String version = new DateTime().toString();

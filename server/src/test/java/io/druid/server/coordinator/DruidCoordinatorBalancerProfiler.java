@@ -29,6 +29,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.db.DatabaseRuleManager;
+import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.PeriodLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;

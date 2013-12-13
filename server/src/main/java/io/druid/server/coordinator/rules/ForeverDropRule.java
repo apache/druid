@@ -17,37 +17,24 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.client;
+package io.druid.server.coordinator.rules;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
+import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 
 /**
  */
-public class DruidServerConfig
+public class ForeverDropRule extends DropRule
 {
-  @JsonProperty
-  @Min(0)
-  private long maxSize = 0;
-
-  @JsonProperty
-  private String tier = DruidServer.DEFAULT_TIER;
-
-  @JsonProperty
-  private String zone = DruidServer.DEFAULT_ZONE;
-
-  public long getMaxSize()
+  @Override
+  public String getType()
   {
-    return maxSize;
+    return "dropForever";
   }
 
-  public String getTier()
+  @Override
+  public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
-    return tier;
-  }
-
-  public String getZone() {
-    return zone;
+    return true;
   }
 }

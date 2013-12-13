@@ -31,6 +31,7 @@ import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.client.DruidServer;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.segment.IndexIO;
+import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.IntervalDropRule;
 import io.druid.server.coordinator.rules.Rule;

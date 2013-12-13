@@ -17,7 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.coordinator;
+package io.druid.server.coordinator.helper;
+
+import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 
 /**
  */

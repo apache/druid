@@ -36,7 +36,9 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class DruidServer implements Comparable
 {
+  public static final int DEFAULT_NUM_REPLICANTS = 2;
   public static final String DEFAULT_TIER = "_default_tier";
+
   private static final Logger log = new Logger(DruidServer.class);
 
   private final Object lock = new Object();

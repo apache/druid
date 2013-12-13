@@ -17,37 +17,57 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.client;
+package io.druid.server.coordinator.rules;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
+import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 
 /**
  */
-public class DruidServerConfig
+public class ForeverLoadRule extends LoadRule
 {
-  @JsonProperty
-  @Min(0)
-  private long maxSize = 0;
+  private final Integer replicants;
+  private final String tier;
 
-  @JsonProperty
-  private String tier = DruidServer.DEFAULT_TIER;
-
-  @JsonProperty
-  private String zone = DruidServer.DEFAULT_ZONE;
-
-  public long getMaxSize()
+  @JsonCreator
+  public ForeverLoadRule(
+      @JsonProperty("replicants") Integer replicants,
+      @JsonProperty("tier") String tier
+  )
   {
-    return maxSize;
+    this.replicants = (replicants == null) ? 2 : replicants;
+    this.tier = tier;
   }
 
+  @Override
+  public int getReplicants()
+  {
+    return replicants;
+  }
+
+  @Override
+  public int getReplicants(String tier)
+  {
+    return (this.tier.equalsIgnoreCase(tier)) ? replicants : 0;
+  }
+
+  @Override
   public String getTier()
   {
-    return tier;
+    return null;
   }
 
-  public String getZone() {
-    return zone;
+  @Override
+  public String getType()
+  {
+    return "loadForever";
+  }
+
+  @Override
+  public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
+  {
+    return true;
   }
 }

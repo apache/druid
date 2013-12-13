@@ -120,7 +120,7 @@ public abstract class LoadRule implements Rule
           new LoadPeonCallback()
           {
             @Override
-            protected void execute()
+            public void execute()
             {
               replicationManager.unregisterReplicantCreation(
                   getTier(),
@@ -197,7 +197,7 @@ public abstract class LoadRule implements Rule
               new LoadPeonCallback()
               {
                 @Override
-                protected void execute()
+                public void execute()
                 {
                   replicationManager.unregisterReplicantTermination(
                       getTier(),
