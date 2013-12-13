@@ -36,7 +36,7 @@ import org.joda.time.Interval;
 
 import java.util.List;
 
-public class MoveTask extends AbstractTask
+public class MoveTask extends AbstractFixedIntervalTask
 {
   private static final Logger log = new Logger(MoveTask.class);
 
@@ -70,8 +70,8 @@ public class MoveTask extends AbstractTask
       throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
     }
 
-    if(!myLock.getInterval().equals(getImplicitLockInterval().get())) {
-      throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getImplicitLockInterval().get());
+    if(!myLock.getInterval().equals(getInterval())) {
+      throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getInterval());
     }
 
     // List unused segments
