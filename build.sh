@@ -30,4 +30,4 @@ echo "For examples, see: "
 echo " "
 ls -1 examples/*/*sh
 echo " "
-echo "See also http://druid.io/docs/0.6.31"
+echo "See also http://druid.io/docs/0.6.32"
