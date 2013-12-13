@@ -31,6 +31,8 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
+import org.joda.time.DateTime;
+import org.joda.time.Period;
 
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   private final Multimap<String, TaskLock> taskLocks = HashMultimap.create();
   private final Multimap<String, TaskAction> taskActions = ArrayListMultimap.create();
 
+  private static final long RECENCY_THRESHOLD = new Period("PT24H").toStandardDuration().getMillis();
   private static final Logger log = new Logger(HeapMemoryTaskStorage.class);
 
   @Override
@@ -69,7 +72,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
       }
 
       log.info("Inserting task %s with status: %s", task.getId(), status);
-      tasks.put(task.getId(), new TaskStuff(task, status));
+      tasks.put(task.getId(), new TaskStuff(task, status, new DateTime()));
     } finally {
       giant.unlock();
     }
@@ -139,7 +142,25 @@ public class HeapMemoryTaskStorage implements TaskStorage
           listBuilder.add(taskStuff.getTask());
         }
       }
+      return listBuilder.build();
+    } finally {
+      giant.unlock();
+    }
+  }
 
+  @Override
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses()
+  {
+    giant.lock();
+
+    try {
+      final ImmutableList.Builder<TaskStatus> listBuilder = ImmutableList.builder();
+      final long recent = System.currentTimeMillis() - RECENCY_THRESHOLD;
+      for(final TaskStuff taskStuff : tasks.values()) {
+        if(taskStuff.getStatus().isComplete() && taskStuff.getCreatedDate().getMillis() > recent) {
+          listBuilder.add(taskStuff.getStatus());
+        }
+      }
       return listBuilder.build();
     } finally {
       giant.unlock();
@@ -212,8 +233,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
   {
     final Task task;
     final TaskStatus status;
+    final DateTime createdDate;
 
-    private TaskStuff(Task task, TaskStatus status)
+    private TaskStuff(Task task, TaskStatus status, DateTime createdDate)
     {
       Preconditions.checkNotNull(task);
       Preconditions.checkNotNull(status);
@@ -221,6 +243,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
       this.task = task;
       this.status = status;
+      this.createdDate = Preconditions.checkNotNull(createdDate, "createdDate");
     }
 
     public Task getTask()
@@ -233,9 +256,14 @@ public class HeapMemoryTaskStorage implements TaskStorage
       return status;
     }
 
+    public DateTime getCreatedDate()
+    {
+      return createdDate;
+    }
+
     private TaskStuff withStatus(TaskStatus _status)
     {
-      return new TaskStuff(task, _status);
+      return new TaskStuff(task, _status, createdDate);
     }
   }
 }
