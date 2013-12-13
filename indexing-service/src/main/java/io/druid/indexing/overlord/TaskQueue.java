@@ -238,7 +238,7 @@ public class TaskQueue
                 taskIsReady = task.isReady(taskActionClientFactory.create(task));
               }
               catch (Exception e) {
-                log.makeAlert(e, "Exception thrown during isReady").addData("task", task.getId()).emit();
+                log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
                 notifyStatus(task, TaskStatus.failure(task.getId()));
                 continue;
               }
