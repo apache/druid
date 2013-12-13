@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -224,7 +225,8 @@ public class TaskQueue
           runnerTaskFutures.put(workItem.getTaskId(), workItem.getResult());
         }
         // Attain futures for all active tasks (assuming they are ready to run).
-        for (final Task task : tasks) {
+        // Copy tasks list, as notifyStatus may modify it.
+        for (final Task task : ImmutableList.copyOf(tasks)) {
           if (!taskFutures.containsKey(task.getId())) {
             final ListenableFuture<TaskStatus> runnerTaskFuture;
             if (runnerTaskFutures.containsKey(task.getId())) {

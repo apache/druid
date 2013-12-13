@@ -32,7 +32,7 @@ import io.druid.timeline.partition.NoneShardSpec;
 /**
  */
 @JsonTypeName("test_realtime")
-public class TestRealtimeTask extends RealtimeIndexTask implements TestTask
+public class TestRealtimeTask extends RealtimeIndexTask
 {
   private final TaskStatus status;
 
@@ -62,13 +62,6 @@ public class TestRealtimeTask extends RealtimeIndexTask implements TestTask
   public String getType()
   {
     return "test_realtime";
-  }
-
-  @Override
-  @JsonProperty
-  public TaskStatus getStatus()
-  {
-    return status;
   }
 
   @Override

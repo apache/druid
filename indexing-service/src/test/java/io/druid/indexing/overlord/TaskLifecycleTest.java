@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -115,7 +116,10 @@ public class TaskLifecycleTest
 
     tmp = Files.createTempDir();
 
-    final TaskQueueConfig tqc = new DefaultObjectMapper().readValue("{\"startDelay\":\"PT0S\"}", TaskQueueConfig.class);
+    final TaskQueueConfig tqc = new DefaultObjectMapper().readValue(
+        "{\"startDelay\":\"PT0S\", \"restartDelay\":\"PT1S\"}",
+        TaskQueueConfig.class
+    );
     ts = new HeapMemoryTaskStorage();
     tsqa = new TaskStorageQueryAdapter(ts);
     tl = new TaskLockbox(ts);
@@ -400,28 +404,41 @@ public class TaskLifecycleTest
     Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
   }
 
-  private TaskStatus runTask(Task task)
+  private TaskStatus runTask(final Task task) throws Exception
   {
+    final Task dummyTask = new DefaultObjectMapper().readValue(
+        "{\"type\":\"noop\", \"isReadyResult\":\"exception\"}\"",
+        Task.class
+    );
     final long startTime = System.currentTimeMillis();
 
+    Preconditions.checkArgument(!task.getId().equals(dummyTask.getId()));
+
+    tq.add(dummyTask);
     tq.add(task);
 
-    TaskStatus status;
+    TaskStatus retVal = null;
 
-    try {
-      while ((status = tsqa.getStatus(task.getId()).get()).isRunnable()) {
-        if (System.currentTimeMillis() > startTime + 10 * 1000) {
-          throw new ISE("Where did the task go?!: %s", task.getId());
+    for (final String taskId : ImmutableList.of(dummyTask.getId(), task.getId())) {
+      try {
+        TaskStatus status;
+        while ((status = tsqa.getStatus(taskId).get()).isRunnable()) {
+          if (System.currentTimeMillis() > startTime + 10 * 1000) {
+            throw new ISE("Where did the task go?!: %s", task.getId());
+          }
+
+          Thread.sleep(100);
         }
-
-        Thread.sleep(100);
+        if (taskId.equals(task.getId())) {
+          retVal = status;
+        }
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
       }
     }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
 
-    return status;
+    return retVal;
   }
 
   private static class MockIndexerDBCoordinator extends IndexerDBCoordinator
