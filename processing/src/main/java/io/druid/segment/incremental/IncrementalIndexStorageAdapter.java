@@ -453,6 +453,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     {
       Integer dimIndexObject = index.getDimensionIndex(dimension.toLowerCase());
       if (dimIndexObject == null) {
+        if (value == null || "".equals(value)) {
+          return new BooleanValueMatcher(true);
+        }
         return new BooleanValueMatcher(false);
       }
       String idObject = index.getDimension(dimension.toLowerCase()).get(value);
