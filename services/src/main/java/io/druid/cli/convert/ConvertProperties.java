@@ -178,7 +178,7 @@ public class ConvertProperties implements Runnable
     }
 
     updatedProps.setProperty(
-        "druid.monitoring.monitors", "[\"io.druid.server.metrics.ServerMonitor\", \"com.metamx.metrics.SysMonitor\"]"
+        "druid.monitoring.monitors", "[\"com.metamx.metrics.SysMonitor\"]"
     );
 
     BufferedWriter out = null;

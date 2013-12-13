@@ -253,5 +253,5 @@ druid.processing.buffer.sizeBytes=10000000
 
 Next Steps
 ----------
-If you are intested in how data flows through the different Druid components, check out the [Druid data flow architecture](Design.html). Now that you have an understanding of what the Druid cluster looks like, why not load some of your own data?
+If you are interested in how data flows through the different Druid components, check out the [Druid data flow architecture](Design.html). Now that you have an understanding of what the Druid cluster looks like, why not load some of your own data?
 Check out the next [tutorial](Tutorial%3A-Loading-Your-Data-Part-1.html) section for more info!
