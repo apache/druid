@@ -124,7 +124,7 @@ public class TaskLifecycleTest
         TaskQueueConfig.class
     );
     ts = new HeapMemoryTaskStorage(
-        new TaskStorageConfig(new Period("PT24H"))
+        new TaskStorageConfig()
         {
         }
     );
