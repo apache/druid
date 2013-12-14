@@ -40,6 +40,7 @@ import io.druid.db.DbTablesConfig;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
+import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -64,17 +65,24 @@ public class DbTaskStorage implements TaskStorage
   private final DbConnector dbConnector;
   private final DbTablesConfig dbTables;
   private final IDBI dbi;
+  private final TaskStorageConfig config;
 
-  private static final long RECENCY_THRESHOLD = new Period("PT24H").toStandardDuration().getMillis();
   private static final EmittingLogger log = new EmittingLogger(DbTaskStorage.class);
 
   @Inject
-  public DbTaskStorage(ObjectMapper jsonMapper, DbConnector dbConnector, DbTablesConfig dbTables, IDBI dbi)
+  public DbTaskStorage(
+      final ObjectMapper jsonMapper,
+      final DbConnector dbConnector,
+      final DbTablesConfig dbTables,
+      final IDBI dbi,
+      final TaskStorageConfig config
+  )
   {
     this.jsonMapper = jsonMapper;
     this.dbConnector = dbConnector;
     this.dbTables = dbTables;
     this.dbi = dbi;
+    this.config = config;
   }
 
   @LifecycleStart
@@ -275,7 +283,7 @@ public class DbTaskStorage implements TaskStorage
   @Override
   public List<TaskStatus> getRecentlyFinishedTaskStatuses()
   {
-    final DateTime recent = new DateTime().minus(RECENCY_THRESHOLD);
+    final DateTime recent = new DateTime().minus(config.getRecentlyFinishedThreshold());
     return retryingHandle(
         new HandleCallback<List<TaskStatus>>()
         {

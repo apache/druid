@@ -28,15 +28,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
+import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
-import org.joda.time.Period;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
@@ -47,13 +47,20 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class HeapMemoryTaskStorage implements TaskStorage
 {
+  private final TaskStorageConfig config;
+
   private final ReentrantLock giant = new ReentrantLock();
   private final Map<String, TaskStuff> tasks = Maps.newHashMap();
   private final Multimap<String, TaskLock> taskLocks = HashMultimap.create();
   private final Multimap<String, TaskAction> taskActions = ArrayListMultimap.create();
 
-  private static final long RECENCY_THRESHOLD = new Period("PT24H").toStandardDuration().getMillis();
   private static final Logger log = new Logger(HeapMemoryTaskStorage.class);
+
+  @Inject
+  public HeapMemoryTaskStorage(TaskStorageConfig config)
+  {
+    this.config = config;
+  }
 
   @Override
   public void insert(Task task, TaskStatus status)
@@ -158,7 +165,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     try {
       final List<TaskStatus> returns = Lists.newArrayList();
-      final long recent = System.currentTimeMillis() - RECENCY_THRESHOLD;
+      final long recent = System.currentTimeMillis() - config.getRecentlyFinishedThreshold().getMillis();
       final Ordering<TaskStuff> createdDateDesc = new Ordering<TaskStuff>()
       {
         @Override

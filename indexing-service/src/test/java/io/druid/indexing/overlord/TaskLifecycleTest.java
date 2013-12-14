@@ -54,6 +54,7 @@ import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
 import io.druid.indexing.common.task.KillTask;
@@ -75,7 +76,9 @@ import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -120,7 +123,11 @@ public class TaskLifecycleTest
         "{\"startDelay\":\"PT0S\", \"restartDelay\":\"PT1S\"}",
         TaskQueueConfig.class
     );
-    ts = new HeapMemoryTaskStorage();
+    ts = new HeapMemoryTaskStorage(
+        new TaskStorageConfig(new Period("PT24H"))
+        {
+        }
+    );
     tsqa = new TaskStorageQueryAdapter(ts);
     tl = new TaskLockbox(ts);
     mdc = newMockMDC();

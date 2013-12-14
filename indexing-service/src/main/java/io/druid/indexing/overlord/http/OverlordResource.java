@@ -368,20 +368,13 @@ public class OverlordResource
   @Produces("application/json")
   public Response getScalingState()
   {
-    if (!taskMaster.getResourceManagementScheduler().isPresent()) {
+    // Don't use asLeaderWith, since we want to return 200 instead of 503 when missing an autoscaler.
+    final Optional<ResourceManagementScheduler> rms = taskMaster.getResourceManagementScheduler();
+    if (rms.isPresent()) {
+      return Response.ok(rms.get().getStats()).build();
+    } else {
       return Response.ok().build();
     }
-    return asLeaderWith(
-        taskMaster.getResourceManagementScheduler(),
-        new Function<ResourceManagementScheduler, Response>()
-        {
-          @Override
-          public Response apply(ResourceManagementScheduler resourceManagementScheduler)
-          {
-            return Response.ok(resourceManagementScheduler.getStats()).build();
-          }
-        }
-    );
   }
 
   @GET

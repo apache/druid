@@ -45,6 +45,7 @@ import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.index.ChatHandlerProvider;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
@@ -154,6 +155,8 @@ public class CliOverlord extends ServerRunnable
 
           private void configureTaskStorage(Binder binder)
           {
+            JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
+
             PolyBind.createChoice(
                 binder, "druid.indexer.storage.type", Key.get(TaskStorage.class), Key.get(HeapMemoryTaskStorage.class)
             );
