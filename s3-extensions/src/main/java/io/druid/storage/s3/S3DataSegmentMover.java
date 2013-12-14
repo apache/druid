@@ -37,20 +37,17 @@ public class S3DataSegmentMover implements DataSegmentMover
   private static final Logger log = new Logger(S3DataSegmentMover.class);
 
   private final RestS3Service s3Client;
-  private final S3DataSegmentMoverConfig config;
 
   @Inject
   public S3DataSegmentMover(
-      RestS3Service s3Client,
-      S3DataSegmentMoverConfig config
+      RestS3Service s3Client
   )
   {
     this.s3Client = s3Client;
-    this.config = config;
   }
 
   @Override
-  public DataSegment move(DataSegment segment) throws SegmentLoadingException
+  public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
   {
     try {
       Map<String, Object> loadSpec = segment.getLoadSpec();
@@ -58,10 +55,15 @@ public class S3DataSegmentMover implements DataSegmentMover
       String s3Path = MapUtils.getString(loadSpec, "key");
       String s3DescriptorPath = S3Utils.descriptorPathForSegmentPath(s3Path);
 
-      final String s3ArchiveBucket = config.getArchiveBucket();
+      final String targetS3Bucket = MapUtils.getString(targetLoadSpec, "bucket");
+      final String targetS3Path = MapUtils.getString(targetLoadSpec, "key");
+      String targetS3DescriptorPath = S3Utils.descriptorPathForSegmentPath(targetS3Path);
 
-      if (s3ArchiveBucket.isEmpty()) {
-        throw new SegmentLoadingException("S3 archive bucket not specified");
+      if (targetS3Bucket.isEmpty()) {
+        throw new SegmentLoadingException("Target S3 bucket is not specified");
+      }
+      if (targetS3Path.isEmpty()) {
+        throw new SegmentLoadingException("Target S3 path is not specified");
       }
 
       if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
@@ -69,26 +71,28 @@ public class S3DataSegmentMover implements DataSegmentMover
             "Moving index file[s3://%s/%s] to [s3://%s/%s]",
             s3Bucket,
             s3Path,
-            s3ArchiveBucket,
-            s3Path
+            targetS3Bucket,
+            targetS3Path
         );
-        s3Client.moveObject(s3Bucket, s3Path, s3ArchiveBucket, new S3Object(s3Path), false);
+        s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, new S3Object(targetS3Path), false);
       }
       if (s3Client.isObjectInBucket(s3Bucket, s3DescriptorPath)) {
         log.info(
             "Moving descriptor file[s3://%s/%s] to [s3://%s/%s]",
             s3Bucket,
             s3DescriptorPath,
-            s3ArchiveBucket,
-            s3DescriptorPath
+            targetS3Bucket,
+            targetS3DescriptorPath
         );
-        s3Client.moveObject(s3Bucket, s3DescriptorPath, s3ArchiveBucket, new S3Object(s3DescriptorPath), false);
+        s3Client.moveObject(s3Bucket, s3DescriptorPath, targetS3Bucket, new S3Object(targetS3DescriptorPath), false);
       }
 
       return segment.withLoadSpec(
           ImmutableMap.<String, Object>builder()
                       .putAll(loadSpec)
-                      .put("bucket", s3ArchiveBucket).build()
+                      .put("bucket", targetS3Bucket)
+                      .put("key", targetS3Path)
+                      .build()
       );
     }
     catch (ServiceException e) {

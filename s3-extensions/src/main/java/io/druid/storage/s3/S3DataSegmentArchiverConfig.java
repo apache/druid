@@ -21,7 +21,7 @@ package io.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class S3DataSegmentMoverConfig
+public class S3DataSegmentArchiverConfig
 {
   @JsonProperty
   public String archiveBucket = "";
