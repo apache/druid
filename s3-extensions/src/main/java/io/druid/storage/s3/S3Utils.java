@@ -19,9 +19,12 @@
 
 package io.druid.storage.s3;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.metamx.common.RetryUtils;
 import org.jets3t.service.ServiceException;
+import io.druid.segment.loading.DataSegmentPusherUtil;
+import io.druid.timeline.DataSegment;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
@@ -34,6 +37,8 @@ import java.util.concurrent.Callable;
  */
 public class S3Utils
 {
+  private static final Joiner JOINER = Joiner.on("/").skipNulls();
+
   public static void closeStreamsQuietly(S3Object s3Obj)
   {
     if (s3Obj == null) {
@@ -94,6 +99,15 @@ public class S3Utils
       throw e;
     }
     return true;
+  }
+
+
+  public static String constructSegmentPath(String baseKey, DataSegment segment)
+  {
+    return JOINER.join(
+        baseKey.isEmpty() ? null : baseKey,
+        DataSegmentPusherUtil.getStorageDir(segment)
+    ) + "/index.zip";
   }
 
   public static String descriptorPathForSegmentPath(String s3Path)

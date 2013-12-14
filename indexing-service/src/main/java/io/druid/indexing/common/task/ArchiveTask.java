@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -35,34 +34,24 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.util.List;
-import java.util.Map;
 
-public class MoveTask extends AbstractFixedIntervalTask
+public class ArchiveTask extends AbstractFixedIntervalTask
 {
-  private static final Logger log = new Logger(MoveTask.class);
+  private static final Logger log = new Logger(ArchiveTask.class);
 
-  private final Map<String, Object> targetLoadSpec;
-
-  @JsonCreator
-  public MoveTask(
+  public ArchiveTask(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval,
-      @JsonProperty("target") Map<String, Object> targetLoadSpec
+      @JsonProperty("interval") Interval interval
   )
   {
-    super(
-        TaskUtils.makeId(id, "move", dataSource, interval),
-        dataSource,
-        interval
-    );
-    this.targetLoadSpec = targetLoadSpec;
+    super(id, dataSource, interval);
   }
 
   @Override
   public String getType()
   {
-    return "move";
+    return "archive";
   }
 
   @Override
@@ -71,11 +60,11 @@ public class MoveTask extends AbstractFixedIntervalTask
     // Confirm we have a lock (will throw if there isn't exactly one element)
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
 
-    if(!myLock.getDataSource().equals(getDataSource())) {
+    if (!myLock.getDataSource().equals(getDataSource())) {
       throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
     }
 
-    if(!myLock.getInterval().equals(getInterval())) {
+    if (!myLock.getInterval().equals(getInterval())) {
       throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getInterval());
     }
 
@@ -85,8 +74,8 @@ public class MoveTask extends AbstractFixedIntervalTask
         .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
 
     // Verify none of these segments have versions > lock version
-    for(final DataSegment unusedSegment : unusedSegments) {
-      if(unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
+    for (final DataSegment unusedSegment : unusedSegments) {
+      if (unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
         throw new ISE(
             "WTF?! Unused segment[%s] has version[%s] > task version[%s]",
             unusedSegment.getIdentifier(),
@@ -95,20 +84,22 @@ public class MoveTask extends AbstractFixedIntervalTask
         );
       }
 
-      log.info("OK to move segment: %s", unusedSegment.getIdentifier());
+      log.info("OK to archive segment: %s", unusedSegment.getIdentifier());
     }
 
-    List<DataSegment> movedSegments = Lists.newLinkedList();
+    List<DataSegment> archivedSegments = Lists.newLinkedList();
 
     // Move segments
     for (DataSegment segment : unusedSegments) {
-      movedSegments.add(toolbox.getDataSegmentMover().move(segment, targetLoadSpec));
+      archivedSegments.add(toolbox.getDataSegmentArchiver().archive(segment));
     }
 
     // Update metadata for moved segments
-    toolbox.getTaskActionClient().submit(new SegmentMoveAction(
-        ImmutableSet.copyOf(movedSegments)
-    ));
+    toolbox.getTaskActionClient().submit(
+        new SegmentMoveAction(
+            ImmutableSet.copyOf(archivedSegments)
+        )
+    );
 
     return TaskStatus.success(getId());
   }

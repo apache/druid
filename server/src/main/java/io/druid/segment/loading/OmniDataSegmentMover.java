@@ -38,9 +38,9 @@ public class OmniDataSegmentMover implements DataSegmentMover
   }
 
   @Override
-  public DataSegment move(DataSegment segment) throws SegmentLoadingException
+  public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
   {
-    return getMover(segment).move(segment);
+    return getMover(segment).move(segment, targetLoadSpec);
   }
 
   private DataSegmentMover getMover(DataSegment segment) throws SegmentLoadingException

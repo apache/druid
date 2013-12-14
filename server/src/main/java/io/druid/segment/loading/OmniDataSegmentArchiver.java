@@ -17,43 +17,41 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.storage.s3;
+package io.druid.segment.loading;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
-import io.druid.segment.loading.DataSegmentArchiver;
-import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
+import java.util.Map;
 
-public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSegmentArchiver
+public class OmniDataSegmentArchiver implements DataSegmentArchiver
 {
-  private final S3DataSegmentArchiverConfig config;
+  private final Map<String, DataSegmentArchiver> archivers;
 
   @Inject
-  public S3DataSegmentArchiver(
-    RestS3Service s3Client,
-    S3DataSegmentArchiverConfig config
+  public OmniDataSegmentArchiver(
+      Map<String, DataSegmentArchiver> archivers
   )
   {
-    super(s3Client);
-    this.config = config;
+    this.archivers = archivers;
   }
 
   @Override
   public DataSegment archive(DataSegment segment) throws SegmentLoadingException
   {
-    String targetS3Bucket = config.getArchiveBucket();
-    String targetS3BaseKey = config.getArchiveBaseKey();
+    return getArchiver(segment).archive(segment);
+  }
 
-    return move(
-        segment,
-        ImmutableMap.<String, Object>of(
-            "bucket", targetS3Bucket,
-            "baseKey", targetS3BaseKey
-        )
-    );
+  private DataSegmentArchiver getArchiver(DataSegment segment) throws SegmentLoadingException
+  {
+    String type = MapUtils.getString(segment.getLoadSpec(), "type");
+    DataSegmentArchiver archiver = archivers.get(type);
+
+    if (archiver == null) {
+      throw new SegmentLoadingException("Unknown loader type[%s].  Known types are %s", type, archivers.keySet());
+    }
+
+    return archiver;
   }
 }

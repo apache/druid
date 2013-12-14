@@ -29,6 +29,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -48,6 +49,7 @@ public class TaskToolboxFactory
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
   private final DataSegmentMover dataSegmentMover;
+  private final DataSegmentArchiver dataSegmentArchiver;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
@@ -64,6 +66,7 @@ public class TaskToolboxFactory
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
       DataSegmentMover dataSegmentMover,
+      DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
@@ -79,6 +82,7 @@ public class TaskToolboxFactory
     this.segmentPusher = segmentPusher;
     this.dataSegmentKiller = dataSegmentKiller;
     this.dataSegmentMover = dataSegmentMover;
+    this.dataSegmentArchiver = dataSegmentArchiver;
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
@@ -100,6 +104,7 @@ public class TaskToolboxFactory
         segmentPusher,
         dataSegmentKiller,
         dataSegmentMover,
+        dataSegmentArchiver,
         segmentAnnouncer,
         newSegmentServerView,
         queryRunnerFactoryConglomerate,

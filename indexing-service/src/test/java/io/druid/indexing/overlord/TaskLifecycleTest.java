@@ -64,6 +64,7 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPuller;
@@ -89,6 +90,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class TaskLifecycleTest
@@ -162,9 +164,17 @@ public class TaskLifecycleTest
         new DataSegmentMover()
         {
           @Override
-          public DataSegment move(DataSegment dataSegment) throws SegmentLoadingException
+          public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
           {
             return dataSegment;
+          }
+        },
+        new DataSegmentArchiver()
+        {
+          @Override
+          public DataSegment archive(DataSegment segment) throws SegmentLoadingException
+          {
+            return segment;
           }
         },
         null, // segment announcer

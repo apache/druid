@@ -60,8 +60,10 @@ import io.druid.indexing.worker.executor.ChatHandlerResource;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
+import io.druid.segment.loading.OmniDataSegmentArchiver;
 import io.druid.segment.loading.OmniDataSegmentKiller;
 import io.druid.segment.loading.OmniDataSegmentMover;
 import io.druid.segment.loading.SegmentLoaderConfig;
@@ -133,6 +135,8 @@ public class CliPeon extends GuiceRunnable
             binder.bind(DataSegmentKiller.class).to(OmniDataSegmentKiller.class).in(LazySingleton.class);
             Binders.dataSegmentMoverBinder(binder);
             binder.bind(DataSegmentMover.class).to(OmniDataSegmentMover.class).in(LazySingleton.class);
+            Binders.dataSegmentArchiverBinder(binder);
+            binder.bind(DataSegmentArchiver.class).to(OmniDataSegmentArchiver.class).in(LazySingleton.class);
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
             binder.bind(ExecutorLifecycleConfig.class).toInstance(

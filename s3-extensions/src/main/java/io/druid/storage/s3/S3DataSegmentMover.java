@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentMover;
+import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;
@@ -56,14 +57,16 @@ public class S3DataSegmentMover implements DataSegmentMover
       String s3DescriptorPath = S3Utils.descriptorPathForSegmentPath(s3Path);
 
       final String targetS3Bucket = MapUtils.getString(targetLoadSpec, "bucket");
-      final String targetS3Path = MapUtils.getString(targetLoadSpec, "key");
+      final String targetS3BaseKey = MapUtils.getString(targetLoadSpec, "baseKey");
+
+      final String targetS3Path = S3Utils.constructSegmentPath(targetS3BaseKey, segment);
       String targetS3DescriptorPath = S3Utils.descriptorPathForSegmentPath(targetS3Path);
 
       if (targetS3Bucket.isEmpty()) {
         throw new SegmentLoadingException("Target S3 bucket is not specified");
       }
       if (targetS3Path.isEmpty()) {
-        throw new SegmentLoadingException("Target S3 path is not specified");
+        throw new SegmentLoadingException("Target S3 baseKey is not specified");
       }
 
       if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {

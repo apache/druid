@@ -20,7 +20,6 @@
 package io.druid.storage.s3;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
@@ -29,7 +28,6 @@ import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 import io.druid.utils.CompressionUtils;
 import org.jets3t.service.ServiceException;
@@ -45,7 +43,6 @@ import java.util.concurrent.Callable;
 public class S3DataSegmentPusher implements DataSegmentPusher
 {
   private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
-  private static final Joiner JOINER = Joiner.on("/").skipNulls();
 
   private final RestS3Service s3Client;
   private final S3DataSegmentPusherConfig config;
@@ -73,10 +70,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment) throws IOException
   {
     log.info("Uploading [%s] to S3", indexFilesDir);
-    final String outputKey = JOINER.join(
-        config.getBaseKey().isEmpty() ? null : config.getBaseKey(),
-        DataSegmentPusherUtil.getStorageDir(inSegment)
-    );
+    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), inSegment);
     final File zipOutFile = File.createTempFile("druid", "index.zip");
     final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
@@ -90,7 +84,6 @@ public class S3DataSegmentPusher implements DataSegmentPusher
               S3Object toPush = new S3Object(zipOutFile);
 
               final String outputBucket = config.getBucket();
-              final String s3Path = outputKey + "/index.zip";
               final String s3DescriptorPath = S3Utils.descriptorPathForSegmentPath(s3Path);
 
               toPush.setBucketName(outputBucket);
