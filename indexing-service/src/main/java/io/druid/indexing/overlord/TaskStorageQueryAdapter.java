@@ -19,14 +19,19 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
+import io.druid.indexing.common.task.Task;
 import io.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -40,6 +45,21 @@ public class TaskStorageQueryAdapter
   public TaskStorageQueryAdapter(TaskStorage storage)
   {
     this.storage = storage;
+  }
+
+  public List<Task> getActiveTasks()
+  {
+    return storage.getActiveTasks();
+  }
+
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses()
+  {
+    return storage.getRecentlyFinishedTaskStatuses();
+  }
+
+  public Optional<Task> getTask(final String taskid)
+  {
+    return storage.getTask(taskid);
   }
 
   public Optional<TaskStatus> getStatus(final String taskid)
