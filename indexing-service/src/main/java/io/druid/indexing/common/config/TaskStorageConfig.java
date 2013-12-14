@@ -10,7 +10,7 @@ public class TaskStorageConfig
 {
   @JsonProperty
   @NotNull
-  private Duration recentlyFinishedThreshold = new Period("PT24H").toStandardDuration();
+  public Duration recentlyFinishedThreshold = new Period("PT24H").toStandardDuration();
 
   public Duration getRecentlyFinishedThreshold()
   {
