@@ -250,7 +250,7 @@ Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) should yield:
 Console
 --------
 
-The indexing service overlord has a console located as:
+The indexing service overlord has a console located at:
 
 ```bash
 localhost:8087/console.html
