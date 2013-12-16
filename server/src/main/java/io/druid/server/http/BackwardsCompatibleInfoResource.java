@@ -32,10 +32,10 @@ import javax.ws.rs.Path;
 /**
  */
 @Path("/static/info")
-public class BackwardsCompatiableInfoResource extends InfoResource
+public class BackwardsCompatibleInfoResource extends InfoResource
 {
   @Inject
-  public BackwardsCompatiableInfoResource(
+  public BackwardsCompatibleInfoResource(
       DruidCoordinator coordinator,
       InventoryView serverInventoryView,
       DatabaseSegmentManager databaseSegmentManager,

@@ -36,25 +36,28 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.GzipFilter;
 
 /**
-*/
+ */
 class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
   @Override
   public void initialize(Server server, Injector injector)
   {
-    ResourceHandler resourceHandler = new ResourceHandler();
+    final ServletContextHandler redirect = new ServletContextHandler(ServletContextHandler.SESSIONS);
+    redirect.setContextPath("/");
+    redirect.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+
+    final ResourceHandler resourceHandler = new ResourceHandler();
     resourceHandler.setResourceBase(DruidCoordinator.class.getClassLoader().getResource("static").toExternalForm());
 
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.setContextPath("/");
 
     HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(new Handler[]{resourceHandler, root, new DefaultHandler()});
+    handlerList.setHandlers(new Handler[]{redirect, resourceHandler, root, new DefaultHandler()});
     server.setHandler(handlerList);
 
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     root.addFilter(GzipFilter.class, "/*", null);
-    root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
     root.addFilter(GuiceFilter.class, "/*", null);
   }
 }

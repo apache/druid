@@ -120,7 +120,11 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
 
             binder.bind(TaskLogStreamer.class).to(SwitchingTaskLogStreamer.class).in(LazySingleton.class);
-            binder.bind(new TypeLiteral<List<TaskLogStreamer>>(){})
+            binder.bind(
+                new TypeLiteral<List<TaskLogStreamer>>()
+                {
+                }
+            )
                   .toProvider(
                       new ListProvider<TaskLogStreamer>()
                           .add(TaskRunnerTaskLogStreamer.class)
@@ -159,7 +163,10 @@ public class CliOverlord extends ServerRunnable
             PolyBind.createChoice(
                 binder, "druid.indexer.storage.type", Key.get(TaskStorage.class), Key.get(HeapMemoryTaskStorage.class)
             );
-            final MapBinder<String, TaskStorage> storageBinder = PolyBind.optionBinder(binder, Key.get(TaskStorage.class));
+            final MapBinder<String, TaskStorage> storageBinder = PolyBind.optionBinder(
+                binder,
+                Key.get(TaskStorage.class)
+            );
 
             storageBinder.addBinding("local").to(HeapMemoryTaskStorage.class);
             binder.bind(HeapMemoryTaskStorage.class).in(LazySingleton.class);
@@ -178,7 +185,10 @@ public class CliOverlord extends ServerRunnable
                 Key.get(TaskRunnerFactory.class),
                 Key.get(ForkingTaskRunnerFactory.class)
             );
-            final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(binder, Key.get(TaskRunnerFactory.class));
+            final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(
+                binder,
+                Key.get(TaskRunnerFactory.class)
+            );
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
             biddy.addBinding("local").to(ForkingTaskRunnerFactory.class);
@@ -191,7 +201,9 @@ public class CliOverlord extends ServerRunnable
           private void configureAutoscale(Binder binder)
           {
             JsonConfigProvider.bind(binder, "druid.indexer.autoscale", ResourceManagementSchedulerConfig.class);
-            binder.bind(ResourceManagementStrategy.class).to(SimpleResourceManagementStrategy.class).in(LazySingleton.class);
+            binder.bind(ResourceManagementStrategy.class)
+                  .to(SimpleResourceManagementStrategy.class)
+                  .in(LazySingleton.class);
 
             JacksonConfigProvider.bind(binder, WorkerSetupData.CONFIG_KEY, WorkerSetupData.class, null);
 
@@ -220,13 +232,17 @@ public class CliOverlord extends ServerRunnable
   }
 
   /**
-  */
+   */
   private static class OverlordJettyServerInitializer implements JettyServerInitializer
   {
     @Override
     public void initialize(Server server, Injector injector)
     {
-      ResourceHandler resourceHandler = new ResourceHandler();
+      final ServletContextHandler redirect = new ServletContextHandler(ServletContextHandler.SESSIONS);
+      redirect.setContextPath("/");
+      redirect.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+
+      final ResourceHandler resourceHandler = new ResourceHandler();
       resourceHandler.setBaseResource(
           new ResourceCollection(
               new String[]{
@@ -240,12 +256,11 @@ public class CliOverlord extends ServerRunnable
       root.setContextPath("/");
 
       HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{resourceHandler, root, new DefaultHandler()});
+      handlerList.setHandlers(new Handler[]{redirect, resourceHandler, root, new DefaultHandler()});
       server.setHandler(handlerList);
 
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
       root.addFilter(GzipFilter.class, "/*", null);
-      root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
       root.addFilter(GuiceFilter.class, "/*", null);
     }
   }
