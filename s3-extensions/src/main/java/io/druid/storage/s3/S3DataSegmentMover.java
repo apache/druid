@@ -19,12 +19,13 @@
 
 package io.druid.storage.s3;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentMover;
-import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;
@@ -74,7 +75,18 @@ public class S3DataSegmentMover implements DataSegmentMover
 
       return segment.withLoadSpec(
           ImmutableMap.<String, Object>builder()
-                      .putAll(loadSpec)
+                      .putAll(
+                          Maps.filterKeys(
+                              loadSpec, new Predicate<String>()
+                          {
+                            @Override
+                            public boolean apply(String input)
+                            {
+                              return !(input.equals("bucket") || input.equals("key"));
+                            }
+                          }
+                          )
+                      )
                       .put("bucket", targetS3Bucket)
                       .put("key", targetS3Path)
                       .build()
