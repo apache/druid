@@ -69,26 +69,8 @@ public class S3DataSegmentMover implements DataSegmentMover
         throw new SegmentLoadingException("Target S3 baseKey is not specified");
       }
 
-      if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
-        log.info(
-            "Moving index file[s3://%s/%s] to [s3://%s/%s]",
-            s3Bucket,
-            s3Path,
-            targetS3Bucket,
-            targetS3Path
-        );
-        s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, new S3Object(targetS3Path), false);
-      }
-      if (s3Client.isObjectInBucket(s3Bucket, s3DescriptorPath)) {
-        log.info(
-            "Moving descriptor file[s3://%s/%s] to [s3://%s/%s]",
-            s3Bucket,
-            s3DescriptorPath,
-            targetS3Bucket,
-            targetS3DescriptorPath
-        );
-        s3Client.moveObject(s3Bucket, s3DescriptorPath, targetS3Bucket, new S3Object(targetS3DescriptorPath), false);
-      }
+      safeMove(s3Bucket, s3Path, targetS3Bucket, targetS3Path);
+      safeMove(s3Bucket, s3DescriptorPath, targetS3Bucket, targetS3DescriptorPath);
 
       return segment.withLoadSpec(
           ImmutableMap.<String, Object>builder()
@@ -100,6 +82,37 @@ public class S3DataSegmentMover implements DataSegmentMover
     }
     catch (ServiceException e) {
       throw new SegmentLoadingException(e, "Unable to move segment[%s]", segment.getIdentifier());
+    }
+  }
+
+  private void safeMove(String s3Bucket, String s3Path, String targetS3Bucket, String targetS3Path)
+      throws ServiceException, SegmentLoadingException
+  {
+    if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
+      log.info(
+          "Moving file[s3://%s/%s] to [s3://%s/%s]",
+          s3Bucket,
+          s3Path,
+          targetS3Bucket,
+          targetS3Path
+      );
+      s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, new S3Object(targetS3Path), false);
+    } else {
+      // ensure object exists in target location
+      if(s3Client.isObjectInBucket(targetS3Bucket, targetS3Path)) {
+        log.info(
+            "Not moving file [s3://%s/%s], already present in target location [s3://%s/%s]",
+            s3Bucket, s3Path,
+            targetS3Bucket, targetS3Path
+        );
+      }
+      else {
+        throw new SegmentLoadingException(
+            "Unable to move file [s3://%s/%s] to [s3://%s/%s], not present in either source or target location",
+            s3Bucket, s3Path,
+            targetS3Bucket, targetS3Path
+        );
+      }
     }
   }
 }
