@@ -554,8 +554,9 @@ public class DruidCoordinator
         }
         loadManagementPeons.clear();
 
-        databaseSegmentManager.stop();
         serverInventoryView.stop();
+        databaseRuleManager.stop();
+        databaseSegmentManager.stop();
         leader = false;
       }
       catch (Exception e) {
