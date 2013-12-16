@@ -84,6 +84,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   {
     final int priority = Integer.parseInt(query.getContextValue("priority", "0"));
 
+    if (Iterables.isEmpty(queryables)) {
+      log.warn("No queryables found.");
+      return Sequences.empty();
+    }
+
     return new BaseSequence<T, Iterator<T>>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
