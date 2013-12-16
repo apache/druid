@@ -83,6 +83,13 @@ public interface TaskStorage
   public List<Task> getActiveTasks();
 
   /**
+   * Returns a list of recently finished task statuses as stored in the storage facility. No particular order
+   * is guaranteed, but implementations are encouraged to return tasks in descending order of creation. No particular
+   * standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
+   */
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses();
+
+  /**
    * Returns a list of locks for a particular task.
    */
   public List<TaskLock> getLocks(String taskid);

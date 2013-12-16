@@ -28,7 +28,6 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseRuleManagerConfig;
 import io.druid.db.DatabaseRuleManagerProvider;
@@ -41,18 +40,16 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Self;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
-import io.druid.server.http.BackwardsCompatiableInfoResource;
+import io.druid.server.http.BackwardsCompatibleInfoResource;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
 import io.druid.server.http.InfoResource;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
-import io.druid.server.http.RedirectServlet;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
@@ -63,7 +60,7 @@ import java.util.List;
  */
 @Command(
     name = "coordinator",
-    description = "Runs the Coordinator, see http://druid.io/docs/0.6.31/Coordinator.html for a description."
+    description = "Runs the Coordinator, see http://druid.io/docs/0.6.36/Coordinator.html for a description."
 )
 public class CliCoordinator extends ServerRunnable
 {
@@ -88,8 +85,8 @@ public class CliCoordinator extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.manager.segments", DatabaseSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
 
-            binder.bind(RedirectServlet.class).in(LazySingleton.class);
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
+            binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
 
             binder.bind(DatabaseSegmentManager.class)
                   .toProvider(DatabaseSegmentManagerProvider.class)
@@ -101,15 +98,12 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
 
-            binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
-
             binder.bind(DruidCoordinator.class);
 
             LifecycleModule.register(binder, DruidCoordinator.class);
-            DiscoveryModule.register(binder, Self.class);
 
             binder.bind(JettyServerInitializer.class).toInstance(new CoordinatorJettyServerInitializer());
-            Jerseys.addResource(binder, BackwardsCompatiableInfoResource.class);
+            Jerseys.addResource(binder, BackwardsCompatibleInfoResource.class);
             Jerseys.addResource(binder, InfoResource.class);
             Jerseys.addResource(binder, CoordinatorResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);

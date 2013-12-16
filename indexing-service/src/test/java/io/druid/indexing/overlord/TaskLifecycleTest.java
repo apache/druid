@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -53,6 +54,7 @@ import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
 import io.druid.indexing.common.task.KillTask;
@@ -74,7 +76,9 @@ import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -115,8 +119,15 @@ public class TaskLifecycleTest
 
     tmp = Files.createTempDir();
 
-    final TaskQueueConfig tqc = new DefaultObjectMapper().readValue("{\"startDelay\":\"PT0S\"}", TaskQueueConfig.class);
-    ts = new HeapMemoryTaskStorage();
+    final TaskQueueConfig tqc = new DefaultObjectMapper().readValue(
+        "{\"startDelay\":\"PT0S\", \"restartDelay\":\"PT1S\"}",
+        TaskQueueConfig.class
+    );
+    ts = new HeapMemoryTaskStorage(
+        new TaskStorageConfig()
+        {
+        }
+    );
     tsqa = new TaskStorageQueryAdapter(ts);
     tl = new TaskLockbox(ts);
     mdc = newMockMDC();
@@ -290,6 +301,34 @@ public class TaskLifecycleTest
   }
 
   @Test
+  public void testNoopTask() throws Exception
+  {
+    final Task noopTask = new DefaultObjectMapper().readValue(
+        "{\"type\":\"noop\", \"runTime\":\"100\"}\"",
+        Task.class
+    );
+    final TaskStatus status = runTask(noopTask);
+
+    Assert.assertEquals("statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
+    Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
+    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+  }
+
+  @Test
+  public void testNeverReadyTask() throws Exception
+  {
+    final Task neverReadyTask = new DefaultObjectMapper().readValue(
+        "{\"type\":\"noop\", \"isReadyResult\":\"exception\"}\"",
+        Task.class
+    );
+    final TaskStatus status = runTask(neverReadyTask);
+
+    Assert.assertEquals("statusCode", TaskStatus.Status.FAILED, status.getStatusCode());
+    Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
+    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+  }
+
+  @Test
   public void testSimple() throws Exception
   {
     final Task task = new AbstractFixedIntervalTask(
@@ -400,28 +439,41 @@ public class TaskLifecycleTest
     Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
   }
 
-  private TaskStatus runTask(Task task)
+  private TaskStatus runTask(final Task task) throws Exception
   {
+    final Task dummyTask = new DefaultObjectMapper().readValue(
+        "{\"type\":\"noop\", \"isReadyResult\":\"exception\"}\"",
+        Task.class
+    );
     final long startTime = System.currentTimeMillis();
 
+    Preconditions.checkArgument(!task.getId().equals(dummyTask.getId()));
+
+    tq.add(dummyTask);
     tq.add(task);
 
-    TaskStatus status;
+    TaskStatus retVal = null;
 
-    try {
-      while ((status = tsqa.getStatus(task.getId()).get()).isRunnable()) {
-        if (System.currentTimeMillis() > startTime + 10 * 1000) {
-          throw new ISE("Where did the task go?!: %s", task.getId());
+    for (final String taskId : ImmutableList.of(dummyTask.getId(), task.getId())) {
+      try {
+        TaskStatus status;
+        while ((status = tsqa.getStatus(taskId).get()).isRunnable()) {
+          if (System.currentTimeMillis() > startTime + 10 * 1000) {
+            throw new ISE("Where did the task go?!: %s", task.getId());
+          }
+
+          Thread.sleep(100);
         }
-
-        Thread.sleep(100);
+        if (taskId.equals(task.getId())) {
+          retVal = status;
+        }
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
       }
     }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
 
-    return status;
+    return retVal;
   }
 
   private static class MockIndexerDBCoordinator extends IndexerDBCoordinator

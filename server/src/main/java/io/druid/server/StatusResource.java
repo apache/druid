@@ -20,16 +20,11 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.Injector;
-import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
-import io.druid.server.initialization.ExtensionsConfig;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  */
@@ -47,52 +42,20 @@ public class StatusResource
   {
     return new Status(
         Initialization.class.getPackage().getImplementationVersion(),
-        getExtensionVersions(),
         new Memory(Runtime.getRuntime())
     );
-  }
-
-  /**
-   * Load the unique extensions and return their implementation-versions
-   *
-   * @return map of extensions loaded with their respective implementation versions.
-   */
-  private static List<ModuleVersion> getExtensionVersions()
-  {
-    final Injector injector = Initialization.makeStartupInjector();
-    final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
-    final List<DruidModule> druidModules = Initialization.getFromExtensions(config, DruidModule.class);
-
-    List<ModuleVersion> moduleVersions = new ArrayList<>();
-    for (DruidModule module : druidModules) {
-
-      String artifact = module.getClass().getPackage().getImplementationTitle();
-      String version = module.getClass().getPackage().getImplementationVersion();
-
-      ModuleVersion moduleVersion;
-      if (artifact != null) {
-        moduleVersion = new ModuleVersion(module.getClass().getCanonicalName(), artifact, version);
-      } else {
-        moduleVersion = new ModuleVersion(module.getClass().getCanonicalName());
-      }
-
-      moduleVersions.add(moduleVersion);
-    }
-    return moduleVersions;
   }
 
   public static class Status
   {
     final String version;
-    final List<ModuleVersion> modules;
     final Memory memory;
 
     public Status(
-        String version, List<ModuleVersion> modules, Memory memory
+        String version, Memory memory
     )
     {
       this.version = version;
-      this.modules = modules;
       this.memory = memory;
     }
 
@@ -100,12 +63,6 @@ public class StatusResource
     public String getVersion()
     {
       return version;
-    }
-
-    @JsonProperty
-    public List<ModuleVersion> getModules()
-    {
-      return modules;
     }
 
     @JsonProperty
@@ -117,20 +74,8 @@ public class StatusResource
     @Override
     public String toString()
     {
-      final String NL = "\n";
-      StringBuilder output = new StringBuilder();
-      output.append(String.format("Druid version - %s", version)).append(NL).append(NL);
-
-      if (modules.size() > 0) {
-        output.append("Registered Druid Modules").append(NL);
-      } else {
-        output.append("No Druid Modules loaded !");
-      }
-
-      for (ModuleVersion moduleVersion : modules) {
-        output.append(moduleVersion).append(NL);
-      }
-      return output.toString();
+      final String NL = System.getProperty("line.separator");
+      return String.format("Druid version - %s", version) + NL;
     }
   }
 
