@@ -29,6 +29,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -39,35 +40,7 @@ public class StatusResource
   @Produces("application/json")
   public Status doGet()
   {
-    return getStatus();
-  }
-
-  public static Status getStatus()
-  {
-    return new Status(
-        Initialization.class.getPackage().getImplementationVersion(),
-        getExtensionVersions(),
-        new Memory(Runtime.getRuntime())
-    );
-  }
-
-  /**
-   * Load the unique extensions and return their implementation-versions
-   *
-   * @return map of extensions loaded with their respective implementation versions.
-   */
-  private static List<ModuleVersion> getExtensionVersions()
-  {
-    final List<DruidModule> druidModules = Initialization.getLoadedDruidModules();
-
-    List<ModuleVersion> moduleVersions = new ArrayList<>();
-    for (DruidModule module : druidModules) {
-      String artifact = module.getClass().getPackage().getImplementationTitle();
-      String version = module.getClass().getPackage().getImplementationVersion();
-
-      moduleVersions.add(new ModuleVersion(module.getClass().getCanonicalName(), artifact, version));
-    }
-    return moduleVersions;
+    return new Status();
   }
 
   public static class Status
@@ -76,13 +49,11 @@ public class StatusResource
     final List<ModuleVersion> modules;
     final Memory memory;
 
-    public Status(
-        String version, List<ModuleVersion> modules, Memory memory
-    )
+    public Status()
     {
-      this.version = version;
-      this.modules = modules;
-      this.memory = memory;
+      this.version = Status.class.getPackage().getImplementationVersion();
+      this.modules = getExtensionVersions();
+      this.memory = new Memory(Runtime.getRuntime());
     }
 
     @JsonProperty
@@ -121,6 +92,25 @@ public class StatusResource
       }
       return output.toString();
     }
+
+    /**
+     * Load the unique extensions and return their implementation-versions
+     *
+     * @return map of extensions loaded with their respective implementation versions.
+     */
+    private List<ModuleVersion> getExtensionVersions()
+    {
+      final Set<DruidModule> druidModules = Initialization.getLoadedModules(DruidModule.class);
+      List<ModuleVersion> moduleVersions = new ArrayList<>();
+      for (DruidModule module : druidModules) {
+        String artifact = module.getClass().getPackage().getImplementationTitle();
+        String version = module.getClass().getPackage().getImplementationVersion();
+
+        moduleVersions.add(new ModuleVersion(module.getClass().getCanonicalName(), artifact, version));
+      }
+      return moduleVersions;
+    }
+
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)

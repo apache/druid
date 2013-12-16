@@ -84,6 +84,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -101,21 +102,23 @@ public class Initialization
       "io.druid",
       "com.metamx.druid"
   );
-  private static List loadedDruidModules = Lists.newArrayList();
+  private final static Map<Class, Set> extensionsMap = Maps.<Class, Set>newHashMap();
 
   /**
-  * @return List of {@link DruidModule}, once loaded.
-  */
-  public static List getLoadedDruidModules()
+   * @param clazz Module class
+   * @param <T>
+   * @return Returns the set of modules loaded.
+   */
+  public static<T> Set<T> getLoadedModules(Class<T> clazz)
   {
-    return loadedDruidModules;
+    return extensionsMap.get(clazz);
   }
   
 
-  public synchronized static <T> List<T> getFromExtensions(ExtensionsConfig config, Class<T> clazz)
+  public synchronized static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> clazz)
   {
     final TeslaAether aether = getAetherClient(config);
-    List<T> retVal = Lists.newArrayList();
+    Set<T> retVal = Sets.newHashSet();
 
     if (config.searchCurrentClassloader()) {
       for (T module : ServiceLoader.load(clazz, Initialization.class.getClassLoader())) {
@@ -141,9 +144,8 @@ public class Initialization
       }
     }
 
-    if (clazz.equals(DruidModule.class)){
-      loadedDruidModules.addAll(retVal);
-    }
+    // update the map with currently loaded modules
+    extensionsMap.put(clazz, retVal);
 
     return retVal;
   }
