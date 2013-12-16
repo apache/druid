@@ -58,6 +58,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorCleanup;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;

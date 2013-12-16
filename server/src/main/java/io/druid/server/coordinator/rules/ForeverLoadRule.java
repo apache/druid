@@ -24,45 +24,39 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
+import java.util.Map;
+
 /**
  */
 public class ForeverLoadRule extends LoadRule
 {
-  private final Integer replicants;
-  private final String tier;
+  private final Map<String, Integer> tieredReplicants;
 
   @JsonCreator
   public ForeverLoadRule(
-      @JsonProperty("replicants") Integer replicants,
-      @JsonProperty("tier") String tier
+      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
-    this.replicants = (replicants == null) ? 2 : replicants;
-    this.tier = tier;
-  }
-
-  @Override
-  public int getReplicants()
-  {
-    return replicants;
-  }
-
-  @Override
-  public int getReplicants(String tier)
-  {
-    return (this.tier.equalsIgnoreCase(tier)) ? replicants : 0;
-  }
-
-  @Override
-  public String getTier()
-  {
-    return null;
+    this.tieredReplicants = tieredReplicants;
   }
 
   @Override
   public String getType()
   {
     return "loadForever";
+  }
+
+  @Override
+  @JsonProperty
+  public Map<String, Integer> getTieredReplicants()
+  {
+    return tieredReplicants;
+  }
+
+  @Override
+  public int getNumReplicants(String tier)
+  {
+    return tieredReplicants.get(tier);
   }
 
   @Override

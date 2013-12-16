@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -36,11 +37,9 @@ import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
-import io.druid.server.coordinator.rules.PeriodLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.joda.time.Period;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
@@ -89,8 +88,10 @@ public class DatabaseRuleManager
 
               final List<Rule> defaultRules = Arrays.<Rule>asList(
                   new ForeverLoadRule(
-                      DruidServer.DEFAULT_NUM_REPLICANTS,
-                      DruidServer.DEFAULT_TIER
+                      ImmutableMap.<String, Integer>of(
+                          DruidServer.DEFAULT_TIER,
+                          DruidServer.DEFAULT_NUM_REPLICANTS
+                      )
                   )
               );
               final String version = new DateTime().toString();

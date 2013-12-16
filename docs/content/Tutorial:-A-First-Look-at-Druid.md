@@ -205,7 +205,7 @@ You are probably wondering, what are these [Granularities](Granularities.html) a
 To issue the query and get some results, run the following in your command line:
 
 ```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  ````timeseries_query.body
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  @timeseries_query.body
 ```
 
 Once again, you should get a JSON blob of text back with your results, that looks something like this:

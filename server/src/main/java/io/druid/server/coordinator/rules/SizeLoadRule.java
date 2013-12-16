@@ -25,6 +25,8 @@ import com.google.common.collect.Range;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
+import java.util.Map;
+
 /**
  */
 public class SizeLoadRule extends LoadRule
@@ -51,41 +53,21 @@ public class SizeLoadRule extends LoadRule
   }
 
   @Override
-  @JsonProperty
-  public int getReplicants()
+  public Map<String, Integer> getTieredReplicants()
   {
-    return replicants;
+    return null;
   }
 
   @Override
-  public int getReplicants(String tier)
+  public int getNumReplicants(String tier)
   {
-    return (this.tier.equalsIgnoreCase(tier)) ? replicants : 0;
-  }
-
-  @Override
-  @JsonProperty
-  public String getTier()
-  {
-    return tier;
+    return 0;
   }
 
   @Override
   public String getType()
   {
     return "loadBySize";
-  }
-
-  @JsonProperty
-  public long getLow()
-  {
-    return low;
-  }
-
-  @JsonProperty
-  public long getHigh()
-  {
-    return high;
   }
 
   @Override
