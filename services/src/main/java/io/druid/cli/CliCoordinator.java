@@ -28,7 +28,6 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseRuleManagerConfig;
 import io.druid.db.DatabaseRuleManagerProvider;
@@ -41,7 +40,6 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Self;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
@@ -106,7 +104,6 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(DruidCoordinator.class);
 
             LifecycleModule.register(binder, DruidCoordinator.class);
-            DiscoveryModule.register(binder, Self.class);
 
             binder.bind(JettyServerInitializer.class).toInstance(new CoordinatorJettyServerInitializer());
             Jerseys.addResource(binder, BackwardsCompatiableInfoResource.class);
