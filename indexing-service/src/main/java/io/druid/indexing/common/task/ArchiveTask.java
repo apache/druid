@@ -29,7 +29,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUnusedAction;
-import io.druid.indexing.common.actions.SegmentMoveAction;
+import io.druid.indexing.common.actions.SegmentMetadataUpdateAction;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -96,7 +96,7 @@ public class ArchiveTask extends AbstractFixedIntervalTask
 
     // Update metadata for moved segments
     toolbox.getTaskActionClient().submit(
-        new SegmentMoveAction(
+        new SegmentMetadataUpdateAction(
             ImmutableSet.copyOf(archivedSegments)
         )
     );

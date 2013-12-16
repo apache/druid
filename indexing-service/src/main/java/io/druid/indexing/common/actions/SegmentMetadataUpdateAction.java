@@ -13,13 +13,13 @@ import io.druid.timeline.DataSegment;
 import java.io.IOException;
 import java.util.Set;
 
-public class SegmentMoveAction implements TaskAction<Void>
+public class SegmentMetadataUpdateAction implements TaskAction<Void>
 {
   @JsonIgnore
   private final Set<DataSegment> segments;
 
   @JsonCreator
-  public SegmentMoveAction(
+  public SegmentMetadataUpdateAction(
       @JsonProperty("segments") Set<DataSegment> segments
   )
   {
@@ -70,7 +70,7 @@ public class SegmentMoveAction implements TaskAction<Void>
   @Override
   public String toString()
   {
-    return "SegmentMoveAction{" +
+    return "SegmentMetadataUpdateAction{" +
            "segments=" + segments +
            '}';
   }
