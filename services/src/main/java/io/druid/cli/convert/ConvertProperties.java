@@ -60,18 +60,19 @@ public class ConvertProperties implements Runnable
       new Rename("druid.database.password", "druid.db.connector.password"),
       new Rename("druid.database.poll.duration", "druid.manager.segment.pollDuration"),
       new Rename("druid.database.password", "druid.db.connector.password"),
+      new Rename("druid.database.validation", "druid.db.connector.useValidationQuery"),
       new Rename("com.metamx.emitter", "druid.emitter"),
       new Rename("com.metamx.emitter.logging", "druid.emitter.logging"),
       new Rename("com.metamx.emitter.logging.level", "druid.emitter.logging.logLevel"),
       new Rename("com.metamx.emitter.http", "druid.emitter.http"),
       new Rename("com.metamx.emitter.http.url", "druid.emitter.http.recipientBaseUrl"),
-      new Rename("com.metamx.emitter.period", "druid.emitter.emissionPeriod"),
-      new Rename("com.metamx.druid.emitter.period", "druid.emitter.emissionPeriod"),
-      new Rename("com.metamx.metrics.emitter.period", "druid.emitter.emissionPeriod"),
+      new Rename("com.metamx.emitter.period", "druid.monitoring.emissionPeriod"),
+      new Rename("com.metamx.druid.emitter.period", "druid.monitoring.emissionPeriod"),
+      new Rename("com.metamx.metrics.emitter.period", "druid.monitoring.emissionPeriod"),
       new PrefixRename("com.metamx.emitter", "druid.emitter"),
       new PrefixRename("com.metamx.druid.emitter", "druid.emitter"),
       new IndexCacheConverter(),
-      new Rename("druid.paths.segmentInfoCache", "druid.segmentCache.infoPath"),
+      new Rename("druid.paths.segmentInfoCache", "druid.segmentCache.infoDir"),
       new Rename("com.metamx.aws.accessKey", "druid.s3.accessKey"),
       new Rename("com.metamx.aws.secretKey", "druid.s3.secretKey"),
       new Rename("druid.bard.maxIntervalDuration", "druid.query.chunkDuration"),
@@ -79,6 +80,7 @@ public class ConvertProperties implements Runnable
       new Rename("druid.client.http.connections", "druid.broker.http.numConnections"),
       new Rename("com.metamx.query.groupBy.maxResults", "druid.query.groupBy.maxResults"),
       new Rename("com.metamx.query.search.maxSearchLimit", "druid.query.search.maxSearchLimit"),
+      new Rename("druid.indexer.runner", "druid.indexer.runner.type"),
       new Rename("druid.indexer.storage", "druid.indexer.storage.type"),
       new Rename("druid.indexer.threads", "druid.indexer.runner.forks"),
       new Rename("druid.indexer.taskDir", "druid.indexer.runner.taskDir"),
@@ -176,7 +178,7 @@ public class ConvertProperties implements Runnable
     }
 
     updatedProps.setProperty(
-        "druid.monitoring.monitors", "[\"io.druid.server.metrics.ServerMonitor\", \"com.metamx.metrics.SysMonitor\"]"
+        "druid.monitoring.monitors", "[\"com.metamx.metrics.SysMonitor\"]"
     );
 
     BufferedWriter out = null;

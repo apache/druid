@@ -28,6 +28,7 @@ import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.timeline.DataSegment;
@@ -42,18 +43,24 @@ public class RealtimeishTask extends AbstractTask
 {
   public RealtimeishTask()
   {
-    super("rt1", "rt", new TaskResource("rt1", 1), "foo", null);
+    super("rt1", "rt", new TaskResource("rt1", 1), "foo");
   }
 
-  public RealtimeishTask(String id, String groupId, TaskResource taskResource, String dataSource, Interval interval)
+  public RealtimeishTask(String id, String groupId, TaskResource taskResource, String dataSource)
   {
-    super(id, groupId, taskResource, dataSource, interval);
+    super(id, groupId, taskResource, dataSource);
   }
 
   @Override
   public String getType()
   {
     return "realtime_test";
+  }
+
+  @Override
+  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  {
+    return true;
   }
 
   @Override

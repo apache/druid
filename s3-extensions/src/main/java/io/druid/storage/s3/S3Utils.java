@@ -19,15 +19,14 @@
 
 package io.druid.storage.s3;
 
-import com.google.common.base.Throwables;
-import com.metamx.common.logger.Logger;
+import com.google.common.base.Predicate;
+import com.metamx.common.RetryUtils;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 
 import java.io.IOException;
-import java.util.Random;
 import java.util.concurrent.Callable;
 
 /**
@@ -35,8 +34,6 @@ import java.util.concurrent.Callable;
  */
 public class S3Utils
 {
-  private static final Logger log = new Logger(S3Utils.class);
-
   public static void closeStreamsQuietly(S3Object s3Obj)
   {
     if (s3Obj == null) {
@@ -55,71 +52,47 @@ public class S3Utils
    * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
    * found, etc) are not retried.
    */
-  public static <T> T retryS3Operation(Callable<T> f) throws IOException, S3ServiceException, InterruptedException
+  public static <T> T retryS3Operation(Callable<T> f) throws Exception
   {
-    int nTry = 0;
-    final int maxTries = 3;
-    while (true) {
-      try {
-        nTry++;
-        return f.call();
-      }
-      catch (IOException e) {
-        if (nTry <= maxTries) {
-          awaitNextRetry(e, nTry);
+    final Predicate<Throwable> shouldRetry = new Predicate<Throwable>()
+    {
+      @Override
+      public boolean apply(Throwable e)
+      {
+        if (e instanceof IOException) {
+          return true;
+        } else if (e instanceof S3ServiceException) {
+          final boolean isIOException = e.getCause() instanceof IOException;
+          final boolean isTimeout = "RequestTimeout".equals(((S3ServiceException) e).getS3ErrorCode());
+          return isIOException || isTimeout;
         } else {
-          throw e;
+          return false;
         }
       }
-      catch (S3ServiceException e) {
-        if (nTry <= maxTries &&
-            (e.getCause() instanceof IOException ||
-             (e.getS3ErrorCode() != null && e.getS3ErrorCode().equals("RequestTimeout")))) {
-          awaitNextRetry(e, nTry);
-        } else {
-          throw e;
-        }
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-    }
-  }
-
-  private static void awaitNextRetry(Exception e, int nTry) throws InterruptedException
-  {
-    final long baseSleepMillis = 1000;
-    final double fuzziness = 0.2;
-    final long sleepMillis = Math.max(
-        baseSleepMillis,
-        (long) (baseSleepMillis * Math.pow(2, nTry) *
-                (1 + new Random().nextGaussian() * fuzziness))
-    );
-    log.info(e, "S3 fail on try %d, retrying in %,dms.", nTry, sleepMillis);
-    Thread.sleep(sleepMillis);
+    };
+    final int maxTries = 10;
+    return RetryUtils.retry(f, shouldRetry, maxTries);
   }
 
   public static boolean isObjectInBucket(RestS3Service s3Client, String bucketName, String objectKey)
       throws S3ServiceException
   {
-      try {
-          s3Client.getObjectDetails(new S3Bucket(bucketName), objectKey);
+    try {
+      s3Client.getObjectDetails(new S3Bucket(bucketName), objectKey);
+    }
+    catch (S3ServiceException e) {
+      if (404 == e.getResponseCode()
+          || "NoSuchKey".equals(e.getS3ErrorCode())
+          || "NoSuchBucket".equals(e.getS3ErrorCode())) {
+        return false;
       }
-      catch (S3ServiceException e) {
-          if (404 == e.getResponseCode()
-              || "NoSuchKey".equals(e.getS3ErrorCode())
-              || "NoSuchBucket".equals(e.getS3ErrorCode()))
-          {
-              return false;
-          }
-          if ("AccessDenied".equals(e.getS3ErrorCode()))
-          {
-              // Object is inaccessible to current user, but does exist.
-              return true;
-          }
-          // Something else has gone wrong
-          throw e;
+      if ("AccessDenied".equals(e.getS3ErrorCode())) {
+        // Object is inaccessible to current user, but does exist.
+        return true;
       }
+      // Something else has gone wrong
+      throw e;
+    }
     return true;
   }
 

@@ -19,6 +19,7 @@
 
 package io.druid.server.initialization;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -50,8 +51,15 @@ public class HttpEmitterModule implements Module
     binder.bind(SSLContext.class).toProvider(Providers.<SSLContext>of(null)).in(LazySingleton.class);
   }
 
-  @Provides @ManageLifecycle @Named("http")
-  public Emitter getEmitter(Supplier<HttpEmitterConfig> config, @Nullable SSLContext sslContext, Lifecycle lifecycle)
+  @Provides
+  @ManageLifecycle
+  @Named("http")
+  public Emitter getEmitter(
+      Supplier<HttpEmitterConfig> config,
+      @Nullable SSLContext sslContext,
+      Lifecycle lifecycle,
+      ObjectMapper jsonMapper
+  )
   {
     final HttpClientConfig.Builder builder = HttpClientConfig
         .builder()
@@ -62,6 +70,6 @@ public class HttpEmitterModule implements Module
       builder.withSslContext(sslContext);
     }
 
-    return new HttpPostEmitter(config.get(), HttpClientInit.createClient(builder.build(), lifecycle));
+    return new HttpPostEmitter(config.get(), HttpClientInit.createClient(builder.build(), lifecycle), jsonMapper);
   }
 }

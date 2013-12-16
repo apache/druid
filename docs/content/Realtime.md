@@ -27,6 +27,9 @@ druid.host=localhost
 druid.service=realtime
 druid.port=8083
 
+druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.36"]
+
+
 druid.zk.service.host=localhost
 
 druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
@@ -46,7 +49,7 @@ The realtime module uses several of the default modules in [Configuration](Confi
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.realtime.specFile`|The file with realtime specifications in it.|none|
-|`druid.publish.type`|Choices:noop, db. After a real-time node completes building a segment after the window period, what does it do with it? For true handoff to occur, this should be set to "db".|noop|
+|`druid.publish.type`|Choices:noop, db. After a real-time node completes building a segment after the window period, what does it do with it? For true handoff to occur, this should be set to "db".|db|
 
 ### Realtime "specFile"
 
@@ -175,7 +178,7 @@ Segment Propagation
 
 The segment propagation diagram for real-time data ingestion can be seen below:
 
-![Segment Propagation](https://raw.github.com/metamx/druid/druid-0.5.4/doc/segment_propagation.png "Segment Propagation")
+![Segment Propagation](../img/segmentPropagation.png "Segment Propagation")
 
 Requirements
 ------------
@@ -187,8 +190,8 @@ Extending the code
 
 Realtime integration is intended to be extended in two ways:
 
-1.  Connect to data streams from varied systems ([Firehose](https://github.com/metamx/druid/blob/druid-0.6.0/realtime/src/main/java/com/metamx/druid/realtime/firehose/FirehoseFactory.java))
-2.  Adjust the publishing strategy to match your needs ([Plumber](https://github.com/metamx/druid/blob/druid-0.6.0/realtime/src/main/java/com/metamx/druid/realtime/plumber/PlumberSchool.java))
+1.  Connect to data streams from varied systems ([Firehose](https://github.com/druid-io/druid-api/blob/master/src/main/java/io/druid/data/input/FirehoseFactory.java))
+2.  Adjust the publishing strategy to match your needs ([Plumber](https://github.com/metamx/druid/blob/master/server/src/main/java/io/druid/segment/realtime/plumber/PlumberSchool.java))
 
 The expectations are that the former will be very common and something that users of Druid will do on a fairly regular basis. Most users will probably never have to deal with the latter form of customization. Indeed, we hope that all potential use cases can be packaged up as part of Druid proper without requiring proprietary customization.
 

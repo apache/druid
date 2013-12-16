@@ -19,15 +19,20 @@
 
 package io.druid.indexing.overlord.http;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.io.InputSupplier;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
@@ -40,6 +45,7 @@ import io.druid.indexing.overlord.scaling.ResourceManagementScheduler;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -52,6 +58,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -62,27 +70,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class OverlordResource
 {
   private static final Logger log = new Logger(OverlordResource.class);
-
-  private static Function<TaskRunnerWorkItem, Map<String, Object>> simplifyTaskFn =
-      new Function<TaskRunnerWorkItem, Map<String, Object>>()
-      {
-        @Override
-        public Map<String, Object> apply(TaskRunnerWorkItem input)
-        {
-          return new ImmutableMap.Builder<String, Object>()
-              .put("id", input.getTask().getId())
-              .put("dataSource", input.getTask().getDataSource())
-              .put("interval",
-                   !input.getTask().getImplicitLockInterval().isPresent()
-                   ? ""
-                   : input.getTask().getImplicitLockInterval().get()
-              )
-              .put("nodeType", input.getTask().getNodeType() == null ? "" : input.getTask().getNodeType())
-              .put("createdTime", input.getCreatedTime())
-              .put("queueInsertionTime", input.getQueueInsertionTime())
-              .build();
-        }
-      };
 
   private final TaskMaster taskMaster;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
@@ -147,11 +134,19 @@ public class OverlordResource
   }
 
   @GET
+  @Path("/task/{taskid}")
+  @Produces("application/json")
+  public Response getTaskPayload(@PathParam("taskid") String taskid)
+  {
+    return optionalTaskResponse(taskid, "payload", taskStorageQueryAdapter.getTask(taskid));
+  }
+
+  @GET
   @Path("/task/{taskid}/status")
   @Produces("application/json")
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
-    return optionalTaskResponse(taskid, "status", taskStorageQueryAdapter.getSameGroupMergedStatus(taskid));
+    return optionalTaskResponse(taskid, "status", taskStorageQueryAdapter.getStatus(taskid));
   }
 
   @GET
@@ -159,7 +154,7 @@ public class OverlordResource
   @Produces("application/json")
   public Response getTaskSegments(@PathParam("taskid") String taskid)
   {
-    final Set<DataSegment> segments = taskStorageQueryAdapter.getSameGroupNewSegments(taskid);
+    final Set<DataSegment> segments = taskStorageQueryAdapter.getInsertedSegments(taskid);
     return Response.ok().entity(segments).build();
   }
 
@@ -169,13 +164,13 @@ public class OverlordResource
   public Response doShutdown(@PathParam("taskid") final String taskid)
   {
     return asLeaderWith(
-        taskMaster.getTaskRunner(),
-        new Function<TaskRunner, Response>()
+        taskMaster.getTaskQueue(),
+        new Function<TaskQueue, Response>()
         {
           @Override
-          public Response apply(TaskRunner taskRunner)
+          public Response apply(TaskQueue taskQueue)
           {
-            taskRunner.shutdown(taskid);
+            taskQueue.shutdown(taskid);
             return Response.ok(ImmutableMap.of("task", taskid)).build();
           }
         }
@@ -225,7 +220,7 @@ public class OverlordResource
             final Map<String, Object> retMap;
 
             // It would be great to verify that this worker is actually supposed to be running the task before
-            // actually doing the task.  Some ideas for how that could be done would be using some sort of attempt_id
+            // actually doing the action.  Some ideas for how that could be done would be using some sort of attempt_id
             // or token that gets passed around.
 
             try {
@@ -245,39 +240,64 @@ public class OverlordResource
   }
 
   @GET
-  @Path("/pendingTasks")
+  @Path("/waitingTasks")
   @Produces("application/json")
-  public Response getPendingTasks(
-      @QueryParam("full") String full
-  )
+  public Response getWaitingTasks()
   {
-    if (full != null) {
-      return asLeaderWith(
-          taskMaster.getTaskRunner(),
-          new Function<TaskRunner, Response>()
-          {
-            @Override
-            public Response apply(TaskRunner taskRunner)
-            {
-              return Response.ok(taskRunner.getPendingTasks()).build();
-            }
-          }
-      );
-    }
-
-    return asLeaderWith(
-        taskMaster.getTaskRunner(),
-        new Function<TaskRunner, Response>()
+    return workItemsResponse(
+        new Function<TaskRunner, Collection<? extends TaskRunnerWorkItem>>()
         {
           @Override
-          public Response apply(TaskRunner taskRunner)
+          public Collection<? extends TaskRunnerWorkItem> apply(TaskRunner taskRunner)
           {
-            return Response.ok(
-                Collections2.transform(
-                    taskRunner.getPendingTasks(),
-                    simplifyTaskFn
+            // A bit roundabout, but works as a way of figuring out what tasks haven't been handed
+            // off to the runner yet:
+            final List<Task> activeTasks = taskStorageQueryAdapter.getActiveTasks();
+            final Set<String> runnersKnownTasks = Sets.newHashSet(
+                Iterables.transform(
+                    taskRunner.getKnownTasks(),
+                    new Function<TaskRunnerWorkItem, String>()
+                    {
+                      @Override
+                      public String apply(final TaskRunnerWorkItem workItem)
+                      {
+                        return workItem.getTaskId();
+                      }
+                    }
                 )
-            ).build();
+            );
+            final List<TaskRunnerWorkItem> waitingTasks = Lists.newArrayList();
+            for (final Task task : activeTasks) {
+              if (!runnersKnownTasks.contains(task.getId())) {
+                waitingTasks.add(
+                    // Would be nice to include the real created date, but the TaskStorage API doesn't yet allow it.
+                    new TaskRunnerWorkItem(
+                        task.getId(),
+                        SettableFuture.<TaskStatus>create(),
+                        new DateTime(0),
+                        new DateTime(0)
+                    )
+                );
+              }
+            }
+            return waitingTasks;
+          }
+        }
+    );
+  }
+
+  @GET
+  @Path("/pendingTasks")
+  @Produces("application/json")
+  public Response getPendingTasks()
+  {
+    return workItemsResponse(
+        new Function<TaskRunner, Collection<? extends TaskRunnerWorkItem>>()
+        {
+          @Override
+          public Collection<? extends TaskRunnerWorkItem> apply(TaskRunner taskRunner)
+          {
+            return taskRunner.getPendingTasks();
           }
         }
     );
@@ -286,40 +306,43 @@ public class OverlordResource
   @GET
   @Path("/runningTasks")
   @Produces("application/json")
-  public Response getRunningTasks(
-      @QueryParam("full") String full
-  )
+  public Response getRunningTasks()
   {
-    if (full != null) {
-      return asLeaderWith(
-          taskMaster.getTaskRunner(),
-          new Function<TaskRunner, Response>()
-          {
-            @Override
-            public Response apply(TaskRunner taskRunner)
-            {
-              return Response.ok(taskRunner.getRunningTasks()).build();
-            }
-          }
-      );
-    }
-
-    return asLeaderWith(
-        taskMaster.getTaskRunner(),
-        new Function<TaskRunner, Response>()
+    return workItemsResponse(
+        new Function<TaskRunner, Collection<? extends TaskRunnerWorkItem>>()
         {
           @Override
-          public Response apply(TaskRunner taskRunner)
+          public Collection<? extends TaskRunnerWorkItem> apply(TaskRunner taskRunner)
           {
-            return Response.ok(
-                Collections2.transform(
-                    taskRunner.getRunningTasks(),
-                    simplifyTaskFn
-                )
-            ).build();
+            return taskRunner.getRunningTasks();
           }
         }
     );
+  }
+
+  @GET
+  @Path("/completeTasks")
+  @Produces("application/json")
+  public Response getCompleteTasks()
+  {
+    final List<TaskResponseObject> completeTasks = Lists.transform(
+        taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(),
+        new Function<TaskStatus, TaskResponseObject>()
+        {
+          @Override
+          public TaskResponseObject apply(TaskStatus taskStatus)
+          {
+            // Would be nice to include the real created date, but the TaskStorage API doesn't yet allow it.
+            return new TaskResponseObject(
+                taskStatus.getId(),
+                new DateTime(0),
+                new DateTime(0),
+                Optional.of(taskStatus)
+            );
+          }
+        }
+    );
+    return Response.ok(completeTasks).build();
   }
 
   @GET
@@ -345,17 +368,13 @@ public class OverlordResource
   @Produces("application/json")
   public Response getScalingState()
   {
-    return asLeaderWith(
-        taskMaster.getResourceManagementScheduler(),
-        new Function<ResourceManagementScheduler, Response>()
-        {
-          @Override
-          public Response apply(ResourceManagementScheduler resourceManagementScheduler)
-          {
-            return Response.ok(resourceManagementScheduler.getStats()).build();
-          }
-        }
-    );
+    // Don't use asLeaderWith, since we want to return 200 instead of 503 when missing an autoscaler.
+    final Optional<ResourceManagementScheduler> rms = taskMaster.getResourceManagementScheduler();
+    if (rms.isPresent()) {
+      return Response.ok(rms.get().getStats()).build();
+    } else {
+      return Response.ok().build();
+    }
   }
 
   @GET
@@ -380,7 +399,39 @@ public class OverlordResource
     }
   }
 
-  public <T> Response optionalTaskResponse(String taskid, String objectType, Optional<T> x)
+  private Response workItemsResponse(final Function<TaskRunner, Collection<? extends TaskRunnerWorkItem>> fn)
+  {
+    return asLeaderWith(
+        taskMaster.getTaskRunner(),
+        new Function<TaskRunner, Response>()
+        {
+          @Override
+          public Response apply(TaskRunner taskRunner)
+          {
+            return Response.ok(
+                Lists.transform(
+                    Lists.newArrayList(fn.apply(taskRunner)),
+                    new Function<TaskRunnerWorkItem, TaskResponseObject>()
+                    {
+                      @Override
+                      public TaskResponseObject apply(TaskRunnerWorkItem workItem)
+                      {
+                        return new TaskResponseObject(
+                            workItem.getTaskId(),
+                            workItem.getCreatedTime(),
+                            workItem.getQueueInsertionTime(),
+                            Optional.<TaskStatus>absent()
+                        );
+                      }
+                    }
+                )
+            ).build();
+          }
+        }
+    );
+  }
+
+  private <T> Response optionalTaskResponse(String taskid, String objectType, Optional<T> x)
   {
     final Map<String, Object> results = Maps.newHashMap();
     results.put("task", taskid);
@@ -392,13 +443,71 @@ public class OverlordResource
     }
   }
 
-  public <T> Response asLeaderWith(Optional<T> x, Function<T, Response> f)
+  private <T> Response asLeaderWith(Optional<T> x, Function<T, Response> f)
   {
     if (x.isPresent()) {
       return f.apply(x.get());
     } else {
       // Encourage client to try again soon, when we'll likely have a redirect set up
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+    }
+  }
+
+  private static class TaskResponseObject
+  {
+    private final String id;
+    private final DateTime createdTime;
+    private final DateTime queueInsertionTime;
+    private final Optional<TaskStatus> status;
+
+    private TaskResponseObject(
+        String id,
+        DateTime createdTime,
+        DateTime queueInsertionTime,
+        Optional<TaskStatus> status
+    )
+    {
+      this.id = id;
+      this.createdTime = createdTime;
+      this.queueInsertionTime = queueInsertionTime;
+      this.status = status;
+    }
+
+    public String getId()
+    {
+      return id;
+    }
+
+    public DateTime getCreatedTime()
+    {
+      return createdTime;
+    }
+
+    public DateTime getQueueInsertionTime()
+    {
+      return queueInsertionTime;
+    }
+
+    public Optional<TaskStatus> getStatus()
+    {
+      return status;
+    }
+
+    @JsonValue
+    public Map<String, Object> toJson()
+    {
+      final Map<String, Object> data = Maps.newLinkedHashMap();
+      data.put("id", id);
+      if (createdTime.getMillis() > 0) {
+        data.put("createdTime", createdTime);
+      }
+      if (queueInsertionTime.getMillis() > 0) {
+        data.put("queueInsertionTime", queueInsertionTime);
+      }
+      if (status.isPresent()) {
+        data.put("statusCode", status.get().getStatusCode().toString());
+      }
+      return data;
     }
   }
 }

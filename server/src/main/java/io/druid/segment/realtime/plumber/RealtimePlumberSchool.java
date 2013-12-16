@@ -98,6 +98,8 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final IndexGranularity segmentGranularity;
   private final Object handoffCondition = new Object();
 
+  private volatile boolean shuttingDown = false;
+
   @JacksonInject
   @NotNull
   private volatile ServiceEmitter emitter;
@@ -410,14 +412,16 @@ public class RealtimePlumberSchool implements PlumberSchool
                   log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
                      .addData("interval", interval)
                      .emit();
+                  if (shuttingDown) {
+                    // We're trying to shut down, and this segment failed to push. Let's just get rid of it.
+                    abandonSegment(truncatedTime, sink);
+                  }
                 }
 
                 if (mergedFile != null) {
                   try {
-                    if (mergedFile != null) {
-                      log.info("Deleting Index File[%s]", mergedFile);
-                      FileUtils.deleteDirectory(mergedFile);
-                    }
+                    log.info("Deleting Index File[%s]", mergedFile);
+                    FileUtils.deleteDirectory(mergedFile);
                   }
                   catch (IOException e) {
                     log.warn(e, "Error deleting directory[%s]", mergedFile);
@@ -432,6 +436,8 @@ public class RealtimePlumberSchool implements PlumberSchool
       public void finishJob()
       {
         log.info("Shutting down...");
+
+        shuttingDown = true;
 
         for (final Map.Entry<Long, Sink> entry : sinks.entrySet()) {
           persistAndMerge(entry.getKey(), entry.getValue());
@@ -613,26 +619,7 @@ public class RealtimePlumberSchool implements PlumberSchool
                       final String sinkVersion = sink.getSegment().getVersion();
                       if (segmentVersion.compareTo(sinkVersion) >= 0) {
                         log.info("Segment version[%s] >= sink version[%s]", segmentVersion, sinkVersion);
-                        try {
-                          segmentAnnouncer.unannounceSegment(sink.getSegment());
-                          FileUtils.deleteDirectory(computePersistDir(schema, sink.getInterval()));
-                          log.info("Removing sinkKey %d for segment %s", sinkKey, sink.getSegment().getIdentifier());
-                          sinks.remove(sinkKey);
-                          sinkTimeline.remove(
-                              sink.getInterval(),
-                              sink.getVersion(),
-                              new SingleElementPartitionChunk<Sink>(sink)
-                          );
-
-                          synchronized (handoffCondition) {
-                            handoffCondition.notifyAll();
-                          }
-                        }
-                        catch (IOException e) {
-                          log.makeAlert(e, "Unable to delete old segment for dataSource[%s].", schema.getDataSource())
-                             .addData("interval", sink.getInterval())
-                             .emit();
-                        }
+                        abandonSegment(sinkKey, sink);
                       }
                     }
                   }
@@ -705,6 +692,31 @@ public class RealtimePlumberSchool implements PlumberSchool
                   }
                 }
             );
+      }
+
+      /**
+       * Unannounces a given sink and removes all local references to it.
+       */
+      private void abandonSegment(final long truncatedTime, final Sink sink) {
+        try {
+          segmentAnnouncer.unannounceSegment(sink.getSegment());
+          FileUtils.deleteDirectory(computePersistDir(schema, sink.getInterval()));
+          log.info("Removing sinkKey %d for segment %s", truncatedTime, sink.getSegment().getIdentifier());
+          sinks.remove(truncatedTime);
+          sinkTimeline.remove(
+              sink.getInterval(),
+              sink.getVersion(),
+              new SingleElementPartitionChunk<>(sink)
+          );
+          synchronized (handoffCondition) {
+            handoffCondition.notifyAll();
+          }
+        }
+        catch (IOException e) {
+          log.makeAlert(e, "Unable to abandon old segment for dataSource[%s]", schema.getDataSource())
+             .addData("interval", sink.getInterval())
+             .emit();
+        }
       }
     };
   }
