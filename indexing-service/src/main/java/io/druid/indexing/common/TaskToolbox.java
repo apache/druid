@@ -29,7 +29,9 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -52,6 +54,8 @@ public class TaskToolbox
   private final ServiceEmitter emitter;
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
+  private final DataSegmentArchiver dataSegmentArchiver;
+  private final DataSegmentMover dataSegmentMover;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
@@ -68,6 +72,8 @@ public class TaskToolbox
       ServiceEmitter emitter,
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
+      DataSegmentMover dataSegmentMover,
+      DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
@@ -84,6 +90,8 @@ public class TaskToolbox
     this.emitter = emitter;
     this.segmentPusher = segmentPusher;
     this.dataSegmentKiller = dataSegmentKiller;
+    this.dataSegmentMover = dataSegmentMover;
+    this.dataSegmentArchiver = dataSegmentArchiver;
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
@@ -117,6 +125,16 @@ public class TaskToolbox
   public DataSegmentKiller getDataSegmentKiller()
   {
     return dataSegmentKiller;
+  }
+
+  public DataSegmentMover getDataSegmentMover()
+  {
+    return dataSegmentMover;
+  }
+
+  public DataSegmentArchiver getDataSegmentArchiver()
+  {
+    return dataSegmentArchiver;
   }
 
   public DataSegmentAnnouncer getSegmentAnnouncer()

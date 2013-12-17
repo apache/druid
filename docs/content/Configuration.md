@@ -287,6 +287,7 @@ This deep storage is used to interface with Amazon's S3.
 |`druid.storage.bucket`|S3 bucket name.|none|
 |`druid.storage.basekey`|S3 base key.|none|
 |`druid.storage.disableAcl`|Boolean flag for ACL.|false|
+|`druid.storage.archiveBucket`|S3 bucket name where segments get archived to when running the indexing service *archive task*|none|
 
 #### HDFS Deep Storage
 
