@@ -21,7 +21,6 @@ package io.druid.storage.s3;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.metamx.common.MapUtils;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
@@ -46,7 +45,7 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
   public DataSegment archive(DataSegment segment) throws SegmentLoadingException
   {
     String targetS3Bucket = config.getArchiveBucket();
-    String targetS3BaseKey = config.getArchiveBaseKey();
+    String targetS3BaseKey = config.getArchiveBasekey();
 
     return move(
         segment,
