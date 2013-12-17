@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 public class JavaScriptAggregatorTest
@@ -139,6 +140,39 @@ public class JavaScriptAggregatorTest
     Assert.assertEquals(val, agg.get(buf, position));
     Assert.assertEquals(val, agg.get(buf, position));
     Assert.assertEquals(val, agg.get(buf, position));
+  }
+
+  @Test
+  public void testAggregateMissingColumn()
+  {
+    Map<String, String> script = scriptDoubleSum;
+
+    JavaScriptAggregator agg = new JavaScriptAggregator(
+        "billy",
+        Collections.<ObjectColumnSelector>singletonList(null),
+        JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
+                                                  script.get("fnReset"),
+                                                  script.get("fnCombine"))
+    );
+
+    final double val = 0;
+
+    Assert.assertEquals("billy", agg.getName());
+
+    agg.reset();
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+
+    agg.aggregate();
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+
+    agg.aggregate();
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
   }
 
   public static void main(String... args) throws Exception {
