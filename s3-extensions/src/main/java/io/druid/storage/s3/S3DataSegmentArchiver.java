@@ -45,7 +45,7 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
   public DataSegment archive(DataSegment segment) throws SegmentLoadingException
   {
     String targetS3Bucket = config.getArchiveBucket();
-    String targetS3BaseKey = config.getArchiveBasekey();
+    String targetS3BaseKey = config.getArchiveBaseKey();
 
     return move(
         segment,
