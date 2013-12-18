@@ -253,6 +253,7 @@ public class CliOverlord extends ServerRunnable
       root.addFilter(GzipFilter.class, "/*", null);
 
       // Can't use /* here because of Guice and Jetty static content conflicts
+      root.addFilter(GuiceFilter.class, "/status/*", null);
       root.addFilter(GuiceFilter.class, "/druid/*", null);
 
       HandlerList handlerList = new HandlerList();

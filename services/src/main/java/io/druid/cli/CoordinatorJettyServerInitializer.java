@@ -51,6 +51,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     // Can't use '/*' here because of Guice and Jetty static content conflicts
     // The coordinator really needs a standarized api path
+    root.addFilter(GuiceFilter.class, "/status/*", null);
     root.addFilter(GuiceFilter.class, "/info/*", null);
     root.addFilter(GuiceFilter.class, "/coordinator/*", null);
 
