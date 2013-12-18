@@ -60,7 +60,7 @@ import java.util.List;
  */
 @Command(
     name = "coordinator",
-    description = "Runs the Coordinator, see http://druid.io/docs/0.6.37/Coordinator.html for a description."
+    description = "Runs the Coordinator, see http://druid.io/docs/0.6.38/Coordinator.html for a description."
 )
 public class CliCoordinator extends ServerRunnable
 {
