@@ -120,7 +120,15 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory
 
       public InputRow parseMessage(Message message) throws FormattedException
       {
-        return parser.parse(message.payload());
+        try {
+          return parser.parse(message.payload());
+        }
+        catch (Exception e) {
+          throw new FormattedException.Builder()
+              .withErrorCode(FormattedException.ErrorCode.UNPARSABLE_ROW)
+              .withMessage(String.format("Error parsing[%s], got [%s]", message.payload(), e.toString()))
+              .build();
+        }
       }
 
       @Override
