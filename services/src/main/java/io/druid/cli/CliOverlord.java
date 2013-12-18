@@ -249,7 +249,6 @@ public class CliOverlord extends ServerRunnable
               }
           )
       );
-      //root.setResourceBase(DruidCoordinator.class.getClassLoader().getResource("static").toExternalForm());
       root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
       root.addFilter(GzipFilter.class, "/*", null);
 
