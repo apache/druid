@@ -112,4 +112,10 @@ public class MoveTask extends AbstractFixedIntervalTask
 
     return TaskStatus.success(getId());
   }
+
+  @JsonProperty
+  public Map<String, Object> getTargetLoadSpec()
+  {
+    return targetLoadSpec;
+  }
 }
