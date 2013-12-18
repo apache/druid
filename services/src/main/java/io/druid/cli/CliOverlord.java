@@ -79,9 +79,7 @@ import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.tasklogs.TaskLogs;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -238,12 +236,12 @@ public class CliOverlord extends ServerRunnable
     @Override
     public void initialize(Server server, Injector injector)
     {
-      final ServletContextHandler redirect = new ServletContextHandler(ServletContextHandler.SESSIONS);
-      redirect.setContextPath("/");
-      redirect.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+      final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
 
-      final ResourceHandler resourceHandler = new ResourceHandler();
-      resourceHandler.setBaseResource(
+      ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
+
+      root.addServlet(holderPwd, "/");
+      root.setBaseResource(
           new ResourceCollection(
               new String[]{
                   TaskMaster.class.getClassLoader().getResource("static").toExternalForm(),
@@ -251,17 +249,17 @@ public class CliOverlord extends ServerRunnable
               }
           )
       );
+      //root.setResourceBase(DruidCoordinator.class.getClassLoader().getResource("static").toExternalForm());
+      root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+      root.addFilter(GzipFilter.class, "/*", null);
 
-      final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
-      root.setContextPath("/");
+      // Can't use /* here because of Guice and Jetty static content conflicts
+      root.addFilter(GuiceFilter.class, "/druid/*", null);
 
       HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{redirect, resourceHandler, root, new DefaultHandler()});
-      server.setHandler(handlerList);
+      handlerList.setHandlers(new Handler[]{root});
 
-      root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-      root.addFilter(GzipFilter.class, "/*", null);
-      root.addFilter(GuiceFilter.class, "/*", null);
+      server.setHandler(handlerList);
     }
   }
 }
