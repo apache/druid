@@ -27,15 +27,15 @@ public class S3DataSegmentArchiverConfig
   public String archiveBucket = "";
 
   @JsonProperty
-  public String archiveBaseKey = "";
+  public String archiveBasekey = "";
 
   public String getArchiveBucket()
   {
     return archiveBucket;
   }
 
-  public String getArchiveBaseKey()
+  public String getArchiveBasekey()
   {
-    return archiveBaseKey;
+    return archiveBasekey;
   }
 }
