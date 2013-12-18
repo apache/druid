@@ -17,35 +17,25 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.cli;
+package io.druid.storage.s3;
 
-import com.google.common.collect.ImmutableList;
-import com.metamx.common.logger.Logger;
-import io.airlift.command.Command;
-import io.druid.guice.RealtimeModule;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
-
-/**
- */
-@Command(
-    name = "realtime",
-    description = "Runs a realtime node, see http://druid.io/docs/0.6.40/Realtime.html for a description"
-)
-public class CliRealtime extends ServerRunnable
+public class S3DataSegmentArchiverConfig
 {
-  private static final Logger log = new Logger(CliBroker.class);
+  @JsonProperty
+  public String archiveBucket = "";
 
-  public CliRealtime()
+  @JsonProperty
+  public String archiveBaseKey = "";
+
+  public String getArchiveBucket()
   {
-    super(log);
+    return archiveBucket;
   }
 
-  @Override
-  protected List<Object> getModules()
+  public String getArchiveBaseKey()
   {
-    return ImmutableList.<Object>of(
-        new RealtimeModule()
-    );
+    return archiveBaseKey;
   }
 }

@@ -107,7 +107,15 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory
           return null;
         }
 
-        return parser.parse(ByteBuffer.wrap(message));
+        try {
+          return parser.parse(ByteBuffer.wrap(message));
+        }
+        catch (Exception e) {
+          throw new FormattedException.Builder()
+              .withErrorCode(FormattedException.ErrorCode.UNPARSABLE_ROW)
+              .withMessage(String.format("Error parsing[%s], got [%s]", ByteBuffer.wrap(message), e.toString()))
+              .build();
+        }
       }
 
       @Override
