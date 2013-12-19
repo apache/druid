@@ -19,6 +19,9 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.databind.Module;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
 import com.google.inject.Injector;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
@@ -79,7 +82,22 @@ public class StatusResourceTest
       Set<DruidModule> loadedModules = Initialization.getLoadedModules(DruidModule.class);
       Assert.assertEquals("Set from loaded module should be same!", loadedModules, modules);
     }
+  }
 
+  public static class TestDruidModule implements DruidModule
+  {
+    @Override
+    public List<? extends Module> getJacksonModules()
+    {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public void configure(Binder binder)
+    {
+      // Do nothing
+    }
   }
 
 }
+

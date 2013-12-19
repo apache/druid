@@ -1,1 +1,1 @@
-io.druid.server.TestDruidModule
+io.druid.server.StatusResourceTest$TestDruidModule
