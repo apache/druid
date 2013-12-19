@@ -44,7 +44,7 @@ import io.druid.guice.PolyBind;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
-import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.index.ChatHandlerProvider;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
@@ -79,9 +79,7 @@ import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.tasklogs.TaskLogs;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -95,7 +93,7 @@ import java.util.List;
  */
 @Command(
     name = "overlord",
-    description = "Runs an Overlord node, see http://druid.io/docs/0.6.33/Indexing-Service.html for a description"
+    description = "Runs an Overlord node, see http://druid.io/docs/0.6.40/Indexing-Service.html for a description"
 )
 public class CliOverlord extends ServerRunnable
 {
@@ -120,7 +118,11 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
 
             binder.bind(TaskLogStreamer.class).to(SwitchingTaskLogStreamer.class).in(LazySingleton.class);
-            binder.bind(new TypeLiteral<List<TaskLogStreamer>>(){})
+            binder.bind(
+                new TypeLiteral<List<TaskLogStreamer>>()
+                {
+                }
+            )
                   .toProvider(
                       new ListProvider<TaskLogStreamer>()
                           .add(TaskRunnerTaskLogStreamer.class)
@@ -154,10 +156,15 @@ public class CliOverlord extends ServerRunnable
 
           private void configureTaskStorage(Binder binder)
           {
+            JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
+
             PolyBind.createChoice(
                 binder, "druid.indexer.storage.type", Key.get(TaskStorage.class), Key.get(HeapMemoryTaskStorage.class)
             );
-            final MapBinder<String, TaskStorage> storageBinder = PolyBind.optionBinder(binder, Key.get(TaskStorage.class));
+            final MapBinder<String, TaskStorage> storageBinder = PolyBind.optionBinder(
+                binder,
+                Key.get(TaskStorage.class)
+            );
 
             storageBinder.addBinding("local").to(HeapMemoryTaskStorage.class);
             binder.bind(HeapMemoryTaskStorage.class).in(LazySingleton.class);
@@ -176,7 +183,10 @@ public class CliOverlord extends ServerRunnable
                 Key.get(TaskRunnerFactory.class),
                 Key.get(ForkingTaskRunnerFactory.class)
             );
-            final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(binder, Key.get(TaskRunnerFactory.class));
+            final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(
+                binder,
+                Key.get(TaskRunnerFactory.class)
+            );
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
             biddy.addBinding("local").to(ForkingTaskRunnerFactory.class);
@@ -189,7 +199,9 @@ public class CliOverlord extends ServerRunnable
           private void configureAutoscale(Binder binder)
           {
             JsonConfigProvider.bind(binder, "druid.indexer.autoscale", ResourceManagementSchedulerConfig.class);
-            binder.bind(ResourceManagementStrategy.class).to(SimpleResourceManagementStrategy.class).in(LazySingleton.class);
+            binder.bind(ResourceManagementStrategy.class)
+                  .to(SimpleResourceManagementStrategy.class)
+                  .in(LazySingleton.class);
 
             JacksonConfigProvider.bind(binder, WorkerSetupData.CONFIG_KEY, WorkerSetupData.class, null);
 
@@ -218,14 +230,18 @@ public class CliOverlord extends ServerRunnable
   }
 
   /**
-  */
+   */
   private static class OverlordJettyServerInitializer implements JettyServerInitializer
   {
     @Override
     public void initialize(Server server, Injector injector)
     {
-      ResourceHandler resourceHandler = new ResourceHandler();
-      resourceHandler.setBaseResource(
+      final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
+
+      ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
+
+      root.addServlet(holderPwd, "/");
+      root.setBaseResource(
           new ResourceCollection(
               new String[]{
                   TaskMaster.class.getClassLoader().getResource("static").toExternalForm(),
@@ -233,18 +249,17 @@ public class CliOverlord extends ServerRunnable
               }
           )
       );
+      root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+      root.addFilter(GzipFilter.class, "/*", null);
 
-      final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
-      root.setContextPath("/");
+      // Can't use /* here because of Guice and Jetty static content conflicts
+      root.addFilter(GuiceFilter.class, "/status/*", null);
+      root.addFilter(GuiceFilter.class, "/druid/*", null);
 
       HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{resourceHandler, root, new DefaultHandler()});
-      server.setHandler(handlerList);
+      handlerList.setHandlers(new Handler[]{root});
 
-      root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-      root.addFilter(GzipFilter.class, "/*", null);
-      root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
-      root.addFilter(GuiceFilter.class, "/*", null);
+      server.setHandler(handlerList);
     }
   }
 }
