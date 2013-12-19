@@ -30,6 +30,7 @@ import io.druid.server.initialization.ExtensionsConfig;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -75,7 +76,7 @@ public class Main
 
     final Injector injector = Initialization.makeStartupInjector();
     final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
-    final List<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(config, CliCommandCreator.class);
+    final Collection<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(config, CliCommandCreator.class);
 
     for (CliCommandCreator creator : extensionCommands) {
       creator.addCommands(builder);
