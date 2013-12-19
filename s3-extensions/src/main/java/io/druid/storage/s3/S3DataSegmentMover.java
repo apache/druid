@@ -20,6 +20,7 @@
 package io.druid.storage.s3;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -33,6 +34,7 @@ import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 public class S3DataSegmentMover implements DataSegmentMover
 {
@@ -97,34 +99,58 @@ public class S3DataSegmentMover implements DataSegmentMover
     }
   }
 
-  private void safeMove(String s3Bucket, String s3Path, String targetS3Bucket, String targetS3Path)
-      throws ServiceException, SegmentLoadingException
+  private void safeMove(
+      final String s3Bucket,
+      final String s3Path,
+      final String targetS3Bucket,
+      final String targetS3Path
+  ) throws ServiceException, SegmentLoadingException
   {
-    if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
-      log.info(
-          "Moving file[s3://%s/%s] to [s3://%s/%s]",
-          s3Bucket,
-          s3Path,
-          targetS3Bucket,
-          targetS3Path
+    try {
+      S3Utils.retryS3Operation(
+          new Callable<Void>()
+          {
+            @Override
+            public Void call() throws Exception
+            {
+              if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
+                if (s3Bucket.equals(targetS3Bucket) && s3Path.equals(targetS3Path)) {
+                  log.info("No need to move file[s3://%s/%s] onto itself", s3Bucket, s3Path);
+                } else {
+                  log.info(
+                      "Moving file[s3://%s/%s] to [s3://%s/%s]",
+                      s3Bucket,
+                      s3Path,
+                      targetS3Bucket,
+                      targetS3Path
+                  );
+                  s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, new S3Object(targetS3Path), false);
+                }
+              } else {
+                // ensure object exists in target location
+                if (s3Client.isObjectInBucket(targetS3Bucket, targetS3Path)) {
+                  log.info(
+                      "Not moving file [s3://%s/%s], already present in target location [s3://%s/%s]",
+                      s3Bucket, s3Path,
+                      targetS3Bucket, targetS3Path
+                  );
+                } else {
+                  throw new SegmentLoadingException(
+                      "Unable to move file [s3://%s/%s] to [s3://%s/%s], not present in either source or target location",
+                      s3Bucket, s3Path,
+                      targetS3Bucket, targetS3Path
+                  );
+                }
+              }
+              return null;
+            }
+          }
       );
-      s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, new S3Object(targetS3Path), false);
-    } else {
-      // ensure object exists in target location
-      if(s3Client.isObjectInBucket(targetS3Bucket, targetS3Path)) {
-        log.info(
-            "Not moving file [s3://%s/%s], already present in target location [s3://%s/%s]",
-            s3Bucket, s3Path,
-            targetS3Bucket, targetS3Path
-        );
-      }
-      else {
-        throw new SegmentLoadingException(
-            "Unable to move file [s3://%s/%s] to [s3://%s/%s], not present in either source or target location",
-            s3Bucket, s3Path,
-            targetS3Bucket, targetS3Path
-        );
-      }
+    }
+    catch (Exception e) {
+      Throwables.propagateIfInstanceOf(e, ServiceException.class);
+      Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
+      throw Throwables.propagate(e);
     }
   }
 }
