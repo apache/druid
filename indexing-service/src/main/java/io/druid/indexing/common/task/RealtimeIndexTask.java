@@ -418,7 +418,7 @@ public class RealtimeIndexTask extends AbstractTask
     @Override
     public void publishSegment(DataSegment segment) throws IOException
     {
-      taskToolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+      taskToolbox.pushSegments(ImmutableList.of(segment));
     }
   }
 }
