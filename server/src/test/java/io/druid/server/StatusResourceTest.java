@@ -19,8 +19,6 @@
 
 package io.druid.server;
 
-import static io.druid.server.StatusResource.ModuleVersion;
-
 import com.google.inject.Injector;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
@@ -30,6 +28,9 @@ import org.junit.Test;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+
+import static io.druid.server.StatusResource.ModuleVersion;
 
 /**
  */
@@ -49,7 +50,10 @@ public class StatusResourceTest
     List<ModuleVersion> statusResourceModuleList;
 
     statusResourceModuleList = resource.doGet().getModules();
-    Assert.assertEquals("No Modules should be loaded currently!", statusResourceModuleList.size(), 0);
+    Assert.assertEquals(
+        "No Modules should be loaded currently! " + statusResourceModuleList,
+        statusResourceModuleList.size(), 0
+    );
 
     Collection<DruidModule> modules = loadTestModule();
     statusResourceModuleList = resource.doGet().getModules();
@@ -65,8 +69,17 @@ public class StatusResourceTest
           contains = Boolean.TRUE;
         }
       }
-      Assert.assertTrue("Status resource should contains module " + moduleName, contains);
+      Assert.assertTrue("Status resource should contain module " + moduleName, contains);
     }
+
+    /*
+     * StatusResource only uses Initialization.getLoadedModules
+     */
+    for (int i = 0; i < 5; i++) {
+      Set<DruidModule> loadedModules = Initialization.getLoadedModules(DruidModule.class);
+      Assert.assertEquals("Set from loaded module should be same!", loadedModules, modules);
+    }
+
   }
 
 }
