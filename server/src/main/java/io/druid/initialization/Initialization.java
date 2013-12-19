@@ -111,9 +111,12 @@ public class Initialization
    */
   public static<T> Set<T> getLoadedModules(Class<T> clazz)
   {
-    return extensionsMap.get(clazz);
+    Set<T> retVal = extensionsMap.get(clazz);
+    if (retVal == null) {
+      return Sets.newHashSet();
+    }
+    return retVal;
   }
-  
 
   public synchronized static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> clazz)
   {

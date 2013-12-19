@@ -148,7 +148,7 @@ public class StatusResource
     @Override
     public String toString()
     {
-      if (artifact.isEmpty()) {
+      if (artifact == null || artifact.isEmpty()) {
         return String.format("  - %s ", name);
       } else {
         return String.format("  - %s (%s-%s)", name, artifact, version);
@@ -194,6 +194,5 @@ public class StatusResource
     {
       return usedMemory;
     }
-
   }
 }
