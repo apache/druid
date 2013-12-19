@@ -28,7 +28,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.42</version>
+        <version>0.6.43-SNAPSHOT</version>
     </parent>
 
     <dependencies>
