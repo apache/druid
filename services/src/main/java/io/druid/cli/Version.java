@@ -31,6 +31,6 @@ public class Version implements Runnable
   @Override
   public void run()
   {
-    System.out.println(StatusResource.getStatus());
+    System.out.println(new StatusResource.Status());
   }
 }
