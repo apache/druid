@@ -114,14 +114,18 @@ public class S3DataSegmentMover implements DataSegmentMover
             public Void call() throws Exception
             {
               if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
-                log.info(
-                    "Moving file[s3://%s/%s] to [s3://%s/%s]",
-                    s3Bucket,
-                    s3Path,
-                    targetS3Bucket,
-                    targetS3Path
-                );
-                s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, new S3Object(targetS3Path), false);
+                if (s3Bucket.equals(targetS3Bucket) && s3Path.equals(targetS3Path)) {
+                  log.info("No need to move file[s3://%s/%s] onto itself", s3Bucket, s3Path);
+                } else {
+                  log.info(
+                      "Moving file[s3://%s/%s] to [s3://%s/%s]",
+                      s3Bucket,
+                      s3Path,
+                      targetS3Bucket,
+                      targetS3Path
+                  );
+                  s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, new S3Object(targetS3Path), false);
+                }
               } else {
                 // ensure object exists in target location
                 if (s3Client.isObjectInBucket(targetS3Bucket, targetS3Path)) {
