@@ -90,6 +90,10 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     synchronized (lock) {
       boolean didProvision = false;
       final WorkerSetupData workerSetupData = workerSetupDataRef.get();
+      if (workerSetupData == null) {
+        log.warn("No workerSetupData available, cannot provision new workers.");
+        return false;
+      }
       final Predicate<ZkWorker> isValidWorker = createValidWorkerPredicate(workerSetupData);
       final int currValidWorkers = Collections2.filter(zkWorkers, isValidWorker).size();
 
@@ -112,21 +116,22 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
 
       updateTargetWorkerCount(pendingTasks, zkWorkers);
 
-      if (currentlyProvisioning.isEmpty()) {
-        int want = targetWorkerCount - (currValidWorkers + currentlyProvisioning.size());
-        while (want > 0) {
-          final AutoScalingData provisioned = autoScalingStrategy.provision();
-          if (provisioned == null) {
-            break;
-          } else {
-            currentlyProvisioning.addAll(provisioned.getNodeIds());
-            lastProvisionTime = new DateTime();
-            scalingStats.addProvisionEvent(provisioned);
-            want -= provisioned.getNodeIds().size();
-            didProvision = true;
-          }
+      int want = targetWorkerCount - (currValidWorkers + currentlyProvisioning.size());
+      while (want > 0) {
+        final AutoScalingData provisioned = autoScalingStrategy.provision();
+        final List<String> newNodes;
+        if (provisioned == null || (newNodes = provisioned.getNodeIds()).isEmpty()) {
+          break;
+        } else {
+          currentlyProvisioning.addAll(newNodes);
+          lastProvisionTime = new DateTime();
+          scalingStats.addProvisionEvent(provisioned);
+          want -= provisioned.getNodeIds().size();
+          didProvision = true;
         }
-      } else {
+      }
+
+      if (!currentlyProvisioning.isEmpty()) {
         Duration durSinceLastProvision = new Duration(lastProvisionTime, new DateTime());
 
         log.info("%s provisioning. Current wait time: %s", currentlyProvisioning, durSinceLastProvision);
@@ -151,6 +156,11 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   public boolean doTerminate(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
     synchronized (lock) {
+      if (workerSetupDataRef.get() == null) {
+        log.warn("No workerSetupData available, cannot terminate workers.");
+        return false;
+      }
+
       boolean didTerminate = false;
       final Set<String> workerNodeIds = Sets.newHashSet(
           autoScalingStrategy.ipToIdLookup(
@@ -218,7 +228,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       } else {
         Duration durSinceLastTerminate = new Duration(lastTerminateTime, new DateTime());
 
-        log.info("%s terminating. Current wait time: ", currentlyTerminating, durSinceLastTerminate);
+        log.info("%s terminating. Current wait time: %s", currentlyTerminating, durSinceLastTerminate);
 
         if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
           log.makeAlert("Worker node termination taking too long!")
@@ -265,22 +275,23 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   {
     synchronized (lock) {
       final WorkerSetupData workerSetupData = workerSetupDataRef.get();
+      final Collection<ZkWorker> validWorkers = Collections2.filter(
+          zkWorkers,
+          createValidWorkerPredicate(workerSetupData)
+      );
 
       if (targetWorkerCount < 0) {
         // Initialize to size of current worker pool
         targetWorkerCount = zkWorkers.size();
         log.info(
-            "Starting with %,d workers (min = %,d, max = %,d).",
+            "Starting with a target of %,d workers (current = %,d, min = %,d, max = %,d).",
             targetWorkerCount,
+            validWorkers.size(),
             workerSetupData.getMinNumWorkers(),
             workerSetupData.getMaxNumWorkers()
         );
       }
 
-      final Collection<ZkWorker> validWorkers = Collections2.filter(
-          zkWorkers,
-          createValidWorkerPredicate(workerSetupData)
-      );
       final boolean atSteadyState = currentlyProvisioning.isEmpty()
                                     && currentlyTerminating.isEmpty()
                                     && validWorkers.size() == targetWorkerCount;
