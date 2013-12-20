@@ -19,8 +19,8 @@
 
 package io.druid.indexing.overlord.scaling;
 
-import com.google.api.client.repackaged.com.google.common.base.Joiner;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
