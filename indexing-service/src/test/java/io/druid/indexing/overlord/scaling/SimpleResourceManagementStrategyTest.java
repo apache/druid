@@ -105,7 +105,7 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList());
     EasyMock.expect(autoScalingStrategy.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList(), Lists.newArrayList())
+        new AutoScalingData(Lists.<String>newArrayList("aNode"))
     );
     EasyMock.replay(autoScalingStrategy);
 
@@ -133,7 +133,7 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList()).times(2);
     EasyMock.expect(autoScalingStrategy.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("fake"), Lists.newArrayList("faker"))
+        new AutoScalingData(Lists.<String>newArrayList("fake"))
     );
     EasyMock.replay(autoScalingStrategy);
 
@@ -190,7 +190,7 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.terminate(EasyMock.<List<String>>anyObject()))
                     .andReturn(null);
     EasyMock.expect(autoScalingStrategy.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("fake"), Lists.newArrayList("faker"))
+        new AutoScalingData(Lists.<String>newArrayList("fake"))
     );
     EasyMock.replay(autoScalingStrategy);
 
@@ -242,7 +242,7 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList());
     EasyMock.expect(autoScalingStrategy.terminate(EasyMock.<List<String>>anyObject())).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList(), Lists.newArrayList())
+        new AutoScalingData(Lists.<String>newArrayList())
     );
     EasyMock.replay(autoScalingStrategy);
 
@@ -272,7 +272,7 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList("ip")).times(2);
     EasyMock.expect(autoScalingStrategy.terminate(EasyMock.<List<String>>anyObject())).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("ip"), Lists.newArrayList("ip"))
+        new AutoScalingData(Lists.<String>newArrayList("ip"))
     );
     EasyMock.replay(autoScalingStrategy);
 

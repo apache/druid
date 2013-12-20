@@ -28,12 +28,10 @@ import java.util.List;
 public class AutoScalingData
 {
   private final List<String> nodeIds;
-  private final List nodes;
 
-  public AutoScalingData(List<String> nodeIds, List nodes)
+  public AutoScalingData(List<String> nodeIds)
   {
     this.nodeIds = nodeIds;
-    this.nodes = nodes;
   }
 
   @JsonProperty
@@ -42,17 +40,11 @@ public class AutoScalingData
     return nodeIds;
   }
 
-  public List getNodes()
-  {
-    return nodes;
-  }
-
   @Override
   public String toString()
   {
     return "AutoScalingData{" +
            "nodeIds=" + nodeIds +
-           ", nodes=" + nodes +
            '}';
   }
 }

@@ -126,13 +126,11 @@ public class EC2AutoScalingStrategyTest
     AutoScalingData created = strategy.provision();
 
     Assert.assertEquals(created.getNodeIds().size(), 1);
-    Assert.assertEquals(created.getNodes().size(), 1);
     Assert.assertEquals("theInstance", created.getNodeIds().get(0));
 
     AutoScalingData deleted = strategy.terminate(Arrays.asList("dummyIP"));
 
     Assert.assertEquals(deleted.getNodeIds().size(), 1);
-    Assert.assertEquals(deleted.getNodes().size(), 1);
     Assert.assertEquals(String.format("%s:8080", IP), deleted.getNodeIds().get(0));
   }
 }
