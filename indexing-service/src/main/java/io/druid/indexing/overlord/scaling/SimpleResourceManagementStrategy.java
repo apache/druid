@@ -203,7 +203,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
                             .toList();
 
           if (laziestWorkerIps.isEmpty()) {
-            log.info("Wanted to terminate %,d workers, but couldn't find any lazy ones!");
+            log.info("Wanted to terminate %,d workers, but couldn't find any lazy ones!", excessWorkers);
           } else {
             log.info(
                 "Terminating %,d workers (wanted %,d): %s",
