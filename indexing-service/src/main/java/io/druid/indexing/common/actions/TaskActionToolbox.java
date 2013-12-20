@@ -76,13 +76,9 @@ public class TaskActionToolbox
     Preconditions.checkArgument(!segments.isEmpty(), "segments nonempty");
     final DataSegment firstSegment = segments.iterator().next();
     for (final DataSegment segment : segments) {
-      if (!segment.getDataSource().equals(firstSegment.getDataSource())) {
-        return false;
-      }
-      if (!segment.getInterval().equals(firstSegment.getInterval())) {
-        return false;
-      }
-      if (!segment.getVersion().equals(firstSegment.getVersion())) {
+      if (!segment.getDataSource().equals(firstSegment.getDataSource())
+          || !segment.getInterval().equals(firstSegment.getInterval())
+          || !segment.getVersion().equals(firstSegment.getVersion())) {
         return false;
       }
     }
