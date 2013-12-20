@@ -42,6 +42,7 @@ import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
@@ -169,39 +170,39 @@ public class IndexerDBCoordinator
   private boolean announceHistoricalSegment(final Handle handle, final DataSegment segment) throws IOException
   {
     try {
-      final List<Map<String, Object>> exists = handle.createQuery(
-          String.format(
-              "SELECT id FROM %s WHERE id = :identifier",
-              dbTables.getSegmentsTable()
-          )
-      ).bind(
-          "identifier",
-          segment.getIdentifier()
-      ).list();
-
-      if (!exists.isEmpty()) {
+      if (segmentExists(handle, segment)) {
         log.info("Found [%s] in DB, not updating DB", segment.getIdentifier());
         return false;
       }
 
-      handle.createStatement(
-          String.format(
-              "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable()
-          )
-      )
-            .bind("id", segment.getIdentifier())
-            .bind("dataSource", segment.getDataSource())
-            .bind("created_date", new DateTime().toString())
-            .bind("start", segment.getInterval().getStart().toString())
-            .bind("end", segment.getInterval().getEnd().toString())
-            .bind("partitioned", segment.getShardSpec().getPartitionNum())
-            .bind("version", segment.getVersion())
-            .bind("used", true)
-            .bind("payload", jsonMapper.writeValueAsString(segment))
-            .execute();
+      // Try/catch to work around races due to SELECT -> INSERT. Avoid ON DUPLICATE KEY since it's not portable.
+      try {
+        handle.createStatement(
+            String.format(
+                "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
+                + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                dbTables.getSegmentsTable()
+            )
+        )
+              .bind("id", segment.getIdentifier())
+              .bind("dataSource", segment.getDataSource())
+              .bind("created_date", new DateTime().toString())
+              .bind("start", segment.getInterval().getStart().toString())
+              .bind("end", segment.getInterval().getEnd().toString())
+              .bind("partitioned", segment.getShardSpec().getPartitionNum())
+              .bind("version", segment.getVersion())
+              .bind("used", true)
+              .bind("payload", jsonMapper.writeValueAsString(segment))
+              .execute();
 
-      log.info("Published segment [%s] to DB", segment.getIdentifier());
+        log.info("Published segment [%s] to DB", segment.getIdentifier());
+      } catch (Exception e) {
+        if (e.getCause() instanceof SQLException && segmentExists(handle, segment)) {
+          log.info("Found [%s] in DB, not updating DB", segment.getIdentifier());
+        } else {
+          throw e;
+        }
+      }
     }
     catch (IOException e) {
       log.error(e, "Exception inserting into DB");
@@ -209,6 +210,20 @@ public class IndexerDBCoordinator
     }
 
     return true;
+  }
+
+  private boolean segmentExists(final Handle handle, final DataSegment segment) {
+    final List<Map<String, Object>> exists = handle.createQuery(
+        String.format(
+            "SELECT id FROM %s WHERE id = :identifier",
+            dbTables.getSegmentsTable()
+        )
+    ).bind(
+        "identifier",
+        segment.getIdentifier()
+    ).list();
+
+    return !exists.isEmpty();
   }
 
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
