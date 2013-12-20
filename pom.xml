@@ -23,7 +23,7 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.42-SNAPSHOT</version>
+    <version>0.6.47-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -73,7 +73,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.2.6</version>
+                <version>0.2.7</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>

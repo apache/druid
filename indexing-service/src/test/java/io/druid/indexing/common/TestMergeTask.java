@@ -44,7 +44,7 @@ public class TestMergeTask extends MergeTask
         Lists.<DataSegment>newArrayList(
             new DataSegment(
                 "dummyDs",
-                new Interval(new DateTime(), new DateTime()),
+                new Interval(new DateTime(), new DateTime().plus(1)),
                 new DateTime().toString(),
                 null,
                 null,

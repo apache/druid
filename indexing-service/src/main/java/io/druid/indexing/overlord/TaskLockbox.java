@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -109,6 +110,11 @@ public class TaskLockbox
       for (final Pair<Task, TaskLock> taskAndLock : byVersionOrdering.sortedCopy(storedLocks)) {
         final Task task = taskAndLock.lhs;
         final TaskLock savedTaskLock = taskAndLock.rhs;
+        if (savedTaskLock.getInterval().toDurationMillis() <= 0) {
+          // "Impossible", but you never know what crazy stuff can be restored from storage.
+          log.warn("WTF?! Got lock with empty interval for task: %s", task.getId());
+          continue;
+        }
         uniqueTaskIds.add(task.getId());
         final Optional<TaskLock> acquiredTaskLock = tryLock(
             task,
@@ -205,6 +211,7 @@ public class TaskLockbox
     giant.lock();
 
     try {
+      Preconditions.checkArgument(interval.toDurationMillis() > 0, "interval empty");
       final String dataSource = task.getDataSource();
       final List<TaskLockPosse> foundPosses = findLockPossesForInterval(dataSource, interval);
       final TaskLockPosse posseToUse;

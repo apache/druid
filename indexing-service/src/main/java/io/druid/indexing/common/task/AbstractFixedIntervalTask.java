@@ -21,6 +21,7 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import org.joda.time.Interval;
@@ -58,7 +59,8 @@ public abstract class AbstractFixedIntervalTask extends AbstractTask
   )
   {
     super(id, groupId, taskResource, dataSource);
-    this.interval = interval;
+    this.interval = Preconditions.checkNotNull(interval, "interval");
+    Preconditions.checkArgument(interval.toDurationMillis() > 0, "interval empty");
   }
 
   @Override

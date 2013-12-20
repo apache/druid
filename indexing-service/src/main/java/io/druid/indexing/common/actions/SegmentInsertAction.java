@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
-import com.metamx.common.ISE;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.task.Task;
 import io.druid.timeline.DataSegment;
@@ -80,9 +79,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
   @Override
   public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    if(!toolbox.taskLockCoversSegments(task, segments, allowOlderVersions)) {
-      throw new ISE("Segments not covered by locks for task[%s]: %s", task.getId(), segments);
-    }
+    toolbox.verifyTaskLocksAndSinglePartitionSettitude(task, segments, true);
 
     final Set<DataSegment> retVal = toolbox.getIndexerDBCoordinator().announceHistoricalSegments(segments);
 
