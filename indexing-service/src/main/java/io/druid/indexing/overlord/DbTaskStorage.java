@@ -34,15 +34,16 @@ import com.metamx.common.RetryUtils;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
-import com.mysql.jdbc.exceptions.MySQLTimeoutException;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
 import io.druid.db.DbConnector;
 import io.druid.db.DbTablesConfig;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
+import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
+import org.joda.time.Period;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
@@ -64,16 +65,24 @@ public class DbTaskStorage implements TaskStorage
   private final DbConnector dbConnector;
   private final DbTablesConfig dbTables;
   private final IDBI dbi;
+  private final TaskStorageConfig config;
 
   private static final EmittingLogger log = new EmittingLogger(DbTaskStorage.class);
 
   @Inject
-  public DbTaskStorage(ObjectMapper jsonMapper, DbConnector dbConnector, DbTablesConfig dbTables, IDBI dbi)
+  public DbTaskStorage(
+      final ObjectMapper jsonMapper,
+      final DbConnector dbConnector,
+      final DbTablesConfig dbTables,
+      final IDBI dbi,
+      final TaskStorageConfig config
+  )
   {
     this.jsonMapper = jsonMapper;
     this.dbConnector = dbConnector;
     this.dbTables = dbTables;
     this.dbi = dbi;
+    this.config = config;
   }
 
   @LifecycleStart
@@ -272,6 +281,45 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses()
+  {
+    final DateTime recent = new DateTime().minus(config.getRecentlyFinishedThreshold());
+    return retryingHandle(
+        new HandleCallback<List<TaskStatus>>()
+        {
+          @Override
+          public List<TaskStatus> withHandle(Handle handle) throws Exception
+          {
+            final List<Map<String, Object>> dbTasks =
+                handle.createQuery(
+                    String.format(
+                        "SELECT id, status_payload FROM %s WHERE active = 0 AND created_date >= :recent ORDER BY created_date DESC",
+                        dbTables.getTasksTable()
+                    )
+                ).bind("recent", recent.toString()).list();
+
+            final ImmutableList.Builder<TaskStatus> statuses = ImmutableList.builder();
+            for (final Map<String, Object> row : dbTasks) {
+              final String id = row.get("id").toString();
+
+              try {
+                final TaskStatus status = jsonMapper.readValue((byte[]) row.get("status_payload"), TaskStatus.class);
+                if (status.isComplete()) {
+                  statuses.add(status);
+                }
+              }
+              catch (Exception e) {
+                log.makeAlert(e, "Failed to parse status payload").addData("task", id).emit();
+              }
+            }
+
+            return statuses.build();
+          }
+        }
+    );
+  }
+
+  @Override
   public void addLock(final String taskid, final TaskLock taskLock)
   {
     Preconditions.checkNotNull(taskid, "taskid");
@@ -407,7 +455,8 @@ public class DbTaskStorage implements TaskStorage
             for (final Map<String, Object> dbTaskLog : dbTaskLogs) {
               try {
                 retList.add(jsonMapper.readValue((byte[]) dbTaskLog.get("log_payload"), TaskAction.class));
-              } catch (Exception e) {
+              }
+              catch (Exception e) {
                 log.makeAlert(e, "Failed to deserialize TaskLog")
                    .addData("task", taskid)
                    .addData("logPayload", dbTaskLog)
@@ -451,7 +500,8 @@ public class DbTaskStorage implements TaskStorage
   /**
    * Retry SQL operations
    */
-  private <T> T retryingHandle(final HandleCallback<T> callback) {
+  private <T> T retryingHandle(final HandleCallback<T> callback)
+  {
     final Callable<T> call = new Callable<T>()
     {
       @Override
@@ -471,9 +521,11 @@ public class DbTaskStorage implements TaskStorage
     final int maxTries = 10;
     try {
       return RetryUtils.retry(call, shouldRetry, maxTries);
-    } catch (RuntimeException e) {
+    }
+    catch (RuntimeException e) {
       throw Throwables.propagate(e);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new CallbackFailedException(e);
     }
   }

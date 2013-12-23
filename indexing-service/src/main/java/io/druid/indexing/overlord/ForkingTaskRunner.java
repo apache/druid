@@ -391,7 +391,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
             if (offset > 0) {
               raf.seek(offset);
             } else if (offset < 0 && offset < rafLength) {
-              raf.seek(rafLength + offset);
+              raf.seek(Math.max(0, rafLength + offset));
             }
             return Channels.newInputStream(raf.getChannel());
           }

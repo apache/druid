@@ -23,14 +23,14 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.34-SNAPSHOT</version>
+    <version>0.6.39</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
         <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
         <url>http://www.github.com/metamx/druid</url>
-        <tag>${project.artifactId}-${project.version}</tag>
+        <tag>druid-0.6.39</tag>
     </scm>
 
     <prerequisites>
@@ -41,7 +41,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.25.1</metamx.java-util.version>
         <apache.curator.version>2.1.0-incubating</apache.curator.version>
-        <druid.api.version>0.1.6</druid.api.version>
+        <druid.api.version>0.1.7</druid.api.version>
     </properties>
 
     <modules>

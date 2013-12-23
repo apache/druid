@@ -19,6 +19,8 @@
 
 package io.druid.indexing.overlord;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexing.common.TaskStatus;
@@ -56,21 +58,25 @@ public class TaskRunnerWorkItem implements Comparable<TaskRunnerWorkItem>
     this.queueInsertionTime = queueInsertionTime;
   }
 
+  @JsonProperty
   public String getTaskId()
   {
     return taskId;
   }
 
+  @JsonIgnore
   public ListenableFuture<TaskStatus> getResult()
   {
     return result;
   }
 
+  @JsonProperty
   public DateTime getCreatedTime()
   {
     return createdTime;
   }
 
+  @JsonProperty
   public DateTime getQueueInsertionTime()
   {
     return queueInsertionTime;

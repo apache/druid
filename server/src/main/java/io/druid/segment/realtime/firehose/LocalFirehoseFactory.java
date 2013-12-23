@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.metamx.common.ISE;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.FileIteratingFirehose;
@@ -78,20 +79,25 @@ public class LocalFirehoseFactory implements FirehoseFactory
   @Override
   public Firehose connect() throws IOException
   {
-    final LinkedList<File> files = Lists.<File>newLinkedList(
-        Arrays.<File>asList(
-            baseDir.listFiles(
-                new FilenameFilter()
-                {
-                  @Override
-                  public boolean accept(File file, String name)
-                  {
-                    return name.contains(filter);
-                  }
-                }
-            )
-        )
+    File[] foundFiles = baseDir.listFiles(
+        new FilenameFilter()
+        {
+          @Override
+          public boolean accept(File file, String name)
+          {
+            return name.contains(filter);
+          }
+        }
     );
+
+    if (foundFiles == null || foundFiles.length == 0) {
+      throw new ISE("Found no files to ingest! Check your schema.");
+    }
+
+    final LinkedList<File> files = Lists.<File>newLinkedList(
+        Arrays.asList(foundFiles)
+    );
+
 
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
