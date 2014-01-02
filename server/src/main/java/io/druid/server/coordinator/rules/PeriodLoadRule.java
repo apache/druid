@@ -44,7 +44,7 @@ public class PeriodLoadRule extends LoadRule
       @JsonProperty("period") Period period,
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
       // The following two vars need to be deprecated
-      @JsonProperty("replicants") Integer replicants,
+      @JsonProperty("replicants") int replicants,
       @JsonProperty("tier") String tier
   )
   {
@@ -80,7 +80,8 @@ public class PeriodLoadRule extends LoadRule
   @Override
   public int getNumReplicants(String tier)
   {
-    return tieredReplicants.get(tier);
+    final Integer retVal = tieredReplicants.get(tier);
+    return retVal == null ? 0 : retVal;
   }
 
   @Override

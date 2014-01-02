@@ -34,9 +34,6 @@ public class DruidServerConfig
   @JsonProperty
   private String tier = DruidServer.DEFAULT_TIER;
 
-  @JsonProperty
-  private String zone = DruidServer.DEFAULT_ZONE;
-
   public long getMaxSize()
   {
     return maxSize;
@@ -45,9 +42,5 @@ public class DruidServerConfig
   public String getTier()
   {
     return tier;
-  }
-
-  public String getZone() {
-    return zone;
   }
 }

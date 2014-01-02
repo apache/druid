@@ -73,7 +73,8 @@ public class IntervalLoadRule extends LoadRule
   @Override
   public int getNumReplicants(String tier)
   {
-    return tieredReplicants.get(tier);
+    final Integer retVal = tieredReplicants.get(tier);
+    return retVal == null ? 0 : retVal;
   }
 
   @JsonProperty

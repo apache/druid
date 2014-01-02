@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator.rules;
 
+import com.google.api.client.util.Maps;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.EmittingLogger;
@@ -47,13 +48,12 @@ public abstract class LoadRule implements Rule
   {
     CoordinatorStats stats = new CoordinatorStats();
 
+    final Map<String, Integer> loadStatus = Maps.newHashMap();
     for (Map.Entry<String, Integer> entry : getTieredReplicants().entrySet()) {
       final String tier = entry.getKey();
       final int expectedReplicants = entry.getValue();
 
       int totalReplicants = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier(), tier);
-      int clusterReplicants = params.getSegmentReplicantLookup()
-                                    .getClusterReplicants(segment.getIdentifier(), tier);
 
       MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getServersByTier(tier);
       if (serverQueue == null) {
@@ -78,8 +78,13 @@ public abstract class LoadRule implements Rule
         );
       }
 
-      stats.accumulate(drop(expectedReplicants, clusterReplicants, segment, params));
+      int clusterReplicants = params.getSegmentReplicantLookup()
+                                    .getClusterReplicants(segment.getIdentifier(), tier);
+      loadStatus.put(tier, expectedReplicants - clusterReplicants);
     }
+    // Remove over-replication
+    stats.accumulate(drop(loadStatus, segment, params));
+
 
     return stats;
   }
@@ -146,23 +151,25 @@ public abstract class LoadRule implements Rule
   }
 
   private CoordinatorStats drop(
-      int expectedReplicants,
-      int clusterReplicants,
+      final Map<String, Integer> loadStatus,
       final DataSegment segment,
       final DruidCoordinatorRuntimeParams params
   )
   {
     CoordinatorStats stats = new CoordinatorStats();
-    final ReplicationThrottler replicationManager = params.getReplicationManager();
 
     if (!params.hasDeletionWaitTimeElapsed()) {
       return stats;
     }
 
-    // Make sure we have enough actual replicants in the correct tier in the cluster before doing anything
-    if (clusterReplicants < expectedReplicants) {
-      return stats;
+    // Make sure we have enough actual replicants in the correct tiers in the cluster before doing anything
+    for (Integer leftToLoad : loadStatus.values()) {
+      if (leftToLoad > 0) {
+        return stats;
+      }
     }
+
+    final ReplicationThrottler replicationManager = params.getReplicationManager();
 
     // Find all instances of this segment across tiers
     Map<String, Integer> replicantsByTier = params.getSegmentReplicantLookup().getClusterTiers(segment.getIdentifier());
