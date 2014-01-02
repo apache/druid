@@ -54,9 +54,18 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
           .setUser2(fireDepartment.getSchema().getDataSource());
 
+      long processed = metrics.processed() - previous.processed();
       emitter.emit(builder.build("events/thrownAway", metrics.thrownAway() - previous.thrownAway()));
       emitter.emit(builder.build("events/unparseable", metrics.unparseable() - previous.unparseable()));
-      emitter.emit(builder.build("events/processed", metrics.processed() - previous.processed()));
+      emitter.emit(builder.build("events/processed", processed));
+      emitter.emit(
+          builder.build(
+              "events/delta/avgIngestionTime", 1.0 * (metrics.ingestionTime() - previous.ingestionTime()) / processed
+          )
+      );
+      emitter.emit(
+          builder.build("events/total/avgIngestionTime", 1.0 * metrics.ingestionTime() / metrics.processed())
+      );
       emitter.emit(builder.build("rows/output", metrics.rowOutput() - previous.rowOutput()));
 
       previousValues.put(fireDepartment, metrics);

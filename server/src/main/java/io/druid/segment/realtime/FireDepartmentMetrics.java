@@ -29,6 +29,7 @@ public class FireDepartmentMetrics
   private final AtomicLong thrownAwayCount = new AtomicLong(0);
   private final AtomicLong unparseableCount = new AtomicLong(0);
   private final AtomicLong rowOutputCount = new AtomicLong(0);
+  private final AtomicLong ingestionTime = new AtomicLong(0);
 
   public void incrementProcessed()
   {
@@ -48,6 +49,11 @@ public class FireDepartmentMetrics
   public void incrementRowOutputCount(long numRows)
   {
     rowOutputCount.addAndGet(numRows);
+  }
+
+  public void incrementIngestionTime(long inMillis)
+  {
+    ingestionTime.addAndGet(inMillis);
   }
 
   public long processed()
@@ -70,6 +76,11 @@ public class FireDepartmentMetrics
     return rowOutputCount.get();
   }
 
+  public long ingestionTime()
+  {
+    return ingestionTime.get();
+  }
+
   public FireDepartmentMetrics snapshot()
   {
     final FireDepartmentMetrics retVal = new FireDepartmentMetrics();
@@ -77,6 +88,7 @@ public class FireDepartmentMetrics
     retVal.thrownAwayCount.set(thrownAwayCount.get());
     retVal.unparseableCount.set(unparseableCount.get());
     retVal.rowOutputCount.set(rowOutputCount.get());
+    retVal.ingestionTime.set(ingestionTime.get());
     return retVal;
   }
 }
