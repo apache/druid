@@ -98,17 +98,11 @@ public class MoveTask extends AbstractFixedIntervalTask
       log.info("OK to move segment: %s", unusedSegment.getIdentifier());
     }
 
-    List<DataSegment> movedSegments = Lists.newLinkedList();
-
     // Move segments
     for (DataSegment segment : unusedSegments) {
-      movedSegments.add(toolbox.getDataSegmentMover().move(segment, targetLoadSpec));
+      final DataSegment movedSegment = toolbox.getDataSegmentMover().move(segment, targetLoadSpec);
+      toolbox.getTaskActionClient().submit(new SegmentMetadataUpdateAction(ImmutableSet.of(movedSegment)));
     }
-
-    // Update metadata for moved segments
-    toolbox.getTaskActionClient().submit(new SegmentMetadataUpdateAction(
-        ImmutableSet.copyOf(movedSegments)
-    ));
 
     return TaskStatus.success(getId());
   }

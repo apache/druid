@@ -712,7 +712,7 @@ public class RealtimePlumberSchool implements PlumberSchool
             handoffCondition.notifyAll();
           }
         }
-        catch (IOException e) {
+        catch (Exception e) {
           log.makeAlert(e, "Unable to abandon old segment for dataSource[%s]", schema.getDataSource())
              .addData("interval", sink.getInterval())
              .emit();

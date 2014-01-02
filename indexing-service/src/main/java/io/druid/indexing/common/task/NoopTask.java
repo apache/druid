@@ -35,9 +35,9 @@ import org.joda.time.DateTime;
 public class NoopTask extends AbstractTask
 {
   private static final Logger log = new Logger(NoopTask.class);
-  private static int defaultRunTime = 2500;
-  private static int defaultIsReadyTime = 0;
-  private static IsReadyResult defaultIsReadyResult = IsReadyResult.YES;
+  private static final int defaultRunTime = 2500;
+  private static final int defaultIsReadyTime = 0;
+  private static final IsReadyResult defaultIsReadyResult = IsReadyResult.YES;
 
   enum IsReadyResult
   {
@@ -138,5 +138,10 @@ public class NoopTask extends AbstractTask
     Thread.sleep(runTime);
     log.info("Woke up!");
     return TaskStatus.success(getId());
+  }
+
+  public static NoopTask create()
+  {
+    return new NoopTask(null, 0, 0, null, null);
   }
 }

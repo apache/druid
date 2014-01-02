@@ -489,7 +489,18 @@ public class DbTaskStorage implements TaskStorage
 
             final Map<Long, TaskLock> retMap = Maps.newHashMap();
             for (final Map<String, Object> row : dbTaskLocks) {
-              retMap.put((Long) row.get("id"), jsonMapper.readValue((byte[]) row.get("lock_payload"), TaskLock.class));
+              try {
+                retMap.put(
+                    (Long) row.get("id"),
+                    jsonMapper.readValue((byte[]) row.get("lock_payload"), TaskLock.class)
+                );
+              }
+              catch (Exception e) {
+                log.makeAlert(e, "Failed to deserialize TaskLock")
+                   .addData("task", taskid)
+                   .addData("lockPayload", row)
+                   .emit();
+              }
             }
             return retMap;
           }

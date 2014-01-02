@@ -125,8 +125,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
                   return input.getInstanceId();
                 }
               }
-          ),
-          result.getReservation().getInstances()
+          )
       );
     }
     catch (Exception e) {
@@ -140,7 +139,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
   public AutoScalingData terminate(List<String> ips)
   {
     if (ips.isEmpty()) {
-      return new AutoScalingData(Lists.<String>newArrayList(), Lists.<Instance>newArrayList());
+      return new AutoScalingData(Lists.<String>newArrayList());
     }
 
     DescribeInstancesResult result = amazonEC2Client.describeInstances(
@@ -184,8 +183,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
                   return String.format("%s:%s", input, config.getWorkerPort());
                 }
               }
-          ),
-          instances
+          )
       );
     }
     catch (Exception e) {

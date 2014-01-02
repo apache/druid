@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -251,26 +252,26 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   @Override
   public Collection<ZkWorker> getWorkers()
   {
-    return zkWorkers.values();
+    return ImmutableList.copyOf(zkWorkers.values());
   }
 
   @Override
   public Collection<RemoteTaskRunnerWorkItem> getRunningTasks()
   {
-    return runningTasks.values();
+    return ImmutableList.copyOf(runningTasks.values());
   }
 
   @Override
   public Collection<RemoteTaskRunnerWorkItem> getPendingTasks()
   {
-    return pendingTasks.values();
+    return ImmutableList.copyOf(pendingTasks.values());
   }
 
   @Override
   public Collection<RemoteTaskRunnerWorkItem> getKnownTasks()
   {
     // Racey, since there is a period of time during assignment when a task is neither pending nor running
-    return Lists.newArrayList(Iterables.concat(pendingTasks.values(), runningTasks.values(), completeTasks.values()));
+    return ImmutableList.copyOf(Iterables.concat(pendingTasks.values(), runningTasks.values(), completeTasks.values()));
   }
 
   public ZkWorker findWorkerRunningTask(String taskId)
