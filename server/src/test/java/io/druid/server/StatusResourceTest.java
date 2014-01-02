@@ -19,19 +19,14 @@
 
 package io.druid.server;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
-import com.google.inject.Injector;
 import io.druid.initialization.DruidModule;
-import io.druid.initialization.Initialization;
-import io.druid.server.initialization.ExtensionsConfig;
+import io.druid.initialization.InitializationTest;
 import junit.framework.Assert;
 import org.junit.Test;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import static io.druid.server.StatusResource.ModuleVersion;
 
@@ -39,29 +34,14 @@ import static io.druid.server.StatusResource.ModuleVersion;
  */
 public class StatusResourceTest
 {
-
-  private Collection<DruidModule> loadTestModule()
-  {
-    Injector baseInjector = Initialization.makeStartupInjector();
-    return Initialization.getFromExtensions(baseInjector.getInstance(ExtensionsConfig.class), DruidModule.class);
-  }
-
   @Test
   public void testLoadedModules()
   {
-    final StatusResource resource = new StatusResource();
-    List<ModuleVersion> statusResourceModuleList;
 
-    statusResourceModuleList = resource.doGet().getModules();
-    Assert.assertEquals(
-        "No Modules should be loaded currently! " + statusResourceModuleList,
-        statusResourceModuleList.size(), 0
-    );
+    Collection<DruidModule> modules = ImmutableList.of((DruidModule)new InitializationTest.TestDruidModule());
+    List<ModuleVersion> statusResourceModuleList = new StatusResource.Status(modules).getModules();
 
-    Collection<DruidModule> modules = loadTestModule();
-    statusResourceModuleList = resource.doGet().getModules();
-
-    Assert.assertEquals("Status should have all modules loaded!", statusResourceModuleList.size(), modules.size());
+    Assert.assertEquals("Status should have all modules loaded!", modules.size(), statusResourceModuleList.size());
 
     for (DruidModule module : modules) {
       String moduleName = module.getClass().getCanonicalName();
@@ -74,30 +54,6 @@ public class StatusResourceTest
       }
       Assert.assertTrue("Status resource should contain module " + moduleName, contains);
     }
-
-    /*
-     * StatusResource only uses Initialization.getLoadedModules
-     */
-    for (int i = 0; i < 5; i++) {
-      Set<DruidModule> loadedModules = Initialization.getLoadedModules(DruidModule.class);
-      Assert.assertEquals("Set from loaded module should be same!", loadedModules, modules);
-    }
   }
-
-  public static class TestDruidModule implements DruidModule
-  {
-    @Override
-    public List<? extends Module> getJacksonModules()
-    {
-      return ImmutableList.of();
-    }
-
-    @Override
-    public void configure(Binder binder)
-    {
-      // Do nothing
-    }
-  }
-
 }
 
