@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
+import io.druid.examples.conjure.ConjureFirehoseFactory;
 import io.druid.examples.flights.FlightsFirehoseFactory;
 import io.druid.examples.rand.RandomFirehoseFactory;
 import io.druid.examples.twitter.TwitterSpritzerFirehoseFactory;
@@ -45,7 +46,8 @@ public class ExamplesDruidModule implements DruidModule
                 new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
                 new NamedType(FlightsFirehoseFactory.class, "flights"),
                 new NamedType(RandomFirehoseFactory.class, "rand"),
-                new NamedType(WebFirehoseFactory.class, "webstream")
+                new NamedType(WebFirehoseFactory.class, "webstream"),
+                new NamedType(ConjureFirehoseFactory.class, "conjure")
             )
     );
   }

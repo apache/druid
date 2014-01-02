@@ -58,6 +58,11 @@
             <artifactId>twitter4j-stream</artifactId>
             <version>3.0.3</version>
         </dependency>
+        <dependency>
+            <groupId>io.d8a</groupId>
+            <artifactId>d8a-conjure</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
 
         <!-- For tests! -->
         <dependency>

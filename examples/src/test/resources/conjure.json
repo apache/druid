@@ -1,0 +1,29 @@
+{
+    "specs":
+    [
+        {
+            "cardinality":10,
+            "type":"int",
+            "count":1,
+            "name":"Int10Card"
+        },
+        {
+            "cardinality":100,
+            "type":"string",
+            "count":1,
+            "name":"String100Card"
+        },
+        {
+            "cardinality":150,
+            "type":"double",
+            "count":1,
+            "name":"Double150Card"
+        },
+        {
+            "cardinality":200,
+            "type":"long",
+            "count":1,
+            "name":"Long200Card"
+        }
+    ]
+}
