@@ -368,18 +368,21 @@ public class IndexTask extends AbstractFixedIntervalTask
     }
 
     plumber.persist(firehose.commit());
-    plumber.finishJob();
 
-    // Output metrics
-    log.info(
-        "Task[%s] took in %,d rows (%,d processed, %,d unparseable, %,d thrown away) and output %,d rows",
-        getId(),
-        metrics.processed() + metrics.unparseable() + metrics.thrownAway(),
-        metrics.processed(),
-        metrics.unparseable(),
-        metrics.thrownAway(),
-        metrics.rowOutput()
-    );
+    try {
+      plumber.finishJob();
+    }
+    finally {
+      log.info(
+          "Task[%s] took in %,d rows (%,d processed, %,d unparseable, %,d thrown away) and output %,d rows",
+          getId(),
+          metrics.processed() + metrics.unparseable() + metrics.thrownAway(),
+          metrics.processed(),
+          metrics.unparseable(),
+          metrics.thrownAway(),
+          metrics.rowOutput()
+      );
+    }
 
     // We expect a single segment to have been created.
     return Iterables.getOnlyElement(pushedSegments);
