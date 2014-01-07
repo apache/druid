@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator.rules;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
@@ -27,6 +28,7 @@ import org.joda.time.DateTime;
 public class ForeverDropRule extends DropRule
 {
   @Override
+  @JsonProperty
   public String getType()
   {
     return "dropForever";

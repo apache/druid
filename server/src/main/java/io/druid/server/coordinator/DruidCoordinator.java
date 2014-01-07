@@ -70,7 +70,6 @@ import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -694,11 +693,11 @@ public class DruidCoordinator
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams.newBuilder()
-                                    .withStartTime(startTime)
-                                    .withDatasources(databaseSegmentManager.getInventory())
-                                    .withDynamicConfigs(dynamicConfigs.get())
-                                    .withEmitter(emitter)
-                                    .build();
+                                         .withStartTime(startTime)
+                                         .withDatasources(databaseSegmentManager.getInventory())
+                                         .withDynamicConfigs(dynamicConfigs.get())
+                                         .withEmitter(emitter)
+                                         .build();
 
 
         for (DruidCoordinatorHelper helper : helpers) {
@@ -731,10 +730,10 @@ public class DruidCoordinator
                           {
                             @Override
                             public boolean apply(
-                                @Nullable DruidServer input
+                                DruidServer input
                             )
                             {
-                              return input.getType().equalsIgnoreCase("historical");
+                              return !input.getType().equalsIgnoreCase("realtime");
                             }
                           }
                       );

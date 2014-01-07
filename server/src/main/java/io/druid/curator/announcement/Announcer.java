@@ -63,6 +63,7 @@ public class Announcer
   private final PathChildrenCacheFactory factory;
 
   private final List<Pair<String, byte[]>> toAnnounce = Lists.newArrayList();
+  private final List<Pair<String, byte[]>> toUpdate = Lists.newArrayList();
   private final ConcurrentMap<String, PathChildrenCache> listeners = new MapMaker().makeMap();
   private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new MapMaker().makeMap();
   private final List<String> parentsIBuilt = new CopyOnWriteArrayList<String>();
@@ -92,6 +93,11 @@ public class Announcer
         announce(pair.lhs, pair.rhs);
       }
       toAnnounce.clear();
+
+      for (Pair<String, byte[]> pair : toUpdate) {
+        update(pair.lhs, pair.rhs);
+      }
+      toUpdate.clear();
     }
   }
 
@@ -143,6 +149,8 @@ public class Announcer
         return;
       }
     }
+
+    log.info("Announcing with Curator %s", curator); // TODO
 
     final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
 
@@ -268,6 +276,13 @@ public class Announcer
 
   public void update(final String path, final byte[] bytes)
   {
+    synchronized (toAnnounce) {
+      if (!started) {
+        toUpdate.add(Pair.of(path, bytes));
+        return;
+      }
+    }
+
     final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
 
     final String parentPath = pathAndNode.getPath();

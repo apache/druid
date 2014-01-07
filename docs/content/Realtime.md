@@ -129,7 +129,6 @@ This describes the data schema for the output Druid segment. More information ab
 |aggregators|Array of Objects|The list of aggregators to use to aggregate colliding rows together.|yes|
 |dataSource|String|The name of the dataSource that the segment belongs to.|yes|
 |indexGranularity|String|The granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows.|yes|
-|segmentGranularity|String|The granularity of the segment as a whole. This is generally larger than the index granularity and describes the rate at which the realtime server will push segments out for historical servers to take over.|yes|
 |shardSpec|Object|This describes the shard that is represented by this server. This must be specified properly in order to have multiple realtime nodes indexing the same data stream in a sharded fashion.|no|
 
 ### Config

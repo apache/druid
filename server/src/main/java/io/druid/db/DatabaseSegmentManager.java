@@ -339,6 +339,50 @@ public class DatabaseSegmentManager
     return true;
   }
 
+  public boolean deleteSegment(final DataSegment segment)
+  {
+    try {
+      final String ds = segment.getDataSource();
+
+      dbi.withHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle) throws Exception
+            {
+              handle.createStatement(
+                  String.format("DELETE from %s WHERE id = :id", getSegmentsTable())
+              )
+                    .bind("id", segment.getIdentifier())
+                    .execute();
+
+              return null;
+            }
+          }
+      );
+
+      ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSources.get();
+
+      if (!dataSourceMap.containsKey(ds)) {
+        log.warn("Cannot find datasource %s", ds);
+        return false;
+      }
+
+      DruidDataSource dataSource = dataSourceMap.get(ds);
+      dataSource.removePartition(segment.getIdentifier());
+
+      if (dataSource.isEmpty()) {
+        dataSourceMap.remove(ds);
+      }
+    }
+    catch (Exception e) {
+      log.error(e, e.toString());
+      return false;
+    }
+
+    return true;
+  }
+
   public boolean isStarted()
   {
     return started;
@@ -462,7 +506,8 @@ public class DatabaseSegmentManager
     }
   }
 
-  private String getSegmentsTable() {
+  private String getSegmentsTable()
+  {
     return dbTables.get().getSegmentsTable();
   }
 }

@@ -41,6 +41,7 @@ public class ForeverLoadRule extends LoadRule
   }
 
   @Override
+  @JsonProperty
   public String getType()
   {
     return "loadForever";
