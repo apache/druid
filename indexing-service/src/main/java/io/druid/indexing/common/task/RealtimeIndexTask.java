@@ -341,11 +341,11 @@ public class RealtimeIndexTask extends AbstractTask
         }
       }
     }
-    catch (Exception e) {
+    catch (Throwable e) {
+      normalExit = false;
       log.makeAlert(e, "Exception aborted realtime processing[%s]", schema.getDataSource())
          .emit();
-      normalExit = false;
-      throw Throwables.propagate(e);
+      throw e;
     }
     finally {
       if (normalExit) {
