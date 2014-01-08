@@ -374,8 +374,11 @@ public class IndexTask extends AbstractFixedIntervalTask
     }
     finally {
       log.info(
-          "Task[%s] took in %,d rows (%,d processed, %,d unparseable, %,d thrown away) and output %,d rows",
+          "Task[%s] interval[%s] partition[%d] took in %,d rows (%,d processed, %,d unparseable, %,d thrown away)"
+          + " and output %,d rows",
           getId(),
+          interval,
+          schema.getShardSpec().getPartitionNum(),
           metrics.processed() + metrics.unparseable() + metrics.thrownAway(),
           metrics.processed(),
           metrics.unparseable(),
