@@ -62,7 +62,8 @@ public class ForkingTaskRunnerConfig
       "druid",
       "io.druid",
       "user.timezone",
-      "file.encoding"
+      "file.encoding",
+      "java.io.tmpdir"
   );
 
   public String getTaskDir()
