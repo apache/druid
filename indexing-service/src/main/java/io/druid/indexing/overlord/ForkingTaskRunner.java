@@ -218,29 +218,20 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             }
 
                             log.info("Logging task %s output to: %s", task.getId(), logFile);
-
-                            final InputStream fromProc = processHolder.process.getInputStream();
-                            final OutputStream toLogfile = closer.register(
-                                Files.newOutputStreamSupplier(logFile).getOutput()
-                            );
-
                             boolean runFailed = true;
 
-                            ByteStreams.copy(fromProc, toLogfile);
-                            final int statusCode = processHolder.process.waitFor();
-                            log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
-
-                            if (statusCode == 0) {
-                              runFailed = false;
+                            try (final OutputStream toLogfile = Files.newOutputStreamSupplier(logFile).getOutput()) {
+                              ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
+                              final int statusCode = processHolder.process.waitFor();
+                              log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
+                              if (statusCode == 0) {
+                                runFailed = false;
+                              }
                             }
-
-                            // Upload task logs
-
-                            // XXX: Consider uploading periodically for very long-lived tasks to prevent
-                            // XXX: bottlenecks at the end or the possibility of losing a lot of logs all
-                            // XXX: at once.
-
-                            taskLogPusher.pushTaskLog(task.getId(), logFile);
+                            finally {
+                              // Upload task logs
+                              taskLogPusher.pushTaskLog(task.getId(), logFile);
+                            }
 
                             if (!runFailed) {
                               // Process exited successfully
@@ -255,9 +246,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             closer.close();
                           }
                         }
-                        catch (Exception e) {
-                          log.info(e, "Exception caught during execution");
-                          throw Throwables.propagate(e);
+                        catch (Throwable t) {
+                          log.info(t, "Exception caught during execution");
+                          throw Throwables.propagate(t);
                         }
                         finally {
                           try {
