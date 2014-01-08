@@ -135,7 +135,8 @@ public class LoadRuleTest
                             "hostHot",
                             1000,
                             "historical",
-                            "hot"
+                            "hot",
+                            0
                         ),
                         mockPeon
                     )
@@ -150,7 +151,8 @@ public class LoadRuleTest
                             "hostNorm",
                             1000,
                             "historical",
-                            DruidServer.DEFAULT_TIER
+                            DruidServer.DEFAULT_TIER,
+                            0
                         ),
                         mockPeon
                     )
@@ -219,7 +221,8 @@ public class LoadRuleTest
         "hostHot",
         1000,
         "historical",
-        "hot"
+        "hot",
+        0
     );
     server1.addDataSegment(segment.getIdentifier(), segment);
     DruidServer server2 = new DruidServer(
@@ -227,7 +230,8 @@ public class LoadRuleTest
         "hostNorm",
         1000,
         "historical",
-        DruidServer.DEFAULT_TIER
+        DruidServer.DEFAULT_TIER,
+        0
     );
     server2.addDataSegment(segment.getIdentifier(), segment);
     DruidCluster druidCluster = new DruidCluster(

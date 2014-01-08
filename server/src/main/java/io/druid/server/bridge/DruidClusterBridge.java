@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package io.druid.server.bridge;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,20 +60,24 @@ import java.util.concurrent.atomic.AtomicReference;
 @ManageLifecycle
 public class DruidClusterBridge
 {
-  public static final String CONNECTOR_OWNER_NODE = "_CONNECTOR";
+  public static final String BRIDGE_OWNER_NODE = "_BRIDGE";
   public static final String NODE_TYPE = "bridge";
 
   private static final EmittingLogger log = new EmittingLogger(DruidClusterBridge.class);
 
   private final ObjectMapper jsonMapper;
   private final DruidClusterBridgeConfig config;
-  private final BridgeZkCoordinator bridgeZkCoordinator; // watches for assignments from main cluster
-  private final Announcer announcer; //announce self to main cluster
-  private final ServerInventoryView<Object> serverInventoryView;
-  private final CuratorFramework curator;
   private final ScheduledExecutorService exec;
-  private final AtomicReference<LeaderLatch> leaderLatch;
   private final DruidNode self;
+
+  // Communicates to the ZK cluster that this bridge node is deployed at
+  private final CuratorFramework curator;
+  private final AtomicReference<LeaderLatch> leaderLatch;
+
+  // Communicates to the remote (parent) ZK cluster
+  private final BridgeZkCoordinator bridgeZkCoordinator;
+  private final Announcer announcer;
+  private final ServerInventoryView<Object> serverInventoryView;
 
   private final Map<DataSegment, Integer> segments = Maps.newHashMap();
   private final Object lock = new Object();
@@ -66,14 +89,14 @@ public class DruidClusterBridge
   public DruidClusterBridge(
       ObjectMapper jsonMapper,
       DruidClusterBridgeConfig config,
+      ScheduledExecutorFactory scheduledExecutorFactory,
+      @Self DruidNode self,
+      CuratorFramework curator,
+      AtomicReference<LeaderLatch> leaderLatch,
       BridgeZkCoordinator bridgeZkCoordinator,
       @Bridge Announcer announcer,
       @Bridge final AbstractDataSegmentAnnouncer dataSegmentAnnouncer,
-      ServerInventoryView serverInventoryView,
-      CuratorFramework curator,
-      ScheduledExecutorFactory scheduledExecutorFactory,
-      AtomicReference<LeaderLatch> leaderLatch,
-      @Self DruidNode self
+      ServerInventoryView serverInventoryView
   )
   {
     this.jsonMapper = jsonMapper;
@@ -86,8 +109,6 @@ public class DruidClusterBridge
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
     this.self = self;
-
-    log.info("Local curator: [%s]", curator); // TODO
 
     serverInventoryView.registerSegmentCallback(
         Executors.newFixedThreadPool(
@@ -128,7 +149,7 @@ public class DruidClusterBridge
               synchronized (lock) {
                 Integer count = segments.get(segment);
                 if (count != null) {
-                  if (count == 0) {
+                  if (count == 1) {
                     dataSegmentAnnouncer.unannounceSegment(segment);
                     segments.remove(segment);
                   } else {
@@ -174,7 +195,7 @@ public class DruidClusterBridge
   private LeaderLatch createNewLeaderLatch()
   {
     final LeaderLatch newLeaderLatch = new LeaderLatch(
-        curator, ZKPaths.makePath(config.getConnectorPath(), CONNECTOR_OWNER_NODE), self.getHost()
+        curator, ZKPaths.makePath(config.getConnectorPath(), BRIDGE_OWNER_NODE), self.getHost()
     );
 
     newLeaderLatch.addListener(
@@ -266,13 +287,13 @@ public class DruidClusterBridge
                   if (totalMaxSize == 0) {
                     log.warn("No servers founds!");
                   } else {
-
                     DruidServerMetadata me = new DruidServerMetadata(
                         self.getHost(),
                         self.getHost(),
                         totalMaxSize,
                         NODE_TYPE,
-                        config.getTier()
+                        config.getTier(),
+                        config.getPriority()
                     );
 
                     try {

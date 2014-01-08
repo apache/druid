@@ -31,6 +31,7 @@ public class DruidServerMetadata
   private final long maxSize;
   private final String tier;
   private final String type;
+  private final int priority;
 
   @JsonCreator
   public DruidServerMetadata(
@@ -38,7 +39,8 @@ public class DruidServerMetadata
       @JsonProperty("host") String host,
       @JsonProperty("maxSize") long maxSize,
       @JsonProperty("type") String type,
-      @JsonProperty("tier") String tier
+      @JsonProperty("tier") String tier,
+      @JsonProperty("priority") int priority
   )
   {
     this.name = name;
@@ -46,6 +48,7 @@ public class DruidServerMetadata
     this.maxSize = maxSize;
     this.tier = tier;
     this.type = type;
+    this.priority = priority;
   }
 
   @JsonProperty
@@ -78,6 +81,12 @@ public class DruidServerMetadata
     return type;
   }
 
+  @JsonProperty
+  public int getPriority()
+  {
+    return priority;
+  }
+
   @Override
   public String toString()
   {
@@ -87,6 +96,7 @@ public class DruidServerMetadata
            ", maxSize=" + maxSize +
            ", tier='" + tier + '\'' +
            ", type='" + type + '\'' +
+           ", priority='" + priority + '\'' +
            '}';
   }
 }

@@ -64,16 +64,11 @@ public class ZkCoordinator extends BaseZkCoordinator
   }
 
   @Override
-  public void createCacheDir()
+  public void loadLocalCache()
   {
-    config.getInfoDir().mkdirs();
-  }
-
-  @Override
-  public void loadCache()
-  {
+    final long start = System.currentTimeMillis();
     File baseDir = config.getInfoDir();
-    if (!baseDir.exists()) {
+    if (!baseDir.exists() && !config.getInfoDir().mkdirs()) {
       return;
     }
 
@@ -107,7 +102,7 @@ public class ZkCoordinator extends BaseZkCoordinator
           @Override
           public void execute()
           {
-            // do nothing
+            log.info("Cache load took %,d ms", System.currentTimeMillis() - start);
           }
         }
     );

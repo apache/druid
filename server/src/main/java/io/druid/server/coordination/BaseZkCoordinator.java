@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,11 +67,12 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
   @LifecycleStart
   public void start() throws IOException
   {
-    log.info("Starting zkCoordinator for server[%s]", me);
     synchronized (lock) {
       if (started) {
         return;
       }
+
+      log.info("Starting zkCoordinator for server[%s]", me);
 
       final String loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
       final String servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
@@ -67,14 +87,11 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
       );
 
       try {
-        createCacheDir();
-
-        log.info("Remote Curator[%s]", curator); // TODO
         curator.newNamespaceAwareEnsurePath(loadQueueLocation).ensure(curator.getZookeeperClient());
         curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
         curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
 
-        loadCache();
+        loadLocalCache();
 
         loadQueueCache.getListenable().addListener(
             new PathChildrenCacheListener()
@@ -173,9 +190,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
     }
   }
 
-  public abstract void createCacheDir();
-
-  public abstract void loadCache();
+  public abstract void loadLocalCache();
 
   public abstract DataSegmentChangeHandler getDataSegmentChangeHandler();
 }

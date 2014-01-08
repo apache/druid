@@ -6,6 +6,8 @@ var ruleTypes = [
   "loadByPeriod",
   "dropByInterval",
   "dropByPeriod",
+  "loadForever",
+  "dropForever",
   "JSON"
 ];
 
@@ -60,6 +62,12 @@ function makeRuleBody(rule) {
       case "dropByPeriod":
         retVal += makeDropByPeriod(rule);
         break;
+      case "loadForever":
+        retVal += makeLoadForever(rule);
+        break;
+      case "dropForever":
+        retVal += "";
+        break;
       case "JSON":
         retVal += makeJSON();
         break;
@@ -91,6 +99,12 @@ function makeDropByInterval(rule) {
 
 function makeDropByPeriod(rule) {
    return "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
+}
+
+function makeLoadForever(rule) {
+  return "<span class='rule_label'>replicants</span><input type='text' class='short_text' name='replicants' " + "value='" + rule.replicants + "'/>" +
+         makeTiersDropdown(rule)
+  ;
 }
 
 function makeJSON() {

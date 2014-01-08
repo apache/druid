@@ -27,6 +27,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.RequestBuilder;
 import io.druid.client.DirectDruidClient;
+import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.ReflectionQueryToolChestWarehouse;
@@ -91,12 +92,12 @@ public class ServerSelectorTest
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-        null,
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
         client1
     );
     serverSelector.addServer(queryableDruidServer1);
     QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
-        null,
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
         client2
     );
     serverSelector.addServer(queryableDruidServer2);

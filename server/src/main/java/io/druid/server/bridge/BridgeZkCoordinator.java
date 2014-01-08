@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package io.druid.server.bridge;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,7 +27,6 @@ import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.concurrent.Execs;
 import io.druid.db.DatabaseSegmentManager;
-import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.realtime.DbSegmentPublisher;
 import io.druid.server.coordination.BaseZkCoordinator;
 import io.druid.server.coordination.DataSegmentChangeCallback;
@@ -51,13 +69,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
   }
 
   @Override
-  public void createCacheDir()
-  {
-    // do nothing
-  }
-
-  @Override
-  public void loadCache()
+  public void loadLocalCache()
   {
     // do nothing
   }
@@ -85,7 +97,6 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
             {
               if (theSegment.equals(segment)) {
                 callback.execute();
-                log.info("Callback executed");
               }
               return ServerView.CallbackAction.CONTINUE;
             }

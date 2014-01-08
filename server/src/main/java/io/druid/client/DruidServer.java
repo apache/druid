@@ -61,7 +61,8 @@ public class DruidServer implements Comparable
         node.getHost(),
         config.getMaxSize(),
         type,
-        config.getTier()
+        config.getTier(),
+        0
     );
   }
 
@@ -71,10 +72,11 @@ public class DruidServer implements Comparable
       @JsonProperty("host") String host,
       @JsonProperty("maxSize") long maxSize,
       @JsonProperty("type") String type,
-      @JsonProperty("tier") String tier
+      @JsonProperty("tier") String tier,
+      @JsonProperty("priority") int priority
   )
   {
-    this.metadata = new DruidServerMetadata(name, host, maxSize, type, tier);
+    this.metadata = new DruidServerMetadata(name, host, maxSize, type, tier, priority);
 
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
     this.segments = new ConcurrentHashMap<String, DataSegment>();
@@ -118,6 +120,12 @@ public class DruidServer implements Comparable
   public String getTier()
   {
     return metadata.getTier();
+  }
+
+  @JsonProperty
+  public int getPriority()
+  {
+    return metadata.getPriority();
   }
 
   @JsonProperty

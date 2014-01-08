@@ -150,8 +150,6 @@ public class Announcer
       }
     }
 
-    log.info("Announcing with Curator %s", curator); // TODO
-
     final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
 
     final String parentPath = pathAndNode.getPath();

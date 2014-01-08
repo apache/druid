@@ -36,7 +36,12 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
     @Override
     public int compare(QueryableDruidServer left, QueryableDruidServer right)
     {
-      return Ints.compare(left.getClient().getNumOpenConnections(), right.getClient().getNumOpenConnections());
+      int retVal = -Ints.compare(left.getServer().getPriority(), right.getServer().getPriority());
+      if (retVal == 0) {
+        retVal = Ints.compare(left.getClient().getNumOpenConnections(), right.getClient().getNumOpenConnections());
+      }
+
+      return retVal;
     }
   };
 
@@ -84,9 +89,12 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
     synchronized (this) {
       final int size = servers.size();
       switch (size) {
-        case 0: return null;
-        case 1: return servers.iterator().next();
-        default: return Collections.min(servers, comparator);
+        case 0:
+          return null;
+        case 1:
+          return servers.iterator().next();
+        default:
+          return Collections.min(servers, comparator);
       }
     }
   }

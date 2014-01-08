@@ -11,19 +11,24 @@ import io.airlift.command.Command;
 import io.druid.concurrent.Execs;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
+import io.druid.curator.discovery.ServerDiscoveryFactory;
+import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.db.DatabaseSegmentManagerConfig;
 import io.druid.db.DatabaseSegmentManagerProvider;
 import io.druid.guice.ConfigProvider;
+import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.ManageLifecycleLast;
 import io.druid.guice.NodeTypeConfig;
+import io.druid.query.QuerySegmentWalker;
+import io.druid.server.QueryResource;
 import io.druid.server.bridge.Bridge;
 import io.druid.server.bridge.BridgeCuratorConfig;
-import io.druid.server.bridge.BridgeJettyServerInitializer;
+import io.druid.server.bridge.BridgeQuerySegmentWalker;
 import io.druid.server.bridge.BridgeZkCoordinator;
 import io.druid.server.bridge.DruidClusterBridge;
 import io.druid.server.bridge.DruidClusterBridgeConfig;
@@ -44,7 +49,7 @@ import java.util.List;
  */
 @Command(
     name = "bridge",
-    description = "Runs a bridge node, see http://druid.io/docs/0.6.46/Bridge.html for a description." // TODO
+    description = "Runs a bridge node, see http://druid.io/docs/0.6.46/Bridge.html for a description."
 )
 public class CliBridge extends ServerRunnable
 {
@@ -74,11 +79,15 @@ public class CliBridge extends ServerRunnable
                   .toProvider(DatabaseSegmentManagerProvider.class)
                   .in(ManageLifecycle.class);
 
+            binder.bind(QuerySegmentWalker.class).to(BridgeQuerySegmentWalker.class).in(LazySingleton.class);
+            binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+            Jerseys.addResource(binder, QueryResource.class);
+            LifecycleModule.register(binder, QueryResource.class);
+
             ConfigProvider.bind(binder, DruidClusterBridgeConfig.class);
             binder.bind(DruidClusterBridge.class);
             LifecycleModule.register(binder, DruidClusterBridge.class);
 
-            binder.bind(JettyServerInitializer.class).toInstance(new BridgeJettyServerInitializer());
             LifecycleModule.register(binder, BridgeZkCoordinator.class);
 
             LifecycleModule.register(binder, Server.class);
@@ -121,6 +130,17 @@ public class CliBridge extends ServerRunnable
             );
 
             return framework;
+          }
+
+          @Provides
+          @ManageLifecycle
+          public ServerDiscoverySelector getServerDiscoverySelector(
+              DruidClusterBridgeConfig config,
+              ServerDiscoveryFactory factory
+
+          )
+          {
+            return factory.createSelector(config.getBrokerServiceName());
           }
 
           @Provides
