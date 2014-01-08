@@ -38,6 +38,9 @@ import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import io.druid.query.topn.TopNQuery;
+import io.druid.query.topn.TopNQueryConfig;
+import io.druid.query.topn.TopNQueryQueryToolChest;
 
 import java.util.Map;
 
@@ -52,6 +55,7 @@ public class QueryToolChestModule implements Module
                   .put(TimeBoundaryQuery.class, TimeBoundaryQueryQueryToolChest.class)
                   .put(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
                   .put(GroupByQuery.class, GroupByQueryQueryToolChest.class)
+                  .put(TopNQuery.class, TopNQueryQueryToolChest.class)
                   .build();
 
   @Override
@@ -67,5 +71,6 @@ public class QueryToolChestModule implements Module
     JsonConfigProvider.bind(binder, "druid.query", QueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.search", SearchQueryConfig.class);
+    JsonConfigProvider.bind(binder, "druid.query.topN", TopNQueryConfig.class);
   }
 }
