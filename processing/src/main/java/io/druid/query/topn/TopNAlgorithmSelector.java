@@ -50,7 +50,6 @@ public class TopNAlgorithmSelector
   {
     // These are just heuristics based on an analysis of where an inflection point may lie to switch
     // between different algorithms
-    // More info: https://metamarkets.atlassian.net/wiki/display/APP/Top+n+speeds+with+uniques
     if (cardinality > 400000 && numBytesPerRecord > 100) {
       this.aggregateTopNMetricFirst = aggregateTopNMetricFirst;
     }
