@@ -84,31 +84,31 @@ The format of the results would look like so:
     "timestamp": "2013-08-31T00:00:00.000Z",
     "result": [
       {
-        "user": "67.173.175.77",
+        "dim1": "dim1_val",
         "count": 111,
         "some_metrics": 10669,
         "average": 96.11711711711712
       },
       {
-        "user": "24.10.49.170",
+        "dim1": "another_dim1_val",
         "count": 88,
         "some_metrics": 28344,
         "average": 322.09090909090907
       },
       {
-        "user": "72.193.24.148",
+        "dim1": "dim1_val3",
         "count": 70,
         "some_metrics": 871,
         "average": 12.442857142857143
       },
       {
-        "user": "108.46.28.47",
+        "dim1": "dim1_val4",
         "count": 62,
         "some_metrics": 815,
         "average": 13.14516129032258
       },
       {
-        "user": "99.181.143.133",
+        "dim1": "dim1_val5",
         "count": 60,
         "some_metrics": 2787,
         "average": 46.45
