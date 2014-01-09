@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.InputRow;
 
-import java.util.Map;
-
 public class LinearShardSpec implements ShardSpec
 {
   private int partitionNum;
@@ -52,5 +50,13 @@ public class LinearShardSpec implements ShardSpec
   @Override
   public boolean isInChunk(InputRow inputRow) {
     return true;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LinearShardSpec{" +
+           "partitionNum=" + partitionNum +
+           '}';
   }
 }

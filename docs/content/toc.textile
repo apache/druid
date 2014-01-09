@@ -42,6 +42,8 @@ h2. Querying
 ** "SegmentMetadataQuery":./SegmentMetadataQuery.html
 ** "TimeBoundaryQuery":./TimeBoundaryQuery.html
 ** "TimeseriesQuery":./TimeseriesQuery.html
+** "TopNQuery":./TopNQuery.html
+*** "TopNMetricSpec":./TopNMetricSpec.html
 
 h2. Architecture
 * "Design":./Design.html
