@@ -23,8 +23,10 @@ import com.google.common.collect.MapMaker;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import io.druid.client.DruidServer;
 import io.druid.client.SingleServerInventoryView;
+import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.curator.inventory.InventoryManagerConfig;
 import io.druid.db.DatabaseSegmentManager;
+import io.druid.server.DruidNode;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
@@ -111,6 +113,8 @@ public class DruidCoordinatorTest
         scheduledExecutorFactory,
         null,
         taskMaster,
+        new NoopServiceAnnouncer(),
+        new DruidNode("hey", "what", 1234),
         loadManagementPeons
     );
   }

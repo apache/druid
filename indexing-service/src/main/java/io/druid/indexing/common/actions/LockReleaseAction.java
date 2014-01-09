@@ -60,7 +60,7 @@ public class LockReleaseAction implements TaskAction<Void>
   @Override
   public boolean isAudited()
   {
-    return true;
+    return false;
   }
 
   @Override

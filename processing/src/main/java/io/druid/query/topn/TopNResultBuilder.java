@@ -17,17 +17,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.config;
+package io.druid.query.topn;
 
-import io.druid.server.initialization.ZkPathsConfig;
-import org.skife.config.Config;
-import org.skife.config.Default;
+import io.druid.query.Result;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
+
+import java.util.Iterator;
+import java.util.List;
 
 /**
  */
-public abstract class IndexerZkConfig extends ZkPathsConfig
+public interface TopNResultBuilder
 {
-  @Config("druid.zk.maxNumBytes")
-  @Default("512000")
-  public abstract long getMaxNumBytes();
+  public TopNResultBuilder addEntry(
+      String dimName,
+      Object dimValIndex,
+      Object[] metricVals,
+      List<AggregatorFactory> aggFactories,
+      List<PostAggregator> postAggs
+  );
+
+  public TopNResultBuilder addEntry(
+      DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor
+  );
+
+  public Iterator<DimValHolder> getTopNIterator();
+
+  public Result<TopNResultValue> build();
 }

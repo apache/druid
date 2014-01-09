@@ -67,7 +67,7 @@ public class MergeTaskBaseTest
   @Test
   public void testInterval()
   {
-    Assert.assertEquals(new Interval("2012-01-03/2012-01-07"), testMergeTaskBase.getImplicitLockInterval().get());
+    Assert.assertEquals(new Interval("2012-01-03/2012-01-07"), testMergeTaskBase.getInterval());
   }
 
   @Test

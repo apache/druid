@@ -17,62 +17,67 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.actions;
+package io.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.collect.ImmutableList;
-import io.druid.indexing.common.task.Task;
+import io.druid.query.MetricValueExtractor;
 
-import java.util.List;
+import java.util.Map;
 
-public class SpawnTasksAction implements TaskAction<Void>
+/**
+ */
+public class DimensionAndMetricValueExtractor extends MetricValueExtractor
 {
-  @JsonIgnore
-  private final List<Task> newTasks;
+  private final Map<String, Object> value;
 
   @JsonCreator
-  public SpawnTasksAction(
-      @JsonProperty("newTasks") List<Task> newTasks
-  )
+  public DimensionAndMetricValueExtractor(Map<String, Object> value)
   {
-    this.newTasks = ImmutableList.copyOf(newTasks);
+    super(value);
+
+    this.value = value;
   }
 
-  @JsonProperty
-  public List<Task> getNewTasks()
+  public String getStringDimensionValue(String dimension)
   {
-    return newTasks;
+    return (String) value.get(dimension);
   }
 
-  public TypeReference<Void> getReturnTypeReference()
+  public Object getDimensionValue(String dimension)
   {
-    return new TypeReference<Void>() {};
+    return value.get(dimension);
   }
 
   @Override
-  public Void perform(Task task, TaskActionToolbox toolbox)
+  public boolean equals(Object o)
   {
-    for(final Task newTask : newTasks) {
-      toolbox.getTaskQueue().add(newTask);
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
     }
 
-    return null;
+    DimensionAndMetricValueExtractor that = (DimensionAndMetricValueExtractor) o;
+
+    if (value != null ? !value.equals(that.value) : that.value != null) {
+      return false;
+    }
+
+    return true;
   }
 
   @Override
-  public boolean isAudited()
+  public int hashCode()
   {
-    return true;
+    return value != null ? value.hashCode() : 0;
   }
 
   @Override
   public String toString()
   {
-    return "SpawnTasksAction{" +
-           "newTasks=" + newTasks +
+    return "DimensionAndMetricValueExtractor{" +
+           "value=" + value +
            '}';
   }
 }

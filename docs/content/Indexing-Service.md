@@ -56,6 +56,7 @@ With the following JVM configuration:
 -Ddruid.db.connector.password=diurd
 
 -Ddruid.selectors.indexing.serviceName=overlord
+-Ddruid.indexer.queue.startDelay=PT0M
 -Ddruid.indexer.runner.javaOpts="-server -Xmx1g"
 -Ddruid.indexer.runner.startPort=8081
 -Ddruid.indexer.fork.property.druid.computation.buffer.size=268435456
@@ -110,12 +111,17 @@ If autoscaling is enabled, new middle managers may be added when a task has been
 
 #### JVM Configuration
 
-In addition to the configuration of some of the default modules in [Configuration](Configuration.html), the overlord module requires the following basic configs to run in remote mode:
+In addition to the configuration of some of the default modules in [Configuration](Configuration.html), the overlord has the following basic configs:
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.runner.type`|Choices "local" or "remote". Indicates whether tasks should be run locally or in a distributed environment.|local|
-|`druid.indexer.storage.type`|Choices are "local" or "db". Indicates whether incoming tasks should be stored locally (in heap) or in a database. Storing incoming tasks in a database allows for tasks to be bootstrapped if the overlord should fail.|local|
+|`druid.indexer.storage.type`|Choices are "local" or "db". Indicates whether incoming tasks should be stored locally (in heap) or in a database. Storing incoming tasks in a database allows for tasks to be resumed if the overlord should fail.|local|
+|`druid.indexer.storage.recentlyFinishedThreshold`|A duration of time to store task results.|PT24H|
+|`druid.indexer.queue.maxSize`|Maximum number of active tasks at one time.|Integer.MAX_VALUE|
+|`druid.indexer.queue.startDelay`|Sleep this long before starting overlord queue management. This can be useful to give a cluster time to re-orient itself after e.g. a widespread network issue.|PT1M|
+|`druid.indexer.queue.restartDelay`|Sleep this long when overlord queue management throws an exception before trying again.|PT30S|
+|`druid.indexer.queue.storageSyncRate`|Sync overlord state this often with an underlying task persistence mechanism.|PT1M|
 
 The following configs only apply if the overlord is running in remote mode:
 

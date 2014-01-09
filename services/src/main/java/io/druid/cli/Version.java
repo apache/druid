@@ -17,15 +17,22 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.config;
+package io.druid.cli;
 
-import org.skife.config.Config;
+import io.airlift.command.Command;
+import io.druid.initialization.DruidModule;
+import io.druid.initialization.Initialization;
+import io.druid.server.StatusResource;
 
-/**
- */
-@Deprecated
-public abstract class EventReceiverFirehoseFactoryConfig
+@Command(
+    name = "version",
+    description = "Returns Druid version information"
+)
+public class Version implements Runnable
 {
-  @Config("druid.indexer.firehoseId.prefix")
-  public abstract String getFirehoseIdPrefix();
+  @Override
+  public void run()
+  {
+    System.out.println(new StatusResource.Status(Initialization.getLoadedModules(DruidModule.class)));
+  }
 }

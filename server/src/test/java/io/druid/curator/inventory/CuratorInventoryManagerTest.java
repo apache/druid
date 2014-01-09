@@ -29,6 +29,7 @@ import org.apache.curator.framework.api.CuratorEventType;
 import org.apache.curator.framework.api.CuratorListener;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.Watcher;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,6 +49,12 @@ public class CuratorInventoryManagerTest extends io.druid.curator.CuratorTestBas
   {
     setupServerAndCurator();
     exec = Execs.singleThreaded("curator-inventory-manager-test-%s");
+  }
+
+  @After
+  public void tearDown() throws Exception
+  {
+    tearDownServerAndCurator();
   }
 
   @Test

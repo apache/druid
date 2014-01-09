@@ -20,6 +20,7 @@
 package io.druid.query.extraction.extraction;
 
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.JavascriptDimExtractionFn;
 import org.junit.Assert;
@@ -49,6 +50,21 @@ public class JavascriptDimExtractionFnTest
     for (String str : testStrings) {
       String res = dimExtractionFn.apply(str);
       Assert.assertEquals(str.substring(0, 3), res);
+    }
+  }
+
+  @Test
+  public void testCastingAndNull()
+  {
+    String function = "function(x) {\n  x = Number(x);\n  if(isNaN(x)) return null;\n  return Math.floor(x / 5) * 5;\n}";
+    DimExtractionFn dimExtractionFn = new JavascriptDimExtractionFn(function);
+
+    Iterator<String> it = Iterators.forArray("0", "5", "5", "10", null);
+
+    for(String str : Lists.newArrayList("1", "5", "6", "10", "CA")) {
+      String res = dimExtractionFn.apply(str);
+      String expected = it.next();
+      Assert.assertEquals(expected, res);
     }
   }
 

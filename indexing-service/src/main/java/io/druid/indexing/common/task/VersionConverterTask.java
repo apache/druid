@@ -23,16 +23,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
-import io.druid.indexing.common.actions.SpawnTasksAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.segment.IndexIO;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -48,10 +47,10 @@ import java.util.Map;
 
 /**
  */
-public class VersionConverterTask extends AbstractTask
+public class VersionConverterTask extends AbstractFixedIntervalTask
 {
   private static final String TYPE = "version_converter";
-  private static final Integer CURR_VERSION_INTEGER = new Integer(IndexIO.CURRENT_VERSION_ID);
+  private static final Integer CURR_VERSION_INTEGER = IndexIO.CURRENT_VERSION_ID;
 
   private static final Logger log = new Logger(VersionConverterTask.class);
 
@@ -74,6 +73,8 @@ public class VersionConverterTask extends AbstractTask
 
   private static String makeId(String dataSource, Interval interval)
   {
+    Preconditions.checkNotNull(dataSource, "dataSource");
+    Preconditions.checkNotNull(interval, "interval");
     return joinId(TYPE, dataSource, interval.getStart(), interval.getEnd(), new DateTime());
   }
 
@@ -105,7 +106,6 @@ public class VersionConverterTask extends AbstractTask
   )
   {
     super(id, groupId, dataSource, interval);
-
     this.segment = segment;
   }
 
@@ -125,45 +125,43 @@ public class VersionConverterTask extends AbstractTask
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     if (segment == null) {
-      throw new ISE("Segment was null, this should never run.", this.getClass().getSimpleName());
-    }
-
-    log.info("I'm in a subless mood.");
-    convertSegment(toolbox, segment);
-    return success();
-  }
-
-  @Override
-  public TaskStatus preflight(TaskActionClient taskActionClient) throws Exception
-  {
-    if (segment != null) {
-      return super.preflight(taskActionClient);
-    }
-
-    List<DataSegment> segments = taskActionClient.submit(defaultListUsedAction());
-
-    final FunctionalIterable<Task> tasks = FunctionalIterable
-        .create(segments)
-        .keep(
-            new Function<DataSegment, Task>()
-            {
-              @Override
-              public Task apply(DataSegment segment)
+      final List<DataSegment> segments = toolbox.getTaskActionClient().submit(
+          new SegmentListUsedAction(
+              getDataSource(),
+              getInterval()
+          )
+      );
+      final FunctionalIterable<Task> tasks = FunctionalIterable
+          .create(segments)
+          .keep(
+              new Function<DataSegment, Task>()
               {
-                final Integer segmentVersion = segment.getBinaryVersion();
-                if (!CURR_VERSION_INTEGER.equals(segmentVersion)) {
-                  return new SubTask(getGroupId(), segment);
+                @Override
+                public Task apply(DataSegment segment)
+                {
+                  final Integer segmentVersion = segment.getBinaryVersion();
+                  if (!CURR_VERSION_INTEGER.equals(segmentVersion)) {
+                    return new SubTask(getGroupId(), segment);
+                  }
+
+                  log.info("Skipping[%s], already version[%s]", segment.getIdentifier(), segmentVersion);
+                  return null;
                 }
-
-                log.info("Skipping[%s], already version[%s]", segment.getIdentifier(), segmentVersion);
-                return null;
               }
-            }
-        );
+          );
 
-    taskActionClient.submit(new SpawnTasksAction(Lists.newArrayList(tasks)));
-
-    return TaskStatus.success(getId());
+      // Vestigial from a past time when this task spawned subtasks.
+      for (final Task subTask : tasks) {
+        final TaskStatus status = subTask.run(toolbox);
+        if (!status.isSuccess()) {
+          return status;
+        }
+      }
+    } else {
+      log.info("I'm in a subless mood.");
+      convertSegment(toolbox, segment);
+    }
+    return success();
   }
 
   @Override
@@ -185,7 +183,7 @@ public class VersionConverterTask extends AbstractTask
     return super.equals(o);
   }
 
-  public static class SubTask extends AbstractTask
+  public static class SubTask extends AbstractFixedIntervalTask
   {
     @JsonIgnore
     private final DataSegment segment;
@@ -251,7 +249,7 @@ public class VersionConverterTask extends AbstractTask
       }
     }
 
-    final Map<DataSegment, File> localSegments = toolbox.getSegments(Arrays.asList(segment));
+    final Map<DataSegment, File> localSegments = toolbox.fetchSegments(Arrays.asList(segment));
 
     final File location = localSegments.get(segment);
     final File outLocation = new File(location, "v9_out");

@@ -28,7 +28,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.27-SNAPSHOT</version>
+        <version>0.6.48-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -39,18 +39,12 @@
         </dependency>
         <dependency>
             <groupId>com.metamx</groupId>
-            <artifactId>java-util</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.metamx</groupId>
             <artifactId>bytebuffer-collections</artifactId>
         </dependency>
         <dependency>
             <groupId>com.metamx</groupId>
             <artifactId>emitter</artifactId>
         </dependency>
-
-
         <dependency>
             <groupId>com.ning</groupId>
             <artifactId>compress-lzf</artifactId>
@@ -62,34 +56,6 @@
         <dependency>
             <groupId>it.uniroma3.mat</groupId>
             <artifactId>extendedset</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>javax.inject</groupId>
-            <artifactId>javax.inject</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -106,6 +72,11 @@
         <dependency>
             <groupId>com.ibm.icu</groupId>
             <artifactId>icu4j</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mozilla</groupId>
+            <artifactId>rhino</artifactId>
+            <version>1.7R4</version>
         </dependency>
 
 
@@ -133,6 +104,14 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
             </plugin>
         </plugins>
     </build>

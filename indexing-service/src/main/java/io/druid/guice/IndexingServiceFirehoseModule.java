@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import io.druid.indexing.common.config.EventReceiverFirehoseFactoryConfig;
 import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
 import io.druid.initialization.DruidModule;
 
@@ -46,7 +45,5 @@ public class IndexingServiceFirehoseModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    // backwards compatibility
-    ConfigProvider.bind(binder, EventReceiverFirehoseFactoryConfig.class);
   }
 }

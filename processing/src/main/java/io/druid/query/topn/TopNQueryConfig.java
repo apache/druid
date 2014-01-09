@@ -17,23 +17,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.config;
+package io.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.db.DbConnectorConfig;
-import org.skife.config.Config;
+import io.druid.query.QueryConfig;
 
-public abstract class IndexerDbConnectorConfig extends DbConnectorConfig
+import javax.validation.constraints.Min;
+
+/**
+ */
+public class TopNQueryConfig extends QueryConfig
 {
-  @JsonProperty("taskTable")
-  @Config("druid.database.taskTable")
-  public abstract String getTaskTable();
+  @JsonProperty
+  @Min(1)
+  private int minTopNThreshold = 1000;
 
-  @JsonProperty("taskLockTable")
-  @Config("druid.database.taskLockTable")
-  public abstract String getTaskLockTable();
-
-  @JsonProperty("taskLogTable")
-  @Config("druid.database.taskLogTable")
-  public abstract String getTaskLogTable();
+  public int getMinTopNThreshold()
+  {
+    return minTopNThreshold;
+  }
 }

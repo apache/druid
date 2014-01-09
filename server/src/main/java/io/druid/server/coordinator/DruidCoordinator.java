@@ -46,10 +46,13 @@ import io.druid.client.ServerInventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
+import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.Self;
 import io.druid.segment.IndexIO;
+import io.druid.server.DruidNode;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
@@ -99,6 +102,8 @@ public class DruidCoordinator
   private final LoadQueueTaskMaster taskMaster;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final AtomicReference<LeaderLatch> leaderLatch;
+  private final ServiceAnnouncer serviceAnnouncer;
+  private final DruidNode self;
 
   @Inject
   public DruidCoordinator(
@@ -112,7 +117,9 @@ public class DruidCoordinator
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
-      LoadQueueTaskMaster taskMaster
+      LoadQueueTaskMaster taskMaster,
+      ServiceAnnouncer serviceAnnouncer,
+      @Self DruidNode self
   )
   {
     this(
@@ -127,6 +134,8 @@ public class DruidCoordinator
         scheduledExecutorFactory,
         indexingServiceClient,
         taskMaster,
+        serviceAnnouncer,
+        self,
         Maps.<String, LoadQueuePeon>newConcurrentMap()
     );
   }
@@ -143,6 +152,8 @@ public class DruidCoordinator
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
+      ServiceAnnouncer serviceAnnouncer,
+      DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap
   )
   {
@@ -157,6 +168,8 @@ public class DruidCoordinator
     this.emitter = emitter;
     this.indexingServiceClient = indexingServiceClient;
     this.taskMaster = taskMaster;
+    this.serviceAnnouncer = serviceAnnouncer;
+    this.self = self;
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
@@ -474,6 +487,7 @@ public class DruidCoordinator
         databaseSegmentManager.start();
         databaseRuleManager.start();
         serverInventoryView.start();
+        serviceAnnouncer.announce(self);
 
         final List<Pair<? extends CoordinatorRunnable, Duration>> coordinatorRunnables = Lists.newArrayList();
         dynamicConfigs = configManager.watch(
@@ -554,8 +568,10 @@ public class DruidCoordinator
         }
         loadManagementPeons.clear();
 
-        databaseSegmentManager.stop();
+        serviceAnnouncer.unannounce(self);
         serverInventoryView.stop();
+        databaseRuleManager.stop();
+        databaseSegmentManager.stop();
         leader = false;
       }
       catch (Exception e) {

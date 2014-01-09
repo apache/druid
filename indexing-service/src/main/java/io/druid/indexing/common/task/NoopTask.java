@@ -20,41 +20,63 @@
 package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.TaskActionClient;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.Period;
 
 /**
  */
 public class NoopTask extends AbstractTask
 {
   private static final Logger log = new Logger(NoopTask.class);
-  private static int defaultRunTime = 2500;
+  private static final int defaultRunTime = 2500;
+  private static final int defaultIsReadyTime = 0;
+  private static final IsReadyResult defaultIsReadyResult = IsReadyResult.YES;
 
-  private final int runTime;
+  enum IsReadyResult
+  {
+    YES,
+    NO,
+    EXCEPTION
+  }
+
+  @JsonIgnore
+  private final long runTime;
+
+  @JsonIgnore
+  private final long isReadyTime;
+
+  @JsonIgnore
+  private final IsReadyResult isReadyResult;
+
+  @JsonIgnore
   private final FirehoseFactory firehoseFactory;
 
   @JsonCreator
   public NoopTask(
       @JsonProperty("id") String id,
-      @JsonProperty("interval") Interval interval,
-      @JsonProperty("runTime") int runTime,
+      @JsonProperty("runTime") long runTime,
+      @JsonProperty("isReadyTime") long isReadyTime,
+      @JsonProperty("isReadyResult") String isReadyResult,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory
   )
   {
     super(
         id == null ? String.format("noop_%s", new DateTime()) : id,
-        "none",
-        interval == null ? new Interval(Period.days(1), new DateTime()) : interval
+        "none"
     );
 
     this.runTime = (runTime == 0) ? defaultRunTime : runTime;
-
+    this.isReadyTime = (isReadyTime == 0) ? defaultIsReadyTime : isReadyTime;
+    this.isReadyResult = (isReadyResult == null)
+                         ? defaultIsReadyResult
+                         : IsReadyResult.valueOf(isReadyResult.toUpperCase());
     this.firehoseFactory = firehoseFactory;
   }
 
@@ -64,16 +86,43 @@ public class NoopTask extends AbstractTask
     return "noop";
   }
 
-  @JsonProperty("runTime")
-  public int getRunTime()
+  @JsonProperty
+  public long getRunTime()
   {
     return runTime;
+  }
+
+  @JsonProperty
+  public long getIsReadyTime()
+  {
+    return isReadyTime;
+  }
+
+  @JsonProperty
+  public IsReadyResult getIsReadyResult()
+  {
+    return isReadyResult;
   }
 
   @JsonProperty("firehose")
   public FirehoseFactory getFirehoseFactory()
   {
     return firehoseFactory;
+  }
+
+  @Override
+  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  {
+    switch (isReadyResult) {
+      case YES:
+        return true;
+      case NO:
+        return false;
+      case EXCEPTION:
+        throw new ISE("Not ready. Never will be ready. Go away!");
+      default:
+        throw new AssertionError("#notreached");
+    }
   }
 
   @Override
@@ -89,5 +138,10 @@ public class NoopTask extends AbstractTask
     Thread.sleep(runTime);
     log.info("Woke up!");
     return TaskStatus.success(getId());
+  }
+
+  public static NoopTask create()
+  {
+    return new NoopTask(null, 0, 0, null, null);
   }
 }

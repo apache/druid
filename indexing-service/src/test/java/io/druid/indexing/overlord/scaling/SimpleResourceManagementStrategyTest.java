@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord.scaling;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -28,6 +29,7 @@ import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.common.guava.DSuppliers;
 import io.druid.indexing.common.TestMergeTask;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
@@ -63,7 +65,7 @@ public class SimpleResourceManagementStrategyTest
   public void setUp() throws Exception
   {
     autoScalingStrategy = EasyMock.createMock(AutoScalingStrategy.class);
-    workerSetupData = new AtomicReference<WorkerSetupData>(
+    workerSetupData = new AtomicReference<>(
         new WorkerSetupData(
             "0", 0, 2, null, null, null
         )
@@ -105,13 +107,13 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList());
     EasyMock.expect(autoScalingStrategy.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList(), Lists.newArrayList())
+        new AutoScalingData(Lists.<String>newArrayList("aNode"))
     );
     EasyMock.replay(autoScalingStrategy);
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -133,13 +135,13 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList()).times(2);
     EasyMock.expect(autoScalingStrategy.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("fake"), Lists.newArrayList("faker"))
+        new AutoScalingData(Lists.<String>newArrayList("fake"))
     );
     EasyMock.replay(autoScalingStrategy);
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -155,7 +157,7 @@ public class SimpleResourceManagementStrategyTest
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -190,13 +192,13 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.terminate(EasyMock.<List<String>>anyObject()))
                     .andReturn(null);
     EasyMock.expect(autoScalingStrategy.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("fake"), Lists.newArrayList("faker"))
+        new AutoScalingData(Lists.<String>newArrayList("fake"))
     );
     EasyMock.replay(autoScalingStrategy);
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -214,7 +216,7 @@ public class SimpleResourceManagementStrategyTest
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -242,13 +244,13 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList());
     EasyMock.expect(autoScalingStrategy.terminate(EasyMock.<List<String>>anyObject())).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList(), Lists.newArrayList())
+        new AutoScalingData(Lists.<String>newArrayList())
     );
     EasyMock.replay(autoScalingStrategy);
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -272,13 +274,13 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList("ip")).times(2);
     EasyMock.expect(autoScalingStrategy.terminate(EasyMock.<List<String>>anyObject())).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("ip"), Lists.newArrayList("ip"))
+        new AutoScalingData(Lists.<String>newArrayList("ip"))
     );
     EasyMock.replay(autoScalingStrategy);
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -293,7 +295,7 @@ public class SimpleResourceManagementStrategyTest
 
     terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask, null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -309,15 +311,174 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.verify(autoScalingStrategy);
   }
 
+  @Test
+  public void testNoActionNeeded() throws Exception
+  {
+    EasyMock.reset(autoScalingStrategy);
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+            .andReturn(Lists.<String>newArrayList("ip"));
+    EasyMock.replay(autoScalingStrategy);
+
+    boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+        ),
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(NoopTask.create()),
+            new TestZkWorker(NoopTask.create())
+        )
+    );
+
+    Assert.assertFalse(terminatedSomething);
+    EasyMock.verify(autoScalingStrategy);
+
+    EasyMock.reset(autoScalingStrategy);
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+            .andReturn(Lists.<String>newArrayList("ip"));
+    EasyMock.replay(autoScalingStrategy);
+
+    boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+        ),
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(NoopTask.create()),
+            new TestZkWorker(NoopTask.create())
+        )
+    );
+
+    Assert.assertFalse(provisionedSomething);
+    EasyMock.verify(autoScalingStrategy);
+  }
+
+  @Test
+  public void testMinVersionIncrease() throws Exception
+  {
+    // Don't terminate anything
+    EasyMock.reset(autoScalingStrategy);
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+            .andReturn(Lists.<String>newArrayList("ip"));
+    EasyMock.replay(autoScalingStrategy);
+    boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
+        Arrays.<RemoteTaskRunnerWorkItem>asList(),
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(NoopTask.create(), "h1", "i1", "0"),
+            new TestZkWorker(NoopTask.create(), "h1", "i2", "0")
+        )
+    );
+    Assert.assertFalse(terminatedSomething);
+    EasyMock.verify(autoScalingStrategy);
+
+    // Don't provision anything
+    EasyMock.reset(autoScalingStrategy);
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+            .andReturn(Lists.<String>newArrayList("ip"));
+    EasyMock.replay(autoScalingStrategy);
+    boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
+        Arrays.<RemoteTaskRunnerWorkItem>asList(),
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(NoopTask.create()),
+            new TestZkWorker(NoopTask.create())
+        )
+    );
+    Assert.assertFalse(provisionedSomething);
+    EasyMock.verify(autoScalingStrategy);
+
+    // Increase minVersion
+    workerSetupData.set(new WorkerSetupData("1", 0, 2, null, null, null));
+
+    // Provision two new workers
+    EasyMock.reset(autoScalingStrategy);
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+            .andReturn(Lists.<String>newArrayList("ip"));
+    EasyMock.expect(autoScalingStrategy.provision()).andReturn(
+        new AutoScalingData(Lists.<String>newArrayList("h3"))
+    );
+    EasyMock.expect(autoScalingStrategy.provision()).andReturn(
+        new AutoScalingData(Lists.<String>newArrayList("h4"))
+    );
+    EasyMock.replay(autoScalingStrategy);
+    provisionedSomething = simpleResourceManagementStrategy.doProvision(
+        Arrays.<RemoteTaskRunnerWorkItem>asList(),
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(NoopTask.create(), "h1", "i1", "0"),
+            new TestZkWorker(NoopTask.create(), "h2", "i2", "0")
+        )
+    );
+    Assert.assertTrue(provisionedSomething);
+    EasyMock.verify(autoScalingStrategy);
+
+    // Terminate old workers
+    EasyMock.reset(autoScalingStrategy);
+    EasyMock.expect(autoScalingStrategy.ipToIdLookup(ImmutableList.of("i1", "i2", "i3", "i4"))).andReturn(
+        ImmutableList.of("h1", "h2", "h3", "h4")
+    );
+    EasyMock.expect(autoScalingStrategy.terminate(ImmutableList.of("i1", "i2"))).andReturn(
+        new AutoScalingData(ImmutableList.of("h1", "h2"))
+    );
+    EasyMock.replay(autoScalingStrategy);
+    terminatedSomething = simpleResourceManagementStrategy.doTerminate(
+        Arrays.<RemoteTaskRunnerWorkItem>asList(),
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(null, "h1", "i1", "0"),
+            new TestZkWorker(null, "h2", "i2", "0"),
+            new TestZkWorker(NoopTask.create(), "h3", "i3", "1"),
+            new TestZkWorker(NoopTask.create(), "h4", "i4", "1")
+        )
+    );
+    Assert.assertTrue(terminatedSomething);
+    EasyMock.verify(autoScalingStrategy);
+  }
+
+  @Test
+  public void testNullWorkerSetupData() throws Exception
+  {
+    workerSetupData.set(null);
+    EasyMock.replay(autoScalingStrategy);
+
+    boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+        ),
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(null)
+        )
+    );
+
+    boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
+        Arrays.<RemoteTaskRunnerWorkItem>asList(
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+        ),
+        Arrays.<ZkWorker>asList(
+            new TestZkWorker(null)
+        )
+    );
+
+    Assert.assertFalse(terminatedSomething);
+    Assert.assertFalse(provisionedSomething);
+
+    EasyMock.verify(autoScalingStrategy);
+  }
+
   private static class TestZkWorker extends ZkWorker
   {
     private final Task testTask;
 
-    private TestZkWorker(
+    public TestZkWorker(
         Task testTask
     )
     {
-      super(new Worker("host", "ip", 3, "version"), null, new DefaultObjectMapper());
+      this(testTask, "host", "ip", "0");
+    }
+
+    public TestZkWorker(
+        Task testTask,
+        String host,
+        String ip,
+        String version
+    )
+    {
+      super(new Worker(host, ip, 3, version), null, new DefaultObjectMapper());
 
       this.testTask = testTask;
     }

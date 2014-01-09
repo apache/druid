@@ -17,30 +17,25 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.http;
+package io.druid.storage.s3;
 
-import com.google.inject.Inject;
-import io.druid.common.config.JacksonConfigManager;
-import io.druid.indexing.overlord.TaskMaster;
-import io.druid.indexing.overlord.TaskStorageQueryAdapter;
-import io.druid.tasklogs.TaskLogStreamer;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.ws.rs.Path;
-
-/**
- */
-@Deprecated
-@Path("/mmx/merger/v1")
-public class OldOverlordResource extends OverlordResource
+public class S3DataSegmentArchiverConfig
 {
-  @Inject
-  public OldOverlordResource(
-      TaskMaster taskMaster,
-      TaskStorageQueryAdapter taskStorageQueryAdapter,
-      TaskLogStreamer taskLogStreamer,
-      JacksonConfigManager configManager
-  ) throws Exception
+  @JsonProperty
+  public String archiveBucket = "";
+
+  @JsonProperty
+  public String archiveBaseKey = "";
+
+  public String getArchiveBucket()
   {
-    super(taskMaster, taskStorageQueryAdapter, taskLogStreamer, configManager);
+    return archiveBucket;
+  }
+
+  public String getArchiveBaseKey()
+  {
+    return archiveBaseKey;
   }
 }

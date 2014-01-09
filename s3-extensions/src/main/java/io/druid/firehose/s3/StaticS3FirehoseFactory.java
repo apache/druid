@@ -34,7 +34,7 @@ import io.druid.data.input.impl.FileIteratingFirehose;
 import io.druid.data.input.impl.StringInputRowParser;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
-import org.jets3t.service.S3Service;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 
@@ -55,13 +55,13 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
 {
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
 
-  private final S3Service s3Client;
+  private final RestS3Service s3Client;
   private final StringInputRowParser parser;
   private final List<URI> uris;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
-      @JacksonInject("s3Client") S3Service s3Client,
+      @JacksonInject("s3Client") RestS3Service s3Client,
       @JsonProperty("parser") StringInputRowParser parser,
       @JsonProperty("uris") List<URI> uris
   )

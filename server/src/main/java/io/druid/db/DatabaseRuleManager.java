@@ -207,7 +207,7 @@ public class DatabaseRuleManager
                       String.format(
                           "SELECT r.dataSource, r.payload "
                           + "FROM %1$s r "
-                          + "INNER JOIN(SELECT dataSource, max(version) as version, payload FROM %1$s GROUP BY dataSource) ds "
+                          + "INNER JOIN(SELECT dataSource, max(version) as version FROM %1$s GROUP BY dataSource) ds "
                           + "ON r.datasource = ds.datasource and r.version = ds.version",
                           getRulesTable()
                       )

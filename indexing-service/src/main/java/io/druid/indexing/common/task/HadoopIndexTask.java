@@ -24,10 +24,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.api.client.util.Lists;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexer.HadoopDruidIndexerConfig;
@@ -37,21 +41,27 @@ import io.druid.indexer.HadoopDruidIndexerSchema;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.initialization.Initialization;
 import io.druid.server.initialization.ExtensionsConfig;
 import io.druid.timeline.DataSegment;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
-public class HadoopIndexTask extends AbstractTask
+public class HadoopIndexTask extends AbstractFixedIntervalTask
 {
   private static final Logger log = new Logger(HadoopIndexTask.class);
   private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
@@ -88,9 +98,13 @@ public class HadoopIndexTask extends AbstractTask
     super(
         id != null ? id : String.format("index_hadoop_%s_%s", schema.getDataSource(), new DateTime()),
         schema.getDataSource(),
-        JodaUtils.umbrellaInterval(JodaUtils.condenseIntervals(schema.getGranularitySpec().bucketIntervals()))
+        JodaUtils.umbrellaInterval(
+            JodaUtils.condenseIntervals(
+                schema.getGranularitySpec()
+                      .bucketIntervals()
+            )
+        )
     );
-
 
     // Some HadoopDruidIndexerSchema stuff doesn't make sense in the context of the indexing service
     Preconditions.checkArgument(schema.getSegmentOutputPath() == null, "segmentOutputPath must be absent");
@@ -106,7 +120,6 @@ public class HadoopIndexTask extends AbstractTask
   {
     return "index_hadoop";
   }
-
 
   @JsonProperty("config")
   public HadoopDruidIndexerSchema getSchema()
@@ -174,14 +187,10 @@ public class HadoopIndexTask extends AbstractTask
 
     if (segments != null) {
       List<DataSegment> publishedSegments = toolbox.getObjectMapper().readValue(
-          segments, new TypeReference<List<DataSegment>>()
-      {
-      }
+          segments,
+          new TypeReference<List<DataSegment>>() {}
       );
-      // Request segment pushes
-      toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(publishedSegments)));
-
-      // Done
+      toolbox.pushSegments(publishedSegments);
       return TaskStatus.success(getId());
     } else {
       return TaskStatus.failure(getId());

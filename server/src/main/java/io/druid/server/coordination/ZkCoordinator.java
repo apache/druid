@@ -230,32 +230,35 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     try {
       log.info("Loading segment %s", segment.getIdentifier());
 
+      final boolean loaded;
       try {
-        serverManager.loadSegment(segment);
+        loaded = serverManager.loadSegment(segment);
       }
       catch (Exception e) {
         removeSegment(segment);
         throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getIdentifier());
       }
 
-      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
-      if (!segmentInfoCacheFile.exists()) {
+      if (loaded) {
+        File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+        if (!segmentInfoCacheFile.exists()) {
+          try {
+            jsonMapper.writeValue(segmentInfoCacheFile, segment);
+          }
+          catch (IOException e) {
+            removeSegment(segment);
+            throw new SegmentLoadingException(
+                e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
+            );
+          }
+        }
+
         try {
-          jsonMapper.writeValue(segmentInfoCacheFile, segment);
+          announcer.announceSegment(segment);
         }
         catch (IOException e) {
-          removeSegment(segment);
-          throw new SegmentLoadingException(
-              e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
-          );
+          throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
         }
-      }
-
-      try {
-        announcer.announceSegment(segment);
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
       }
 
     }
@@ -275,8 +278,9 @@ public class ZkCoordinator implements DataSegmentChangeHandler
       for (DataSegment segment : segments) {
         log.info("Loading segment %s", segment.getIdentifier());
 
+        final boolean loaded;
         try {
-          serverManager.loadSegment(segment);
+          loaded = serverManager.loadSegment(segment);
         }
         catch (Exception e) {
           log.error(e, "Exception loading segment[%s]", segment.getIdentifier());
@@ -285,20 +289,22 @@ public class ZkCoordinator implements DataSegmentChangeHandler
           continue;
         }
 
-        File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
-        if (!segmentInfoCacheFile.exists()) {
-          try {
-            jsonMapper.writeValue(segmentInfoCacheFile, segment);
+        if (loaded) {
+          File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+          if (!segmentInfoCacheFile.exists()) {
+            try {
+              jsonMapper.writeValue(segmentInfoCacheFile, segment);
+            }
+            catch (IOException e) {
+              log.error(e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile);
+              removeSegment(segment);
+              segmentFailures.add(segment.getIdentifier());
+              continue;
+            }
           }
-          catch (IOException e) {
-            log.error(e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile);
-            removeSegment(segment);
-            segmentFailures.add(segment.getIdentifier());
-            continue;
-          }
-        }
 
-        validSegments.add(segment);
+          validSegments.add(segment);
+        }
       }
 
       try {

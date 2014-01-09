@@ -40,14 +40,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.CuratorDiscoveryConfig;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.x.discovery.ProviderStrategy;
-import org.apache.curator.x.discovery.ServiceCache;
-import org.apache.curator.x.discovery.ServiceCacheBuilder;
-import org.apache.curator.x.discovery.ServiceDiscovery;
-import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.ServiceProvider;
-import org.apache.curator.x.discovery.ServiceProviderBuilder;
+import org.apache.curator.x.discovery.*;
 import org.apache.curator.x.discovery.details.ServiceCacheListener;
 
 import java.io.IOException;
@@ -389,8 +382,12 @@ public class DiscoveryModule implements Module
     }
 
     @Override
-    public ServiceProviderBuilder<T> refreshPaddingMs(int refreshPaddingMs)
-    {
+    public ServiceProviderBuilder<T> downInstancePolicy(DownInstancePolicy downInstancePolicy) {
+      return this;
+    }
+
+    @Override
+    public ServiceProviderBuilder<T> additionalFilter(InstanceFilter<T> tInstanceFilter) {
       return this;
     }
   }
@@ -407,6 +404,11 @@ public class DiscoveryModule implements Module
     public ServiceInstance<T> getInstance() throws Exception
     {
       return null;
+    }
+
+    @Override
+    public void noteError(ServiceInstance<T> tServiceInstance) {
+
     }
 
     @Override

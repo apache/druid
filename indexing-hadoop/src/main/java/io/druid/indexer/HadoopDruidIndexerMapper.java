@@ -62,7 +62,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
       try {
         inputRow = parser.parse(value.toString());
       }
-      catch (IllegalArgumentException e) {
+      catch (Exception e) {
         if (config.isIgnoreInvalidRows()) {
           context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
           return; // we're ignoring this invalid row

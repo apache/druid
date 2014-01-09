@@ -24,13 +24,14 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.ServerView;
-import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Processing;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 
@@ -47,6 +48,8 @@ public class TaskToolboxFactory
   private final ServiceEmitter emitter;
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
+  private final DataSegmentMover dataSegmentMover;
+  private final DataSegmentArchiver dataSegmentArchiver;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
@@ -62,6 +65,8 @@ public class TaskToolboxFactory
       ServiceEmitter emitter,
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
+      DataSegmentMover dataSegmentMover,
+      DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
       ServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
@@ -76,6 +81,8 @@ public class TaskToolboxFactory
     this.emitter = emitter;
     this.segmentPusher = segmentPusher;
     this.dataSegmentKiller = dataSegmentKiller;
+    this.dataSegmentMover = dataSegmentMover;
+    this.dataSegmentArchiver = dataSegmentArchiver;
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
@@ -96,6 +103,8 @@ public class TaskToolboxFactory
         emitter,
         segmentPusher,
         dataSegmentKiller,
+        dataSegmentMover,
+        dataSegmentArchiver,
         segmentAnnouncer,
         newSegmentServerView,
         queryRunnerFactoryConglomerate,

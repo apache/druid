@@ -17,23 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.config;
+package io.druid.query.topn;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
-import org.skife.config.DefaultNull;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.segment.Cursor;
+import io.druid.segment.DimensionSelector;
 
-public abstract class TaskLogConfig
+/**
+ */
+public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
 {
-  @Config("druid.indexer.logs.type")
-  @Default("noop")
-  public abstract String getLogType();
+  public static final Aggregator[] EMPTY_ARRAY = {};
+  public static final int INIT_POSITION_VALUE = -1;
+  public static final int SKIP_POSITION_VALUE = -2;
 
-  @Config("druid.indexer.logs.s3bucket")
-  @DefaultNull
-  public abstract String getLogStorageBucket();
+  public TopNParams makeInitParams(DimensionSelector dimSelector, Cursor cursor);
 
-  @Config("druid.indexer.logs.s3prefix")
-  @DefaultNull
-  public abstract String getLogStoragePrefix();
+  public TopNResultBuilder makeResultBuilder(Parameters params);
+
+  public void run(
+      Parameters params,
+      TopNResultBuilder resultBuilder,
+      DimValSelector dimValSelector
+  );
+
+  public void cleanup(Parameters params);
 }
