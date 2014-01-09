@@ -26,11 +26,7 @@ import java.util.Set;
 
 public class RandomServerSelectorStrategy implements ServerSelectorStrategy
 {
-  Random random;
-
-  public RandomServerSelectorStrategy() {
-    this.random = new Random();
-  }
+  private static final Random random = new Random();
 
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers)
