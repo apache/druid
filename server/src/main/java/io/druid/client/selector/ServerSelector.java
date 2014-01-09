@@ -31,24 +31,18 @@ import java.util.Set;
  */
 public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
 {
-  private static final Comparator<QueryableDruidServer> comparator = new Comparator<QueryableDruidServer>()
-  {
-    @Override
-    public int compare(QueryableDruidServer left, QueryableDruidServer right)
-    {
-      return Ints.compare(left.getClient().getNumOpenConnections(), right.getClient().getNumOpenConnections());
-    }
-  };
-
   private final Set<QueryableDruidServer> servers = Sets.newHashSet();
 
   private final DataSegment segment;
+  private final ServerSelectorStrategy strategy;
 
   public ServerSelector(
-      DataSegment segment
+      DataSegment segment,
+      ServerSelectorStrategy strategy
   )
   {
     this.segment = segment;
+    this.strategy = strategy;
   }
 
   public DataSegment getSegment()
@@ -86,7 +80,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
       switch (size) {
         case 0: return null;
         case 1: return servers.iterator().next();
-        default: return Collections.min(servers, comparator);
+        default: return strategy.pick(servers);
       }
     }
   }
