@@ -25,8 +25,9 @@ import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
-import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
+import io.druid.client.selector.QueryableDruidServer;
+import io.druid.client.selector.ServerSelectorStrategy;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Client;
 import io.druid.query.QueryRunner;
@@ -57,19 +58,22 @@ public class BrokerServerView implements TimelineServerView
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
   private final ServerView baseView;
+  private final ServerSelectorStrategy serverSelectorStrategy;
 
   @Inject
   public BrokerServerView(
       QueryToolChestWarehouse warehose,
       ObjectMapper smileMapper,
       @Client HttpClient httpClient,
-      ServerView baseView
+      ServerView baseView,
+      ServerSelectorStrategy serverSelectorStrategy
   )
   {
     this.warehose = warehose;
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
     this.baseView = baseView;
+    this.serverSelectorStrategy = serverSelectorStrategy;
 
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
@@ -164,7 +168,7 @@ public class BrokerServerView implements TimelineServerView
 
       ServerSelector selector = selectors.get(segmentId);
       if (selector == null) {
-        selector = new ServerSelector(segment);
+        selector = new ServerSelector(segment, serverSelectorStrategy);
 
         VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
         if (timeline == null) {
