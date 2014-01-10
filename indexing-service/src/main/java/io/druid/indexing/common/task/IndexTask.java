@@ -1,34 +1,35 @@
 /*
- * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- */
+* Druid - a distributed column store.
+* Copyright (C) 2012, 2013  Metamarkets Group Inc.
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License
+* as published by the Free Software Foundation; either version 2
+* of the License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.util.Sets;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultiset;
 import com.google.common.primitives.Ints;
 import com.metamx.common.logger.Logger;
@@ -41,7 +42,6 @@ import io.druid.indexer.granularity.GranularitySpec;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -63,6 +63,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Simple single-threaded indexing task. Meant to be easy to use for small and medium sized datasets. For "big data",
+ * try launching multiple IndexTasks or using the {@link HadoopIndexTask}.
+ */
 public class IndexTask extends AbstractFixedIntervalTask
 {
   private static final Logger log = new Logger(IndexTask.class);
@@ -132,53 +136,67 @@ public class IndexTask extends AbstractFixedIntervalTask
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
-    final Set<DataSegment> segments = Sets.newHashSet();
-    for (final Interval bucket : granularitySpec.bucketIntervals()) {
-      final List<ShardSpec> shardSpecs;
-      if (targetPartitionSize > 0) {
-        shardSpecs = determinePartitions(bucket, targetPartitionSize);
-      } else {
-        shardSpecs = ImmutableList.<ShardSpec>of(new NoneShardSpec());
-      }
-      for (final ShardSpec shardSpec : shardSpecs) {
-        final DataSegment segment = generateSegment(
-            toolbox,
-            new Schema(
-                getDataSource(),
-                spatialDimensions,
-                aggregators,
-                indexGranularity,
-                shardSpec
-            ),
-            bucket,
-            myLock.getVersion()
-        );
-        segments.add(segment);
-      }
-    }
+
+    final Map<Interval, List<ShardSpec>> shardSpecMap = determinePartitions(targetPartitionSize);
+
+    final Map<Interval, List<Schema>> schemass = Maps.transformEntries(
+        shardSpecMap,
+        new Maps.EntryTransformer<Interval, List<ShardSpec>, List<Schema>>()
+        {
+          @Override
+          public List<Schema> transformEntry(
+              Interval key, List<ShardSpec> shardSpecs
+          )
+          {
+            return Lists.transform(
+                shardSpecs,
+                new Function<ShardSpec, Schema>()
+                {
+                  @Override
+                  public Schema apply(final ShardSpec shardSpec)
+                  {
+                    return new Schema(getDataSource(), spatialDimensions, aggregators, indexGranularity, shardSpec);
+                  }
+                }
+            );
+          }
+        }
+    );
+
+    final Set<DataSegment> segments = generateSegments(toolbox, schemass, myLock.getVersion());
     toolbox.pushSegments(segments);
+
     return TaskStatus.success(getId());
   }
 
-  private List<ShardSpec> determinePartitions(
-      final Interval interval,
+  private Map<Interval, List<ShardSpec>> determinePartitions(
       final int targetPartitionSize
   ) throws IOException
   {
-    log.info("Determining partitions for interval[%s] with targetPartitionSize[%d]", interval, targetPartitionSize);
+    Map<Interval, List<ShardSpec>> retVal = Maps.newLinkedHashMap();
 
-    // The implementation of this determine partitions stuff is less than optimal.  Should be done better.
+    log.info("Determining partitions with targetPartitionSize[%d]", targetPartitionSize);
 
     // Blacklist dimensions that have multiple values per row
-    final Set<String> unusableDimensions = com.google.common.collect.Sets.newHashSet();
-    // Track values of all non-blacklisted dimensions
-    final Map<String, TreeMultiset<String>> dimensionValueMultisets = Maps.newHashMap();
+    final Set<String> unusableDimensions = Sets.newHashSet();
 
     // Load data
     try (Firehose firehose = firehoseFactory.connect()) {
-      while (firehose.hasMore()) {
-        final InputRow inputRow = firehose.nextRow();
-        if (interval.contains(inputRow.getTimestampFromEpoch())) {
+      if (!firehose.hasMore()) {
+        log.error("Unable to find any events to ingest! Check your firehose config!");
+        return retVal;
+      }
+      InputRow inputRow = firehose.nextRow();
+
+      for (Interval interval : granularitySpec.bucketIntervals()) {
+        // Track values of all non-blacklisted dimensions
+        final Map<String, TreeMultiset<String>> dimensionValueMultisets = Maps.newHashMap();
+
+        boolean hasEventsInInterval = false;
+        boolean done = false;
+        while (!done && interval.contains(inputRow.getTimestampFromEpoch())) {
+          hasEventsInInterval = true;
+
           // Extract dimensions from event
           for (final String dim : inputRow.getDimensions()) {
             final List<String> dimValues = inputRow.getDimension(dim);
@@ -198,10 +216,31 @@ public class IndexTask extends AbstractFixedIntervalTask
               }
             }
           }
+
+          if (firehose.hasMore()) {
+            inputRow = firehose.nextRow();
+          } else {
+            done = true;
+          }
+        }
+
+        if (hasEventsInInterval) {
+          if (targetPartitionSize == 0) {
+            retVal.put(interval, ImmutableList.<ShardSpec>of(new NoneShardSpec()));
+          } else {
+            retVal.put(interval, determineShardSpecs(dimensionValueMultisets));
+          }
         }
       }
     }
 
+    return retVal;
+  }
+
+  private List<ShardSpec> determineShardSpecs(
+      final Map<String, TreeMultiset<String>> dimensionValueMultisets
+  )
+  {
     // ShardSpecs we will return
     final List<ShardSpec> shardSpecs = Lists.newArrayList();
 
@@ -281,6 +320,23 @@ public class IndexTask extends AbstractFixedIntervalTask
     return shardSpecs;
   }
 
+  private Set<DataSegment> generateSegments(
+      final TaskToolbox toolbox,
+      final Map<Interval, List<Schema>> schemass,
+      final String version
+  ) throws IOException
+  {
+    final Set<DataSegment> retVal = Sets.newHashSet();
+
+    for (Map.Entry<Interval, List<Schema>> entry : schemass.entrySet()) {
+      for (Schema schema : entry.getValue()) {
+        retVal.add(generateSegment(toolbox, schema, entry.getKey(), version));
+      }
+    }
+
+    return retVal;
+  }
+
   private DataSegment generateSegment(
       final TaskToolbox toolbox,
       final Schema schema,
@@ -302,7 +358,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     );
 
     // We need to track published segments.
-    final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<DataSegment>();
+    final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
     final DataSegmentPusher wrappedDataSegmentPusher = new DataSegmentPusher()
     {
       @Override

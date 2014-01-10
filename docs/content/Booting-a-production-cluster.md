@@ -1,7 +1,7 @@
 ---
 layout: doc_page
 ---
-# Booting a Single Node Cluster #
+# Booting a Single Node Cluster
 
 [Loading Your Data](Tutorial%3A-Loading-Your-Data-Part-2.html) and [All About Queries](Tutorial%3A-All-About-Queries.html) contain recipes to boot a small druid cluster on localhost. Here we will boot a small cluster on EC2. You can checkout the code, or download a tarball from [here](http://static.druid.io/artifacts/druid-services-0.6.46-bin.tar.gz).
 
@@ -17,7 +17,7 @@ export AWS_SECRET_KEY=
 
 Then, booting an ec2 instance running one node of each type is as simple as running the script, run_ec2.sh :)
 
-# Apache Whirr #
+# Apache Whirr
 
 Apache Whirr is a set of libraries for launching cloud services. You can clone a version of Whirr that includes Druid as a service from git@github.com:rjurney/whirr.git:
 

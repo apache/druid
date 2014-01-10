@@ -64,6 +64,10 @@ h2. Architecture
 ** "MySQL":./MySQL.html
 ** "ZooKeeper":./ZooKeeper.html
 
+h2. Experimental
+* "About Experimental Features":./About-Experimental-Features.html
+* "Geographic Queries":./GeographicQueries.html
+
 h2. Development
 * "Versioning":./Versioning.html
 * "Build From Source":./Build-from-source.html
