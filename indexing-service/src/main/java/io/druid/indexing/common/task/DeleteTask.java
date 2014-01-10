@@ -22,6 +22,7 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -103,7 +104,7 @@ public class DeleteTask extends AbstractFixedIntervalTask
         segment.getVersion()
     );
 
-    toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(uploadedSegment)));
+    toolbox.pushSegments(ImmutableList.of(uploadedSegment));
 
     return TaskStatus.success(getId());
   }

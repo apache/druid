@@ -45,7 +45,11 @@ public class ArchiveTask extends AbstractFixedIntervalTask
       @JsonProperty("interval") Interval interval
   )
   {
-    super(id, dataSource, interval);
+    super(
+        TaskUtils.makeId(id, "archive", dataSource, interval),
+        dataSource,
+        interval
+    );
   }
 
   @Override

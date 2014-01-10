@@ -19,12 +19,17 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  */
@@ -35,34 +40,37 @@ public class StatusResource
   @Produces("application/json")
   public Status doGet()
   {
-    return getStatus();
-  }
-
-  public static Status getStatus()
-  {
-    return new Status(
-        Initialization.class.getPackage().getImplementationVersion(),
-        new Memory(Runtime.getRuntime())
-    );
+    return new Status(Initialization.getLoadedModules(DruidModule.class));
   }
 
   public static class Status
   {
     final String version;
+    final List<ModuleVersion> modules;
     final Memory memory;
 
-    public Status(
-        String version, Memory memory
-    )
+    public Status(Collection<DruidModule> modules)
     {
-      this.version = version;
-      this.memory = memory;
+      this.version = getDruidVersion();
+      this.modules = getExtensionVersions(modules);
+      this.memory = new Memory(Runtime.getRuntime());
+    }
+
+    private String getDruidVersion()
+    {
+      return Status.class.getPackage().getImplementationVersion();
     }
 
     @JsonProperty
     public String getVersion()
     {
       return version;
+    }
+
+    @JsonProperty
+    public List<ModuleVersion> getModules()
+    {
+      return modules;
     }
 
     @JsonProperty
@@ -75,20 +83,45 @@ public class StatusResource
     public String toString()
     {
       final String NL = System.getProperty("line.separator");
-      return String.format("Druid version - %s", version) + NL;
+      StringBuilder output = new StringBuilder();
+      output.append(String.format("Druid version - %s", version)).append(NL).append(NL);
+
+      if (modules.size() > 0) {
+        output.append("Registered Druid Modules").append(NL);
+      } else {
+        output.append("No Druid Modules loaded !");
+      }
+
+      for (ModuleVersion moduleVersion : modules) {
+        output.append(moduleVersion).append(NL);
+      }
+      return output.toString();
+    }
+
+    /**
+     * Load the unique extensions and return their implementation-versions
+     *
+     * @return map of extensions loaded with their respective implementation versions.
+     */
+    private List<ModuleVersion> getExtensionVersions(Collection<DruidModule> druidModules)
+    {
+      List<ModuleVersion> moduleVersions = new ArrayList<>();
+      for (DruidModule module : druidModules) {
+        String artifact = module.getClass().getPackage().getImplementationTitle();
+        String version = module.getClass().getPackage().getImplementationVersion();
+
+        moduleVersions.add(new ModuleVersion(module.getClass().getCanonicalName(), artifact, version));
+      }
+      return moduleVersions;
     }
   }
 
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public static class ModuleVersion
   {
     final String name;
     final String artifact;
     final String version;
-
-    public ModuleVersion(String name)
-    {
-      this(name, "", "");
-    }
 
     public ModuleVersion(String name, String artifact, String version)
     {
@@ -118,7 +151,7 @@ public class StatusResource
     @Override
     public String toString()
     {
-      if (artifact.isEmpty()) {
+      if (artifact == null || artifact.isEmpty()) {
         return String.format("  - %s ", name);
       } else {
         return String.format("  - %s (%s-%s)", name, artifact, version);
@@ -164,6 +197,5 @@ public class StatusResource
     {
       return usedMemory;
     }
-
   }
 }

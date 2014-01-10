@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.actions;
 
+import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskStorage;
@@ -45,21 +46,21 @@ public class LocalTaskActionClient implements TaskActionClient
   {
     log.info("Performing action for task[%s]: %s", task.getId(), taskAction);
 
-    final RetType ret = taskAction.perform(task, toolbox);
-
     if (taskAction.isAudited()) {
       // Add audit log
       try {
         storage.addAuditLog(task, taskAction);
       }
       catch (Exception e) {
+        final String actionClass = taskAction.getClass().getName();
         log.makeAlert(e, "Failed to record action in audit log")
            .addData("task", task.getId())
-           .addData("actionClass", taskAction.getClass().getName())
+           .addData("actionClass", actionClass)
            .emit();
+        throw new ISE(e, "Failed to record action [%s] in audit log", actionClass);
       }
     }
 
-    return ret;
+    return taskAction.perform(task, toolbox);
   }
 }

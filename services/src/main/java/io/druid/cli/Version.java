@@ -20,6 +20,8 @@
 package io.druid.cli;
 
 import io.airlift.command.Command;
+import io.druid.initialization.DruidModule;
+import io.druid.initialization.Initialization;
 import io.druid.server.StatusResource;
 
 @Command(
@@ -31,6 +33,6 @@ public class Version implements Runnable
   @Override
   public void run()
   {
-    System.out.println(StatusResource.getStatus());
+    System.out.println(new StatusResource.Status(Initialization.getLoadedModules(DruidModule.class)));
   }
 }

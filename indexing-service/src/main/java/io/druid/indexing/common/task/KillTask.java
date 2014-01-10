@@ -97,10 +97,8 @@ public class KillTask extends AbstractFixedIntervalTask
     // Kill segments
     for (DataSegment segment : unusedSegments) {
       toolbox.getDataSegmentKiller().kill(segment);
+      toolbox.getTaskActionClient().submit(new SegmentNukeAction(ImmutableSet.of(segment)));
     }
-
-    // Remove metadata for these segments
-    toolbox.getTaskActionClient().submit(new SegmentNukeAction(ImmutableSet.copyOf(unusedSegments)));
 
     return TaskStatus.success(getId());
   }

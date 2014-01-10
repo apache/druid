@@ -213,7 +213,7 @@ public class DatabaseSegmentManager
               for (DataSegment segment : segments) {
                 batch.add(
                     String.format(
-                        "UPDATE %s SET used=1 WHERE id = '%s'",
+                        "UPDATE %s SET used=true WHERE id = '%s'",
                         getSegmentsTable(),
                         segment.getIdentifier()
                     )
@@ -244,7 +244,7 @@ public class DatabaseSegmentManager
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  String.format("UPDATE %s SET used=1 WHERE id = :id", getSegmentsTable())
+                  String.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable())
               )
                     .bind("id", segmentId)
                     .execute();
@@ -278,7 +278,7 @@ public class DatabaseSegmentManager
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  String.format("UPDATE %s SET used=0 WHERE dataSource = :dataSource", getSegmentsTable())
+                  String.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
               )
                     .bind("dataSource", ds)
                     .execute();
@@ -308,7 +308,7 @@ public class DatabaseSegmentManager
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  String.format("UPDATE %s SET used=0 WHERE id = :segmentID", getSegmentsTable())
+                  String.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable())
               ).bind("segmentID", segmentID)
                     .execute();
 
@@ -408,7 +408,7 @@ public class DatabaseSegmentManager
             public List<Map<String, Object>> withHandle(Handle handle) throws Exception
             {
               return handle.createQuery(
-                  String.format("SELECT payload FROM %s WHERE used=1", getSegmentsTable())
+                  String.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable())
               ).list();
             }
           }

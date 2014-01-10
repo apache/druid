@@ -294,7 +294,58 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getSegments(), ((AppendTask) task2).getSegments());
+    Assert.assertEquals(task.getSegments(), task2.getSegments());
+  }
+
+  @Test
+  public void testArchiveTaskSerde() throws Exception
+  {
+    final ArchiveTask task = new ArchiveTask(
+        null,
+        "foo",
+        new Interval("2010-01-01/P1D")
+    );
+
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final ArchiveTask task2 = (ArchiveTask) jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getInterval(), task2.getInterval());
+  }
+
+  @Test
+  public void testMoveTaskSerde() throws Exception
+  {
+    final MoveTask task = new MoveTask(
+        null,
+        "foo",
+        new Interval("2010-01-01/P1D"),
+        ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what")
+    );
+
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final MoveTask task2 = (MoveTask) jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+    Assert.assertEquals(ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what"), task.getTargetLoadSpec());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getInterval(), task2.getInterval());
+    Assert.assertEquals(task.getTargetLoadSpec(), task2.getTargetLoadSpec());
   }
 
   @Test

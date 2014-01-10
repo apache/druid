@@ -1,11 +1,13 @@
 ---
 layout: doc_page
 ---
+
+# Druid Plumbers
 The Plumber is the thing that handles generated segments both while they are being generated and when they are "done". This is also technically a pluggable interface and there are multiple implementations, but there are a lot of details handled by the plumber such that it is expected that there will only be a few implementations and only more advanced third-parties will implement their own. 
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|type|String|Specifies the type of plumber. Each value will have its own configuration schema, plumbers packaged with Druid are described [here](https://github.com/metamx/druid/wiki/Plumber#available-plumbers)|yes|
+|type|String|Specifies the type of plumber. Each value will have its own configuration schema, plumbers packaged with Druid are described below.|yes|
 
 We provide a brief description of the example to exemplify the types of things that are configured on the plumber.
 

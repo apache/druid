@@ -20,13 +20,16 @@
 package io.druid.indexing.overlord.scaling;
 
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
@@ -38,7 +41,6 @@ import org.joda.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  */
@@ -48,211 +50,194 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
 
   private final AutoScalingStrategy autoScalingStrategy;
   private final SimpleResourceManagementConfig config;
-  private final Supplier<WorkerSetupData> workerSetupdDataRef;
+  private final Supplier<WorkerSetupData> workerSetupDataRef;
   private final ScalingStats scalingStats;
 
-  private final ConcurrentSkipListSet<String> currentlyProvisioning = new ConcurrentSkipListSet<String>();
-  private final ConcurrentSkipListSet<String> currentlyTerminating = new ConcurrentSkipListSet<String>();
+  private final Object lock = new Object();
+  private final Set<String> currentlyProvisioning = Sets.newHashSet();
+  private final Set<String> currentlyTerminating = Sets.newHashSet();
 
-  private volatile DateTime lastProvisionTime = new DateTime();
-  private volatile DateTime lastTerminateTime = new DateTime();
+  private int targetWorkerCount = -1;
+  private DateTime lastProvisionTime = new DateTime();
+  private DateTime lastTerminateTime = new DateTime();
 
   @Inject
   public SimpleResourceManagementStrategy(
       AutoScalingStrategy autoScalingStrategy,
       SimpleResourceManagementConfig config,
-      Supplier<WorkerSetupData> workerSetupdDataRef
+      Supplier<WorkerSetupData> workerSetupDataRef
   )
   {
     this.autoScalingStrategy = autoScalingStrategy;
     this.config = config;
-    this.workerSetupdDataRef = workerSetupdDataRef;
+    this.workerSetupDataRef = workerSetupDataRef;
     this.scalingStats = new ScalingStats(config.getNumEventsToTrack());
   }
 
   @Override
   public boolean doProvision(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
-    final WorkerSetupData workerSetupData = workerSetupdDataRef.get();
-
-    final String minVersion = workerSetupData.getMinVersion() == null
-                        ? config.getWorkerVersion()
-                        : workerSetupData.getMinVersion();
-    int maxNumWorkers = workerSetupData.getMaxNumWorkers();
-
-    int currValidWorkers = 0;
-    for (ZkWorker zkWorker : zkWorkers) {
-      if (zkWorker.isValidVersion(minVersion)) {
-        currValidWorkers++;
+    synchronized (lock) {
+      boolean didProvision = false;
+      final WorkerSetupData workerSetupData = workerSetupDataRef.get();
+      if (workerSetupData == null) {
+        log.warn("No workerSetupData available, cannot provision new workers.");
+        return false;
       }
-    }
+      final Predicate<ZkWorker> isValidWorker = createValidWorkerPredicate(config, workerSetupData);
+      final int currValidWorkers = Collections2.filter(zkWorkers, isValidWorker).size();
 
-    if (currValidWorkers >= maxNumWorkers) {
-      log.debug(
-          "Cannot scale anymore. Num workers = %d, Max num workers = %d",
-          zkWorkers.size(),
-          workerSetupdDataRef.get().getMaxNumWorkers()
-      );
-      return false;
-    }
-
-    List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
-        Lists.newArrayList(
-            Iterables.<ZkWorker, String>transform(
-                zkWorkers,
-                new Function<ZkWorker, String>()
-                {
-                  @Override
-                  public String apply(ZkWorker input)
+      final List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
+          Lists.newArrayList(
+              Iterables.<ZkWorker, String>transform(
+                  zkWorkers,
+                  new Function<ZkWorker, String>()
                   {
-                    return input.getWorker().getIp();
+                    @Override
+                    public String apply(ZkWorker input)
+                    {
+                      return input.getWorker().getIp();
+                    }
                   }
-                }
-            )
-        )
-    );
+              )
+          )
+      );
+      currentlyProvisioning.removeAll(workerNodeIds);
 
-    currentlyProvisioning.removeAll(workerNodeIds);
-    boolean nothingProvisioning = currentlyProvisioning.isEmpty();
+      updateTargetWorkerCount(workerSetupData, pendingTasks, zkWorkers);
 
-    if (nothingProvisioning) {
-      if (hasTaskPendingBeyondThreshold(pendingTasks)) {
-        AutoScalingData provisioned = autoScalingStrategy.provision();
-
-        if (provisioned != null) {
-          currentlyProvisioning.addAll(provisioned.getNodeIds());
+      int want = targetWorkerCount - (currValidWorkers + currentlyProvisioning.size());
+      while (want > 0) {
+        final AutoScalingData provisioned = autoScalingStrategy.provision();
+        final List<String> newNodes;
+        if (provisioned == null || (newNodes = provisioned.getNodeIds()).isEmpty()) {
+          break;
+        } else {
+          currentlyProvisioning.addAll(newNodes);
           lastProvisionTime = new DateTime();
           scalingStats.addProvisionEvent(provisioned);
-
-          return true;
+          want -= provisioned.getNodeIds().size();
+          didProvision = true;
         }
       }
-    } else {
-      Duration durSinceLastProvision = new Duration(lastProvisionTime, new DateTime());
 
-      log.info(
-          "%s still provisioning. Wait for all provisioned nodes to complete before requesting new worker. Current wait time: %s",
-          currentlyProvisioning,
-          durSinceLastProvision
-      );
+      if (!currentlyProvisioning.isEmpty()) {
+        Duration durSinceLastProvision = new Duration(lastProvisionTime, new DateTime());
 
-      if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
-        log.makeAlert("Worker node provisioning taking too long!")
-           .addData("millisSinceLastProvision", durSinceLastProvision.getMillis())
-           .addData("provisioningCount", currentlyProvisioning.size())
-           .emit();
+        log.info("%s provisioning. Current wait time: %s", currentlyProvisioning, durSinceLastProvision);
 
-        List<String> nodeIps = autoScalingStrategy.idToIpLookup(Lists.newArrayList(currentlyProvisioning));
-        autoScalingStrategy.terminate(nodeIps);
-        currentlyProvisioning.clear();
+        if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
+          log.makeAlert("Worker node provisioning taking too long!")
+             .addData("millisSinceLastProvision", durSinceLastProvision.getMillis())
+             .addData("provisioningCount", currentlyProvisioning.size())
+             .emit();
+
+          List<String> nodeIps = autoScalingStrategy.idToIpLookup(Lists.newArrayList(currentlyProvisioning));
+          autoScalingStrategy.terminate(nodeIps);
+          currentlyProvisioning.clear();
+        }
       }
-    }
 
-    return false;
+      return didProvision;
+    }
   }
 
   @Override
   public boolean doTerminate(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
-    Set<String> workerNodeIds = Sets.newHashSet(
-        autoScalingStrategy.ipToIdLookup(
-            Lists.newArrayList(
-                Iterables.transform(
-                    zkWorkers,
-                    new Function<ZkWorker, String>()
-                    {
-                      @Override
-                      public String apply(ZkWorker input)
+    synchronized (lock) {
+      final WorkerSetupData workerSetupData = workerSetupDataRef.get();
+      if (workerSetupData == null) {
+        log.warn("No workerSetupData available, cannot terminate workers.");
+        return false;
+      }
+
+      boolean didTerminate = false;
+      final Set<String> workerNodeIds = Sets.newHashSet(
+          autoScalingStrategy.ipToIdLookup(
+              Lists.newArrayList(
+                  Iterables.transform(
+                      zkWorkers,
+                      new Function<ZkWorker, String>()
                       {
-                        return input.getWorker().getIp();
+                        @Override
+                        public String apply(ZkWorker input)
+                        {
+                          return input.getWorker().getIp();
+                        }
                       }
-                    }
-                )
-            )
-        )
-    );
-
-    Set<String> stillExisting = Sets.newHashSet();
-    for (String s : currentlyTerminating) {
-      if (workerNodeIds.contains(s)) {
-        stillExisting.add(s);
-      }
-    }
-    currentlyTerminating.clear();
-    currentlyTerminating.addAll(stillExisting);
-    boolean nothingTerminating = currentlyTerminating.isEmpty();
-
-    if (nothingTerminating) {
-      final int minNumWorkers = workerSetupdDataRef.get().getMinNumWorkers();
-      if (zkWorkers.size() <= minNumWorkers) {
-        log.info("Only [%d <= %d] nodes in the cluster, not terminating anything.", zkWorkers.size(), minNumWorkers);
-        return false;
-      }
-
-      List<ZkWorker> thoseLazyWorkers = Lists.newArrayList(
-          FunctionalIterable
-              .create(zkWorkers)
-              .filter(
-                  new Predicate<ZkWorker>()
-                  {
-                    @Override
-                    public boolean apply(ZkWorker input)
-                    {
-                      return input.getRunningTasks().isEmpty()
-                             && System.currentTimeMillis() - input.getLastCompletedTaskTime().getMillis()
-                                >= config.getWorkerIdleTimeout().toStandardDuration().getMillis();
-                    }
-                  }
+                  )
               )
-      );
-
-      int maxPossibleNodesTerminated = zkWorkers.size() - minNumWorkers;
-      int numNodesToTerminate = Math.min(maxPossibleNodesTerminated, thoseLazyWorkers.size());
-      if (numNodesToTerminate <= 0) {
-        log.info("Found no nodes to terminate.");
-        return false;
-      }
-
-      AutoScalingData terminated = autoScalingStrategy.terminate(
-          Lists.transform(
-              thoseLazyWorkers.subList(0, numNodesToTerminate),
-              new Function<ZkWorker, String>()
-              {
-                @Override
-                public String apply(ZkWorker input)
-                {
-                  return input.getWorker().getIp();
-                }
-              }
           )
       );
 
-      if (terminated != null) {
-        currentlyTerminating.addAll(terminated.getNodeIds());
-        lastTerminateTime = new DateTime();
-        scalingStats.addTerminateEvent(terminated);
-
-        return true;
+      final Set<String> stillExisting = Sets.newHashSet();
+      for (String s : currentlyTerminating) {
+        if (workerNodeIds.contains(s)) {
+          stillExisting.add(s);
+        }
       }
-    } else {
-      Duration durSinceLastTerminate = new Duration(lastTerminateTime, new DateTime());
+      currentlyTerminating.clear();
+      currentlyTerminating.addAll(stillExisting);
 
-      log.info(
-          "%s still terminating. Wait for all nodes to terminate before trying again.",
-          currentlyTerminating
-      );
+      updateTargetWorkerCount(workerSetupData, pendingTasks, zkWorkers);
 
-      if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
-        log.makeAlert("Worker node termination taking too long!")
-           .addData("millisSinceLastTerminate", durSinceLastTerminate.getMillis())
-           .addData("terminatingCount", currentlyTerminating.size())
-           .emit();
+      final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config, workerSetupData);
+      if (currentlyTerminating.isEmpty()) {
+        final int excessWorkers = (zkWorkers.size() + currentlyProvisioning.size()) - targetWorkerCount;
+        if (excessWorkers > 0) {
+          final List<String> laziestWorkerIps =
+              FluentIterable.from(zkWorkers)
+                            .filter(isLazyWorker)
+                            .limit(excessWorkers)
+                            .transform(
+                                new Function<ZkWorker, String>()
+                                {
+                                  @Override
+                                  public String apply(ZkWorker zkWorker)
+                                  {
+                                    return zkWorker.getWorker().getIp();
+                                  }
+                                }
+                            )
+                            .toList();
 
-        currentlyTerminating.clear();
+          if (laziestWorkerIps.isEmpty()) {
+            log.info("Wanted to terminate %,d workers, but couldn't find any lazy ones!", excessWorkers);
+          } else {
+            log.info(
+                "Terminating %,d workers (wanted %,d): %s",
+                laziestWorkerIps.size(),
+                excessWorkers,
+                Joiner.on(", ").join(laziestWorkerIps)
+            );
+
+            final AutoScalingData terminated = autoScalingStrategy.terminate(laziestWorkerIps);
+            if (terminated != null) {
+              currentlyTerminating.addAll(terminated.getNodeIds());
+              lastTerminateTime = new DateTime();
+              scalingStats.addTerminateEvent(terminated);
+              didTerminate = true;
+            }
+          }
+        }
+      } else {
+        Duration durSinceLastTerminate = new Duration(lastTerminateTime, new DateTime());
+
+        log.info("%s terminating. Current wait time: %s", currentlyTerminating, durSinceLastTerminate);
+
+        if (durSinceLastTerminate.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
+          log.makeAlert("Worker node termination taking too long!")
+             .addData("millisSinceLastTerminate", durSinceLastTerminate.getMillis())
+             .addData("terminatingCount", currentlyTerminating.size())
+             .emit();
+
+          currentlyTerminating.clear();
+        }
       }
+
+      return didTerminate;
     }
-
-    return false;
   }
 
   @Override
@@ -261,16 +246,128 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     return scalingStats;
   }
 
-  private boolean hasTaskPendingBeyondThreshold(Collection<RemoteTaskRunnerWorkItem> pendingTasks)
+  private static Predicate<ZkWorker> createLazyWorkerPredicate(
+      final SimpleResourceManagementConfig config,
+      final WorkerSetupData workerSetupData
+  )
   {
-    long now = System.currentTimeMillis();
-    for (TaskRunnerWorkItem pendingTask : pendingTasks) {
-      final Duration durationSinceInsertion = new Duration(pendingTask.getQueueInsertionTime().getMillis(), now);
-      final Duration timeoutDuration = config.getPendingTaskTimeout().toStandardDuration();
-      if (durationSinceInsertion.isEqual(timeoutDuration) || durationSinceInsertion.isLongerThan(timeoutDuration)) {
-        return true;
+    final Predicate<ZkWorker> isValidWorker = createValidWorkerPredicate(config, workerSetupData);
+
+    return new Predicate<ZkWorker>()
+    {
+      @Override
+      public boolean apply(ZkWorker worker)
+      {
+        final boolean itHasBeenAWhile = System.currentTimeMillis() - worker.getLastCompletedTaskTime().getMillis()
+                                        >= config.getWorkerIdleTimeout().toStandardDuration().getMillis();
+        return worker.getRunningTasks().isEmpty() && (itHasBeenAWhile || !isValidWorker.apply(worker));
+      }
+    };
+  }
+
+  private static Predicate<ZkWorker> createValidWorkerPredicate(
+      final SimpleResourceManagementConfig config,
+      final WorkerSetupData workerSetupData
+  )
+  {
+    return new Predicate<ZkWorker>()
+    {
+      @Override
+      public boolean apply(ZkWorker zkWorker)
+      {
+        final String minVersion = workerSetupData.getMinVersion() != null
+                                  ? workerSetupData.getMinVersion()
+                                  : config.getWorkerVersion();
+        if (minVersion == null) {
+          throw new ISE("No minVersion found! It should be set in your runtime properties or configuration database.");
+        }
+        return zkWorker.isValidVersion(minVersion);
+      }
+    };
+  }
+
+  private void updateTargetWorkerCount(
+      final WorkerSetupData workerSetupData,
+      final Collection<RemoteTaskRunnerWorkItem> pendingTasks,
+      final Collection<ZkWorker> zkWorkers
+  )
+  {
+    synchronized (lock) {
+      final Collection<ZkWorker> validWorkers = Collections2.filter(
+          zkWorkers,
+          createValidWorkerPredicate(config, workerSetupData)
+      );
+      final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config, workerSetupData);
+
+      if (targetWorkerCount < 0) {
+        // Initialize to size of current worker pool, subject to pool size limits
+        targetWorkerCount = Math.max(
+            Math.min(
+                zkWorkers.size(),
+                workerSetupData.getMaxNumWorkers()
+            ),
+            workerSetupData.getMinNumWorkers()
+        );
+        log.info(
+            "Starting with a target of %,d workers (current = %,d, min = %,d, max = %,d).",
+            targetWorkerCount,
+            validWorkers.size(),
+            workerSetupData.getMinNumWorkers(),
+            workerSetupData.getMaxNumWorkers()
+        );
+      }
+
+      final boolean atSteadyState = currentlyProvisioning.isEmpty()
+                                    && currentlyTerminating.isEmpty()
+                                    && validWorkers.size() == targetWorkerCount;
+      final boolean shouldScaleUp = atSteadyState
+                                    && hasTaskPendingBeyondThreshold(pendingTasks)
+                                    && targetWorkerCount < workerSetupData.getMaxNumWorkers();
+      final boolean shouldScaleDown = atSteadyState
+                                      && Iterables.any(validWorkers, isLazyWorker)
+                                      && targetWorkerCount > workerSetupData.getMinNumWorkers();
+      if (shouldScaleUp) {
+        targetWorkerCount++;
+        log.info(
+            "I think we should scale up to %,d workers (current = %,d, min = %,d, max = %,d).",
+            targetWorkerCount,
+            validWorkers.size(),
+            workerSetupData.getMinNumWorkers(),
+            workerSetupData.getMaxNumWorkers()
+        );
+      } else if (shouldScaleDown) {
+        targetWorkerCount--;
+        log.info(
+            "I think we should scale down to %,d workers (current = %,d, min = %,d, max = %,d).",
+            targetWorkerCount,
+            validWorkers.size(),
+            workerSetupData.getMinNumWorkers(),
+            workerSetupData.getMaxNumWorkers()
+        );
+      } else {
+        log.info(
+            "Our target is %,d workers, and I'm okay with that (current = %,d, min = %,d, max = %,d).",
+            targetWorkerCount,
+            validWorkers.size(),
+            workerSetupData.getMinNumWorkers(),
+            workerSetupData.getMaxNumWorkers()
+        );
       }
     }
-    return false;
+  }
+
+  private boolean hasTaskPendingBeyondThreshold(Collection<RemoteTaskRunnerWorkItem> pendingTasks)
+  {
+    synchronized (lock) {
+      long now = System.currentTimeMillis();
+      for (TaskRunnerWorkItem pendingTask : pendingTasks) {
+        final Duration durationSinceInsertion = new Duration(pendingTask.getQueueInsertionTime().getMillis(), now);
+        final Duration timeoutDuration = config.getPendingTaskTimeout().toStandardDuration();
+        if (durationSinceInsertion.isEqual(timeoutDuration) || durationSinceInsertion.isLongerThan(timeoutDuration)) {
+          return true;
+        }
+      }
+      return false;
+    }
   }
 }

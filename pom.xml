@@ -23,14 +23,14 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.39</version>
+    <version>0.6.48-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
         <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
         <url>http://www.github.com/metamx/druid</url>
-        <tag>druid-0.6.39</tag>
+        <tag>${project.artifactId}-${project.version}</tag>
     </scm>
 
     <prerequisites>
@@ -40,7 +40,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.25.1</metamx.java-util.version>
-        <apache.curator.version>2.1.0-incubating</apache.curator.version>
+        <apache.curator.version>2.3.0</apache.curator.version>
         <druid.api.version>0.1.7</druid.api.version>
     </properties>
 
@@ -73,12 +73,12 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.2.6</version>
+                <version>0.2.7</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>0.8.4</version>
+                <version>0.8.5</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -289,6 +289,16 @@
                 <groupId>com.sun.jersey.contribs</groupId>
                 <artifactId>jersey-guice</artifactId>
                 <version>1.17.1</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.inject</groupId>
+                        <artifactId>guice</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.google.inject.extensions</groupId>
+                        <artifactId>guice-servlet</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.sun.jersey</groupId>
@@ -414,7 +424,7 @@
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
-                <version>4.8.1</version>
+                <version>4.11</version>
                 <scope>test</scope>
             </dependency>
             <dependency>

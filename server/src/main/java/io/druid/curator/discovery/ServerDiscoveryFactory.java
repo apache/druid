@@ -63,6 +63,11 @@ public class ServerDiscoveryFactory
     }
 
     @Override
+    public void noteError(ServiceInstance<T> tServiceInstance) {
+      // do nothing
+    }
+
+    @Override
     public void close() throws IOException
     {
       // do nothing

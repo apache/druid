@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Batch Data Ingestion
 There are two choices for batch data ingestion to your Druid cluster, you can use the [Indexing service](Indexing-service.html) or you can use the `HadoopDruidIndexer`.
 
 Which should I use?

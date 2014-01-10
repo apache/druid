@@ -21,7 +21,9 @@ h2. Operations
 * "Booting a Production Cluster":./Booting-a-production-cluster.html
 
 h2. Data Ingestion
-* "Realtime":./Realtime.html
+* "Realtime":./Realtime-ingestion.html
+** "Firehose":./Firehose.html
+** "Plumber":./Plumber.html
 * "Batch":./Batch-ingestion.html
 * "Indexing Service":./Indexing-Service.html
 ** "Tasks":./Tasks.html
@@ -42,6 +44,8 @@ h2. Querying
 ** "SegmentMetadataQuery":./SegmentMetadataQuery.html
 ** "TimeBoundaryQuery":./TimeBoundaryQuery.html
 ** "TimeseriesQuery":./TimeseriesQuery.html
+** "TopNQuery":./TopNQuery.html
+*** "TopNMetricSpec":./TopNMetricSpec.html
 
 h2. Architecture
 * "Design":./Design.html
@@ -52,8 +56,6 @@ h2. Architecture
 ** "Coordinator":./Coordinator.html
 *** "Rule Configuration":./Rule-Configuration.html
 ** "Realtime":./Realtime.html
-*** "Firehose":./Firehose.html
-*** "Plumber":./Plumber.html
 ** "Indexing Service":./Indexing-Service.html
 *** "Middle Manager":./Middlemanager.html
 *** "Peon":./Peons.html
