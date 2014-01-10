@@ -177,9 +177,6 @@ public class IndexTask extends AbstractFixedIntervalTask
 
     log.info("Determining partitions with targetPartitionSize[%d]", targetPartitionSize);
 
-    // Blacklist dimensions that have multiple values per row
-    final Set<String> unusableDimensions = Sets.newHashSet();
-
     // Load data
     try (Firehose firehose = firehoseFactory.connect()) {
       if (!firehose.hasMore()) {
@@ -189,6 +186,9 @@ public class IndexTask extends AbstractFixedIntervalTask
       InputRow inputRow = firehose.nextRow();
 
       for (Interval interval : granularitySpec.bucketIntervals()) {
+        // Blacklist dimensions that have multiple values per row
+        final Set<String> unusableDimensions = Sets.newHashSet();
+
         // Track values of all non-blacklisted dimensions
         final Map<String, TreeMultiset<String>> dimensionValueMultisets = Maps.newHashMap();
 
