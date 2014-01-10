@@ -3,6 +3,7 @@ package io.druid.query.aggregation.cardinality;
 
 import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
 import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
@@ -18,7 +19,6 @@ import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
-import org.codehaus.jackson.annotate.JsonCreator;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;

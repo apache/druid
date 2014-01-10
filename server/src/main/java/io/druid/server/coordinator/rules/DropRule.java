@@ -23,6 +23,8 @@ import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
+import org.joda.time.Days;
 
 /**
  * DropRules indicate when segments should be completely removed from the cluster.
@@ -36,5 +38,10 @@ public abstract class DropRule implements Rule
     coordinator.removeSegment(segment);
     stats.addToGlobalStat("deletedCount", 1);
     return stats;
+  }
+
+  public static void main(String[] args)
+  {
+    System.out.println(new DateTime("2013-10-12").plus(Days.days(90)));
   }
 }
