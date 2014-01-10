@@ -57,7 +57,8 @@ public class ForeverLoadRule extends LoadRule
   @Override
   public int getNumReplicants(String tier)
   {
-    return tieredReplicants.get(tier);
+    Integer retVal = tieredReplicants.get(tier);
+    return (retVal == null) ? 0 : retVal;
   }
 
   @Override
