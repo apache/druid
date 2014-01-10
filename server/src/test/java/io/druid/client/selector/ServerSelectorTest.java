@@ -74,7 +74,8 @@ public class ServerSelectorTest
             new NoneShardSpec(),
             0,
             0L
-        )
+        ),
+        new ConnectionCountServerSelectorStrategy()
     );
 
     DirectDruidClient client1 = new DirectDruidClient(

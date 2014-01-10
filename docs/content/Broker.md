@@ -35,9 +35,10 @@ JVM Configuration
 
 The broker module uses several of the default modules in [Configuration](Configuration.html) and has the following set of configurations as well:
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.broker.cache.type`|Choices: local, memcache. The type of cache to use for queries.|local|
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.broker.cache.type`|`local`, `memcache`|The type of cache to use for queries.|`local`|
+|`druid.broker.balancer.type`|`random`, `connectionCount`|Determines how the broker balances connections to compute nodes. `random` choose randomly, `connectionCount` picks the node with the fewest number of active connections to|`random`|
 
 #### Local Cache
 
