@@ -29,6 +29,9 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
@@ -123,12 +126,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       typeRef = types.lhs;
     }
 
-    final Future<InputStream> future;
+    final ListenableFuture<InputStream> future;
     final String url = String.format("http://%s/druid/v2/", host);
 
     try {
       log.debug("Querying url[%s]", url);
-      openConnections.getAndIncrement();
       future = httpClient
           .post(new URL(url))
           .setContent(objectMapper.writeValueAsBytes(query))
@@ -169,11 +171,27 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       stopTime - startTime,
                       byteCount / (0.0001 * (stopTime - startTime))
                   );
-                  openConnections.getAndDecrement();
                   return super.done(clientResponse);
                 }
               }
           );
+      openConnections.getAndIncrement();
+      Futures.addCallback(
+          future, new FutureCallback<InputStream>()
+      {
+        @Override
+        public void onSuccess(InputStream result)
+        {
+          openConnections.getAndDecrement();
+        }
+
+        @Override
+        public void onFailure(Throwable t)
+        {
+          openConnections.getAndDecrement();
+        }
+      }
+      );
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
