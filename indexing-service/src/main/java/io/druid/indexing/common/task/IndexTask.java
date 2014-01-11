@@ -139,9 +139,8 @@ public class IndexTask extends AbstractFixedIntervalTask
 
     final Set<Interval> validIntervals = Sets.intersection(granularitySpec.bucketIntervals(), getDataIntervals());
     if (validIntervals.isEmpty()) {
-      throw new ISE("No valid data intervals found. Check out configs!");
+      throw new ISE("No valid data intervals found. Check your configs!");
     }
-
 
     for (final Interval bucket : validIntervals) {
       final List<ShardSpec> shardSpecs;
