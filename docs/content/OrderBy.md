@@ -1,7 +1,7 @@
 ---
 layout: doc_page
 ---
-The orderBy field provides the functionality to sort and limit the set of results from a groupBy query. Available options are:
+The orderBy field provides the functionality to sort and limit the set of results from a groupBy query. If you group by a single dimension and are ordering by a single metric, we highly recommend using [TopN Queries](TopNQuery.html) instead. The performance will be substantially better. Available options are:
 
 ### DefaultLimitSpec
 

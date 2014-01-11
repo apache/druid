@@ -66,10 +66,14 @@ You can then use the EC2 dashboard to locate the instance and confirm that it ha
 
 If both the instance and the Druid cluster launch successfully, a few minutes later other messages to STDOUT should follow with information returned from EC2, including the instance ID:
 
+<<<<<<< HEAD
+# Apache Whirr
+=======
     Started cluster of 1 instances
     Cluster{instances=[Instance{roles=[zookeeper, druid-mysql, druid-master, druid-broker, druid-compute, druid-realtime], publicIp= ...
     
 The final message will contain login information for the instance.
+>>>>>>> master
 
 Note that the Whirr will return an exception if any of the nodes fail to launch, and the cluster will be destroyed. To destroy the cluster manually, run the following command:
 

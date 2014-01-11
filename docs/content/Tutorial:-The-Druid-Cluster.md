@@ -155,11 +155,13 @@ druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.46"]
 druid.s3.secretKey=QyyfVZ7llSiRg6Qcrql1eEUG7buFpAK6T6engr1b
 druid.s3.accessKey=AKIAIMKECRUYKDQGR6YQ
 
-druid.server.maxSize=100000000
+druid.server.maxSize=10000000000
 
-druid.processing.buffer.sizeBytes=10000000
+# Change these to make Druid faster
+druid.processing.buffer.sizeBytes=268435456
+druid.processing.numThreads=1
 
-druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 100000000}]
+druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 10000000000}]
 ```
 
 To start the historical node:
@@ -248,7 +250,7 @@ druid.publish.type=noop
 # druid.db.connector.user=druid
 # druid.db.connector.password=diurd
 
-druid.processing.buffer.sizeBytes=10000000
+druid.processing.buffer.sizeBytes=268435456
 ```
 
 Next Steps
