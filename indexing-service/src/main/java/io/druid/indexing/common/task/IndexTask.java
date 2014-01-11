@@ -31,6 +31,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultiset;
 import com.google.common.primitives.Ints;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
@@ -137,6 +138,10 @@ public class IndexTask extends AbstractFixedIntervalTask
     final Set<DataSegment> segments = Sets.newHashSet();
 
     final Set<Interval> validIntervals = Sets.intersection(granularitySpec.bucketIntervals(), getDataIntervals());
+    if (validIntervals.isEmpty()) {
+      throw new ISE("No valid data intervals found. Check out configs!");
+    }
+
 
     for (final Interval bucket : validIntervals) {
       final List<ShardSpec> shardSpecs;
