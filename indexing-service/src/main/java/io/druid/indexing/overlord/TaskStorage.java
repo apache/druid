@@ -30,10 +30,11 @@ import java.util.List;
 public interface TaskStorage
 {
   /**
-   * Adds a task to the storage facility with a particular status. If the task ID already exists, this method
-   * will throw a {@link TaskExistsException}.
+   * Adds a task to the storage facility with a particular status.
+   *
+   * @throws io.druid.indexing.overlord.TaskExistsException if the task ID already exists
    */
-  public void insert(Task task, TaskStatus status);
+  public void insert(Task task, TaskStatus status) throws TaskExistsException;
 
   /**
    * Persists task status in the storage facility. This method should throw an exception if the task status lifecycle

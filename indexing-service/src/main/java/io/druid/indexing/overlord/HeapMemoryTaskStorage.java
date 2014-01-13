@@ -63,7 +63,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public void insert(Task task, TaskStatus status)
+  public void insert(Task task, TaskStatus status) throws TaskExistsException
   {
     giant.lock();
 
