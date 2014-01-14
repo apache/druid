@@ -27,8 +27,8 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
 {
   "dataSource": "the_data_source",
   "timestampSpec" : {
-    "timestampColumn": "ts",
-    "timestampFormat": "<iso, millis, posix, auto or any Joda time format>"
+    "column": "ts",
+    "format": "<iso, millis, posix, auto or any Joda time format>"
   },
   "dataSpec": {
     "format": "<csv, tsv, or json>",
@@ -188,8 +188,8 @@ The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Co
   "config": {
     "dataSource" : "example",
     "timestampSpec" : {
-      "timestampColumn" : "timestamp",
-      "timestampFormat" : "auto"
+      "column" : "timestamp",
+      "format" : "auto"
     },
     "dataSpec" : {
       "format" : "json",

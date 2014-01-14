@@ -443,7 +443,11 @@ public class DeterminePartitionsJob implements Jobby
       final int index = bytes.getInt();
 
       if (index >= numPartitions) {
-        throw new ISE("Not enough partitions, index[%,d] >= numPartitions[%,d]", index, numPartitions);
+        throw new ISE(
+            "Not enough partitions, index[%,d] >= numPartitions[%,d]. Please increase the number of reducers to the index size or check your config & settings!",
+            index,
+            numPartitions
+        );
       }
 
       return index;
@@ -453,7 +457,6 @@ public class DeterminePartitionsJob implements Jobby
   private static abstract class DeterminePartitionsDimSelectionBaseReducer
       extends Reducer<BytesWritable, Text, BytesWritable, Text>
   {
-
     protected static volatile HadoopDruidIndexerConfig config = null;
 
     @Override

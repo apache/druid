@@ -31,7 +31,7 @@ druid.zk.service.host=localhost
 druid.server.maxSize=10000000000
 
 # Change these to make Druid faster
-druid.processing.buffer.sizeBytes=10000000
+druid.processing.buffer.sizeBytes=100000000
 druid.processing.numThreads=1
 
 druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 10000000000}]

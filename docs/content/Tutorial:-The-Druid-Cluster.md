@@ -158,7 +158,7 @@ druid.s3.accessKey=AKIAIMKECRUYKDQGR6YQ
 druid.server.maxSize=10000000000
 
 # Change these to make Druid faster
-druid.processing.buffer.sizeBytes=268435456
+druid.processing.buffer.sizeBytes=100000000
 druid.processing.numThreads=1
 
 druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 10000000000}]
@@ -250,7 +250,7 @@ druid.publish.type=noop
 # druid.db.connector.user=druid
 # druid.db.connector.password=diurd
 
-druid.processing.buffer.sizeBytes=268435456
+druid.processing.buffer.sizeBytes=100000000
 ```
 
 Next Steps

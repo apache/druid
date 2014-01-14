@@ -264,8 +264,10 @@ Examining the contents of the file, you should find:
     "type" : "index_hadoop",
     "config": {
       "dataSource" : "wikipedia",
-      "timestampColumn" : "timestamp",
-      "timestampFormat" : "auto",
+      "timestampSpec" : {
+        "column" : "timestamp",
+        "format" : "auto"
+      },
       "dataSpec" : {
         "format" : "json",
         "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
@@ -303,7 +305,8 @@ Examining the contents of the file, you should find:
   }
   ```
 
-If you are curious about what all this configuration means, see [here](Task.html)
+If you are curious about what all this configuration means, see [here](Task.html).
+
 To submit the task:
 
 ```bash

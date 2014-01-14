@@ -42,7 +42,7 @@ druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
 druid.db.connector.user=druid
 druid.db.connector.password=diurd
 
-druid.processing.buffer.sizeBytes=268435456
+druid.processing.buffer.sizeBytes=100000000
 ```
 
 The realtime module also uses several of the default modules in [Configuration](Configuration.html). For more information on the realtime spec file (or configuration file), see [realtime ingestion](Realtime-ingestion.html) page.
