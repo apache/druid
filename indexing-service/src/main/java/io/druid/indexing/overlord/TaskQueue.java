@@ -296,7 +296,7 @@ public class TaskQueue
    *
    * @return true
    */
-  public boolean add(final Task task)
+  public boolean add(final Task task) throws TaskExistsException
   {
     giant.lock();
 
@@ -306,15 +306,8 @@ public class TaskQueue
       Preconditions.checkState(tasks.size() < config.getMaxSize(), "Too many tasks (max = %,d)", config.getMaxSize());
 
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
-      // insert the task into our queue.
-      try {
-        taskStorage.insert(task, TaskStatus.running(task.getId()));
-      }
-      catch (TaskExistsException e) {
-        log.warn("Attempt to add task twice: %s", task.getId());
-        throw Throwables.propagate(e);
-      }
-
+      // insert the task into our queue. So don't catch it.
+      taskStorage.insert(task, TaskStatus.running(task.getId()));
       tasks.add(task);
       managementMayBeNecessary.signalAll();
       return true;

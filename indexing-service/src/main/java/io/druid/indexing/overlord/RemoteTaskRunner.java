@@ -61,6 +61,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 
@@ -335,7 +336,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       pendingTaskPayloads.remove(taskId);
       log.info("Removed task from pending queue: %s", taskId);
     } else if (completeTasks.containsKey(taskId)) {
-      cleanup(completeTasks.get(taskId).getWorker().getHost(), taskId);
+      cleanup(taskId);
     } else {
       final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
@@ -469,27 +470,31 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   /**
    * Removes a task from the complete queue and clears out the ZK status path of the task.
    *
-   * @param workerId - the worker that was previously running the task
    * @param taskId   - the task to cleanup
    */
-  private void cleanup(final String workerId, final String taskId)
+  private void cleanup(final String taskId)
   {
     if (!started) {
       return;
     }
-    if (completeTasks.remove(taskId) == null) {
+    final RemoteTaskRunnerWorkItem removed = completeTasks.remove(taskId);
+    final Worker worker = removed.getWorker();
+    if (removed == null || worker == null) {
       log.makeAlert("WTF?! Asked to cleanup nonexistent task")
-         .addData("workerId", workerId)
          .addData("taskId", taskId)
          .emit();
     } else {
+      final String workerId = worker.getHost();
       log.info("Cleaning up task[%s] on worker[%s]", taskId, workerId);
       final String statusPath = JOINER.join(zkPaths.getIndexerStatusPath(), workerId, taskId);
       try {
         cf.delete().guaranteed().forPath(statusPath);
       }
-      catch (Exception e) {
+      catch (KeeperException.NoNodeException e) {
         log.info("Tried to delete status path[%s] that didn't exist! Must've gone away already?", statusPath);
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
       }
     }
   }
@@ -593,7 +598,6 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
               elapsed,
               config.getTaskAssignmentTimeout()
           );
-
           taskComplete(taskRunnerWorkItem, theZkWorker, TaskStatus.failure(task.getId()));
           break;
         }
@@ -666,7 +670,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
                             SettableFuture.<TaskStatus>create(),
                             zkWorker.getWorker()
                         );
-                        runningTasks.put(taskId, taskRunnerWorkItem);
+                        runningTasks.put(taskId, taskRunnerWorkItem.withWorker(zkWorker.getWorker()));
                       }
 
                       if (taskStatus.isComplete()) {
