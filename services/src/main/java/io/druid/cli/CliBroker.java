@@ -54,7 +54,7 @@ import java.util.List;
  */
 @Command(
     name = "broker",
-    description = "Runs a broker node, see http://druid.io/docs/0.6.46/Broker.html for a description"
+    description = "Runs a broker node, see http://druid.io/docs/0.6.48/Broker.html for a description"
 )
 public class CliBroker extends ServerRunnable
 {
