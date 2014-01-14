@@ -37,8 +37,10 @@ public class ServerTimeRejectionPolicyFactoryTest
 
     DateTime now = new DateTime();
     DateTime past = now.minus(period).minus(1);
+    DateTime future = now.plus(period).plus(1);
 
     Assert.assertTrue(rejectionPolicy.accept(now.getMillis()));
     Assert.assertFalse(rejectionPolicy.accept(past.getMillis()));
+    Assert.assertFalse(rejectionPolicy.accept(future.getMillis()));
   }
 }

@@ -40,7 +40,12 @@ public class ServerTimeRejectionPolicyFactory implements RejectionPolicyFactory
       @Override
       public boolean accept(long timestamp)
       {
-        return timestamp >= (System.currentTimeMillis() - windowMillis);
+        long now = System.currentTimeMillis();
+
+        boolean notTooOld = timestamp >= (now - windowMillis);
+        boolean notTooYoung = timestamp <= (now + windowMillis);
+
+        return notTooOld && notTooYoung;
       }
 
       @Override
