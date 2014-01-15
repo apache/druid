@@ -37,14 +37,7 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
-import io.druid.query.CacheStrategy;
-import io.druid.query.IntervalChunkingQueryRunner;
-import io.druid.query.Query;
-import io.druid.query.QueryRunner;
-import io.druid.query.QueryToolChest;
-import io.druid.query.Result;
-import io.druid.query.ResultGranularTimestampComparator;
-import io.druid.query.ResultMergeQueryRunner;
+import io.druid.query.*;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.search.search.SearchHit;
@@ -119,7 +112,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource())
+        .setUser2(query.getDataSource().toString())
         .setUser4("search")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))

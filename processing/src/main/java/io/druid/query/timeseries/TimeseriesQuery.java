@@ -24,10 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.BaseQuery;
-import io.druid.query.Queries;
-import io.druid.query.Query;
-import io.druid.query.Result;
+import io.druid.query.*;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
@@ -48,7 +45,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   @JsonCreator
   public TimeseriesQuery(
-      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") QueryGranularity granularity,
@@ -142,4 +139,34 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
            '}';
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    TimeseriesQuery that = (TimeseriesQuery) o;
+    if (!partialEquals(that))
+      return false;
+
+    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null)
+      return false;
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
+    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
+    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(that.postAggregatorSpecs) : that.postAggregatorSpecs != null)
+      return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dimFilter != null ? dimFilter.hashCode() : 0;
+    result = 31 * result + partialHashCode();
+    result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
+    result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
+    result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
+    return result;
+  }
 }

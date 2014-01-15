@@ -25,9 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.BaseQuery;
-import io.druid.query.Query;
-import io.druid.query.Result;
+import io.druid.query.*;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -49,7 +47,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 
   @JsonCreator
   public SearchQuery(
-      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("limit") int limit,
@@ -189,5 +187,39 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", limit=" + limit +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    SearchQuery that = (SearchQuery) o;
+
+    if (!partialEquals(that))
+      return false;
+
+    if (limit != that.limit) return false;
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
+    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) return false;
+    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
+    if (querySpec != null ? !querySpec.equals(that.querySpec) : that.querySpec != null) return false;
+    if (sortSpec != null ? !sortSpec.equals(that.sortSpec) : that.sortSpec != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dimFilter != null ? dimFilter.hashCode() : 0;
+    result = 31 * result + partialHashCode();
+    result = 31 * result + (sortSpec != null ? sortSpec.hashCode() : 0);
+    result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
+    result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
+    result = 31 * result + (querySpec != null ? querySpec.hashCode() : 0);
+    result = 31 * result + limit;
+    return result;
   }
 }

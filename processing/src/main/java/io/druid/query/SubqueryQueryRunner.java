@@ -1,6 +1,5 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -15,44 +14,37 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ * This file Copyright (C) 2014 N3TWORK, Inc. and contributed to the Druid project
+ * under the Druid Corporate Contributor License Agreement.
  */
 
-package io.druid.query.search.search;
+package io.druid.query;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-
-import java.util.Comparator;
+import com.metamx.common.guava.Sequence;
+import org.joda.time.Period;
 
 /**
+ * If there's a subquery, run it instead of the outer query
  */
-public class LexicographicSearchSortSpec implements SearchSortSpec
+public class SubqueryQueryRunner<T> implements QueryRunner<T>
 {
-  @JsonCreator
-  public LexicographicSearchSortSpec(
-  )
+  private final QueryRunner<T> baseRunner;
+
+  public SubqueryQueryRunner(QueryRunner<T> baseRunner)
   {
+    this.baseRunner = baseRunner;
   }
 
   @Override
-  public Comparator<SearchHit> getComparator()
+  public Sequence<T> run(final Query<T> query)
   {
-    return new Comparator<SearchHit>()
-    {
-      @Override
-      public int compare(SearchHit searchHit, SearchHit searchHit1)
-      {
-        return searchHit.getValue().compareTo(searchHit1.getValue());
-      }
-    };
-  }
-
-  public String toString()
-  {
-    return "lexicographicSort";
-  }
-
-  @Override
-  public boolean equals(Object other) {
-    return (other instanceof LexicographicSearchSortSpec);
+    DataSource dataSource = query.getDataSource();
+    if (dataSource instanceof QueryDataSource) {
+      return run((Query<T>) ((QueryDataSource)dataSource).getQuery());
+    }
+    else {
+      return baseRunner.run(query);
+    }
   }
 }

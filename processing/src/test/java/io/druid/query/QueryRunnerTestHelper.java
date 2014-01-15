@@ -55,6 +55,7 @@ public class QueryRunnerTestHelper
   public static final String qualityDimension = "quality";
   public static final String placementishDimension = "placementish";
   public static final String indexMetric = "index";
+  public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
   public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
@@ -93,6 +94,9 @@ public class QueryRunnerTestHelper
 
   public static final QuerySegmentSpec firstToThird = new MultipleIntervalSegmentSpec(
       Arrays.asList(new Interval("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
+  );
+  public static final QuerySegmentSpec secondOnly = new MultipleIntervalSegmentSpec(
+      Arrays.asList(new Interval("2011-04-02T00:00:00.000Z/P1D"))
   );
   public static final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
       Arrays.asList(new Interval("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))

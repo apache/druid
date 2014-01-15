@@ -30,8 +30,7 @@ import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelectorStrategy;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Client;
-import io.druid.query.QueryRunner;
-import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.*;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
@@ -232,10 +231,22 @@ public class BrokerServerView implements TimelineServerView
 
 
   @Override
-  public VersionedIntervalTimeline<String, ServerSelector> getTimeline(String dataSource)
+  public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
   {
+    String table;
+    while (dataSource instanceof QueryDataSource) {
+      dataSource = ((QueryDataSource)dataSource).getQuery().getDataSource();
+    }
+
+    if (dataSource instanceof TableDataSource) {
+      table = ((TableDataSource)dataSource).getName();
+    }
+    else {
+      throw new UnsupportedOperationException("Unsupported data source type: " + dataSource.getClass().getSimpleName());
+    }
+
     synchronized (lock) {
-      return timelines.get(dataSource);
+      return timelines.get(table);
     }
   }
 

@@ -22,6 +22,8 @@ package io.druid.query.timeseries;
 import com.google.common.base.Function;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
+import io.druid.query.DataSource;
+import io.druid.query.Query;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.Aggregator;

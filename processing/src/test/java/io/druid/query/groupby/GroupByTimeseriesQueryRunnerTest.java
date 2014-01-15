@@ -56,22 +56,24 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     config.setMaxIntermediateRows(10000);
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
-        new GroupByQueryEngine(
-            configSupplier,
-            new StupidPool<ByteBuffer>(
-                new Supplier<ByteBuffer>()
-                {
-                  @Override
-                  public ByteBuffer get()
-                  {
-                    return ByteBuffer.allocate(1024 * 1024);
-                  }
-                }
-            )
-        ),
+    final GroupByQueryEngine engine = new GroupByQueryEngine(
         configSupplier,
-        new GroupByQueryQueryToolChest(configSupplier)
+        new StupidPool<ByteBuffer>(
+            new Supplier<ByteBuffer>()
+            {
+              @Override
+              public ByteBuffer get()
+              {
+                return ByteBuffer.allocate(1024 * 1024);
+              }
+            }
+        )
+    );
+
+    final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
+        engine,
+        configSupplier,
+        new GroupByQueryQueryToolChest(configSupplier, engine)
     );
 
     final Collection<?> objects = QueryRunnerTestHelper.makeQueryRunners(factory);
@@ -95,13 +97,13 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
             return Sequences.map(
                 groupByRunner.run(
                     GroupByQuery.builder()
-                                .setDataSource(tsQuery.getDataSource())
-                                .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
-                                .setGranularity(tsQuery.getGranularity())
-                                .setDimFilter(tsQuery.getDimensionsFilter())
-                                .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
-                                .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
-                                .build()
+                        .setDataSource(tsQuery.getDataSource())
+                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
+                        .setGranularity(tsQuery.getGranularity())
+                        .setDimFilter(tsQuery.getDimensionsFilter())
+                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
+                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+                        .build()
                 ),
                 new Function<Row, Result<TimeseriesResultValue>>()
                 {

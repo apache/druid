@@ -24,9 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.query.BaseQuery;
-import io.druid.query.Query;
-import io.druid.query.Result;
+import io.druid.query.*;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
@@ -51,7 +49,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   @JsonCreator
   public TimeBoundaryQuery(
-      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("context") Map<String, String> context
   )
@@ -163,5 +161,18 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
             )
         )
     );
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    return partialEquals((TimeBoundaryQuery) o);
+  }
+
+  @Override
+  public int hashCode() {
+    return partialHashCode();
   }
 }

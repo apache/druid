@@ -31,12 +31,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
-import io.druid.query.BySegmentSkippingQueryRunner;
-import io.druid.query.CacheStrategy;
-import io.druid.query.Query;
-import io.druid.query.QueryRunner;
-import io.druid.query.QueryToolChest;
-import io.druid.query.Result;
+import io.druid.query.*;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
@@ -117,7 +112,7 @@ public class TimeBoundaryQueryQueryToolChest
   public ServiceMetricEvent.Builder makeMetricBuilder(TimeBoundaryQuery query)
   {
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource())
+        .setUser2(query.getDataSource().toString())
         .setUser4(query.getType())
         .setUser6("false");
   }

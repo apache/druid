@@ -19,6 +19,7 @@
 
 package io.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.common.guava.Sequence;
@@ -53,7 +54,7 @@ public interface Query<T>
   public static final String SEGMENT_METADATA = "segmentMetadata";
   public static final String TOPN = "topN";
 
-  public String getDataSource();
+  public DataSource getDataSource();
 
   public boolean hasFilters();
 

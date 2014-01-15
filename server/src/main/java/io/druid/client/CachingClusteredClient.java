@@ -140,6 +140,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
 
+
     VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
     if (timeline == null) {
       return Sequences.empty();

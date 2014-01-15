@@ -32,16 +32,7 @@ import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.CacheStrategy;
-import io.druid.query.IntervalChunkingQueryRunner;
-import io.druid.query.Query;
-import io.druid.query.QueryCacheHelper;
-import io.druid.query.QueryConfig;
-import io.druid.query.QueryRunner;
-import io.druid.query.QueryToolChest;
-import io.druid.query.Result;
-import io.druid.query.ResultGranularTimestampComparator;
-import io.druid.query.ResultMergeQueryRunner;
+import io.druid.query.*;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
@@ -122,7 +113,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource())
+        .setUser2(query.getDataSource().toString())
         .setUser4("timeseries")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
