@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Tasks
 Tasks are run on middle managers and always operate on a single data source.
 
 There are several different types of tasks.

@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Segment Metadata Queries
 Segment metadata queries return per segment information about:
 
 * Cardinality of all columns in the segment

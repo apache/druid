@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Time Boundary Queries
 Time boundary queries return the earliest and latest data points of a data set. The grammar is:
 
 ```json
