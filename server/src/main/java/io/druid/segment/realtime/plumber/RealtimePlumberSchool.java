@@ -31,7 +31,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.FunctionalIterable;
@@ -42,6 +41,7 @@ import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
+import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
@@ -84,7 +84,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -92,43 +91,33 @@ import java.util.concurrent.ScheduledExecutorService;
 public class RealtimePlumberSchool implements PlumberSchool
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumberSchool.class);
-
   private final Period windowPeriod;
   private final File basePersistDirectory;
   private final IndexGranularity segmentGranularity;
   private final Object handoffCondition = new Object();
-
   private volatile boolean shuttingDown = false;
-
   @JacksonInject
   @NotNull
   private volatile ServiceEmitter emitter;
-
   @JacksonInject
   @NotNull
   private volatile QueryRunnerFactoryConglomerate conglomerate = null;
-
   @JacksonInject
   @NotNull
   private volatile DataSegmentPusher dataSegmentPusher = null;
-
   @JacksonInject
   @NotNull
   private volatile DataSegmentAnnouncer segmentAnnouncer = null;
-
   @JacksonInject
   @NotNull
   private volatile SegmentPublisher segmentPublisher = null;
-
   @JacksonInject
   @NotNull
   private volatile ServerView serverView = null;
-
   @JacksonInject
   @NotNull
   @Processing
   private volatile ExecutorService queryExecutorService = null;
-
   private volatile VersioningPolicy versioningPolicy = null;
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
 
@@ -485,22 +474,13 @@ public class RealtimePlumberSchool implements PlumberSchool
       private void initializeExecutors()
       {
         if (persistExecutor == null) {
-          persistExecutor = Executors.newFixedThreadPool(
-              1,
-              new ThreadFactoryBuilder()
-                  .setDaemon(true)
-                  .setNameFormat("plumber_persist_%d")
-                  .build()
+          // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+          persistExecutor = Execs.blockingSingleThreaded(
+              "plumber_persist_%d",2
           );
         }
         if (scheduledExecutor == null) {
-          scheduledExecutor = Executors.newScheduledThreadPool(
-              1,
-              new ThreadFactoryBuilder()
-                  .setDaemon(true)
-                  .setNameFormat("plumber_scheduled_%d")
-                  .build()
-          );
+          scheduledExecutor = Execs.scheduledSingleThreaded("plumber_scheduled_%d");
         }
       }
 
@@ -697,7 +677,8 @@ public class RealtimePlumberSchool implements PlumberSchool
       /**
        * Unannounces a given sink and removes all local references to it.
        */
-      private void abandonSegment(final long truncatedTime, final Sink sink) {
+      private void abandonSegment(final long truncatedTime, final Sink sink)
+      {
         try {
           segmentAnnouncer.unannounceSegment(sink.getSegment());
           FileUtils.deleteDirectory(computePersistDir(schema, sink.getInterval()));
