@@ -87,7 +87,7 @@ public class ExecsTest
     for(int i=0;i<capacity;i++){
       barrier.await();
     }
-    producer.shutdownNow();
+    producer.shutdown();
 
 
   }
