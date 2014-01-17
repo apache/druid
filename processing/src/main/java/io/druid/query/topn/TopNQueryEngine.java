@@ -105,10 +105,13 @@ public class TopNQueryEngine
     if (selector.isHasDimExtractionFn()) {
       topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
     } else if (selector.isAggregateAllMetrics()) {
+      log.info("Aggregating all yay!");
       topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
     } else if (selector.isAggregateTopNMetricFirst() && query.getAggregatorSpecs().size() > 1) {
+      log.info("Aggregating topN metric first");
       topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(capabilities, query, bufferPool);
     } else {
+      log.info("Aggregating all with a pool!");
       topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
     }
 
