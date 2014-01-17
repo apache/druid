@@ -60,7 +60,7 @@ public class Execs
    * @param capacity maximum capacity after which the executorService will block on accepting new tasks
    * @return ExecutorService which blocks accepting new tasks when the capacity reached
    */
-  public static ExecutorService blockingSingleThreaded(String nameFormat, int capacity)
+  public static ExecutorService newBlockingSingleThreaded(String nameFormat, int capacity)
   {
     return new ThreadPoolExecutor(
         1, 1,

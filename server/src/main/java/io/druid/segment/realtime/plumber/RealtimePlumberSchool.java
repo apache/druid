@@ -479,7 +479,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       {
         if (persistExecutor == null) {
           // use a blocking single threaded executor to throttle the firehose when write to disk is slow
-          persistExecutor = Execs.blockingSingleThreaded(
+          persistExecutor = Execs.newBlockingSingleThreaded(
               "plumber_persist_%d", maxPendingPersistBatches
           );
         }
