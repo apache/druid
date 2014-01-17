@@ -194,7 +194,7 @@ public class RealtimeIndexTask extends AbstractTask
     final RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
         windowPeriod,
         new File(toolbox.getTaskWorkDir(), "persist"),
-        segmentGranularity
+        segmentGranularity, fireDepartmentConfig.getMaxPendingPersistBatches()
     );
 
     final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
