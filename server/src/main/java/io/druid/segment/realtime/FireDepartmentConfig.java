@@ -31,19 +31,19 @@ public class FireDepartmentConfig
   private static int MAX_PENDING_PERSIST_BATCHES_DEFAULT = 2;
   private final int maxRowsInMemory;
   private final Period intermediatePersistPeriod;
-  private final int maxPendingPersistBatches;
+  private final int maxPendingPersists;
 
   @JsonCreator
   public FireDepartmentConfig(
       @JsonProperty("maxRowsInMemory") int maxRowsInMemory,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
-      @JsonProperty("maxPendingPersistBatches") int maxPendingPersistBatches
+      @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
     this.maxRowsInMemory = maxRowsInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod;
-    this.maxPendingPersistBatches = maxPendingPersistBatches > 0
-                                    ? maxPendingPersistBatches
+    this.maxPendingPersists = maxPendingPersists > 0
+                                    ? maxPendingPersists
                                     : MAX_PENDING_PERSIST_BATCHES_DEFAULT;
 
     Preconditions.checkArgument(maxRowsInMemory > 0, "maxRowsInMemory[%s] should be greater than 0", maxRowsInMemory);
@@ -63,8 +63,8 @@ public class FireDepartmentConfig
   }
 
   @JsonProperty
-  public int getMaxPendingPersistBatches()
+  public int getMaxPendingPersists()
   {
-    return maxPendingPersistBatches;
+    return maxPendingPersists;
   }
 }

@@ -95,7 +95,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final File basePersistDirectory;
   private final IndexGranularity segmentGranularity;
   private final Object handoffCondition = new Object();
-  private final int maxPendingPersistBatches;
+  private final int maxPendingPersists;
   private volatile boolean shuttingDown = false;
   @JacksonInject
   @NotNull
@@ -127,7 +127,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
-      @JsonProperty("maxPendingPersistBatches") int maxPendingPersistBatches
+      @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
     this.windowPeriod = windowPeriod;
@@ -135,9 +135,9 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.segmentGranularity = segmentGranularity;
     this.versioningPolicy = new IntervalStartVersioningPolicy();
     this.rejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
-    this.maxPendingPersistBatches = maxPendingPersistBatches;
+    this.maxPendingPersists = maxPendingPersists;
 
-    Preconditions.checkArgument(maxPendingPersistBatches > 0);
+    Preconditions.checkArgument(maxPendingPersists > 0);
     Preconditions.checkNotNull(windowPeriod, "RealtimePlumberSchool requires a windowPeriod.");
     Preconditions.checkNotNull(basePersistDirectory, "RealtimePlumberSchool requires a basePersistDirectory.");
     Preconditions.checkNotNull(segmentGranularity, "RealtimePlumberSchool requires a segmentGranularity.");
@@ -480,7 +480,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         if (persistExecutor == null) {
           // use a blocking single threaded executor to throttle the firehose when write to disk is slow
           persistExecutor = Execs.newBlockingSingleThreaded(
-              "plumber_persist_%d", maxPendingPersistBatches
+              "plumber_persist_%d", maxPendingPersists
           );
         }
         if (scheduledExecutor == null) {
