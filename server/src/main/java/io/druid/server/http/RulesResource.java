@@ -20,55 +20,51 @@
 package io.druid.server.http;
 
 import com.google.inject.Inject;
-import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.db.DatabaseRuleManager;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 /**
  */
-@Path("/coordinator")
-public class CoordinatorResource
+@Path("/rules")
+public class RulesResource
 {
-  private final DruidCoordinator coordinator;
+  private final DatabaseRuleManager databaseRuleManager;
 
   @Inject
-  public CoordinatorResource(
-      DruidCoordinator coordinator
+  public RulesResource(
+      DatabaseRuleManager databaseRuleManager
   )
   {
-    this.coordinator = coordinator;
+    this.databaseRuleManager = databaseRuleManager;
   }
 
   @GET
-  @Path("/leader")
   @Produces("application/json")
-  public Response getLeader()
+  public Response getRules()
   {
-    return Response.ok(coordinator.getCurrentLeader()).build();
+    return Response.ok(databaseRuleManager.getAllRules()).build();
   }
 
   @GET
-  @Path("/loadstatus")
+  @Path("/{dataSourceName}")
   @Produces("application/json")
-  public Response getLoadStatus(
-      @QueryParam("full") String full
+  public Response getDatasourceRules(
+      @PathParam("dataSourceName") final String dataSourceName,
+      @QueryParam("full") final String full
+
   )
   {
     if (full != null) {
-      return Response.ok(coordinator.getReplicationStatus()).build();
+      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
+                     .build();
     }
-    return Response.ok(coordinator.getLoadStatus()).build();
-  }
-
-  @GET
-  @Path("loadqueue")
-  @Produces("application/json")
-  public Response getLoadQueue()
-  {
-    return Response.ok(coordinator.getLoadManagementPeons()).build();
+    return Response.ok(databaseRuleManager.getRules(dataSourceName))
+                   .build();
   }
 }
