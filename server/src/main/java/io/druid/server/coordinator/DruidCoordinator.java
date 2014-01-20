@@ -201,32 +201,23 @@ public class DruidCoordinator
       for (Rule rule : rules) {
         if (rule instanceof LoadRule && rule.appliesTo(segment, now)) {
           expectedSegmentsInCluster.add(segment.getDataSource(), ((LoadRule) rule).getReplicants());
-          //Integer count = expectedSegmentsInCluster.get(segment.getDataSource());
-          //if (count == null) {
-          //  count = 0;
-          //}
-          //expectedSegmentsInCluster.put(segment.getDataSource(), count + ((LoadRule) rule).getReplicants());
           break;
         }
       }
     }
 
     // find segments currently loaded per datasource
-    Map<String, Integer> segmentsInCluster = Maps.newHashMap();
+    CountingMap<String> segmentsInCluster = new CountingMap<>();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       for (DataSegment segment : druidServer.getSegments().values()) {
-        Integer count = segmentsInCluster.get(segment.getDataSource());
-        if (count == null) {
-          count = 0;
-        }
-        segmentsInCluster.put(segment.getDataSource(), count + 1);
+        segmentsInCluster.add(segment.getDataSource(), 1);
       }
     }
 
     // compare available segments with currently loaded
     Map<String, Double> loadStatus = Maps.newHashMap();
     for (Map.Entry<String, AtomicLong> entry : expectedSegmentsInCluster.entrySet()) {
-      Integer actual = segmentsInCluster.get(entry.getKey());
+      Long actual = segmentsInCluster.get(entry.getKey()).get();
       loadStatus.put(entry.getKey(), 100 * (actual == null ? 0.0D : (double) actual) / entry.getValue().get());
     }
 
