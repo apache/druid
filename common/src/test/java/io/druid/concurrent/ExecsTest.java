@@ -23,8 +23,7 @@ import com.google.common.base.Throwables;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Executor;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,12 +34,13 @@ public class ExecsTest
   public void testBlockingExecutorService() throws Exception
   {
     final int capacity = 3;
-    final ExecutorService executorService = Execs.newBlockingSingleThreaded("test%d", capacity);
+    final ExecutorService blockingExecutor = Execs.newBlockingSingleThreaded("test%d", capacity);
+    final CountDownLatch queueFullSignal = new CountDownLatch(capacity + 1);
+    final CountDownLatch taskCompletedSignal = new CountDownLatch(2 * capacity);
+    final CountDownLatch taskStartSignal = new CountDownLatch(1);
     final AtomicInteger producedCount = new AtomicInteger();
     final AtomicInteger consumedCount = new AtomicInteger();
-    final CyclicBarrier barrier = new CyclicBarrier(2);
-    ExecutorService producer = Executors.newCachedThreadPool();
-
+    ExecutorService producer = Executors.newSingleThreadExecutor();
     producer.submit(
         new Runnable()
         {
@@ -49,7 +49,7 @@ public class ExecsTest
             for (int i = 0; i < 2 * capacity; i++) {
               final int taskID = i;
               System.out.println("Produced task" + taskID);
-              executorService.submit(
+              blockingExecutor.submit(
                   new Runnable()
                   {
                     @Override
@@ -57,9 +57,9 @@ public class ExecsTest
                     {
                       System.out.println("Starting task" + taskID);
                       try {
+                        taskStartSignal.await();
                         consumedCount.incrementAndGet();
-                        barrier.await(); //1
-                        barrier.await(); //2
+                        taskCompletedSignal.countDown();
                       }
                       catch (Exception e) {
                         throw Throwables.propagate(e);
@@ -69,26 +69,24 @@ public class ExecsTest
                   }
               );
               producedCount.incrementAndGet();
+              queueFullSignal.countDown();
             }
           }
         }
     );
-   while(producedCount.get() < capacity ){
-      Thread.sleep(5);
-    }
 
-    for(int i=0;i<capacity;i++){
-      barrier.await(); //1
-      // total consumed tasks + capacity = total produced tasks
-      Assert.assertEquals(consumedCount.intValue() + capacity, producedCount.intValue());
-      barrier.await();  //2
-
-    }
-    for(int i=0;i<capacity;i++){
-      barrier.await();
-    }
+    queueFullSignal.await();
+    // verify that the producer blocks
+    Assert.assertEquals(capacity + 1, producedCount.get());
+    // let the tasks run
+    taskStartSignal.countDown();
+    // wait until all tasks complete
+    taskCompletedSignal.await();
+    // verify all tasks consumed
+    Assert.assertEquals(2 * capacity, consumedCount.get());
+    // cleanup
+    blockingExecutor.shutdown();
     producer.shutdown();
-
 
   }
 }
