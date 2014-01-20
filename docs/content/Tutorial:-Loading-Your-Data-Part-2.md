@@ -42,9 +42,10 @@ Streaming Event Ingestion
 
 With real-world data, we recommend having a message bus such as [Apache Kafka](http://kafka.apache.org/) sit between the data stream and the real-time node. The message bus provides higher availability for production environments. [Firehoses](Firehose.html) are the key abstraction for real-time ingestion.
 
+<a id="set-up-kafka"></a>
 #### Setting up Kafka
 
-[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/druid-0.6.46/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in real-time without writing any code. To load data to a real-time node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
+[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/druid-0.6.52/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in real-time without writing any code. To load data to a real-time node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
 
 Instructions for booting a Zookeeper and then Kafka cluster are available [here](http://kafka.apache.org/07/quickstart.html).
 
@@ -91,17 +92,17 @@ You should be comfortable starting Druid nodes at this point. If not, it may be 
 
 1. Real-time nodes can be started with:
 
-```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/indexing/wikipedia.spec -classpath lib/*:config/realtime io.druid.cli.Main server realtime
-```
+  ```bash
+  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/indexing/wikipedia.spec -classpath lib/*:config/realtime io.druid.cli.Main server realtime
+  ```
 
 2. A realtime.spec should already exist for the data source in the Druid tarball. You should be able to find it at:
 
-```bash
-examples/indexing/wikipedia.spec
-```
+  ```bash
+  examples/indexing/wikipedia.spec
+  ```
 
-The contents of the file should match:
+  The contents of the file should match:
 
   ```json
   [
@@ -263,8 +264,10 @@ Examining the contents of the file, you should find:
     "type" : "index_hadoop",
     "config": {
       "dataSource" : "wikipedia",
-      "timestampColumn" : "timestamp",
-      "timestampFormat" : "auto",
+      "timestampSpec" : {
+        "column" : "timestamp",
+        "format" : "auto"
+      },
       "dataSpec" : {
         "format" : "json",
         "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
@@ -302,7 +305,8 @@ Examining the contents of the file, you should find:
   }
   ```
 
-If you are curious about what all this configuration means, see [here](Task.html)
+If you are curious about what all this configuration means, see [here](Task.html).
+
 To submit the task:
 
 ```bash

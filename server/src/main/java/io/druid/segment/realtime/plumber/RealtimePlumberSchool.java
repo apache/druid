@@ -45,40 +45,35 @@ import java.util.concurrent.ExecutorService;
 public class RealtimePlumberSchool implements PlumberSchool
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumberSchool.class);
+  private static final int defaultPending = 2;
 
   private final Period windowPeriod;
   private final File basePersistDirectory;
   private final IndexGranularity segmentGranularity;
+  private final int maxPendingPersists;
 
   @JacksonInject
   @NotNull
   private volatile ServiceEmitter emitter;
-
   @JacksonInject
   @NotNull
   private volatile QueryRunnerFactoryConglomerate conglomerate = null;
-
   @JacksonInject
   @NotNull
   private volatile DataSegmentPusher dataSegmentPusher = null;
-
   @JacksonInject
   @NotNull
   private volatile DataSegmentAnnouncer segmentAnnouncer = null;
-
   @JacksonInject
   @NotNull
   private volatile SegmentPublisher segmentPublisher = null;
-
   @JacksonInject
   @NotNull
   private volatile ServerView serverView = null;
-
   @JacksonInject
   @NotNull
   @Processing
   private volatile ExecutorService queryExecutorService = null;
-
   private volatile VersioningPolicy versioningPolicy = null;
   private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
 
@@ -86,7 +81,8 @@ public class RealtimePlumberSchool implements PlumberSchool
   public RealtimePlumberSchool(
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity
+      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
+      @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
     this.windowPeriod = windowPeriod;
@@ -94,7 +90,9 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.segmentGranularity = segmentGranularity;
     this.versioningPolicy = new IntervalStartVersioningPolicy();
     this.rejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
+    this.maxPendingPersists = (maxPendingPersists > 0) ? maxPendingPersists : defaultPending;
 
+    Preconditions.checkArgument(maxPendingPersists > 0, "RealtimePlumberSchool requires maxPendingPersists > 0");
     Preconditions.checkNotNull(windowPeriod, "RealtimePlumberSchool requires a windowPeriod.");
     Preconditions.checkNotNull(basePersistDirectory, "RealtimePlumberSchool requires a basePersistDirectory.");
     Preconditions.checkNotNull(segmentGranularity, "RealtimePlumberSchool requires a segmentGranularity.");
@@ -169,7 +167,8 @@ public class RealtimePlumberSchool implements PlumberSchool
         versioningPolicy,
         dataSegmentPusher,
         segmentPublisher,
-        serverView
+        serverView,
+        maxPendingPersists
     );
   }
 

@@ -19,6 +19,7 @@ import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
+import io.druid.concurrent.Execs;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -43,7 +44,6 @@ import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
-import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
@@ -83,7 +83,7 @@ public class RealtimePlumber implements Plumber
   private final DataSegmentPusher dataSegmentPusher;
   private final SegmentPublisher segmentPublisher;
   private final ServerView serverView;
-
+  private final int maxPendingPersists;
 
   private final Object handoffCondition = new Object();
   private final Map<Long, Sink> sinks = Maps.newConcurrentMap();
@@ -110,7 +110,8 @@ public class RealtimePlumber implements Plumber
       VersioningPolicy versioningPolicy,
       DataSegmentPusher dataSegmentPusher,
       SegmentPublisher segmentPublisher,
-      ServerView serverView
+      ServerView serverView,
+      int maxPendingPersists
   )
   {
     this.windowPeriod = windowPeriod;
@@ -127,6 +128,7 @@ public class RealtimePlumber implements Plumber
     this.dataSegmentPusher = dataSegmentPusher;
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
+    this.maxPendingPersists = maxPendingPersists;
   }
 
   public Schema getSchema()
@@ -424,12 +426,9 @@ public class RealtimePlumber implements Plumber
   protected void initializeExecutors()
   {
     if (persistExecutor == null) {
-      persistExecutor = Executors.newFixedThreadPool(
-          1,
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("plumber_persist_%d")
-              .build()
+      // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+      persistExecutor = Execs.newBlockingSingleThreaded(
+          "plumber_persist_%d", maxPendingPersists
       );
     }
     if (scheduledExecutor == null) {

@@ -13,7 +13,7 @@ In this tutorial, we will set up other types of Druid nodes as well as and exter
 
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
-You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.6.46-bin.tar.gz)
+You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.6.52-bin.tar.gz)
 
 and untar the contents within by issuing:
 
@@ -149,17 +149,19 @@ druid.port=8081
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.46"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.52"]
 
 # Dummy read only AWS account (used to download example data)
 druid.s3.secretKey=QyyfVZ7llSiRg6Qcrql1eEUG7buFpAK6T6engr1b
 druid.s3.accessKey=AKIAIMKECRUYKDQGR6YQ
 
-druid.server.maxSize=100000000
+druid.server.maxSize=10000000000
 
-druid.processing.buffer.sizeBytes=10000000
+# Change these to make Druid faster
+druid.processing.buffer.sizeBytes=100000000
+druid.processing.numThreads=1
 
-druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 100000000}]
+druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 10000000000}]
 ```
 
 To start the historical node:
@@ -238,7 +240,7 @@ druid.port=8083
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.46","io.druid.extensions:druid-kafka-seven:0.6.46"]
+druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.52","io.druid.extensions:druid-kafka-seven:0.6.52"]
 
 # Change this config to db to hand off to the rest of the Druid cluster
 druid.publish.type=noop
@@ -248,7 +250,7 @@ druid.publish.type=noop
 # druid.db.connector.user=druid
 # druid.db.connector.password=diurd
 
-druid.processing.buffer.sizeBytes=10000000
+druid.processing.buffer.sizeBytes=100000000
 ```
 
 Next Steps

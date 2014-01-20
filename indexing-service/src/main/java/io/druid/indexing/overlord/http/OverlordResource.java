@@ -36,6 +36,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.TaskExistsException;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunner;
@@ -45,6 +46,7 @@ import io.druid.indexing.overlord.scaling.ResourceManagementScheduler;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.timeline.DataSegment;
+import org.apache.zookeeper.data.Stat;
 import org.joda.time.DateTime;
 
 import javax.ws.rs.Consumes;
@@ -126,8 +128,15 @@ public class OverlordResource
           @Override
           public Response apply(TaskQueue taskQueue)
           {
-            taskQueue.add(task);
-            return Response.ok(ImmutableMap.of("task", task.getId())).build();
+            try {
+              taskQueue.add(task);
+              return Response.ok(ImmutableMap.of("task", task.getId())).build();
+            }
+            catch (TaskExistsException e) {
+              return Response.status(Response.Status.BAD_REQUEST)
+                             .entity(ImmutableMap.of("error", String.format("Task[%s] already exists!", task.getId())))
+                             .build();
+            }
           }
         }
     );

@@ -28,17 +28,23 @@ import org.joda.time.Period;
  */
 public class FireDepartmentConfig
 {
+  private static int MAX_PENDING_PERSIST_BATCHES_DEFAULT = 2;
   private final int maxRowsInMemory;
   private final Period intermediatePersistPeriod;
+  private final int maxPendingPersists;
 
   @JsonCreator
   public FireDepartmentConfig(
       @JsonProperty("maxRowsInMemory") int maxRowsInMemory,
-      @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod
+      @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
+      @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
     this.maxRowsInMemory = maxRowsInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod;
+    this.maxPendingPersists = maxPendingPersists > 0
+                                    ? maxPendingPersists
+                                    : MAX_PENDING_PERSIST_BATCHES_DEFAULT;
 
     Preconditions.checkArgument(maxRowsInMemory > 0, "maxRowsInMemory[%s] should be greater than 0", maxRowsInMemory);
     Preconditions.checkNotNull(intermediatePersistPeriod, "intermediatePersistPeriod");
@@ -54,5 +60,11 @@ public class FireDepartmentConfig
   public Period getIntermediatePersistPeriod()
   {
     return intermediatePersistPeriod;
+  }
+
+  @JsonProperty
+  public int getMaxPendingPersists()
+  {
+    return maxPendingPersists;
   }
 }

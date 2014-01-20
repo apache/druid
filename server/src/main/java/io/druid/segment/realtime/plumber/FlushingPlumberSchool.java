@@ -50,6 +50,7 @@ public class FlushingPlumberSchool implements PlumberSchool
   private final Period windowPeriod;
   private final File basePersistDirectory;
   private final IndexGranularity segmentGranularity;
+  private final int maxPendingPersists;
 
   @JacksonInject
   @NotNull
@@ -76,7 +77,8 @@ public class FlushingPlumberSchool implements PlumberSchool
       @JsonProperty("flushDuration") Duration flushDuration,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity
+      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
+      @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
     this.flushDuration = flushDuration;
@@ -85,7 +87,9 @@ public class FlushingPlumberSchool implements PlumberSchool
     this.segmentGranularity = segmentGranularity;
     this.versioningPolicy = new IntervalStartVersioningPolicy();
     this.rejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
+    this.maxPendingPersists = maxPendingPersists;
 
+    Preconditions.checkArgument(maxPendingPersists > 0, "FlushingPlumberSchool requires maxPendingPersists > 0");
     Preconditions.checkNotNull(flushDuration, "FlushingPlumberSchool requires a flushDuration.");
     Preconditions.checkNotNull(windowPeriod, "FlushingPlumberSchool requires a windowPeriod.");
     Preconditions.checkNotNull(basePersistDirectory, "FlushingPlumberSchool requires a basePersistDirectory.");
@@ -113,7 +117,8 @@ public class FlushingPlumberSchool implements PlumberSchool
         conglomerate,
         segmentAnnouncer,
         queryExecutorService,
-        versioningPolicy
+        versioningPolicy,
+        maxPendingPersists
     );
   }
 

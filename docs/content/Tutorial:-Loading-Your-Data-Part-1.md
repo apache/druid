@@ -269,6 +269,8 @@ Next Steps
 
 This tutorial covered ingesting a small batch data set and loading it into Druid. In [Loading Your Data Part 2](Tutorial%3A-Loading-Your-Data-Part-2.html), we will cover how to ingest data using Hadoop for larger data sets.
 
+Note: The index task and local firehose can be used to ingest your own data if the size of that data is relatively small (< 1G). The index task is fairly slow and we highly recommend using the Hadoop Index Task for ingesting larger quantities of data.
+
 Additional Information
 ----------------------
 

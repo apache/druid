@@ -194,6 +194,12 @@ Which gets us metrics about only those edits where the namespace is 'article':
 
 Check out [Filters](Filters.html) for more information.
 
+What Types of Queries to Use
+----------------------------
+
+The types of query you should use depends on your use case. [TimeBoundary queries](TimeBoundaryQuery.html) are useful to understand the range of your data. [Timeseries queries](TimeseriesQuery.html) are useful for aggregates and filters over a time range, and offer significant speed improvements over [GroupBy queries](GroupByQuery.html). To find the top values for a given dimension, [TopN queries](TopNQuery.html) should be used over group by queries as well.
+
+
 ## Learn More ##
 
 You can learn more about querying at [Querying](Querying.html)! If you are ready to evaluate Druid more in depth, check out [Booting a production cluster](Booting-a-production-cluster.html)!

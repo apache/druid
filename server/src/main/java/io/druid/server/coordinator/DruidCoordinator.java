@@ -44,6 +44,7 @@ import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.collections.CountingMap;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.curator.discovery.ServiceAnnouncer;
@@ -53,6 +54,8 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
+import io.druid.server.coordinator.rules.LoadRule;
+import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
@@ -63,7 +66,6 @@ import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -72,6 +74,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -181,6 +184,53 @@ public class DruidCoordinator
   public boolean isLeader()
   {
     return leader;
+  }
+
+  public Map<String, LoadQueuePeon> getLoadManagementPeons()
+  {
+    return loadManagementPeons;
+  }
+
+  public Map<String, Double> getReplicationStatus()
+  {
+    // find expected load per datasource
+    final CountingMap<String> expectedSegmentsInCluster = new CountingMap<>();
+    final DateTime now = new DateTime();
+    for (DataSegment segment : getAvailableDataSegments()) {
+      List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
+      for (Rule rule : rules) {
+        if (rule instanceof LoadRule && rule.appliesTo(segment, now)) {
+          expectedSegmentsInCluster.add(segment.getDataSource(), ((LoadRule) rule).getReplicants());
+          //Integer count = expectedSegmentsInCluster.get(segment.getDataSource());
+          //if (count == null) {
+          //  count = 0;
+          //}
+          //expectedSegmentsInCluster.put(segment.getDataSource(), count + ((LoadRule) rule).getReplicants());
+          break;
+        }
+      }
+    }
+
+    // find segments currently loaded per datasource
+    Map<String, Integer> segmentsInCluster = Maps.newHashMap();
+    for (DruidServer druidServer : serverInventoryView.getInventory()) {
+      for (DataSegment segment : druidServer.getSegments().values()) {
+        Integer count = segmentsInCluster.get(segment.getDataSource());
+        if (count == null) {
+          count = 0;
+        }
+        segmentsInCluster.put(segment.getDataSource(), count + 1);
+      }
+    }
+
+    // compare available segments with currently loaded
+    Map<String, Double> loadStatus = Maps.newHashMap();
+    for (Map.Entry<String, AtomicLong> entry : expectedSegmentsInCluster.entrySet()) {
+      Integer actual = segmentsInCluster.get(entry.getKey());
+      loadStatus.put(entry.getKey(), 100 * (actual == null ? 0.0D : (double) actual) / entry.getValue().get());
+    }
+
+    return loadStatus;
   }
 
   public Map<String, Double> getLoadStatus()
@@ -687,11 +737,11 @@ public class DruidCoordinator
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams.newBuilder()
-                                    .withStartTime(startTime)
-                                    .withDatasources(databaseSegmentManager.getInventory())
-                                    .withDynamicConfigs(dynamicConfigs.get())
-                                    .withEmitter(emitter)
-                                    .build();
+                                         .withStartTime(startTime)
+                                         .withDatasources(databaseSegmentManager.getInventory())
+                                         .withDynamicConfigs(dynamicConfigs.get())
+                                         .withEmitter(emitter)
+                                         .build();
 
 
         for (DruidCoordinatorHelper helper : helpers) {
@@ -724,7 +774,7 @@ public class DruidCoordinator
                           {
                             @Override
                             public boolean apply(
-                                @Nullable DruidServer input
+                                DruidServer input
                             )
                             {
                               return input.getType().equalsIgnoreCase("historical");
@@ -760,11 +810,11 @@ public class DruidCoordinator
                   SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
 
                   // Stop peons for servers that aren't there anymore.
-                  final Set<String> disdappearedServers = Sets.newHashSet(loadManagementPeons.keySet());
+                  final Set<String> disappeared = Sets.newHashSet(loadManagementPeons.keySet());
                   for (DruidServer server : servers) {
-                    disdappearedServers.remove(server.getName());
+                    disappeared.remove(server.getName());
                   }
-                  for (String name : disdappearedServers) {
+                  for (String name : disappeared) {
                     log.info("Removing listener for server[%s] which is no longer there.", name);
                     LoadQueuePeon peon = loadManagementPeons.remove(name);
                     peon.stop();

@@ -46,7 +46,8 @@ public class FlushingPlumber extends RealtimePlumber
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
       ExecutorService queryExecutorService,
-      VersioningPolicy versioningPolicy
+      VersioningPolicy versioningPolicy,
+      int maxPendingPersists
   )
   {
     super(
@@ -63,7 +64,8 @@ public class FlushingPlumber extends RealtimePlumber
         versioningPolicy,
         null,
         null,
-        null
+        null,
+        maxPendingPersists
     );
 
     this.flushDuration = flushDuration;
