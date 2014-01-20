@@ -128,6 +128,7 @@ public class QueryResource
               .setUser4(query.getType())
               .setUser5(query.getIntervals().get(0).toString())
               .setUser6(String.valueOf(query.hasFilters()))
+              .setUser7(req.getRemoteAddr())
               .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
               .build("request/time", requestTime)
       );

@@ -57,6 +57,7 @@ import java.util.TreeSet;
 
 /**
  */
+@Deprecated
 @Path("/info")
 public class InfoResource
 {
@@ -101,7 +102,6 @@ public class InfoResource
   private final DatabaseSegmentManager databaseSegmentManager;
   private final DatabaseRuleManager databaseRuleManager;
   private final IndexingServiceClient indexingServiceClient;
-
 
   @Inject
   public InfoResource(

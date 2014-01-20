@@ -23,7 +23,7 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.48-SNAPSHOT</version>
+    <version>0.6.53-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -39,7 +39,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.25.1</metamx.java-util.version>
+        <metamx.java-util.version>0.25.2</metamx.java-util.version>
         <apache.curator.version>2.3.0</apache.curator.version>
         <druid.api.version>0.1.7</druid.api.version>
     </properties>
@@ -73,7 +73,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.2.7</version>
+                <version>0.2.9</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -142,6 +142,10 @@
                     <exclusion>
                         <groupId>org.codehaus.jackson</groupId>
                         <artifactId>jackson-mapper-asl</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>commons-codec</groupId>
+                        <artifactId>commons-codec</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>

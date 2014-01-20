@@ -22,7 +22,7 @@ $(document).ready(function() {
           var interval = $('#interval').val();
           $.ajax({
             type: 'DELETE',
-            url:'/info/datasources/' + selected +'?kill=true&interval=' + interval,
+            url:'/druid/coordinator/v1/datasources/' + selected +'?kill=true&interval=' + interval,
             contentType:"application/json; charset=utf-8",
             dataType:"json",
             error: function(xhr, status, error) {
@@ -41,7 +41,7 @@ $(document).ready(function() {
       }
   });
 
-  $.getJSON("/info/db/datasources?includeDisabled", function(data) {
+  $.getJSON("/druid/coordinator/v1/db/datasources?includeDisabled", function(data) {
     $.each(data, function(index, datasource) {
       $('#datasources').append($('<option></option>').attr("value", datasource).text(datasource));
     });

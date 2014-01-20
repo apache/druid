@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
+import com.metamx.common.Granularity;
 import com.metamx.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -45,22 +46,25 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
 
     // Insert all intervals
-    for(final Interval inputInterval : inputIntervals) {
+    for (final Interval inputInterval : inputIntervals) {
       intervals.add(inputInterval);
     }
 
     // Ensure intervals are non-overlapping (but they may abut each other)
     final PeekingIterator<Interval> intervalIterator = Iterators.peekingIterator(intervals.iterator());
-    while(intervalIterator.hasNext()) {
+    while (intervalIterator.hasNext()) {
       final Interval currentInterval = intervalIterator.next();
 
-      if(intervalIterator.hasNext()) {
+      if (intervalIterator.hasNext()) {
         final Interval nextInterval = intervalIterator.peek();
-        if(currentInterval.overlaps(nextInterval)) {
-          throw new IllegalArgumentException(String.format(
-              "Overlapping intervals: %s, %s",
-              currentInterval,
-              nextInterval));
+        if (currentInterval.overlaps(nextInterval)) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "Overlapping intervals: %s, %s",
+                  currentInterval,
+                  nextInterval
+              )
+          );
         }
       }
     }
@@ -79,10 +83,16 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     // First interval with start time ≤ dt
     final Interval interval = intervals.floor(new Interval(dt, new DateTime(Long.MAX_VALUE)));
 
-    if(interval != null && interval.contains(dt)) {
+    if (interval != null && interval.contains(dt)) {
       return Optional.of(interval);
     } else {
       return Optional.absent();
     }
+  }
+
+  @Override
+  public Granularity getGranularity()
+  {
+    throw new UnsupportedOperationException();
   }
 }

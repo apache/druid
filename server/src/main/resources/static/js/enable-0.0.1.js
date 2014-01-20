@@ -21,7 +21,7 @@ $(document).ready(function() {
           var selected = $('#datasources option:selected').text();
           $.ajax({
             type: 'POST',
-            url:'/info/datasources/' + selected,
+            url:'/druid/coordinator/v1/datasources/' + selected,
             data: JSON.stringify(selected),
             contentType:"application/json; charset=utf-8",
             dataType:"json",
@@ -50,7 +50,7 @@ $(document).ready(function() {
         var selected = $('#datasources option:selected').text();
         $.ajax({
           type: 'DELETE',
-          url:'/info/datasources/' + selected,
+          url:'/druid/coordinator/v1/datasources/' + selected,
           data: JSON.stringify(selected),
           contentType:"application/json; charset=utf-8",
           dataType:"json",
@@ -70,12 +70,12 @@ $(document).ready(function() {
     }
   });
 
-  $.getJSON("/info/db/datasources", function(enabled_datasources) {
+  $.getJSON("/druid/coordinator/v1/db/datasources", function(enabled_datasources) {
     $.each(enabled_datasources, function(index, datasource) {
       $('#enabled_datasources').append($('<li>' + datasource + '</li>'));
     });
 
-    $.getJSON("/info/db/datasources?includeDisabled", function(db_datasources) {
+    $.getJSON("/druid/coordinator/v1/db/datasources?includeDisabled", function(db_datasources) {
       var disabled_datasources = _.difference(db_datasources, enabled_datasources);
       $.each(disabled_datasources, function(index, datasource) {
         $('#disabled_datasources').append($('<li>' + datasource + '</li>'));

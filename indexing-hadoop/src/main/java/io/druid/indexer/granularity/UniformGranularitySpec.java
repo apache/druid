@@ -67,6 +67,7 @@ public class UniformGranularitySpec implements GranularitySpec
     return wrappedSpec.bucketInterval(dt);
   }
 
+  @Override
   @JsonProperty("gran")
   public Granularity getGranularity()
   {

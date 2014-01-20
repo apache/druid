@@ -155,7 +155,7 @@ function makeTiersDropdown(selTier) {
 function getRules() {
   var selected = $('#datasources option:selected').text();
   if (selected !== "") {
-    $.getJSON("/info/rules/" + selected, function(data) {
+    $.getJSON("/druid/coordinator/v1/rules/" + selected, function(data) {
       $('#rules_list').empty();
       if (!$.isEmptyObject(data)) {
         $.each(data, function(index, rule) {
@@ -240,7 +240,7 @@ $(document).ready(function() {
         var selected = $('#datasources option:selected').text();
         $.ajax({
           type: 'POST',
-          url:'/info/rules/' + selected,
+          url:'/druid/coordinator/v1/rules/' + selected,
           data: JSON.stringify(rules),
           contentType:"application/json; charset=utf-8",
           dataType:"json",
@@ -260,11 +260,11 @@ $(document).ready(function() {
     }
   });
 
-  $.getJSON("/info/tiers", function(theTiers) {
+  $.getJSON("/druid/coordinator/v1/tiers", function(theTiers) {
       tiers = theTiers;
   });
 
-  $.getJSON("/info/db/datasources", function(data) {
+  $.getJSON("/druid/coordinator/v1/db/datasources", function(data) {
     $.each(data, function(index, datasource) {
       $('#datasources').append($('<option></option>').attr("value", datasource).text(datasource));
     });

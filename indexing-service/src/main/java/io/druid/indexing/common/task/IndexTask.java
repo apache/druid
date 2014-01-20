@@ -22,15 +22,17 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.util.Sets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultiset;
 import com.google.common.primitives.Ints;
+import com.metamx.common.ISE;
+import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -61,6 +63,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class IndexTask extends AbstractFixedIntervalTask
@@ -133,7 +136,13 @@ public class IndexTask extends AbstractFixedIntervalTask
   {
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
     final Set<DataSegment> segments = Sets.newHashSet();
-    for (final Interval bucket : granularitySpec.bucketIntervals()) {
+
+    final Set<Interval> validIntervals = Sets.intersection(granularitySpec.bucketIntervals(), getDataIntervals());
+    if (validIntervals.isEmpty()) {
+      throw new ISE("No valid data intervals found. Check your configs!");
+    }
+
+    for (final Interval bucket : validIntervals) {
       final List<ShardSpec> shardSpecs;
       if (targetPartitionSize > 0) {
         shardSpecs = determinePartitions(bucket, targetPartitionSize);
@@ -158,6 +167,19 @@ public class IndexTask extends AbstractFixedIntervalTask
     }
     toolbox.pushSegments(segments);
     return TaskStatus.success(getId());
+  }
+
+  private SortedSet<Interval> getDataIntervals() throws IOException
+  {
+    SortedSet<Interval> retVal = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+    try (Firehose firehose = firehoseFactory.connect()) {
+      while (firehose.hasMore()) {
+        final InputRow inputRow = firehose.nextRow();
+        Interval interval = granularitySpec.getGranularity().bucket(new DateTime(inputRow.getTimestampFromEpoch()));
+        retVal.add(interval);
+      }
+    }
+    return retVal;
   }
 
   private List<ShardSpec> determinePartitions(
