@@ -58,11 +58,8 @@
         <module>s3-extensions</module>
         <module>kafka-seven</module>
         <module>kafka-eight</module>
-<<<<<<< HEAD
-        <module>sample-agg</module>
-=======
         <module>rabbitmq</module>
->>>>>>> upstream/master
+        <module>sample-agg</module>
     </modules>
 
     <dependencyManagement>
