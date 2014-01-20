@@ -19,6 +19,7 @@
 
 package io.druid.server.http;
 
+import com.google.api.client.util.Maps;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -37,19 +38,9 @@ import java.util.Set;
 
 /**
  */
-@Path("/tiers")
+@Path("/druid/coordinator/v1/tiers")
 public class TiersResource
 {
-  private static Map<String, Object> makeSimpleTier(DruidServer input)
-  {
-    return new ImmutableMap.Builder<String, Object>()
-        .put("host", input.getHost())
-        .put("tier", input.getTier())
-        .put("currSize", input.getCurrSize())
-        .put("maxSize", input.getMaxSize())
-        .build();
-  }
-
   private final InventoryView serverInventoryView;
 
   @Inject
@@ -61,7 +52,6 @@ public class TiersResource
   }
 
   @GET
-  @Path("/tiers")
   @Produces("application/json")
   public Response getTiers(
       @QueryParam("simple") String simple
@@ -70,13 +60,20 @@ public class TiersResource
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
 
     if (simple != null) {
-      Table<String, String, Long> metadata = HashBasedTable.create();
+      Map<String, Map<String, Long>> metadata = Maps.newHashMap();
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
-        Long currSize = metadata.get(druidServer.getTier(), "currSize");
-        metadata.put(druidServer.getTier(), "currSize", (currSize == null) ? 0 : currSize + druidServer.getCurrSize());
+        Map<String, Long> tierMetadata = metadata.get(druidServer.getTier());
 
-        Long maxSize = metadata.get(druidServer.getTier(), "maxSize");
-        metadata.put(druidServer.getTier(), "maxSize", (maxSize == null) ? 0 : maxSize + druidServer.getMaxSize());
+        if (tierMetadata == null) {
+          tierMetadata = Maps.newHashMap();
+          metadata.put(druidServer.getTier(), tierMetadata);
+        }
+
+        Long currSize = tierMetadata.get("currSize");
+        tierMetadata.put("currSize", (currSize == null) ? 0 : currSize + druidServer.getCurrSize());
+
+        Long maxSize = tierMetadata.get("maxSize");
+        tierMetadata.put("maxSize", (maxSize == null) ? 0 : maxSize + druidServer.getMaxSize());
       }
       return builder.entity(metadata).build();
     }
@@ -85,7 +82,7 @@ public class TiersResource
     for (DruidServer server : serverInventoryView.getInventory()) {
       tiers.add(server.getTier());
     }
-    return builder.entity(tiers)
-                  .build();
+
+    return builder.entity(tiers).build();
   }
 }

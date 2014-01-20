@@ -40,7 +40,7 @@ import java.util.Map;
 
 /**
  */
-@Path("/servers")
+@Path("/druid/coordinator/v1/servers")
 public class ServersResource
 {
   private static Map<String, Object> makeSimpleServer(DruidServer input)

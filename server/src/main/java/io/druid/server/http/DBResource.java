@@ -39,7 +39,7 @@ import java.util.List;
 
 /**
  */
-@Path("/db")
+@Path("/druid/coordinator/v1/db")
 public class DBResource
 {
   private final DatabaseSegmentManager databaseSegmentManager;

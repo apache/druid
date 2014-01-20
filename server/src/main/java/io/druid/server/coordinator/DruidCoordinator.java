@@ -44,6 +44,7 @@ import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.collections.CountingMap;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.curator.discovery.ServiceAnnouncer;
@@ -73,6 +74,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -191,40 +193,41 @@ public class DruidCoordinator
 
   public Map<String, Double> getReplicationStatus()
   {
-    // find expected load
-    final Map<String, Integer> expectedSegmentsInCluster = Maps.newHashMap();
+    // find expected load per datasource
+    final CountingMap<String> expectedSegmentsInCluster = new CountingMap<>();
     final DateTime now = new DateTime();
     for (DataSegment segment : getAvailableDataSegments()) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       for (Rule rule : rules) {
         if (rule instanceof LoadRule && rule.appliesTo(segment, now)) {
-          Integer count = expectedSegmentsInCluster.get(segment.getIdentifier());
-          if (count == null) {
-            count = 0;
-          }
-          expectedSegmentsInCluster.put(segment.getIdentifier(), count + ((LoadRule) rule).getReplicants());
+          expectedSegmentsInCluster.add(segment.getDataSource(), ((LoadRule) rule).getReplicants());
+          //Integer count = expectedSegmentsInCluster.get(segment.getDataSource());
+          //if (count == null) {
+          //  count = 0;
+          //}
+          //expectedSegmentsInCluster.put(segment.getDataSource(), count + ((LoadRule) rule).getReplicants());
           break;
         }
       }
     }
 
-    // find segments currently loaded
+    // find segments currently loaded per datasource
     Map<String, Integer> segmentsInCluster = Maps.newHashMap();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       for (DataSegment segment : druidServer.getSegments().values()) {
-        Integer count = segmentsInCluster.get(segment.getIdentifier());
+        Integer count = segmentsInCluster.get(segment.getDataSource());
         if (count == null) {
           count = 0;
         }
-        segmentsInCluster.put(segment.getIdentifier(), count + 1);
+        segmentsInCluster.put(segment.getDataSource(), count + 1);
       }
     }
 
     // compare available segments with currently loaded
     Map<String, Double> loadStatus = Maps.newHashMap();
-    for (Map.Entry<String, Integer> entry : expectedSegmentsInCluster.entrySet()) {
+    for (Map.Entry<String, AtomicLong> entry : expectedSegmentsInCluster.entrySet()) {
       Integer actual = segmentsInCluster.get(entry.getKey());
-      loadStatus.put(entry.getKey(), 100 * (actual == null ? 0.0D : (double) actual) / entry.getValue());
+      loadStatus.put(entry.getKey(), 100 * (actual == null ? 0.0D : (double) actual) / entry.getValue().get());
     }
 
     return loadStatus;

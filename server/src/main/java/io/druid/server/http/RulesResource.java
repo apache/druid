@@ -31,7 +31,7 @@ import javax.ws.rs.core.Response;
 
 /**
  */
-@Path("/rules")
+@Path("/druid/coordinator/v1/rules")
 public class RulesResource
 {
   private final DatabaseRuleManager databaseRuleManager;

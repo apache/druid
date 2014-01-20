@@ -53,7 +53,7 @@ import java.util.TreeSet;
 
 /**
  */
-@Path("/datasources")
+@Path("/druid/coordinator/v1/datasources")
 public class DatasourcesResource
 {
   private static Map<String, Object> makeSimpleDatasource(DruidDataSource input)

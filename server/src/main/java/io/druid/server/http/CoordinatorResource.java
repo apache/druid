@@ -19,8 +19,13 @@
 
 package io.druid.server.http;
 
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.LoadQueuePeon;
+import io.druid.timeline.DataSegment;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -30,7 +35,7 @@ import javax.ws.rs.core.Response;
 
 /**
  */
-@Path("/coordinator")
+@Path("/druid/coordinator/v1")
 public class CoordinatorResource
 {
   private final DruidCoordinator coordinator;
@@ -67,8 +72,40 @@ public class CoordinatorResource
   @GET
   @Path("loadqueue")
   @Produces("application/json")
-  public Response getLoadQueue()
+  public Response getLoadQueue(
+      @QueryParam("simple") String simple
+  )
   {
+    if (simple != null) {
+      return Response.ok(
+          Maps.transformValues(
+              coordinator.getLoadManagementPeons(),
+              new Function<LoadQueuePeon, Object>()
+              {
+                @Override
+                public Object apply(LoadQueuePeon input)
+                {
+                  long loadSize = 0;
+                  for (DataSegment dataSegment : input.getSegmentsToLoad()) {
+                    loadSize += dataSegment.getSize();
+                  }
+
+                  long dropSize = 0;
+                  for (DataSegment dataSegment : input.getSegmentsToDrop()) {
+                    dropSize += dataSegment.getSize();
+                  }
+
+                  return new ImmutableMap.Builder<>()
+                      .put("segmentsToLoad", input.getSegmentsToLoad().size())
+                      .put("segmentsToDrop", input.getSegmentsToDrop().size())
+                      .put("segmentsToLoadSize", loadSize)
+                      .put("segmentsToDropSize", dropSize)
+                      .build();
+                }
+              }
+          )
+      ).build();
+    }
     return Response.ok(coordinator.getLoadManagementPeons()).build();
   }
 }
