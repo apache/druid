@@ -27,9 +27,10 @@ import io.druid.segment.realtime.Schema;
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(
-    @JsonSubTypes.Type(name = "realtime", value = RealtimePlumberSchool.class)
-)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "realtime", value = RealtimePlumberSchool.class),
+    @JsonSubTypes.Type(name = "flushing", value = FlushingPlumberSchool.class)
+})
 public interface PlumberSchool
 {
   /**
