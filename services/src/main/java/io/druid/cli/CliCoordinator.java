@@ -47,9 +47,14 @@ import io.druid.server.http.BackwardsCompatibleInfoResource;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
+import io.druid.server.http.DBResource;
+import io.druid.server.http.DatasourcesResource;
 import io.druid.server.http.InfoResource;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
+import io.druid.server.http.RulesResource;
+import io.druid.server.http.ServersResource;
+import io.druid.server.http.TiersResource;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
@@ -107,6 +112,11 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, InfoResource.class);
             Jerseys.addResource(binder, CoordinatorResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
+            Jerseys.addResource(binder, TiersResource.class);
+            Jerseys.addResource(binder, RulesResource.class);
+            Jerseys.addResource(binder, ServersResource.class);
+            Jerseys.addResource(binder, DatasourcesResource.class);
+            Jerseys.addResource(binder, DBResource.class);
 
             LifecycleModule.register(binder, Server.class);
           }

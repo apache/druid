@@ -19,52 +19,52 @@
 
 package io.druid.server.http;
 
-import io.druid.common.config.JacksonConfigManager;
-import io.druid.server.coordinator.CoordinatorDynamicConfig;
+import com.google.inject.Inject;
+import io.druid.db.DatabaseRuleManager;
 
-import javax.inject.Inject;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 /**
  */
-@Path("/druid/coordinator/v1/config")
-public class CoordinatorDynamicConfigsResource
+@Path("/druid/coordinator/v1/rules")
+public class RulesResource
 {
-  private final JacksonConfigManager manager;
+  private final DatabaseRuleManager databaseRuleManager;
 
   @Inject
-  public CoordinatorDynamicConfigsResource(
-      JacksonConfigManager manager
+  public RulesResource(
+      DatabaseRuleManager databaseRuleManager
   )
   {
-    this.manager = manager;
+    this.databaseRuleManager = databaseRuleManager;
   }
 
   @GET
   @Produces("application/json")
-  public Response getDynamicConfigs()
+  public Response getRules()
   {
-    return Response.ok(
-        manager.watch(
-            CoordinatorDynamicConfig.CONFIG_KEY,
-            CoordinatorDynamicConfig.class
-        ).get()
-    ).build();
+    return Response.ok(databaseRuleManager.getAllRules()).build();
   }
 
-  @POST
-  @Consumes("application/json")
-  public Response setDynamicConfigs(final CoordinatorDynamicConfig dynamicConfig)
+  @GET
+  @Path("/{dataSourceName}")
+  @Produces("application/json")
+  public Response getDatasourceRules(
+      @PathParam("dataSourceName") final String dataSourceName,
+      @QueryParam("full") final String full
+
+  )
   {
-    if (!manager.set(CoordinatorDynamicConfig.CONFIG_KEY, dynamicConfig)) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+    if (full != null) {
+      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
+                     .build();
     }
-    return Response.ok().build();
+    return Response.ok(databaseRuleManager.getRules(dataSourceName))
+                   .build();
   }
-
 }
