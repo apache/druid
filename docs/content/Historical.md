@@ -28,12 +28,13 @@ druid.port=8081
 
 druid.zk.service.host=localhost
 
-druid.server.maxSize=100000000
+druid.server.maxSize=10000000000
 
-druid.processing.buffer.sizeBytes=10000000
+# Change these to make Druid faster
+druid.processing.buffer.sizeBytes=100000000
+druid.processing.numThreads=1
 
-druid.segmentCache.infoPath=/tmp/druid/segmentInfoCache
-druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 100000000}]```
+druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 10000000000}]
 ```
 
 Note: This will spin up a Historical node with the local filesystem as deep storage.

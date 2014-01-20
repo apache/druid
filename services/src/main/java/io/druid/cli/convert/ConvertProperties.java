@@ -72,7 +72,7 @@ public class ConvertProperties implements Runnable
       new PrefixRename("com.metamx.emitter", "druid.emitter"),
       new PrefixRename("com.metamx.druid.emitter", "druid.emitter"),
       new IndexCacheConverter(),
-      new Rename("druid.paths.segmentInfoCache", "druid.segmentCache.infoPath"),
+      new Rename("druid.paths.segmentInfoCache", "druid.segmentCache.infoDir"),
       new Rename("com.metamx.aws.accessKey", "druid.s3.accessKey"),
       new Rename("com.metamx.aws.secretKey", "druid.s3.secretKey"),
       new Rename("druid.bard.maxIntervalDuration", "druid.query.chunkDuration"),
@@ -178,7 +178,7 @@ public class ConvertProperties implements Runnable
     }
 
     updatedProps.setProperty(
-        "druid.monitoring.monitors", "[\"io.druid.server.metrics.ServerMonitor\", \"com.metamx.metrics.SysMonitor\"]"
+        "druid.monitoring.monitors", "[\"com.metamx.metrics.SysMonitor\"]"
     );
 
     BufferedWriter out = null;

@@ -103,7 +103,7 @@ public class HttpClientModule implements Module
     private int numConnections = 5;
 
     @JsonProperty
-    private Period readTimeout = null;
+    private Period readTimeout = new Period("PT15M");
 
     public int getNumConnections()
     {

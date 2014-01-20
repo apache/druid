@@ -34,7 +34,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.exec.TaskConsumer;
+import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.scaling.ResourceManagementScheduler;
 import io.druid.indexing.overlord.scaling.ResourceManagementSchedulerFactory;
 import io.druid.server.DruidNode;
@@ -56,20 +56,22 @@ public class TaskMaster
   private final LeaderSelector leaderSelector;
   private final ReentrantLock giant = new ReentrantLock();
   private final Condition mayBeStopped = giant.newCondition();
-  private final TaskQueue taskQueue;
   private final TaskActionClientFactory taskActionClientFactory;
 
-  private final AtomicReference<Lifecycle> leaderLifecycleRef = new AtomicReference<Lifecycle>(null);
+  private final AtomicReference<Lifecycle> leaderLifecycleRef = new AtomicReference<>(null);
 
   private volatile boolean leading = false;
   private volatile TaskRunner taskRunner;
+  private volatile TaskQueue taskQueue;
   private volatile ResourceManagementScheduler resourceManagementScheduler;
 
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
   @Inject
   public TaskMaster(
-      final TaskQueue taskQueue,
+      final TaskQueueConfig taskQueueConfig,
+      final TaskLockbox taskLockbox,
+      final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
       @Self final DruidNode node,
       final ZkPathsConfig zkPaths,
@@ -80,118 +82,99 @@ public class TaskMaster
       final ServiceEmitter emitter
   )
   {
-    this.taskQueue = taskQueue;
     this.taskActionClientFactory = taskActionClientFactory;
-
     this.leaderSelector = new LeaderSelector(
-        curator, zkPaths.getIndexerLeaderLatchPath(), new LeaderSelectorListener()
-    {
-      @Override
-      public void takeLeadership(CuratorFramework client) throws Exception
-      {
-        giant.lock();
+        curator,
+        zkPaths.getIndexerLeaderLatchPath(),
+        new LeaderSelectorListener()
+        {
+          @Override
+          public void takeLeadership(CuratorFramework client) throws Exception
+          {
+            giant.lock();
 
-        try {
-          log.info("By the power of Grayskull, I have the power!");
+            try {
+              // Make sure the previous leadership cycle is really, really over.
+              stopLeading();
 
-          taskRunner = runnerFactory.build();
-          final TaskConsumer taskConsumer = new TaskConsumer(
-              taskQueue,
-              taskRunner,
-              taskActionClientFactory,
-              emitter
-          );
+              // I AM THE MASTER OF THE UNIVERSE.
+              log.info("By the power of Grayskull, I have the power!");
+              taskLockbox.syncFromStorage();
+              taskRunner = runnerFactory.build();
+              taskQueue = new TaskQueue(
+                  taskQueueConfig,
+                  taskStorage,
+                  taskRunner,
+                  taskActionClientFactory,
+                  taskLockbox,
+                  emitter
+              );
 
-          // Bootstrap task queue and task lockbox (load state stuff from the database)
-          taskQueue.bootstrap();
+              // Sensible order to start stuff:
+              final Lifecycle leaderLifecycle = new Lifecycle();
+              if (leaderLifecycleRef.getAndSet(leaderLifecycle) != null) {
+                log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
+                   .emit();
+              }
+              leaderLifecycle.addManagedInstance(taskRunner);
+              if (taskRunner instanceof RemoteTaskRunner) {
+                final ScheduledExecutorFactory executorFactory = ScheduledExecutors.createFactory(leaderLifecycle);
+                resourceManagementScheduler = managementSchedulerFactory.build(
+                    (RemoteTaskRunner) taskRunner,
+                    executorFactory
+                );
+                leaderLifecycle.addManagedInstance(resourceManagementScheduler);
+              }
+              leaderLifecycle.addManagedInstance(taskQueue);
+              leaderLifecycle.addHandler(
+                  new Lifecycle.Handler()
+                  {
+                    @Override
+                    public void start() throws Exception
+                    {
+                      serviceAnnouncer.announce(node);
+                    }
 
-          // Sensible order to start stuff:
-          final Lifecycle leaderLifecycle = new Lifecycle();
-          if (leaderLifecycleRef.getAndSet(leaderLifecycle) != null) {
-            log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
-               .emit();
-          }
-
-          leaderLifecycle.addManagedInstance(taskRunner);
-          leaderLifecycle.addHandler(
-              new Lifecycle.Handler()
-              {
-                @Override
-                public void start() throws Exception
-                {
-                  taskRunner.bootstrap(taskQueue.snapshot());
-                }
-
-                @Override
-                public void stop()
-                {
-
+                    @Override
+                    public void stop()
+                    {
+                      serviceAnnouncer.unannounce(node);
+                    }
+                  }
+              );
+              try {
+                leaderLifecycle.start();
+                leading = true;
+                while (leading && !Thread.currentThread().isInterrupted()) {
+                  mayBeStopped.await();
                 }
               }
-          );
-          leaderLifecycle.addManagedInstance(taskQueue);
-
-          leaderLifecycle.addHandler(
-              new Lifecycle.Handler()
-              {
-                @Override
-                public void start() throws Exception
-                {
-                  serviceAnnouncer.announce(node);
-                }
-
-                @Override
-                public void stop()
-                {
-                  serviceAnnouncer.unannounce(node);
-                }
+              catch (InterruptedException e) {
+                // Suppress so we can bow out gracefully
               }
-          );
-          leaderLifecycle.addManagedInstance(taskConsumer);
-
-          if (taskRunner instanceof RemoteTaskRunner) {
-            final ScheduledExecutorFactory executorFactory = ScheduledExecutors.createFactory(leaderLifecycle);
-            resourceManagementScheduler = managementSchedulerFactory.build(
-                (RemoteTaskRunner) taskRunner,
-                executorFactory
-            );
-            leaderLifecycle.addManagedInstance(resourceManagementScheduler);
-          }
-
-          try {
-            leaderLifecycle.start();
-            leading = true;
-
-            while (leading && !Thread.currentThread().isInterrupted()) {
-              mayBeStopped.await();
+              finally {
+                log.info("Bowing out!");
+                stopLeading();
+              }
+            }
+            catch (Exception e) {
+              log.makeAlert(e, "Failed to lead").emit();
+              throw Throwables.propagate(e);
+            }
+            finally {
+              giant.unlock();
             }
           }
-          catch (InterruptedException e) {
-            // Suppress so we can bow out gracefully
-          }
-          finally {
-            log.info("Bowing out!");
-            stopLeading();
-          }
-        }
-        catch (Exception e) {
-          log.makeAlert(e, "Failed to lead").emit();
-          throw Throwables.propagate(e);
-        }
-        finally {
-          giant.unlock();
-        }
-      }
 
-      @Override
-      public void stateChanged(CuratorFramework client, ConnectionState newState)
-      {
-        if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
-          // disconnected from zk. assume leadership is gone
-          stopLeading();
+          @Override
+          public void stateChanged(CuratorFramework client, ConnectionState newState)
+          {
+            if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
+              // disconnected from zk. assume leadership is gone
+              stopLeading();
+            }
+          }
         }
-      }
-    }
     );
 
     leaderSelector.setId(node.getHost());

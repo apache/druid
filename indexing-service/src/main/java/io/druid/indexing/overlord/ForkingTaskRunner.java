@@ -102,12 +102,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
-  public void bootstrap(List<Task> tasks)
-  {
-    // do nothing
-  }
-
-  @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     synchronized (tasks) {
@@ -115,7 +109,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
         tasks.put(
             task.getId(),
             new ForkingTaskRunnerWorkItem(
-                task,
+                task.getId(),
                 exec.submit(
                     new Callable<TaskStatus>()
                     {
@@ -224,29 +218,20 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             }
 
                             log.info("Logging task %s output to: %s", task.getId(), logFile);
-
-                            final InputStream fromProc = processHolder.process.getInputStream();
-                            final OutputStream toLogfile = closer.register(
-                                Files.newOutputStreamSupplier(logFile).getOutput()
-                            );
-
                             boolean runFailed = true;
 
-                            ByteStreams.copy(fromProc, toLogfile);
-                            final int statusCode = processHolder.process.waitFor();
-                            log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
-
-                            if (statusCode == 0) {
-                              runFailed = false;
+                            try (final OutputStream toLogfile = Files.newOutputStreamSupplier(logFile).getOutput()) {
+                              ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
+                              final int statusCode = processHolder.process.waitFor();
+                              log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
+                              if (statusCode == 0) {
+                                runFailed = false;
+                              }
                             }
-
-                            // Upload task logs
-
-                            // XXX: Consider uploading periodically for very long-lived tasks to prevent
-                            // XXX: bottlenecks at the end or the possibility of losing a lot of logs all
-                            // XXX: at once.
-
-                            taskLogPusher.pushTaskLog(task.getId(), logFile);
+                            finally {
+                              // Upload task logs
+                              taskLogPusher.pushTaskLog(task.getId(), logFile);
+                            }
 
                             if (!runFailed) {
                               // Process exited successfully
@@ -261,9 +246,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             closer.close();
                           }
                         }
-                        catch (Exception e) {
-                          log.info(e, "Exception caught during execution");
-                          throw Throwables.propagate(e);
+                        catch (Throwable t) {
+                          log.info(t, "Exception caught during execution");
+                          throw Throwables.propagate(t);
                         }
                         finally {
                           try {
@@ -359,6 +344,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
+  public Collection<TaskRunnerWorkItem> getKnownTasks()
+  {
+    synchronized (tasks) {
+      return Lists.<TaskRunnerWorkItem>newArrayList(tasks.values());
+    }
+  }
+
+  @Override
   public Collection<ZkWorker> getWorkers()
   {
     return ImmutableList.of();
@@ -389,7 +382,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
             if (offset > 0) {
               raf.seek(offset);
             } else if (offset < 0 && offset < rafLength) {
-              raf.seek(rafLength + offset);
+              raf.seek(Math.max(0, rafLength + offset));
             }
             return Channels.newInputStream(raf.getChannel());
           }
@@ -425,11 +418,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     private volatile ProcessHolder processHolder = null;
 
     private ForkingTaskRunnerWorkItem(
-        Task task,
+        String taskId,
         ListenableFuture<TaskStatus> statusFuture
     )
     {
-      super(task, statusFuture);
+      super(taskId, statusFuture);
     }
   }
 

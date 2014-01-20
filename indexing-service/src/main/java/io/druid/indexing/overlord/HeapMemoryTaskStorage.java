@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.api.client.util.Lists;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
@@ -26,11 +27,15 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
+import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
+import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;
@@ -42,6 +47,8 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class HeapMemoryTaskStorage implements TaskStorage
 {
+  private final TaskStorageConfig config;
+
   private final ReentrantLock giant = new ReentrantLock();
   private final Map<String, TaskStuff> tasks = Maps.newHashMap();
   private final Multimap<String, TaskLock> taskLocks = HashMultimap.create();
@@ -49,8 +56,14 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
   private static final Logger log = new Logger(HeapMemoryTaskStorage.class);
 
+  @Inject
+  public HeapMemoryTaskStorage(TaskStorageConfig config)
+  {
+    this.config = config;
+  }
+
   @Override
-  public void insert(Task task, TaskStatus status)
+  public void insert(Task task, TaskStatus status) throws TaskExistsException
   {
     giant.lock();
 
@@ -69,7 +82,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
       }
 
       log.info("Inserting task %s with status: %s", task.getId(), status);
-      tasks.put(task.getId(), new TaskStuff(task, status));
+      tasks.put(task.getId(), new TaskStuff(task, status, new DateTime()));
     } finally {
       giant.unlock();
     }
@@ -128,7 +141,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<Task> getRunningTasks()
+  public List<Task> getActiveTasks()
   {
     giant.lock();
 
@@ -139,8 +152,34 @@ public class HeapMemoryTaskStorage implements TaskStorage
           listBuilder.add(taskStuff.getTask());
         }
       }
-
       return listBuilder.build();
+    } finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses()
+  {
+    giant.lock();
+
+    try {
+      final List<TaskStatus> returns = Lists.newArrayList();
+      final long recent = System.currentTimeMillis() - config.getRecentlyFinishedThreshold().getMillis();
+      final Ordering<TaskStuff> createdDateDesc = new Ordering<TaskStuff>()
+      {
+        @Override
+        public int compare(TaskStuff a, TaskStuff b)
+        {
+          return a.getCreatedDate().compareTo(b.getCreatedDate());
+        }
+      }.reverse();
+      for(final TaskStuff taskStuff : createdDateDesc.sortedCopy(tasks.values())) {
+        if(taskStuff.getStatus().isComplete() && taskStuff.getCreatedDate().getMillis() > recent) {
+          returns.add(taskStuff.getStatus());
+        }
+      }
+      return returns;
     } finally {
       giant.unlock();
     }
@@ -212,8 +251,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
   {
     final Task task;
     final TaskStatus status;
+    final DateTime createdDate;
 
-    private TaskStuff(Task task, TaskStatus status)
+    private TaskStuff(Task task, TaskStatus status, DateTime createdDate)
     {
       Preconditions.checkNotNull(task);
       Preconditions.checkNotNull(status);
@@ -221,6 +261,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
       this.task = task;
       this.status = status;
+      this.createdDate = Preconditions.checkNotNull(createdDate, "createdDate");
     }
 
     public Task getTask()
@@ -233,9 +274,14 @@ public class HeapMemoryTaskStorage implements TaskStorage
       return status;
     }
 
+    public DateTime getCreatedDate()
+    {
+      return createdDate;
+    }
+
     private TaskStuff withStatus(TaskStatus _status)
     {
-      return new TaskStuff(task, _status);
+      return new TaskStuff(task, _status, createdDate);
     }
   }
 }

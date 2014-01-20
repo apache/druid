@@ -1,25 +1,28 @@
 ---
 layout: doc_page
 ---
+
+# Configuring Druid
+
 This describes the basic server configuration that is loaded by all the server processes; the same file is loaded by all. See also the json "specFile" descriptions in [Realtime](Realtime.html) and [Batch-ingestion](Batch-ingestion.html).
 
-JVM Configuration Best Practices
-================================
+## JVM Configuration Best Practices
 
 There are three JVM parameters that we set on all of our processes:
 
-1.  `-Duser.timezone=UTC` This sets the default timezone of the JVM to UTC. We always set this and do not test with other default timezones, so local timezones might work, but they also might uncover weird and interesting bugs
-2.  `-Dfile.encoding=UTF-8` This is similar to timezone, we test assuming UTF-8. Local encodings might work, but they also might result in weird and interesting bugs
-3.  `-Djava.io.tmpdir=<a path>` Various parts of the system that interact with the file system do it via temporary files, these files can get somewhat large. Many production systems are setup to have small (but fast) `/tmp` directories, these can be problematic with Druid so we recommend pointing the JVM’s tmp directory to something with a little more meat.
+1.  `-Duser.timezone=UTC` This sets the default timezone of the JVM to UTC. We always set this and do not test with other default timezones, so local timezones might work, but they also might uncover weird and interesting bugs.
+2.  `-Dfile.encoding=UTF-8` This is similar to timezone, we test assuming UTF-8. Local encodings might work, but they also might result in weird and interesting bugs.
+3.  `-Djava.io.tmpdir=<a path>` Various parts of the system that interact with the file system do it via temporary files, and these files can get somewhat large. Many production systems are set up to have small (but fast) `/tmp` directories, which can be problematic with Druid so we recommend pointing the JVM’s tmp directory to something with a little more meat.
 
-Modules
-=======
+## Modules
 
-As of Druid v0.6, most core Druid functionality has been compartmentalized into modules. There are a set of default modules that may apply to any node type, and there are specific modules for the different node types. Default modules are __lazily instantiated__. Each module has its own set of configuration. This page will describe the configuration of the default modules.
+As of Druid v0.6, most core Druid functionality has been compartmentalized into modules. There are a set of default modules that may apply to any node type, and there are specific modules for the different node types. Default modules are __lazily instantiated__. Each module has its own set of configuration. 
+
+This page describes the configuration of the default modules. Node-specific configuration is discussed on each node's respective page. In addition, you can add custom modules to [extend Druid](Modules.html).
 
 Configuration of the various modules is done via Java properties. These can either be provided as `-D` system properties on the java command line or they can be passed in via a file called `runtime.properties` that exists on the classpath.
 
-Note: as a future item, we’d like to consolidate all of the various configuration into a yaml/JSON based configuration files.
+Note: as a future item, we’d like to consolidate all of the various configuration into a yaml/JSON based configuration file.
 
 ### Emitter Module
 
@@ -147,7 +150,7 @@ Druid storage nodes maintain information about segments they have already downlo
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.segmentCache.locations`|Segments assigned to a historical node are first stored on the local file system and then served by the historical node. These locations defines where that local cache resides|none|
+|`druid.segmentCache.locations`|Segments assigned to a historical node are first stored on the local file system and then served by the historical node. These locations define where that local cache resides|none|
 |`druid.segmentCache.deleteOnRemove`|Delete segment files from cache once a node is no longer serving a segment.|true|
 |`druid.segmentCache.infoDir`|Historical nodes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
 
@@ -282,8 +285,10 @@ This deep storage is used to interface with Amazon's S3.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.storage.bucket`|S3 bucket name.|none|
-|`druid.storage.basekey`|S3 base key.|none|
+|`druid.storage.baseKey`|S3 object key prefix for storage.|none|
 |`druid.storage.disableAcl`|Boolean flag for ACL.|false|
+|`druid.storage.archiveBucket`|S3 bucket name for archiving when running the indexing-service *archive task*.|none|
+|`druid.storage.archiveBaseKey`|S3 object key prefix for archiving.|none|
 
 #### HDFS Deep Storage
 
@@ -308,20 +313,28 @@ This module is used to configure the [Indexing Service](Indexing-Service.html) t
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.logs.type`|Choices:noop, S3. Where to store task logs|noop|
+|`druid.indexer.logs.type`|Choices:noop, s3, file. Where to store task logs|file|
 
-#### Noop Task Logs
+#### File Task Logs
 
-No task logs are actually stored.
+Store task logs in the local filesystem.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.logs.directory`|Local filesystem path.|log|
 
 #### S3 Task Logs
 
-Store Task Logs in S3.
+Store task logs in S3.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.logs.s3Bucket`|S3 bucket name.|none|
 |`druid.indexer.logs.s3Prefix`|S3 key prefix.|none|
+
+#### Noop Task Logs
+
+No task logs are actually stored.
 
 ### Firehose Module
 

@@ -490,8 +490,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
               for (ComplexColumn complexColumn : complexColumnCache.values()) {
                 Closeables.closeQuietly(complexColumn);
               }
-              for (Object column : complexColumnCache.values()) {
-                if (column instanceof Closeable) {
+              for (Object column : objectColumnCache.values()) {
+                if(column instanceof Closeable) {
                   Closeables.closeQuietly((Closeable) column);
                 }
               }

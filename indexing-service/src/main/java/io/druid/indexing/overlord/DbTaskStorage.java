@@ -23,29 +23,40 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import com.metamx.common.RetryUtils;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
+import com.mysql.jdbc.exceptions.MySQLTransientException;
 import io.druid.db.DbConnector;
 import io.druid.db.DbTablesConfig;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
+import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
+import org.skife.jdbi.v2.exceptions.DBIException;
 import org.skife.jdbi.v2.exceptions.StatementException;
+import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.sql.SQLException;
+import java.sql.SQLRecoverableException;
+import java.sql.SQLTransientException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 public class DbTaskStorage implements TaskStorage
 {
@@ -53,16 +64,24 @@ public class DbTaskStorage implements TaskStorage
   private final DbConnector dbConnector;
   private final DbTablesConfig dbTables;
   private final IDBI dbi;
+  private final TaskStorageConfig config;
 
   private static final EmittingLogger log = new EmittingLogger(DbTaskStorage.class);
 
   @Inject
-  public DbTaskStorage(ObjectMapper jsonMapper, DbConnector dbConnector, DbTablesConfig dbTables, IDBI dbi)
+  public DbTaskStorage(
+      final ObjectMapper jsonMapper,
+      final DbConnector dbConnector,
+      final DbTablesConfig dbTables,
+      final IDBI dbi,
+      final TaskStorageConfig config
+  )
   {
     this.jsonMapper = jsonMapper;
     this.dbConnector = dbConnector;
     this.dbTables = dbTables;
     this.dbi = dbi;
+    this.config = config;
   }
 
   @LifecycleStart
@@ -78,7 +97,7 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
-  public void insert(final Task task, final TaskStatus status)
+  public void insert(final Task task, final TaskStatus status) throws TaskExistsException
   {
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(status, "status");
@@ -92,7 +111,7 @@ public class DbTaskStorage implements TaskStorage
     log.info("Inserting task %s with status: %s", task.getId(), status);
 
     try {
-      dbi.withHandle(
+      retryingHandle(
           new HandleCallback<Void>()
           {
             @Override
@@ -117,9 +136,11 @@ public class DbTaskStorage implements TaskStorage
           }
       );
     }
-    catch (StatementException e) {
-      // Might be a duplicate task ID.
-      if (getTask(task.getId()).isPresent()) {
+    catch (Exception e) {
+      final boolean isStatementException = e instanceof StatementException ||
+                                           (e instanceof CallbackFailedException
+                                            && e.getCause() instanceof StatementException);
+      if (isStatementException && getTask(task.getId()).isPresent()) {
         throw new TaskExistsException(task.getId(), e);
       } else {
         throw e;
@@ -134,7 +155,7 @@ public class DbTaskStorage implements TaskStorage
 
     log.info("Updating task %s to status: %s", status.getId(), status);
 
-    int updated = dbi.withHandle(
+    int updated = retryingHandle(
         new HandleCallback<Integer>()
         {
           @Override
@@ -162,7 +183,7 @@ public class DbTaskStorage implements TaskStorage
   @Override
   public Optional<Task> getTask(final String taskid)
   {
-    return dbi.withHandle(
+    return retryingHandle(
         new HandleCallback<Optional<Task>>()
         {
           @Override
@@ -192,7 +213,7 @@ public class DbTaskStorage implements TaskStorage
   @Override
   public Optional<TaskStatus> getStatus(final String taskid)
   {
-    return dbi.withHandle(
+    return retryingHandle(
         new HandleCallback<Optional<TaskStatus>>()
         {
           @Override
@@ -220,9 +241,9 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<Task> getRunningTasks()
+  public List<Task> getActiveTasks()
   {
-    return dbi.withHandle(
+    return retryingHandle(
         new HandleCallback<List<Task>>()
         {
           @Override
@@ -231,7 +252,7 @@ public class DbTaskStorage implements TaskStorage
             final List<Map<String, Object>> dbTasks =
                 handle.createQuery(
                     String.format(
-                        "SELECT id, payload, status_payload FROM %s WHERE active = 1",
+                        "SELECT id, payload, status_payload FROM %s WHERE active = 1 ORDER BY created_date",
                         dbTables.getTasksTable()
                     )
                 )
@@ -261,6 +282,45 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses()
+  {
+    final DateTime recent = new DateTime().minus(config.getRecentlyFinishedThreshold());
+    return retryingHandle(
+        new HandleCallback<List<TaskStatus>>()
+        {
+          @Override
+          public List<TaskStatus> withHandle(Handle handle) throws Exception
+          {
+            final List<Map<String, Object>> dbTasks =
+                handle.createQuery(
+                    String.format(
+                        "SELECT id, status_payload FROM %s WHERE active = 0 AND created_date >= :recent ORDER BY created_date DESC",
+                        dbTables.getTasksTable()
+                    )
+                ).bind("recent", recent.toString()).list();
+
+            final ImmutableList.Builder<TaskStatus> statuses = ImmutableList.builder();
+            for (final Map<String, Object> row : dbTasks) {
+              final String id = row.get("id").toString();
+
+              try {
+                final TaskStatus status = jsonMapper.readValue((byte[]) row.get("status_payload"), TaskStatus.class);
+                if (status.isComplete()) {
+                  statuses.add(status);
+                }
+              }
+              catch (Exception e) {
+                log.makeAlert(e, "Failed to parse status payload").addData("task", id).emit();
+              }
+            }
+
+            return statuses.build();
+          }
+        }
+    );
+  }
+
+  @Override
   public void addLock(final String taskid, final TaskLock taskLock)
   {
     Preconditions.checkNotNull(taskid, "taskid");
@@ -273,7 +333,7 @@ public class DbTaskStorage implements TaskStorage
         taskid
     );
 
-    dbi.withHandle(
+    retryingHandle(
         new HandleCallback<Integer>()
         {
           @Override
@@ -308,7 +368,7 @@ public class DbTaskStorage implements TaskStorage
       if (taskLock.equals(taskLockToRemove)) {
         log.info("Deleting TaskLock with id[%d]: %s", id, taskLock);
 
-        dbi.withHandle(
+        retryingHandle(
             new HandleCallback<Integer>()
             {
               @Override
@@ -353,7 +413,7 @@ public class DbTaskStorage implements TaskStorage
 
     log.info("Logging action for task[%s]: %s", task.getId(), taskAction);
 
-    dbi.withHandle(
+    retryingHandle(
         new HandleCallback<Integer>()
         {
           @Override
@@ -376,7 +436,7 @@ public class DbTaskStorage implements TaskStorage
   @Override
   public List<TaskAction> getAuditLogs(final String taskid)
   {
-    return dbi.withHandle(
+    return retryingHandle(
         new HandleCallback<List<TaskAction>>()
         {
           @Override
@@ -392,21 +452,19 @@ public class DbTaskStorage implements TaskStorage
                       .bind("task_id", taskid)
                       .list();
 
-            return Lists.transform(
-                dbTaskLogs, new Function<Map<String, Object>, TaskAction>()
-            {
-              @Override
-              public TaskAction apply(Map<String, Object> row)
-              {
-                try {
-                  return jsonMapper.readValue((byte[]) row.get("log_payload"), TaskAction.class);
-                }
-                catch (Exception e) {
-                  throw Throwables.propagate(e);
-                }
+            final List<TaskAction> retList = Lists.newArrayList();
+            for (final Map<String, Object> dbTaskLog : dbTaskLogs) {
+              try {
+                retList.add(jsonMapper.readValue((byte[]) dbTaskLog.get("log_payload"), TaskAction.class));
+              }
+              catch (Exception e) {
+                log.makeAlert(e, "Failed to deserialize TaskLog")
+                   .addData("task", taskid)
+                   .addData("logPayload", dbTaskLog)
+                   .emit();
               }
             }
-            );
+            return retList;
           }
         }
     );
@@ -414,7 +472,7 @@ public class DbTaskStorage implements TaskStorage
 
   private Map<Long, TaskLock> getLocksWithIds(final String taskid)
   {
-    return dbi.withHandle(
+    return retryingHandle(
         new HandleCallback<Map<Long, TaskLock>>()
         {
           @Override
@@ -432,11 +490,63 @@ public class DbTaskStorage implements TaskStorage
 
             final Map<Long, TaskLock> retMap = Maps.newHashMap();
             for (final Map<String, Object> row : dbTaskLocks) {
-              retMap.put((Long) row.get("id"), jsonMapper.readValue((byte[]) row.get("lock_payload"), TaskLock.class));
+              try {
+                retMap.put(
+                    (Long) row.get("id"),
+                    jsonMapper.readValue((byte[]) row.get("lock_payload"), TaskLock.class)
+                );
+              }
+              catch (Exception e) {
+                log.makeAlert(e, "Failed to deserialize TaskLock")
+                   .addData("task", taskid)
+                   .addData("lockPayload", row)
+                   .emit();
+              }
             }
             return retMap;
           }
         }
     );
+  }
+
+  /**
+   * Retry SQL operations
+   */
+  private <T> T retryingHandle(final HandleCallback<T> callback)
+  {
+    final Callable<T> call = new Callable<T>()
+    {
+      @Override
+      public T call() throws Exception
+      {
+        return dbi.withHandle(callback);
+      }
+    };
+    final Predicate<Throwable> shouldRetry = new Predicate<Throwable>()
+    {
+      @Override
+      public boolean apply(Throwable e)
+      {
+        return shouldRetryException(e);
+      }
+    };
+    final int maxTries = 10;
+    try {
+      return RetryUtils.retry(call, shouldRetry, maxTries);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  private static boolean shouldRetryException(final Throwable e)
+  {
+    return e != null && (e instanceof SQLTransientException
+                         || e instanceof MySQLTransientException
+                         || e instanceof SQLRecoverableException
+                         || e instanceof UnableToObtainConnectionException
+                         || (e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317)
+                         || (e instanceof SQLException && shouldRetryException(e.getCause()))
+                         || (e instanceof DBIException && shouldRetryException(e.getCause())));
   }
 }

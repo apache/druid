@@ -21,27 +21,22 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Optional;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import org.joda.time.Interval;
 
 /**
  * Represents a task that can run on a worker. The general contracts surrounding Tasks are:
  * <ul>
- *   <li>Tasks must operate on a single datasource.</li>
- *   <li>Tasks should be immutable, since the task ID is used as a proxy for the task in many locations.</li>
- *   <li>Task IDs must be unique. This can be done by naming them using UUIDs or the current timestamp.</li>
- *   <li>Tasks are each part of a "task group", which is a set of tasks that can share interval locks. These are
- *   useful for producing sharded segments.</li>
- *   <li>Tasks can optionally have an "implicit lock interval". Tasks with this property are guaranteed to have
- *   a lock on that interval during their {@link #preflight(io.druid.indexing.common.actions.TaskActionClient)}
- *   and {@link #run(io.druid.indexing.common.TaskToolbox)} methods.</li>
- *   <li>Tasks do not need to explicitly release locks; they are released upon task completion. Tasks may choose
- *   to release locks early if they desire.</li>
+ * <li>Tasks must operate on a single datasource.</li>
+ * <li>Tasks should be immutable, since the task ID is used as a proxy for the task in many locations.</li>
+ * <li>Task IDs must be unique. This can be done by naming them using UUIDs or the current timestamp.</li>
+ * <li>Tasks are each part of a "task group", which is a set of tasks that can share interval locks. These are
+ * useful for producing sharded segments.</li>
+ * <li>Tasks do not need to explicitly release locks; they are released upon task completion. Tasks may choose
+ * to release locks early if they desire.</li>
  * </ul>
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -50,9 +45,9 @@ import org.joda.time.Interval;
     @JsonSubTypes.Type(name = "merge", value = MergeTask.class),
     @JsonSubTypes.Type(name = "delete", value = DeleteTask.class),
     @JsonSubTypes.Type(name = "kill", value = KillTask.class),
+    @JsonSubTypes.Type(name = "move", value = MoveTask.class),
+    @JsonSubTypes.Type(name = "archive", value = ArchiveTask.class),
     @JsonSubTypes.Type(name = "index", value = IndexTask.class),
-    @JsonSubTypes.Type(name = "index_partitions", value = IndexDeterminePartitionsTask.class),
-    @JsonSubTypes.Type(name = "index_generator", value = IndexGeneratorTask.class),
     @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
     @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
     @JsonSubTypes.Type(name = "noop", value = NoopTask.class),
@@ -97,30 +92,25 @@ public interface Task
   public String getDataSource();
 
   /**
-   * Returns implicit lock interval for this task, if any. Tasks without implicit lock intervals are not granted locks
-   * when started and must explicitly request them.
-   */
-  public Optional<Interval> getImplicitLockInterval();
-
-  /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method
    * should return null.
    */
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
-   * Execute preflight checks for a task. This typically runs on the coordinator, and will be run while
-   * holding a lock on our dataSource and implicit lock interval (if any). If this method throws an exception, the
-   * task should be considered a failure.
+   * Execute preflight actions for a task. This can be used to acquire locks, check preconditions, and so on. The
+   * actions must be idempotent, since this method may be executed multiple times. This typically runs on the
+   * coordinator. If this method throws an exception, the task should be considered a failure.
+   *
+   * This method must be idempotent, as it may be run multiple times per task.
    *
    * @param taskActionClient action client for this task (not the full toolbox)
    *
-   * @return Some kind of status (runnable means continue on to a worker, non-runnable means we completed without
-   *         using a worker).
+   * @return true if ready, false if not ready yet
    *
-   * @throws Exception
+   * @throws Exception if the task should be considered a failure
    */
-  public TaskStatus preflight(TaskActionClient taskActionClient) throws Exception;
+  public boolean isReady(TaskActionClient taskActionClient) throws Exception;
 
   /**
    * Execute a task. This typically runs on a worker as determined by a TaskRunner, and will be run while

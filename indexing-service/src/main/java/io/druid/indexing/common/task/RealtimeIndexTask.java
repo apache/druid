@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.emitter.EmittingLogger;
@@ -35,9 +34,8 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
-import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
-import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -130,8 +128,7 @@ public class RealtimeIndexTask extends AbstractTask
             ), 1
         )
         : taskResource,
-        schema.getDataSource(),
-        null
+        schema.getDataSource()
     );
 
     this.schema = schema;
@@ -165,6 +162,12 @@ public class RealtimeIndexTask extends AbstractTask
     } else {
       return null;
     }
+  }
+
+  @Override
+  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  {
+    return true;
   }
 
   @Override
@@ -206,7 +209,7 @@ public class RealtimeIndexTask extends AbstractTask
       @Override
       public void announceSegment(final DataSegment segment) throws IOException
       {
-        // NOTE: Side effect: Calling announceSegment causes a lock to be acquired
+        // Side effect: Calling announceSegment causes a lock to be acquired
         toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
@@ -225,6 +228,7 @@ public class RealtimeIndexTask extends AbstractTask
       @Override
       public void announceSegments(Iterable<DataSegment> segments) throws IOException
       {
+        // Side effect: Calling announceSegments causes locks to be acquired
         for (DataSegment segment : segments) {
           toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
         }
@@ -257,7 +261,7 @@ public class RealtimeIndexTask extends AbstractTask
       public String getVersion(final Interval interval)
       {
         try {
-          // NOTE: Side effect: Calling getVersion causes a lock to be acquired
+          // Side effect: Calling getVersion causes a lock to be acquired
           final TaskLock myLock = toolbox.getTaskActionClient()
                                          .submit(new LockAcquireAction(interval));
 
@@ -337,11 +341,11 @@ public class RealtimeIndexTask extends AbstractTask
         }
       }
     }
-    catch (Exception e) {
+    catch (Throwable e) {
+      normalExit = false;
       log.makeAlert(e, "Exception aborted realtime processing[%s]", schema.getDataSource())
          .emit();
-      normalExit = false;
-      throw Throwables.propagate(e);
+      throw e;
     }
     finally {
       if (normalExit) {
@@ -412,7 +416,7 @@ public class RealtimeIndexTask extends AbstractTask
     @Override
     public void publishSegment(DataSegment segment) throws IOException
     {
-      taskToolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+      taskToolbox.pushSegments(ImmutableList.of(segment));
     }
   }
 }

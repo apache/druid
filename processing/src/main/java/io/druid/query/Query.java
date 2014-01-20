@@ -28,6 +28,7 @@ import io.druid.query.search.search.SearchQuery;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.topn.TopNQuery;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -40,7 +41,8 @@ import java.util.Map;
     @JsonSubTypes.Type(name = Query.SEARCH, value = SearchQuery.class),
     @JsonSubTypes.Type(name = Query.TIME_BOUNDARY, value = TimeBoundaryQuery.class),
     @JsonSubTypes.Type(name = Query.GROUP_BY, value = GroupByQuery.class),
-    @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class)
+    @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class),
+    @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class)
 })
 public interface Query<T>
 {
@@ -49,6 +51,7 @@ public interface Query<T>
   public static final String TIME_BOUNDARY = "timeBoundary";
   public static final String GROUP_BY = "groupBy";
   public static final String SEGMENT_METADATA = "segmentMetadata";
+  public static final String TOPN = "topN";
 
   public String getDataSource();
 

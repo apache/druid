@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Tutorial: A First Look at Druid
 Greetings! This tutorial will help clarify some core Druid concepts. We will use a realtime dataset and issue some basic Druid queries. If you are ready to explore Druid, and learn a thing or two, read on!
 
 About the data
@@ -47,7 +49,7 @@ There are two ways to setup Druid: download a tarball, or [Build From Source](Bu
 
 ### Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.20-bin.tar.gz). Download this file to a directory of your choosing.
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.52-bin.tar.gz). Download this file to a directory of your choosing.
 
 You can extract the awesomeness within by issuing:
 
@@ -58,7 +60,7 @@ tar -zxvf druid-services-*-bin.tar.gz
 Not too lost so far right? That's great! If you cd into the directory:
 
 ```
-cd druid-services-0.6.20
+cd druid-services-0.6.52
 ```
 
 You should see a bunch of files:
@@ -140,7 +142,8 @@ The result looks something like this:
 
 This groupBy query is a bit complicated and we'll return to it later. For the time being, just make sure you are getting some blocks of data back. If you are having problems, make sure you have [curl](http://curl.haxx.se/) installed. Control+C to break out of the client script.
 
-h2. Querying Druid
+Querying Druid
+--------------
 
 In your favorite editor, create the file:
 
@@ -202,7 +205,7 @@ You are probably wondering, what are these [Granularities](Granularities.html) a
 To issue the query and get some results, run the following in your command line:
 
 ```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  ````timeseries_query.body
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  @timeseries_query.body
 ```
 
 Once again, you should get a JSON blob of text back with your results, that looks something like this:

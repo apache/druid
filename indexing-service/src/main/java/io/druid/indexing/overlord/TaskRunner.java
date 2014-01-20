@@ -24,40 +24,32 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 
 import java.util.Collection;
-import java.util.List;
 
 /**
- * Interface for handing off tasks. Used by a {@link io.druid.indexing.overlord.exec.TaskConsumer} to
- * run tasks that have been locked.
+ * Interface for handing off tasks. Managed by a {@link io.druid.indexing.overlord.TaskQueue}.
  */
 public interface TaskRunner
 {
   /**
-   * Provide a new task runner with a list of tasks that may already be running. Will be called once shortly
-   * after instantiation and before any calls to {@link #run}. Bootstrapping should not be construed as a command
-   * to run the tasks; they will be passed to {@link #run} one-by-one when this is desired. Some bootstrapped tasks
-   * may not actually be running (for example, if they are currently held back due to not having a lock).
-   *
-   * @param tasks the tasks
-   */
-  public void bootstrap(List<Task> tasks);
-
-  /**
    * Run a task. The returned status should be some kind of completed status.
    *
    * @param task task to run
+   *
    * @return task status, eventually
    */
   public ListenableFuture<TaskStatus> run(Task task);
 
   /**
-   * Best-effort task shutdown. May or may not do anything.
+   * Inform the task runner it can clean up any resources associated with a task. This implies shutdown of any
+   * currently-running tasks.
    */
   public void shutdown(String taskid);
 
   public Collection<? extends TaskRunnerWorkItem> getRunningTasks();
 
   public Collection<? extends TaskRunnerWorkItem> getPendingTasks();
+
+  public Collection<? extends TaskRunnerWorkItem> getKnownTasks();
 
   public Collection<ZkWorker> getWorkers();
 }

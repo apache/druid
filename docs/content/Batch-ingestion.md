@@ -1,14 +1,16 @@
 ---
 layout: doc_page
 ---
-There are two choices for batch data ingestion to your Druid cluster, you can use the [Indexing service](Indexing-service.html) or you can use the `HadoopDruidIndexer`.
+
+# Batch Data Ingestion
+There are two choices for batch data ingestion to your Druid cluster, you can use the [Indexing service](Indexing-Service.html) or you can use the `HadoopDruidIndexer`.
 
 Which should I use?
 -------------------
 
-The [Indexing service](Indexing-service.html) is a node that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the [database](MySQL.html) that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. The indexing service was created such that external systems could programmatically interact with it and run periodic indexing tasks. Long-term, the indexing service is going to be the preferred method of ingesting data.
+The [Indexing service](Indexing-Service.html) is a node that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the [database](MySQL.html) that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. The indexing service was created such that external systems could programmatically interact with it and run periodic indexing tasks. Long-term, the indexing service is going to be the preferred method of ingesting data.
 
-The `HadoopDruidIndexer` runs hadoop jobs in order to separate and index data segments. It takes advantage of Hadoop as a job scheduling and distributed job execution platform. It is a simple method if you already have Hadoop running and don’t want to spend the time configuring and deploying the [Indexing service](Indexing service.html) just yet.
+The `HadoopDruidIndexer` runs hadoop jobs in order to separate and index data segments. It takes advantage of Hadoop as a job scheduling and distributed job execution platform. It is a simple method if you already have Hadoop running and don’t want to spend the time configuring and deploying the [Indexing service](Indexing-Service.html) just yet.
 
 Batch Ingestion using the HadoopDruidIndexer
 --------------------------------------------
@@ -25,8 +27,8 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
 {
   "dataSource": "the_data_source",
   "timestampSpec" : {
-    "timestampColumn": "ts",
-    "timestampFormat": "<iso, millis, posix, auto or any Joda time format>"
+    "column": "ts",
+    "format": "<iso, millis, posix, auto or any Joda time format>"
   },
   "dataSpec": {
     "format": "<csv, tsv, or json>",
@@ -186,8 +188,8 @@ The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Co
   "config": {
     "dataSource" : "example",
     "timestampSpec" : {
-      "timestampColumn" : "timestamp",
-      "timestampFormat" : "auto"
+      "column" : "timestamp",
+      "format" : "auto"
     },
     "dataSpec" : {
       "format" : "json",
@@ -202,7 +204,7 @@ The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Co
       "type" : "static",
       "paths" : "data.json"
     },
-    "targetPartitionSize" : 5000000,
+    "targetPartitionSi:qze" : 5000000,
     "rollupSpec" : {
       "aggs": [{
           "type" : "count",
@@ -229,7 +231,7 @@ The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Co
 |--------|-----------|---------|
 |type|This should be "index_hadoop".|yes|
 |config|A Hadoop Index Config (see above).|yes|
-|hadoopCoordinates|The Maven <groupId>:<artifactId>:<version> of Hadoop to use. The default is "org.apache.hadoop:hadoop-core:1.0.3".|no|
+|hadoopCoordinates|The Maven `<groupId>:<artifactId>:<version>` of Hadoop to use. The default is "org.apache.hadoop:hadoop-core:1.0.3".|no|
 
 The Hadoop Index Config submitted as part of an Hadoop Index Task is identical to the Hadoop Index Config used by the `HadoopBatchIndexer` except that three fields must be omitted: `segmentOutputPath`, `workingPath`, `updaterJobSpec`. The Indexing Service takes care of setting these fields internally.
 

@@ -3,8 +3,8 @@
 
 <link rel="stylesheet" href="css/toc.css">
 
-h1. Contents
-* "Introduction":./
+h2. Introduction
+* "About Druid":./
 * "Concepts and Terminology":./Concepts-and-Terminology.html
 
 h2. Getting Started
@@ -14,21 +14,21 @@ h2. Getting Started
 * "Tutorial: Loading Your Data Part 2":./Tutorial:-Loading-Your-Data-Part-2.html
 * "Tutorial: All About Queries":./Tutorial:-All-About-Queries.html
 
-h2. Evaluate Druid
+h2. Operations
+* "Configuration":Configuration.html
+* "Extending Druid":./Modules.html
 * "Cluster Setup":./Cluster-setup.html
 * "Booting a Production Cluster":./Booting-a-production-cluster.html
-
-h2. Configuration
-* "Configuration":Configuration.html
-
-h2. Extend Druid
-* "Modules":./Modules.html
+* "Performance FAQ":./Performance-FAQ.html
 
 h2. Data Ingestion
-* "Realtime":./Realtime.html
+* "Realtime":./Realtime-ingestion.html
+** "Firehose":./Firehose.html
+** "Plumber":./Plumber.html
 * "Batch":./Batch-ingestion.html
 * "Indexing Service":./Indexing-Service.html
 ** "Tasks":./Tasks.html
+* "Ingestion FAQ":./Ingestion-FAQ.html
 
 h2. Querying
 * "Querying":./Querying.html
@@ -36,15 +36,18 @@ h2. Querying
 ** "Aggregations":./Aggregations.html
 ** "Post Aggregations":./Post-aggregations.html
 ** "Granularities":./Granularities.html
+** "DimensionSpecs":./DimensionSpecs.html
 * Query Types
 ** "GroupByQuery":./GroupByQuery.html
 *** "OrderBy":./OrderBy.html
 *** "Having":./Having.html
-** "SearchQuery":./Having.html
+** "SearchQuery":./SearchQuery.html
 *** "SearchQuerySpec":./SearchQuerySpec.html
 ** "SegmentMetadataQuery":./SegmentMetadataQuery.html
 ** "TimeBoundaryQuery":./TimeBoundaryQuery.html
 ** "TimeseriesQuery":./TimeseriesQuery.html
+** "TopNQuery":./TopNQuery.html
+*** "TopNMetricSpec":./TopNMetricSpec.html
 
 h2. Architecture
 * "Design":./Design.html
@@ -55,13 +58,17 @@ h2. Architecture
 ** "Coordinator":./Coordinator.html
 *** "Rule Configuration":./Rule-Configuration.html
 ** "Realtime":./Realtime.html
-*** "Firehose":./Firehose.html
-*** "Plumber":./Plumber.html
 ** "Indexing Service":./Indexing-Service.html
+*** "Middle Manager":./Middlemanager.html
+*** "Peon":./Peons.html
 * External Dependencies
 ** "Deep Storage":./Deep-Storage.html
 ** "MySQL":./MySQL.html
 ** "ZooKeeper":./ZooKeeper.html
+
+h2. Experimental
+* "About Experimental Features":./About-Experimental-Features.html
+* "Geographic Queries":./GeographicQueries.html
 
 h2. Development
 * "Versioning":./Versioning.html

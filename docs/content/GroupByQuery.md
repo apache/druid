@@ -1,8 +1,7 @@
 ---
 layout: doc_page
 ---
-These types of queries take a groupBy query object and return an array of JSON objects where each object represents a grouping asked for by the query.
-
+These types of queries take a groupBy query object and return an array of JSON objects where each object represents a grouping asked for by the query. Note: If you only want to do straight aggreagates for some time range, we highly recommend using [TimeseriesQueries](TimeseriesQuery.html) instead. The performance will be substantially better.
 An example groupBy query object is shown below:
 
 ``` json
