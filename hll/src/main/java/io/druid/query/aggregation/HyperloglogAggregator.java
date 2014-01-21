@@ -50,7 +50,7 @@ public class HyperloglogAggregator implements Aggregator
     }
   };
 
-  static Object combine(Object lhs, Object rhs)
+  public static Object combine(Object lhs, Object rhs)
   {
     final TIntByteMap newIbMap = new TIntByteHashMap((TIntByteMap) lhs);
     final TIntByteMap rightIbMap = (TIntByteMap) rhs;
