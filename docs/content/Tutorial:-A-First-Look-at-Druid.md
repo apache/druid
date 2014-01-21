@@ -80,7 +80,7 @@ Let's start doing stuff. You can start a Druid [Realtime](Realtime.html) node by
 
 Select "wikipedia".
 
-Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
+Note that the first time you start the example, it may take some extra time due to its fetching various dependencies. Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
 
 ```
 2013-09-04 19:33:11,922 INFO [main] org.eclipse.jetty.server.AbstractConnector - Started SelectChannelConnector@0.0.0.0:8083
@@ -118,7 +118,7 @@ Select "wikipedia" once again. This script issues [GroupByQueries](GroupByQuery.
 
 This is a **groupBy** query, which you may be familiar with from SQL. We are grouping, or aggregating, via the `dimensions` field: `["page"]`. We are **filtering** via the `namespace` dimension, to only look at edits on `articles`. Our **aggregations** are what we are calculating: a count of the number of data rows, and a count of the number of edits that have occurred.
 
-The result looks something like this:
+The result looks something like this (when it's prettified):
 
 ```json
 [
