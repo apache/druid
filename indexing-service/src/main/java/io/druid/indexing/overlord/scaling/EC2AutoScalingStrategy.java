@@ -155,32 +155,15 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
     }
 
     try {
-      log.info("Terminating instances[%s]", instances);
-      amazonEC2Client.terminateInstances(
-          new TerminateInstancesRequest(
-              Lists.transform(
-                  instances,
-                  new Function<Instance, String>()
-                  {
-                    @Override
-                    public String apply(Instance input)
-                    {
-                      return input.getInstanceId();
-                    }
-                  }
-              )
-          )
-      );
-
-      return new AutoScalingData(
+      return terminateWithIds(
           Lists.transform(
-              ips,
-              new Function<String, String>()
+              instances,
+              new Function<Instance, String>()
               {
                 @Override
-                public String apply(@Nullable String input)
+                public String apply(Instance input)
                 {
-                  return String.format("%s:%s", input, config.getWorkerPort());
+                  return input.getInstanceId();
                 }
               }
           )
