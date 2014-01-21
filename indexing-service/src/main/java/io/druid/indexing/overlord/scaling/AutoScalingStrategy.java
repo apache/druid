@@ -30,6 +30,8 @@ public interface AutoScalingStrategy
 
   public AutoScalingData terminate(List<String> ips);
 
+  public AutoScalingData terminateWithIds(List<String> ids);
+
   /**
    * Provides a lookup of ip addresses to node ids
    * @param ips - nodes IPs
