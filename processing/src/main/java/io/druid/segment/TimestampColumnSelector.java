@@ -17,35 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.scaling;
-
-import java.util.List;
+package io.druid.segment;
 
 /**
  */
-public class TestAutoScalingStrategy<T> implements AutoScalingStrategy
+public interface TimestampColumnSelector
 {
-  @Override
-  public AutoScalingData provision()
-  {
-    return null;
-  }
-
-  @Override
-  public AutoScalingData terminate(List<String> ips)
-  {
-    return null;
-  }
-
-  @Override
-  public List<String> ipToIdLookup(List<String> ips)
-  {
-    return null;
-  }
-
-  @Override
-  public List<String> idToIpLookup(List<String> nodeIds)
-  {
-    return null;
-  }
+  public long getTimestamp();
 }
