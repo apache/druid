@@ -196,7 +196,7 @@ public class Initialization
         if (!exclusions.contains(artifact.getGroupId())) {
           urls.add(artifact.getFile().toURI().toURL());
         } else {
-          log.info("Skipped Artifact[%s]", artifact);
+          log.debug("Skipped Artifact[%s]", artifact);
         }
       }
 
