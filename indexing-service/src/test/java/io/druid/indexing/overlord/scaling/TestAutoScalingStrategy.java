@@ -38,6 +38,12 @@ public class TestAutoScalingStrategy<T> implements AutoScalingStrategy
   }
 
   @Override
+  public AutoScalingData terminateWithIds(List<String> ids)
+  {
+    return null;
+  }
+
+  @Override
   public List<String> ipToIdLookup(List<String> ips)
   {
     return null;

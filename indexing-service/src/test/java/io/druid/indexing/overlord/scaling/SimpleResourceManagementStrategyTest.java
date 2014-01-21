@@ -187,9 +187,7 @@ public class SimpleResourceManagementStrategyTest
 
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList()).times(2);
-    EasyMock.expect(autoScalingStrategy.idToIpLookup(EasyMock.<List<String>>anyObject()))
-                .andReturn(Lists.<String>newArrayList());
-    EasyMock.expect(autoScalingStrategy.terminate(EasyMock.<List<String>>anyObject()))
+    EasyMock.expect(autoScalingStrategy.terminateWithIds(EasyMock.<List<String>>anyObject()))
                     .andReturn(null);
     EasyMock.expect(autoScalingStrategy.provision()).andReturn(
         new AutoScalingData(Lists.<String>newArrayList("fake"))

@@ -155,7 +155,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
     }
 
     try {
-      log.info("Terminating instance[%s]", instances);
+      log.info("Terminating instances[%s]", instances);
       amazonEC2Client.terminateInstances(
           new TerminateInstancesRequest(
               Lists.transform(
@@ -185,6 +185,28 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
               }
           )
       );
+    }
+    catch (Exception e) {
+      log.error(e, "Unable to terminate any instances.");
+    }
+
+    return null;
+  }
+
+  @Override
+  public AutoScalingData terminateWithIds(List<String> ids)
+  {
+    if (ids.isEmpty()) {
+      return new AutoScalingData(Lists.<String>newArrayList());
+    }
+
+    try {
+      log.info("Terminating instances[%s]", ids);
+      amazonEC2Client.terminateInstances(
+          new TerminateInstancesRequest(ids)
+      );
+
+      return new AutoScalingData(ids);
     }
     catch (Exception e) {
       log.error(e, "Unable to terminate any instances.");
