@@ -49,7 +49,7 @@ import java.util.List;
  */
 @Command(
     name = "bridge",
-    description = "Runs a bridge node, see http://druid.io/docs/0.6.46/Bridge.html for a description."
+    description = "This is a highly experimental node to use at your own discretion"
 )
 public class CliBridge extends ServerRunnable
 {

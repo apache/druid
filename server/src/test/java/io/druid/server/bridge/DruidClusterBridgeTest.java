@@ -176,6 +176,10 @@ public class DruidClusterBridgeTest
         EasyMock.<Executor>anyObject(),
         EasyMock.<ServerView.SegmentCallback>anyObject()
     );
+    batchServerInventoryView.registerServerCallback(
+        EasyMock.<Executor>anyObject(),
+        EasyMock.<ServerView.ServerCallback>anyObject()
+    );
     EasyMock.expectLastCall();
     batchServerInventoryView.start();
     EasyMock.expectLastCall();

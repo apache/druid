@@ -25,6 +25,7 @@ import com.google.common.base.Charsets;
 import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
@@ -44,6 +45,8 @@ import java.util.List;
  */
 public class BridgeQuerySegmentWalker implements QuerySegmentWalker
 {
+  private static final Logger log = new Logger(BridgeQuerySegmentWalker.class);
+
   private final ServerDiscoverySelector brokerSelector;
   private final HttpClient httpClient;
   private final ObjectMapper jsonMapper;
@@ -113,6 +116,8 @@ public class BridgeQuerySegmentWalker implements QuerySegmentWalker
           return Sequences.simple(results);
         }
         catch (Exception e) {
+          log.error(e, "Exception with bridge query");
+
           return Sequences.empty();
         }
       }

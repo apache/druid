@@ -45,6 +45,8 @@ public abstract class DruidClusterBridgeConfig extends ZkPathsConfig
   public abstract String getBrokerServiceName();
 
   @Config("druid.server.priority")
-  @Default("0")
-  public abstract int getPriority();
+  public int getPriority()
+  {
+    return DruidServer.DEFAULT_PRIORITY;
+  }
 }

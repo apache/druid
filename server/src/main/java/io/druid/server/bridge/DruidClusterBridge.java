@@ -41,6 +41,7 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.AbstractDataSegmentAnnouncer;
+import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
@@ -51,6 +52,7 @@ import org.apache.curator.utils.ZKPaths;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
@@ -110,13 +112,15 @@ public class DruidClusterBridge
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
     this.self = self;
 
+    ExecutorService serverInventoryViewExec = Executors.newFixedThreadPool(
+        1,
+        new ThreadFactoryBuilder().setDaemon(true)
+                                  .setNameFormat("DruidClusterBridge-ServerInventoryView-%d")
+                                  .build()
+    );
+
     serverInventoryView.registerSegmentCallback(
-        Executors.newFixedThreadPool(
-            1,
-            new ThreadFactoryBuilder().setDaemon(true)
-                                      .setNameFormat("DruidClusterBridge-ServerInventoryView-%d")
-                                      .build()
-        ),
+        serverInventoryViewExec,
         new ServerView.BaseSegmentCallback()
         {
           @Override
@@ -147,15 +151,7 @@ public class DruidClusterBridge
           {
             try {
               synchronized (lock) {
-                Integer count = segments.get(segment);
-                if (count != null) {
-                  if (count == 1) {
-                    dataSegmentAnnouncer.unannounceSegment(segment);
-                    segments.remove(segment);
-                  } else {
-                    segments.put(segment, count - 1);
-                  }
-                }
+                serverRemovedSegment(dataSegmentAnnouncer, segment, server);
               }
             }
             catch (Exception e) {
@@ -165,6 +161,27 @@ public class DruidClusterBridge
             return ServerView.CallbackAction.CONTINUE;
           }
         }
+    );
+
+    serverInventoryView.registerServerCallback(
+        serverInventoryViewExec,
+        new ServerView.ServerCallback()
+        {
+          @Override
+          public ServerView.CallbackAction serverRemoved(DruidServer server)
+          {
+            try {
+              for (DataSegment dataSegment : server.getSegments().values()) {
+                serverRemovedSegment(dataSegmentAnnouncer, dataSegment, server);
+              }
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
+            }
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
+
     );
   }
 
@@ -274,7 +291,7 @@ public class DruidClusterBridge
                                 DruidServer input
                             )
                             {
-                              return !input.getType().equalsIgnoreCase("realtime");
+                              return !input.isRealtime();
                             }
                           }
                       );
@@ -306,7 +323,7 @@ public class DruidClusterBridge
                     }
                   }
                 }
-                if (leader) { // (We might no longer be coordinator)
+                if (leader) { // (We might no longer be leader)
                   return ScheduledExecutors.Signal.REPEAT;
                 } else {
                   return ScheduledExecutors.Signal.STOP;
@@ -326,7 +343,7 @@ public class DruidClusterBridge
           leaderLatch.get().start();
         }
         catch (Exception e1) {
-          // If an exception gets thrown out here, then the coordinator will zombie out 'cause it won't be looking for
+          // If an exception gets thrown out here, then the bridge will zombie out 'cause it won't be looking for
           // the latch anymore.  I don't believe it's actually possible for an Exception to throw out here, but
           // Curator likes to have "throws Exception" on methods so it might happen...
           log.makeAlert(e1, "I am a zombie")
@@ -350,6 +367,25 @@ public class DruidClusterBridge
       catch (Exception e) {
         log.makeAlert(e, "Unable to stopBeingLeader").emit();
       }
+    }
+  }
+
+  private void serverRemovedSegment(DataSegmentAnnouncer dataSegmentAnnouncer, DataSegment segment, DruidServer server)
+      throws IOException
+  {
+    Integer count = segments.get(segment);
+    if (count != null) {
+      if (count == 1) {
+        dataSegmentAnnouncer.unannounceSegment(segment);
+        segments.remove(segment);
+      } else {
+        segments.put(segment, count - 1);
+      }
+    } else {
+      log.makeAlert("Trying to remove a segment that was never added?")
+         .addData("server", server.getHost())
+         .addData("segmentId", segment.getIdentifier())
+         .emit();
     }
   }
 }

@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class DruidServer implements Comparable
 {
+  public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_NUM_REPLICANTS = 2;
   public static final String DEFAULT_TIER = "_default_tier";
 
@@ -62,7 +63,7 @@ public class DruidServer implements Comparable
         config.getMaxSize(),
         type,
         config.getTier(),
-        0
+        DEFAULT_PRIORITY
     );
   }
 
@@ -133,6 +134,11 @@ public class DruidServer implements Comparable
   {
     // Copying the map slows things down a lot here, don't use Immutable Map here
     return Collections.unmodifiableMap(segments);
+  }
+
+  public boolean isRealtime()
+  {
+    return getType().equalsIgnoreCase("realtime");
   }
 
   public DataSegment getSegment(String segmentName)

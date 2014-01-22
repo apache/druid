@@ -577,7 +577,7 @@ public class DruidCoordinator
                   if (leader) {
                     theRunnable.run();
                   }
-                  if (leader) { // (We might no longer be coordinator)
+                  if (leader) { // (We might no longer be leader)
                     return ScheduledExecutors.Signal.REPEAT;
                   } else {
                     return ScheduledExecutors.Signal.STOP;
@@ -777,7 +777,7 @@ public class DruidCoordinator
                                 DruidServer input
                             )
                             {
-                              return !input.getType().equalsIgnoreCase("realtime");
+                              return !input.isRealtime();
                             }
                           }
                       );
