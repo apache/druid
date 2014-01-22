@@ -54,6 +54,13 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
+import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanup;
+import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
+import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
+import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -200,7 +207,9 @@ public class DruidCoordinator
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       for (Rule rule : rules) {
         if (rule instanceof LoadRule && rule.appliesTo(segment, now)) {
-          expectedSegmentsInCluster.add(segment.getDataSource(), ((LoadRule) rule).getReplicants());
+          for (Integer numReplicants : ((LoadRule) rule).getTieredReplicants().values()) {
+            expectedSegmentsInCluster.add(segment.getDataSource(), numReplicants);
+          }
           break;
         }
       }
@@ -364,7 +373,7 @@ public class DruidCoordinator
           new LoadPeonCallback()
           {
             @Override
-            protected void execute()
+            public void execute()
             {
               try {
                 if (curator.checkExists().forPath(toServedSegPath) != null &&
@@ -568,7 +577,7 @@ public class DruidCoordinator
                   if (leader) {
                     theRunnable.run();
                   }
-                  if (leader) { // (We might no longer be coordinator)
+                  if (leader) { // (We might no longer be leader)
                     return ScheduledExecutors.Signal.REPEAT;
                   } else {
                     return ScheduledExecutors.Signal.STOP;
@@ -768,7 +777,7 @@ public class DruidCoordinator
                                 DruidServer input
                             )
                             {
-                              return input.getType().equalsIgnoreCase("historical");
+                              return !input.isRealtime();
                             }
                           }
                       );

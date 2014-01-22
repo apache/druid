@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import junit.framework.Assert;

@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.coordinator;
+package io.druid.server.coordinator.helper;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -33,6 +33,9 @@ import com.metamx.common.Pair;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.server.coordinator.CoordinatorStats;
+import io.druid.server.coordinator.DatasourceWhitelist;
+import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;

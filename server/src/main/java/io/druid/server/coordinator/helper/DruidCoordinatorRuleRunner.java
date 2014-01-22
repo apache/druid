@@ -17,10 +17,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.coordinator;
+package io.druid.server.coordinator.helper;
 
 import com.metamx.emitter.EmittingLogger;
 import io.druid.db.DatabaseRuleManager;
+import io.druid.server.coordinator.CoordinatorStats;
+import io.druid.server.coordinator.DruidCluster;
+import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import io.druid.server.coordinator.ReplicationThrottler;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;

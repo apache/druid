@@ -83,7 +83,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
         MoreExecutors.sameThreadExecutor()
     );
 
-    final DruidServerMetadata me = new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal");
+    final DruidServerMetadata me = new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal", 0);
 
     final ZkPathsConfig zkPaths = new ZkPathsConfig()
     {

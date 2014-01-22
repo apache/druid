@@ -17,21 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.client.selector;
+package io.druid.server.bridge;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.timeline.DataSegment;
+import com.google.inject.BindingAnnotation;
 
-import java.util.Set;
-import java.util.TreeMap;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RandomServerSelectorStrategy.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "random", value = RandomServerSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "connectionCount", value = ConnectionCountServerSelectorStrategy.class)
-})
-public interface ServerSelectorStrategy
+/**
+ */
+@BindingAnnotation
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Bridge
 {
-  public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment);
 }

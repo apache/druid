@@ -704,7 +704,7 @@ public class RealtimePlumber implements Plumber
               return ServerView.CallbackAction.UNREGISTER;
             }
 
-            if ("realtime".equals(server.getType())) {
+            if (server.isRealtime()) {
               return ServerView.CallbackAction.CONTINUE;
             }
 

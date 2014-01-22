@@ -17,21 +17,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.client.selector;
+package io.druid.server.bridge;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.timeline.DataSegment;
+import io.druid.curator.CuratorConfig;
+import org.skife.config.Config;
 
-import java.util.Set;
-import java.util.TreeMap;
-
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RandomServerSelectorStrategy.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "random", value = RandomServerSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "connectionCount", value = ConnectionCountServerSelectorStrategy.class)
-})
-public interface ServerSelectorStrategy
+/**
+ */
+public abstract class BridgeCuratorConfig extends CuratorConfig
 {
-  public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment);
+  @Config("druid.bridge.zk.service.host")
+  public abstract String getParentZkHosts();
 }

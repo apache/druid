@@ -17,21 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.client.selector;
+package io.druid.server.bridge;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.timeline.DataSegment;
+import io.druid.client.DruidServer;
+import io.druid.server.initialization.ZkPathsConfig;
+import org.joda.time.Duration;
+import org.skife.config.Config;
+import org.skife.config.Default;
 
-import java.util.Set;
-import java.util.TreeMap;
-
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RandomServerSelectorStrategy.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "random", value = RandomServerSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "connectionCount", value = ConnectionCountServerSelectorStrategy.class)
-})
-public interface ServerSelectorStrategy
+/**
+ */
+public abstract class DruidClusterBridgeConfig extends ZkPathsConfig
 {
-  public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment);
+  @Config("druid.server.tier")
+  @Default(DruidServer.DEFAULT_TIER)
+  public abstract String getTier();
+
+  @Config("druid.bridge.startDelay")
+  @Default("PT300s")
+  public abstract Duration getStartDelay();
+
+  @Config("druid.bridge.period")
+  @Default("PT60s")
+  public abstract Duration getPeriod();
+
+  @Config("druid.bridge.broker.serviceName")
+  public abstract String getBrokerServiceName();
+
+  @Config("druid.server.priority")
+  public int getPriority()
+  {
+    return DruidServer.DEFAULT_PRIORITY;
+  }
 }
