@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
+import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.filter.DimFilter;
@@ -45,7 +46,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
 
   @JsonCreator
   public SelectQuery(
-      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") QueryGranularity granularity,

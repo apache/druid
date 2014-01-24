@@ -126,7 +126,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource())
+        .setUser2(query.getDataSource().toString())
         .setUser4("Select")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
