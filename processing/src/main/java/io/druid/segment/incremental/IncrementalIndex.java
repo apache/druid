@@ -45,6 +45,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.TimestampColumnSelector;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
@@ -197,6 +198,19 @@ public class IncrementalIndex implements Iterable<Row>
         aggs[i] = agg.factorize(
             new ColumnSelectorFactory()
             {
+              @Override
+              public TimestampColumnSelector makeTimestampColumnSelector()
+              {
+                return new TimestampColumnSelector()
+                {
+                  @Override
+                  public long getTimestamp()
+                  {
+                    return in.getTimestampFromEpoch();
+                  }
+                };
+              }
+
               @Override
               public FloatColumnSelector makeFloatColumnSelector(String columnName)
               {

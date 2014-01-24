@@ -21,8 +21,10 @@ package io.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.timeline.DataSegment;
 
 import java.util.Set;
+import java.util.TreeMap;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RandomServerSelectorStrategy.class)
 @JsonSubTypes(value = {
@@ -31,5 +33,5 @@ import java.util.Set;
 })
 public interface ServerSelectorStrategy
 {
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers);
+  public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment);
 }

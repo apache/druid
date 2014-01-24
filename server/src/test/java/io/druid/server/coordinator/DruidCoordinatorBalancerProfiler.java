@@ -29,6 +29,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.db.DatabaseRuleManager;
+import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.PeriodLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
@@ -53,7 +54,7 @@ public class DruidCoordinatorBalancerProfiler
   Map<String, DataSegment> segments = Maps.newHashMap();
   ServiceEmitter emitter;
   DatabaseRuleManager manager;
-  PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), 3, "normal");
+  PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), null, 3, "normal");
   List<Rule> rules = ImmutableList.<Rule>of(loadRule);
 
   @Before

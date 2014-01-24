@@ -46,9 +46,9 @@ public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
   }
 
   @Override
-  public void go(DataSegmentChangeHandler handler)
+  public void go(DataSegmentChangeHandler handler, DataSegmentChangeCallback callback)
   {
-    handler.removeSegment(segment);
+    handler.removeSegment(segment, callback);
   }
 
   @Override

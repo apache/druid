@@ -17,35 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.scaling;
+package io.druid.server.coordinator.helper;
 
-import java.util.List;
+import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 
 /**
  */
-public class TestAutoScalingStrategy<T> implements AutoScalingStrategy
+public interface DruidCoordinatorHelper
 {
-  @Override
-  public AutoScalingData provision()
-  {
-    return null;
-  }
-
-  @Override
-  public AutoScalingData terminate(List<String> ips)
-  {
-    return null;
-  }
-
-  @Override
-  public List<String> ipToIdLookup(List<String> ips)
-  {
-    return null;
-  }
-
-  @Override
-  public List<String> idToIpLookup(List<String> nodeIds)
-  {
-    return null;
-  }
+  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params);
 }

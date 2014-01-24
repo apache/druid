@@ -6,6 +6,8 @@ var ruleTypes = [
   "loadByPeriod",
   "dropByInterval",
   "dropByPeriod",
+  "loadForever",
+  "dropForever",
   "JSON"
 ];
 
@@ -17,6 +19,7 @@ function makeRuleDiv(rule) {
   } else {
     retVal += makeRuleComponents(rule.type) + makeRuleBody(rule);
   }
+
   retVal += "</div>";
   return retVal;
 }
@@ -54,11 +57,17 @@ function makeRuleBody(rule) {
       case "loadByPeriod":
         retVal += makeLoadByPeriod(rule);
         break;
+      case "loadForever":
+        retVal += makeLoadForever(rule);
+        break;
       case "dropByInterval":
         retVal += makeDropByInterval(rule);
         break;
       case "dropByPeriod":
         retVal += makeDropByPeriod(rule);
+        break;
+      case "dropForever":
+        retVal += "";
         break;
       case "JSON":
         retVal += makeJSON();
@@ -72,36 +81,67 @@ function makeRuleBody(rule) {
 }
 
 function makeLoadByInterval(rule) {
-   return "<span class='rule_label'>interval</span><input type='text' class='long_text' name='interval' " + "value='" + rule.interval + "'/>" +
-          "<span class='rule_label'>replicants</span><input type='text' class='short_text' name='replicants' " + "value='" + rule.replicants + "'/>" +
-          makeTiersDropdown(rule)
-   ;
+  var retVal = "";
+  retVal += "<span class='rule_label'>interval</span><input type='text' class='long_text' name='interval' " + "value='" + rule.interval + "'/>";
+  retVal += "<button type='button' class='add_tier'>Add Another Tier</button>";
+  if (rule.tieredReplicants === undefined) {
+    retVal += makeTierLoad(null, 0);
+  }
+  for (var tier in rule.tieredReplicants) {
+    retVal += makeTierLoad(tier, rule.tieredReplicants[tier]);
+  }
+  return retVal;
 }
 
 function makeLoadByPeriod(rule) {
-  return "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>" +
-         "<span class='rule_label'>replicants</span><input type='text' class='short_text' name='replicants' " + "value='" + rule.replicants + "'/>" +
-         makeTiersDropdown(rule)
-  ;
+  var retVal = "";
+  retVal += "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
+  retVal += "<button type='button' class='add_tier'>Add Another Tier</button>";
+  if (rule.tieredReplicants === undefined) {
+    retVal += makeTierLoad(null, 0);
+  }
+  for (var tier in rule.tieredReplicants) {
+    retVal += makeTierLoad(tier, rule.tieredReplicants[tier]);
+  }
+  return retVal;
+}
+
+function makeLoadForever(rule) {
+  var retVal = "";
+  retVal += "<button type='button' class='add_tier'>Add Another Tier</button>";
+  if (rule.tieredReplicants === undefined) {
+    retVal += makeTierLoad(null, 0);
+  }
+  for (var tier in rule.tieredReplicants) {
+    retVal += makeTierLoad(tier, rule.tieredReplicants[tier]);
+  }
+  return retVal;
+}
+
+function makeTierLoad(tier, val) {
+  return "<div class='rule_tier'>" +
+         "<span class='rule_label'>replicants</span><input type='text' class='short_text' name='replicants' " + "value='" + val + "'/>" +
+                      makeTiersDropdown(tier) +
+         "</div>";
 }
 
 function makeDropByInterval(rule) {
-   return "<span class='rule_label'>interval</span><input type='text' name='interval' " + "value='" + rule.interval + "'/>";
+  return "<span class='rule_label'>interval</span><input type='text' name='interval' " + "value='" + rule.interval + "'/>";
 }
 
 function makeDropByPeriod(rule) {
-   return "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
+  return "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
 }
 
 function makeJSON() {
   return "<span class='rule_label'>JSON</span><input type='text' class='very_long_text' name='JSON'/>";
 }
 
-function makeTiersDropdown(rule) {
+function makeTiersDropdown(selTier) {
   var retVal = "<span class='rule_label'>tier</span><select class='tiers' name='tier'>"
 
   $.each(tiers, function(index, tier) {
-    if (rule.tier === tier) {
+    if (selTier === tier) {
       retVal += "<option selected='selected' value='" + tier + "'>" + tier + "</option>";
     } else {
       retVal += "<option value='" + tier + "'>" + tier + "</option>";
@@ -115,7 +155,7 @@ function makeTiersDropdown(rule) {
 function getRules() {
   var selected = $('#datasources option:selected').text();
   if (selected !== "") {
-    $.getJSON("/info/rules/" + selected, function(data) {
+    $.getJSON("/druid/coordinator/v1/rules/" + selected, function(data) {
       $('#rules_list').empty();
       if (!$.isEmptyObject(data)) {
         $.each(data, function(index, rule) {
@@ -128,7 +168,7 @@ function getRules() {
 
 function domToRule(domRule) {
   var ruleType = $($(domRule).find(".rule_dropdown_types:first")).val();
-  var inputs = $($(domRule).find(".rule_body:first")).children(":not(span)");
+  var inputs = $($(domRule).find(".rule_body:first")).children("input");
 
   // Special case for free form JSON
   if (ruleType === "JSON") {
@@ -141,6 +181,17 @@ function domToRule(domRule) {
     var name = $(input).attr("name");
     rule[name] = $(input).val();
   });
+
+  var theTiers = $($(domRule).find(".rule_body:first")).children(".rule_tier");
+
+  var tieredReplicants = {};
+  $.each(theTiers, function(index, theTier) {
+    var tierName = $(theTier).find("select").val();
+    var replicants = $(theTier).find("[name=replicants]").val();
+    tieredReplicants[tierName] = replicants;
+  });
+  rule.tieredReplicants = tieredReplicants;
+
   return rule;
 }
 
@@ -189,7 +240,7 @@ $(document).ready(function() {
         var selected = $('#datasources option:selected').text();
         $.ajax({
           type: 'POST',
-          url:'/info/rules/' + selected,
+          url:'/druid/coordinator/v1/rules/' + selected,
           data: JSON.stringify(rules),
           contentType:"application/json; charset=utf-8",
           dataType:"json",
@@ -209,11 +260,11 @@ $(document).ready(function() {
     }
   });
 
-  $.getJSON("/info/tiers", function(theTiers) {
+  $.getJSON("/druid/coordinator/v1/tiers", function(theTiers) {
       tiers = theTiers;
   });
 
-  $.getJSON("/info/db/datasources", function(data) {
+  $.getJSON("/druid/coordinator/v1/db/datasources", function(data) {
     $.each(data, function(index, datasource) {
       $('#datasources').append($('<option></option>').attr("value", datasource).text(datasource));
     });
@@ -235,6 +286,10 @@ $(document).ready(function() {
 
   $(".delete_rule").live("click", function(event) {
     $(event.target).parent(".rule").remove();
+  });
+
+  $(".add_tier").live("click", function(event) {
+    $(event.target).parent().append(makeTierLoad(null, 0));
   });
 
   $("#create_new_rule").click(function (event) {

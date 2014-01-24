@@ -48,11 +48,13 @@ import java.util.List;
  */
 public class QueryRunnerTestHelper
 {
+  public static final String segmentId= "testSegment";
   public static final String dataSource = "testing";
   public static final QueryGranularity dayGran = QueryGranularity.DAY;
   public static final QueryGranularity allGran = QueryGranularity.ALL;
   public static final String providerDimension = "proVider";
   public static final String qualityDimension = "quality";
+  public static final String placementDimension = "placement";
   public static final String placementishDimension = "placementish";
   public static final String indexMetric = "index";
   public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
@@ -114,13 +116,13 @@ public class QueryRunnerTestHelper
     return Arrays.asList(
         new Object[][]{
             {
-                makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex))
+                makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId))
             },
             {
-                makeQueryRunner(factory, new QueryableIndexSegment(null, mMappedTestIndex))
+                makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex))
             },
             {
-                makeQueryRunner(factory, new QueryableIndexSegment(null, mergedRealtimeIndex))
+                makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
             }
         }
     );

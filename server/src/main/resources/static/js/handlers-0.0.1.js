@@ -2,7 +2,7 @@
 
 $(document).ready(function() {
 
-  var basePath = "/info/";
+  var basePath = "/druid/coordinator/v1/";
   var type = $('#select_type').attr('value') + '';
   var view = $('#select_view').attr('value') + '';
 

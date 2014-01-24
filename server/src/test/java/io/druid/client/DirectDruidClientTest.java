@@ -104,12 +104,12 @@ public class DirectDruidClientTest
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-        null,
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
         client1
     );
     serverSelector.addServer(queryableDruidServer1);
     QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
-        null,
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
         client2
     );
     serverSelector.addServer(queryableDruidServer2);
