@@ -86,7 +86,7 @@ public class RealtimePlumberSchoolTest
     RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
         new Period("PT10m"),
         tmpDir,
-        IndexGranularity.HOUR, 1
+        IndexGranularity.HOUR
     );
 
     announcer = EasyMock.createMock(DataSegmentAnnouncer.class);

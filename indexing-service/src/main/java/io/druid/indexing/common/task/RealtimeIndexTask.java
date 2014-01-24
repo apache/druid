@@ -87,6 +87,9 @@ public class RealtimeIndexTask extends AbstractTask
   private final Period windowPeriod;
 
   @JsonIgnore
+  private final int maxPendingPersists;
+
+  @JsonIgnore
   private final IndexGranularity segmentGranularity;
 
   @JsonIgnore
@@ -106,6 +109,7 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
       @JsonProperty("windowPeriod") Period windowPeriod,
+      @JsonProperty("maxPendingPersists") int maxPendingPersists,
       @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
       @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory
   )
@@ -113,7 +117,7 @@ public class RealtimeIndexTask extends AbstractTask
     super(
         id == null
         ? makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString())
-        :id,
+        : id,
 
         String.format(
             "index_realtime_%s",
@@ -135,6 +139,9 @@ public class RealtimeIndexTask extends AbstractTask
     this.firehoseFactory = firehoseFactory;
     this.fireDepartmentConfig = fireDepartmentConfig;
     this.windowPeriod = windowPeriod;
+    this.maxPendingPersists = (maxPendingPersists == 0)
+                              ? RealtimePlumberSchool.DEFAULT_MAX_PENDING_PERSISTS
+                              : maxPendingPersists;
     this.segmentGranularity = segmentGranularity;
     this.rejectionPolicyFactory = rejectionPolicyFactory;
   }
@@ -194,8 +201,9 @@ public class RealtimeIndexTask extends AbstractTask
     final RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
         windowPeriod,
         new File(toolbox.getTaskWorkDir(), "persist"),
-        segmentGranularity, fireDepartmentConfig.getMaxPendingPersists()
+        segmentGranularity
     );
+    realtimePlumberSchool.setDefaultMaxPendingPersists(maxPendingPersists);
 
     final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
 

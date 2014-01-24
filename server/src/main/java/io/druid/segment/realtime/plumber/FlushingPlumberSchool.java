@@ -77,8 +77,7 @@ public class FlushingPlumberSchool implements PlumberSchool
       @JsonProperty("flushDuration") Duration flushDuration,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
-      @JsonProperty("maxPendingPersists") int maxPendingPersists
+      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity
   )
   {
     this.flushDuration = flushDuration;
@@ -87,9 +86,9 @@ public class FlushingPlumberSchool implements PlumberSchool
     this.segmentGranularity = segmentGranularity;
     this.versioningPolicy = new IntervalStartVersioningPolicy();
     this.rejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
-    this.maxPendingPersists = maxPendingPersists;
+    // Workaround for Jackson issue where if maxPendingPersists is null, all JacksonInjects fail
+    this.maxPendingPersists = RealtimePlumberSchool.DEFAULT_MAX_PENDING_PERSISTS;
 
-    Preconditions.checkArgument(maxPendingPersists > 0, "FlushingPlumberSchool requires maxPendingPersists > 0");
     Preconditions.checkNotNull(flushDuration, "FlushingPlumberSchool requires a flushDuration.");
     Preconditions.checkNotNull(windowPeriod, "FlushingPlumberSchool requires a windowPeriod.");
     Preconditions.checkNotNull(basePersistDirectory, "FlushingPlumberSchool requires a basePersistDirectory.");

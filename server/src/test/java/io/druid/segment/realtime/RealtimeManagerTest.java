@@ -78,7 +78,7 @@ public class RealtimeManagerTest
         Arrays.<FireDepartment>asList(
             new FireDepartment(
                 schema,
-                new FireDepartmentConfig(1, new Period("P1Y"), 1),
+                new FireDepartmentConfig(1, new Period("P1Y")),
                 new FirehoseFactory()
                 {
                   @Override

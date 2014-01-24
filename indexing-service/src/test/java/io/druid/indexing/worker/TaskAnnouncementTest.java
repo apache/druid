@@ -46,6 +46,7 @@ public class TaskAnnouncementTest
         null,
         null,
         new Period("PT10M"),
+        1,
         IndexGranularity.HOUR,
         null
     );
