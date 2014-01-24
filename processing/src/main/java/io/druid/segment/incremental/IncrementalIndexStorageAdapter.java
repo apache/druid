@@ -126,7 +126,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Iterable<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran)
   {
+    if (index.isEmpty()) {
+      return ImmutableList.of();
+    }
+
     Interval actualIntervalTmp = interval;
+
 
     final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
     if (!actualIntervalTmp.overlaps(dataInterval)) {

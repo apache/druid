@@ -103,6 +103,9 @@ public class QueryRunnerTestHelper
   public static final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
       Arrays.asList(new Interval("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
+  public static final QuerySegmentSpec emptyInterval = new MultipleIntervalSegmentSpec(
+      Arrays.asList(new Interval("2020-04-02T00:00:00.000Z/P1D"))
+  );
 
   @SuppressWarnings("unchecked")
   public static Collection<?> makeQueryRunners(
