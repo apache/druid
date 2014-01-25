@@ -39,7 +39,7 @@
         <dependency>
             <groupId>kafka</groupId>
             <artifactId>core-kafka</artifactId>
-            <version>0.7.2-mmx1</version>
+            <version>0.7.2-mmx4</version>
             <exclusions>
                 <exclusion>
                     <groupId>log4j</groupId>
