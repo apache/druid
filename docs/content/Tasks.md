@@ -159,34 +159,15 @@ The indexing service can also run real-time tasks. These tasks effectively trans
 }
 ```
 
-Id:
-The ID of the task. Not required.
-
-Resource:
-A JSON object used for high availability purposes. Not required.
-
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
+|id|String|The ID of the task.|No|
+|Resource|JSON object|Used for high availability purposes.|No|
 |availabilityGroup|String|An uniqueness identifier for the task. Tasks with the same availability group will always run on different middle managers. Used mainly for replication. |yes|
 |requiredCapacity|Integer|How much middle manager capacity this task will take.|yes|
 
-Schema:
-See [Schema](Realtime.html).
+For schema, fireDepartmentConfig, windowPeriod, segmentGranularity, and rejectionPolicy, see the [realtime-ingestion doc](Realtime-ingestion.html). For firehose configuration, see [Firehose](Firehose.html).
 
-Fire Department Config:
-See [Config](Realtime.html).
-
-Firehose:
-See [Firehose](Firehose.html).
-
-Window Period:
-See [Realtime](Realtime.html).
-
-Segment Granularity:
-See [Realtime](Realtime.html).
-
-Rejection Policy:
-See [Realtime](Realtime.html).
 
 Segment Merging Tasks
 ---------------------
