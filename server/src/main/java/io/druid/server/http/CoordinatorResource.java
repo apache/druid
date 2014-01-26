@@ -70,7 +70,7 @@ public class CoordinatorResource
   }
 
   @GET
-  @Path("loadqueue")
+  @Path("/loadqueue")
   @Produces("application/json")
   public Response getLoadQueue(
       @QueryParam("simple") String simple
