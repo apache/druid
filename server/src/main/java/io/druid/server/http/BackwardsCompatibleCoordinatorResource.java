@@ -30,7 +30,7 @@ import javax.ws.rs.core.Response;
 /**
  */
 @Deprecated
-@Path("/druid/coordinator")
+@Path("/coordinator")
 public class BackwardsCompatibleCoordinatorResource
 {
   private final DruidCoordinator coordinator;
