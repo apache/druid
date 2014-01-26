@@ -54,6 +54,8 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/status/*", null);
     root.addFilter(GuiceFilter.class, "/info/*", null);
     root.addFilter(GuiceFilter.class, "/druid/coordinator/*", null);
+    // this will be removed in the next major release
+    root.addFilter(GuiceFilter.class, "/coordinator/*", null);
 
     HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(new Handler[]{root});
