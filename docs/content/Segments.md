@@ -19,7 +19,7 @@ datasource_intervalStart_intervalEnd_version_partitionNum
 Segment Components
 ------------------
 
-A segment is compromised of several files, listed below.
+A segment is comprised of several files, listed below.
 
 * `version.bin`
 
