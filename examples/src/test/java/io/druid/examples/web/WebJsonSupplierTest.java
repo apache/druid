@@ -29,7 +29,7 @@ public class WebJsonSupplierTest
   public void checkInvalidUrl() throws Exception
   {
 
-    String invalidURL = "http://invalid.url";
+    String invalidURL = "http://invalid.url.";
     WebJsonSupplier supplier = new WebJsonSupplier(invalidURL);
     supplier.getInput();
   }

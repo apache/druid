@@ -19,40 +19,44 @@
 
 package io.druid.server.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import io.druid.client.InventoryView;
-import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.db.DatabaseRuleManager;
-import io.druid.db.DatabaseSegmentManager;
 import io.druid.server.coordinator.DruidCoordinator;
 
-import javax.annotation.Nullable;
+import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Response;
 
 /**
  */
 @Deprecated
-@Path("/static/info")
-public class BackwardsCompatibleInfoResource extends InfoResource
+@Path("/coordinator")
+public class BackwardsCompatibleCoordinatorResource
 {
+  private final DruidCoordinator coordinator;
+
   @Inject
-  public BackwardsCompatibleInfoResource(
-      DruidCoordinator coordinator,
-      InventoryView serverInventoryView,
-      DatabaseSegmentManager databaseSegmentManager,
-      DatabaseRuleManager databaseRuleManager,
-      @Nullable IndexingServiceClient indexingServiceClient,
-      ObjectMapper jsonMapper
+  public BackwardsCompatibleCoordinatorResource(
+      DruidCoordinator coordinator
   )
   {
-    super(
-        coordinator,
-        serverInventoryView,
-        databaseSegmentManager,
-        databaseRuleManager,
-        indexingServiceClient,
-        jsonMapper
-    );
+    this.coordinator = coordinator;
+  }
+
+  @GET
+  @Path("/leader")
+  @Produces("application/json")
+  public Response getLeader()
+  {
+    return Response.ok(coordinator.getCurrentLeader()).build();
+  }
+
+  @GET
+  @Path("/loadstatus")
+  @Produces("application/json")
+  public Response getLoadStatus(
+  )
+  {
+    return Response.ok(coordinator.getLoadStatus()).build();
   }
 }
