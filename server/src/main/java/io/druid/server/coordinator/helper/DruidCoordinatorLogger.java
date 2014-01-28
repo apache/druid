@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.coordinator;
+package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
@@ -27,6 +27,11 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.collections.CountingMap;
+import io.druid.server.coordinator.CoordinatorStats;
+import io.druid.server.coordinator.DruidCluster;
+import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import io.druid.server.coordinator.LoadQueuePeon;
+import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;

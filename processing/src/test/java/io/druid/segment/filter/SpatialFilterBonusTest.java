@@ -83,7 +83,7 @@ public class SpatialFilterBonusTest
     return Arrays.asList(
         new Object[][]{
             {
-                new IncrementalIndexSegment(rtIndex)
+                new IncrementalIndexSegment(rtIndex, null)
             },
             {
                 new QueryableIndexSegment(null, mMappedTestIndex)

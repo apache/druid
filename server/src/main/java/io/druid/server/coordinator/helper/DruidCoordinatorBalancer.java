@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.coordinator;
+package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -25,6 +25,14 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidServer;
+import io.druid.server.coordinator.BalancerSegmentHolder;
+import io.druid.server.coordinator.BalancerStrategy;
+import io.druid.server.coordinator.CoordinatorStats;
+import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import io.druid.server.coordinator.LoadPeonCallback;
+import io.druid.server.coordinator.LoadQueuePeon;
+import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
@@ -163,7 +171,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         callback = new LoadPeonCallback()
         {
           @Override
-          protected void execute()
+          public void execute()
           {
             Map<String, BalancerSegmentHolder> movingSegments = currentlyMovingSegments.get(toServer.getTier());
             if (movingSegments != null) {

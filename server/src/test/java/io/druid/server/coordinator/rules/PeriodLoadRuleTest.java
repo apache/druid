@@ -42,6 +42,7 @@ public class PeriodLoadRuleTest
     DateTime now = new DateTime("2013-01-01");
     PeriodLoadRule rule = new PeriodLoadRule(
         new Period("P5000Y"),
+        null,
         0,
         ""
     );
@@ -57,6 +58,7 @@ public class PeriodLoadRuleTest
     DateTime now = new DateTime("2012-12-31T01:00:00");
     PeriodLoadRule rule = new PeriodLoadRule(
         new Period("P1M"),
+        null,
         0,
         ""
     );

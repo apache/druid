@@ -178,12 +178,12 @@ public class Sink implements Iterable<FireHydrant>
     FireHydrant old;
     if (currIndex == null) {  // Only happens on initialization, cannot synchronize on null
       old = currIndex;
-      currIndex = new FireHydrant(newIndex, hydrants.size());
+      currIndex = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
       hydrants.add(currIndex);
     } else {
       synchronized (currIndex) {
         old = currIndex;
-        currIndex = new FireHydrant(newIndex, hydrants.size());
+        currIndex = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
         hydrants.add(currIndex);
       }
     }

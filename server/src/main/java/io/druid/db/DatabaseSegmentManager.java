@@ -462,7 +462,8 @@ public class DatabaseSegmentManager
     }
   }
 
-  private String getSegmentsTable() {
+  private String getSegmentsTable()
+  {
     return dbTables.get().getSegmentsTable();
   }
 }

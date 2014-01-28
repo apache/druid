@@ -19,78 +19,24 @@
 
 package io.druid.server.coordinator.rules;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Range;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 /**
  */
-public class SizeLoadRule extends LoadRule
+public class ForeverDropRule extends DropRule
 {
-  private final long low;
-  private final long high;
-  private final Integer replicants;
-  private final String tier;
-  private final Range<Long> range;
-
-  @JsonCreator
-  public SizeLoadRule(
-      @JsonProperty("low") long low,
-      @JsonProperty("high") long high,
-      @JsonProperty("replicants") Integer replicants,
-      @JsonProperty("tier") String tier
-  )
-  {
-    this.low = low;
-    this.high = high;
-    this.replicants = replicants;
-    this.tier = tier;
-    this.range = Range.closedOpen(low, high);
-  }
-
   @Override
   @JsonProperty
-  public int getReplicants()
-  {
-    return replicants;
-  }
-
-  @Override
-  public int getReplicants(String tier)
-  {
-    return (this.tier.equalsIgnoreCase(tier)) ? replicants : 0;
-  }
-
-  @Override
-  @JsonProperty
-  public String getTier()
-  {
-    return tier;
-  }
-
-  @Override
   public String getType()
   {
-    return "loadBySize";
-  }
-
-  @JsonProperty
-  public long getLow()
-  {
-    return low;
-  }
-
-  @JsonProperty
-  public long getHigh()
-  {
-    return high;
+    return "dropForever";
   }
 
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
-    return range.contains(segment.getSize());
+    return true;
   }
 }

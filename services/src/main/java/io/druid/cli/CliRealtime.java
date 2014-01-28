@@ -30,7 +30,7 @@ import java.util.List;
  */
 @Command(
     name = "realtime",
-    description = "Runs a realtime node, see http://druid.io/docs/0.6.51/Realtime.html for a description"
+    description = "Runs a realtime node, see http://druid.io/docs/0.6.52/Realtime.html for a description"
 )
 public class CliRealtime extends ServerRunnable
 {

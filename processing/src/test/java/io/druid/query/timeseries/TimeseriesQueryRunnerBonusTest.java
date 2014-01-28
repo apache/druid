@@ -90,7 +90,7 @@ public class TimeseriesQueryRunnerBonusTest
     final QueryRunnerFactory factory = TimeseriesQueryRunnerFactory.create();
     final QueryRunner<Result<TimeseriesResultValue>> runner = makeQueryRunner(
         factory,
-        new IncrementalIndexSegment(index)
+        new IncrementalIndexSegment(index, null)
     );
 
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()

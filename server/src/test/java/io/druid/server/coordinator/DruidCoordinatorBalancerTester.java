@@ -20,6 +20,7 @@
 package io.druid.server.coordinator;
 
 import io.druid.client.DruidServer;
+import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import io.druid.timeline.DataSegment;
 
 public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
@@ -59,7 +60,7 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
         loadPeon.loadSegment(segment.getSegment(), new LoadPeonCallback()
         {
           @Override
-          protected void execute()
+          public void execute()
           {
           }
         });

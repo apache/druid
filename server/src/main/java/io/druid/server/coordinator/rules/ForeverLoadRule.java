@@ -21,51 +21,49 @@ package io.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Range;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
+import java.util.Map;
+
 /**
  */
-public class SizeDropRule extends DropRule
+public class ForeverLoadRule extends LoadRule
 {
-  private final long low;
-  private final long high;
-  private final Range<Long> range;
+  private final Map<String, Integer> tieredReplicants;
 
   @JsonCreator
-  public SizeDropRule(
-      @JsonProperty("low") long low,
-      @JsonProperty("high") long high
+  public ForeverLoadRule(
+      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
-    this.low = low;
-    this.high = high;
-    this.range = Range.closedOpen(low, high);
+    this.tieredReplicants = tieredReplicants;
   }
 
   @Override
   @JsonProperty
   public String getType()
   {
-    return "dropBySize";
+    return "loadForever";
   }
 
+  @Override
   @JsonProperty
-  public long getLow()
+  public Map<String, Integer> getTieredReplicants()
   {
-    return low;
+    return tieredReplicants;
   }
 
-  @JsonProperty
-  public long getHigh()
+  @Override
+  public int getNumReplicants(String tier)
   {
-    return high;
+    Integer retVal = tieredReplicants.get(tier);
+    return (retVal == null) ? 0 : retVal;
   }
 
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
-    return range.contains(segment.getSize());
+    return true;
   }
 }

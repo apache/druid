@@ -19,18 +19,21 @@
 
 package io.druid.client.selector;
 
+import com.google.api.client.util.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  */
 public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
 {
+
+  private static final EmittingLogger log = new EmittingLogger(ServerSelector.class);
+
   private final Set<QueryableDruidServer> servers = Sets.newHashSet();
 
   private final DataSegment segment;
@@ -76,12 +79,17 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   public QueryableDruidServer pick()
   {
     synchronized (this) {
-      final int size = servers.size();
-      switch (size) {
-        case 0: return null;
-        case 1: return servers.iterator().next();
-        default: return strategy.pick(servers);
+      TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers = Maps.newTreeMap();
+      for (QueryableDruidServer server : servers) {
+        Set<QueryableDruidServer> theServers = prioritizedServers.get(server.getServer().getPriority());
+        if (theServers == null) {
+          theServers = Sets.newHashSet();
+          prioritizedServers.put(server.getServer().getPriority(), theServers);
+        }
+        theServers.add(server);
       }
+
+      return strategy.pick(prioritizedServers, segment);
     }
   }
 }

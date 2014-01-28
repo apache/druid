@@ -19,11 +19,9 @@
 
 package io.druid.indexer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import io.druid.db.DbConnector;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
@@ -38,8 +36,6 @@ import java.util.List;
 public class DbUpdaterJob implements Jobby
 {
   private static final Logger log = new Logger(DbUpdaterJob.class);
-
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   private final HadoopDruidIndexerConfig config;
   private final IDBI dbi;
@@ -82,7 +78,7 @@ public class DbUpdaterJob implements Jobby
                       .put("partitioned", segment.getShardSpec().getPartitionNum())
                       .put("version", segment.getVersion())
                       .put("used", true)
-                      .put("payload", jsonMapper.writeValueAsString(segment))
+                      .put("payload", HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(segment))
                       .build()
               );
 

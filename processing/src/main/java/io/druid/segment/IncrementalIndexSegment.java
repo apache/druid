@@ -30,18 +30,21 @@ import java.io.IOException;
 public class IncrementalIndexSegment implements Segment
 {
   private final IncrementalIndex index;
+  private final String segmentIdentifier;
 
   public IncrementalIndexSegment(
-      IncrementalIndex index
+      IncrementalIndex index,
+      String segmentIdentifier
   )
   {
     this.index = index;
+    this.segmentIdentifier = segmentIdentifier;
   }
 
   @Override
   public String getIdentifier()
   {
-    throw new UnsupportedOperationException();
+    return segmentIdentifier;
   }
 
   @Override

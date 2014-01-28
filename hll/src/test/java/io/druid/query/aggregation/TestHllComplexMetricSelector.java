@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,11 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.coordinator;
+package io.druid.query.aggregation;
 
-/**
- */
-public interface DruidCoordinatorHelper
+import io.druid.segment.ObjectColumnSelector;
+
+public class TestHllComplexMetricSelector implements ObjectColumnSelector<String>
 {
-  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params);
+  private int index = 0;
+
+
+  @Override
+  public Class<String> classOfObject()
+  {
+    return String.class;
+  }
+
+  @Override
+  public String get()
+  {
+    return String.valueOf(index);
+  }
+
+  public void increment()
+  {
+    ++index;
+  }
 }

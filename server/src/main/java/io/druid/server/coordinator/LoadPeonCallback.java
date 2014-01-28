@@ -21,7 +21,7 @@ package io.druid.server.coordinator;
 
 /**
  */
-public abstract class LoadPeonCallback
+public interface LoadPeonCallback
 {
-  protected abstract void execute();
+  public void execute();
 }

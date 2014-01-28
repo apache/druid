@@ -17,38 +17,46 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.coordinator;
+package io.druid.server.http;
 
-import com.metamx.common.logger.Logger;
-import io.druid.timeline.DataSegment;
+import com.google.inject.Inject;
+import io.druid.server.coordinator.DruidCoordinator;
 
-import java.util.Set;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Response;
 
-public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
+/**
+ */
+@Deprecated
+@Path("/coordinator")
+public class BackwardsCompatibleCoordinatorResource
 {
   private final DruidCoordinator coordinator;
 
-  private static final Logger log = new Logger(DruidCoordinatorSegmentInfoLoader.class);
-
-  public DruidCoordinatorSegmentInfoLoader(DruidCoordinator coordinator)
+  @Inject
+  public BackwardsCompatibleCoordinatorResource(
+      DruidCoordinator coordinator
+  )
   {
     this.coordinator = coordinator;
   }
 
-  @Override
-  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+  @GET
+  @Path("/leader")
+  @Produces("application/json")
+  public Response getLeader()
   {
-    // Display info about all available segments
-    final Set<DataSegment> availableSegments = coordinator.getAvailableDataSegments();
-    if (log.isDebugEnabled()) {
-      log.debug("Available DataSegments");
-      for (DataSegment dataSegment : availableSegments) {
-        log.debug("  %s", dataSegment);
-      }
-    }
+    return Response.ok(coordinator.getCurrentLeader()).build();
+  }
 
-    return params.buildFromExisting()
-                 .withAvailableSegments(availableSegments)
-                 .build();
+  @GET
+  @Path("/loadstatus")
+  @Produces("application/json")
+  public Response getLoadStatus(
+  )
+  {
+    return Response.ok(coordinator.getLoadStatus()).build();
   }
 }
