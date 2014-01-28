@@ -30,17 +30,11 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
-import io.druid.query.FinalizeResultsQueryRunner;
-import io.druid.query.NoopQueryRunner;
-import io.druid.query.Query;
-import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactory;
-import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.query.QueryToolChest;
-import io.druid.query.SegmentDescriptor;
+import io.druid.query.*;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Sink;
+import io.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -108,7 +102,7 @@ public class RealtimeManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    final FireChief chief = chiefs.get(query.getDataSource());
+    final FireChief chief = chiefs.get(getDataSourceName(query));
 
     return chief == null ? new NoopQueryRunner<T>() : chief.getQueryRunner(query);
   }
@@ -116,10 +110,28 @@ public class RealtimeManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    final FireChief chief = chiefs.get(query.getDataSource());
+    final FireChief chief = chiefs.get(getDataSourceName(query));
 
     return chief == null ? new NoopQueryRunner<T>() : chief.getQueryRunner(query);
   }
+
+  private <T> String getDataSourceName(Query<T> query)
+  {
+    DataSource dataSource = query.getDataSource();
+    if (!(dataSource instanceof TableDataSource)) {
+      throw new UnsupportedOperationException("data source type '" + dataSource.getClass().getName() + "' unsupported");
+    }
+
+    String dataSourceName;
+    try {
+      dataSourceName = ((TableDataSource)query.getDataSource()).getName();
+    }
+    catch (ClassCastException e) {
+      throw new UnsupportedOperationException("Subqueries are only supported in the broker");
+    }
+    return dataSourceName;
+  }
+
 
   private class FireChief extends Thread implements Closeable
   {
