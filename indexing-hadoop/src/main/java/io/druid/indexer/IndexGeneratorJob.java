@@ -225,12 +225,7 @@ public class IndexGeneratorJob implements Jobby
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
       bytes.position(4); // Skip length added by SortableBytes
       int shardNum = bytes.getInt();
-
-      if (shardNum >= numPartitions) {
-        throw new ISE("Not enough partitions, shard[%,d] >= numPartitions[%,d]", shardNum, numPartitions);
-      }
-
-      return shardNum;
+      return shardNum % numPartitions;
     }
   }
 
