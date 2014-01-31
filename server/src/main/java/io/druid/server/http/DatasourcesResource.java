@@ -84,8 +84,7 @@ public class DatasourcesResource
   @Produces("application/json")
   public Response getQueryableDataSources(
       @QueryParam("full") String full,
-      @QueryParam("simple") String simple,
-      @QueryParam("gran") String gran
+      @QueryParam("simple") String simple
   )
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
@@ -107,9 +106,6 @@ public class DatasourcesResource
               )
           )
       ).build();
-    } else if (gran != null) {
-      IndexGranularity granularity = IndexGranularity.fromString(gran);
-      // TODO
     }
 
     return builder.entity(
@@ -131,6 +127,7 @@ public class DatasourcesResource
 
   @DELETE
   @Path("/{dataSourceName}")
+  @Produces("application/json")
   public Response deleteDataSource(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("kill") final String kill,
@@ -138,10 +135,22 @@ public class DatasourcesResource
   )
   {
     if (indexingServiceClient == null) {
-      return Response.status(Response.Status.OK).entity(ImmutableMap.of("error", "no indexing service found")).build();
+      return Response.ok().entity(ImmutableMap.of("error", "no indexing service found")).build();
     }
     if (kill != null && Boolean.valueOf(kill)) {
-      indexingServiceClient.killSegments(dataSourceName, new Interval(interval));
+      try {
+        indexingServiceClient.killSegments(dataSourceName, new Interval(interval));
+      }
+      catch (Exception e) {
+        return Response.status(Response.Status.NOT_FOUND)
+                       .entity(
+                           ImmutableMap.of(
+                               "error",
+                               "Exception occurred. Are you sure you have an indexing service?"
+                           )
+                       )
+                       .build();
+      }
     } else {
       if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
         return Response.status(Response.Status.NOT_FOUND).build();

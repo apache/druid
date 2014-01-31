@@ -243,7 +243,7 @@ $(document).ready(function() {
           url:'/druid/coordinator/v1/rules/' + selected,
           data: JSON.stringify(rules),
           contentType:"application/json; charset=utf-8",
-          dataType:"json",
+          dataType:"text",
           error: function(xhr, status, error) {
             $("#update_dialog").dialog("close");
             $("#error_dialog").html(xhr.responseText);
@@ -266,9 +266,9 @@ $(document).ready(function() {
 
   $.getJSON("/druid/coordinator/v1/db/datasources", function(data) {
     $.each(data, function(index, datasource) {
-      $('#datasources').append($('<option></option>').attr("value", datasource).text(datasource));
+      $('#datasources').append($('<option></option>').val(datasource).text(datasource));
     });
-    $('#datasources').append($('<option></option>').attr("value", defaultDatasource).text(defaultDatasource));
+    $('#datasources').append($('<option></option>').val(defaultDatasource).text(defaultDatasource));
   });
 
   $("#datasources").change(function(event) {
@@ -276,7 +276,7 @@ $(document).ready(function() {
     $("#rules").show();
   });
 
-  $(".rule_dropdown_types").live("change", function(event) {
+  $(document).on("change", '.rule_dropdown_types', null, function(event) {
     var newRule = {
       "type" : $(event.target).val()
     };
@@ -284,11 +284,11 @@ $(document).ready(function() {
     ruleBody.replaceWith(makeRuleBody(newRule));
   });
 
-  $(".delete_rule").live("click", function(event) {
+  $(document).on("click", '.delete_rule', null, function(event) {
     $(event.target).parent(".rule").remove();
   });
 
-  $(".add_tier").live("click", function(event) {
+  $(document).on("click", '.add_tier', null, function(event) {
     $(event.target).parent().append(makeTierLoad(null, 0));
   });
 
