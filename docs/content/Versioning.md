@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Versioning Druid
 This page discusses how we do versioning and provides information on our stable releases.
 
 Versioning Strategy
