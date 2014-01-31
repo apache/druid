@@ -92,6 +92,7 @@ public class IncrementalIndex implements Iterable<Row>
   public IncrementalIndex(IncrementalIndexSchema incrementalIndexSchema)
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
+
     this.gran = incrementalIndexSchema.getGran();
     this.metrics = incrementalIndexSchema.getMetrics();
 

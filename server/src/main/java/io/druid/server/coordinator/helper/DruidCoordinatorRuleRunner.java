@@ -62,6 +62,9 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    // To deal with a loss and regaining leadership during middle of execution of rules
+    int startingLeaderGen = coordinator.getLeaderGeneration();
+
     CoordinatorStats stats = new CoordinatorStats();
     DruidCluster cluster = params.getDruidCluster();
 
@@ -76,8 +79,8 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     }
 
     DruidCoordinatorRuntimeParams paramsWithReplicationManager = params.buildFromExisting()
-                                                                  .withReplicationManager(replicatorThrottler)
-                                                                  .build();
+                                                                       .withReplicationManager(replicatorThrottler)
+                                                                       .build();
 
     // Run through all matched rules for available segments
     DateTime now = new DateTime();
@@ -87,7 +90,9 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
-          stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
+          if (coordinator.getLeaderGeneration() == startingLeaderGen) {
+            stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
+          }
           foundMatchingRule = true;
           break;
         }
