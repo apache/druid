@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -62,9 +63,6 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    // To deal with losing and regaining leadership in the middle of rule execution
-    int startingLeaderGen = coordinator.getLeaderGeneration();
-
     CoordinatorStats stats = new CoordinatorStats();
     DruidCluster cluster = params.getDruidCluster();
 
@@ -90,9 +88,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
-          if (coordinator.getLeaderGeneration() == startingLeaderGen) {
-            stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
-          }
+          stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
           foundMatchingRule = true;
           break;
         }
