@@ -71,7 +71,9 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
         }
       }
 
-      if(config.getGranularitySpec().bucketInterval(new DateTime(inputRow.getTimestampFromEpoch())).isPresent()) {
+      if (config.getGranularitySpec().bucketIntervals().isEmpty() || config.getGranularitySpec()
+                                                                           .bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()))
+                                                                           .isPresent()) {
         innerMap(inputRow, value, context);
       }
     }

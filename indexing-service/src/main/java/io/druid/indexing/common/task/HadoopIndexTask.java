@@ -24,14 +24,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.api.client.util.Lists;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexer.HadoopDruidIndexerConfig;
@@ -42,7 +37,6 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
-import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.initialization.Initialization;
 import io.druid.server.initialization.ExtensionsConfig;
@@ -51,30 +45,25 @@ import io.tesla.aether.internal.DefaultTeslaAether;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
-public class HadoopIndexTask extends AbstractFixedIntervalTask
+public class HadoopIndexTask extends AbstractTask
 {
   private static final Logger log = new Logger(HadoopIndexTask.class);
-  private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
-
   private static final ExtensionsConfig extensionsConfig;
 
   static {
     extensionsConfig = Initialization.makeStartupInjector().getInstance(ExtensionsConfig.class);
   }
 
+  private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
   @JsonIgnore
   private final HadoopDruidIndexerSchema schema;
-
   @JsonIgnore
   private final String hadoopCoordinates;
 
@@ -97,13 +86,7 @@ public class HadoopIndexTask extends AbstractFixedIntervalTask
   {
     super(
         id != null ? id : String.format("index_hadoop_%s_%s", schema.getDataSource(), new DateTime()),
-        schema.getDataSource(),
-        JodaUtils.umbrellaInterval(
-            JodaUtils.condenseIntervals(
-                schema.getGranularitySpec()
-                      .bucketIntervals()
-            )
-        )
+        schema.getDataSource()
     );
 
     // Some HadoopDruidIndexerSchema stuff doesn't make sense in the context of the indexing service
@@ -119,6 +102,22 @@ public class HadoopIndexTask extends AbstractFixedIntervalTask
   public String getType()
   {
     return "index_hadoop";
+  }
+
+  @Override
+  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  {
+    if (!schema.getGranularitySpec().bucketIntervals().isEmpty()) {
+      Interval interval = JodaUtils.umbrellaInterval(
+          JodaUtils.condenseIntervals(
+              schema.getGranularitySpec()
+                    .bucketIntervals()
+          )
+      );
+      return taskActionClient.submit(new LockTryAcquireAction(interval)).isPresent();
+    } else {
+      return true;
+    }
   }
 
   @JsonProperty("config")
@@ -171,13 +170,22 @@ public class HadoopIndexTask extends AbstractFixedIntervalTask
     final Class<?> mainClass = loader.loadClass(HadoopIndexTaskInnerProcessing.class.getName());
     final Method mainMethod = mainClass.getMethod("runTask", String[].class);
 
-    // We should have a lock from before we started running
-    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
-    log.info("Setting version to: %s", myLock.getVersion());
+    // We should have a lock from before we started running only if interval was specified
+    boolean determineIntervals = schema.getGranularitySpec().bucketIntervals().isEmpty();
+    final String version;
+    if (determineIntervals) {
+      version = new DateTime().toString();
+    } else {
+      Iterable<TaskLock> locks = getTaskLocks(toolbox);
+      final TaskLock myLock = Iterables.getOnlyElement(locks);
+      version = myLock.getVersion();
+      log.info("Setting version to: %s", myLock.getVersion());
+    }
+
 
     String[] args = new String[]{
         toolbox.getObjectMapper().writeValueAsString(schema),
-        myLock.getVersion(),
+        version,
         toolbox.getConfig().getHadoopWorkingPath(),
         toolbox.getSegmentPusher().getPathForHadoop(getDataSource()),
     };
@@ -186,10 +194,23 @@ public class HadoopIndexTask extends AbstractFixedIntervalTask
 
 
     if (segments != null) {
+
       List<DataSegment> publishedSegments = toolbox.getObjectMapper().readValue(
           segments,
-          new TypeReference<List<DataSegment>>() {}
+          new TypeReference<List<DataSegment>>()
+          {
+          }
       );
+
+      // What if we cannot take the lock ??
+      if (determineIntervals) {
+        List<Interval> intervals = Lists.newArrayList();
+        for (DataSegment segment : publishedSegments) {
+          intervals.add(segment.getInterval());
+        }
+        Interval interval = JodaUtils.umbrellaInterval(JodaUtils.condenseIntervals(intervals));
+        toolbox.getTaskActionClient().submit(new LockTryAcquireAction(interval));
+      }
       toolbox.pushSegments(publishedSegments);
       return TaskStatus.success(getId());
     } else {

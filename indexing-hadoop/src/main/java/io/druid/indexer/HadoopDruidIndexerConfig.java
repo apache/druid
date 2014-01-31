@@ -537,16 +537,24 @@ public class HadoopDruidIndexerConfig
     return new Path(String.format("%s/%s/%s", getWorkingPath(), getDataSource(), getVersion().replace(":", "")));
   }
 
-  public Path makeSegmentPartitionInfoPath(Bucket bucket)
+  public Path makeSegmentPartitionInfoPath(Interval bucketInterval)
   {
-    final Interval bucketInterval = getGranularitySpec().bucketInterval(bucket.time).get();
-
     return new Path(
         String.format(
             "%s/%s_%s/partitions.json",
             makeIntermediatePath(),
             ISODateTimeFormat.basicDateTime().print(bucketInterval.getStart()),
             ISODateTimeFormat.basicDateTime().print(bucketInterval.getEnd())
+        )
+    );
+  }
+
+  public Path makeIntervalInfoPath()
+  {
+    return new Path(
+        String.format(
+            "%s/intervals.json",
+            makeIntermediatePath()
         )
     );
   }
@@ -625,8 +633,5 @@ public class HadoopDruidIndexerConfig
     Preconditions.checkNotNull(segmentOutputPath, "segmentOutputPath");
     Preconditions.checkNotNull(version, "version");
     Preconditions.checkNotNull(rollupSpec, "rollupSpec");
-
-    final int nIntervals = getIntervals().size();
-    Preconditions.checkArgument(nIntervals > 0, "intervals.size()[%s] <= 0", nIntervals);
   }
 }

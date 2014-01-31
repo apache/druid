@@ -217,9 +217,7 @@ public class DeterminePartitionsJob implements Jobby
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
-        DateTime bucket = segmentGranularity.getStart();
-
-        final Path partitionInfoPath = config.makeSegmentPartitionInfoPath(new Bucket(0, bucket, 0));
+        final Path partitionInfoPath = config.makeSegmentPartitionInfoPath(segmentGranularity);
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(dimSelectionJob.getConfiguration());
         }
@@ -233,10 +231,10 @@ public class DeterminePartitionsJob implements Jobby
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
           for (int i = 0; i < specs.size(); ++i) {
             actualSpecs.add(new HadoopyShardSpec(specs.get(i), shardCount++));
-            log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
+            log.info("DateTime[%s], partition[%d], spec[%s]", segmentGranularity, i, actualSpecs.get(i));
           }
 
-          shardSpecs.put(bucket, actualSpecs);
+          shardSpecs.put(segmentGranularity.getStart(), actualSpecs);
         } else {
           log.info("Path[%s] didn't exist!?", partitionInfoPath);
         }
@@ -741,7 +739,7 @@ public class DeterminePartitionsJob implements Jobby
       }
 
       final OutputStream out = Utils.makePathAndOutputStream(
-          context, config.makeSegmentPartitionInfoPath(new Bucket(0, bucket, 0)), config.isOverwriteFiles()
+          context, config.makeSegmentPartitionInfoPath(config.getGranularitySpec().getGranularity().bucket(bucket)), config.isOverwriteFiles()
       );
 
       final DimPartitions chosenPartitions = maxCardinality > HIGH_CARDINALITY_THRESHOLD

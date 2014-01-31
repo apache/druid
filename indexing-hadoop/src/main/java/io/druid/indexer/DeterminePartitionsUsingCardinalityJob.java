@@ -36,6 +36,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
+import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
@@ -108,6 +109,7 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
       groupByJob.setOutputKeyClass(NullWritable.class);
       groupByJob.setOutputValueClass(NullWritable.class);
       groupByJob.setOutputFormatClass(SequenceFileOutputFormat.class);
+      groupByJob.setNumReduceTasks(1);
       JobHelper.setupClasspath(config, groupByJob);
 
       config.addInputPaths(groupByJob);
@@ -123,16 +125,30 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
       }
 
       /*
-       * Load partitions determined by the previous job.
+       * Load partitions and intervals determined by the previous job.
        */
 
       log.info("Job completed, loading up partitions for intervals[%s].", config.getSegmentGranularIntervals());
       FileSystem fileSystem = null;
+      if (config.getSegmentGranularIntervals().isEmpty()) {
+        final Path intervalInfoPath = config.makeIntervalInfoPath();
+        fileSystem = intervalInfoPath.getFileSystem(groupByJob.getConfiguration());
+        if (!fileSystem.exists(intervalInfoPath)) {
+          throw new ISE("Path[%s] didn't exist!?", intervalInfoPath);
+        }
+        List<Interval> intervals = config.jsonMapper.readValue(
+            Utils.openInputStream(groupByJob, intervalInfoPath), new TypeReference<List<Interval>>()
+        {
+        }
+        );
+        config.setGranularitySpec(new UniformGranularitySpec(config.getGranularitySpec().getGranularity(), intervals));
+        log.info("Determined Intervals for Job [%s]" + config.getSegmentGranularIntervals());
+      }
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
         DateTime bucket = segmentGranularity.getStart();
 
-        final Path partitionInfoPath = config.makeSegmentPartitionInfoPath(new Bucket(0, bucket, 0));
+        final Path partitionInfoPath = config.makeSegmentPartitionInfoPath(segmentGranularity);
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(groupByJob.getConfiguration());
         }
@@ -157,15 +173,20 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
               actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
               log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
             }
-
-            shardSpecs.put(bucket, actualSpecs);
           }
+
+          shardSpecs.put(bucket, actualSpecs);
+
         } else {
           log.info("Path[%s] didn't exist!?", partitionInfoPath);
         }
       }
       config.setShardSpecs(shardSpecs);
-      log.info("Determine partitions Using cardinality took %d millis", (System.currentTimeMillis() - startTime));
+      log.info(
+          "Determine partitions Using cardinality took %d millis shardSpecs %s",
+          (System.currentTimeMillis() - startTime),
+          shardSpecs
+      );
 
       return true;
     }
@@ -176,10 +197,11 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
 
   public static class DetermineCardinalityMapper extends HadoopDruidIndexerMapper<LongWritable, BytesWritable>
   {
-    private static HashFunction hashFunction = null;
+    private static HashFunction hashFunction = Hashing.murmur3_128();
     private QueryGranularity rollupGranularity = null;
     private Map<Interval, HyperLogLog> hyperLogLogs;
     private HadoopDruidIndexerConfig config;
+    private boolean determineIntervals;
 
     @Override
     protected void setup(Context context)
@@ -187,14 +209,19 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
     {
       super.setup(context);
       rollupGranularity = getConfig().getRollupSpec().getRollupGranularity();
-      hashFunction = Hashing.murmur3_128();
       config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
 
-      final ImmutableMap.Builder<Interval, HyperLogLog> builder = ImmutableMap.builder();
-      for (final Interval bucketInterval : config.getGranularitySpec().bucketIntervals()) {
-        builder.put(bucketInterval, new HyperLogLog(20));
+      if (config.getSegmentGranularIntervals().isEmpty()) {
+        determineIntervals = true;
+        hyperLogLogs = Maps.newHashMap();
+      } else {
+        determineIntervals = false;
+        final ImmutableMap.Builder<Interval, HyperLogLog> builder = ImmutableMap.builder();
+        for (final Interval bucketInterval : config.getGranularitySpec().bucketIntervals()) {
+          builder.put(bucketInterval, new HyperLogLog(20));
+        }
+        hyperLogLogs = builder.build();
       }
-      hyperLogLogs = builder.build();
     }
 
     @Override
@@ -217,13 +244,23 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
           rollupGranularity.truncate(inputRow.getTimestampFromEpoch()),
           dims
       );
-      final Optional<Interval> maybeInterval = config.getGranularitySpec()
-                                                     .bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()));
+      Interval interval;
+      if (determineIntervals) {
+        interval = config.getGranularitySpec().getGranularity().bucket(new DateTime(inputRow.getTimestampFromEpoch()));
 
-      if (!maybeInterval.isPresent()) {
-        throw new ISE("WTF?! No bucket found for timestamp: %s", inputRow.getTimestampFromEpoch());
+        if (!hyperLogLogs.containsKey(interval)) {
+          hyperLogLogs.put(interval, new HyperLogLog(20));
+        }
+      } else {
+        final Optional<Interval> maybeInterval = config.getGranularitySpec()
+                                                       .bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()));
+
+        if (!maybeInterval.isPresent()) {
+          throw new ISE("WTF?! No bucket found for timestamp: %s", inputRow.getTimestampFromEpoch());
+        }
+        interval = maybeInterval.get();
       }
-      hyperLogLogs.get(maybeInterval.get())
+      hyperLogLogs.get(interval)
                   .offerHashed(
                       hashFunction.hashBytes(HadoopDruidIndexerConfig.jsonMapper.writeValueAsBytes(groupKey))
                                   .asLong()
@@ -253,6 +290,7 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
   public static class DetermineCardinalityReducer
       extends Reducer<LongWritable, BytesWritable, NullWritable, NullWritable>
   {
+    private final List<Interval> intervals = Lists.newArrayList();
     protected HadoopDruidIndexerConfig config = null;
 
     @Override
@@ -279,8 +317,9 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
           e.printStackTrace(); // TODO: check for better handling
         }
       }
-
-      final Path outPath = config.makeSegmentPartitionInfoPath(new Bucket(0, new DateTime(key.get()), 0));
+      Interval interval = config.getGranularitySpec().getGranularity().bucket(new DateTime(key.get()));
+      intervals.add(interval);
+      final Path outPath = config.makeSegmentPartitionInfoPath(interval);
       final OutputStream out = Utils.makePathAndOutputStream(
           context, outPath, config.isOverwriteFiles()
       );
@@ -299,7 +338,35 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
         Closeables.close(out, false);
       }
     }
+
+    @Override
+    public void run(Context context)
+        throws IOException, InterruptedException
+    {
+      super.run(context);
+      if (config.getSegmentGranularIntervals().isEmpty()) {
+        final Path outPath = config.makeIntervalInfoPath();
+        final OutputStream out = Utils.makePathAndOutputStream(
+            context, outPath, config.isOverwriteFiles()
+        );
+
+        try {
+          HadoopDruidIndexerConfig.jsonMapper.writerWithType(
+              new TypeReference<List<Interval>>()
+              {
+              }
+          ).writeValue(
+              out,
+              intervals
+          );
+        }
+        finally {
+          Closeables.close(out, false);
+        }
+      }
+    }
   }
-
-
 }
+
+
+

@@ -29,6 +29,7 @@ import com.metamx.common.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
 
@@ -45,13 +46,15 @@ public class UniformGranularitySpec implements GranularitySpec
   )
   {
     List<Interval> granularIntervals = Lists.newArrayList();
-
-    for (Interval inputInterval : inputIntervals) {
-      Iterables.addAll(granularIntervals,  granularity.getIterable(inputInterval));
+    if (inputIntervals != null) {
+      for (Interval inputInterval : inputIntervals) {
+        Iterables.addAll(granularIntervals, granularity.getIterable(inputInterval));
+      }
     }
 
+
     this.granularity = granularity;
-    this.inputIntervals = ImmutableList.copyOf(inputIntervals);
+    this.inputIntervals = inputIntervals == null ? Collections.EMPTY_LIST : ImmutableList.copyOf(inputIntervals);
     this.wrappedSpec = new ArbitraryGranularitySpec(granularIntervals);
   }
 
