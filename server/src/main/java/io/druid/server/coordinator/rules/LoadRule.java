@@ -22,7 +22,6 @@ package io.druid.server.coordinator.rules;
 import com.google.api.client.util.Maps;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -60,9 +59,6 @@ public abstract class LoadRule implements Rule
       if (serverQueue == null) {
         log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
         return stats;
-      }
-      if (!coordinator.isValidRun()) {
-        throw new ISE("Leader change occurred during rule run. Bailing out.");
       }
 
       final List<ServerHolder> serverHolderList = Lists.newArrayList(serverQueue);
