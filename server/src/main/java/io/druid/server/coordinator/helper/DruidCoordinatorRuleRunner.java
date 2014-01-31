@@ -62,7 +62,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    // To deal with a loss and regaining leadership during middle of execution of rules
+    // To deal with losing and regaining leadership in the middle of rule execution
     int startingLeaderGen = coordinator.getLeaderGeneration();
 
     CoordinatorStats stats = new CoordinatorStats();
