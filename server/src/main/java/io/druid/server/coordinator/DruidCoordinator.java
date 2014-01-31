@@ -98,6 +98,8 @@ public class DruidCoordinator
   private volatile boolean started = false;
   private volatile boolean leader = false;
   private volatile AtomicReference<CoordinatorDynamicConfig> dynamicConfigs;
+  private volatile int leaderGeneration = 0;
+  private volatile int startingLeaderGeneration = 0;
 
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
@@ -191,6 +193,11 @@ public class DruidCoordinator
   public boolean isLeader()
   {
     return leader;
+  }
+
+  public boolean isValidRun()
+  {
+    return leaderGeneration == startingLeaderGeneration;
   }
 
   public Map<String, LoadQueuePeon> getLoadManagementPeons()
@@ -534,6 +541,7 @@ public class DruidCoordinator
       log.info("I am the leader of the coordinators, all must bow!");
       try {
         leader = true;
+        leaderGeneration++;
         databaseSegmentManager.start();
         databaseRuleManager.start();
         serverInventoryView.start();
@@ -575,6 +583,7 @@ public class DruidCoordinator
                 public ScheduledExecutors.Signal call()
                 {
                   if (leader) {
+                    startingLeaderGeneration = leaderGeneration;
                     theRunnable.run();
                   }
                   if (leader) { // (We might no longer be leader)
@@ -622,6 +631,7 @@ public class DruidCoordinator
         serverInventoryView.stop();
         databaseRuleManager.stop();
         databaseSegmentManager.stop();
+        leaderGeneration++;
         leader = false;
       }
       catch (Exception e) {
@@ -742,7 +752,6 @@ public class DruidCoordinator
                                          .withDynamicConfigs(dynamicConfigs.get())
                                          .withEmitter(emitter)
                                          .build();
-
 
         for (DruidCoordinatorHelper helper : helpers) {
           params = helper.run(params);

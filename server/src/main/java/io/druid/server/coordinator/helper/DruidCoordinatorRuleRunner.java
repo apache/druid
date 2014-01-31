@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -76,14 +77,19 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     }
 
     DruidCoordinatorRuntimeParams paramsWithReplicationManager = params.buildFromExisting()
-                                                                  .withReplicationManager(replicatorThrottler)
-                                                                  .build();
+                                                                       .withReplicationManager(replicatorThrottler)
+                                                                       .build();
 
     // Run through all matched rules for available segments
     DateTime now = new DateTime();
     DatabaseRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
     for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
+
+      if (!coordinator.isValidRun()) {
+        throw new ISE("Leader change occurred during rule run. Bailing out.");
+      }
+
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
