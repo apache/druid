@@ -388,7 +388,7 @@ public class HadoopDruidIndexerConfig
     return partitionsSpec.getPartitionDimension();
   }
 
-  public boolean partitionByDimension()
+  public boolean isDeterminingPartitions()
   {
     return partitionsSpec.isDeterminingPartitions();
   }

@@ -281,7 +281,6 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
       }
 
       final Path outPath = config.makeSegmentPartitionInfoPath(new Bucket(0, new DateTime(key.get()), 0));
-      new Exception("creating output path" + outPath).printStackTrace();
       final OutputStream out = Utils.makePathAndOutputStream(
           context, outPath, config.isOverwriteFiles()
       );

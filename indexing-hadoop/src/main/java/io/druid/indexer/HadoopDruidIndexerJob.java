@@ -72,8 +72,12 @@ public class HadoopDruidIndexerJob implements Jobby
 
     ensurePaths();
 
-    if (config.partitionByDimension()) {
-      jobs.add(new DeterminePartitionsJob(config));
+    if (config.isDeterminingPartitions()) {
+      if(config.getPartitionDimension() == null){
+        jobs.add(new DeterminePartitionsUsingCardinalityJob(config));
+      } else {
+        jobs.add(new DeterminePartitionsJob(config));
+      }
     }
     else {
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
