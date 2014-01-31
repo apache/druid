@@ -263,7 +263,8 @@ public class DatabaseRuleManager
 
   public List<Rule> getRules(final String dataSource)
   {
-    return rules.get().get(dataSource);
+    List<Rule> retVal = rules.get().get(dataSource);
+    return retVal == null ? Lists.<Rule>newArrayList() : retVal;
   }
 
   public List<Rule> getRulesWithDefault(final String dataSource)

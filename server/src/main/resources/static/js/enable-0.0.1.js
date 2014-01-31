@@ -24,7 +24,7 @@ $(document).ready(function() {
             url:'/druid/coordinator/v1/datasources/' + selected,
             data: JSON.stringify(selected),
             contentType:"application/json; charset=utf-8",
-            dataType:"json",
+            dataType:"text",
             error: function(xhr, status, error) {
               $("#enable_dialog").dialog("close");
               $("#error_dialog").html(xhr.responseText);
@@ -53,7 +53,7 @@ $(document).ready(function() {
           url:'/druid/coordinator/v1/datasources/' + selected,
           data: JSON.stringify(selected),
           contentType:"application/json; charset=utf-8",
-          dataType:"json",
+          dataType:"text",
           error: function(xhr, status, error) {
             $("#disable_dialog").dialog("close");
             $("#error_dialog").html(xhr.responseText);
@@ -81,11 +81,10 @@ $(document).ready(function() {
         $('#disabled_datasources').append($('<li>' + datasource + '</li>'));
       });
       $.each(db_datasources, function(index, datasource) {
-        $('#datasources').append($('<option></option>').attr("value", datasource).text(datasource));
+        $('#datasources').append($('<option></option>').val(datasource).text(datasource));
       });
     });
   });
-
 
   $("#enable").click(function() {
     $("#enable_dialog").dialog("open");
