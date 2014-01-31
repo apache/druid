@@ -38,25 +38,6 @@ import java.util.List;
 
 public class HashBasedNumberedShardSpecTest
 {
-  @Before
-  public void setup()
-  {
-    TestUtil.MAPPER.setInjectableValues(
-        new InjectableValues()
-        {
-          @Override
-          public Object findInjectableValue(
-              Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
-          )
-          {
-            if (valueId.equals("com.fasterxml.jackson.databind.ObjectMapper")) {
-              return TestUtil.MAPPER;
-            }
-            throw new ISE("No Injectable value found");
-          }
-        }
-    );
-  }
 
   @Test
   public void testSerdeRoundTrip() throws Exception

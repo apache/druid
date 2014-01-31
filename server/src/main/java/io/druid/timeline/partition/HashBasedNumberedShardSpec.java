@@ -39,9 +39,9 @@ import java.util.Set;
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
 
-  private static HashFunction hashFunction = null;
+  private static final HashFunction hashFunction = Hashing.murmur3_32();
   @JacksonInject
-  public ObjectMapper jsonMapper;
+  private ObjectMapper jsonMapper;
 
   @JsonCreator
   public HashBasedNumberedShardSpec(
@@ -50,7 +50,6 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   )
   {
     super(partitionNum, partitions);
-    hashFunction = Hashing.murmur3_32();
   }
 
   @Override

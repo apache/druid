@@ -62,29 +62,20 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Determines appropriate ShardSpecs for a job by determining approximate cardinality of data set
+ * Determines appropriate ShardSpecs for a job by determining approximate cardinality of data set using HyperLogLog
  */
-public class DeterminePartitionsUsingCardinalityJob implements Jobby
+public class DetermineHashedPartitionsJob implements Jobby
 {
   private static final int MAX_SHARDS = 128;
-  private static final Logger log = new Logger(DeterminePartitionsUsingCardinalityJob.class);
+  private static final Logger log = new Logger(DetermineHashedPartitionsJob.class);
   private final HadoopDruidIndexerConfig config;
+  private static final int HYPER_LOG_LOG_BIT_SIZE = 20;
 
-  public DeterminePartitionsUsingCardinalityJob(
+  public DetermineHashedPartitionsJob(
       HadoopDruidIndexerConfig config
   )
   {
     this.config = config;
-  }
-
-  public static void injectSystemProperties(Job job)
-  {
-    final Configuration conf = job.getConfiguration();
-    for (String propName : System.getProperties().stringPropertyNames()) {
-      if (propName.startsWith("hadoop.")) {
-        conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
-      }
-    }
   }
 
   public boolean run()
@@ -97,10 +88,10 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
       long startTime = System.currentTimeMillis();
       final Job groupByJob = new Job(
           new Configuration(),
-          String.format("%s-determine_cardinality_grouped-%s", config.getDataSource(), config.getIntervals())
+          String.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
       );
 
-      injectSystemProperties(groupByJob);
+      JobHelper.injectSystemProperties(groupByJob);
       groupByJob.setInputFormatClass(TextInputFormat.class);
       groupByJob.setMapperClass(DetermineCardinalityMapper.class);
       groupByJob.setMapOutputKeyClass(LongWritable.class);
@@ -145,6 +136,7 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
         log.info("Determined Intervals for Job [%s]" + config.getSegmentGranularIntervals());
       }
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
+      int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
         DateTime bucket = segmentGranularity.getStart();
 
@@ -161,14 +153,17 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
           int numberOfShards = (int) Math.ceil((double) cardinality / config.getTargetPartitionSize());
 
           if (numberOfShards > MAX_SHARDS) {
-            numberOfShards = MAX_SHARDS;
+            throw new ISE(
+                "Number of shards [%d] exceed the maximum limit of [%d], either targetPartitionSize is too low or data volume is too high",
+                numberOfShards,
+                MAX_SHARDS
+            );
           }
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
           if (numberOfShards == 1) {
-            actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), 0));
+            actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
           } else {
-            int shardCount = 0;
             for (int i = 0; i < numberOfShards; ++i) {
               actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
               log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
@@ -183,9 +178,8 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
       }
       config.setShardSpecs(shardSpecs);
       log.info(
-          "Determine partitions Using cardinality took %d millis shardSpecs %s",
-          (System.currentTimeMillis() - startTime),
-          shardSpecs
+          "DetermineHashedPartitionsJob took %d millis",
+          (System.currentTimeMillis() - startTime)
       );
 
       return true;
@@ -218,7 +212,7 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
         determineIntervals = false;
         final ImmutableMap.Builder<Interval, HyperLogLog> builder = ImmutableMap.builder();
         for (final Interval bucketInterval : config.getGranularitySpec().bucketIntervals()) {
-          builder.put(bucketInterval, new HyperLogLog(20));
+          builder.put(bucketInterval, new HyperLogLog(HYPER_LOG_LOG_BIT_SIZE));
         }
         hyperLogLogs = builder.build();
       }
@@ -249,7 +243,7 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
         interval = config.getGranularitySpec().getGranularity().bucket(new DateTime(inputRow.getTimestampFromEpoch()));
 
         if (!hyperLogLogs.containsKey(interval)) {
-          hyperLogLogs.put(interval, new HyperLogLog(20));
+          hyperLogLogs.put(interval, new HyperLogLog(HYPER_LOG_LOG_BIT_SIZE));
         }
       } else {
         final Optional<Interval> maybeInterval = config.getGranularitySpec()
@@ -307,7 +301,7 @@ public class DeterminePartitionsUsingCardinalityJob implements Jobby
         Context context
     ) throws IOException, InterruptedException
     {
-      HyperLogLog aggregate = new HyperLogLog(20);
+      HyperLogLog aggregate = new HyperLogLog(HYPER_LOG_LOG_BIT_SIZE);
       for (BytesWritable value : values) {
         HyperLogLog logValue = HyperLogLog.Builder.build(value.getBytes());
         try {

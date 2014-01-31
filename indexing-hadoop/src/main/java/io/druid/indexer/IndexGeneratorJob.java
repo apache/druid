@@ -84,9 +84,7 @@ import java.util.zip.ZipOutputStream;
 public class IndexGeneratorJob implements Jobby
 {
   private static final Logger log = new Logger(IndexGeneratorJob.class);
-
   private final HadoopDruidIndexerConfig config;
-
   private IndexGeneratorStats jobStats;
 
   public IndexGeneratorJob(
@@ -95,6 +93,39 @@ public class IndexGeneratorJob implements Jobby
   {
     this.config = config;
     this.jobStats = new IndexGeneratorStats();
+  }
+
+  public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
+  {
+
+    final Configuration conf = new Configuration();
+    final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.jsonMapper;
+
+    ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
+
+    for (String propName : System.getProperties().stringPropertyNames()) {
+      if (propName.startsWith("hadoop.")) {
+        conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
+      }
+    }
+
+    final Path descriptorInfoDir = config.makeDescriptorInfoDir();
+
+    try {
+      FileSystem fs = descriptorInfoDir.getFileSystem(conf);
+
+      for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
+        final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
+        publishedSegmentsBuilder.add(segment);
+        log.info("Adding segment %s to the list of published segments", segment.getIdentifier());
+      }
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+    List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
+
+    return publishedSegments;
   }
 
   public IndexGeneratorStats getJobStats()
@@ -112,12 +143,7 @@ public class IndexGeneratorJob implements Jobby
 
       job.getConfiguration().set("io.sort.record.percent", "0.23");
 
-      for (String propName : System.getProperties().stringPropertyNames()) {
-        Configuration conf = job.getConfiguration();
-        if (propName.startsWith("hadoop.")) {
-          conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
-        }
-      }
+      JobHelper.injectSystemProperties(job);
 
       job.setInputFormatClass(TextInputFormat.class);
 
@@ -156,39 +182,6 @@ public class IndexGeneratorJob implements Jobby
     }
   }
 
-  public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
-  {
-
-    final Configuration conf = new Configuration();
-    final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.jsonMapper;
-
-    ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
-
-    for (String propName : System.getProperties().stringPropertyNames()) {
-      if (propName.startsWith("hadoop.")) {
-        conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
-      }
-    }
-
-    final Path descriptorInfoDir = config.makeDescriptorInfoDir();
-
-    try {
-      FileSystem fs = descriptorInfoDir.getFileSystem(conf);
-
-      for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
-        final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
-        publishedSegmentsBuilder.add(segment);
-        log.info("Adding segment %s to the list of published segments", segment.getIdentifier());
-      }
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-    List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
-
-    return publishedSegments;
-  }
-
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Text>
 
   {
@@ -225,7 +218,15 @@ public class IndexGeneratorJob implements Jobby
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
       bytes.position(4); // Skip length added by SortableBytes
       int shardNum = bytes.getInt();
-      return shardNum % numPartitions;
+      if (System.getProperty("mapred.job.tracker").equals("local")) {
+        return shardNum % numPartitions;
+      } else {
+        if (shardNum >= numPartitions) {
+          throw new ISE("Not enough partitions, shard[%,d] >= numPartitions[%,d]", shardNum, numPartitions);
+        }
+        return shardNum;
+
+      }
     }
   }
 

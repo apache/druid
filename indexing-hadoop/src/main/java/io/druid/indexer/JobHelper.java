@@ -94,4 +94,14 @@ public class JobHelper
       }
     }
   }
+
+  public static void injectSystemProperties(Job job)
+  {
+    final Configuration conf = job.getConfiguration();
+    for (String propName : System.getProperties().stringPropertyNames()) {
+      if (propName.startsWith("hadoop.")) {
+        conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
+      }
+    }
+  }
 }

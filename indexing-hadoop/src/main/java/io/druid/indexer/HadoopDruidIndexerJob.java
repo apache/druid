@@ -74,7 +74,7 @@ public class HadoopDruidIndexerJob implements Jobby
 
     if (config.isDeterminingPartitions()) {
       if(config.getPartitionDimension() == null){
-        jobs.add(new DeterminePartitionsUsingCardinalityJob(config));
+        jobs.add(new DetermineHashedPartitionsJob(config));
       } else {
         jobs.add(new DeterminePartitionsJob(config));
       }
@@ -143,12 +143,7 @@ public class HadoopDruidIndexerJob implements Jobby
       );
 
       job.getConfiguration().set("io.sort.record.percent", "0.19");
-      for (String propName : System.getProperties().stringPropertyNames()) {
-        Configuration conf = job.getConfiguration();
-        if (propName.startsWith("hadoop.")) {
-          conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
-        }
-      }
+      JobHelper.injectSystemProperties(job);
 
       config.addInputPaths(job);
     }

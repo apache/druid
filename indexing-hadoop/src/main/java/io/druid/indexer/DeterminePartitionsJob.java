@@ -107,16 +107,6 @@ public class DeterminePartitionsJob implements Jobby
     this.config = config;
   }
 
-  public static void injectSystemProperties(Job job)
-  {
-    final Configuration conf = job.getConfiguration();
-    for (String propName : System.getProperties().stringPropertyNames()) {
-      if (propName.startsWith("hadoop.")) {
-        conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
-      }
-    }
-  }
-
   public boolean run()
   {
     try {
@@ -131,7 +121,7 @@ public class DeterminePartitionsJob implements Jobby
             String.format("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
         );
 
-        injectSystemProperties(groupByJob);
+        JobHelper.injectSystemProperties(groupByJob);
         groupByJob.setInputFormatClass(TextInputFormat.class);
         groupByJob.setMapperClass(DeterminePartitionsGroupByMapper.class);
         groupByJob.setMapOutputKeyClass(BytesWritable.class);
@@ -168,7 +158,7 @@ public class DeterminePartitionsJob implements Jobby
 
       dimSelectionJob.getConfiguration().set("io.sort.record.percent", "0.19");
 
-      injectSystemProperties(dimSelectionJob);
+      JobHelper.injectSystemProperties(dimSelectionJob);
 
       if (!config.getPartitionsSpec().isAssumeGrouped()) {
         // Read grouped data from the groupByJob.
