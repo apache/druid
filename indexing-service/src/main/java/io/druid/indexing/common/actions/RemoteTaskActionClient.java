@@ -32,6 +32,7 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.task.Task;
+import org.jboss.netty.channel.ChannelException;
 import org.joda.time.Duration;
 
 import java.io.IOException;
@@ -94,6 +95,7 @@ public class RemoteTaskActionClient implements TaskActionClient
         }
         catch (Exception e) {
           Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
+          Throwables.propagateIfInstanceOf(e.getCause(), ChannelException.class);
           throw Throwables.propagate(e);
         }
 
@@ -105,7 +107,7 @@ public class RemoteTaskActionClient implements TaskActionClient
 
         return jsonMapper.convertValue(responseDict.get("result"), taskAction.getReturnTypeReference());
       }
-      catch (IOException e) {
+      catch (IOException | ChannelException e) {
         log.warn(e, "Exception submitting action for task[%s]", task.getId());
 
         final Duration delay = retryPolicy.getAndIncrementRetryDelay();
