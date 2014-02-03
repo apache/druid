@@ -45,6 +45,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.groupby.having.EqualToHavingSpec;
 import io.druid.query.groupby.having.GreaterThanHavingSpec;
@@ -787,6 +788,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }"))
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
