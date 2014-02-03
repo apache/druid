@@ -3,11 +3,12 @@
 $(document).ready(function() {
 
   var basePath = "/druid/coordinator/v1/";
-  var type = $('#select_type').attr('value') + '';
-  var view = $('#select_view').attr('value') + '';
+  var type = $('#select_type').val() + '';
+  var view = $('#select_view').val() + '';
 
   function handleTable(dontDisplay)
   {
+  console.log(type);
     $.get(basePath + type + '?full', function(data) {
       buildTable(data, $('#result_table'), dontDisplay);
 
@@ -75,8 +76,9 @@ $(document).ready(function() {
   }
 
   $('#view_button').click(function() {
-    type = $('#select_type').attr('value') + '';
-    view = $('#select_view').attr('value') + '';
+  console.log("here");
+    type = $('#select_type').val() + '';
+    view = $('#select_view').val() + '';
 
     resetViews();
 

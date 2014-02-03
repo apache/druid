@@ -21,13 +21,17 @@ package io.druid.server.http;
 
 import com.google.inject.Inject;
 import io.druid.db.DatabaseRuleManager;
+import io.druid.server.coordinator.rules.Rule;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
+import java.util.List;
 
 /**
  */
@@ -66,5 +70,19 @@ public class RulesResource
     }
     return Response.ok(databaseRuleManager.getRules(dataSourceName))
                    .build();
+  }
+
+  @POST
+  @Path("/{dataSourceName}")
+  @Consumes("application/json")
+  public Response setDatasourceRules(
+      @PathParam("dataSourceName") final String dataSourceName,
+      final List<Rule> rules
+  )
+  {
+    if (databaseRuleManager.overrideRule(dataSourceName, rules)) {
+      return Response.ok().build();
+    }
+    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
   }
 }

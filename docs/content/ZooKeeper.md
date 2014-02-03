@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# ZooKeeper
 Druid uses [ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of current cluster state. The operations that happen over ZK are
 
 1.  [Coordinator](Coordinator.html) leader election
