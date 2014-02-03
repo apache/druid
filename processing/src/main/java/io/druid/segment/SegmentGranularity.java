@@ -35,7 +35,7 @@ import org.joda.time.format.DateTimeFormatter;
 
 /**
  */
-public enum IndexGranularity
+public enum SegmentGranularity
 {
   MINUTE
       {
@@ -542,8 +542,8 @@ public enum IndexGranularity
   public abstract int numIn(ReadableInterval interval);
 
   @JsonCreator
-  public static IndexGranularity fromString(String s)
+  public static SegmentGranularity fromString(String s)
   {
-    return IndexGranularity.valueOf(s.toUpperCase());
+    return SegmentGranularity.valueOf(s.toUpperCase());
   }
 }

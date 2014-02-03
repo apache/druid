@@ -29,7 +29,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.SegmentGranularity;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
@@ -71,7 +71,7 @@ public class RealtimePlumber implements Plumber
 
   private final Period windowPeriod;
   private final File basePersistDirectory;
-  private final IndexGranularity segmentGranularity;
+  private final SegmentGranularity segmentGranularity;
   private final Schema schema;
   private final FireDepartmentMetrics metrics;
   private final RejectionPolicy rejectionPolicy;
@@ -99,7 +99,7 @@ public class RealtimePlumber implements Plumber
   public RealtimePlumber(
       Period windowPeriod,
       File basePersistDirectory,
-      IndexGranularity segmentGranularity,
+      SegmentGranularity segmentGranularity,
       Schema schema,
       FireDepartmentMetrics metrics,
       RejectionPolicy rejectionPolicy,
@@ -141,7 +141,7 @@ public class RealtimePlumber implements Plumber
     return windowPeriod;
   }
 
-  public IndexGranularity getSegmentGranularity()
+  public SegmentGranularity getSegmentGranularity()
   {
     return segmentGranularity;
   }

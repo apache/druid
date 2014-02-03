@@ -34,7 +34,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.SegmentGranularity;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.Schema;
@@ -86,7 +86,7 @@ public class RealtimePlumberSchoolTest
     RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
         new Period("PT10m"),
         tmpDir,
-        IndexGranularity.HOUR
+        SegmentGranularity.HOUR
     );
 
     announcer = EasyMock.createMock(DataSegmentAnnouncer.class);

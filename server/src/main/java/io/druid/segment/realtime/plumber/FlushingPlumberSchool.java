@@ -27,7 +27,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.SegmentGranularity;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.Schema;
 import io.druid.server.coordination.DataSegmentAnnouncer;
@@ -49,7 +49,7 @@ public class FlushingPlumberSchool implements PlumberSchool
   private final Duration flushDuration;
   private final Period windowPeriod;
   private final File basePersistDirectory;
-  private final IndexGranularity segmentGranularity;
+  private final SegmentGranularity segmentGranularity;
   private final int maxPendingPersists;
 
   @JacksonInject
@@ -77,7 +77,7 @@ public class FlushingPlumberSchool implements PlumberSchool
       @JsonProperty("flushDuration") Duration flushDuration,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity
+      @JsonProperty("segmentGranularity") SegmentGranularity segmentGranularity
   )
   {
     this.flushDuration = flushDuration;

@@ -31,7 +31,6 @@ import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.db.DatabaseSegmentManager;
-import io.druid.segment.IndexGranularity;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 

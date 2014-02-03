@@ -35,7 +35,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.SegmentGranularity;
 import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.timeline.DataSegment;
@@ -199,7 +199,7 @@ public class TaskSerdeTest
         null,
         new Period("PT10M"),
         1,
-        IndexGranularity.HOUR,
+        SegmentGranularity.HOUR,
         null
     );
 
@@ -213,7 +213,7 @@ public class TaskSerdeTest
     Assert.assertEquals(2, task.getTaskResource().getRequiredCapacity());
     Assert.assertEquals("rofl", task.getTaskResource().getAvailabilityGroup());
     Assert.assertEquals(new Period("PT10M"), task.getWindowPeriod());
-    Assert.assertEquals(IndexGranularity.HOUR, task.getSegmentGranularity());
+    Assert.assertEquals(SegmentGranularity.HOUR, task.getSegmentGranularity());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());

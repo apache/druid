@@ -42,7 +42,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.SegmentGranularity;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentConfig;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
@@ -90,7 +90,7 @@ public class RealtimeIndexTask extends AbstractTask
   private final int maxPendingPersists;
 
   @JsonIgnore
-  private final IndexGranularity segmentGranularity;
+  private final SegmentGranularity segmentGranularity;
 
   @JsonIgnore
   private final RejectionPolicyFactory rejectionPolicyFactory;
@@ -110,7 +110,7 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("maxPendingPersists") int maxPendingPersists,
-      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
+      @JsonProperty("segmentGranularity") SegmentGranularity segmentGranularity,
       @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory
   )
   {
@@ -399,7 +399,7 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @JsonProperty
-  public IndexGranularity getSegmentGranularity()
+  public SegmentGranularity getSegmentGranularity()
   {
     return segmentGranularity;
   }

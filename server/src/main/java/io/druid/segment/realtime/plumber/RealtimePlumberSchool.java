@@ -28,7 +28,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.ServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.SegmentGranularity;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.Schema;
@@ -50,7 +50,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
   private final Period windowPeriod;
   private final File basePersistDirectory;
-  private final IndexGranularity segmentGranularity;
+  private final SegmentGranularity segmentGranularity;
 
   @JacksonInject
   @NotNull
@@ -89,7 +89,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   public RealtimePlumberSchool(
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity
+      @JsonProperty("segmentGranularity") SegmentGranularity segmentGranularity
   )
   {
     this.windowPeriod = windowPeriod;

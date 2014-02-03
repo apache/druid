@@ -7,7 +7,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.SegmentGranularity;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.Schema;
 import io.druid.server.coordination.DataSegmentAnnouncer;
@@ -38,7 +38,7 @@ public class FlushingPlumber extends RealtimePlumber
       Duration flushDuration,
       Period windowPeriod,
       File basePersistDirectory,
-      IndexGranularity segmentGranularity,
+      SegmentGranularity segmentGranularity,
       Schema schema,
       FireDepartmentMetrics metrics,
       RejectionPolicy rejectionPolicy,
