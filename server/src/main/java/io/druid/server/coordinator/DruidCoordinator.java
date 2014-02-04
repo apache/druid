@@ -777,7 +777,7 @@ public class DruidCoordinator
                                 DruidServer input
                             )
                             {
-                              return !input.isRealtime();
+                              return input.isAssignable();
                             }
                           }
                       );

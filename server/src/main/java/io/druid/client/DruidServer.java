@@ -136,6 +136,11 @@ public class DruidServer implements Comparable
     return Collections.unmodifiableMap(segments);
   }
 
+  public boolean isAssignable()
+  {
+    return getType().equalsIgnoreCase("historical") || getType().equalsIgnoreCase("bridge");
+  }
+
   public boolean isRealtime()
   {
     return getType().equalsIgnoreCase("realtime");
