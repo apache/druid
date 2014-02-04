@@ -26,9 +26,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ComparisonChain;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -40,7 +38,9 @@ import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
+import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
@@ -76,7 +76,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Determines appropriate ShardSpecs for a job by determining whether or not partitioning is necessary, and if so,
@@ -114,6 +113,10 @@ public class DeterminePartitionsJob implements Jobby
        * Group by (timestamp, dimensions) so we can correctly count dimension values as they would appear
        * in the final segment.
        */
+
+      if(!(config.getPartitionsSpec() instanceof SingleDimensionPartitionsSpec)){
+        throw new ISE("DeterminePartitionsJob can only be run for SingleDimensionPartitionsSpec, partitionSpec found [%s]", config.getPartitionsSpec());
+      }
 
       if (!config.getPartitionsSpec().isAssumeGrouped()) {
         final Job groupByJob = new Job(
@@ -180,7 +183,7 @@ public class DeterminePartitionsJob implements Jobby
       dimSelectionJob.setOutputValueClass(Text.class);
       dimSelectionJob.setOutputFormatClass(DeterminePartitionsDimSelectionOutputFormat.class);
       dimSelectionJob.setPartitionerClass(DeterminePartitionsDimSelectionPartitioner.class);
-      dimSelectionJob.setNumReduceTasks(config.getGranularitySpec().bucketIntervals().size());
+      dimSelectionJob.setNumReduceTasks(config.getGranularitySpec().bucketIntervals().get().size());
       JobHelper.setupClasspath(config, dimSelectionJob);
 
       config.intoConfiguration(dimSelectionJob);
@@ -206,7 +209,7 @@ public class DeterminePartitionsJob implements Jobby
       FileSystem fileSystem = null;
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
-      for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
+      for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         final Path partitionInfoPath = config.makeSegmentPartitionInfoPath(segmentGranularity);
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(dimSelectionJob.getConfiguration());
@@ -257,17 +260,9 @@ public class DeterminePartitionsJob implements Jobby
         Context context
     ) throws IOException, InterruptedException
     {
-      // Create group key, there are probably more efficient ways of doing this
-      final Map<String, Set<String>> dims = Maps.newTreeMap();
-      for (final String dim : inputRow.getDimensions()) {
-        final Set<String> dimValues = ImmutableSortedSet.copyOf(inputRow.getDimension(dim));
-        if (dimValues.size() > 0) {
-          dims.put(dim, dimValues);
-        }
-      }
-      final List<Object> groupKey = ImmutableList.of(
+      final List<Object> groupKey = Rows.toGroupKey(
           rollupGranularity.truncate(inputRow.getTimestampFromEpoch()),
-          dims
+          inputRow
       );
       context.write(
           new BytesWritable(HadoopDruidIndexerConfig.jsonMapper.writeValueAsBytes(groupKey)),
@@ -303,8 +298,8 @@ public class DeterminePartitionsJob implements Jobby
         throws IOException, InterruptedException
     {
       final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
-      final String partitionDimension = config.getPartitionDimension();
-      helper = new DeterminePartitionsDimSelectionMapperHelper(config, partitionDimension);
+      SingleDimensionPartitionsSpec spec = (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
+      helper = new DeterminePartitionsDimSelectionMapperHelper(config, spec.getPartitionDimension());
     }
 
     @Override
@@ -335,8 +330,8 @@ public class DeterminePartitionsJob implements Jobby
     {
       super.setup(context);
       final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
-      final String partitionDimension = config.getPartitionDimension();
-      helper = new DeterminePartitionsDimSelectionMapperHelper(config, partitionDimension);
+      final SingleDimensionPartitionsSpec spec = (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
+      helper = new DeterminePartitionsDimSelectionMapperHelper(config, spec.getPartitionDimension());
     }
 
     @Override
@@ -371,7 +366,7 @@ public class DeterminePartitionsJob implements Jobby
 
       final ImmutableMap.Builder<DateTime, Integer> timeIndexBuilder = ImmutableMap.builder();
       int idx = 0;
-      for (final Interval bucketInterval : config.getGranularitySpec().bucketIntervals()) {
+      for (final Interval bucketInterval : config.getGranularitySpec().bucketIntervals().get()) {
         timeIndexBuilder.put(bucketInterval.getStart(), idx);
         idx++;
       }

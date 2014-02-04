@@ -24,9 +24,7 @@ import com.clearspring.analytics.stream.cardinality.HyperLogLog;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
@@ -35,6 +33,7 @@ import com.google.common.io.Closeables;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -68,8 +67,8 @@ public class DetermineHashedPartitionsJob implements Jobby
 {
   private static final int MAX_SHARDS = 128;
   private static final Logger log = new Logger(DetermineHashedPartitionsJob.class);
-  private final HadoopDruidIndexerConfig config;
   private static final int HYPER_LOG_LOG_BIT_SIZE = 20;
+  private final HadoopDruidIndexerConfig config;
 
   public DetermineHashedPartitionsJob(
       HadoopDruidIndexerConfig config
@@ -121,7 +120,7 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       log.info("Job completed, loading up partitions for intervals[%s].", config.getSegmentGranularIntervals());
       FileSystem fileSystem = null;
-      if (config.getSegmentGranularIntervals().isEmpty()) {
+      if (!config.getSegmentGranularIntervals().isPresent()) {
         final Path intervalInfoPath = config.makeIntervalInfoPath();
         fileSystem = intervalInfoPath.getFileSystem(groupByJob.getConfiguration());
         if (!fileSystem.exists(intervalInfoPath)) {
@@ -137,7 +136,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       }
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
-      for (Interval segmentGranularity : config.getSegmentGranularIntervals()) {
+      for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
 
         final Path partitionInfoPath = config.makeSegmentPartitionInfoPath(segmentGranularity);
@@ -204,17 +203,17 @@ public class DetermineHashedPartitionsJob implements Jobby
       super.setup(context);
       rollupGranularity = getConfig().getRollupSpec().getRollupGranularity();
       config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
-
-      if (config.getSegmentGranularIntervals().isEmpty()) {
-        determineIntervals = true;
-        hyperLogLogs = Maps.newHashMap();
-      } else {
+      Optional<Set<Interval>> intervals = config.getSegmentGranularIntervals();
+      if (intervals.isPresent()) {
         determineIntervals = false;
         final ImmutableMap.Builder<Interval, HyperLogLog> builder = ImmutableMap.builder();
-        for (final Interval bucketInterval : config.getGranularitySpec().bucketIntervals()) {
+        for (final Interval bucketInterval : intervals.get()) {
           builder.put(bucketInterval, new HyperLogLog(HYPER_LOG_LOG_BIT_SIZE));
         }
         hyperLogLogs = builder.build();
+      } else {
+        determineIntervals = true;
+        hyperLogLogs = Maps.newHashMap();
       }
     }
 
@@ -225,18 +224,10 @@ public class DetermineHashedPartitionsJob implements Jobby
         Context context
     ) throws IOException, InterruptedException
     {
-      // Create group key, there are probably more efficient ways of doing this
-      final Map<String, Set<String>> dims = Maps.newTreeMap();
-      for (final String dim : inputRow.getDimensions()) {
-        final Set<String> dimValues = ImmutableSortedSet.copyOf(inputRow.getDimension(dim));
-        if (dimValues.size() > 0) {
-          dims.put(dim, dimValues);
-        }
-      }
 
-      final List<Object> groupKey = ImmutableList.of(
+      final List<Object> groupKey = Rows.toGroupKey(
           rollupGranularity.truncate(inputRow.getTimestampFromEpoch()),
-          dims
+          inputRow
       );
       Interval interval;
       if (determineIntervals) {
@@ -338,7 +329,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         throws IOException, InterruptedException
     {
       super.run(context);
-      if (config.getSegmentGranularIntervals().isEmpty()) {
+      if (!config.getSegmentGranularIntervals().isPresent()) {
         final Path outPath = config.makeIntervalInfoPath();
         final OutputStream out = Utils.makePathAndOutputStream(
             context, outPath, config.isOverwriteFiles()

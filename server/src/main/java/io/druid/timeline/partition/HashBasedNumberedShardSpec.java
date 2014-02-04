@@ -25,16 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Rows;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
@@ -60,18 +56,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
 
   protected int hash(InputRow inputRow)
   {
-    final Map<String, Set<String>> dims = Maps.newTreeMap();
-    for (final String dim : inputRow.getDimensions()) {
-      final Set<String> dimValues = ImmutableSortedSet.copyOf(inputRow.getDimension(dim));
-      if (dimValues.size() > 0) {
-        dims.put(dim, dimValues);
-      }
-    }
-    final List<Object> groupKey = ImmutableList.of(
-        inputRow.getTimestampFromEpoch(),
-        dims
-    );
-
+    final List<Object> groupKey = Rows.toGroupKey(inputRow.getTimestampFromEpoch(), inputRow);
     try {
       return hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asInt();
     }

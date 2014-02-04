@@ -40,7 +40,7 @@ import java.util.SortedSet;
 public interface GranularitySpec
 {
   /** Set of all time groups, broken up on segment boundaries. Should be sorted by interval start and non-overlapping.*/
-  public SortedSet<Interval> bucketIntervals();
+  public Optional<SortedSet<Interval>> bucketIntervals();
 
   /** Time-grouping interval corresponding to some instant, if any. */
   public Optional<Interval> bucketInterval(DateTime dt);
