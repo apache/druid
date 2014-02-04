@@ -141,11 +141,6 @@ public class DruidServer implements Comparable
     return getType().equalsIgnoreCase("historical") || getType().equalsIgnoreCase("bridge");
   }
 
-  public boolean isRealtime()
-  {
-    return getType().equalsIgnoreCase("realtime");
-  }
-
   public DataSegment getSegment(String segmentName)
   {
     return segments.get(segmentName);
