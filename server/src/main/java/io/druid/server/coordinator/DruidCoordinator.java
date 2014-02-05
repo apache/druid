@@ -87,6 +87,7 @@ public class DruidCoordinator
 
   private volatile boolean started = false;
   private volatile boolean leader = false;
+  private volatile int leaderCounter = 0;
   private volatile AtomicReference<CoordinatorDynamicConfig> dynamicConfigs;
 
   private final DruidCoordinatorConfig config;
@@ -483,6 +484,7 @@ public class DruidCoordinator
 
       log.info("I am the leader of the coordinators, all must bow!");
       try {
+        leaderCounter++;
         leader = true;
         databaseSegmentManager.start();
         databaseRuleManager.start();
@@ -512,6 +514,7 @@ public class DruidCoordinator
           );
         }
 
+        final int startingLeaderCounter = leaderCounter;
         for (final Pair<? extends CoordinatorRunnable, Duration> coordinatorRunnable : coordinatorRunnables) {
           ScheduledExecutors.scheduleWithFixedDelay(
               exec,
@@ -524,10 +527,11 @@ public class DruidCoordinator
                 @Override
                 public ScheduledExecutors.Signal call()
                 {
-                  if (leader) {
+                  if (leader && startingLeaderCounter == leaderCounter) {
                     theRunnable.run();
                   }
-                  if (leader) { // (We might no longer be coordinator)
+                  // (We might no longer be leader or leadership has changed)
+                  if (leader && startingLeaderCounter == leaderCounter) {
                     return ScheduledExecutors.Signal.REPEAT;
                   } else {
                     return ScheduledExecutors.Signal.STOP;
@@ -560,6 +564,8 @@ public class DruidCoordinator
   {
     synchronized (lock) {
       try {
+        leaderCounter++;
+
         log.info("I am no longer the leader...");
 
         for (String server : loadManagementPeons.keySet()) {
@@ -687,11 +693,11 @@ public class DruidCoordinator
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams.newBuilder()
-                                    .withStartTime(startTime)
-                                    .withDatasources(databaseSegmentManager.getInventory())
-                                    .withDynamicConfigs(dynamicConfigs.get())
-                                    .withEmitter(emitter)
-                                    .build();
+                                         .withStartTime(startTime)
+                                         .withDatasources(databaseSegmentManager.getInventory())
+                                         .withDynamicConfigs(dynamicConfigs.get())
+                                         .withEmitter(emitter)
+                                         .build();
 
 
         for (DruidCoordinatorHelper helper : helpers) {
