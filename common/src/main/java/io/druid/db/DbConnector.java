@@ -87,7 +87,8 @@ public class DbConnector
             + "  `payload` longblob NOT NULL,\n"
             + "  `status_payload` longblob NOT NULL,\n"
             + "  `active` tinyint(1) NOT NULL DEFAULT '0',\n"
-            + "  PRIMARY KEY (`id`)\n"
+            + "  PRIMARY KEY (`id`),\n"
+            + "  KEY (active, created_date(100))\n"
             + ")",
             taskTableName
         )
