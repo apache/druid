@@ -54,7 +54,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     return Math.abs(hash(inputRow)) % getPartitions() == getPartitionNum();
   }
 
-  protected int hash(InputRow inputRow)
+  private int hash(InputRow inputRow)
   {
     final List<Object> groupKey = Rows.toGroupKey(inputRow.getTimestampFromEpoch(), inputRow);
     try {
