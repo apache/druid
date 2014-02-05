@@ -500,4 +500,47 @@ public class HadoopDruidIndexerConfigTest
       throw Throwables.propagate(e);
     }
   }
+
+  public void testRandomPartitionsSpec() throws Exception{
+    {
+      final HadoopDruidIndexerConfig cfg;
+
+      try {
+        cfg = jsonReadWriteRead(
+            "{"
+            + "\"partitionsSpec\":{"
+            + "   \"targetPartitionSize\":100,"
+            + "   \"type\":\"random\""
+            + " }"
+            + "}",
+            HadoopDruidIndexerConfig.class
+        );
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+
+      final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
+
+      Assert.assertEquals(
+          "isDeterminingPartitions",
+          partitionsSpec.isDeterminingPartitions(),
+          true
+      );
+
+      Assert.assertEquals(
+          "getTargetPartitionSize",
+          partitionsSpec.getTargetPartitionSize(),
+          100
+      );
+
+      Assert.assertEquals(
+          "getMaxPartitionSize",
+          partitionsSpec.getMaxPartitionSize(),
+          150
+      );
+
+      Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof RandomPartitionsSpec);
+    }
+  }
 }
