@@ -527,7 +527,7 @@ public class DruidCoordinator
                 @Override
                 public ScheduledExecutors.Signal call()
                 {
-                  if (leader) {
+                  if (leader && startingLeaderCounter == leaderCounter) {
                     theRunnable.run();
                   }
                   // (We might no longer be leader or leadership has changed)
