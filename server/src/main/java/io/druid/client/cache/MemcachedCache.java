@@ -68,6 +68,7 @@ public class MemcachedCache implements Cache
                                         .setShouldOptimize(true)
                                         .setOpQueueMaxBlockTime(config.getTimeout())
                                         .setOpTimeout(config.getTimeout())
+                                        .setOpQueueFactory(new MemcachedOperationQueueFactory(config.getMaxOperationQueueSize()))
                                         .build(),
           AddrUtil.getAddresses(config.getHosts())
         ),

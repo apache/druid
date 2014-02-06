@@ -27,19 +27,17 @@ public class MemcachedCacheConfig
 {
   @JsonProperty
   private int expiration = 2592000; // What is this number?
-
   @JsonProperty
   private int timeout = 500;
-
   @JsonProperty
   @NotNull
   private String hosts;
-
   @JsonProperty
   private int maxObjectSize = 50 * 1024 * 1024;
-
   @JsonProperty
   private String memcachedPrefix = "druid";
+  @JsonProperty
+  private int maxOperationQueueSize = 256 * 1024 * 1024; // 256 MB
 
   public int getExpiration()
   {
@@ -64,5 +62,10 @@ public class MemcachedCacheConfig
   public String getMemcachedPrefix()
   {
     return memcachedPrefix;
+  }
+
+  public int getMaxOperationQueueSize()
+  {
+    return maxOperationQueueSize;
   }
 }
