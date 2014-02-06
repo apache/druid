@@ -96,8 +96,8 @@ public class DruidCoordinator
   private final Object lock = new Object();
 
   private volatile boolean started = false;
+  private volatile int leaderCounter = 0;
   private volatile boolean leader = false;
-  private volatile AtomicReference<CoordinatorDynamicConfig> dynamicConfigs;
 
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
@@ -184,7 +184,6 @@ public class DruidCoordinator
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
     this.leaderLatch = new AtomicReference<>(null);
-    this.dynamicConfigs = new AtomicReference<>(null);
     this.loadManagementPeons = loadQueuePeonMap;
   }
 
@@ -280,7 +279,11 @@ public class DruidCoordinator
 
   public CoordinatorDynamicConfig getDynamicConfigs()
   {
-    return dynamicConfigs.get();
+    return configManager.watch(
+        CoordinatorDynamicConfig.CONFIG_KEY,
+        CoordinatorDynamicConfig.class,
+        new CoordinatorDynamicConfig.Builder().build()
+    ).get();
   }
 
   public void removeSegment(DataSegment segment)
@@ -533,6 +536,7 @@ public class DruidCoordinator
 
       log.info("I am the leader of the coordinators, all must bow!");
       try {
+        leaderCounter++;
         leader = true;
         databaseSegmentManager.start();
         databaseRuleManager.start();
@@ -540,11 +544,6 @@ public class DruidCoordinator
         serviceAnnouncer.announce(self);
 
         final List<Pair<? extends CoordinatorRunnable, Duration>> coordinatorRunnables = Lists.newArrayList();
-        dynamicConfigs = configManager.watch(
-            CoordinatorDynamicConfig.CONFIG_KEY,
-            CoordinatorDynamicConfig.class,
-            new CoordinatorDynamicConfig.Builder().build()
-        );
         coordinatorRunnables.add(Pair.of(new CoordinatorHistoricalManagerRunnable(), config.getCoordinatorPeriod()));
         if (indexingServiceClient != null) {
           coordinatorRunnables.add(
@@ -562,6 +561,7 @@ public class DruidCoordinator
           );
         }
 
+        final int startingLeaderCounter = leaderCounter;
         for (final Pair<? extends CoordinatorRunnable, Duration> coordinatorRunnable : coordinatorRunnables) {
           ScheduledExecutors.scheduleWithFixedDelay(
               exec,
@@ -574,10 +574,10 @@ public class DruidCoordinator
                 @Override
                 public ScheduledExecutors.Signal call()
                 {
-                  if (leader) {
+                  if (leader && startingLeaderCounter == leaderCounter) {
                     theRunnable.run();
                   }
-                  if (leader) { // (We might no longer be leader)
+                  if (leader && startingLeaderCounter == leaderCounter) { // (We might no longer be leader)
                     return ScheduledExecutors.Signal.REPEAT;
                   } else {
                     return ScheduledExecutors.Signal.STOP;
@@ -610,6 +610,8 @@ public class DruidCoordinator
   {
     synchronized (lock) {
       try {
+        leaderCounter++;
+
         log.info("I am no longer the leader...");
 
         for (String server : loadManagementPeons.keySet()) {
@@ -739,10 +741,9 @@ public class DruidCoordinator
             DruidCoordinatorRuntimeParams.newBuilder()
                                          .withStartTime(startTime)
                                          .withDatasources(databaseSegmentManager.getInventory())
-                                         .withDynamicConfigs(dynamicConfigs.get())
+                                         .withDynamicConfigs(getDynamicConfigs())
                                          .withEmitter(emitter)
                                          .build();
-
 
         for (DruidCoordinatorHelper helper : helpers) {
           params = helper.run(params);
@@ -777,7 +778,7 @@ public class DruidCoordinator
                                 DruidServer input
                             )
                             {
-                              return !input.isRealtime();
+                              return input.isAssignable();
                             }
                           }
                       );
@@ -826,7 +827,6 @@ public class DruidCoordinator
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .withBalancerReferenceTimestamp(DateTime.now())
-                               .withDynamicConfigs(dynamicConfigs.get())
                                .build();
                 }
               },

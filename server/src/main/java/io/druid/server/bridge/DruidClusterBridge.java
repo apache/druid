@@ -291,7 +291,7 @@ public class DruidClusterBridge
                                 DruidServer input
                             )
                             {
-                              return !input.isRealtime();
+                              return input.isAssignable();
                             }
                           }
                       );

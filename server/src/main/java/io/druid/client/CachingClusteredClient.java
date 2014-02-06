@@ -313,7 +313,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               final MultipleSpecificSegmentSpec segmentSpec = new MultipleSpecificSegmentSpec(descriptors);
               List<Interval> intervals = segmentSpec.getIntervals();
 
-              if (server.isRealtime() || !populateCache || isBySegment) {
+              if (!server.isAssignable() || !populateCache || isBySegment) {
                 resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec));
               } else {
                 resultSeqToAdd = toolChest.mergeSequences(

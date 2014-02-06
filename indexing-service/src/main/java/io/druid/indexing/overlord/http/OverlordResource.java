@@ -46,7 +46,6 @@ import io.druid.indexing.overlord.scaling.ResourceManagementScheduler;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.timeline.DataSegment;
-import org.apache.zookeeper.data.Stat;
 import org.joda.time.DateTime;
 
 import javax.ws.rs.Consumes;

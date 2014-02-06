@@ -8,7 +8,6 @@ $(document).ready(function() {
 
   function handleTable(dontDisplay)
   {
-  console.log(type);
     $.get(basePath + type + '?full', function(data) {
       buildTable(data, $('#result_table'), dontDisplay);
 
@@ -76,7 +75,6 @@ $(document).ready(function() {
   }
 
   $('#view_button').click(function() {
-  console.log("here");
     type = $('#select_type').val() + '';
     view = $('#select_view').val() + '';
 

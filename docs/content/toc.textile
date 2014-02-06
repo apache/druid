@@ -28,6 +28,7 @@ h2. Data Ingestion
 * "Batch":./Batch-ingestion.html
 * "Indexing Service":./Indexing-Service.html
 ** "Tasks":./Tasks.html
+* "Data Formats":./Data_formats.html
 * "Ingestion FAQ":./Ingestion-FAQ.html
 
 h2. Querying
