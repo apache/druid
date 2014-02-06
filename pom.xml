@@ -399,11 +399,28 @@
                 <artifactId>httpcore</artifactId>
                 <version>4.2</version>
             </dependency>
+            <!--
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-core</artifactId>
                 <version>1.0.3</version>
                 <scope>provided</scope>
+            </dependency>
+            -->
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-common</artifactId>
+                <version>2.0.0-cdh4.5.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-core</artifactId>
+                <version>2.0.0-mr1-cdh4.5.0-cm4.8.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-hdfs</artifactId>
+                <version>2.0.0-cdh4.5.0</version>
             </dependency>
 
             <!-- Test Scope -->
@@ -541,6 +558,17 @@
             <id>pub-libs</id>
             <name>pub-libs-local</name>
             <url>https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local</url>
+        </repository>
+        <repository>
+            <id>cloudera-releases</id>
+            <name>Cloudera Releases</name>
+            <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+            <releases>
+              <enabled>true</enabled>
+            </releases>
+            <snapshots>
+              <enabled>false</enabled>
+            </snapshots>
         </repository>
         <repository>
             <id>thirdparty-uploads</id>
