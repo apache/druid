@@ -148,7 +148,7 @@ public class DefaultLimitSpec implements LimitSpec
       @Override
       public int compare(Row left, Row right)
       {
-        return comparator.compare(left.getFloatMetric(column), right.getFloatMetric(column));
+        return comparator.compare(left.getRaw(column), right.getRaw(column));
       }
     };
   }

@@ -979,6 +979,94 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.verify(mockPeon);
   }
 
+  /**
+   * Nodes:
+   * hot - nothing loaded
+   * _default_tier - 1 segment loaded
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testReplicantThrottleAcrossTiers() throws Exception
+  {
+    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
+    EasyMock.replay(mockPeon);
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"),
+                ImmutableMap.<String, Integer>of(
+                    "hot", 1,
+                    DruidServer.DEFAULT_TIER, 1
+                ),
+                null,
+                null
+            )
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot",
+                            "hostHot",
+                            1000,
+                            "historical",
+                            "hot",
+                            0
+                        ),
+                        mockPeon
+                    )
+                )
+            ),
+            DruidServer.DEFAULT_TIER,
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverNorm",
+                            "hostNorm",
+                            1000,
+                            "historical",
+                            DruidServer.DEFAULT_TIER,
+                            0
+                        ),
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
+    DruidCoordinatorRuntimeParams params =
+        new DruidCoordinatorRuntimeParams.Builder()
+            .withDruidCluster(druidCluster)
+            .withAvailableSegments(availableSegments)
+            .withDatabaseRuleManager(databaseRuleManager)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .build();
+
+    DruidCoordinatorRuleRunner runner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(7, 1), coordinator);
+    DruidCoordinatorRuntimeParams afterParams = runner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 24);
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get(DruidServer.DEFAULT_TIER).get() == 7);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
+
+    EasyMock.verify(mockPeon);
+  }
+
   @Test
   public void testDropReplicantThrottle() throws Exception
   {
