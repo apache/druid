@@ -301,7 +301,8 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       final int maxWorkerCount = workerSetupData.getMaxNumWorkers();
 
       if (minWorkerCount > maxWorkerCount) {
-        log.info("Huh? minWorkerCount[%d] > maxWorkerCount[%d]. I give up!", minWorkerCount, maxWorkerCount);
+        log.error("Huh? minWorkerCount[%d] > maxWorkerCount[%d]. I give up!", minWorkerCount, maxWorkerCount);
+        return;
       }
 
       if (targetWorkerCount < 0) {
