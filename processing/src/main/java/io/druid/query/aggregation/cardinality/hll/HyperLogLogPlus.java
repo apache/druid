@@ -144,9 +144,6 @@ public class HyperLogLogPlus
     }
   }
 
-  public static final HashFunction HASHER = Hashing.murmur3_128();
-  public static final byte[] EMPTY_BYTES = new byte[]{};
-
   private ByteBuffer theBuffer;
   private RegisterSetBB registerSet;
   private final int p;

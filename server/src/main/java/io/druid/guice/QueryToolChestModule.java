@@ -19,7 +19,6 @@
 
 package io.druid.guice;
 
-import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -35,6 +34,7 @@ import io.druid.query.QueryConfig;
 import io.druid.query.QueryToolChest;
 import io.druid.query.aggregation.cardinality.DimensionCardinalityAggregatorFactory;
 import io.druid.query.aggregation.cardinality.HllPlusComplexMetricSerde;
+import io.druid.query.aggregation.cardinality.hll.HyperLogLogPlus;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
@@ -86,7 +86,7 @@ public class QueryToolChestModule implements DruidModule
                   SerializerProvider serializerProvider)
                   throws IOException
               {
-                jsonGenerator.writeObject(hyperLogLogPlus.getBytes());
+                jsonGenerator.writeObject(hyperLogLogPlus.getBuffer());
               }
             }
         )
