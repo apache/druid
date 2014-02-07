@@ -37,7 +37,7 @@ public class MemcachedCacheConfig
   @JsonProperty
   private String memcachedPrefix = "druid";
   @JsonProperty
-  private int maxOperationQueueSize = 256 * 1024 * 1024; // 256 MB
+  private long maxOperationQueueSize = 256 * 1024 * 1024L; // 256 MB
 
   public int getExpiration()
   {
@@ -64,7 +64,7 @@ public class MemcachedCacheConfig
     return memcachedPrefix;
   }
 
-  public int getMaxOperationQueueSize()
+  public long getMaxOperationQueueSize()
   {
     return maxOperationQueueSize;
   }

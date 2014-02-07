@@ -56,7 +56,7 @@ public class MemcachedCache implements Cache
 
       // always use compression
       transcoder.setCompressionThreshold(0);
-
+      MemcachedOperationQueueFactory queueFactory = new MemcachedOperationQueueFactory(config.getMaxOperationQueueSize());
       return new MemcachedCache(
         new MemcachedClient(
           new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
@@ -68,7 +68,8 @@ public class MemcachedCache implements Cache
                                         .setShouldOptimize(true)
                                         .setOpQueueMaxBlockTime(config.getTimeout())
                                         .setOpTimeout(config.getTimeout())
-                                        .setOpQueueFactory(new MemcachedOperationQueueFactory(config.getMaxOperationQueueSize()))
+                                        .setOpQueueFactory(queueFactory)
+                                        .setWriteOpQueueFactory(queueFactory)
                                         .build(),
           AddrUtil.getAddresses(config.getHosts())
         ),

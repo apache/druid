@@ -26,9 +26,9 @@ import java.util.concurrent.BlockingQueue;
 
 public class MemcachedOperationQueueFactory implements OperationQueueFactory
 {
-  public final int maxQueueSize;
+  public final long maxQueueSize;
 
-  public MemcachedOperationQueueFactory(int maxQueueSize)
+  public MemcachedOperationQueueFactory(long maxQueueSize)
   {
     this.maxQueueSize = maxQueueSize;
   }
