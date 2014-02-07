@@ -53,6 +53,7 @@ import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.segment.serde.ComplexMetrics;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
@@ -86,7 +87,10 @@ public class QueryToolChestModule implements DruidModule
                   SerializerProvider serializerProvider)
                   throws IOException
               {
-                jsonGenerator.writeObject(hyperLogLogPlus.getBuffer());
+                ByteBuffer buf = hyperLogLogPlus.getBuffer();
+                byte[] bytes = new byte[buf.remaining()];
+                buf.put(bytes);
+                jsonGenerator.writeObject(bytes);
               }
             }
         )
