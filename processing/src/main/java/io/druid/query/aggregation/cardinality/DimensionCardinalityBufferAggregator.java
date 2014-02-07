@@ -1,12 +1,10 @@
 package io.druid.query.aggregation.cardinality;
 
-import com.google.common.base.Charsets;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.cardinality.hll.HyperLogLogPlus;
 import io.druid.segment.ObjectColumnSelector;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 /**
  *
