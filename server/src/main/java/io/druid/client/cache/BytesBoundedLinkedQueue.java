@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -35,14 +36,15 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implements BlockingQueue<E>
 {
-  private LinkedList<E> delegate;
-  private int capacity;
-  private int currentSize;
-  private Lock lock = new ReentrantLock();
-  private Condition notFull = lock.newCondition();
-  private Condition notEmpty = lock.newCondition();
+  private final LinkedList<E> delegate;
+  private final AtomicLong currentSize = new AtomicLong(0);
+  private final Lock putLock = new ReentrantLock();
+  private final Condition notFull = putLock.newCondition();
+  private final Lock takeLock = new ReentrantLock();
+  private final Condition notEmpty = takeLock.newCondition();
+  private long capacity;
 
-  public BytesBoundedLinkedQueue(int capacity)
+  public BytesBoundedLinkedQueue(long capacity)
   {
     delegate = new LinkedList<>();
     this.capacity = capacity;
@@ -57,28 +59,54 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
 
   public abstract long getBytesSize(E e);
 
-  public void operationAdded(E e)
+  public void elementAdded(E e)
   {
-    currentSize += getBytesSize(e);
-    notEmpty.signalAll();
+    currentSize.addAndGet(getBytesSize(e));
   }
 
-  public void operationRemoved(E e)
+  public void elementRemoved(E e)
   {
-    currentSize -= getBytesSize(e);
-    notFull.signalAll();
+    currentSize.addAndGet(-1 * getBytesSize(e));
+  }
+
+  private void fullyUnlock()
+  {
+    takeLock.unlock();
+    putLock.unlock();
+  }
+
+  private void fullyLock()
+  {
+    takeLock.lock();
+    putLock.lock();
+  }
+
+  private void signalNotEmpty()
+  {
+    takeLock.lock();
+    try {
+      notEmpty.signal();
+    }
+    finally {
+      takeLock.unlock();
+    }
+  }
+
+  private void signalNotFull()
+  {
+    putLock.lock();
+    try {
+      notFull.signal();
+    }
+    finally {
+      putLock.unlock();
+    }
   }
 
   @Override
   public int size()
   {
-    lock.lock();
-    try {
-      return delegate.size();
-    }
-    finally {
-      lock.unlock();
-    }
+    return delegate.size();
   }
 
   @Override
@@ -96,57 +124,66 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   {
     checkNotNull(e);
     long nanos = unit.toNanos(timeout);
-    lock.lockInterruptibly();
+    boolean added = false;
+    putLock.lockInterruptibly();
     try {
-      while (currentSize > capacity) {
+      while (currentSize.get() >= capacity) {
         if (nanos <= 0) {
-          return false;
+          break;
         }
         nanos = notFull.awaitNanos(nanos);
       }
       delegate.add(e);
-      operationAdded(e);
-      return true;
+      elementAdded(e);
+      added = true;
     }
     finally {
-      lock.unlock();
+      putLock.unlock();
     }
+    if (added) {
+      signalNotEmpty();
+    }
+    return added;
 
   }
 
   @Override
   public E take() throws InterruptedException
   {
-    lock.lockInterruptibly();
+    E e;
+    takeLock.lockInterruptibly();
     try {
       while (delegate.size() == 0) {
         notEmpty.await();
       }
-      E e = delegate.remove();
-      operationRemoved(e);
-      return e;
+      e = delegate.remove();
+      elementRemoved(e);
     }
     finally {
-      lock.unlock();
+      takeLock.unlock();
     }
+    if (e != null) {
+      signalNotFull();
+    }
+    return e;
   }
 
   @Override
   public int remainingCapacity()
   {
-    lock.lock();
-    try {
-      // return approximate remaining capacity based on current data
-      if (delegate.size() == 0) {
-        return capacity;
-      } else {
-        int averageByteSize = currentSize / delegate.size();
-        return (capacity - currentSize) / averageByteSize;
-      }
+    int delegateSize = delegate.size();
+    long currentByteSize = currentSize.get();
+    // return approximate remaining capacity based on current data
+    if (delegateSize == 0) {
+      return (int) Math.min(capacity, Integer.MAX_VALUE);
+    } else if (capacity > currentByteSize) {
+      long averageElementSize = currentByteSize / delegateSize;
+      return (int) ((capacity - currentByteSize) / averageElementSize);
+    } else {
+      // queue full
+      return 0;
     }
-    finally {
-      lock.unlock();
-    }
+
   }
 
   @Override
@@ -164,67 +201,80 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
     if (c == this) {
       throw new IllegalArgumentException();
     }
-    lock.lock();
+    int n = 0;
+    takeLock.lock();
     try {
-      int n = Math.min(maxElements, delegate.size());
+      n = Math.min(maxElements, delegate.size());
       if (n < 0) {
         return 0;
       }
       // count.get provides visibility to first n Nodes
       for (int i = 0; i < n; i++) {
         E e = delegate.remove(0);
-        operationRemoved(e);
+        elementRemoved(e);
         c.add(e);
       }
-      return n;
     }
     finally {
-      lock.unlock();
+      takeLock.unlock();
     }
+    if (n > 0) {
+      signalNotFull();
+    }
+    return n;
   }
 
   @Override
   public boolean offer(E e)
   {
     checkNotNull(e);
-    lock.lock();
+    boolean added = false;
+    putLock.lock();
     try {
-      if (currentSize > capacity) {
+      if (currentSize.get() >= capacity) {
         return false;
       } else {
-        boolean added = delegate.add(e);
+        added = delegate.add(e);
         if (added) {
-          operationAdded(e);
+          elementAdded(e);
         }
-        return added;
       }
     }
     finally {
-      lock.unlock();
+      putLock.unlock();
     }
+    if (added) {
+      signalNotEmpty();
+    }
+    return added;
   }
 
   @Override
   public E poll()
   {
-    lock.lock();
+    E e = null;
+    takeLock.lock();
     try {
-      E e = delegate.poll();
+      e = delegate.poll();
       if (e != null) {
-        operationRemoved(e);
+        elementRemoved(e);
       }
-      return e;
     }
     finally {
-      lock.unlock();
+      takeLock.unlock();
     }
+    if (e != null) {
+      signalNotFull();
+    }
+    return e;
   }
 
   @Override
   public E poll(long timeout, TimeUnit unit) throws InterruptedException
   {
     long nanos = unit.toNanos(timeout);
-    lock.lockInterruptibly();
+    E e = null;
+    takeLock.lockInterruptibly();
     try {
       while (delegate.size() == 0) {
         if (nanos <= 0) {
@@ -232,22 +282,30 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
         }
         nanos = notEmpty.awaitNanos(nanos);
       }
-      return delegate.poll();
+      e = delegate.poll();
+      if (e != null) {
+        elementRemoved(e);
+      }
     }
     finally {
-      lock.unlock();
+      takeLock.unlock();
     }
+    if (e != null) {
+      signalNotFull();
+    }
+    return e;
+
   }
 
   @Override
   public E peek()
   {
-    lock.lock();
+    takeLock.lock();
     try {
       return delegate.peek();
     }
     finally {
-      lock.unlock();
+      takeLock.unlock();
     }
   }
 
@@ -271,42 +329,43 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
     @Override
     public boolean hasNext()
     {
-      lock.lock();
+      fullyLock();
       try {
         return delegate.hasNext();
       }
       finally {
-        lock.unlock();
+        fullyUnlock();
       }
     }
 
     @Override
     public E next()
     {
-      lock.lock();
+      fullyLock();
       try {
         this.lastReturned = delegate.next();
         return lastReturned;
       }
       finally {
-        lock.unlock();
+        fullyUnlock();
       }
     }
 
     @Override
     public void remove()
     {
-      lock.lock();
+      fullyLock();
       try {
         if (this.lastReturned == null) {
           throw new IllegalStateException();
         }
         delegate.remove();
-        operationRemoved(lastReturned);
+        elementRemoved(lastReturned);
+        signalNotFull();
         lastReturned = null;
       }
       finally {
-        lock.unlock();
+        fullyUnlock();
       }
     }
   }
