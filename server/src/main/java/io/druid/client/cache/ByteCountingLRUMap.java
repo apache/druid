@@ -24,6 +24,7 @@ import com.metamx.common.logger.Logger;
 import java.nio.ByteBuffer;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
 */
@@ -74,8 +75,7 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
   public byte[] put(ByteBuffer key, byte[] value)
   {
     numBytes += key.remaining() + value.length;
-    byte[] retVal = super.put(key, value);
-    return retVal;
+    return super.put(key, value);
   }
 
   @Override
@@ -97,5 +97,32 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
       return true;
     }
     return false;
+  }
+
+  @Override
+  public byte[] remove(Object key)
+  {
+    byte[] value = super.remove(key);
+    if(value != null) {
+      numBytes -= ((ByteBuffer)key).remaining() + value.length;
+    }
+    return value;
+  }
+
+  /**
+   * We want keySet().iterator().remove() to account for object removal
+   * The underlying Map calls this.remove(key) so we do not need to override this
+   */
+  @Override
+  public Set<ByteBuffer> keySet()
+  {
+    return super.keySet();
+  }
+
+  @Override
+  public void clear()
+  {
+    numBytes = 0;
+    super.clear();
   }
 }
