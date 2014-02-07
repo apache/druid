@@ -129,7 +129,7 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
     try {
       while (currentSize.get() >= capacity) {
         if (nanos <= 0) {
-          break;
+          return false;
         }
         nanos = notFull.awaitNanos(nanos);
       }
