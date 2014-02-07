@@ -19,10 +19,10 @@
 
 package io.druid.query.aggregation.cardinality;
 
-import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
-import com.google.common.base.Throwables;
+import com.google.common.base.Charsets;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.InputRow;
+import io.druid.query.aggregation.cardinality.hll.HyperLogLogPlus;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.GenericIndexed;
@@ -33,7 +33,6 @@ import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -64,10 +63,10 @@ public class HllPlusComplexMetricSerde extends ComplexMetricSerde
           return rawVal;
         }
 
-        HyperLogLogPlus hll = new HyperLogLogPlus(11, 0);
+        HyperLogLogPlus hll = new HyperLogLogPlus(11);
         if (rawVal instanceof List) {
           for (Object o : (List) rawVal) {
-            hll.offer(o);
+            hll.offer(o.toString().getBytes(Charsets.UTF_8));
           }
         }
         else {
@@ -104,23 +103,16 @@ public class HllPlusComplexMetricSerde extends ComplexMetricSerde
     @Override
     public HyperLogLogPlus fromByteBuffer(ByteBuffer buffer, int numBytes)
     {
-      byte[] bytes = new byte[numBytes];
-      buffer.get(bytes);
-      try {
-        return HyperLogLogPlus.Builder.build(bytes);
-      } catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
+      buffer.limit(buffer.position() + numBytes);
+      return new HyperLogLogPlus(buffer);
     }
 
     @Override
     public byte[] toBytes(HyperLogLogPlus val)
     {
-      try {
-        return val.getBytes();
-      } catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
+      byte[] retVal = new byte[val.sizeof()];
+      val.getBuffer().duplicate().get(retVal);
+      return retVal;
     }
 
     @Override
