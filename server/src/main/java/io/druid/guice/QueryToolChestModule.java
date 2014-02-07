@@ -89,7 +89,7 @@ public class QueryToolChestModule implements DruidModule
               {
                 ByteBuffer buf = hyperLogLogPlus.getBuffer();
                 byte[] bytes = new byte[buf.remaining()];
-                buf.put(bytes);
+                buf.get(bytes);
                 jsonGenerator.writeObject(bytes);
               }
             }
