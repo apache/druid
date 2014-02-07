@@ -1,8 +1,6 @@
 package io.druid.query.aggregation.cardinality;
 
 
-import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
-import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
@@ -16,6 +14,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
+import io.druid.query.aggregation.cardinality.hll.HyperLogLogPlus;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
@@ -100,11 +99,20 @@ public class DimensionCardinalityAggregatorFactory implements AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    try {
-      return ((HyperLogLogPlus) lhs).merge((HyperLogLogPlus) rhs);
-    } catch (CardinalityMergeException e) {
-      throw Throwables.propagate(e);
+    HyperLogLogPlus leftHll = (HyperLogLogPlus) lhs;
+    HyperLogLogPlus rightHll = (HyperLogLogPlus) rhs;
+
+    if (leftHll.isReadOnly()) {
+      if (rightHll.isReadOnly()) {
+        HyperLogLogPlus retVal = leftHll.mutableCopy();
+        retVal.addAll(rightHll);
+        return retVal;
+      }
+      rightHll.addAll(leftHll);
+      return rightHll;
     }
+    leftHll.addAll(rightHll);
+    return leftHll;
   }
 
   @Override
@@ -127,7 +135,7 @@ public class DimensionCardinalityAggregatorFactory implements AggregatorFactory
       throw new ISE("Cannot deserialize class[%s]", object.getClass());
     }
 
-    return DimensionCardinalityAggregator.fromBytes(bytes);
+    return new HyperLogLogPlus(ByteBuffer.wrap(bytes));
   }
 
   @Override

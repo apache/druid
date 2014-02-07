@@ -1,12 +1,12 @@
 package io.druid.query.aggregation.cardinality;
 
-import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.cardinality.hll.HyperLogLogPlus;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.junit.Assert;
@@ -49,7 +49,7 @@ public class HllPlusComplexMetricSerdeTest
     Random random = new Random(1234);
     boolean toggle = true;
     for (int i = 0; i < 100; ++i) {
-      HyperLogLogPlus hll = new HyperLogLogPlus(11, 0);
+      HyperLogLogPlus hll = new HyperLogLogPlus(11);
       List<String> vals = Lists.newArrayList();
       for (int y = 0; y < random.nextInt(4) + 1; ++y) {
         String val = String.format("%d-howdy-%d", i, y);

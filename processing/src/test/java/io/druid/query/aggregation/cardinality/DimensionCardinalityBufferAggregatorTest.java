@@ -1,6 +1,6 @@
 package io.druid.query.aggregation.cardinality;
 
-import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
+import io.druid.query.aggregation.cardinality.hll.HyperLogLogPlus;
 import io.druid.segment.ObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
