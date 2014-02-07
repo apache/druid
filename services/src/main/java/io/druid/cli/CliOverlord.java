@@ -93,7 +93,7 @@ import java.util.List;
  */
 @Command(
     name = "overlord",
-    description = "Runs an Overlord node, see http://druid.io/docs/0.6.57/Indexing-Service.html for a description"
+    description = "Runs an Overlord node, see http://druid.io/docs/0.6.58/Indexing-Service.html for a description"
 )
 public class CliOverlord extends ServerRunnable
 {

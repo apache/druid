@@ -65,10 +65,6 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/coordinator
 
-# This setup requires all dependencies to be bundled such that we don't need to contact the remote repo
-druid.extensions.remoteRepositories=[]
-druid.extensions.localRepository=lib
-
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
 

@@ -66,10 +66,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/indexer
 
-# This setup requires all dependencies to be bundled such that we don't need to contact the remote repo
-druid.extensions.remoteRepositories=[]
-druid.extensions.localRepository=lib
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.57"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.58"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
@@ -118,10 +115,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/worker
 
-# This setup requires all dependencies to be bundled such that we don't need to contact the remote repo
-druid.extensions.remoteRepositories=[]
-druid.extensions.localRepository=lib
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.57","io.druid.extensions:druid-kafka-seven:0.6.57"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.58","io.druid.extensions:druid-kafka-seven:0.6.58"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
