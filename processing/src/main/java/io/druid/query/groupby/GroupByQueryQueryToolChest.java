@@ -38,6 +38,7 @@ import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.IntervalChunkingQueryRunner;
+import io.druid.query.ParallelQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -61,7 +62,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   };
   private static final String GROUP_BY_MERGE_KEY = "groupByMerge";
   private static final Map<String, String> NO_MERGE_CONTEXT = ImmutableMap.of(GROUP_BY_MERGE_KEY, "false");
-
   private final Supplier<GroupByQueryConfig> configSupplier;
 
   @Inject
@@ -121,28 +121,32 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           }
         }
     );
-
-    final IncrementalIndex index = runner.run(query).accumulate(
-        new IncrementalIndex(
-            // use granularity truncated min timestamp
-            // since incoming truncated timestamps may precede timeStart
-            granTimeStart,
-            gran,
-            aggs.toArray(new AggregatorFactory[aggs.size()])
-        ),
-        new Accumulator<IncrementalIndex, Row>()
-        {
-          @Override
-          public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
-          {
-            if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions)) > config.getMaxResults()) {
-              throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
-            }
-
-            return accumulated;
-          }
-        }
+    IncrementalIndex index = new IncrementalIndex(
+        // use granularity truncated min timestamp
+        // since incoming truncated timestamps may precede timeStart
+        granTimeStart,
+        gran,
+        aggs.toArray(new AggregatorFactory[aggs.size()])
     );
+    Accumulator<IncrementalIndex, Row> accumulator = new Accumulator<IncrementalIndex, Row>()
+    {
+      @Override
+      public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
+      {
+        if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions)) > config.getMaxResults()) {
+          throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
+        }
+
+        return accumulated;
+      }
+    };
+
+
+    if (runner instanceof ParallelQueryRunner && Boolean.getBoolean("optimize")) {
+      index = (IncrementalIndex) ((ParallelQueryRunner) runner).runAndAccumulate(query, index, accumulator);
+    } else {
+      index = runner.run(query).accumulate(index, accumulator);
+    }
 
     // convert millis back to timestamp according to granularity to preserve time zone information
     Sequence<Row> retVal = Sequences.map(

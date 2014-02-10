@@ -25,6 +25,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.Sequence;
@@ -51,10 +52,9 @@ import java.util.concurrent.Future;
  * That is, the two sub queryables for A would run *after* B is run, effectively meaning that the results for B
  * must be fully cached in memory before the results for Aa and Ab are computed.
  */
-public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
+public class ChainedExecutionQueryRunner<T> implements ParallelQueryRunner<T>
 {
   private static final Logger log = new Logger(ChainedExecutionQueryRunner.class);
-
   private final Iterable<QueryRunner<T>> queryables;
   private final ExecutorService exec;
   private final Ordering<T> ordering;
@@ -156,5 +156,64 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
           }
         }
     );
+  }
+
+  @Override
+  public <OutType> OutType runAndAccumulate(
+      final Query<T> query,
+      final OutType outType, final Accumulator<OutType, T> outTypeTAccumulator
+  )
+  {
+    final int priority = Integer.parseInt(query.getContextValue("priority", "0"));
+
+    if (Iterables.isEmpty(queryables)) {
+      log.warn("No queryables found.");
+      return outType;
+    }
+    List<Future<Boolean>> futures = Lists.newArrayList(
+        Iterables.transform(
+            queryables,
+            new Function<QueryRunner<T>, Future<Boolean>>()
+            {
+              @Override
+              public Future<Boolean> apply(final QueryRunner<T> input)
+              {
+                return exec.submit(
+                    new PrioritizedCallable<Boolean>(priority)
+                    {
+                      @Override
+                      public Boolean call() throws Exception
+                      {
+                        try {
+                          input.run(query).accumulate(outType, outTypeTAccumulator);
+                          return true;
+                        }
+                        catch (Exception e) {
+                          log.error(e, "Exception with one of the sequences!");
+                          throw Throwables.propagate(e);
+                        }
+                      }
+                    }
+                );
+              }
+            }
+        )
+    );
+
+    // Let the runners complete
+    for (Future<Boolean> future : futures) {
+      try {
+        future.get();
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      catch (ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+
+    return outType;
   }
 }
