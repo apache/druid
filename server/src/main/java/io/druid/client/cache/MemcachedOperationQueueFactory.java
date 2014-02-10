@@ -41,7 +41,7 @@ public class MemcachedOperationQueueFactory implements OperationQueueFactory
       @Override
       public long getBytesSize(Operation operation)
       {
-        return operation.getBuffer().capacity();
+        return operation.getBuffer().remaining();
       }
     };
   }
