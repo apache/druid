@@ -20,6 +20,7 @@
 package io.druid.indexer.path;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Comparators;
@@ -99,9 +100,12 @@ public class GranularityPathSpec implements PathSpec
   public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException
   {
     final Set<Interval> intervals = Sets.newTreeSet(Comparators.intervals());
-    for (Interval segmentInterval : config.getSegmentGranularIntervals()) {
-      for (Interval dataInterval : dataGranularity.getIterable(segmentInterval)) {
-        intervals.add(dataInterval);
+    Optional<Set<Interval>> optionalIntervals = config.getSegmentGranularIntervals();
+    if (optionalIntervals.isPresent()) {
+      for (Interval segmentInterval : optionalIntervals.get()) {
+        for (Interval dataInterval : dataGranularity.getIterable(segmentInterval)) {
+          intervals.add(dataInterval);
+        }
       }
     }
 
