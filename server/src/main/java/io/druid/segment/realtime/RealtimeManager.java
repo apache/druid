@@ -182,8 +182,8 @@ public class RealtimeManager implements QuerySegmentWalker
               inputRow = firehose.nextRow();
             }
             catch (Exception e) {
-              log.info(e, "thrown away line due to exception");
-              metrics.incrementThrownAway();
+              log.debug(e, "thrown away line due to exception, considering unparseable");
+              metrics.incrementUnparseable();
               continue;
             }
 
