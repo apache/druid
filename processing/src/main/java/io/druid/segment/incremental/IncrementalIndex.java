@@ -600,7 +600,6 @@ public class IncrementalIndex implements Iterable<Row>
     private final Map<String, Integer> falseIds;
     private final Map<Integer, String> falseIdsReverse;
     private volatile String[] sortedVals = null;
-    private final AtomicInteger falseIDSize = new AtomicInteger();
 
     public DimDim()
     {
