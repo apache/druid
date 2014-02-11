@@ -34,7 +34,7 @@ import java.util.List;
 )
 public class CliRealtime extends ServerRunnable
 {
-  private static final Logger log = new Logger(CliBroker.class);
+  private static final Logger log = new Logger(CliRealtime.class);
 
   public CliRealtime()
   {

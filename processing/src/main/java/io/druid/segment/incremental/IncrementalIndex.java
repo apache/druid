@@ -40,7 +40,6 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -84,7 +83,7 @@ public class IncrementalIndex implements Iterable<Row>
   private final DimensionHolder dimValues;
   private final ConcurrentSkipListMap<TimeAndDims, Aggregator[]> facts;
   private volatile AtomicInteger numEntries = new AtomicInteger();
-  // This is modified on add() by a (hopefully) single thread.
+  // This is modified on add() in a critical section.
   private InputRow in;
 
   public IncrementalIndex(IncrementalIndexSchema incrementalIndexSchema)
@@ -287,7 +286,7 @@ public class IncrementalIndex implements Iterable<Row>
                   }
                 }
 
-        );
+            );
       }
 
       Aggregator[] prev = facts.putIfAbsent(key, aggs);
@@ -601,6 +600,7 @@ public class IncrementalIndex implements Iterable<Row>
     private final Map<String, Integer> falseIds;
     private final Map<Integer, String> falseIdsReverse;
     private volatile String[] sortedVals = null;
+    private final AtomicInteger falseIDSize = new AtomicInteger();
 
     public DimDim()
     {
