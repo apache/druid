@@ -66,6 +66,12 @@ public abstract class ZkPathsConfig
     return defaultPath("coordinator");
   }
 
+  @Config("druid.zk.paths.connectorPath")
+  public String getConnectorPath()
+  {
+    return defaultPath("connector");
+  }
+
   @Config("druid.zk.paths.indexer.announcementsPath")
   public String getIndexerAnnouncementPath()
   {

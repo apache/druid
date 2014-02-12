@@ -86,7 +86,9 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
     if (chatHandlerProvider.isPresent()) {
       log.info("Found chathandler of class[%s]", chatHandlerProvider.get().getClass().getName());
       chatHandlerProvider.get().register(serviceName, firehose);
-      chatHandlerProvider.get().register(serviceName.replaceAll(".*:", ""), firehose); // rofl
+      if (serviceName.contains(":")) {
+        chatHandlerProvider.get().register(serviceName.replaceAll(".*:", ""), firehose); // rofl
+      }
     } else {
       log.info("No chathandler detected");
     }

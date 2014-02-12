@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+# Transforming Dimension Values
+The following JSON fields can be used in a query to operate on dimension values. 
 
 ## DimensionSpec
 
@@ -8,7 +10,7 @@ layout: doc_page
 
 ### DefaultDimensionSpec
 
-Returns dimension values as is and optionally renames renames the dimension.
+Returns dimension values as is and optionally renames the dimension.
 
 ```json
 { "type" : "default", "dimension" : <dimension>, "outputName": <output_name> }

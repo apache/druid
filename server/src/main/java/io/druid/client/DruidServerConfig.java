@@ -32,7 +32,10 @@ public class DruidServerConfig
   private long maxSize = 0;
 
   @JsonProperty
-  private String tier = "_default_tier";
+  private String tier = DruidServer.DEFAULT_TIER;
+
+  @JsonProperty
+  private int priority = DruidServer.DEFAULT_PRIORITY;
 
   public long getMaxSize()
   {
@@ -42,5 +45,10 @@ public class DruidServerConfig
   public String getTier()
   {
     return tier;
+  }
+
+  public int getPriority()
+  {
+    return priority;
   }
 }

@@ -50,6 +50,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexer.granularity.GranularitySpec;
 import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.indexer.partitions.PartitionsSpec;
+import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.indexer.updater.DbUpdaterJobSpec;
@@ -73,6 +74,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 
 /**
  */
@@ -178,7 +180,7 @@ public class HadoopDruidIndexerConfig
       this.partitionsSpec = partitionsSpec;
     } else {
       // Backwards compatibility
-      this.partitionsSpec = new PartitionsSpec(partitionDimension, targetPartitionSize, null, false);
+      this.partitionsSpec = new SingleDimensionPartitionsSpec(partitionDimension, targetPartitionSize, null, false);
     }
 
     if (granularitySpec != null) {
@@ -378,17 +380,17 @@ public class HadoopDruidIndexerConfig
     this.ignoreInvalidRows = ignoreInvalidRows;
   }
 
-  public List<Interval> getIntervals()
+  public Optional<List<Interval>> getIntervals()
   {
-    return JodaUtils.condenseIntervals(getGranularitySpec().bucketIntervals());
+    Optional<SortedSet<Interval>> setOptional = getGranularitySpec().bucketIntervals();
+    if (setOptional.isPresent()) {
+      return Optional.of((List<Interval>) JodaUtils.condenseIntervals(setOptional.get()));
+    } else {
+      return Optional.absent();
+    }
   }
 
-  public String getPartitionDimension()
-  {
-    return partitionsSpec.getPartitionDimension();
-  }
-
-  public boolean partitionByDimension()
+  public boolean isDeterminingPartitions()
   {
     return partitionsSpec.isDeterminingPartitions();
   }
@@ -483,70 +485,86 @@ public class HadoopDruidIndexerConfig
     throw new ISE("row[%s] doesn't fit in any shard[%s]", inputRow, shards);
   }
 
-  public Set<Interval> getSegmentGranularIntervals()
+  public Optional<Set<Interval>> getSegmentGranularIntervals()
   {
-    return granularitySpec.bucketIntervals();
+    return Optional.fromNullable((Set<Interval>) granularitySpec.bucketIntervals().orNull());
   }
 
-  public Iterable<Bucket> getAllBuckets()
+  public Optional<Iterable<Bucket>> getAllBuckets()
   {
-    return FunctionalIterable
-        .create(getSegmentGranularIntervals())
-        .transformCat(
-            new Function<Interval, Iterable<Bucket>>()
-            {
-              @Override
-              public Iterable<Bucket> apply(Interval input)
-              {
-                final DateTime bucketTime = input.getStart();
-                final List<HadoopyShardSpec> specs = shardSpecs.get(bucketTime);
-                if (specs == null) {
-                  return ImmutableList.of();
-                }
+    Optional<Set<Interval>> intervals = getSegmentGranularIntervals();
+    if (intervals.isPresent()) {
+      return Optional.of(
+          (Iterable<Bucket>) FunctionalIterable
+              .create(intervals.get())
+              .transformCat(
+                  new Function<Interval, Iterable<Bucket>>()
+                  {
+                    @Override
+                    public Iterable<Bucket> apply(Interval input)
+                    {
+                      final DateTime bucketTime = input.getStart();
+                      final List<HadoopyShardSpec> specs = shardSpecs.get(bucketTime);
+                      if (specs == null) {
+                        return ImmutableList.of();
+                      }
 
-                return FunctionalIterable
-                    .create(specs)
-                    .transform(
-                        new Function<HadoopyShardSpec, Bucket>()
-                        {
-                          int i = 0;
+                      return FunctionalIterable
+                          .create(specs)
+                          .transform(
+                              new Function<HadoopyShardSpec, Bucket>()
+                              {
+                                int i = 0;
 
-                          @Override
-                          public Bucket apply(HadoopyShardSpec input)
-                          {
-                            return new Bucket(input.getShardNum(), bucketTime, i++);
-                          }
-                        }
-                    );
-              }
-            }
-        );
+                                @Override
+                                public Bucket apply(HadoopyShardSpec input)
+                                {
+                                  return new Bucket(input.getShardNum(), bucketTime, i++);
+                                }
+                              }
+                          );
+                    }
+                  }
+              )
+      );
+    } else {
+      return Optional.absent();
+    }
   }
 
-  /******************************************
-   Path helper logic
-   ******************************************/
+    /******************************************
+     Path helper logic
+     ******************************************/
 
-  /**
-   * Make the intermediate path for this job run.
-   *
-   * @return the intermediate path for this job run.
-   */
+    /**
+     * Make the intermediate path for this job run.
+     *
+     * @return the intermediate path for this job run.
+     */
+
   public Path makeIntermediatePath()
   {
     return new Path(String.format("%s/%s/%s", getWorkingPath(), getDataSource(), getVersion().replace(":", "")));
   }
 
-  public Path makeSegmentPartitionInfoPath(Bucket bucket)
+  public Path makeSegmentPartitionInfoPath(Interval bucketInterval)
   {
-    final Interval bucketInterval = getGranularitySpec().bucketInterval(bucket.time).get();
-
     return new Path(
         String.format(
             "%s/%s_%s/partitions.json",
             makeIntermediatePath(),
             ISODateTimeFormat.basicDateTime().print(bucketInterval.getStart()),
             ISODateTimeFormat.basicDateTime().print(bucketInterval.getEnd())
+        )
+    );
+  }
+
+  public Path makeIntervalInfoPath()
+  {
+    return new Path(
+        String.format(
+            "%s/intervals.json",
+            makeIntermediatePath()
         )
     );
   }
@@ -625,8 +643,5 @@ public class HadoopDruidIndexerConfig
     Preconditions.checkNotNull(segmentOutputPath, "segmentOutputPath");
     Preconditions.checkNotNull(version, "version");
     Preconditions.checkNotNull(rollupSpec, "rollupSpec");
-
-    final int nIntervals = getIntervals().size();
-    Preconditions.checkArgument(nIntervals > 0, "intervals.size()[%s] <= 0", nIntervals);
   }
 }

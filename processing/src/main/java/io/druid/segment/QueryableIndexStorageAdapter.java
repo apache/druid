@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
 import com.metamx.common.collect.MoreIterators;
 import com.metamx.common.guava.FunctionalIterable;
@@ -75,6 +76,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public Indexed<String> getAvailableDimensions()
   {
     return index.getAvailableDimensions();
+  }
+
+  @Override
+  public Iterable<String> getAvailableMetrics()
+  {
+    return Sets.difference(Sets.newHashSet(index.getColumnNames()), Sets.newHashSet(index.getAvailableDimensions()));
   }
 
   @Override
@@ -225,6 +232,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
+                    public void advanceTo(int offset)
+                    {
+                      int count = 0;
+                      while (count < offset && !isDone()) {
+                        advance();
+                        count++;
+                      }
+                    }
+
+                    @Override
                     public boolean isDone()
                     {
                       return !cursorOffset.withinBounds();
@@ -234,6 +251,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public void reset()
                     {
                       cursorOffset = initOffset.clone();
+                    }
+
+                    @Override
+                    public TimestampColumnSelector makeTimestampColumnSelector()
+                    {
+                      return new TimestampColumnSelector()
+                      {
+                        @Override
+                        public long getTimestamp()
+                        {
+                          return timestamps.getLongSingleValueRow(cursorOffset.getOffset());
+                        }
+                      };
                     }
 
                     @Override
@@ -249,8 +279,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (column == null) {
                         return null;
-                      }
-                      else if (columnDesc.getCapabilities().hasMultipleValues()) {
+                      } else if (columnDesc.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override
@@ -490,8 +519,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
               for (ComplexColumn complexColumn : complexColumnCache.values()) {
                 Closeables.closeQuietly(complexColumn);
               }
-              for (Object column : complexColumnCache.values()) {
-                if (column instanceof Closeable) {
+              for (Object column : objectColumnCache.values()) {
+                if(column instanceof Closeable) {
                   Closeables.closeQuietly((Closeable) column);
                 }
               }
@@ -609,6 +638,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
+                    public void advanceTo(int offset)
+                    {
+                      currRow += offset;
+                    }
+
+                    @Override
                     public boolean isDone()
                     {
                       return currRow >= timestamps.length() || timestamps.getLongSingleValueRow(currRow) >= nextBucket;
@@ -618,6 +653,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public void reset()
                     {
                       currRow = initRow;
+                    }
+
+                    @Override
+                    public TimestampColumnSelector makeTimestampColumnSelector()
+                    {
+                      return new TimestampColumnSelector()
+                      {
+                        @Override
+                        public long getTimestamp()
+                        {
+                          return timestamps.getLongSingleValueRow(currRow);
+                        }
+                      };
                     }
 
                     @Override
@@ -633,8 +681,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (dict == null) {
                         return null;
-                      }
-                      else if (column.getCapabilities().hasMultipleValues()) {
+                      } else if (column.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override

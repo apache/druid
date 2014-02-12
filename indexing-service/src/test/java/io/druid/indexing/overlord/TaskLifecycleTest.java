@@ -64,7 +64,9 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPuller;
@@ -76,9 +78,7 @@ import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -88,6 +88,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class TaskLifecycleTest
@@ -156,6 +157,22 @@ public class TaskLifecycleTest
           public void kill(DataSegment segments) throws SegmentLoadingException
           {
 
+          }
+        },
+        new DataSegmentMover()
+        {
+          @Override
+          public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+          {
+            return dataSegment;
+          }
+        },
+        new DataSegmentArchiver()
+        {
+          @Override
+          public DataSegment archive(DataSegment segment) throws SegmentLoadingException
+          {
+            return segment;
           }
         },
         null, // segment announcer

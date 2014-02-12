@@ -36,7 +36,10 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class DruidServer implements Comparable
 {
+  public static final int DEFAULT_PRIORITY = 0;
+  public static final int DEFAULT_NUM_REPLICANTS = 2;
   public static final String DEFAULT_TIER = "_default_tier";
+
   private static final Logger log = new Logger(DruidServer.class);
 
   private final Object lock = new Object();
@@ -59,7 +62,8 @@ public class DruidServer implements Comparable
         node.getHost(),
         config.getMaxSize(),
         type,
-        config.getTier()
+        config.getTier(),
+        DEFAULT_PRIORITY
     );
   }
 
@@ -69,10 +73,11 @@ public class DruidServer implements Comparable
       @JsonProperty("host") String host,
       @JsonProperty("maxSize") long maxSize,
       @JsonProperty("type") String type,
-      @JsonProperty("tier") String tier
+      @JsonProperty("tier") String tier,
+      @JsonProperty("priority") int priority
   )
   {
-    this.metadata = new DruidServerMetadata(name, host, maxSize, type, tier);
+    this.metadata = new DruidServerMetadata(name, host, maxSize, type, tier, priority);
 
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
     this.segments = new ConcurrentHashMap<String, DataSegment>();
@@ -119,10 +124,21 @@ public class DruidServer implements Comparable
   }
 
   @JsonProperty
+  public int getPriority()
+  {
+    return metadata.getPriority();
+  }
+
+  @JsonProperty
   public Map<String, DataSegment> getSegments()
   {
     // Copying the map slows things down a lot here, don't use Immutable Map here
     return Collections.unmodifiableMap(segments);
+  }
+
+  public boolean isAssignable()
+  {
+    return getType().equalsIgnoreCase("historical") || getType().equalsIgnoreCase("bridge");
   }
 
   public DataSegment getSegment(String segmentName)

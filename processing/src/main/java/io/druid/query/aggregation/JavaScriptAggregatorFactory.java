@@ -265,9 +265,11 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
         final Object[] args = new Object[size + 1];
 
         args[0] = current;
-        int i = 0;
-        while (i < size) {
-          args[i + 1] = selectorList[i++].get();
+        for (int i = 0 ; i < size ; i++) {
+          final ObjectColumnSelector selector = selectorList[i];
+          if (selector != null) {
+            args[i + 1] = selector.get();
+          }
         }
 
         final Object res = fnAggregate.call(cx, scope, scope, args);

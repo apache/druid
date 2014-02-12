@@ -51,6 +51,7 @@ public class TestRealtimeTask extends RealtimeIndexTask
         null,
         null,
         null,
+        1,
         null,
         null
     );

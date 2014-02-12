@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.emitter.EmittingLogger;
@@ -35,9 +34,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
-import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
-import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
@@ -90,6 +87,9 @@ public class RealtimeIndexTask extends AbstractTask
   private final Period windowPeriod;
 
   @JsonIgnore
+  private final int maxPendingPersists;
+
+  @JsonIgnore
   private final IndexGranularity segmentGranularity;
 
   @JsonIgnore
@@ -109,6 +109,7 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
       @JsonProperty("windowPeriod") Period windowPeriod,
+      @JsonProperty("maxPendingPersists") int maxPendingPersists,
       @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
       @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory
   )
@@ -116,7 +117,7 @@ public class RealtimeIndexTask extends AbstractTask
     super(
         id == null
         ? makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString())
-        :id,
+        : id,
 
         String.format(
             "index_realtime_%s",
@@ -138,6 +139,9 @@ public class RealtimeIndexTask extends AbstractTask
     this.firehoseFactory = firehoseFactory;
     this.fireDepartmentConfig = fireDepartmentConfig;
     this.windowPeriod = windowPeriod;
+    this.maxPendingPersists = (maxPendingPersists == 0)
+                              ? RealtimePlumberSchool.DEFAULT_MAX_PENDING_PERSISTS
+                              : maxPendingPersists;
     this.segmentGranularity = segmentGranularity;
     this.rejectionPolicyFactory = rejectionPolicyFactory;
   }
@@ -199,6 +203,7 @@ public class RealtimeIndexTask extends AbstractTask
         new File(toolbox.getTaskWorkDir(), "persist"),
         segmentGranularity
     );
+    realtimePlumberSchool.setDefaultMaxPendingPersists(maxPendingPersists);
 
     final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
 
@@ -212,7 +217,7 @@ public class RealtimeIndexTask extends AbstractTask
       @Override
       public void announceSegment(final DataSegment segment) throws IOException
       {
-        // NOTE: Side effect: Calling announceSegment causes a lock to be acquired
+        // Side effect: Calling announceSegment causes a lock to be acquired
         toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
@@ -231,6 +236,7 @@ public class RealtimeIndexTask extends AbstractTask
       @Override
       public void announceSegments(Iterable<DataSegment> segments) throws IOException
       {
+        // Side effect: Calling announceSegments causes locks to be acquired
         for (DataSegment segment : segments) {
           toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
         }
@@ -263,7 +269,7 @@ public class RealtimeIndexTask extends AbstractTask
       public String getVersion(final Interval interval)
       {
         try {
-          // NOTE: Side effect: Calling getVersion causes a lock to be acquired
+          // Side effect: Calling getVersion causes a lock to be acquired
           final TaskLock myLock = toolbox.getTaskActionClient()
                                          .submit(new LockAcquireAction(interval));
 
@@ -343,11 +349,11 @@ public class RealtimeIndexTask extends AbstractTask
         }
       }
     }
-    catch (Exception e) {
+    catch (Throwable e) {
+      normalExit = false;
       log.makeAlert(e, "Exception aborted realtime processing[%s]", schema.getDataSource())
          .emit();
-      normalExit = false;
-      throw Throwables.propagate(e);
+      throw e;
     }
     finally {
       if (normalExit) {
@@ -418,7 +424,7 @@ public class RealtimeIndexTask extends AbstractTask
     @Override
     public void publishSegment(DataSegment segment) throws IOException
     {
-      taskToolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+      taskToolbox.pushSegments(ImmutableList.of(segment));
     }
   }
 }

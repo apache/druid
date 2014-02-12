@@ -40,8 +40,8 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.cache.Cache;
-import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
+import io.druid.client.selector.QueryableDruidServer;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
@@ -313,7 +313,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               final MultipleSpecificSegmentSpec segmentSpec = new MultipleSpecificSegmentSpec(descriptors);
               List<Interval> intervals = segmentSpec.getIntervals();
 
-              if ("realtime".equals(server.getType()) || !populateCache || isBySegment) {
+              if (!server.isAssignable() || !populateCache || isBySegment) {
                 resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec));
               } else {
                 resultSeqToAdd = toolChest.mergeSequences(

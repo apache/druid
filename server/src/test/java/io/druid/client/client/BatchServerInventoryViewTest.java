@@ -93,7 +93,8 @@ public class BatchServerInventoryViewTest
             "host",
             Long.MAX_VALUE,
             "type",
-            "tier"
+            "tier",
+            0
         ),
         new BatchDataSegmentAnnouncerConfig()
         {

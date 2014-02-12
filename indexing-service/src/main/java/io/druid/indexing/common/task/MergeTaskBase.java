@@ -27,6 +27,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -142,7 +143,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
       );
 
       // download segments to merge
-      final Map<DataSegment, File> gettedSegments = toolbox.getSegments(segments);
+      final Map<DataSegment, File> gettedSegments = toolbox.fetchSegments(segments);
 
       // merge files together
       final File fileToUpload = merge(gettedSegments, new File(taskDir, "merged"));
@@ -165,7 +166,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
 
-      toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(uploadedSegment)));
+      toolbox.pushSegments(ImmutableList.of(uploadedSegment));
 
       return TaskStatus.success(getId());
     }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -31,14 +32,14 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import io.druid.client.DruidServer;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
-import io.druid.server.coordinator.rules.PeriodLoadRule;
+import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.joda.time.Period;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
@@ -86,10 +87,11 @@ public class DatabaseRuleManager
               }
 
               final List<Rule> defaultRules = Arrays.<Rule>asList(
-                  new PeriodLoadRule(
-                      new Period("P5000Y"),
-                      2,
-                      "_default_tier"
+                  new ForeverLoadRule(
+                      ImmutableMap.<String, Integer>of(
+                          DruidServer.DEFAULT_TIER,
+                          DruidServer.DEFAULT_NUM_REPLICANTS
+                      )
                   )
               );
               final String version = new DateTime().toString();
@@ -207,7 +209,7 @@ public class DatabaseRuleManager
                       String.format(
                           "SELECT r.dataSource, r.payload "
                           + "FROM %1$s r "
-                          + "INNER JOIN(SELECT dataSource, max(version) as version, payload FROM %1$s GROUP BY dataSource) ds "
+                          + "INNER JOIN(SELECT dataSource, max(version) as version FROM %1$s GROUP BY dataSource) ds "
                           + "ON r.datasource = ds.datasource and r.version = ds.version",
                           getRulesTable()
                       )
@@ -261,7 +263,8 @@ public class DatabaseRuleManager
 
   public List<Rule> getRules(final String dataSource)
   {
-    return rules.get().get(dataSource);
+    List<Rule> retVal = rules.get().get(dataSource);
+    return retVal == null ? Lists.<Rule>newArrayList() : retVal;
   }
 
   public List<Rule> getRulesWithDefault(final String dataSource)

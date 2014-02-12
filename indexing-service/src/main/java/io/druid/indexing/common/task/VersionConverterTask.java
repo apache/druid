@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
@@ -248,7 +249,7 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
       }
     }
 
-    final Map<DataSegment, File> localSegments = toolbox.getSegments(Arrays.asList(segment));
+    final Map<DataSegment, File> localSegments = toolbox.fetchSegments(Arrays.asList(segment));
 
     final File location = localSegments.get(segment);
     final File outLocation = new File(location, "v9_out");

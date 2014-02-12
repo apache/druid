@@ -54,7 +54,7 @@ public class ArbitraryGranularityTest
             new Interval("2012-01-08T00Z/2012-01-11T00Z"),
             new Interval("2012-02-01T00Z/2012-03-01T00Z")
         ),
-        Lists.newArrayList(spec.bucketIntervals())
+        Lists.newArrayList(spec.bucketIntervals().get())
     );
 
     Assert.assertEquals(

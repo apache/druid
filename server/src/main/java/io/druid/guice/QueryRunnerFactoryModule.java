@@ -31,10 +31,14 @@ import io.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchQueryRunnerFactory;
 import io.druid.query.search.search.SearchQuery;
+import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryRunnerFactory;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import io.druid.query.topn.TopNQuery;
+import io.druid.query.topn.TopNQueryRunnerFactory;
 
 import java.util.Map;
 
@@ -49,6 +53,8 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
                   .put(TimeBoundaryQuery.class, TimeBoundaryQueryRunnerFactory.class)
                   .put(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
                   .put(GroupByQuery.class, GroupByQueryRunnerFactory.class)
+                  .put(SelectQuery.class, SelectQueryRunnerFactory.class)
+                  .put(TopNQuery.class, TopNQueryRunnerFactory.class)
                   .build();
 
   @Override

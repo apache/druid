@@ -25,8 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.InputRow;
 
-import java.util.Map;
-
 public class NumberedShardSpec implements ShardSpec
 {
   @JsonIgnore
@@ -70,5 +68,14 @@ public class NumberedShardSpec implements ShardSpec
   public boolean isInChunk(InputRow inputRow)
   {
     return true;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "NumberedShardSpec{" +
+           "partitionNum=" + partitionNum +
+           ", partitions=" + partitions +
+           '}';
   }
 }

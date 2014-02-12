@@ -36,8 +36,9 @@
   margin: 0 10px 0 10px;
 }
 
-.delete_rule {
+.delete_rule, .add_tier {
   border-style : none;
   color:#555;
   background-color:#eee;
+  cursor: pointer;
 }

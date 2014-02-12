@@ -19,7 +19,7 @@
 
 package io.druid.indexing.overlord;
 
-public class TaskExistsException extends RuntimeException
+public class TaskExistsException extends Exception
 {
   private final String taskId;
 

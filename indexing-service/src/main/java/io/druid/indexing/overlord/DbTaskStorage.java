@@ -43,7 +43,6 @@ import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
-import org.joda.time.Period;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
@@ -98,7 +97,7 @@ public class DbTaskStorage implements TaskStorage
   }
 
   @Override
-  public void insert(final Task task, final TaskStatus status)
+  public void insert(final Task task, final TaskStatus status) throws TaskExistsException
   {
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(status, "status");
@@ -137,9 +136,11 @@ public class DbTaskStorage implements TaskStorage
           }
       );
     }
-    catch (StatementException e) {
-      // Might be a duplicate task ID.
-      if (getTask(task.getId()).isPresent()) {
+    catch (Exception e) {
+      final boolean isStatementException = e instanceof StatementException ||
+                                           (e instanceof CallbackFailedException
+                                            && e.getCause() instanceof StatementException);
+      if (isStatementException && getTask(task.getId()).isPresent()) {
         throw new TaskExistsException(task.getId(), e);
       } else {
         throw e;
@@ -489,7 +490,18 @@ public class DbTaskStorage implements TaskStorage
 
             final Map<Long, TaskLock> retMap = Maps.newHashMap();
             for (final Map<String, Object> row : dbTaskLocks) {
-              retMap.put((Long) row.get("id"), jsonMapper.readValue((byte[]) row.get("lock_payload"), TaskLock.class));
+              try {
+                retMap.put(
+                    (Long) row.get("id"),
+                    jsonMapper.readValue((byte[]) row.get("lock_payload"), TaskLock.class)
+                );
+              }
+              catch (Exception e) {
+                log.makeAlert(e, "Failed to deserialize TaskLock")
+                   .addData("task", taskid)
+                   .addData("lockPayload", row)
+                   .emit();
+              }
             }
             return retMap;
           }
@@ -522,11 +534,8 @@ public class DbTaskStorage implements TaskStorage
     try {
       return RetryUtils.retry(call, shouldRetry, maxTries);
     }
-    catch (RuntimeException e) {
-      throw Throwables.propagate(e);
-    }
     catch (Exception e) {
-      throw new CallbackFailedException(e);
+      throw Throwables.propagate(e);
     }
   }
 
