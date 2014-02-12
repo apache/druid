@@ -22,6 +22,7 @@ package io.druid.segment.realtime;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+import io.druid.db.DbConnector;
 import io.druid.db.DbTablesConfig;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -83,15 +84,15 @@ public class DbSegmentPublisher implements SegmentPublisher
             public Void withHandle(Handle handle) throws Exception
             {
               String statement;
-              if (!handle.getConnection().getMetaData().getDatabaseProductName().contains("PostgreSQL")) {
+              if (DbConnector.isPostgreSQL(dbi)) {
                 statement = String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
+                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
                     config.getSegmentsTable()
                 );
               } else {
                 statement = String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+                    "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
                     config.getSegmentsTable()
                 );
