@@ -44,7 +44,11 @@ public class DbConnector
         dbi,
         segmentTableName,
         String.format(
-            "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date TINYTEXT NOT NULL, start TINYTEXT NOT NULL, end TINYTEXT NOT NULL, partitioned BOOLEAN NOT NULL, version TINYTEXT NOT NULL, used BOOLEAN NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), INDEX(used), PRIMARY KEY (id))",
+            isPostgreSQL(dbi) ?
+                "CREATE TABLE %1$s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date TEXT NOT NULL, start TEXT NOT NULL, \"end\" TEXT NOT NULL, partitioned SMALLINT NOT NULL, version TEXT NOT NULL, used BOOLEAN NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (id));" +
+                "CREATE INDEX ON %1$s(dataSource);"+
+                "CREATE INDEX ON %1$s(used);":
+                "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date TINYTEXT NOT NULL, start TINYTEXT NOT NULL, end TINYTEXT NOT NULL, partitioned BOOLEAN NOT NULL, version TINYTEXT NOT NULL, used BOOLEAN NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), INDEX(used), PRIMARY KEY (id))",
             segmentTableName
         )
     );
@@ -56,7 +60,10 @@ public class DbConnector
         dbi,
         ruleTableName,
         String.format(
-            "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, version TINYTEXT NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), PRIMARY KEY (id))",
+            isPostgreSQL(dbi) ?
+                "CREATE TABLE %1$s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, version TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (id));"+
+                "CREATE INDEX ON %1$s(dataSource);":
+                "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, version TINYTEXT NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), PRIMARY KEY (id))",
             ruleTableName
         )
     );
@@ -68,7 +75,9 @@ public class DbConnector
         dbi,
         configTableName,
         String.format(
-            "CREATE table %s (name VARCHAR(255) NOT NULL, payload BLOB NOT NULL, PRIMARY KEY(name))",
+            isPostgreSQL(dbi) ?
+                "CREATE TABLE %s (name VARCHAR(255) NOT NULL, payload bytea NOT NULL, PRIMARY KEY(name))":
+                "CREATE table %s (name VARCHAR(255) NOT NULL, payload BLOB NOT NULL, PRIMARY KEY(name))",
             configTableName
         )
     );
@@ -144,16 +153,20 @@ public class DbConnector
             @Override
             public Void withHandle(Handle handle) throws Exception
             {
-              if ( !handle.getConnection().getMetaData().getDatabaseProductName().contains("PostgreSQL") ) {
-                List<Map<String, Object>> table = handle.select(String.format("SHOW tables LIKE '%s'", tableName));
-
-                if (table.isEmpty()) {
-                  log.info("Creating table[%s]", tableName);
-                  handle.createStatement(sql).execute();
-                } else {
-                  log.info("Table[%s] existed: [%s]", tableName, table);
-                }
+              List<Map<String, Object>> table;
+              if ( isPostgreSQL(dbi) ) {
+                table = handle.select(String.format("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename LIKE '%s'", tableName));
+              } else {
+                table = handle.select(String.format("SHOW tables LIKE '%s'", tableName));
               }
+
+              if (table.isEmpty()) {
+                log.info("Creating table[%s]", tableName);
+                handle.createStatement(sql).execute();
+              } else {
+                log.info("Table[%s] existed: [%s]", tableName, table);
+              }
+
               return null;
             }
           }
@@ -162,6 +175,20 @@ public class DbConnector
     catch (Exception e) {
       log.warn(e, "Exception creating table");
     }
+  }
+
+  protected static Boolean isPostgreSQL(final IDBI dbi)
+  {
+    return dbi.withHandle(
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle) throws Exception
+          {
+            return handle.getConnection().getMetaData().getDatabaseProductName().contains("PostgreSQL");
+          }
+        }
+    );
   }
 
   private final Supplier<DbConnectorConfig> config;
