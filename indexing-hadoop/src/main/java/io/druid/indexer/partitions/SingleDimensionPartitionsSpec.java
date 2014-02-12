@@ -19,33 +19,42 @@
 
 package io.druid.indexer.partitions;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.indexer.DeterminePartitionsJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.Jobby;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SingleDimensionPartitionsSpec.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "dimension", value = SingleDimensionPartitionsSpec.class),
-    @JsonSubTypes.Type(name = "random", value = RandomPartitionsSpec.class)
-})
-public interface PartitionsSpec
+import javax.annotation.Nullable;
+
+public class SingleDimensionPartitionsSpec extends AbstractPartitionsSpec
 {
-  @JsonIgnore
-  public Jobby getPartitionJob(HadoopDruidIndexerConfig config);
+  @Nullable
+  private final String partitionDimension;
+
+  @JsonCreator
+  public SingleDimensionPartitionsSpec(
+      @JsonProperty("partitionDimension") @Nullable String partitionDimension,
+      @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
+      @JsonProperty("maxPartitionSize") @Nullable Long maxPartitionSize,
+      @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
+  )
+  {
+    super(targetPartitionSize, maxPartitionSize, assumeGrouped);
+    this.partitionDimension = partitionDimension;
+  }
 
   @JsonProperty
-  public long getTargetPartitionSize();
+  @Nullable
+  public String getPartitionDimension()
+  {
+    return partitionDimension;
+  }
 
-  @JsonProperty
-  public long getMaxPartitionSize();
-
-  @JsonProperty
-  public boolean isAssumeGrouped();
-
-  @JsonIgnore
-  public boolean isDeterminingPartitions();
-
+  @Override
+  public Jobby getPartitionJob(HadoopDruidIndexerConfig config)
+  {
+    return new DeterminePartitionsJob(config);
+  }
 }

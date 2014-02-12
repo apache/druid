@@ -19,8 +19,12 @@
 
 package io.druid;
 
+import com.fasterxml.jackson.databind.BeanProperty;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.common.ISE;
 import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
 
@@ -37,5 +41,20 @@ public class TestUtil
     for (Module module : list) {
       MAPPER.registerModule(module);
     }
+    MAPPER.setInjectableValues(
+        new InjectableValues()
+        {
+          @Override
+          public Object findInjectableValue(
+              Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
+          )
+          {
+            if (valueId.equals("com.fasterxml.jackson.databind.ObjectMapper")) {
+              return TestUtil.MAPPER;
+            }
+            throw new ISE("No Injectable value found");
+          }
+        }
+    );
   }
 }

@@ -57,7 +57,7 @@ public class UniformGranularityTest
             new Interval("2012-01-09T00Z/P1D"),
             new Interval("2012-01-10T00Z/P1D")
         ),
-        Lists.newArrayList(spec.bucketIntervals())
+        Lists.newArrayList(spec.bucketIntervals().get())
     );
 
     Assert.assertEquals(

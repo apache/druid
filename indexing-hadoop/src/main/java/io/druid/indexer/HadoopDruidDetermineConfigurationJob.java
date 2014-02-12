@@ -20,68 +20,55 @@
 package io.druid.indexer;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeComparator;
+import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  */
-public class HadoopDruidIndexerJob implements Jobby
+public class HadoopDruidDetermineConfigurationJob implements Jobby
 {
-  private static final Logger log = new Logger(HadoopDruidIndexerJob.class);
+  private static final Logger log = new Logger(HadoopDruidDetermineConfigurationJob.class);
   private final HadoopDruidIndexerConfig config;
-  private final DbUpdaterJob dbUpdaterJob;
-  private IndexGeneratorJob indexJob;
-  private volatile List<DataSegment> publishedSegments = null;
 
   @Inject
-  public HadoopDruidIndexerJob(
+  public HadoopDruidDetermineConfigurationJob(
       HadoopDruidIndexerConfig config
   )
   {
-    config.verify();
     this.config = config;
-
-    if (config.isUpdaterJobSpecSet()) {
-      dbUpdaterJob = new DbUpdaterJob(config);
-    } else {
-      dbUpdaterJob = null;
-    }
   }
 
   @Override
   public boolean run()
   {
     List<Jobby> jobs = Lists.newArrayList();
+
     JobHelper.ensurePaths(config);
 
-    indexJob = new IndexGeneratorJob(config);
-    jobs.add(indexJob);
-
-    if (dbUpdaterJob != null) {
-      jobs.add(dbUpdaterJob);
+    if (config.isDeterminingPartitions()) {
+      jobs.add(config.getPartitionsSpec().getPartitionJob(config));
     } else {
-      log.info("No updaterJobSpec set, not uploading to database");
+      Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
+      int shardCount = 0;
+      for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
+        DateTime bucket = segmentGranularity.getStart();
+        final HadoopyShardSpec spec = new HadoopyShardSpec(new NoneShardSpec(), shardCount++);
+        shardSpecs.put(bucket, Lists.newArrayList(spec));
+        log.info("DateTime[%s], spec[%s]", bucket, spec);
+      }
+      config.setShardSpecs(shardSpecs);
     }
 
+    return JobHelper.runJobs(jobs, config);
 
-    JobHelper.runJobs(jobs, config);
-    publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
-    return true;
   }
 
-  public List<DataSegment> getPublishedSegments()
-  {
-    if (publishedSegments == null) {
-      throw new IllegalStateException("Job hasn't run yet. No segments have been published yet.");
-    }
-    return publishedSegments;
-  }
-
-  public IndexGeneratorJob.IndexGeneratorStats getIndexJobStats()
-  {
-    return indexJob.getJobStats();
-  }
 }
