@@ -177,7 +177,7 @@ public class DbConnector
     }
   }
 
-  protected static Boolean isPostgreSQL(final IDBI dbi)
+  public static Boolean isPostgreSQL(final IDBI dbi)
   {
     return dbi.withHandle(
         new HandleCallback<Boolean>()
