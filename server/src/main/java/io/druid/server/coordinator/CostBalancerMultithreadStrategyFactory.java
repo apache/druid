@@ -26,6 +26,6 @@ public class CostBalancerMultithreadStrategyFactory implements BalancerStrategyF
   @Override
   public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
   {
-    return new CostBalancerStrategy(referenceTimestamp);
+    return new CostBalancerMultithreadStrategy(referenceTimestamp);
   }
 }
