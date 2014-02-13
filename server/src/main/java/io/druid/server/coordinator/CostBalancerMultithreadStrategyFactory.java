@@ -16,26 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
 package io.druid.server.coordinator;
 
-import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 
-import java.util.List;
-
-public interface BalancerStrategy
+public class CostBalancerMultithreadStrategyFactory implements BalancerStrategyFactory
 {
-  public static final String COST = "cost";
 
-  public static final String COST_MULTI = "cost_multi";
-
-  public static final String RANDOM = "random";
-
-  public ServerHolder findNewSegmentHomeBalancer(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
-
-  public ServerHolder findNewSegmentHomeReplicator(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
-
-  public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders);
-
-  public void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList);
+  @Override
+  public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
+  {
+    return new CostBalancerStrategy(referenceTimestamp);
+  }
 }

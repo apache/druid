@@ -19,6 +19,9 @@
 
 package io.druid.server.coordinator;
 
+import static io.druid.server.coordinator.BalancerStrategy.COST;
+import static io.druid.server.coordinator.BalancerStrategy.COST_MULTI;
+import static io.druid.server.coordinator.BalancerStrategy.RANDOM;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -736,6 +739,14 @@ public class DruidCoordinator
           }
         }
 
+        BalancerStrategyFactory factory= null;
+        if (COST.equals(config.getCoordinatorBalancerStrategy()))
+          factory = new CostBalancerStrategyFactory();
+        else if (RANDOM.equals(config.getCoordinatorBalancerStrategy()))
+          factory= new RandomBalancerStrategyFactory();
+        else if (COST_MULTI.equals(config.getCoordinatorBalancerStrategy()))
+          factory = new CostBalancerMultithreadStrategyFactory();
+
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams.newBuilder()
@@ -743,6 +754,7 @@ public class DruidCoordinator
                                          .withDatasources(databaseSegmentManager.getInventory())
                                          .withDynamicConfigs(getDynamicConfigs())
                                          .withEmitter(emitter)
+                                         .withBalancerStrategyFactory(factory)
                                          .build();
 
         for (DruidCoordinatorHelper helper : helpers) {
