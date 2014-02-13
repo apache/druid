@@ -385,7 +385,7 @@ public class InfoResource
                           if (!tiers.isEmpty()) {
                             tier = tiers.iterator().next();
                           }
-                          
+
                           newRule.put("tier", tier);
                           newRule.put("replicants", ((LoadRule) rule).getNumReplicants(tier));
 
