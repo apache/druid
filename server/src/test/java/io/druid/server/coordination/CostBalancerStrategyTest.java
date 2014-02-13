@@ -74,7 +74,7 @@ public class CostBalancerStrategyTest
   }
 
   @Test
-  public void test() throws InterruptedException {
+  public void testCostBalancerStrategy() throws InterruptedException {
     DataSegment segment = getSegment(1000);
 
     CostBalancerStrategy strategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC));
@@ -82,5 +82,16 @@ public class CostBalancerStrategyTest
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }
+
+  @Test
+  public void testCostBalancerMultithreadStrategy() throws InterruptedException {
+    DataSegment segment = getSegment(1000);
+
+    CostBalancerStrategy strategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC));
+    ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
+    Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
+    Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
+  }
+
 
 }
