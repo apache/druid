@@ -380,12 +380,12 @@ public class InfoResource
                           }
                           );
                           Set<String> tiers = Sets.newHashSet(((LoadRule) rule).getTieredReplicants().keySet());
+                          tiers.remove(DruidServer.DEFAULT_TIER);
                           String tier = DruidServer.DEFAULT_TIER;
-                          if (tiers.size() > 1) {
-                            tiers.remove(DruidServer.DEFAULT_TIER);
+                          if (!tiers.isEmpty()) {
                             tier = tiers.iterator().next();
                           }
-
+                          
                           newRule.put("tier", tier);
                           newRule.put("replicants", ((LoadRule) rule).getNumReplicants(tier));
 
