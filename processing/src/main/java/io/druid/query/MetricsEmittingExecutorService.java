@@ -46,7 +46,6 @@ public class MetricsEmittingExecutorService extends DelegatingExecutorService
     this.metricBuilder = metricBuilder;
   }
 
-
   @Override
   public <T> Future<T> submit(Callable<T> tCallable)
   {
