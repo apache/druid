@@ -109,8 +109,8 @@ public class IndexTask extends AbstractFixedIntervalTask
         id != null ? id : String.format("index_%s_%s", dataSource, new DateTime().toString()),
         dataSource,
         new Interval(
-            granularitySpec.bucketIntervals().first().getStart(),
-            granularitySpec.bucketIntervals().last().getEnd()
+            granularitySpec.bucketIntervals().get().first().getStart(),
+            granularitySpec.bucketIntervals().get().last().getEnd()
         )
     );
 
@@ -137,7 +137,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
     final Set<DataSegment> segments = Sets.newHashSet();
 
-    final Set<Interval> validIntervals = Sets.intersection(granularitySpec.bucketIntervals(), getDataIntervals());
+    final Set<Interval> validIntervals = Sets.intersection(granularitySpec.bucketIntervals().get(), getDataIntervals());
     if (validIntervals.isEmpty()) {
       throw new ISE("No valid data intervals found. Check your configs!");
     }
