@@ -724,7 +724,7 @@ public class DeterminePartitionsJob implements Jobby
       }
 
       final OutputStream out = Utils.makePathAndOutputStream(
-          context, config.makeSegmentPartitionInfoPath(config.getGranularitySpec().getGranularity().bucket(bucket)), config.isOverwriteFiles()
+          context, config.makeSegmentPartitionInfoPath(config.getGranularitySpec().bucketInterval(bucket).get()), config.isOverwriteFiles()
       );
 
       final DimPartitions chosenPartitions = maxCardinality > HIGH_CARDINALITY_THRESHOLD
