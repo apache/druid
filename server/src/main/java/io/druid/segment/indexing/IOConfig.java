@@ -19,9 +19,15 @@
 
 package io.druid.segment.indexing;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
 /**
  */
-
-public interface IngestConfig
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "realtime", value = RealtimeIOConfig.class)
+})
+public interface IOConfig
 {
 }

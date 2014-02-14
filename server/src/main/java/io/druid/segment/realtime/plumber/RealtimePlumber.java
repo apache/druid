@@ -35,6 +35,7 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -72,7 +73,7 @@ public class RealtimePlumber implements Plumber
   private final Period windowPeriod;
   private final File basePersistDirectory;
   private final SegmentGranularity segmentGranularity;
-  private final Schema schema;
+  private final DataSchema schema;
   private final FireDepartmentMetrics metrics;
   private final RejectionPolicy rejectionPolicy;
   private final ServiceEmitter emitter;
@@ -100,7 +101,7 @@ public class RealtimePlumber implements Plumber
       Period windowPeriod,
       File basePersistDirectory,
       SegmentGranularity segmentGranularity,
-      Schema schema,
+      DataSchema schema,
       FireDepartmentMetrics metrics,
       RejectionPolicy rejectionPolicy,
       ServiceEmitter emitter,
@@ -131,7 +132,7 @@ public class RealtimePlumber implements Plumber
     this.maxPendingPersists = maxPendingPersists;
   }
 
-  public Schema getSchema()
+  public DataSchema getSchema()
   {
     return schema;
   }
@@ -632,12 +633,12 @@ public class RealtimePlumber implements Plumber
     }
   }
 
-  protected File computeBaseDir(Schema schema)
+  protected File computeBaseDir(DataSchema schema)
   {
     return new File(basePersistDirectory, schema.getDataSource());
   }
 
-  protected File computePersistDir(Schema schema, Interval interval)
+  protected File computePersistDir(DataSchema schema, Interval interval)
   {
     return new File(computeBaseDir(schema), interval.toString().replace("/", "_"));
   }
@@ -651,7 +652,7 @@ public class RealtimePlumber implements Plumber
    *
    * @return the number of rows persisted
    */
-  protected int persistHydrant(FireHydrant indexToPersist, Schema schema, Interval interval)
+  protected int persistHydrant(FireHydrant indexToPersist, DataSchema schema, Interval interval)
   {
     if (indexToPersist.hasSwapped()) {
       log.info(

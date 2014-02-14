@@ -31,6 +31,7 @@ import io.druid.data.input.InputRow;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.realtime.FireHydrant;
 import io.druid.segment.realtime.Schema;
 import io.druid.timeline.DataSegment;
@@ -51,13 +52,13 @@ public class Sink implements Iterable<FireHydrant>
   private volatile FireHydrant currIndex;
 
   private final Interval interval;
-  private final Schema schema;
+  private final DataSchema schema;
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
 
   public Sink(
       Interval interval,
-      Schema schema,
+      DataSchema schema,
       String version
   )
   {
@@ -70,7 +71,7 @@ public class Sink implements Iterable<FireHydrant>
 
   public Sink(
       Interval interval,
-      Schema schema,
+      DataSchema schema,
       String version,
       List<FireHydrant> hydrants
   )
@@ -164,13 +165,13 @@ public class Sink implements Iterable<FireHydrant>
     );
   }
 
-  private FireHydrant makeNewCurrIndex(long minTimestamp, Schema schema)
+  private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
     IncrementalIndex newIndex = new IncrementalIndex(
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(minTimestamp)
-            .withQueryGranularity(schema.getIndexGranularity())
-            .withSpatialDimensions(schema.getSpatialDimensions())
+            .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
+            .withSpatialDimensions(schema.getParser().getParseSpec().getDimensionsSpec().getSpatialDimensions())
             .withMetrics(schema.getAggregators())
             .build()
     );

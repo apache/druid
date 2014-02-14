@@ -29,6 +29,7 @@ import io.druid.client.ServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.SegmentGranularity;
+import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.Schema;
@@ -158,7 +159,13 @@ public class RealtimePlumberSchool implements PlumberSchool
   }
 
   @Override
-  public Plumber findPlumber(final Schema schema, final FireDepartmentMetrics metrics)
+  public SegmentGranularity getSegmentGranularity()
+  {
+    return segmentGranularity;
+  }
+
+  @Override
+  public Plumber findPlumber(final DataSchema schema, final FireDepartmentMetrics metrics)
   {
     verifyState();
 

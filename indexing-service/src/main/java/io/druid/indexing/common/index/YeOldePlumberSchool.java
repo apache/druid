@@ -35,6 +35,7 @@ import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.SegmentGranularity;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -77,6 +78,12 @@ public class YeOldePlumberSchool implements PlumberSchool
     this.version = version;
     this.dataSegmentPusher = dataSegmentPusher;
     this.tmpSegmentDir = tmpSegmentDir;
+  }
+
+  @Override
+  public SegmentGranularity getSegmentGranularity()
+  {
+    throw new UnsupportedOperationException();
   }
 
   @Override

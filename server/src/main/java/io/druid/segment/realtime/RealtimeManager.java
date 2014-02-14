@@ -39,6 +39,9 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.IngestionSchema;
+import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Sink;
 import org.joda.time.DateTime;
@@ -77,7 +80,7 @@ public class RealtimeManager implements QuerySegmentWalker
   public void start() throws IOException
   {
     for (final FireDepartment fireDepartment : fireDepartments) {
-      Schema schema = fireDepartment.getSchema();
+      DataSchema schema = fireDepartment.getSchema();
 
       final FireChief chief = new FireChief(fireDepartment);
       chiefs.put(schema.getDataSource(), chief);
@@ -126,7 +129,7 @@ public class RealtimeManager implements QuerySegmentWalker
     private final FireDepartment fireDepartment;
     private final FireDepartmentMetrics metrics;
 
-    private volatile FireDepartmentConfig config = null;
+    private volatile RealtimeDriverConfig config = null;
     private volatile Firehose firehose = null;
     private volatile Plumber plumber = null;
     private volatile boolean normalExit = true;

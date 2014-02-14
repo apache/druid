@@ -21,10 +21,7 @@ package io.druid.segment.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.segment.realtime.plumber.RejectionPolicyFactory;
 import org.joda.time.Period;
-
-import java.io.File;
 
 /**
  */
@@ -32,24 +29,15 @@ public class RealtimeDriverConfig implements DriverConfig
 {
   private final int maxRowsInMemory;
   private final Period intermediatePersistPeriod;
-  private final Period windowPeriod;
-  private final File basePersistDirectory;
-  private final RejectionPolicyFactory rejectionPolicyFactory;
 
   @JsonCreator
   public RealtimeDriverConfig(
       @JsonProperty("maxRowsInMemory") int maxRowsInMemory,
-      @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
-      @JsonProperty("windowPeriod") Period windowPeriod,
-      @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory
+      @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod
   )
   {
     this.maxRowsInMemory = maxRowsInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod;
-    this.windowPeriod = windowPeriod;
-    this.basePersistDirectory = basePersistDirectory;
-    this.rejectionPolicyFactory = rejectionPolicyFactory;
   }
 
   @JsonProperty
@@ -62,23 +50,5 @@ public class RealtimeDriverConfig implements DriverConfig
   public Period getIntermediatePersistPeriod()
   {
     return intermediatePersistPeriod;
-  }
-
-  @JsonProperty
-  public Period getWindowPeriod()
-  {
-    return windowPeriod;
-  }
-
-  @JsonProperty
-  public File getBasePersistDirectory()
-  {
-    return basePersistDirectory;
-  }
-
-  @JsonProperty
-  public RejectionPolicyFactory getRejectionPolicyFactory()
-  {
-    return rejectionPolicyFactory;
   }
 }

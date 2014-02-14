@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "uniform", value = RealtimeDriverConfig.class)
+    @JsonSubTypes.Type(name = "realtime", value = RealtimeDriverConfig.class)
 })
 public interface DriverConfig
 {

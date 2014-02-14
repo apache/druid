@@ -22,6 +22,7 @@ package io.druid.segment.realtime;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
+import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -31,6 +32,9 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.SegmentGranularity;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.GranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
@@ -72,11 +76,21 @@ public class RealtimeManagerTest
         makeRow(new DateTime("9000-01-01").getMillis()), makeRow(new DateTime().getMillis())
     );
 
-    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, new DateTime().toString()));
+    DataSchema dataSchema = new DataSchema(
+      schema.getDataSource(),
+      null,
+      null,
+      null,
+      schema.getAggregators(),
+      new GranularitySpec(null, schema.getIndexGranularity()),
+      schema.getShardSpec()
+    );
+    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), dataSchema, new DateTime().toString()));
 
     realtimeManager = new RealtimeManager(
         Arrays.<FireDepartment>asList(
             new FireDepartment(
+                null, null, null,
                 schema,
                 new FireDepartmentConfig(1, new Period("P1Y")),
                 new FirehoseFactory()
@@ -86,15 +100,27 @@ public class RealtimeManagerTest
                   {
                     return new TestFirehose(rows.iterator());
                   }
+
+                  @Override
+                  public ByteBufferInputRowParser getParser()
+                  {
+                    throw new UnsupportedOperationException();
+                  }
                 },
                 new PlumberSchool()
                 {
                   @Override
                   public Plumber findPlumber(
-                      Schema schema, FireDepartmentMetrics metrics
+                      DataSchema schema, FireDepartmentMetrics metrics
                   )
                   {
                     return plumber;
+                  }
+
+                  @Override
+                  public SegmentGranularity getSegmentGranularity()
+                  {
+                    throw new UnsupportedOperationException();
                   }
                 }
             )

@@ -146,4 +146,10 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory
       }
     };
   }
+
+  @Override
+  public ByteBufferInputRowParser getParser()
+  {
+    return parser;
+  }
 }

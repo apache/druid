@@ -29,7 +29,11 @@ import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
+import io.druid.data.input.impl.ParseSpec;
+import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
 
 import java.io.InputStream;
@@ -45,84 +49,104 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
 {
   private static final Logger log = new Logger(ProtoBufInputRowParser.class);
 
-	private final MapInputRowParser inputRowCreator;
-	private final Descriptor descriptor;
+  private final ParseSpec parseSpec;
+  private final MapInputRowParser mapParser;
+  private final String descriptorFileInClasspath;
 
-	@JsonCreator
-	public ProtoBufInputRowParser(
-	    @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
+  @JsonCreator
+  public ProtoBufInputRowParser(
+      @JsonProperty("parseSpec") ParseSpec parseSpec,
+      @JsonProperty("descriptor") String descriptorFileInClasspath,
+      // Backwards compatible
+      @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("dimensions") List<String> dimensions,
-	    @JsonProperty("dimensionExclusions") List<String> dimensionExclusions,
-      @JsonProperty("descriptor") String descriptorFileInClasspath)
-	{
+      @JsonProperty("dimensionExclusions") List<String> dimensionExclusions,
+      @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions
+  )
+  {
+    // Backwards Compatible
+    if (parseSpec == null) {
+      this.parseSpec = new ParseSpec(
+          timestampSpec,
+          new DimensionsSpec(dimensions, dimensionExclusions, spatialDimensions)
+      )
+      {
+      };
+    } else {
+      this.parseSpec = parseSpec;
+    }
 
-		descriptor = getDescriptor(descriptorFileInClasspath);
-    inputRowCreator = new MapInputRowParser(timestampSpec, dimensions, dimensionExclusions);
+    this.descriptorFileInClasspath = descriptorFileInClasspath;
+    this.mapParser = new MapInputRowParser(this.parseSpec, null, null, null, null);
+  }
 
-	}
+  @Override
+  public ParseSpec getParseSpec()
+  {
+    return parseSpec;
+  }
 
-	@Override
-	public InputRow parse(ByteBuffer input) throws FormattedException
-	{
-        // We should really create a ProtoBufBasedInputRow that does not need an intermediate map but accesses
-        // the DynamicMessage directly...
-		Map<String, Object> theMap = buildStringKeyMap(input);
+  @Override
+  public InputRowParser withParseSpec(ParseSpec parseSpec)
+  {
+    return new ProtoBufInputRowParser(parseSpec, descriptorFileInClasspath, null, null, null, null);
+  }
 
-		return inputRowCreator.parse(theMap);
-	}
+  @Override
+  public InputRow parse(ByteBuffer input) throws FormattedException
+  {
+    // We should really create a ProtoBufBasedInputRow that does not need an intermediate map but accesses
+    // the DynamicMessage directly...
+    Map<String, Object> theMap = buildStringKeyMap(input);
 
-	private Map<String, Object> buildStringKeyMap(ByteBuffer input)
-	{
-		Map<String, Object> theMap = Maps.newHashMap();
+    return mapParser.parse(theMap);
+  }
 
-		try
-		{
+  private Map<String, Object> buildStringKeyMap(ByteBuffer input)
+  {
+    final Descriptor descriptor = getDescriptor(descriptorFileInClasspath);
+    final Map<String, Object> theMap = Maps.newHashMap();
+
+    try {
       DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
-			Map<Descriptors.FieldDescriptor, Object> allFields = message.getAllFields();
+      Map<Descriptors.FieldDescriptor, Object> allFields = message.getAllFields();
 
-			for (Map.Entry<Descriptors.FieldDescriptor, Object> entry : allFields.entrySet())
-			{
-				String name = entry.getKey().getName();
-				if (theMap.containsKey(name))
-				{
-					continue;
-					// Perhaps throw an exception here?
-					// throw new RuntimeException("dupicate key " + name + " in " + message);
-				}
+      for (Map.Entry<Descriptors.FieldDescriptor, Object> entry : allFields.entrySet()) {
+        String name = entry.getKey().getName();
+        if (theMap.containsKey(name)) {
+          continue;
+          // Perhaps throw an exception here?
+          // throw new RuntimeException("dupicate key " + name + " in " + message);
+        }
         Object value = entry.getValue();
-        if(value instanceof Descriptors.EnumValueDescriptor) {
+        if (value instanceof Descriptors.EnumValueDescriptor) {
           Descriptors.EnumValueDescriptor desc = (Descriptors.EnumValueDescriptor) value;
           value = desc.getName();
         }
 
-				theMap.put(name, value);
-			}
+        theMap.put(name, value);
+      }
 
-		} catch (InvalidProtocolBufferException e)
-		{
-			log.warn(e, "Problem with protobuf something");
-		}
-		return theMap;
-	}
+    }
+    catch (InvalidProtocolBufferException e) {
+      log.warn(e, "Problem with protobuf something");
+    }
+    return theMap;
+  }
 
-	private Descriptor getDescriptor(String descriptorFileInClassPath)
-	{
-		try
-		{
-			InputStream fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFileInClassPath);
-			FileDescriptorSet set = FileDescriptorSet.parseFrom(fin);
-			FileDescriptor file = FileDescriptor.buildFrom(set.getFile(0), new FileDescriptor[]
-			{});
-			return file.getMessageTypes().get(0);
-		} catch (Exception e)
-		{
-			throw Throwables.propagate(e);
-		}
-	}
-
-	@Override
-	public void addDimensionExclusion(String dimension)
-	{
-		inputRowCreator.addDimensionExclusion(dimension);
-	}
+  private Descriptor getDescriptor(String descriptorFileInClassPath)
+  {
+    try {
+      InputStream fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFileInClassPath);
+      FileDescriptorSet set = FileDescriptorSet.parseFrom(fin);
+      FileDescriptor file = FileDescriptor.buildFrom(
+          set.getFile(0), new FileDescriptor[]
+          {}
+      );
+      return file.getMessageTypes().get(0);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
 }

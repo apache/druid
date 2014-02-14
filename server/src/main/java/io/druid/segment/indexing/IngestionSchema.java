@@ -27,36 +27,36 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class IngestionSchema
 {
   private final DataSchema dataSchema;
+  private final IOConfig ioConfig;
   private final DriverConfig driverConfig;
-  private final IngestConfig ingestConfig;
 
   @JsonCreator
   public IngestionSchema(
-      @JsonProperty("schema") DataSchema dataSchema,
-      @JsonProperty("config") DriverConfig driverConfig,
-      @JsonProperty("ingest") IngestConfig ingestConfig
+      @JsonProperty("dataSchema") DataSchema dataSchema,
+      @JsonProperty("io") IOConfig ioConfig,
+      @JsonProperty("driverConfig") DriverConfig driverConfig
   )
   {
     this.dataSchema = dataSchema;
+    this.ioConfig = ioConfig;
     this.driverConfig = driverConfig;
-    this.ingestConfig = ingestConfig;
   }
 
-  @JsonProperty
+  @JsonProperty("dataSchema")
   public DataSchema getDataSchema()
   {
     return dataSchema;
   }
 
-  @JsonProperty
+  @JsonProperty("io")
+  public IOConfig getIoConfig()
+  {
+    return ioConfig;
+  }
+
+  @JsonProperty("config")
   public DriverConfig getDriverConfig()
   {
     return driverConfig;
-  }
-
-  @JsonProperty
-  public IngestConfig getIngestConfig()
-  {
-    return ingestConfig;
   }
 }

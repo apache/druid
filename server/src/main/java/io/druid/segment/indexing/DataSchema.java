@@ -22,24 +22,17 @@ package io.druid.segment.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.data.input.impl.TimestampSpec;
+import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
-
-import java.util.List;
 
 /**
  */
 public class DataSchema
 {
   private final String dataSource;
-  private final TimestampSpec timestampSpec;
-  private final List<String> dimensions;
-  private final List<String> dimensionExclusions;
-  private final List<SpatialDimensionSchema> spatialDimensions;
+  private final ByteBufferInputRowParser parser;
   private final AggregatorFactory[] aggregators;
   private final GranularitySpec granularitySpec;
   private final ShardSpec shardSpec;
@@ -47,27 +40,19 @@ public class DataSchema
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
-      @JsonProperty("dimensions") List<String> dimensions,
-      @JsonProperty("dimensionExclusions") List<String> dimensionExclusions,
-      @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions,
-      @JsonProperty("metrics") AggregatorFactory[] aggregators,
+      @JsonProperty("parser") ByteBufferInputRowParser parser,
+      @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
       @JsonProperty("shardSpec") ShardSpec shardSpec
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
-    Preconditions.checkNotNull(timestampSpec, "timestampSpec");
+    Preconditions.checkNotNull(parser, "parser");
     Preconditions.checkNotNull(aggregators, "metrics");
     Preconditions.checkNotNull(granularitySpec, "granularitySpec");
 
     this.dataSource = dataSource;
-    this.timestampSpec = timestampSpec;
-    this.dimensions = dimensions;
-    this.dimensionExclusions = dimensionExclusions;
-    this.spatialDimensions = (spatialDimensions == null)
-                             ? Lists.<SpatialDimensionSchema>newArrayList()
-                             : spatialDimensions;
+    this.parser = parser;
     this.aggregators = aggregators;
     this.granularitySpec = granularitySpec;
     this.shardSpec = shardSpec == null ? new NoneShardSpec() : shardSpec;
@@ -80,30 +65,12 @@ public class DataSchema
   }
 
   @JsonProperty
-  public TimestampSpec getTimestampSpec()
+  public ByteBufferInputRowParser getParser()
   {
-    return timestampSpec;
+    return parser;
   }
 
-  @JsonProperty
-  public List<String> getDimensions()
-  {
-    return dimensions;
-  }
-
-  @JsonProperty
-  public List<String> getDimensionExclusions()
-  {
-    return dimensionExclusions;
-  }
-
-  @JsonProperty
-  public List<SpatialDimensionSchema> getSpatialDimensions()
-  {
-    return spatialDimensions;
-  }
-
-  @JsonProperty
+  @JsonProperty("metricsSpec")
   public AggregatorFactory[] getAggregators()
   {
     return aggregators;

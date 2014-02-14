@@ -28,6 +28,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.SegmentGranularity;
+import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.Schema;
 import io.druid.server.coordination.DataSegmentAnnouncer;
@@ -96,8 +97,7 @@ public class FlushingPlumberSchool implements PlumberSchool
   }
 
   @Override
-
-  public Plumber findPlumber(final Schema schema, final FireDepartmentMetrics metrics)
+  public Plumber findPlumber(final DataSchema schema, final FireDepartmentMetrics metrics)
   {
     verifyState();
 
@@ -119,6 +119,12 @@ public class FlushingPlumberSchool implements PlumberSchool
         versioningPolicy,
         maxPendingPersists
     );
+  }
+
+  @Override
+  public SegmentGranularity getSegmentGranularity()
+  {
+    return segmentGranularity;
   }
 
   private void verifyState()
