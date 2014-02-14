@@ -26,6 +26,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
 import com.metamx.common.concurrent.ExecutorServiceConfig;
+import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -34,6 +35,7 @@ import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.MetricsEmittingExecutorService;
+import io.druid.query.PrioritizedExecutorService;
 import io.druid.server.DruidProcessingConfig;
 
 import java.lang.reflect.InvocationTargetException;
@@ -58,10 +60,17 @@ public class DruidProcessingModule implements Module
   @Provides
   @Processing
   @ManageLifecycle
-  public ExecutorService getProcessingExecutorService(ExecutorServiceConfig config, ServiceEmitter emitter)
+  public ExecutorService getProcessingExecutorService(
+      ExecutorServiceConfig config,
+      ServiceEmitter emitter,
+      Lifecycle lifecycle
+  )
   {
     return new MetricsEmittingExecutorService(
-        Executors.newFixedThreadPool(config.getNumThreads(), Execs.makeThreadFactory(config.getFormatString())),
+        PrioritizedExecutorService.create(
+            lifecycle,
+            config
+        ),
         emitter,
         new ServiceMetricEvent.Builder()
     );
