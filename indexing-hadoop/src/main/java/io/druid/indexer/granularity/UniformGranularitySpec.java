@@ -35,7 +35,7 @@ import java.util.SortedSet;
 public class UniformGranularitySpec implements GranularitySpec
 {
   final private Granularity granularity;
-  final private Iterable<Interval> inputIntervals;
+  final private List<Interval> inputIntervals;
   final private ArbitraryGranularitySpec wrappedSpec;
 
   @JsonCreator
@@ -44,28 +44,21 @@ public class UniformGranularitySpec implements GranularitySpec
       @JsonProperty("intervals") List<Interval> inputIntervals
   )
   {
-    this.granularity = granularity;
-    if (inputIntervals != null) {
-      List<Interval> granularIntervals = Lists.newArrayList();
-      for (Interval inputInterval : inputIntervals) {
-        Iterables.addAll(granularIntervals, granularity.getIterable(inputInterval));
-      }
-      this.inputIntervals = ImmutableList.copyOf(inputIntervals);
-      this.wrappedSpec = new ArbitraryGranularitySpec(granularIntervals);
-    } else {
-      this.inputIntervals = null;
-      this.wrappedSpec = null;
+    List<Interval> granularIntervals = Lists.newArrayList();
+
+    for (Interval inputInterval : inputIntervals) {
+      Iterables.addAll(granularIntervals,  granularity.getIterable(inputInterval));
     }
+
+    this.granularity = granularity;
+    this.inputIntervals = ImmutableList.copyOf(inputIntervals);
+    this.wrappedSpec = new ArbitraryGranularitySpec(granularIntervals);
   }
 
   @Override
-  public Optional<SortedSet<Interval>> bucketIntervals()
+  public SortedSet<Interval> bucketIntervals()
   {
-    if (wrappedSpec == null) {
-      return Optional.absent();
-    } else {
-      return wrappedSpec.bucketIntervals();
-    }
+    return wrappedSpec.bucketIntervals();
   }
 
   @Override
@@ -82,8 +75,8 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @JsonProperty("intervals")
-  public Optional<Iterable<Interval>> getIntervals()
+  public Iterable<Interval> getIntervals()
   {
-    return Optional.fromNullable(inputIntervals);
+    return inputIntervals;
   }
 }

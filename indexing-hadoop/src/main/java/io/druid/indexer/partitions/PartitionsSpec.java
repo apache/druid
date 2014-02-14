@@ -19,33 +19,69 @@
 
 package io.druid.indexer.partitions;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.indexer.Jobby;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SingleDimensionPartitionsSpec.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "dimension", value = SingleDimensionPartitionsSpec.class),
-    @JsonSubTypes.Type(name = "random", value = RandomPartitionsSpec.class)
-})
-public interface PartitionsSpec
+import javax.annotation.Nullable;
+
+public class PartitionsSpec
 {
+  private static final double DEFAULT_OVERSIZE_THRESHOLD = 1.5;
+
+  @Nullable
+  private final String partitionDimension;
+
+  private final long targetPartitionSize;
+
+  private final long maxPartitionSize;
+
+  private final boolean assumeGrouped;
+
+  @JsonCreator
+  public PartitionsSpec(
+      @JsonProperty("partitionDimension") @Nullable String partitionDimension,
+      @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
+      @JsonProperty("maxPartitionSize") @Nullable Long maxPartitionSize,
+      @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
+  )
+  {
+    this.partitionDimension = partitionDimension;
+    this.targetPartitionSize = targetPartitionSize == null ? -1 : targetPartitionSize;
+    this.maxPartitionSize = maxPartitionSize == null
+                            ? (long) (this.targetPartitionSize * DEFAULT_OVERSIZE_THRESHOLD)
+                            : maxPartitionSize;
+    this.assumeGrouped = assumeGrouped == null ? false : assumeGrouped;
+  }
+
   @JsonIgnore
-  public Jobby getPartitionJob(HadoopDruidIndexerConfig config);
+  public boolean isDeterminingPartitions()
+  {
+    return targetPartitionSize > 0;
+  }
 
   @JsonProperty
-  public long getTargetPartitionSize();
+  @Nullable
+  public String getPartitionDimension()
+  {
+    return partitionDimension;
+  }
 
   @JsonProperty
-  public long getMaxPartitionSize();
+  public long getTargetPartitionSize()
+  {
+    return targetPartitionSize;
+  }
 
   @JsonProperty
-  public boolean isAssumeGrouped();
+  public long getMaxPartitionSize()
+  {
+    return maxPartitionSize;
+  }
 
-  @JsonIgnore
-  public boolean isDeterminingPartitions();
-
+  @JsonProperty
+  public boolean isAssumeGrouped()
+  {
+    return assumeGrouped;
+  }
 }

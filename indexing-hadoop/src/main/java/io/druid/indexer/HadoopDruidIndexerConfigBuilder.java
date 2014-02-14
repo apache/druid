@@ -46,10 +46,6 @@ public class HadoopDruidIndexerConfigBuilder
     return HadoopDruidIndexerConfig.jsonMapper.convertValue(schema, HadoopDruidIndexerConfig.class);
   }
 
-  public static HadoopDruidIndexerSchema toSchema(HadoopDruidIndexerConfig config){
-    return HadoopDruidIndexerConfig.jsonMapper.convertValue(config, HadoopDruidIndexerSchema.class);
-  }
-
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
     return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);

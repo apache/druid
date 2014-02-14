@@ -25,8 +25,6 @@ import com.google.common.collect.Lists;
 import io.druid.db.DbConnectorConfig;
 import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.indexer.partitions.PartitionsSpec;
-import io.druid.indexer.partitions.RandomPartitionsSpec;
-import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.updater.DbUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -67,7 +65,7 @@ public class HadoopDruidIndexerConfigTest
     Assert.assertEquals(
         "getIntervals",
         Lists.newArrayList(new Interval("2012-01-01/P1D")),
-        granularitySpec.getIntervals().get()
+        granularitySpec.getIntervals()
     );
 
     Assert.assertEquals(
@@ -101,7 +99,7 @@ public class HadoopDruidIndexerConfigTest
     Assert.assertEquals(
         "getIntervals",
         Lists.newArrayList(new Interval("2012-02-01/P1D")),
-        granularitySpec.getIntervals().get()
+        granularitySpec.getIntervals()
     );
 
     Assert.assertEquals(
@@ -169,14 +167,15 @@ public class HadoopDruidIndexerConfigTest
         100
     );
 
-    Assert.assertTrue(
-        "partitionSpec",
-        partitionsSpec instanceof SingleDimensionPartitionsSpec
+    Assert.assertEquals(
+        "getPartitionDimension",
+        partitionsSpec.getPartitionDimension(),
+        null
     );
   }
 
   @Test
-  public void testPartitionsSpecSpecificDimensionLegacy()
+  public void testPartitionsSpecSpecificDimension()
   {
     final HadoopDruidIndexerConfig cfg;
 
@@ -215,10 +214,9 @@ public class HadoopDruidIndexerConfigTest
         150
     );
 
-    Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof SingleDimensionPartitionsSpec);
     Assert.assertEquals(
         "getPartitionDimension",
-        ((SingleDimensionPartitionsSpec)partitionsSpec).getPartitionDimension(),
+        partitionsSpec.getPartitionDimension(),
         "foo"
     );
   }
@@ -261,10 +259,9 @@ public class HadoopDruidIndexerConfigTest
         150
     );
 
-    Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof SingleDimensionPartitionsSpec);
     Assert.assertEquals(
         "getPartitionDimension",
-        ((SingleDimensionPartitionsSpec)partitionsSpec).getPartitionDimension(),
+        partitionsSpec.getPartitionDimension(),
         "foo"
     );
   }
@@ -310,10 +307,9 @@ public class HadoopDruidIndexerConfigTest
         200
     );
 
-    Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof SingleDimensionPartitionsSpec);
     Assert.assertEquals(
         "getPartitionDimension",
-        ((SingleDimensionPartitionsSpec)partitionsSpec).getPartitionDimension(),
+        partitionsSpec.getPartitionDimension(),
         "foo"
     );
   }
@@ -424,6 +420,7 @@ public class HadoopDruidIndexerConfigTest
     );
   }
 
+
   @Test
   public void shouldMakeHDFSCompliantSegmentOutputPath()
   {
@@ -498,49 +495,6 @@ public class HadoopDruidIndexerConfigTest
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
-    }
-  }
-
-  public void testRandomPartitionsSpec() throws Exception{
-    {
-      final HadoopDruidIndexerConfig cfg;
-
-      try {
-        cfg = jsonReadWriteRead(
-            "{"
-            + "\"partitionsSpec\":{"
-            + "   \"targetPartitionSize\":100,"
-            + "   \"type\":\"random\""
-            + " }"
-            + "}",
-            HadoopDruidIndexerConfig.class
-        );
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-
-      final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
-
-      Assert.assertEquals(
-          "isDeterminingPartitions",
-          partitionsSpec.isDeterminingPartitions(),
-          true
-      );
-
-      Assert.assertEquals(
-          "getTargetPartitionSize",
-          partitionsSpec.getTargetPartitionSize(),
-          100
-      );
-
-      Assert.assertEquals(
-          "getMaxPartitionSize",
-          partitionsSpec.getMaxPartitionSize(),
-          150
-      );
-
-      Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof RandomPartitionsSpec);
     }
   }
 }
