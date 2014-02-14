@@ -197,6 +197,35 @@ public abstract class AbstractCostBalancerStrategy implements BalancerStrategy
         normalization,
         normalizedInitialCost
     );
-
   }
+
+  protected double computeCost(
+      final DataSegment proposalSegment, final ServerHolder server, final boolean includeCurrentServer
+  )
+  {
+    final long proposalSegmentSize = proposalSegment.getSize();
+
+    if (includeCurrentServer || !server.isServingSegment(proposalSegment)) {
+      /** Don't calculate cost if the server doesn't have enough space or is loading the segment */
+      if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment))
+        return Double.POSITIVE_INFINITY;
+
+      /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
+      double cost = 0f;
+      /**  the sum of the costs of other (exclusive of the proposalSegment) segments on the server */
+      for (DataSegment segment : server.getServer().getSegments().values()) {
+        if (!proposalSegment.equals(segment)) {
+          cost += computeJointSegmentCosts(proposalSegment, segment);
+        }
+      }
+      /**  plus the costs of segments that will be loaded */
+      for (DataSegment segment : server.getPeon().getSegmentsToLoad()) {
+        cost += computeJointSegmentCosts(proposalSegment, segment);
+      }
+      return cost;
+    }
+    return Double.POSITIVE_INFINITY;
+  }
+
 }
+

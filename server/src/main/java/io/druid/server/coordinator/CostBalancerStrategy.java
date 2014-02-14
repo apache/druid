@@ -23,9 +23,6 @@ import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
-import java.util.List;
 
 public class CostBalancerStrategy extends AbstractCostBalancerStrategy
 {
@@ -42,36 +39,15 @@ public class CostBalancerStrategy extends AbstractCostBalancerStrategy
       boolean includeCurrentServer
   )
   {
-
     Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
-    final long proposalSegmentSize = proposalSegment.getSize();
 
     for (ServerHolder server : serverHolders) {
-      if (includeCurrentServer || !server.isServingSegment(proposalSegment)) {
-        /** Don't calculate cost if the server doesn't have enough space or is loading the segment */
-        if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
-          continue;
-        }
-
-        /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
-        double cost = 0f;
-        /**  the sum of the costs of other (exclusive of the proposalSegment) segments on the server */
-        for (DataSegment segment : server.getServer().getSegments().values()) {
-          if (!proposalSegment.equals(segment)) {
-            cost += computeJointSegmentCosts(proposalSegment, segment);
-          }
-        }
-        /**  plus the costs of segments that will be loaded */
-        for (DataSegment segment : server.getPeon().getSegmentsToLoad()) {
-          cost += computeJointSegmentCosts(proposalSegment, segment);
-        }
-
-        if (cost < bestServer.lhs) {
-          bestServer = Pair.of(cost, server);
-        }
+      double cost = computeCost(proposalSegment, server, includeCurrentServer);
+      if (cost < bestServer.lhs) {
+        bestServer = Pair.of(cost, server);
       }
     }
-
     return bestServer;
   }
 }
+
