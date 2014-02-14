@@ -66,9 +66,18 @@ public class HadoopDruidIndexerJob implements Jobby
       log.info("No updaterJobSpec set, not uploading to database");
     }
 
+    jobs.add(new Jobby()
+    {
+      @Override
+      public boolean run()
+      {
+        publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
+        return true;
+      }
+    });
+
 
     JobHelper.runJobs(jobs, config);
-    publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
     return true;
   }
 
