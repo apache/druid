@@ -57,6 +57,15 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
     }
   }
 
+  private void checkSize(E e)
+  {
+    if (getBytesSize(e) > capacity) {
+      throw new IllegalArgumentException(
+          String.format("cannot add element of size[%d] greater than capacity[%d]", getBytesSize(e), capacity)
+      );
+    }
+  }
+
   public abstract long getBytesSize(E e);
 
   public void elementAdded(E e)
@@ -123,11 +132,12 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   ) throws InterruptedException
   {
     checkNotNull(e);
+    checkSize(e);
     long nanos = unit.toNanos(timeout);
     boolean added = false;
     putLock.lockInterruptibly();
     try {
-      while (currentSize.get() >= capacity) {
+      while (currentSize.get() + getBytesSize(e) > capacity) {
         if (nanos <= 0) {
           return false;
         }
@@ -228,10 +238,11 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   public boolean offer(E e)
   {
     checkNotNull(e);
+    checkSize(e);
     boolean added = false;
     putLock.lock();
     try {
-      if (currentSize.get() >= capacity) {
+      if (currentSize.get() + getBytesSize(e) > capacity) {
         return false;
       } else {
         added = delegate.add(e);

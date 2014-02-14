@@ -158,6 +158,26 @@ public class BytesBoundedLinkedQueueTest
 
   }
 
+  @Test
+  public void testAddBiggerElementThanCapacityFails()
+  {
+    BlockingQueue<TestObject> q = getQueue(5);
+    try {
+      q.offer(new TestObject(10));
+      Assert.fail();
+    }
+    catch (IllegalArgumentException success) {
+
+    }
+  }
+
+  @Test public void testAddedObjectExceedsCapacity() throws Exception {
+    BlockingQueue<TestObject> q = getQueue(4);
+    Assert.assertTrue(q.offer(new TestObject(3)));
+    Assert.assertFalse(q.offer(new TestObject(2)));
+    Assert.assertFalse(q.offer(new TestObject(2),delayMS, TimeUnit.MILLISECONDS));
+  }
+
   public static class TestObject
   {
     public final int size;
