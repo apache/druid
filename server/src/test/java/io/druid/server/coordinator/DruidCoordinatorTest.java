@@ -101,6 +101,12 @@ public class DruidCoordinatorTest
           {
             return null;
           }
+
+          @Override
+          public int getCostBalancerStrategyThreadCount()
+          {
+            return 1;
+          }
         },
         new ZkPathsConfig(){
 

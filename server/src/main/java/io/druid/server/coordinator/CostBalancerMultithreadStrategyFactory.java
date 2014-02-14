@@ -22,10 +22,16 @@ import org.joda.time.DateTime;
 
 public class CostBalancerMultithreadStrategyFactory implements BalancerStrategyFactory
 {
+  private final int threadCount;
+
+  public CostBalancerMultithreadStrategyFactory(int costBalancerStrategyThreadCount)
+  {
+    this.threadCount = costBalancerStrategyThreadCount;
+  }
 
   @Override
   public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
   {
-    return new CostBalancerMultithreadStrategy(referenceTimestamp);
+    return new CostBalancerMultithreadStrategy(referenceTimestamp, threadCount);
   }
 }

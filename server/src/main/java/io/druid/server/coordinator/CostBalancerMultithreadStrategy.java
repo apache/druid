@@ -36,10 +36,12 @@ import java.util.concurrent.Executors;
 public class CostBalancerMultithreadStrategy extends AbstractCostBalancerStrategy
 {
   private static final EmittingLogger log = new EmittingLogger(CostBalancerMultithreadStrategy.class);
+  private final int threadCount;
 
-  public CostBalancerMultithreadStrategy(DateTime referenceTimestamp)
+  public CostBalancerMultithreadStrategy(DateTime referenceTimestamp, int threadCount)
   {
     super(referenceTimestamp);
+    this.threadCount = threadCount;
   }
 
   protected Pair<Double, ServerHolder> chooseBestServer(
@@ -50,7 +52,7 @@ public class CostBalancerMultithreadStrategy extends AbstractCostBalancerStrateg
   {
     Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
 
-    ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(8));
+    ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(threadCount));
     List<ListenableFuture<Pair<Double, ServerHolder>>> futures = Lists.newArrayList();
 
     for (final ServerHolder server : serverHolders) {
