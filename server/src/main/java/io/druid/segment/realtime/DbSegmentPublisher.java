@@ -41,6 +41,7 @@ public class DbSegmentPublisher implements SegmentPublisher
   private final ObjectMapper jsonMapper;
   private final DbTablesConfig config;
   private final IDBI dbi;
+  private final String statement;
 
   @Inject
   public DbSegmentPublisher(
@@ -52,6 +53,20 @@ public class DbSegmentPublisher implements SegmentPublisher
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.dbi = dbi;
+
+    if (DbConnector.isPostgreSQL(dbi)) {
+      this.statement = String.format(
+          "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+          config.getSegmentsTable()
+      );
+    } else {
+      this.statement = String.format(
+          "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
+              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+          config.getSegmentsTable()
+      );
+    }
   }
 
   public void publishSegment(final DataSegment segment) throws IOException
@@ -83,21 +98,6 @@ public class DbSegmentPublisher implements SegmentPublisher
             @Override
             public Void withHandle(Handle handle) throws Exception
             {
-              String statement;
-              if (DbConnector.isPostgreSQL(dbi)) {
-                statement = String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
-                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                    config.getSegmentsTable()
-                );
-              } else {
-                statement = String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
-                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                    config.getSegmentsTable()
-                );
-              }
-
               handle.createStatement(statement)
                     .bind("id", segment.getIdentifier())
                     .bind("dataSource", segment.getDataSource())
