@@ -46,10 +46,6 @@ public abstract class DruidCoordinatorConfig
   @Default("cost")
   public abstract String getCoordinatorBalancerStrategy();
 
-  @Config("druid.coordinator.cost.balancer.threads")
-  @Default("4")
-  public abstract int getCostBalancerStrategyThreadCount();
-
   @Config("druid.coordinator.merge.on")
   public boolean isMergeSegments()
   {
