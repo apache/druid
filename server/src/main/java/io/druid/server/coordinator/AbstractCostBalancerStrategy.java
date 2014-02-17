@@ -33,11 +33,11 @@ public abstract class AbstractCostBalancerStrategy implements BalancerStrategy
   private static final int DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
   private static final int SEVEN_DAYS_IN_MILLIS = 7 * DAY_IN_MILLIS;
   private static final int THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
-  private final DateTime referenceTimestamp;
+  private final long referenceTimestampInMillis;
 
   public AbstractCostBalancerStrategy(DateTime referenceTimestamp)
   {
-    this.referenceTimestamp = referenceTimestamp;
+    this.referenceTimestampInMillis = referenceTimestamp.getMillis();
   }
 
   @Override
@@ -103,12 +103,8 @@ public abstract class AbstractCostBalancerStrategy implements BalancerStrategy
       dataSourcePenalty = 2;
     }
 
-    double maxDiff = Math.max(
-        referenceTimestamp.getMillis() - segment1.getInterval().getEndMillis(),
-        referenceTimestamp.getMillis() - segment2.getInterval().getEndMillis()
-    );
-    double segment1diff = referenceTimestamp.getMillis() - segment1.getInterval().getEndMillis();
-    double segment2diff = referenceTimestamp.getMillis() - segment2.getInterval().getEndMillis();
+    double segment1diff = referenceTimestampInMillis - segment1.getInterval().getEndMillis();
+    double segment2diff = referenceTimestampInMillis - segment2.getInterval().getEndMillis();
     if (segment1diff < SEVEN_DAYS_IN_MILLIS && segment2diff < SEVEN_DAYS_IN_MILLIS) {
       recencyPenalty = (2 - segment1diff / SEVEN_DAYS_IN_MILLIS) * (2 - segment2diff / SEVEN_DAYS_IN_MILLIS);
     }
