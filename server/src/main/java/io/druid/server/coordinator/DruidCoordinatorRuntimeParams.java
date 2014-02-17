@@ -206,7 +206,7 @@ public class DruidCoordinatorRuntimeParams
       this.stats = new CoordinatorStats();
       this.coordinatorDynamicConfig = new CoordinatorDynamicConfig.Builder().build();
       this.balancerReferenceTimestamp = null;
-      this.strategyFactory = new CostBalancerStrategyFactory();
+      this.strategyFactory = new CostBalancerMultithreadStrategyFactory(1);
     }
 
     Builder(

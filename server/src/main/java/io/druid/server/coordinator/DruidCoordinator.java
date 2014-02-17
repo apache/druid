@@ -739,13 +739,8 @@ public class DruidCoordinator
           }
         }
 
-        BalancerStrategyFactory factory= null;
-        if (COST.equals(config.getCoordinatorBalancerStrategy()))
-          factory = new CostBalancerStrategyFactory();
-        else if (RANDOM.equals(config.getCoordinatorBalancerStrategy()))
-          factory= new RandomBalancerStrategyFactory();
-        else if (COST_MULTI.equals(config.getCoordinatorBalancerStrategy()))
-          factory = new CostBalancerMultithreadStrategyFactory(getDynamicConfigs().getCostBalancerThreads());
+        BalancerStrategyFactory factory =
+            new CostBalancerMultithreadStrategyFactory(getDynamicConfigs().getCostBalancerThreads());
 
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =
