@@ -87,7 +87,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
   }
 
   @Override
-  public InputRowParser withParseSpec(ParseSpec parseSpec)
+  public ProtoBufInputRowParser withParseSpec(ParseSpec parseSpec)
   {
     return new ProtoBufInputRowParser(parseSpec, descriptorFileInClasspath, null, null, null, null);
   }

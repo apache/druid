@@ -46,6 +46,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.Schema;
@@ -109,8 +110,8 @@ public class IndexTask extends AbstractFixedIntervalTask
         id != null ? id : String.format("index_%s_%s", dataSource, new DateTime().toString()),
         dataSource,
         new Interval(
-            granularitySpec.bucketIntervals().first().getStart(),
-            granularitySpec.bucketIntervals().last().getEnd()
+            granularitySpec.bucketIntervals().get().first().getStart(),
+            granularitySpec.bucketIntervals().get().last().getEnd()
         )
     );
 
@@ -137,7 +138,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
     final Set<DataSegment> segments = Sets.newHashSet();
 
-    final Set<Interval> validIntervals = Sets.intersection(granularitySpec.bucketIntervals(), getDataIntervals());
+    final Set<Interval> validIntervals = Sets.intersection(granularitySpec.bucketIntervals().get(), getDataIntervals());
     if (validIntervals.isEmpty()) {
       throw new ISE("No valid data intervals found. Check your configs!");
     }
@@ -152,11 +153,11 @@ public class IndexTask extends AbstractFixedIntervalTask
       for (final ShardSpec shardSpec : shardSpecs) {
         final DataSegment segment = generateSegment(
             toolbox,
-            new Schema(
+            new DataSchema(
                 getDataSource(),
-                spatialDimensions,
+                firehoseFactory.getParser(),
                 aggregators,
-                indexGranularity,
+                new io.druid.segment.indexing.GranularitySpec(null, indexGranularity),
                 shardSpec
             ),
             bucket,
@@ -172,7 +173,7 @@ public class IndexTask extends AbstractFixedIntervalTask
   private SortedSet<Interval> getDataIntervals() throws IOException
   {
     SortedSet<Interval> retVal = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
-    try (Firehose firehose = firehoseFactory.connect()) {
+    try (Firehose firehose = firehoseFactory.connect(firehoseFactory.getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
         Interval interval = granularitySpec.getGranularity().bucket(new DateTime(inputRow.getTimestampFromEpoch()));
@@ -197,7 +198,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     final Map<String, TreeMultiset<String>> dimensionValueMultisets = Maps.newHashMap();
 
     // Load data
-    try (Firehose firehose = firehoseFactory.connect()) {
+    try (Firehose firehose = firehoseFactory.connect(firehoseFactory.getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
         if (interval.contains(inputRow.getTimestampFromEpoch())) {
@@ -305,7 +306,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 
   private DataSegment generateSegment(
       final TaskToolbox toolbox,
-      final Schema schema,
+      final DataSchema schema,
       final Interval interval,
       final String version
   ) throws IOException
@@ -344,7 +345,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 
     // Create firehose + plumber
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
-    final Firehose firehose = firehoseFactory.connect();
+    final Firehose firehose = firehoseFactory.connect(firehoseFactory.getParser());
     final Plumber plumber = new YeOldePlumberSchool(
         interval,
         version,
@@ -420,7 +421,7 @@ public class IndexTask extends AbstractFixedIntervalTask
    *
    * @return true or false
    */
-  private boolean shouldIndex(final Schema schema, final Interval interval, final InputRow inputRow)
+  private boolean shouldIndex(final DataSchema schema, final Interval interval, final InputRow inputRow)
   {
     return interval.contains(inputRow.getTimestampFromEpoch()) && schema.getShardSpec().isInChunk(inputRow);
   }

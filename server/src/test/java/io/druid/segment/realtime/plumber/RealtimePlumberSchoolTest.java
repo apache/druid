@@ -25,9 +25,15 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
+import com.metamx.common.exception.FormattedException;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.ServerView;
+import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Query;
@@ -35,6 +41,8 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.SegmentGranularity;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.Schema;
@@ -75,11 +83,32 @@ public class RealtimePlumberSchoolTest
     final File tmpDir = Files.createTempDir();
     tmpDir.deleteOnExit();
 
-    final Schema schema = new Schema(
+    final DataSchema schema = new DataSchema(
         "test",
-        Lists.<SpatialDimensionSchema>newArrayList(),
+        new InputRowParser()
+        {
+          @Override
+          public InputRow parse(Object input) throws FormattedException
+          {
+            return null;
+          }
+
+          @Override
+          public ParseSpec getParseSpec()
+          {
+            return new ParseSpec(new TimestampSpec("timestamp", "auto"), new DimensionsSpec(null, null, null))
+            {
+            };
+          }
+
+          @Override
+          public InputRowParser withParseSpec(ParseSpec parseSpec)
+          {
+            return null;
+          }
+        },
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        QueryGranularity.NONE,
+        new GranularitySpec(null, QueryGranularity.NONE),
         new NoneShardSpec()
     );
 

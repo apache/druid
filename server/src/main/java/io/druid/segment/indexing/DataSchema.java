@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.ByteBufferInputRowParser;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
@@ -32,7 +33,7 @@ import io.druid.timeline.partition.ShardSpec;
 public class DataSchema
 {
   private final String dataSource;
-  private final ByteBufferInputRowParser parser;
+  private final InputRowParser parser;
   private final AggregatorFactory[] aggregators;
   private final GranularitySpec granularitySpec;
   private final ShardSpec shardSpec;
@@ -40,14 +41,13 @@ public class DataSchema
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("parser") ByteBufferInputRowParser parser,
+      @JsonProperty("parser") InputRowParser parser,
       @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
       @JsonProperty("shardSpec") ShardSpec shardSpec
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
-    Preconditions.checkNotNull(parser, "parser");
     Preconditions.checkNotNull(aggregators, "metrics");
     Preconditions.checkNotNull(granularitySpec, "granularitySpec");
 
@@ -65,7 +65,7 @@ public class DataSchema
   }
 
   @JsonProperty
-  public ByteBufferInputRowParser getParser()
+  public InputRowParser getParser()
   {
     return parser;
   }

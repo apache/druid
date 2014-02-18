@@ -31,13 +31,18 @@ import com.ircclouds.irc.api.domain.messages.ChannelPrivMsg;
 import com.ircclouds.irc.api.listeners.VariousMessageListenerAdapter;
 import com.ircclouds.irc.api.state.IIRCState;
 import com.metamx.common.Pair;
+import com.metamx.common.exception.FormattedException;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.ParseSpec;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -94,14 +99,14 @@ import java.util.concurrent.LinkedBlockingQueue;
  * );
  * }</pre>
  */
-public class IrcFirehoseFactory implements FirehoseFactory
+public class IrcFirehoseFactory implements FirehoseFactory<IrcParser>
 {
   private static final Logger log = new Logger(IrcFirehoseFactory.class);
 
   private final String nick;
   private final String host;
   private final List<String> channels;
-  private final IrcDecoder decoder;
+  private final IrcParser parser;
 
   @JsonCreator
   public IrcFirehoseFactory(
@@ -114,11 +119,11 @@ public class IrcFirehoseFactory implements FirehoseFactory
     this.nick = nick;
     this.host = host;
     this.channels = channels;
-    this.decoder = decoder;
+    this.parser = new IrcParser(decoder);
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(final IrcParser firehoseParser) throws IOException
   {
     final IRCApi irc = new IRCApiImpl(false);
     final LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>> queue = new LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>>();
@@ -201,7 +206,7 @@ public class IrcFirehoseFactory implements FirehoseFactory
           while(true) {
             Pair<DateTime, ChannelPrivMsg> nextMsg = queue.take();
             try {
-              nextRow = decoder.decodeMessage(nextMsg.lhs, nextMsg.rhs.getChannelName(), nextMsg.rhs.getText());
+              nextRow = firehoseParser.parse(nextMsg);
               if(nextRow != null) return true;
             }
             catch (IllegalArgumentException iae) {
@@ -241,6 +246,12 @@ public class IrcFirehoseFactory implements FirehoseFactory
         irc.disconnect("");
       }
     };
+  }
+
+  @Override
+  public IrcParser getParser()
+  {
+    return parser;
   }
 }
 

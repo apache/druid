@@ -25,6 +25,7 @@ import com.google.common.base.Predicate;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -60,10 +61,10 @@ public class ClippedFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(InputRowParser parser) throws IOException
   {
     return new PredicateFirehose(
-        delegate.connect(),
+        delegate.connect(parser),
         new Predicate<InputRow>()
         {
           @Override
@@ -73,5 +74,11 @@ public class ClippedFirehoseFactory implements FirehoseFactory
           }
         }
     );
+  }
+
+  @Override
+  public InputRowParser getParser()
+  {
+    return delegate.getParser();
   }
 }

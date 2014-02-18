@@ -82,6 +82,7 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
   "segmentOutputPath": "s3n:\/\/billy-bucket\/the\/segments\/go\/here",
   "leaveIntermediate": "false",
   "partitionsSpec": {
+    "type": "random"
     "targetPartitionSize": 5000000
   },
   "updaterJobSpec": {
@@ -145,12 +146,20 @@ The indexing process has the ability to roll data up as it processes the incomin
 
 ### Partitioning specification
 
-Segments are always partitioned based on timestamp (according to the granularitySpec) and may be further partitioned in some other way. For example, data for a day may be split by the dimension "last\_name" into two segments: one with all values from A-M and one with all values from N-Z.
+Segments are always partitioned based on timestamp (according to the granularitySpec) and may be further partitioned in some other way depending on partition type.
+Druid supports two types of partitions spec - singleDimension and random.
+
+In SingleDimension partition type data is partitioned based on the values in that dimension.
+For example, data for a day may be split by the dimension "last\_name" into two segments: one with all values from A-M and one with all values from N-Z.
+
+In random partition type, the number of partitions is determined based on the targetPartitionSize and cardinality of input set and the data is partitioned based on the hashcode of the row.
+Random partition type is more efficient and gives better distribution of data.
 
 To use this option, the indexer must be given a target partition size. It can then find a good set of partition ranges on its own.
 
 |property|description|required?|
 |--------|-----------|---------|
+|type|type of partitionSpec to be used |no, default : singleDimension|
 |targetPartitionSize|target number of rows to include in a partition, should be a number that targets segments of 700MB\~1GB.|yes|
 |partitionDimension|the dimension to partition on. Leave blank to select a dimension automatically.|no|
 |assumeGrouped|assume input data has already been grouped on time and dimensions. This is faster, but can choose suboptimal partitions if the assumption is violated.|no|

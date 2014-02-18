@@ -43,6 +43,11 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.segment.SegmentGranularity;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.DriverConfig;
+import io.druid.segment.indexing.GranularitySpec;
+import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentConfig;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
@@ -194,7 +199,7 @@ public class RealtimeIndexTask extends AbstractTask
 
     // Set up firehose
     final Period intermediatePersistPeriod = fireDepartmentConfig.getIntermediatePersistPeriod();
-    final Firehose firehose = firehoseFactory.connect();
+    final Firehose firehose = firehoseFactory.connect(firehoseFactory.getParser());
 
     // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
     // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
@@ -298,10 +303,23 @@ public class RealtimeIndexTask extends AbstractTask
       realtimePlumberSchool.setRejectionPolicyFactory(rejectionPolicyFactory);
     }
 
-    final FireDepartment fireDepartment = new FireDepartment(schema, fireDepartmentConfig, null, null);
+    DataSchema dataSchema = new DataSchema(
+        schema.getDataSource(),
+        firehoseFactory.getParser(),
+        schema.getAggregators(),
+        new GranularitySpec(realtimePlumberSchool.getSegmentGranularity(), schema.getIndexGranularity()),
+        schema.getShardSpec()
+    );
+    RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(firehoseFactory, realtimePlumberSchool);
+    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(
+        fireDepartmentConfig.getMaxRowsInMemory(),
+        fireDepartmentConfig.getIntermediatePersistPeriod()
+    );
+
+    final FireDepartment fireDepartment = new FireDepartment(dataSchema, realtimeIOConfig, driverConfig, null, null, null, null);
     final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
-    this.plumber = realtimePlumberSchool.findPlumber(schema, fireDepartment.getMetrics());
+    this.plumber = realtimePlumberSchool.findPlumber(dataSchema, fireDepartment.getMetrics());
 
     try {
       plumber.startJob();

@@ -22,12 +22,12 @@ package io.druid.segment.realtime.plumber;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.GranularitySpec;
 import io.druid.segment.realtime.FireHydrant;
-import io.druid.segment.realtime.Schema;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
@@ -43,11 +43,11 @@ public class SinkTest
   @Test
   public void testSwap() throws Exception
   {
-    final Schema schema = new Schema(
+    final DataSchema schema = new DataSchema(
         "test",
-        Lists.<SpatialDimensionSchema>newArrayList(),
+        null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        QueryGranularity.MINUTE,
+        new GranularitySpec(null, QueryGranularity.MINUTE),
         new NoneShardSpec()
     );
 

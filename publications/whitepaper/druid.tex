@@ -206,7 +206,7 @@ for queries on events that exist in this JVM heap-based buffer. To avoid heap ov
 problems, real-time nodes persist their in-memory indexes to disk either
 periodically or after some maximum row limit is reached. This persist process
 converts data stored in the in-memory buffer to a column oriented storage
-format described in \ref{sec:storage-format}. Each persisted index is immutable and
+format described in Section \ref{sec:storage-format}. Each persisted index is immutable and
 real-time nodes load persisted indexes into off-heap memory such that they can
 still be queried. Figure~\ref{fig:realtime_flow} illustrates the process.
 
@@ -533,7 +533,7 @@ contain strings. Storing strings directly is unnecessarily costly and string
 columns can be dictionary encoded instead. Dictionary encoding is a common
 method to compress data and has been used in other data stores such as
 PowerDrill \cite{hall2012processing}. In the example in
-Table~\ref{tab:sample_data}, we can map each publisher to an unique integer
+Table~\ref{tab:sample_data}, we can map each page to an unique integer
 identifier.
 \begin{verbatim}
 Justin Bieber   -> 0

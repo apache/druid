@@ -26,6 +26,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
@@ -36,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Creates firehoses that shut off at a particular time. Useful for limiting the lifespan of a realtime job.
  */
-public class TimedShutoffFirehoseFactory implements FirehoseFactory
+public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowParser>
 {
   private static final EmittingLogger log = new EmittingLogger(FirehoseFactory.class);
   private final FirehoseFactory delegateFactory;
@@ -53,9 +54,15 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(InputRowParser parser) throws IOException
   {
-    return new TimedShutoffFirehose();
+    return new TimedShutoffFirehose(parser);
+  }
+
+  @Override
+  public InputRowParser getParser()
+  {
+    return delegateFactory.getParser();
   }
 
   public class TimedShutoffFirehose implements Firehose
@@ -65,9 +72,9 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory
     private final Object shutdownLock = new Object();
     private volatile boolean shutdown = false;
 
-    public TimedShutoffFirehose() throws IOException
+    public TimedShutoffFirehose(InputRowParser parser) throws IOException
     {
-      firehose = delegateFactory.connect();
+      firehose = delegateFactory.connect(parser);
 
       exec = Executors.newScheduledThreadPool(
           1,
@@ -87,7 +94,8 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory
               shutdown = true;
               try {
                 firehose.close();
-              } catch (IOException e) {
+              }
+              catch (IOException e) {
                 log.warn(e, "Failed to close delegate firehose, ignoring.");
               }
             }

@@ -75,7 +75,7 @@ public class WebFirehoseFactoryTest
   public void testDimensions() throws Exception
   {
     InputRow inputRow;
-    Firehose firehose = webbie.connect();
+    Firehose firehose = webbie.connect(null);
     if (firehose.hasMore()) {
       inputRow = firehose.nextRow();
     } else {
@@ -90,7 +90,7 @@ public class WebFirehoseFactoryTest
   public void testPosixTimeStamp() throws Exception
   {
     InputRow inputRow;
-    Firehose firehose = webbie.connect();
+    Firehose firehose = webbie.connect(null);
     if (firehose.hasMore()) {
       inputRow = firehose.nextRow();
     } else {
@@ -114,7 +114,7 @@ public class WebFirehoseFactoryTest
         },
         "auto"
     );
-    Firehose firehose1 = webbie3.connect();
+    Firehose firehose1 = webbie3.connect(null);
     if (firehose1.hasMore()) {
       long milliSeconds = firehose1.nextRow().getTimestampFromEpoch();
       DateTime date = new DateTime("2013-07-08");
@@ -138,7 +138,7 @@ public class WebFirehoseFactoryTest
         },
         null
     );
-    Firehose firehose2 = webbie2.connect();
+    Firehose firehose2 = webbie2.connect(null);
     if (firehose2.hasMore()) {
       long milliSeconds = firehose2.nextRow().getTimestampFromEpoch();
       DateTime date = new DateTime("2013-07-08");
@@ -151,7 +151,7 @@ public class WebFirehoseFactoryTest
   @Test
   public void testAutoMilliSecondsTimeStamp() throws Exception
   {
-    Firehose firehose3 = webbie1.connect();
+    Firehose firehose3 = webbie1.connect(null);
     if (firehose3.hasMore()) {
       long milliSeconds = firehose3.nextRow().getTimestampFromEpoch();
       DateTime date = new DateTime("2013-07-08");
@@ -165,7 +165,7 @@ public class WebFirehoseFactoryTest
   public void testGetDimension() throws Exception
   {
     InputRow inputRow;
-    Firehose firehose = webbie1.connect();
+    Firehose firehose = webbie1.connect(null);
     if (firehose.hasMore()) {
       inputRow = firehose.nextRow();
     } else {
@@ -181,7 +181,7 @@ public class WebFirehoseFactoryTest
   public void testGetFloatMetric() throws Exception
   {
     InputRow inputRow;
-    Firehose firehose = webbie1.connect();
+    Firehose firehose = webbie1.connect(null);
     if (firehose.hasMore()) {
       inputRow = firehose.nextRow();
     } else {

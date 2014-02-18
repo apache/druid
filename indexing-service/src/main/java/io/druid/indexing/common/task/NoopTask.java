@@ -130,7 +130,7 @@ public class NoopTask extends AbstractTask
   {
     if (firehoseFactory != null) {
       log.info("Connecting firehose");
-      firehoseFactory.connect();
+      firehoseFactory.connect(firehoseFactory.getParser());
     }
 
     log.info("Running noop task[%s]", getId());

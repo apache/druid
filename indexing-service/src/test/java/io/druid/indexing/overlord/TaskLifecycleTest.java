@@ -41,6 +41,7 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.indexing.common.SegmentLoaderFactory;
@@ -586,7 +587,7 @@ public class TaskLifecycleTest
     return new FirehoseFactory()
     {
       @Override
-      public Firehose connect() throws IOException
+      public Firehose connect(InputRowParser parser) throws IOException
       {
         return new Firehose()
         {
@@ -622,6 +623,12 @@ public class TaskLifecycleTest
           }
         };
       }
+
+      @Override
+      public InputRowParser getParser()
+      {
+        return null;
+      }
     };
   }
 
@@ -630,7 +637,7 @@ public class TaskLifecycleTest
     return new FirehoseFactory()
     {
       @Override
-      public Firehose connect() throws IOException
+      public Firehose connect(InputRowParser parser) throws IOException
       {
         final Iterator<InputRow> inputRowIterator = inputRows.iterator();
 
@@ -667,6 +674,12 @@ public class TaskLifecycleTest
 
           }
         };
+      }
+
+      @Override
+      public InputRowParser getParser()
+      {
+        return null;
       }
     };
   }

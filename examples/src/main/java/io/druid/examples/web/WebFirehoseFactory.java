@@ -29,6 +29,7 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.utils.Runnables;
 import org.joda.time.DateTime;
 
@@ -38,9 +39,10 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @JsonTypeName("webstream")
-public class WebFirehoseFactory implements FirehoseFactory
+public class WebFirehoseFactory implements FirehoseFactory<InputRowParser>
 {
   private static final EmittingLogger log = new EmittingLogger(WebFirehoseFactory.class);
+
   private final String timeFormat;
   private final UpdateStreamFactory factory;
   private final long queueWaitTime = 15L;
@@ -72,7 +74,7 @@ public class WebFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(InputRowParser parser) throws IOException
   {
 
     final UpdateStream updateStream = factory.build();
@@ -130,5 +132,11 @@ public class WebFirehoseFactory implements FirehoseFactory
       }
 
     };
+  }
+
+  @Override
+  public InputRowParser getParser()
+  {
+    return null;
   }
 }

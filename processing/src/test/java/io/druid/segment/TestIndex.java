@@ -166,9 +166,9 @@ public class TestIndex
             StringInputRowParser parser = new StringInputRowParser(
                 new DelimitedParseSpec(
                     new TimestampSpec("ts", "iso"),
-                    new DimensionsSpec(Arrays.asList(COLUMNS), Arrays.asList(DIMENSIONS), null),
+                    new DimensionsSpec(Arrays.asList(DIMENSIONS), null, null),
                     "\t",
-                    Arrays.<String>asList()
+                    Arrays.asList(COLUMNS)
                 ),
                 null, null, null, null
             );

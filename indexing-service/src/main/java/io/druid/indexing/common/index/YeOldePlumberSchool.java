@@ -37,6 +37,7 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentGranularity;
 import io.druid.segment.SegmentUtils;
+import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -87,7 +88,7 @@ public class YeOldePlumberSchool implements PlumberSchool
   }
 
   @Override
-  public Plumber findPlumber(final Schema schema, final FireDepartmentMetrics metrics)
+  public Plumber findPlumber(final DataSchema schema, final FireDepartmentMetrics metrics)
   {
     // There can be only one.
     final Sink theSink = new Sink(interval, schema, version);

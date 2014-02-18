@@ -22,6 +22,7 @@ package io.druid.firehose.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.ByteBufferInputRowParser;
@@ -40,10 +41,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  */
-public class KafkaSevenFirehoseFactory implements FirehoseFactory
+public class KafkaSevenFirehoseFactory implements FirehoseFactory<ByteBufferInputRowParser>
 {
   private static final Logger log = new Logger(KafkaSevenFirehoseFactory.class);
 
@@ -60,9 +62,20 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory
   {
     this.consumerProps = consumerProps;
     this.feed = feed;
-    this.parser = parser;
-
-    parser.addDimensionExclusion("feed");
+    Set<String> newDimExclus = Sets.union(
+        parser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
+        Sets.newHashSet("feed")
+    );
+    this.parser = parser.withParseSpec(
+        parser.getParseSpec()
+              .withDimensionsSpec(
+                  parser.getParseSpec()
+                        .getDimensionsSpec()
+                        .withDimensionExclusions(
+                            newDimExclus
+                        )
+              )
+    );
   }
 
   @JsonProperty
@@ -84,7 +97,7 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(final ByteBufferInputRowParser firehoseParser) throws IOException
   {
     final ConsumerConnector connector = Consumer.createJavaConsumerConnector(new ConsumerConfig(consumerProps));
 
@@ -121,7 +134,7 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory
       public InputRow parseMessage(Message message) throws FormattedException
       {
         try {
-          return parser.parse(message.payload());
+          return firehoseParser.parse(message.payload());
         }
         catch (Exception e) {
           throw new FormattedException.Builder()
