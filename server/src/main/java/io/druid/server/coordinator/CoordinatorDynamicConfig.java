@@ -31,7 +31,7 @@ public class CoordinatorDynamicConfig
   private final int maxSegmentsToMove;
   private final int replicantLifetime;
   private final int replicationThrottleLimit;
-  private final int costBalancerThreads;
+  private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
 
   @JsonCreator
@@ -42,7 +42,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
-      @JsonProperty("costBalancerThreads") int costBalancerThreads,
+      @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
       @JsonProperty("emitBalancingStats") boolean emitBalancingStats
   )
   {
@@ -53,7 +53,7 @@ public class CoordinatorDynamicConfig
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.emitBalancingStats = emitBalancingStats;
-    this.costBalancerThreads = costBalancerThreads;
+    this.balancerComputeThreads = balancerComputeThreads;
   }
 
   @JsonProperty
@@ -99,9 +99,9 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty
-  public int getCostBalancerThreads()
+  public int getBalancerComputeThreads()
   {
-    return costBalancerThreads;
+    return balancerComputeThreads;
   }
 
   public static class Builder
@@ -113,7 +113,7 @@ public class CoordinatorDynamicConfig
     private int replicantLifetime;
     private int replicationThrottleLimit;
     private boolean emitBalancingStats;
-    private int costBalancerThreads;
+    private int balancerComputeThreads;
 
     public Builder()
     {
@@ -127,7 +127,7 @@ public class CoordinatorDynamicConfig
         int maxSegmentsToMove,
         int replicantLifetime,
         int replicationThrottleLimit,
-        int costBalancerThreads,
+        int balancerComputeThreads,
         boolean emitBalancingStats
     )
     {
@@ -138,7 +138,7 @@ public class CoordinatorDynamicConfig
       this.replicantLifetime = replicantLifetime;
       this.replicationThrottleLimit = replicationThrottleLimit;
       this.emitBalancingStats = emitBalancingStats;
-      this.costBalancerThreads = costBalancerThreads;
+      this.balancerComputeThreads = balancerComputeThreads;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -177,9 +177,9 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withCostBalancerThreads(int costBalancerThreads)
+    public Builder withBalancerComputeThreads(int balancerComputeThreads)
     {
-      this.costBalancerThreads = costBalancerThreads;
+      this.balancerComputeThreads = balancerComputeThreads;
       return this;
     }
 
@@ -192,7 +192,7 @@ public class CoordinatorDynamicConfig
           maxSegmentsToMove,
           replicantLifetime,
           replicationThrottleLimit,
-          costBalancerThreads,
+          balancerComputeThreads,
           emitBalancingStats
       );
     }

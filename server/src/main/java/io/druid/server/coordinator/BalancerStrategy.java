@@ -25,12 +25,6 @@ import java.util.List;
 
 public interface BalancerStrategy
 {
-  public static final String COST = "cost";
-
-  public static final String COST_MULTI = "cost_multi";
-
-  public static final String RANDOM = "random";
-
   public ServerHolder findNewSegmentHomeBalancer(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
 
   public ServerHolder findNewSegmentHomeReplicator(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);

@@ -19,9 +19,6 @@
 
 package io.druid.server.coordinator;
 
-import static io.druid.server.coordinator.BalancerStrategy.COST;
-import static io.druid.server.coordinator.BalancerStrategy.COST_MULTI;
-import static io.druid.server.coordinator.BalancerStrategy.RANDOM;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
@@ -740,7 +737,7 @@ public class DruidCoordinator
         }
 
         BalancerStrategyFactory factory =
-            new CostBalancerMultithreadStrategyFactory(getDynamicConfigs().getCostBalancerThreads());
+            new CostBalancerMultithreadStrategyFactory(getDynamicConfigs().getBalancerComputeThreads());
 
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =

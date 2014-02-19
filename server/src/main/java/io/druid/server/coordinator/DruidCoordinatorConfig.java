@@ -42,10 +42,6 @@ public abstract class DruidCoordinatorConfig
   @Default("PT1800s")
   public abstract Duration getCoordinatorIndexingPeriod();
 
-  @Config("druid.coordinator.balancer.strategy")
-  @Default("cost")
-  public abstract String getCoordinatorBalancerStrategy();
-
   @Config("druid.coordinator.merge.on")
   public boolean isMergeSegments()
   {
