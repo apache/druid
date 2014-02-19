@@ -21,13 +21,9 @@ package io.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.segment.SegmentGranularity;
+import com.metamx.common.Granularity;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
-import org.joda.time.Period;
-
-import java.io.File;
 
 /**
  */
@@ -45,5 +41,5 @@ public interface PlumberSchool
    */
   public Plumber findPlumber(DataSchema schema, FireDepartmentMetrics metrics);
 
-  public SegmentGranularity getSegmentGranularity();
+  public Granularity getSegmentGranularity();
 }

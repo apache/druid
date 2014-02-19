@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closeables;
+import com.metamx.common.Granularity;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
@@ -42,9 +43,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
-import io.druid.segment.SegmentGranularity;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.DriverConfig;
 import io.druid.segment.indexing.GranularitySpec;
 import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.indexing.RealtimeIOConfig;
@@ -95,7 +94,7 @@ public class RealtimeIndexTask extends AbstractTask
   private final int maxPendingPersists;
 
   @JsonIgnore
-  private final SegmentGranularity segmentGranularity;
+  private final Granularity segmentGranularity;
 
   @JsonIgnore
   private final RejectionPolicyFactory rejectionPolicyFactory;
@@ -115,7 +114,7 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("maxPendingPersists") int maxPendingPersists,
-      @JsonProperty("segmentGranularity") SegmentGranularity segmentGranularity,
+      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory
   )
   {
@@ -316,7 +315,15 @@ public class RealtimeIndexTask extends AbstractTask
         fireDepartmentConfig.getIntermediatePersistPeriod()
     );
 
-    final FireDepartment fireDepartment = new FireDepartment(dataSchema, realtimeIOConfig, driverConfig, null, null, null, null);
+    final FireDepartment fireDepartment = new FireDepartment(
+        dataSchema,
+        realtimeIOConfig,
+        driverConfig,
+        null,
+        null,
+        null,
+        null
+    );
     final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
     this.plumber = realtimePlumberSchool.findPlumber(dataSchema, fireDepartment.getMetrics());
@@ -417,7 +424,7 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @JsonProperty
-  public SegmentGranularity getSegmentGranularity()
+  public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
   }

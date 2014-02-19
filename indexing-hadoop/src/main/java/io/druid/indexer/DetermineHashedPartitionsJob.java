@@ -35,7 +35,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.granularity.UniformGranularitySpec;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;

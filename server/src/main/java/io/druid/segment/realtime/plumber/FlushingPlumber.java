@@ -2,15 +2,14 @@ package io.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.metamx.common.Granularity;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.segment.SegmentGranularity;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -39,7 +38,7 @@ public class FlushingPlumber extends RealtimePlumber
       Duration flushDuration,
       Period windowPeriod,
       File basePersistDirectory,
-      SegmentGranularity segmentGranularity,
+      Granularity segmentGranularity,
       DataSchema schema,
       FireDepartmentMetrics metrics,
       RejectionPolicy rejectionPolicy,
@@ -120,20 +119,26 @@ public class FlushingPlumber extends RealtimePlumber
 
   private void startFlushThread()
   {
-    final long truncatedNow = getSegmentGranularity().truncate(new DateTime()).getMillis();
+    final DateTime truncatedNow = getSegmentGranularity().truncate(new DateTime());
     final long windowMillis = getWindowPeriod().toStandardDuration().getMillis();
 
     log.info(
         "Expect to run at [%s]",
         new DateTime().plus(
-            new Duration(System.currentTimeMillis(), getSegmentGranularity().increment(truncatedNow) + windowMillis)
+            new Duration(
+                System.currentTimeMillis(),
+                getSegmentGranularity().increment(truncatedNow).getMillis() + windowMillis
+            )
         )
     );
 
     ScheduledExecutors
         .scheduleAtFixedRate(
             flushScheduledExec,
-            new Duration(System.currentTimeMillis(), getSegmentGranularity().increment(truncatedNow) + windowMillis),
+            new Duration(
+                System.currentTimeMillis(),
+                getSegmentGranularity().increment(truncatedNow).getMillis() + windowMillis
+            ),
             new Duration(truncatedNow, getSegmentGranularity().increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
                 String.format(

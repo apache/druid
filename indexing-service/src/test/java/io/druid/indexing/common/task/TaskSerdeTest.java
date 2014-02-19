@@ -28,14 +28,13 @@ import io.druid.data.input.impl.JSONDataSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.FirehoseModule;
-import io.druid.indexer.HadoopDruidIndexerSchema;
-import io.druid.indexer.granularity.UniformGranularitySpec;
+import io.druid.indexer.HadoopIngestionSchema;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.segment.SegmentGranularity;
 import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.timeline.DataSegment;
@@ -199,7 +198,7 @@ public class TaskSerdeTest
         null,
         new Period("PT10M"),
         1,
-        SegmentGranularity.HOUR,
+        Granularity.HOUR,
         null
     );
 
@@ -213,7 +212,7 @@ public class TaskSerdeTest
     Assert.assertEquals(2, task.getTaskResource().getRequiredCapacity());
     Assert.assertEquals("rofl", task.getTaskResource().getAvailabilityGroup());
     Assert.assertEquals(new Period("PT10M"), task.getWindowPeriod());
-    Assert.assertEquals(SegmentGranularity.HOUR, task.getSegmentGranularity());
+    Assert.assertEquals(Granularity.HOUR, task.getSegmentGranularity());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
@@ -354,7 +353,7 @@ public class TaskSerdeTest
   {
     final HadoopIndexTask task = new HadoopIndexTask(
         null,
-        new HadoopDruidIndexerSchema(
+        new HadoopIngestionSchema(
             "foo",
             new TimestampSpec("timestamp", "auto"),
             new JSONDataSpec(ImmutableList.of("foo"), null),

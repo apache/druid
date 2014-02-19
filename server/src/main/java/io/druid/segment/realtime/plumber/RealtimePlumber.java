@@ -9,6 +9,7 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.metamx.common.Granularity;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.FunctionalIterable;
@@ -29,7 +30,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
-import io.druid.segment.SegmentGranularity;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
@@ -39,7 +39,6 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
-import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
@@ -72,7 +71,7 @@ public class RealtimePlumber implements Plumber
 
   private final Period windowPeriod;
   private final File basePersistDirectory;
-  private final SegmentGranularity segmentGranularity;
+  private final Granularity segmentGranularity;
   private final DataSchema schema;
   private final FireDepartmentMetrics metrics;
   private final RejectionPolicy rejectionPolicy;
@@ -100,7 +99,7 @@ public class RealtimePlumber implements Plumber
   public RealtimePlumber(
       Period windowPeriod,
       File basePersistDirectory,
-      SegmentGranularity segmentGranularity,
+      Granularity segmentGranularity,
       DataSchema schema,
       FireDepartmentMetrics metrics,
       RejectionPolicy rejectionPolicy,
@@ -142,7 +141,7 @@ public class RealtimePlumber implements Plumber
     return windowPeriod;
   }
 
-  public SegmentGranularity getSegmentGranularity()
+  public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
   }
@@ -179,7 +178,7 @@ public class RealtimePlumber implements Plumber
       return null;
     }
 
-    final long truncatedTime = segmentGranularity.truncate(timestamp);
+    final long truncatedTime = segmentGranularity.truncate(new DateTime(timestamp)).getMillis();
 
     Sink retVal = sinks.get(truncatedTime);
 
@@ -546,20 +545,26 @@ public class RealtimePlumber implements Plumber
 
   protected void startPersistThread()
   {
-    final long truncatedNow = segmentGranularity.truncate(new DateTime()).getMillis();
+    final DateTime truncatedNow = segmentGranularity.truncate(new DateTime());
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
     log.info(
         "Expect to run at [%s]",
         new DateTime().plus(
-            new Duration(System.currentTimeMillis(), segmentGranularity.increment(truncatedNow) + windowMillis)
+            new Duration(
+                System.currentTimeMillis(),
+                segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
+            )
         )
     );
 
     ScheduledExecutors
         .scheduleAtFixedRate(
             scheduledExecutor,
-            new Duration(System.currentTimeMillis(), segmentGranularity.increment(truncatedNow) + windowMillis),
+            new Duration(
+                System.currentTimeMillis(),
+                segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
+            ),
             new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
                 String.format(

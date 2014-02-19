@@ -17,12 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexer.granularity;
+package io.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
 import com.metamx.common.Granularity;
+import io.druid.granularity.QueryGranularity;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -45,5 +46,10 @@ public interface GranularitySpec
   /** Time-grouping interval corresponding to some instant, if any. */
   public Optional<Interval> bucketInterval(DateTime dt);
 
-  public Granularity getGranularity();
+  public Granularity getSegmentGranularity();
+
+  public QueryGranularity getQueryGranularity();
+
+  @Deprecated
+  public GranularitySpec withQueryGranularity(QueryGranularity queryGranularity);
 }

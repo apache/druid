@@ -21,6 +21,7 @@ package io.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.metamx.common.Granularity;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -47,7 +48,7 @@ public class SinkTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new GranularitySpec(null, QueryGranularity.MINUTE),
+        new GranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE),
         new NoneShardSpec()
     );
 

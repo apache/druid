@@ -34,7 +34,7 @@ import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerConfigBuilder;
 import io.druid.indexer.HadoopDruidIndexerJob;
-import io.druid.indexer.HadoopDruidIndexerSchema;
+import io.druid.indexer.HadoopIngestionSchema;
 import io.druid.indexer.Jobby;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -68,7 +68,7 @@ public class HadoopIndexTask extends AbstractTask
 
   private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
   @JsonIgnore
-  private final HadoopDruidIndexerSchema schema;
+  private final HadoopIngestionSchema schema;
   @JsonIgnore
   private final String hadoopCoordinates;
 
@@ -85,16 +85,16 @@ public class HadoopIndexTask extends AbstractTask
   @JsonCreator
   public HadoopIndexTask(
       @JsonProperty("id") String id,
-      @JsonProperty("config") HadoopDruidIndexerSchema schema,
+      @JsonProperty("config") HadoopIngestionSchema schema,
       @JsonProperty("hadoopCoordinates") String hadoopCoordinates
   )
   {
     super(
-        id != null ? id : String.format("index_hadoop_%s_%s", schema.getDataSource(), new DateTime()),
-        schema.getDataSource()
+        id != null ? id : String.format("index_hadoop_%s_%s", schema.getDataSchema().getDataSource(), new DateTime()),
+        schema.getDataSchema().getDataSource()
     );
 
-    // Some HadoopDruidIndexerSchema stuff doesn't make sense in the context of the indexing service
+    // Some HadoopIngestionSchema stuff doesn't make sense in the context of the indexing service
     Preconditions.checkArgument(schema.getSegmentOutputPath() == null, "segmentOutputPath must be absent");
     Preconditions.checkArgument(schema.getWorkingPath() == null, "workingPath must be absent");
     Preconditions.checkArgument(schema.getUpdaterJobSpec() == null, "updaterJobSpec must be absent");
@@ -126,7 +126,7 @@ public class HadoopIndexTask extends AbstractTask
   }
 
   @JsonProperty("config")
-  public HadoopDruidIndexerSchema getSchema()
+  public HadoopIngestionSchema getSchema()
   {
     return schema;
   }
@@ -186,8 +186,8 @@ public class HadoopIndexTask extends AbstractTask
     };
 
     String config = (String) determineConfigurationMainMethod.invoke(null, new Object[]{determineConfigArgs});
-    HadoopDruidIndexerSchema indexerSchema = toolbox.getObjectMapper()
-                                                    .readValue(config, HadoopDruidIndexerSchema.class);
+    HadoopIngestionSchema indexerSchema = toolbox.getObjectMapper()
+                                                    .readValue(config, HadoopIngestionSchema.class);
 
 
     // We should have a lock from before we started running only if interval was specified
@@ -239,10 +239,10 @@ public class HadoopIndexTask extends AbstractTask
       final String schema = args[0];
       String version = args[1];
 
-      final HadoopDruidIndexerSchema theSchema = HadoopDruidIndexerConfig.jsonMapper
+      final HadoopIngestionSchema theSchema = HadoopDruidIndexerConfig.jsonMapper
                                                                          .readValue(
                                                                              schema,
-                                                                             HadoopDruidIndexerSchema.class
+                                                                             HadoopIngestionSchema.class
                                                                          );
       final HadoopDruidIndexerConfig config =
           new HadoopDruidIndexerConfigBuilder().withSchema(theSchema)
@@ -268,10 +268,10 @@ public class HadoopIndexTask extends AbstractTask
       final String workingPath = args[1];
       final String segmentOutputPath = args[2];
 
-      final HadoopDruidIndexerSchema theSchema = HadoopDruidIndexerConfig.jsonMapper
+      final HadoopIngestionSchema theSchema = HadoopDruidIndexerConfig.jsonMapper
                                                                          .readValue(
                                                                              schema,
-                                                                             HadoopDruidIndexerSchema.class
+                                                                             HadoopIngestionSchema.class
                                                                          );
       final HadoopDruidIndexerConfig config =
           new HadoopDruidIndexerConfigBuilder().withSchema(theSchema)

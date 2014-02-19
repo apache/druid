@@ -21,16 +21,18 @@ package io.druid.segment.realtime;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.client.util.Lists;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.GranularitySpec;
 import io.druid.segment.indexing.IngestionSchema;
 import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 
@@ -41,7 +43,7 @@ import java.io.IOException;
  * realtime stream of data.  The Plumber directs each drop of water from the firehose into the correct sink and makes
  * sure that the sinks don't overflow.
  */
-public class FireDepartment extends IngestionSchema
+public class FireDepartment implements IngestionSchema
 {
   private final DataSchema dataSchema;
   private final RealtimeIOConfig ioConfig;
@@ -52,7 +54,7 @@ public class FireDepartment extends IngestionSchema
   @JsonCreator
   public FireDepartment(
       @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("io") RealtimeIOConfig ioConfig,
+      @JsonProperty("ioConfig") RealtimeIOConfig ioConfig,
       @JsonProperty("driverConfig") RealtimeDriverConfig driverConfig,
       // Backwards Compatability
       @JsonProperty("schema") Schema schema,
@@ -61,8 +63,6 @@ public class FireDepartment extends IngestionSchema
       @JsonProperty("plumber") PlumberSchool plumberSchool
   )
   {
-    super(dataSchema, ioConfig, driverConfig);
-
     // Backwards compatibility
     if (dataSchema == null) {
       Preconditions.checkNotNull(schema, "schema");
@@ -74,11 +74,12 @@ public class FireDepartment extends IngestionSchema
           schema.getDataSource(),
           firehoseFactory.getParser(),
           schema.getAggregators(),
-          new GranularitySpec(
+          new UniformGranularitySpec(
               plumberSchool.getSegmentGranularity(),
-              schema.getIndexGranularity()
-          ),
-          schema.getShardSpec()
+              schema.getIndexGranularity(),
+              Lists.<Interval>newArrayList(),
+              plumberSchool.getSegmentGranularity()
+          )
       );
       this.ioConfig = new RealtimeIOConfig(
           firehoseFactory,
@@ -86,7 +87,8 @@ public class FireDepartment extends IngestionSchema
       );
       this.driverConfig = new RealtimeDriverConfig(
           config.getMaxRowsInMemory(),
-          config.getIntermediatePersistPeriod()
+          config.getIntermediatePersistPeriod(),
+          schema.getShardSpec()
       );
     } else {
       Preconditions.checkNotNull(dataSchema, "dataSchema");
@@ -104,12 +106,23 @@ public class FireDepartment extends IngestionSchema
    *
    * @return the Schema for this feed.
    */
-  public DataSchema getSchema()
+  @JsonProperty("dataSchema")
+  @Override
+  public DataSchema getDataSchema()
   {
     return dataSchema;
   }
 
-  public RealtimeDriverConfig getConfig()
+  @JsonProperty("ioConfig")
+  @Override
+  public RealtimeIOConfig getIOConfig()
+  {
+    return ioConfig;
+  }
+
+  @JsonProperty("driverConfig")
+  @Override
+  public RealtimeDriverConfig getDriverConfig()
   {
     return driverConfig;
   }

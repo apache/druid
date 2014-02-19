@@ -21,6 +21,8 @@ package io.druid.segment.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.timeline.partition.NoneShardSpec;
+import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.Period;
 
 /**
@@ -29,15 +31,18 @@ public class RealtimeDriverConfig implements DriverConfig
 {
   private final int maxRowsInMemory;
   private final Period intermediatePersistPeriod;
+  private final ShardSpec shardSpec;
 
   @JsonCreator
   public RealtimeDriverConfig(
       @JsonProperty("maxRowsInMemory") int maxRowsInMemory,
-      @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod
+      @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
+      @JsonProperty("shardSpec") ShardSpec shardSpec
   )
   {
     this.maxRowsInMemory = maxRowsInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod;
+    this.shardSpec = shardSpec == null ? new NoneShardSpec() : shardSpec;
   }
 
   @JsonProperty
@@ -50,5 +55,11 @@ public class RealtimeDriverConfig implements DriverConfig
   public Period getIntermediatePersistPeriod()
   {
     return intermediatePersistPeriod;
+  }
+
+  @JsonProperty
+  public ShardSpec getShardSpec()
+  {
+    return shardSpec;
   }
 }

@@ -19,44 +19,13 @@
 
 package io.druid.segment.indexing;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 /**
  */
-public class IngestionSchema
+public interface IngestionSchema
 {
-  private final DataSchema dataSchema;
-  private final IOConfig ioConfig;
-  private final DriverConfig driverConfig;
+  public DataSchema getDataSchema();
 
-  @JsonCreator
-  public IngestionSchema(
-      @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("io") IOConfig ioConfig,
-      @JsonProperty("driverConfig") DriverConfig driverConfig
-  )
-  {
-    this.dataSchema = dataSchema;
-    this.ioConfig = ioConfig;
-    this.driverConfig = driverConfig;
-  }
+  public IOConfig getIOConfig();
 
-  @JsonProperty("dataSchema")
-  public DataSchema getDataSchema()
-  {
-    return dataSchema;
-  }
-
-  @JsonProperty("io")
-  public IOConfig getIoConfig()
-  {
-    return ioConfig;
-  }
-
-  @JsonProperty("config")
-  public DriverConfig getDriverConfig()
-  {
-    return driverConfig;
-  }
+  public DriverConfig getDriverConfig();
 }

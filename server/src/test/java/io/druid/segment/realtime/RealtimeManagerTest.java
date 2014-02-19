@@ -21,6 +21,7 @@ package io.druid.segment.realtime;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
+import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
@@ -32,7 +33,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.segment.SegmentGranularity;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.GranularitySpec;
 import io.druid.segment.indexing.RealtimeDriverConfig;
@@ -74,7 +74,7 @@ public class RealtimeManagerTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new GranularitySpec(null, QueryGranularity.NONE),
+        new GranularitySpec(Granularity.HOUR, QueryGranularity.NONE),
         new NoneShardSpec()
     );
     RealtimeIOConfig ioConfig = new RealtimeIOConfig(
@@ -103,7 +103,7 @@ public class RealtimeManagerTest
           }
 
           @Override
-          public SegmentGranularity getSegmentGranularity()
+          public Granularity getSegmentGranularity()
           {
             throw new UnsupportedOperationException();
           }

@@ -40,7 +40,6 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.IngestionSchema;
 import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Sink;
@@ -80,7 +79,7 @@ public class RealtimeManager implements QuerySegmentWalker
   public void start() throws IOException
   {
     for (final FireDepartment fireDepartment : fireDepartments) {
-      DataSchema schema = fireDepartment.getSchema();
+      DataSchema schema = fireDepartment.getDataSchema();
 
       final FireChief chief = new FireChief(fireDepartment);
       chiefs.put(schema.getDataSource(), chief);
@@ -145,7 +144,7 @@ public class RealtimeManager implements QuerySegmentWalker
 
     public void init() throws IOException
     {
-      config = fireDepartment.getConfig();
+      config = fireDepartment.getDriverConfig();
 
       synchronized (this) {
         try {
@@ -217,12 +216,12 @@ public class RealtimeManager implements QuerySegmentWalker
           }
         }
       } catch (RuntimeException e) {
-        log.makeAlert(e, "RuntimeException aborted realtime processing[%s]", fireDepartment.getSchema().getDataSource())
+        log.makeAlert(e, "RuntimeException aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
            .emit();
         normalExit = false;
         throw e;
       } catch (Error e) {
-        log.makeAlert(e, "Exception aborted realtime processing[%s]", fireDepartment.getSchema().getDataSource())
+        log.makeAlert(e, "Exception aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
            .emit();
         normalExit = false;
         throw e;
@@ -243,7 +242,7 @@ public class RealtimeManager implements QuerySegmentWalker
       Preconditions.checkNotNull(firehose, "firehose is null, init() must be called first.");
       Preconditions.checkNotNull(plumber, "plumber is null, init() must be called first.");
 
-      log.info("FireChief[%s] state ok.", fireDepartment.getSchema().getDataSource());
+      log.info("FireChief[%s] state ok.", fireDepartment.getDataSchema().getDataSource());
     }
 
     public <T> QueryRunner<T> getQueryRunner(Query<T> query)

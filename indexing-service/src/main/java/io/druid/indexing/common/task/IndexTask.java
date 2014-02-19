@@ -39,17 +39,15 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.granularity.GranularitySpec;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Sink;
 import io.druid.timeline.DataSegment;
@@ -157,7 +155,7 @@ public class IndexTask extends AbstractFixedIntervalTask
                 getDataSource(),
                 firehoseFactory.getParser(),
                 aggregators,
-                new io.druid.segment.indexing.GranularitySpec(null, indexGranularity),
+                granularitySpec.withQueryGranularity(indexGranularity),
                 shardSpec
             ),
             bucket,
@@ -176,7 +174,8 @@ public class IndexTask extends AbstractFixedIntervalTask
     try (Firehose firehose = firehoseFactory.connect(firehoseFactory.getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
-        Interval interval = granularitySpec.getGranularity().bucket(new DateTime(inputRow.getTimestampFromEpoch()));
+        Interval interval = granularitySpec.getSegmentGranularity()
+                                           .bucket(new DateTime(inputRow.getTimestampFromEpoch()));
         retVal.add(interval);
       }
     }

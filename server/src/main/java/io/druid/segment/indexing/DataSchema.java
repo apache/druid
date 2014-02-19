@@ -22,11 +22,9 @@ package io.druid.segment.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.timeline.partition.NoneShardSpec;
-import io.druid.timeline.partition.ShardSpec;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 
 /**
  */
@@ -36,16 +34,14 @@ public class DataSchema
   private final InputRowParser parser;
   private final AggregatorFactory[] aggregators;
   private final GranularitySpec granularitySpec;
-  private final ShardSpec shardSpec;
 
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("parser") InputRowParser parser,
       @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
-      @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
-      @JsonProperty("shardSpec") ShardSpec shardSpec
-  )
+      @JsonProperty("granularitySpec") GranularitySpec granularitySpec
+      )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
     Preconditions.checkNotNull(aggregators, "metrics");
@@ -55,7 +51,6 @@ public class DataSchema
     this.parser = parser;
     this.aggregators = aggregators;
     this.granularitySpec = granularitySpec;
-    this.shardSpec = shardSpec == null ? new NoneShardSpec() : shardSpec;
   }
 
   @JsonProperty
@@ -82,9 +77,8 @@ public class DataSchema
     return granularitySpec;
   }
 
-  @JsonProperty
-  public ShardSpec getShardSpec()
+  public DataSchema withGranularitySpec(GranularitySpec granularitySpec)
   {
-    return shardSpec;
+    return new DataSchema(dataSource, parser, aggregators, granularitySpec);
   }
 }

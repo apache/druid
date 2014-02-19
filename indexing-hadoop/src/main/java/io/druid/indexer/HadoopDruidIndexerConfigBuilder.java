@@ -24,7 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.impl.DataSpec;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.indexer.granularity.GranularitySpec;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.indexer.rollup.DataRollupSpec;
@@ -41,13 +41,13 @@ import java.util.Map;
  */
 public class HadoopDruidIndexerConfigBuilder
 {
-  public static HadoopDruidIndexerConfig fromSchema(HadoopDruidIndexerSchema schema)
+  public static HadoopDruidIndexerConfig fromSchema(HadoopIngestionSchema schema)
   {
     return HadoopDruidIndexerConfig.jsonMapper.convertValue(schema, HadoopDruidIndexerConfig.class);
   }
 
-  public static HadoopDruidIndexerSchema toSchema(HadoopDruidIndexerConfig config){
-    return HadoopDruidIndexerConfig.jsonMapper.convertValue(config, HadoopDruidIndexerSchema.class);
+  public static HadoopIngestionSchema toSchema(HadoopDruidIndexerConfig config){
+    return HadoopDruidIndexerConfig.jsonMapper.convertValue(config, HadoopIngestionSchema.class);
   }
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
@@ -230,7 +230,7 @@ public class HadoopDruidIndexerConfigBuilder
     return this;
   }
 
-  public HadoopDruidIndexerConfigBuilder withSchema(HadoopDruidIndexerSchema schema)
+  public HadoopDruidIndexerConfigBuilder withSchema(HadoopIngestionSchema schema)
   {
     this.dataSource = schema.getDataSource();
     this.timestampSpec = schema.getTimestampSpec();

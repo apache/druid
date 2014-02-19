@@ -23,16 +23,15 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.metamx.common.Granularity;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.ServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.segment.SegmentGranularity;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Period;
@@ -51,7 +50,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
   private final Period windowPeriod;
   private final File basePersistDirectory;
-  private final SegmentGranularity segmentGranularity;
+  private final Granularity segmentGranularity;
 
   @JacksonInject
   @NotNull
@@ -90,7 +89,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   public RealtimePlumberSchool(
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") SegmentGranularity segmentGranularity
+      @JsonProperty("segmentGranularity") Granularity segmentGranularity
   )
   {
     this.windowPeriod = windowPeriod;
@@ -159,7 +158,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   }
 
   @Override
-  public SegmentGranularity getSegmentGranularity()
+  public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
   }

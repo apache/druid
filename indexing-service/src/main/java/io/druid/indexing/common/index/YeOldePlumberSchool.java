@@ -29,19 +29,18 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.metamx.common.Granularity;
 import com.metamx.common.logger.Logger;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
-import io.druid.segment.SegmentGranularity;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
-import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
@@ -82,7 +81,7 @@ public class YeOldePlumberSchool implements PlumberSchool
   }
 
   @Override
-  public SegmentGranularity getSegmentGranularity()
+  public Granularity getSegmentGranularity()
   {
     throw new UnsupportedOperationException();
   }

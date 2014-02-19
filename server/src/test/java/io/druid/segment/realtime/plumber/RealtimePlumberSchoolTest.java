@@ -20,10 +20,10 @@
 package io.druid.segment.realtime.plumber;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -32,7 +32,6 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -40,12 +39,10 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.segment.SegmentGranularity;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
@@ -108,14 +105,14 @@ public class RealtimePlumberSchoolTest
           }
         },
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new GranularitySpec(null, QueryGranularity.NONE),
+        new GranularitySpec(Granularity.HOUR, QueryGranularity.NONE),
         new NoneShardSpec()
     );
 
     RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
         new Period("PT10m"),
         tmpDir,
-        SegmentGranularity.HOUR
+        Granularity.HOUR
     );
 
     announcer = EasyMock.createMock(DataSegmentAnnouncer.class);

@@ -29,8 +29,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -44,18 +42,14 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DataSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.data.input.impl.ToLowercaseDataSpec;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
-import io.druid.indexer.granularity.GranularitySpec;
-import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.indexer.partitions.PartitionsSpec;
-import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.indexer.updater.DbUpdaterJobSpec;
 import io.druid.initialization.Initialization;
-import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
@@ -70,7 +64,6 @@ import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -113,30 +106,18 @@ public class HadoopDruidIndexerConfig
     INVALID_ROW_COUNTER
   }
 
-  private volatile String dataSource;
-  private volatile TimestampSpec timestampSpec;
-  private volatile DataSpec dataSpec;
-  private volatile GranularitySpec granularitySpec;
+  private volatile HadoopIngestionSchema schema;
   private volatile PathSpec pathSpec;
-  private volatile String workingPath;
-  private volatile String segmentOutputPath;
-  private volatile String version;
-  private volatile PartitionsSpec partitionsSpec;
-  private volatile boolean leaveIntermediate;
-  private volatile boolean cleanupOnFailure;
-  private volatile Map<DateTime, List<HadoopyShardSpec>> shardSpecs;
-  private volatile boolean overwriteFiles;
-  private volatile DataRollupSpec rollupSpec;
-  private volatile DbUpdaterJobSpec updaterJobSpec;
-  private volatile boolean ignoreInvalidRows;
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
+      final @JsonProperty("schema") HadoopIngestionSchema schema,
+      // Backwards compatibility
       final @JsonProperty("dataSource") String dataSource,
       final @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       final @JsonProperty("dataSpec") DataSpec dataSpec,
       final @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
-      final @JsonProperty("pathSpec") PathSpec pathSpec,
+      final @JsonProperty("pathSpec") Map<String, Object> pathSpec,
       final @JsonProperty("workingPath") String workingPath,
       final @JsonProperty("segmentOutputPath") String segmentOutputPath,
       final @JsonProperty("version") String version,
@@ -157,232 +138,58 @@ public class HadoopDruidIndexerConfig
       final @JsonProperty("targetPartitionSize") Long targetPartitionSize
   )
   {
-    this.dataSource = dataSource;
-    this.timestampSpec = (timestampSpec == null) ? new TimestampSpec(timestampColumn, timestampFormat) : timestampSpec;
-    this.dataSpec = dataSpec;
-    this.pathSpec = pathSpec;
-    this.workingPath = workingPath;
-    this.segmentOutputPath = segmentOutputPath;
-    this.version = version == null ? new DateTime().toString() : version;
-    this.leaveIntermediate = leaveIntermediate;
-    this.cleanupOnFailure = (cleanupOnFailure == null ? true : cleanupOnFailure);
-    this.shardSpecs = (shardSpecs == null ? ImmutableMap.<DateTime, List<HadoopyShardSpec>>of() : shardSpecs);
-    this.overwriteFiles = overwriteFiles;
-    this.rollupSpec = rollupSpec;
-    this.updaterJobSpec = updaterJobSpec;
-    this.ignoreInvalidRows = ignoreInvalidRows;
-
-    if (partitionsSpec != null) {
-      Preconditions.checkArgument(
-          partitionDimension == null && targetPartitionSize == null,
-          "Cannot mix partitionsSpec with partitionDimension/targetPartitionSize"
-      );
-      this.partitionsSpec = partitionsSpec;
+    if (schema != null) {
+      this.schema = schema;
     } else {
-      // Backwards compatibility
-      this.partitionsSpec = new SingleDimensionPartitionsSpec(partitionDimension, targetPartitionSize, null, false);
-    }
-
-    if (granularitySpec != null) {
-      Preconditions.checkArgument(
-          segmentGranularity == null && intervals == null,
-          "Cannot mix granularitySpec with segmentGranularity/intervals"
+      this.schema = HadoopIngestionSchema.convertLegacy(
+          dataSource,
+          timestampSpec,
+          dataSpec,
+          granularitySpec,
+          pathSpec,
+          workingPath,
+          segmentOutputPath,
+          version,
+          partitionsSpec,
+          leaveIntermediate,
+          cleanupOnFailure,
+          shardSpecs,
+          overwriteFiles,
+          rollupSpec,
+          updaterJobSpec,
+          ignoreInvalidRows,
+          timestampColumn,
+          timestampFormat,
+          intervals,
+          segmentGranularity,
+          partitionDimension,
+          targetPartitionSize
       );
-      this.granularitySpec = granularitySpec;
-    } else {
-      // Backwards compatibility
-      if (segmentGranularity != null && intervals != null) {
-        this.granularitySpec = new UniformGranularitySpec(segmentGranularity, intervals);
-      }
     }
-  }
-
-  /**
-   * Default constructor does nothing. The caller is expected to use the various setX methods.
-   */
-  public HadoopDruidIndexerConfig()
-  {
-  }
-
-  @JsonProperty
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
-  public void setDataSource(String dataSource)
-  {
-    this.dataSource = dataSource.toLowerCase();
-  }
-
-  @JsonProperty
-  public TimestampSpec getTimestampSpec()
-  {
-    return timestampSpec;
-  }
-
-  public void setTimestampSpec(TimestampSpec timestampSpec)
-  {
-    this.timestampSpec = timestampSpec;
-  }
-
-  @JsonProperty
-  public DataSpec getDataSpec()
-  {
-    return dataSpec;
-  }
-
-  public void setDataSpec(DataSpec dataSpec)
-  {
-    this.dataSpec = new ToLowercaseDataSpec(dataSpec);
-  }
-
-  @JsonProperty
-  public GranularitySpec getGranularitySpec()
-  {
-    return granularitySpec;
+    this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
   public void setGranularitySpec(GranularitySpec granularitySpec)
   {
-    this.granularitySpec = granularitySpec;
-  }
-
-  @JsonProperty
-  public PathSpec getPathSpec()
-  {
-    return pathSpec;
-  }
-
-  public void setPathSpec(PathSpec pathSpec)
-  {
-    this.pathSpec = pathSpec;
-  }
-
-  @JsonProperty
-  public String getWorkingPath()
-  {
-    return workingPath;
-  }
-
-  public void setWorkingPath(String workingPath)
-  {
-    this.workingPath = workingPath;
-  }
-
-  @JsonProperty
-  public String getSegmentOutputPath()
-  {
-    return segmentOutputPath;
-  }
-
-  public void setSegmentOutputPath(String segmentOutputPath)
-  {
-    this.segmentOutputPath = segmentOutputPath;
-  }
-
-  @JsonProperty
-  public String getVersion()
-  {
-    return version;
+    this.schema = schema.withDataSchema(schema.getDataSchema().withGranularitySpec(granularitySpec));
+    this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
   public void setVersion(String version)
   {
-    this.version = version;
-  }
-
-  @JsonProperty
-  public PartitionsSpec getPartitionsSpec()
-  {
-    return partitionsSpec;
-  }
-
-  public void setPartitionsSpec(PartitionsSpec partitionsSpec)
-  {
-    this.partitionsSpec = partitionsSpec;
-  }
-
-  @JsonProperty
-  public boolean isLeaveIntermediate()
-  {
-    return leaveIntermediate;
-  }
-
-  public void setLeaveIntermediate(boolean leaveIntermediate)
-  {
-    this.leaveIntermediate = leaveIntermediate;
-  }
-
-  @JsonProperty
-  public boolean isCleanupOnFailure()
-  {
-    return cleanupOnFailure;
-  }
-
-  public void setCleanupOnFailure(boolean cleanupOnFailure)
-  {
-    this.cleanupOnFailure = cleanupOnFailure;
-  }
-
-  @JsonProperty
-  public Map<DateTime, List<HadoopyShardSpec>> getShardSpecs()
-  {
-    return shardSpecs;
+    this.schema = schema.withDriverConfig(schema.getDriverConfig().withVersion(version));
+    this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
   public void setShardSpecs(Map<DateTime, List<HadoopyShardSpec>> shardSpecs)
   {
-    this.shardSpecs = Collections.unmodifiableMap(shardSpecs);
-  }
-
-  @JsonProperty
-  public boolean isOverwriteFiles()
-  {
-    return overwriteFiles;
-  }
-
-  public void setOverwriteFiles(boolean overwriteFiles)
-  {
-    this.overwriteFiles = overwriteFiles;
-  }
-
-  @JsonProperty
-  public DataRollupSpec getRollupSpec()
-  {
-    return rollupSpec;
-  }
-
-  public void setRollupSpec(DataRollupSpec rollupSpec)
-  {
-    this.rollupSpec = rollupSpec;
-  }
-
-  @JsonProperty
-  public DbUpdaterJobSpec getUpdaterJobSpec()
-  {
-    return updaterJobSpec;
-  }
-
-  public void setUpdaterJobSpec(DbUpdaterJobSpec updaterJobSpec)
-  {
-    this.updaterJobSpec = updaterJobSpec;
-  }
-
-  @JsonProperty
-  public boolean isIgnoreInvalidRows()
-  {
-    return ignoreInvalidRows;
-  }
-
-  public void setIgnoreInvalidRows(boolean ignoreInvalidRows)
-  {
-    this.ignoreInvalidRows = ignoreInvalidRows;
+    this.schema = schema.withDriverConfig(schema.getDriverConfig().withShardSpecs(shardSpecs));
+    this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
   public Optional<List<Interval>> getIntervals()
   {
-    Optional<SortedSet<Interval>> setOptional = getGranularitySpec().bucketIntervals();
+    Optional<SortedSet<Interval>> setOptional = schema.getDataSchema().getGranularitySpec().bucketIntervals();
     if (setOptional.isPresent()) {
       return Optional.of((List<Interval>) JodaUtils.condenseIntervals(setOptional.get()));
     } else {
@@ -392,58 +199,37 @@ public class HadoopDruidIndexerConfig
 
   public boolean isDeterminingPartitions()
   {
-    return partitionsSpec.isDeterminingPartitions();
+    return schema.getDriverConfig().getPartitionsSpec().isDeterminingPartitions();
   }
 
   public Long getTargetPartitionSize()
   {
-    return partitionsSpec.getTargetPartitionSize();
+    return schema.getDriverConfig().getPartitionsSpec().getTargetPartitionSize();
   }
 
   public long getMaxPartitionSize()
   {
-    return partitionsSpec.getMaxPartitionSize();
+    return schema.getDriverConfig().getPartitionsSpec().getMaxPartitionSize();
   }
 
   public boolean isUpdaterJobSpecSet()
   {
-    return (updaterJobSpec != null);
+    return (schema.getIOConfig().getMetadataUpdateSpec() != null);
   }
 
   public StringInputRowParser getParser()
   {
-    final List<String> dimensionExclusions;
-
-    if (getDataSpec().hasCustomDimensions()) {
-      dimensionExclusions = null;
-    } else {
-      dimensionExclusions = Lists.newArrayList();
-      dimensionExclusions.add(timestampSpec.getTimestampColumn());
-      dimensionExclusions.addAll(
-          Lists.transform(
-              getRollupSpec().getAggs(), new Function<AggregatorFactory, String>()
-          {
-            @Override
-            public String apply(AggregatorFactory aggregatorFactory)
-            {
-              return aggregatorFactory.getName();
-            }
-          }
-          )
-      );
-    }
-
-    return new StringInputRowParser(null, getTimestampSpec(), getDataSpec(), dimensionExclusions, null);
+    return (StringInputRowParser) schema.getDataSchema().getParser();
   }
 
   public HadoopyShardSpec getShardSpec(Bucket bucket)
   {
-    return shardSpecs.get(bucket.time).get(bucket.partitionNum);
+    return schema.getDriverConfig().getShardSpecs().get(bucket.time).get(bucket.partitionNum);
   }
 
   public Job addInputPaths(Job job) throws IOException
   {
-    return getPathSpec().addInputPaths(this, job);
+    return pathSpec.addInputPaths(this, job);
   }
 
   /********************************************
@@ -459,12 +245,16 @@ public class HadoopDruidIndexerConfig
    */
   public Optional<Bucket> getBucket(InputRow inputRow)
   {
-    final Optional<Interval> timeBucket = getGranularitySpec().bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()));
+    final Optional<Interval> timeBucket = schema.getDataSchema().getGranularitySpec().bucketInterval(
+        new DateTime(
+            inputRow.getTimestampFromEpoch()
+        )
+    );
     if (!timeBucket.isPresent()) {
       return Optional.absent();
     }
 
-    final List<HadoopyShardSpec> shards = shardSpecs.get(timeBucket.get().getStart());
+    final List<HadoopyShardSpec> shards = schema.getDriverConfig().getShardSpecs().get(timeBucket.get().getStart());
     if (shards == null || shards.isEmpty()) {
       return Optional.absent();
     }
@@ -487,7 +277,12 @@ public class HadoopDruidIndexerConfig
 
   public Optional<Set<Interval>> getSegmentGranularIntervals()
   {
-    return Optional.fromNullable((Set<Interval>) granularitySpec.bucketIntervals().orNull());
+    return Optional.fromNullable(
+        (Set<Interval>) schema.getDataSchema()
+                              .getGranularitySpec()
+                              .bucketIntervals()
+                              .orNull()
+    );
   }
 
   public Optional<Iterable<Bucket>> getAllBuckets()
@@ -504,7 +299,7 @@ public class HadoopDruidIndexerConfig
                     public Iterable<Bucket> apply(Interval input)
                     {
                       final DateTime bucketTime = input.getStart();
-                      final List<HadoopyShardSpec> specs = shardSpecs.get(bucketTime);
+                      final List<HadoopyShardSpec> specs = schema.getDriverConfig().getShardSpecs().get(bucketTime);
                       if (specs == null) {
                         return ImmutableList.of();
                       }
@@ -532,19 +327,26 @@ public class HadoopDruidIndexerConfig
     }
   }
 
-    /******************************************
-     Path helper logic
-     ******************************************/
+  /******************************************
+   Path helper logic
+   ******************************************/
 
-    /**
-     * Make the intermediate path for this job run.
-     *
-     * @return the intermediate path for this job run.
-     */
+  /**
+   * Make the intermediate path for this job run.
+   *
+   * @return the intermediate path for this job run.
+   */
 
   public Path makeIntermediatePath()
   {
-    return new Path(String.format("%s/%s/%s", getWorkingPath(), getDataSource(), getVersion().replace(":", "")));
+    return new Path(
+        String.format(
+            "%s/%s/%s",
+            schema.getDriverConfig().getWorkingPath(),
+            schema.getDataSchema().getDataSource(),
+            schema.getDriverConfig().getVersion().replace(":", "")
+        )
+    );
   }
 
   public Path makeSegmentPartitionInfoPath(Interval bucketInterval)
@@ -586,16 +388,16 @@ public class HadoopDruidIndexerConfig
 
   public Path makeSegmentOutputPath(FileSystem fileSystem, Bucket bucket)
   {
-    final Interval bucketInterval = getGranularitySpec().bucketInterval(bucket.time).get();
+    final Interval bucketInterval = schema.getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get();
     if (fileSystem instanceof DistributedFileSystem) {
       return new Path(
           String.format(
               "%s/%s/%s_%s/%s/%s",
-              getSegmentOutputPath(),
-              getDataSource(),
+              schema.getIOConfig().getSegmentOutputPath(),
+              schema.getDataSchema().getDataSource(),
               bucketInterval.getStart().toString(ISODateTimeFormat.basicDateTime()),
               bucketInterval.getEnd().toString(ISODateTimeFormat.basicDateTime()),
-              getVersion().replace(":", "_"),
+              schema.getDriverConfig().getVersion().replace(":", "_"),
               bucket.partitionNum
           )
       );
@@ -603,11 +405,11 @@ public class HadoopDruidIndexerConfig
     return new Path(
         String.format(
             "%s/%s/%s_%s/%s/%s",
-            getSegmentOutputPath(),
-            getDataSource(),
+            schema.getIOConfig().getSegmentOutputPath(),
+            schema.getDataSchema().getDataSource(),
             bucketInterval.getStart().toString(),
             bucketInterval.getEnd().toString(),
-            getVersion(),
+            schema.getDriverConfig().getVersion(),
             bucket.partitionNum
         )
     );
@@ -634,14 +436,13 @@ public class HadoopDruidIndexerConfig
       throw Throwables.propagate(e);
     }
 
-    Preconditions.checkNotNull(dataSource, "dataSource");
-    Preconditions.checkNotNull(dataSpec, "dataSpec");
-    Preconditions.checkNotNull(timestampSpec, "timestampSpec");
-    Preconditions.checkNotNull(granularitySpec, "granularitySpec");
+    Preconditions.checkNotNull(schema.getDataSchema().getDataSource(), "dataSource");
+    Preconditions.checkNotNull(schema.getDataSchema().getParser().getParseSpec(), "parseSpec");
+    Preconditions.checkNotNull(schema.getDataSchema().getParser().getParseSpec().getTimestampSpec(), "timestampSpec");
+    Preconditions.checkNotNull(schema.getDataSchema().getGranularitySpec(), "granularitySpec");
     Preconditions.checkNotNull(pathSpec, "pathSpec");
-    Preconditions.checkNotNull(workingPath, "workingPath");
-    Preconditions.checkNotNull(segmentOutputPath, "segmentOutputPath");
-    Preconditions.checkNotNull(version, "version");
-    Preconditions.checkNotNull(rollupSpec, "rollupSpec");
+    Preconditions.checkNotNull(schema.getDriverConfig().getWorkingPath(), "workingPath");
+    Preconditions.checkNotNull(schema.getIOConfig().getSegmentOutputPath(), "segmentOutputPath");
+    Preconditions.checkNotNull(schema.getDriverConfig().getVersion(), "version");
   }
 }

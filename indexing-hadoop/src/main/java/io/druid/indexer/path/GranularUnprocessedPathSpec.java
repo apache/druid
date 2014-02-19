@@ -26,7 +26,7 @@ import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Comparators;
 import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.indexer.granularity.UniformGranularitySpec;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.indexer.hadoop.FSSpideringIterator;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;

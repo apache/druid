@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexer.granularity;
+package io.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
+import io.druid.granularity.QueryGranularity;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -34,17 +35,24 @@ import java.util.SortedSet;
 
 public class UniformGranularitySpec implements GranularitySpec
 {
-  final private Granularity granularity;
-  final private Iterable<Interval> inputIntervals;
+  private final Granularity segmentGranularity;
+  private final QueryGranularity queryGranularity;
+  final private List<Interval> inputIntervals;
   final private ArbitraryGranularitySpec wrappedSpec;
 
   @JsonCreator
   public UniformGranularitySpec(
-      @JsonProperty("gran") Granularity granularity,
-      @JsonProperty("intervals") List<Interval> inputIntervals
+      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
+      @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
+      @JsonProperty("intervals") List<Interval> inputIntervals,
+      // Backwards compatible
+      @JsonProperty("gran") Granularity granularity
+
   )
   {
-    this.granularity = granularity;
+    this.segmentGranularity = segmentGranularity == null ? granularity : segmentGranularity;
+    this.queryGranularity = queryGranularity;
+
     if (inputIntervals != null) {
       List<Interval> granularIntervals = Lists.newArrayList();
       for (Interval inputInterval : inputIntervals) {
@@ -75,14 +83,31 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @Override
-  @JsonProperty("gran")
-  public Granularity getGranularity()
+  @JsonProperty("segmentGranularity")
+  public Granularity getSegmentGranularity()
   {
-    return granularity;
+    return segmentGranularity;
+  }
+
+  @Override
+  public QueryGranularity getQueryGranularity()
+  {
+    return queryGranularity;
+  }
+
+  @Override
+  public GranularitySpec withQueryGranularity(QueryGranularity queryGranularity)
+  {
+    return new UniformGranularitySpec(
+        segmentGranularity,
+        queryGranularity,
+        inputIntervals,
+        segmentGranularity
+    );
   }
 
   @JsonProperty("intervals")
-  public Optional<Iterable<Interval>> getIntervals()
+  public Optional<List<Interval>> getIntervals()
   {
     return Optional.fromNullable(inputIntervals);
   }
