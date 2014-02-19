@@ -54,7 +54,8 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
 
   public GroupByParallelQueryRunner(
       ExecutorService exec,
-      Ordering<Row> ordering, Supplier<GroupByQueryConfig> configSupplier,
+      Ordering<Row> ordering,
+      Supplier<GroupByQueryConfig> configSupplier,
       QueryRunner<Row>... queryables
   )
   {
