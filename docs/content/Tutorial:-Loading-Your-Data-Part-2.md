@@ -231,6 +231,8 @@ The following events should exist in the file:
 
 To index the data, we are going to need an indexing service, a historical node, and a coordinator node.
 
+Note: If Zookeeper and MySQL aren't running, you'll have to start them again as described in [The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html).
+
 To start the Indexing Service:
 
 ```bash
