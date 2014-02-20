@@ -9,6 +9,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.DateTime;
@@ -40,6 +41,7 @@ public class FlushingPlumber extends RealtimePlumber
       File basePersistDirectory,
       Granularity segmentGranularity,
       DataSchema schema,
+      RealtimeDriverConfig config,
       FireDepartmentMetrics metrics,
       RejectionPolicy rejectionPolicy,
       ServiceEmitter emitter,
@@ -55,6 +57,7 @@ public class FlushingPlumber extends RealtimePlumber
         basePersistDirectory,
         segmentGranularity,
         schema,
+        config,
         metrics,
         rejectionPolicy,
         emitter,
@@ -144,7 +147,7 @@ public class FlushingPlumber extends RealtimePlumber
                 String.format(
                     "%s-flusher-%d",
                     getSchema().getDataSource(),
-                    getSchema().getShardSpec().getPartitionNum()
+                    getConfig().getShardSpec().getPartitionNum()
                 )
             )
             {

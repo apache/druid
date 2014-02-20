@@ -38,6 +38,7 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -87,10 +88,14 @@ public class YeOldePlumberSchool implements PlumberSchool
   }
 
   @Override
-  public Plumber findPlumber(final DataSchema schema, final FireDepartmentMetrics metrics)
+  public Plumber findPlumber(
+      final DataSchema schema,
+      final RealtimeDriverConfig config,
+      final FireDepartmentMetrics metrics
+  )
   {
     // There can be only one.
-    final Sink theSink = new Sink(interval, schema, version);
+    final Sink theSink = new Sink(interval, schema, config, version);
 
     // Temporary directory to hold spilled segments.
     final File persistDir = new File(tmpSegmentDir, theSink.getSegment().getIdentifier());
@@ -139,9 +144,9 @@ public class YeOldePlumberSchool implements PlumberSchool
           // User should have persisted everything by now.
           Preconditions.checkState(!theSink.swappable(), "All data must be persisted before fininshing the job!");
 
-          if(spilled.size() == 0) {
+          if (spilled.size() == 0) {
             throw new IllegalStateException("Nothing indexed?");
-          } else if(spilled.size() == 1) {
+          } else if (spilled.size() == 1) {
             fileToUpload = Iterables.getOnlyElement(spilled);
           } else {
             List<QueryableIndex> indexes = Lists.newArrayList();
@@ -167,7 +172,8 @@ public class YeOldePlumberSchool implements PlumberSchool
               segmentToUpload.getIdentifier()
           );
 
-        } catch(Exception e) {
+        }
+        catch (Exception e) {
           log.warn(e, "Failed to merge and upload");
           throw Throwables.propagate(e);
         }
@@ -186,7 +192,7 @@ public class YeOldePlumberSchool implements PlumberSchool
 
       private void spillIfSwappable()
       {
-        if(theSink.swappable()) {
+        if (theSink.swappable()) {
           final FireHydrant indexToPersist = theSink.swap();
           final int rowsToPersist = indexToPersist.getIndex().size();
           final File dirToPersist = getSpillDir(indexToPersist.getCount());
@@ -206,7 +212,8 @@ public class YeOldePlumberSchool implements PlumberSchool
 
             spilled.add(dirToPersist);
 
-          } catch(Exception e) {
+          }
+          catch (Exception e) {
             log.warn(e, "Failed to spill index[%d]", indexToPersist.getCount());
             throw Throwables.propagate(e);
           }

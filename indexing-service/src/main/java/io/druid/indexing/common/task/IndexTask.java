@@ -39,13 +39,15 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
-import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.plumber.Plumber;
@@ -56,6 +58,7 @@ import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 
 import java.io.File;
 import java.io.IOException;
@@ -155,9 +158,9 @@ public class IndexTask extends AbstractFixedIntervalTask
                 getDataSource(),
                 firehoseFactory.getParser(),
                 aggregators,
-                granularitySpec.withQueryGranularity(indexGranularity),
-                shardSpec
+                granularitySpec.withQueryGranularity(indexGranularity)
             ),
+            shardSpec,
             bucket,
             myLock.getVersion()
         );
@@ -306,6 +309,7 @@ public class IndexTask extends AbstractFixedIntervalTask
   private DataSegment generateSegment(
       final TaskToolbox toolbox,
       final DataSchema schema,
+      final ShardSpec shardSpec,
       final Interval interval,
       final String version
   ) throws IOException
@@ -319,7 +323,7 @@ public class IndexTask extends AbstractFixedIntervalTask
             interval.getStart(),
             interval.getEnd(),
             version,
-            schema.getShardSpec().getPartitionNum()
+            shardSpec.getPartitionNum()
         )
     );
 
@@ -350,7 +354,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         version,
         wrappedDataSegmentPusher,
         tmpDir
-    ).findPlumber(schema, metrics);
+    ).findPlumber(schema, new RealtimeDriverConfig(0, new Period(), shardSpec), metrics);
 
     // rowFlushBoundary for this job
     final int myRowFlushBoundary = this.rowFlushBoundary > 0
@@ -363,7 +367,7 @@ public class IndexTask extends AbstractFixedIntervalTask
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
-        if (shouldIndex(schema, interval, inputRow)) {
+        if (shouldIndex(shardSpec, interval, inputRow)) {
           final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
           if (sink == null) {
             throw new NullPointerException(
@@ -400,7 +404,7 @@ public class IndexTask extends AbstractFixedIntervalTask
           + " and output %,d rows",
           getId(),
           interval,
-          schema.getShardSpec().getPartitionNum(),
+          shardSpec.getPartitionNum(),
           metrics.processed() + metrics.unparseable() + metrics.thrownAway(),
           metrics.processed(),
           metrics.unparseable(),
@@ -420,9 +424,13 @@ public class IndexTask extends AbstractFixedIntervalTask
    *
    * @return true or false
    */
-  private boolean shouldIndex(final DataSchema schema, final Interval interval, final InputRow inputRow)
+  private boolean shouldIndex(
+      final ShardSpec shardSpec,
+      final Interval interval,
+      final InputRow inputRow
+  )
   {
-    return interval.contains(inputRow.getTimestampFromEpoch()) && schema.getShardSpec().isInChunk(inputRow);
+    return interval.contains(inputRow.getTimestampFromEpoch()) && shardSpec.isInChunk(inputRow);
   }
 
   @JsonProperty

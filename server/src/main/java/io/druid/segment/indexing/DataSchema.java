@@ -43,10 +43,6 @@ public class DataSchema
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec
       )
   {
-    Preconditions.checkNotNull(dataSource, "dataSource");
-    Preconditions.checkNotNull(aggregators, "metrics");
-    Preconditions.checkNotNull(granularitySpec, "granularitySpec");
-
     this.dataSource = dataSource;
     this.parser = parser;
     this.aggregators = aggregators;

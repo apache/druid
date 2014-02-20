@@ -114,8 +114,11 @@ public class DeterminePartitionsJob implements Jobby
        * in the final segment.
        */
 
-      if(!(config.getPartitionsSpec() instanceof SingleDimensionPartitionsSpec)){
-        throw new ISE("DeterminePartitionsJob can only be run for SingleDimensionPartitionsSpec, partitionSpec found [%s]", config.getPartitionsSpec());
+      if (!(config.getPartitionsSpec() instanceof SingleDimensionPartitionsSpec)) {
+        throw new ISE(
+            "DeterminePartitionsJob can only be run for SingleDimensionPartitionsSpec, partitionSpec found [%s]",
+            config.getPartitionsSpec()
+        );
       }
 
       if (!config.getPartitionsSpec().isAssumeGrouped()) {
@@ -250,7 +253,7 @@ public class DeterminePartitionsJob implements Jobby
         throws IOException, InterruptedException
     {
       super.setup(context);
-      rollupGranularity = getConfig().getRollupSpec().getRollupGranularity();
+      rollupGranularity = getConfig().getGranularitySpec().getQueryGranularity();
     }
 
     @Override
@@ -297,7 +300,7 @@ public class DeterminePartitionsJob implements Jobby
     protected void setup(Context context)
         throws IOException, InterruptedException
     {
-      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
       SingleDimensionPartitionsSpec spec = (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
       helper = new DeterminePartitionsDimSelectionMapperHelper(config, spec.getPartitionDimension());
     }
@@ -329,7 +332,7 @@ public class DeterminePartitionsJob implements Jobby
         throws IOException, InterruptedException
     {
       super.setup(context);
-      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
       final SingleDimensionPartitionsSpec spec = (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
       helper = new DeterminePartitionsDimSelectionMapperHelper(config, spec.getPartitionDimension());
     }
@@ -449,7 +452,7 @@ public class DeterminePartitionsJob implements Jobby
       if (config == null) {
         synchronized (DeterminePartitionsDimSelectionBaseReducer.class) {
           if (config == null) {
-            config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+            config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
           }
         }
       }
@@ -724,7 +727,9 @@ public class DeterminePartitionsJob implements Jobby
       }
 
       final OutputStream out = Utils.makePathAndOutputStream(
-          context, config.makeSegmentPartitionInfoPath(config.getGranularitySpec().bucketInterval(bucket).get()), config.isOverwriteFiles()
+          context,
+          config.makeSegmentPartitionInfoPath(config.getGranularitySpec().bucketInterval(bucket).get()),
+          config.isOverwriteFiles()
       );
 
       final DimPartitions chosenPartitions = maxCardinality > HIGH_CARDINALITY_THRESHOLD

@@ -39,12 +39,14 @@ public class UniformGranularityTest
   {
     final GranularitySpec spec = new UniformGranularitySpec(
         Granularity.DAY,
+        null,
         Lists.newArrayList(
             new Interval("2012-01-08T00Z/2012-01-11T00Z"),
             new Interval("2012-01-07T00Z/2012-01-08T00Z"),
             new Interval("2012-01-03T00Z/2012-01-04T00Z"),
             new Interval("2012-01-01T00Z/2012-01-03T00Z")
-        )
+        ),
+        null
     );
 
     Assert.assertEquals(
@@ -96,12 +98,14 @@ public class UniformGranularityTest
   {
     final GranularitySpec spec = new UniformGranularitySpec(
         Granularity.DAY,
+        null,
         Lists.newArrayList(
             new Interval("2012-01-08T00Z/2012-01-11T00Z"),
             new Interval("2012-01-07T00Z/2012-01-08T00Z"),
             new Interval("2012-01-03T00Z/2012-01-04T00Z"),
             new Interval("2012-01-01T00Z/2012-01-03T00Z")
-        )
+        ),
+        null
     );
 
     try {
@@ -113,10 +117,11 @@ public class UniformGranularityTest
       );
       Assert.assertEquals(
           "Round-trip granularity",
-          ((UniformGranularitySpec) spec).getGranularity(),
-          ((UniformGranularitySpec) rtSpec).getGranularity()
+          spec.getSegmentGranularity(),
+          rtSpec.getSegmentGranularity()
       );
-    } catch(Exception e) {
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }

@@ -44,9 +44,9 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.GranularitySpec;
 import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentConfig;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
@@ -306,13 +306,18 @@ public class RealtimeIndexTask extends AbstractTask
         schema.getDataSource(),
         firehoseFactory.getParser(),
         schema.getAggregators(),
-        new GranularitySpec(realtimePlumberSchool.getSegmentGranularity(), schema.getIndexGranularity()),
-        schema.getShardSpec()
+        new UniformGranularitySpec(
+            realtimePlumberSchool.getSegmentGranularity(),
+            schema.getIndexGranularity(),
+            null,
+            realtimePlumberSchool.getSegmentGranularity()
+        )
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(firehoseFactory, realtimePlumberSchool);
     RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(
         fireDepartmentConfig.getMaxRowsInMemory(),
-        fireDepartmentConfig.getIntermediatePersistPeriod()
+        fireDepartmentConfig.getIntermediatePersistPeriod(),
+        schema.getShardSpec()
     );
 
     final FireDepartment fireDepartment = new FireDepartment(
@@ -326,7 +331,7 @@ public class RealtimeIndexTask extends AbstractTask
     );
     final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
-    this.plumber = realtimePlumberSchool.findPlumber(dataSchema, fireDepartment.getMetrics());
+    this.plumber = realtimePlumberSchool.findPlumber(dataSchema, driverConfig, fireDepartment.getMetrics());
 
     try {
       plumber.startJob();

@@ -36,6 +36,7 @@ public class HadoopDriverConfig implements DriverConfig
   private final String version;
   private final PartitionsSpec partitionsSpec;
   private final Map<DateTime, List<HadoopyShardSpec>> shardSpecs;
+  private final int rowFlushBoundary;
   private final boolean leaveIntermediate;
   private final Boolean cleanupOnFailure;
   private final boolean overwriteFiles;
@@ -46,6 +47,7 @@ public class HadoopDriverConfig implements DriverConfig
       final @JsonProperty("version") String version,
       final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
       final @JsonProperty("shardSpecs") Map<DateTime, List<HadoopyShardSpec>> shardSpecs,
+      final @JsonProperty("rowFlushBoundary") int rowFlushBoundary,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
@@ -56,6 +58,7 @@ public class HadoopDriverConfig implements DriverConfig
     this.version = version == null ? new DateTime().toString() : version;
     this.partitionsSpec = partitionsSpec;
     this.shardSpecs = shardSpecs == null ? ImmutableMap.<DateTime, List<HadoopyShardSpec>>of() : shardSpecs;
+    this.rowFlushBoundary = rowFlushBoundary;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = (cleanupOnFailure == null ? true : cleanupOnFailure);
     this.overwriteFiles = overwriteFiles;
@@ -87,13 +90,19 @@ public class HadoopDriverConfig implements DriverConfig
   }
 
   @JsonProperty
+  public int getRowFlushBoundary()
+  {
+    return rowFlushBoundary;
+  }
+
+  @JsonProperty
   public boolean isLeaveIntermediate()
   {
     return leaveIntermediate;
   }
 
   @JsonProperty
-  public Boolean getCleanupOnFailure()
+  public Boolean isCleanupOnFailure()
   {
     return cleanupOnFailure;
   }
@@ -110,6 +119,21 @@ public class HadoopDriverConfig implements DriverConfig
     return ignoreInvalidRows;
   }
 
+  public HadoopDriverConfig withWorkingPath(String path)
+  {
+    return new HadoopDriverConfig(
+        path,
+        version,
+        partitionsSpec,
+        shardSpecs,
+        rowFlushBoundary,
+        leaveIntermediate,
+        cleanupOnFailure,
+        overwriteFiles,
+        ignoreInvalidRows
+    );
+  }
+
   public HadoopDriverConfig withVersion(String ver)
   {
     return new HadoopDriverConfig(
@@ -117,6 +141,7 @@ public class HadoopDriverConfig implements DriverConfig
         ver,
         partitionsSpec,
         shardSpecs,
+        rowFlushBoundary,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -131,6 +156,7 @@ public class HadoopDriverConfig implements DriverConfig
         version,
         partitionsSpec,
         specs,
+        rowFlushBoundary,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,

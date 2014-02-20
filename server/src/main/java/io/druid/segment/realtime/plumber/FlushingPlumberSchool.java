@@ -29,6 +29,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Duration;
@@ -96,7 +97,11 @@ public class FlushingPlumberSchool implements PlumberSchool
   }
 
   @Override
-  public Plumber findPlumber(final DataSchema schema, final FireDepartmentMetrics metrics)
+  public Plumber findPlumber(
+      final DataSchema schema,
+      final RealtimeDriverConfig config,
+      final FireDepartmentMetrics metrics
+  )
   {
     verifyState();
 
@@ -109,6 +114,7 @@ public class FlushingPlumberSchool implements PlumberSchool
         basePersistDirectory,
         segmentGranularity,
         schema,
+        config,
         metrics,
         rejectionPolicy,
         emitter,

@@ -56,7 +56,7 @@ public class UniformGranularitySpec implements GranularitySpec
     if (inputIntervals != null) {
       List<Interval> granularIntervals = Lists.newArrayList();
       for (Interval inputInterval : inputIntervals) {
-        Iterables.addAll(granularIntervals, granularity.getIterable(inputInterval));
+        Iterables.addAll(granularIntervals, this.segmentGranularity.getIterable(inputInterval));
       }
       this.inputIntervals = ImmutableList.copyOf(inputIntervals);
       this.wrappedSpec = new ArbitraryGranularitySpec(granularIntervals);

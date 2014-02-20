@@ -32,7 +32,6 @@ import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.indexer.HadoopDruidIndexerConfigBuilder;
 import io.druid.indexer.HadoopDruidIndexerJob;
 import io.druid.indexer.HadoopIngestionSchema;
 import io.druid.indexer.Jobby;
@@ -95,9 +94,12 @@ public class HadoopIndexTask extends AbstractTask
     );
 
     // Some HadoopIngestionSchema stuff doesn't make sense in the context of the indexing service
-    Preconditions.checkArgument(schema.getSegmentOutputPath() == null, "segmentOutputPath must be absent");
-    Preconditions.checkArgument(schema.getWorkingPath() == null, "workingPath must be absent");
-    Preconditions.checkArgument(schema.getUpdaterJobSpec() == null, "updaterJobSpec must be absent");
+    Preconditions.checkArgument(
+        schema.getIOConfig().getSegmentOutputPath() == null,
+        "segmentOutputPath must be absent"
+    );
+    Preconditions.checkArgument(schema.getDriverConfig().getWorkingPath() == null, "workingPath must be absent");
+    Preconditions.checkArgument(schema.getIOConfig().getMetadataUpdateSpec() == null, "updaterJobSpec must be absent");
 
     this.schema = schema;
     this.hadoopCoordinates = (hadoopCoordinates == null ? defaultHadoopCoordinates : hadoopCoordinates);
@@ -112,7 +114,7 @@ public class HadoopIndexTask extends AbstractTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    Optional<SortedSet<Interval>> intervals = schema.getGranularitySpec().bucketIntervals();
+    Optional<SortedSet<Interval>> intervals = schema.getDataSchema().getGranularitySpec().bucketIntervals();
     if (intervals.isPresent()) {
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(
@@ -171,7 +173,7 @@ public class HadoopIndexTask extends AbstractTask
     jobUrls.addAll(extensionURLs);
 
     System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(jobUrls));
-    boolean determineIntervals = !schema.getGranularitySpec().bucketIntervals().isPresent();
+    boolean determineIntervals = !schema.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
 
     final Class<?> determineConfigurationMainClass = loader.loadClass(HadoopDetermineConfigInnerProcessing.class.getName());
     final Method determineConfigurationMainMethod = determineConfigurationMainClass.getMethod(
@@ -187,7 +189,7 @@ public class HadoopIndexTask extends AbstractTask
 
     String config = (String) determineConfigurationMainMethod.invoke(null, new Object[]{determineConfigArgs});
     HadoopIngestionSchema indexerSchema = toolbox.getObjectMapper()
-                                                    .readValue(config, HadoopIngestionSchema.class);
+                                                 .readValue(config, HadoopIngestionSchema.class);
 
 
     // We should have a lock from before we started running only if interval was specified
@@ -195,7 +197,7 @@ public class HadoopIndexTask extends AbstractTask
     if (determineIntervals) {
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(
-              indexerSchema.getGranularitySpec().bucketIntervals().get()
+              indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get()
           )
       );
       TaskLock lock = toolbox.getTaskActionClient().submit(new LockAcquireAction(interval));
@@ -240,14 +242,14 @@ public class HadoopIndexTask extends AbstractTask
       String version = args[1];
 
       final HadoopIngestionSchema theSchema = HadoopDruidIndexerConfig.jsonMapper
-                                                                         .readValue(
-                                                                             schema,
-                                                                             HadoopIngestionSchema.class
-                                                                         );
-      final HadoopDruidIndexerConfig config =
-          new HadoopDruidIndexerConfigBuilder().withSchema(theSchema)
-                                               .withVersion(version)
-                                               .build();
+                                                                      .readValue(
+                                                                          schema,
+                                                                          HadoopIngestionSchema.class
+                                                                      );
+      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(
+          theSchema
+              .withDriverConfig(theSchema.getDriverConfig().withVersion(version))
+      );
 
       HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(config);
 
@@ -269,21 +271,21 @@ public class HadoopIndexTask extends AbstractTask
       final String segmentOutputPath = args[2];
 
       final HadoopIngestionSchema theSchema = HadoopDruidIndexerConfig.jsonMapper
-                                                                         .readValue(
-                                                                             schema,
-                                                                             HadoopIngestionSchema.class
-                                                                         );
-      final HadoopDruidIndexerConfig config =
-          new HadoopDruidIndexerConfigBuilder().withSchema(theSchema)
-                                               .withWorkingPath(workingPath)
-                                               .withSegmentOutputPath(segmentOutputPath)
-                                               .build();
+                                                                      .readValue(
+                                                                          schema,
+                                                                          HadoopIngestionSchema.class
+                                                                      );
+      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(
+          theSchema
+              .withIOConfig(theSchema.getIOConfig().withSegmentOutputPath(segmentOutputPath))
+              .withDriverConfig(theSchema.getDriverConfig().withWorkingPath(workingPath))
+      );
 
       Jobby job = new HadoopDruidDetermineConfigurationJob(config);
 
       log.info("Starting a hadoop index generator job...");
       if (job.run()) {
-        return HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(HadoopDruidIndexerConfigBuilder.toSchema(config));
+        return HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(config.getSchema());
       }
 
       return null;

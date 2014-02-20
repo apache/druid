@@ -28,6 +28,7 @@ import com.metamx.common.Granularity;
 import io.druid.data.input.impl.DataSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.ParseSpec;
+import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
@@ -146,10 +147,32 @@ public class HadoopIngestionSchema implements IngestionSchema
                                        ? new TimestampSpec(timestampColumn, timestampFormat)
                                        : timestampSpec;
       List<String> dimensionExclusions = Lists.newArrayList();
+
       dimensionExclusions.add(theTimestampSpec.getTimestampColumn());
-      for (AggregatorFactory aggregatorFactory : rollupSpec.getAggs()) {
-        dimensionExclusions.add(aggregatorFactory.getName());
+      if (rollupSpec != null) {
+        for (AggregatorFactory aggregatorFactory : rollupSpec.getAggs()) {
+          dimensionExclusions.add(aggregatorFactory.getName());
+        }
       }
+      //
+      //if (dataSpec.hasCustomDimensions()) {
+      //  dimensionExclusions = null;
+      //} else {
+      //  dimensionExclusions = Lists.newArrayList();
+      //  dimensionExclusions.add(theTimestampSpec.getTimestampColumn());
+      //  dimensionExclusions.addAll(
+      //      Lists.transform(
+      //          rollupSpec.getAggs(), new Function<AggregatorFactory, String>()
+      //      {
+      //        @Override
+      //        public String apply(AggregatorFactory aggregatorFactory)
+      //        {
+      //          return aggregatorFactory.getName();
+      //        }
+      //      }
+      //      )
+      //  );
+      //}
 
       PartitionsSpec thePartitionSpec;
       if (partitionsSpec != null) {
@@ -163,25 +186,6 @@ public class HadoopIngestionSchema implements IngestionSchema
         thePartitionSpec = new SingleDimensionPartitionsSpec(partitionDimension, targetPartitionSize, null, false);
       }
 
-      if (dataSpec.hasCustomDimensions()) {
-        dimensionExclusions = null;
-      } else {
-        dimensionExclusions = Lists.newArrayList();
-        dimensionExclusions.add(theTimestampSpec.getTimestampColumn());
-        dimensionExclusions.addAll(
-            Lists.transform(
-                rollupSpec.getAggs(), new Function<AggregatorFactory, String>()
-            {
-              @Override
-              public String apply(AggregatorFactory aggregatorFactory)
-              {
-                return aggregatorFactory.getName();
-              }
-            }
-            )
-        );
-      }
-
       GranularitySpec theGranularitySpec = null;
       if (granularitySpec != null) {
         Preconditions.checkArgument(
@@ -189,10 +193,18 @@ public class HadoopIngestionSchema implements IngestionSchema
             "Cannot mix granularitySpec with segmentGranularity/intervals"
         );
         theGranularitySpec = granularitySpec;
+        if (rollupSpec != null) {
+          theGranularitySpec = theGranularitySpec.withQueryGranularity(rollupSpec.rollupGranularity);
+        }
       } else {
         // Backwards compatibility
         if (segmentGranularity != null && intervals != null) {
-          theGranularitySpec = new UniformGranularitySpec(segmentGranularity, null, intervals, segmentGranularity);
+          theGranularitySpec = new UniformGranularitySpec(
+              segmentGranularity,
+              rollupSpec == null ? null : rollupSpec.rollupGranularity,
+              intervals,
+              segmentGranularity
+          );
         }
       }
 
@@ -202,16 +214,18 @@ public class HadoopIngestionSchema implements IngestionSchema
               new ParseSpec(
                   theTimestampSpec,
                   new DimensionsSpec(
-                      dataSpec.getDimensions(),
+                      dataSpec == null ? Lists.<String>newArrayList() : dataSpec.getDimensions(),
                       dimensionExclusions,
-                      dataSpec.getSpatialDimensions()
+                      dataSpec == null ? Lists.<SpatialDimensionSchema>newArrayList() : dataSpec.getSpatialDimensions()
                   )
               )
               {
               },
               null, null, null, null
           ),
-          rollupSpec.getAggs().toArray(new AggregatorFactory[rollupSpec.getAggs().size()]),
+          rollupSpec == null
+          ? new AggregatorFactory[]{}
+          : rollupSpec.getAggs().toArray(new AggregatorFactory[rollupSpec.getAggs().size()]),
           theGranularitySpec
       );
 
@@ -226,6 +240,7 @@ public class HadoopIngestionSchema implements IngestionSchema
           version,
           thePartitionSpec,
           shardSpecs,
+          rollupSpec == null ? 50000 : rollupSpec.rowFlushBoundary,
           leaveIntermediate,
           cleanupOnFailure,
           overwriteFiles,
@@ -255,12 +270,12 @@ public class HadoopIngestionSchema implements IngestionSchema
     return driverConfig;
   }
 
-  public HadoopIngestionSchema withDriverConfig(HadoopDriverConfig config)
+  public HadoopIngestionSchema withDataSchema(DataSchema schema)
   {
     return new HadoopIngestionSchema(
-        dataSchema,
+        schema,
         ioConfig,
-        config,
+        driverConfig,
         null,
         null,
         null,
@@ -286,12 +301,43 @@ public class HadoopIngestionSchema implements IngestionSchema
     );
   }
 
-  public HadoopIngestionSchema withDataSchema(DataSchema schema)
+  public HadoopIngestionSchema withIOConfig(HadoopIOConfig config)
   {
     return new HadoopIngestionSchema(
-        schema,
-        ioConfig,
+        dataSchema,
+        config,
         driverConfig,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        null,
+        false,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+  }
+
+  public HadoopIngestionSchema withDriverConfig(HadoopDriverConfig config)
+  {
+    return new HadoopIngestionSchema(
+        dataSchema,
+        ioConfig,
+        config,
         null,
         null,
         null,

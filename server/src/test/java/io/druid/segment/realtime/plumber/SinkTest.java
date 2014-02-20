@@ -27,12 +27,14 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.GranularitySpec;
+import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireHydrant;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Test;
 
 import java.util.List;
@@ -48,13 +50,13 @@ public class SinkTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new GranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE),
-        new NoneShardSpec()
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null, Granularity.HOUR)
     );
 
     final Interval interval = new Interval("2013-01-01/2013-01-02");
     final String version = new DateTime().toString();
-    final Sink sink = new Sink(interval, schema, version);
+    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(1, new Period("P1Y"), null);
+    final Sink sink = new Sink(interval, schema, driverConfig, version);
 
     sink.add(new InputRow()
     {

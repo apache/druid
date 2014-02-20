@@ -33,8 +33,8 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -254,9 +254,9 @@ public class IndexGeneratorJob implements Jobby
     protected void setup(Context context)
         throws IOException, InterruptedException
     {
-      config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+      config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
-      for (AggregatorFactory factory : config.getRollupSpec().getAggs()) {
+      for (AggregatorFactory factory : config.getSchema().getDataSchema().getAggregators()) {
         metricNames.add(factory.getName().toLowerCase());
       }
 
@@ -272,10 +272,8 @@ public class IndexGeneratorJob implements Jobby
       Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
 
       final Interval interval = config.getGranularitySpec().bucketInterval(bucket.time).get();
-      final DataRollupSpec rollupSpec = config.getRollupSpec();
-      final AggregatorFactory[] aggs = rollupSpec.getAggs().toArray(
-          new AggregatorFactory[rollupSpec.getAggs().size()]
-      );
+      //final DataRollupSpec rollupSpec = config.getRollupSpec();
+      final AggregatorFactory[] aggs = config.getSchema().getDataSchema().getAggregators();
 
       IncrementalIndex index = makeIncrementalIndex(bucket, aggs);
 
@@ -299,7 +297,7 @@ public class IndexGeneratorJob implements Jobby
         int numRows = index.add(inputRow);
         ++lineCount;
 
-        if (numRows >= rollupSpec.rowFlushBoundary) {
+        if (numRows >= config.getSchema().getDriverConfig().getRowFlushBoundary()) {
           log.info(
               "%,d lines to %,d rows in %,d millis",
               lineCount - runningTotalLineCount,
@@ -453,7 +451,7 @@ public class IndexGeneratorJob implements Jobby
       DataSegment segment = new DataSegment(
           config.getDataSource(),
           interval,
-          config.getVersion(),
+          config.getSchema().getDriverConfig().getVersion(),
           loadSpec,
           dimensionNames,
           metricNames,
@@ -612,11 +610,17 @@ public class IndexGeneratorJob implements Jobby
 
     private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs)
     {
+      List<SpatialDimensionSchema> spatialDimensionSchemas = config.getSchema().getDataSchema().getParser() == null
+                                                             ? Lists.<SpatialDimensionSchema>newArrayList()
+                                                             : config.getSchema().getDataSchema().getParser()
+                                                                     .getParseSpec()
+                                                                     .getDimensionsSpec()
+                                                                     .getSpatialDimensions();
       return new IncrementalIndex(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(theBucket.time.getMillis())
-              .withSpatialDimensions(config.getDataSpec().getSpatialDimensions())
-              .withQueryGranularity(config.getRollupSpec().getRollupGranularity())
+              .withSpatialDimensions(spatialDimensionSchemas)
+              .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
               .withMetrics(aggs)
               .build()
       );

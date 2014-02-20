@@ -40,13 +40,13 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.GranularitySpec;
+import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
-import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.easymock.EasyMock;
@@ -105,8 +105,7 @@ public class RealtimePlumberSchoolTest
           }
         },
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new GranularitySpec(Granularity.HOUR, QueryGranularity.NONE),
-        new NoneShardSpec()
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null, Granularity.HOUR)
     );
 
     RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
@@ -143,7 +142,9 @@ public class RealtimePlumberSchoolTest
     realtimePlumberSchool.setEmitter(emitter);
     realtimePlumberSchool.setQueryExecutorService(MoreExecutors.sameThreadExecutor());
 
-    plumber = realtimePlumberSchool.findPlumber(schema, new FireDepartmentMetrics());
+    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(1, new Period("P1Y"), null);
+
+    plumber = realtimePlumberSchool.findPlumber(schema, driverConfig, new FireDepartmentMetrics());
   }
 
   @After

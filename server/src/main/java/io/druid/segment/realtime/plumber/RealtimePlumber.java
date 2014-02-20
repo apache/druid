@@ -36,6 +36,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -73,6 +74,7 @@ public class RealtimePlumber implements Plumber
   private final File basePersistDirectory;
   private final Granularity segmentGranularity;
   private final DataSchema schema;
+  private final RealtimeDriverConfig config;
   private final FireDepartmentMetrics metrics;
   private final RejectionPolicy rejectionPolicy;
   private final ServiceEmitter emitter;
@@ -101,6 +103,7 @@ public class RealtimePlumber implements Plumber
       File basePersistDirectory,
       Granularity segmentGranularity,
       DataSchema schema,
+      RealtimeDriverConfig config,
       FireDepartmentMetrics metrics,
       RejectionPolicy rejectionPolicy,
       ServiceEmitter emitter,
@@ -118,6 +121,7 @@ public class RealtimePlumber implements Plumber
     this.basePersistDirectory = basePersistDirectory;
     this.segmentGranularity = segmentGranularity;
     this.schema = schema;
+    this.config = config;
     this.metrics = metrics;
     this.rejectionPolicy = rejectionPolicy;
     this.emitter = emitter;
@@ -134,6 +138,11 @@ public class RealtimePlumber implements Plumber
   public DataSchema getSchema()
   {
     return schema;
+  }
+
+  public RealtimeDriverConfig getConfig()
+  {
+    return config;
   }
 
   public Period getWindowPeriod()
@@ -188,7 +197,7 @@ public class RealtimePlumber implements Plumber
           segmentGranularity.increment(new DateTime(truncatedTime))
       );
 
-      retVal = new Sink(sinkInterval, schema, versioningPolicy.getVersion(sinkInterval));
+      retVal = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval));
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -516,7 +525,7 @@ public class RealtimePlumber implements Plumber
                           sinkInterval.getStart(),
                           sinkInterval.getEnd(),
                           versioningPolicy.getVersion(sinkInterval),
-                          schema.getShardSpec()
+                          config.getShardSpec()
                       ),
                       IndexIO.loadIndex(segmentDir)
                   ),
@@ -525,7 +534,7 @@ public class RealtimePlumber implements Plumber
           );
         }
 
-        Sink currSink = new Sink(sinkInterval, schema, versioningPolicy.getVersion(sinkInterval), hydrants);
+        Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants);
         sinks.put(sinkInterval.getStartMillis(), currSink);
         sinkTimeline.add(
             currSink.getInterval(),
@@ -570,7 +579,7 @@ public class RealtimePlumber implements Plumber
                 String.format(
                     "%s-overseer-%d",
                     schema.getDataSource(),
-                    schema.getShardSpec().getPartitionNum()
+                    config.getShardSpec().getPartitionNum()
                 )
             )
             {

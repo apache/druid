@@ -45,7 +45,7 @@ public class DbUpdaterJob implements Jobby
   )
   {
     this.config = config;
-    this.dbi = new DbConnector(config.getUpdaterJobSpec(), null).getDBI();
+    this.dbi = new DbConnector(config.getSchema().getIOConfig().getMetadataUpdateSpec(), null).getDBI();
   }
 
   @Override
@@ -63,7 +63,7 @@ public class DbUpdaterJob implements Jobby
                 String.format(
                     "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                    config.getUpdaterJobSpec().getSegmentTable()
+                    config.getSchema().getIOConfig().getMetadataUpdateSpec().getSegmentTable()
                 )
             );
             for (final DataSegment segment : segments) {

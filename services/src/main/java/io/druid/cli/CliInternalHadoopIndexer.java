@@ -24,7 +24,6 @@ import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.indexer.HadoopDruidIndexerConfigBuilder;
 import io.druid.indexer.HadoopDruidIndexerJob;
 
 import java.io.File;
@@ -58,9 +57,9 @@ public class CliInternalHadoopIndexer implements Runnable
   {
     try {
       if (argumentSpec.startsWith("{")) {
-        return HadoopDruidIndexerConfigBuilder.fromString(argumentSpec);
+        return HadoopDruidIndexerConfig.fromString(argumentSpec);
       } else {
-        return HadoopDruidIndexerConfigBuilder.fromFile(new File(argumentSpec));
+        return HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
       }
     }
     catch (Exception e) {

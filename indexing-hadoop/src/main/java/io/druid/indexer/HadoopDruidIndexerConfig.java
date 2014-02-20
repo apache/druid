@@ -21,6 +21,7 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -33,21 +34,16 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.DataSpec;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
-import io.druid.indexer.rollup.DataRollupSpec;
-import io.druid.indexer.updater.DbUpdaterJobSpec;
 import io.druid.initialization.Initialization;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.server.DruidNode;
@@ -62,6 +58,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.ISODateTimeFormat;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -106,73 +103,107 @@ public class HadoopDruidIndexerConfig
     INVALID_ROW_COUNTER
   }
 
+  public static HadoopDruidIndexerConfig fromSchema(HadoopIngestionSchema schema)
+  {
+    return new HadoopDruidIndexerConfig(schema);
+  }
+
+  public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
+  {
+    return new HadoopDruidIndexerConfig(
+        HadoopDruidIndexerConfig.jsonMapper
+                                .convertValue(argSpec, HadoopIngestionSchema.class)
+    );
+  }
+
+  @SuppressWarnings("unchecked")
+  public static HadoopDruidIndexerConfig fromFile(File file)
+  {
+    try {
+      return fromMap(
+          (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
+              file, new TypeReference<Map<String, Object>>()
+          {
+          }
+          )
+      );
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public static HadoopDruidIndexerConfig fromString(String str)
+  {
+    try {
+      return fromMap(
+          (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
+              str, new TypeReference<Map<String, Object>>()
+          {
+          }
+          )
+      );
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public static HadoopDruidIndexerConfig fromConfiguration(Configuration conf)
+  {
+    final HadoopDruidIndexerConfig retVal = fromString(conf.get(HadoopDruidIndexerConfig.CONFIG_PROPERTY));
+    retVal.verify();
+    return retVal;
+  }
+
   private volatile HadoopIngestionSchema schema;
   private volatile PathSpec pathSpec;
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
-      final @JsonProperty("schema") HadoopIngestionSchema schema,
-      // Backwards compatibility
-      final @JsonProperty("dataSource") String dataSource,
-      final @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
-      final @JsonProperty("dataSpec") DataSpec dataSpec,
-      final @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
-      final @JsonProperty("pathSpec") Map<String, Object> pathSpec,
-      final @JsonProperty("workingPath") String workingPath,
-      final @JsonProperty("segmentOutputPath") String segmentOutputPath,
-      final @JsonProperty("version") String version,
-      final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
-      final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
-      final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
-      final @JsonProperty("shardSpecs") Map<DateTime, List<HadoopyShardSpec>> shardSpecs,
-      final @JsonProperty("overwriteFiles") boolean overwriteFiles,
-      final @JsonProperty("rollupSpec") DataRollupSpec rollupSpec,
-      final @JsonProperty("updaterJobSpec") DbUpdaterJobSpec updaterJobSpec,
-      final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
-      // These fields are deprecated and will be removed in the future
-      final @JsonProperty("timestampColumn") String timestampColumn,
-      final @JsonProperty("timestampFormat") String timestampFormat,
-      final @JsonProperty("intervals") List<Interval> intervals,
-      final @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      final @JsonProperty("partitionDimension") String partitionDimension,
-      final @JsonProperty("targetPartitionSize") Long targetPartitionSize
+      final @JsonProperty("schema") HadoopIngestionSchema schema
   )
   {
-    if (schema != null) {
-      this.schema = schema;
-    } else {
-      this.schema = HadoopIngestionSchema.convertLegacy(
-          dataSource,
-          timestampSpec,
-          dataSpec,
-          granularitySpec,
-          pathSpec,
-          workingPath,
-          segmentOutputPath,
-          version,
-          partitionsSpec,
-          leaveIntermediate,
-          cleanupOnFailure,
-          shardSpecs,
-          overwriteFiles,
-          rollupSpec,
-          updaterJobSpec,
-          ignoreInvalidRows,
-          timestampColumn,
-          timestampFormat,
-          intervals,
-          segmentGranularity,
-          partitionDimension,
-          targetPartitionSize
-      );
-    }
+    this.schema = schema;
     this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
+  }
+
+  @JsonProperty
+  public HadoopIngestionSchema getSchema()
+  {
+    return schema;
+  }
+
+  public String getDataSource()
+  {
+    return schema.getDataSchema().getDataSource();
+  }
+
+  public GranularitySpec getGranularitySpec()
+  {
+    return schema.getDataSchema().getGranularitySpec();
   }
 
   public void setGranularitySpec(GranularitySpec granularitySpec)
   {
     this.schema = schema.withDataSchema(schema.getDataSchema().withGranularitySpec(granularitySpec));
     this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
+  }
+
+  public PartitionsSpec getPartitionsSpec()
+  {
+    return schema.getDriverConfig().getPartitionsSpec();
+  }
+
+  public boolean isOverwriteFiles()
+  {
+    return schema.getDriverConfig().isOverwriteFiles();
+  }
+
+  public boolean isIgnoreInvalidRows()
+  {
+    return schema.getDriverConfig().isIgnoreInvalidRows();
   }
 
   public void setVersion(String version)

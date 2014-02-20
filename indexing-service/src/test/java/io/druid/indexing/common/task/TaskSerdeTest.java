@@ -54,7 +54,12 @@ public class TaskSerdeTest
     final IndexTask task = new IndexTask(
         null,
         "foo",
-        new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P2D"))),
+        new UniformGranularitySpec(
+            Granularity.DAY,
+            null,
+            ImmutableList.of(new Interval("2010-01-01/P2D")),
+            Granularity.DAY
+        ),
         null,
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
@@ -354,10 +359,16 @@ public class TaskSerdeTest
     final HadoopIndexTask task = new HadoopIndexTask(
         null,
         new HadoopIngestionSchema(
+            null, null, null,
             "foo",
             new TimestampSpec("timestamp", "auto"),
             new JSONDataSpec(ImmutableList.of("foo"), null),
-            new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P1D"))),
+            new UniformGranularitySpec(
+                Granularity.DAY,
+                null,
+                ImmutableList.of(new Interval("2010-01-01/P1D")),
+                Granularity.DAY
+            ),
             ImmutableMap.<String, Object>of("paths", "bar"),
             null,
             null,
@@ -370,6 +381,10 @@ public class TaskSerdeTest
             new DataRollupSpec(ImmutableList.<AggregatorFactory>of(), QueryGranularity.NONE),
             null,
             false,
+            null,
+            null,
+            null,
+            null,
             null,
             null
         ),

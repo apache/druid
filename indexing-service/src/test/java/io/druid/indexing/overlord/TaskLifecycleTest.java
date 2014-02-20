@@ -163,7 +163,8 @@ public class TaskLifecycleTest
         new DataSegmentMover()
         {
           @Override
-          public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+          public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec)
+              throws SegmentLoadingException
           {
             return dataSegment;
           }
@@ -223,7 +224,12 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         "foo",
-        new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P2D"))),
+        new UniformGranularitySpec(
+            Granularity.DAY,
+            null,
+            ImmutableList.of(new Interval("2010-01-01/P2D")),
+            Granularity.DAY
+        ),
         null,
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
@@ -278,7 +284,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         "foo",
-        new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P1D"))),
+        new UniformGranularitySpec(Granularity.DAY, null, ImmutableList.of(new Interval("2010-01-01/P1D")), Granularity.DAY),
         null,
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,

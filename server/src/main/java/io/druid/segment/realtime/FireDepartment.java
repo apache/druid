@@ -129,7 +129,7 @@ public class FireDepartment implements IngestionSchema
 
   public Plumber findPlumber()
   {
-    return ioConfig.getPlumberSchool().findPlumber(dataSchema, metrics);
+    return ioConfig.getPlumberSchool().findPlumber(dataSchema, driverConfig, metrics);
   }
 
   public Firehose connect() throws IOException

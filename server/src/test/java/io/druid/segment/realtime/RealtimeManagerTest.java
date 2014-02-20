@@ -34,13 +34,12 @@ import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.GranularitySpec;
 import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
-import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.utils.Runnables;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
@@ -74,8 +73,7 @@ public class RealtimeManagerTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new GranularitySpec(Granularity.HOUR, QueryGranularity.NONE),
-        new NoneShardSpec()
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null, Granularity.HOUR)
     );
     RealtimeIOConfig ioConfig = new RealtimeIOConfig(
         new FirehoseFactory()
@@ -96,7 +94,7 @@ public class RealtimeManagerTest
         {
           @Override
           public Plumber findPlumber(
-              DataSchema schema, FireDepartmentMetrics metrics
+              DataSchema schema, RealtimeDriverConfig config, FireDepartmentMetrics metrics
           )
           {
             return plumber;
@@ -109,14 +107,15 @@ public class RealtimeManagerTest
           }
         }
     );
-    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, new DateTime().toString()));
+    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(1, new Period("P1Y"), null);
+    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, driverConfig, new DateTime().toString()));
 
     realtimeManager = new RealtimeManager(
         Arrays.<FireDepartment>asList(
             new FireDepartment(
                 schema,
                 ioConfig,
-                new RealtimeDriverConfig(1, new Period("P1Y")),
+                driverConfig,
                 null, null, null, null
             )
         ),
