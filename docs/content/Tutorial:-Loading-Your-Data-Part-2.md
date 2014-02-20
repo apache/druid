@@ -207,7 +207,7 @@ Batch Ingestion
 ---------------
 Druid is designed for large data volumes, and most real-world data sets require batch indexing be done through a Hadoop job.
 
-The setup for a single node, 'standalone' Hadoop cluster is available [here](http://hadoop.apache.org/docs/stable/single_node_setup.html).
+The setup for a single node, 'standalone' Hadoop cluster is available [here](http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html).
 
 For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Your-Data-Part-1), but we are going to use Hadoop here for demonstration purposes.
 
