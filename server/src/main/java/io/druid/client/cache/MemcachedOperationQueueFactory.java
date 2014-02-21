@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,35 +17,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.cli;
+package io.druid.client.cache;
 
-import com.google.common.collect.ImmutableList;
-import com.metamx.common.logger.Logger;
-import io.airlift.command.Command;
-import io.druid.guice.RealtimeModule;
+import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.OperationQueueFactory;
 
-import java.util.List;
+import java.util.concurrent.BlockingQueue;
 
-/**
- */
-@Command(
-    name = "realtime",
-    description = "Runs a realtime node, see http://druid.io/docs/0.6.61/Realtime.html for a description"
-)
-public class CliRealtime extends ServerRunnable
+public class MemcachedOperationQueueFactory implements OperationQueueFactory
 {
-  private static final Logger log = new Logger(CliRealtime.class);
+  public final long maxQueueSize;
 
-  public CliRealtime()
+  public MemcachedOperationQueueFactory(long maxQueueSize)
   {
-    super(log);
+    this.maxQueueSize = maxQueueSize;
   }
 
   @Override
-  protected List<Object> getModules()
+  public BlockingQueue<Operation> create()
   {
-    return ImmutableList.<Object>of(
-        new RealtimeModule()
-    );
+    return new BytesBoundedLinkedQueue<Operation>(maxQueueSize)
+    {
+      @Override
+      public long getBytesSize(Operation operation)
+      {
+        return operation.getBuffer().remaining();
+      }
+    };
   }
 }

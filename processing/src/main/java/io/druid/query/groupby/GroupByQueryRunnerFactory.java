@@ -30,8 +30,8 @@ import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.Row;
-import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.ConcatQueryRunner;
+import io.druid.query.GroupByParallelQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -116,9 +116,8 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
               }
           )
       );
-    }
-    else {
-      return new ChainedExecutionQueryRunner<Row>(queryExecutor, new RowOrdering(), queryRunners);
+    } else {
+      return new GroupByParallelQueryRunner(queryExecutor, new RowOrdering(), config, queryRunners);
     }
   }
 
@@ -142,7 +141,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     @Override
     public Sequence<Row> run(Query<Row> input)
     {
-      if (! (input instanceof GroupByQuery)) {
+      if (!(input instanceof GroupByQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
       }
 
