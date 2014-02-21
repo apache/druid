@@ -14,6 +14,8 @@ Before we start digging into how to query Druid, make sure you've gone through t
 
 Let's start up a simple Druid cluster so we can query all the things.
 
+Note: If Zookeeper and MySQL aren't running, you'll have to start them again as described in [The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html).
+
 To start a Coordinator node:
 
 ```bash
