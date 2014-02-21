@@ -928,11 +928,46 @@ inverted indices to perform fast filters are also used in other data
 stores \cite{macnicol2004sybase}.
 
 \section{Druid in Production}
-Druid is run in production at several organizations and is often part of a more
-sophisticated data analytics stack. We've made multiple design decisions to
-allow for ease of usability, deployment, and monitoring.
+Over the last few years of using Druid, we've gained tremendous
+knowledge about handling production workloads, setting up correct operational
+monitoring, integrating Druid with other products as part of a more
+sophisticated data analytics stack, and distributing data to handle entire data
+center outages. One of the most important lessons we've learned is that no
+amount of testing can accurately simulate a production environment, and failures
+will occur for every imaginable and unimaginable reason. Interestingly, most of
+our most severe crashes were due to misunderstanding the impacts a
+seemingly small feature would have on the overall system. 
+
+Some of our more interesting observations include:
+\begin{itemize}
+\item Druid is most often used in production to power exploratory dashboards.
+Interestingly, because many users of explatory dashboards are not from
+technical backgrounds, they often issue queries without understanding the
+impacts to the underlying system. For example, some users become impatient that
+their queries for terabytes of data do not return in milliseconds and
+continously refresh their dashboard view, generating heavy load to Druid. This
+type of usage forced Druid to better defend itself against expensive repetitive
+queries.
+
+\item Cluster query performance benefits from multitenancy. Hosting every
+production datasource in the same cluster leads to better data parallelization
+as additional nodes are added.
+
+\item Even if you provide users with the ability to arbitrarily explore data, they
+often only have a few questions in mind. Caching is extremely important, and in
+fact we see a very high percentage of our query results come from the broker cache.
+
+\item When using a memory mapped storage engine, even a small amount of paging
+data from disk can severely impact query performance. SSDs can greatly solve
+this problem.
+
+\item Leveraging approximate algorithms can greatly reduce data storage costs and
+improve query performance. Many users do not care about exact answers to their
+questions and are comfortable with a few percentage points of error. 
+\end{itemize}
 
 \subsection{Operational Monitoring}
+Proper monitoring is critical to run a large scale distributed cluster.
 Each Druid node is designed to periodically emit a set of operational metrics.
 These metrics may include system level data such as CPU usage, available
 memory, and disk capacity, JVM statistics such as garbage collection time, and
@@ -948,11 +983,10 @@ cluster has allowed us to find numerous production problems, such as gradual
 query speed degregations, less than optimally tuned hardware, and various other
 system bottlenecks. We also use a metrics cluster to analyze what queries are
 made in production. This analysis allows us to determine what our users are
-most often doing and we use this information to drive what optimizations we
-should implement.
+most often doing and we use this information to drive our road map.
 
 \subsection{Pairing Druid with a Stream Processor}
-As the time of writing, Druid can only understand fully denormalized data
+At the time of writing, Druid can only understand fully denormalized data
 streams. In order to provide full business logic in production, Druid can be
 paired with a stream processor such as Apache Storm \cite{marz2013storm}. A
 Storm topology consumes events from a data stream, retains only those that are
@@ -978,11 +1012,14 @@ be desired if one data center is situated much closer to users.
 In this paper, we presented Druid, a distributed, column-oriented, real-time
 analytical data store. Druid is designed to power high performance applications
 and is optimized for low query latencies. Druid supports streaming data
-ingestion and is fault-tolerant. We discussed how Druid was able to
-scan 27 billion rows in a second. We summarized key architecture aspects such
-as the storage format, query language, and general execution. In the future, we
-plan to cover the different algorithms we’ve developed for Druid and how other
-systems may plug into Druid in greater detail.
+ingestion and is fault-tolerant. We discussed how Druid benchmarks and
+summarized key architecture aspects such
+as the storage format, query language, and general execution.
+
+In the future, we plan to extend the Druid query language to support full SQL.
+Doing so will require joins, a feature we've held off on implementing because
+we do our joins at the data processing layer. We are also interested in
+exploring more flexible data ingestion and support for less structured data.
 
 \balance
 
