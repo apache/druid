@@ -76,12 +76,13 @@ could be fully leveraged for our requirements.
 
 We ended up creating Druid, an open-source, distributed, column-oriented,
 realtime analytical data store.  In many ways, Druid shares similarities with
-other interactive query systems \cite{melnik2010dremel}, main-memory databases
-\cite{farber2012sap}, and widely-known distributed data stores such as BigTable
-\cite{chang2008bigtable}, Dynamo \cite{decandia2007dynamo}, and Cassandra
-\cite{lakshman2010cassandra}.  The distribution and query model also
-borrow ideas from current generation search infrastructure
-\cite{linkedin2013senseidb, apache2013solr, banon2013elasticsearch}.
+other OLAP systems \cite{oehler2012ibm, schrader2009oracle, lachev2005applied},
+interactive query systems \cite{melnik2010dremel}, main-memory databases
+\cite{farber2012sap}, and widely-known distributed data stores
+\cite{chang2008bigtable, decandia2007dynamo, lakshman2010cassandra}.  The
+distribution and query model also borrow ideas from current generation search
+infrastructure \cite{linkedin2013senseidb, apache2013solr,
+banon2013elasticsearch}.
 
 This paper describes the architecture of Druid, explores the various design
 decisions made in creating an always-on production system that powers a hosted
@@ -202,13 +203,14 @@ Zookeeper.
 Real-time nodes maintain an in-memory index buffer for all incoming events.
 These indexes are incrementally populated as new events are ingested and the
 indexes are also directly queryable.  Druid virtually behaves as a row store
-for queries on events that exist in this JVM heap-based buffer. To avoid heap overflow
-problems, real-time nodes persist their in-memory indexes to disk either
-periodically or after some maximum row limit is reached. This persist process
-converts data stored in the in-memory buffer to a column oriented storage
-format described in Section \ref{sec:storage-format}. Each persisted index is immutable and
-real-time nodes load persisted indexes into off-heap memory such that they can
-still be queried. Figure~\ref{fig:realtime_flow} illustrates the process.
+for queries on events that exist in this JVM heap-based buffer. To avoid heap
+overflow problems, real-time nodes persist their in-memory indexes to disk
+either periodically or after some maximum row limit is reached. This persist
+process converts data stored in the in-memory buffer to a column oriented
+storage format described in Section \ref{sec:storage-format}. Each persisted
+index is immutable and real-time nodes load persisted indexes into off-heap
+memory such that they can still be queried. This process is described in detail
+in \cite{o1996log} and is illustrated in Figure~\ref{fig:realtime_flow}.
 
 \begin{figure} 
 \centering 
@@ -602,20 +604,22 @@ the two arrays.
 \end{figure}
 
 This approach of performing Boolean operations on large bitmap sets is commonly
-used in search engines. Bitmap compression algorithms are a well-defined area
-of research and often utilize run-length encoding. Popular algorithms include
-Byte-aligned Bitmap Code \cite{antoshenkov1995byte}, Word-Aligned Hybrid (WAH)
-code \cite{wu2006optimizing}, and Partitioned Word-Aligned Hybrid (PWAH)
-compression \cite{van2011memory}. Druid opted to use the Concise algorithm
-\cite{colantonio2010concise} as it can outperform WAH by reducing the size of
-the compressed bitmaps by up to 50\%.  Figure~\ref{fig:concise_plot}
-illustrates the number of bytes using Concise compression versus using an
-integer array. The results were generated on a cc2.8xlarge system with a single
-thread, 2G heap, 512m young gen, and a forced GC between each run. The data set
-is a single day’s worth of data collected from the Twitter garden hose
-\cite{twitter2013} data stream. The data set contains 2,272,295 rows and 12
-dimensions of varying cardinality. As an additional comparison, we also
-resorted the data set rows to maximize compression.
+used in search engines. Bitmap indices for OLAP workloads is described in
+detail in \cite{o1997improved}. Bitmap compression algorithms are a
+well-defined area of research and often utilize run-length encoding. Popular
+algorithms include Byte-aligned Bitmap Code \cite{antoshenkov1995byte},
+Word-Aligned Hybrid (WAH) code \cite{wu2006optimizing}, and Partitioned
+Word-Aligned Hybrid (PWAH) compression \cite{van2011memory}. Druid opted to use
+the Concise algorithm \cite{colantonio2010concise} as it can outperform WAH by
+reducing the size of the compressed bitmaps by up to 50\%.
+Figure~\ref{fig:concise_plot} illustrates the number of bytes using Concise
+compression versus using an integer array. The results were generated on a
+cc2.8xlarge system with a single thread, 2G heap, 512m young gen, and a forced
+GC between each run. The data set is a single day’s worth of data collected
+from the Twitter garden hose \cite{twitter2013} data stream. The data set
+contains 2,272,295 rows and 12 dimensions of varying cardinality. As an
+additional comparison, we also resorted the data set rows to maximize
+compression.
 
 In the unsorted case, the total Concise size was 53,451,144 bytes and the total
 integer array size was 127,248,520 bytes. Overall, Concise compressed sets are
@@ -887,7 +891,7 @@ algorithms mentioned in PowerDrill.
 
 Although Druid builds on many of the same principles as other distributed
 columnar data stores \cite{fink2012distributed}, many of these data stores are
-designed to be more generic key-value stores \cite{stonebraker2005c} and do not
+designed to be more generic key-value stores \cite{lakshman2010cassandra} and do not
 support computation directly in the storage layer.  There are also other data
 stores designed for some of the same of the data warehousing issues that Druid
 is meant to solve. These systems include include in-memory databases such as
@@ -895,6 +899,13 @@ SAP’s HANA \cite{farber2012sap} and VoltDB \cite{voltdb2010voltdb}. These data
 stores lack Druid's low latency ingestion characteristics. Druid also has
 native analytical features baked in, similar to \cite{paraccel2013}, however,
 Druid allows system wide rolling software updates with no downtime.  
+
+Druid is similiar to \cite{stonebraker2005c, cipar2012lazybase} in that it has
+two subsystems, a read-optimized subsystem in the historical nodes and a
+write-optimized subsystem in real-time nodes. Real-time nodes are designed to
+ingest a high volume of append heavy data, and do not support data updates.
+Unlike the two aforementioned systems, Druid is meant for OLAP transactions and
+not OLTP transactions.
 
 Druid's low latency data ingestion features share some similarities with
 Trident/Storm \cite{marz2013storm} and Streaming Spark
@@ -916,7 +927,53 @@ of functionality as Druid, some of Druid’s optimization techniques such as usi
 inverted indices to perform fast filters are also used in other data
 stores \cite{macnicol2004sybase}.
 
-\section{Conclusions}
+\section{Druid in Production}
+Druid is run in production at several organizations and is often part of a more
+sophisticated data analytics stack. We've made multiple design decisions to
+allow for ease of usability, deployment, and monitoring.
+
+\subsection{Operational Monitoring}
+Each Druid node is designed to periodically emit a set of operational metrics.
+These metrics may include system level data such as CPU usage, available
+memory, and disk capacity, JVM statistics such as garbage collection time, and
+heap usage, or node specific metrics such as segment scan time, cache
+hit rates, and data ingestion latencies. For each query, Druid nodes can also
+emit metrics about the details of the query such as the number of filters
+applied, or the interval of data requested.
+
+Metrics can be emitted from a production Druid cluster into a dedicated metrics
+Druid cluster. Queries can be made to the metrics Druid cluster to explore
+production cluster performance and stability. Leveraging a dedicated metrics
+cluster has allowed us to find numerous production problems, such as gradual
+query speed degregations, less than optimally tuned hardware, and various other
+system bottlenecks. We also use a metrics cluster to analyze what queries are
+made in production. This analysis allows us to determine what our users are
+most often doing and we use this information to drive what optimizations we
+should implement.
+
+\subsection{Pairing Druid with a Stream Processor}
+As the time of writing, Druid can only understand fully denormalized data
+streams. In order to provide full business logic in production, Druid can be
+paired with a stream processor such as Apache Storm \cite{marz2013storm}. A
+Storm topology consumes events from a data stream, retains only those that are
+“on-time”, and applies any relevant business logic. This could range from
+simple transformations, such as id to name lookups, up to complex operations
+such as multi-stream joins. The Storm topology forwards the processed event
+stream to Druid in real-time. Storm handles the streaming data processing work,
+and Druid is used for responding to queries on top of both real-time and
+historical data. 
+
+\subsection{Multiple Data Center Distribution}
+Large scale production outages may not only affect single nodes, but entire
+data centers as well. The tier configuration in Druid coordinator nodes allow
+for segments to be replicated across multiple tiers. Hence, segments can be
+exactly replicated across historical nodes in multiple data centers.
+Similarily, query preference can be assigned to different tiers. It is possible
+to have nodes in one data center act as a primary cluster (and recieve all
+queries) and have a redundant cluster in another data center. Such a setup may
+be desired if one data center is situated much closer to users. 
+
+\section{Conclusions and Future Work}
 \label{sec:conclusions}
 In this paper, we presented Druid, a distributed, column-oriented, real-time
 analytical data store. Druid is designed to power high performance applications

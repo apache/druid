@@ -24,10 +24,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.ConcatSequence;
 import com.metamx.common.guava.Sequence;
@@ -35,21 +34,16 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.data.input.Rows;
-import io.druid.granularity.QueryGranularity;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
-import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -61,7 +55,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   };
   private static final String GROUP_BY_MERGE_KEY = "groupByMerge";
   private static final Map<String, String> NO_MERGE_CONTEXT = ImmutableMap.of(GROUP_BY_MERGE_KEY, "false");
-
   private final Supplier<GroupByQueryConfig> configSupplier;
 
   @Inject
@@ -92,60 +85,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
   {
     final GroupByQueryConfig config = configSupplier.get();
-    final QueryGranularity gran = query.getGranularity();
-    final long timeStart = query.getIntervals().get(0).getStartMillis();
-
-    // use gran.iterable instead of gran.truncate so that
-    // AllGranularity returns timeStart instead of Long.MIN_VALUE
-    final long granTimeStart = gran.iterable(timeStart, timeStart + 1).iterator().next();
-
-    final List<AggregatorFactory> aggs = Lists.transform(
-        query.getAggregatorSpecs(),
-        new Function<AggregatorFactory, AggregatorFactory>()
-        {
-          @Override
-          public AggregatorFactory apply(@Nullable AggregatorFactory input)
-          {
-            return input.getCombiningFactory();
-          }
-        }
-    );
-    final List<String> dimensions = Lists.transform(
-        query.getDimensions(),
-        new Function<DimensionSpec, String>()
-        {
-          @Override
-          public String apply(@Nullable DimensionSpec input)
-          {
-            return input.getOutputName();
-          }
-        }
+    Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
+        query,
+        config
     );
 
-    final IncrementalIndex index = runner.run(query).accumulate(
-        new IncrementalIndex(
-            // use granularity truncated min timestamp
-            // since incoming truncated timestamps may precede timeStart
-            granTimeStart,
-            gran,
-            aggs.toArray(new AggregatorFactory[aggs.size()])
-        ),
-        new Accumulator<IncrementalIndex, Row>()
-        {
-          @Override
-          public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
-          {
-            if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions)) > config.getMaxResults()) {
-              throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
-            }
-
-            return accumulated;
-          }
-        }
-    );
-
-    // convert millis back to timestamp according to granularity to preserve time zone information
-    Sequence<Row> retVal = Sequences.map(
+    IncrementalIndex index = runner.run(query).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+    Sequence<Row> sequence = Sequences.map(
         Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
         new Function<Row, Row>()
         {
@@ -153,12 +99,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           public Row apply(Row input)
           {
             final MapBasedRow row = (MapBasedRow) input;
-            return new MapBasedRow(gran.toDateTime(row.getTimestampFromEpoch()), row.getEvent());
+            return new MapBasedRow(
+                query.getGranularity()
+                     .toDateTime(row.getTimestampFromEpoch()),
+                row.getEvent()
+            );
           }
         }
     );
-
-    return query.applyLimit(retVal);
+    return query.applyLimit(sequence);
   }
 
   @Override
