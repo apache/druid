@@ -34,6 +34,7 @@ import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.List;
 
 public class HllPlusComplexMetricSerde extends ComplexMetricSerde
@@ -104,14 +105,14 @@ public class HllPlusComplexMetricSerde extends ComplexMetricSerde
     public HyperLogLogPlus fromByteBuffer(ByteBuffer buffer, int numBytes)
     {
       buffer.limit(buffer.position() + numBytes);
-      return new HyperLogLogPlus(buffer);
+      return new HyperLogLogPlus(buffer.order(ByteOrder.nativeOrder()));
     }
 
     @Override
     public byte[] toBytes(HyperLogLogPlus val)
     {
       byte[] retVal = new byte[val.sizeof()];
-      val.getBuffer().duplicate().get(retVal);
+      val.getBuffer().duplicate().order(ByteOrder.nativeOrder()).get(retVal);
       return retVal;
     }
 
