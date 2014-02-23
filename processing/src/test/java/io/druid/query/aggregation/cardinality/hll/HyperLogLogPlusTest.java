@@ -16,6 +16,7 @@ package io.druid.query.aggregation.cardinality.hll;
  * limitations under the License.
  */
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -181,9 +182,11 @@ public class HyperLogLogPlusTest
     hll.offer(1);
     hll.offer(2);
     HyperLogLogPlus anotherHll = hll.mutableCopy();
-    assert hll.cardinality() == anotherHll.cardinality();
+    Assert.assertEquals(hll.cardinality(), anotherHll.cardinality());
 
     anotherHll.offer(3);
-    assert anotherHll.cardinality() == new HyperLogLogPlus(anotherHll.getBuffer()).cardinality();
+    Assert.assertEquals(anotherHll.cardinality(), new HyperLogLogPlus(anotherHll.getBuffer()).cardinality());
+
+    Assert.assertEquals(anotherHll.cardinality(), new HyperLogLogPlus(anotherHll.getBuffer().duplicate()).cardinality());
   }
 }

@@ -23,6 +23,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -158,7 +159,7 @@ public class HyperLogLogPlus
    * @param p - the precision value for the normal set
    */
   public HyperLogLogPlus(int p) {
-    this(ByteBuffer.allocate(4 + numRegisterBytes[p]).putInt(0, p));
+    this(ByteBuffer.allocate(4 + numRegisterBytes[p]).order(ByteOrder.nativeOrder()).putInt(0, p));
   }
 
 
@@ -320,11 +321,11 @@ public class HyperLogLogPlus
   }
 
   public ByteBuffer getBuffer() {
-    return theBuffer.asReadOnlyBuffer();
+    return theBuffer.asReadOnlyBuffer().order(theBuffer.order());
   }
 
   public HyperLogLogPlus mutableCopy() {
-    return mutableCopy(ByteBuffer.allocate(theBuffer.remaining()));
+    return mutableCopy(ByteBuffer.allocate(theBuffer.remaining()).order(theBuffer.order()));
   }
 
   public HyperLogLogPlus mutableCopy(ByteBuffer bufToUse) {
