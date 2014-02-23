@@ -186,7 +186,5 @@ public class HyperLogLogPlusTest
 
     anotherHll.offer(3);
     Assert.assertEquals(anotherHll.cardinality(), new HyperLogLogPlus(anotherHll.getBuffer()).cardinality());
-
-    Assert.assertEquals(anotherHll.cardinality(), new HyperLogLogPlus(anotherHll.getBuffer().duplicate()).cardinality());
   }
 }
