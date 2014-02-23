@@ -20,6 +20,7 @@ import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Comparator;
 import java.util.List;
 
@@ -108,8 +109,10 @@ public class DimensionCardinalityAggregatorFactory implements AggregatorFactory
         retVal.addAll(rightHll);
         return retVal;
       }
-      rightHll.addAll(leftHll);
-      return rightHll;
+      else {
+        rightHll.addAll(leftHll);
+        return rightHll;
+      }
     }
     leftHll.addAll(rightHll);
     return leftHll;
@@ -131,11 +134,14 @@ public class DimensionCardinalityAggregatorFactory implements AggregatorFactory
     else if (object instanceof byte[]) {
       bytes = (byte[]) object;
     }
+    else if (object instanceof HyperLogLogPlus) {
+      return object;
+    }
     else {
       throw new ISE("Cannot deserialize class[%s]", object.getClass());
     }
 
-    return new HyperLogLogPlus(ByteBuffer.wrap(bytes));
+    return new HyperLogLogPlus(ByteBuffer.wrap(bytes).order(ByteOrder.nativeOrder()));
   }
 
   @Override
