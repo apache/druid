@@ -5,6 +5,7 @@ import io.druid.query.aggregation.cardinality.hll.HyperLogLogPlus;
 import io.druid.segment.ObjectColumnSelector;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  *
@@ -46,7 +47,7 @@ public class DimensionCardinalityBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    ByteBuffer duplicate = buf.duplicate().order(buf.order());
+    ByteBuffer duplicate = buf.duplicate().order(ByteOrder.nativeOrder());
     duplicate.position(position);
     return new HyperLogLogPlus(duplicate);
   }
