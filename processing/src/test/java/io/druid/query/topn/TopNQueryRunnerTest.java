@@ -818,7 +818,7 @@ public class TopNQueryRunnerTest
         .build();
 
     final ArrayList<Result<TopNResultValue>> expectedResults = Lists.newArrayList(
-        new Result<TopNResultValue>(
+        new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -860,7 +860,7 @@ public class TopNQueryRunnerTest
         .build();
 
     final ArrayList<Result<TopNResultValue>> expectedResults = Lists.newArrayList(
-        new Result<TopNResultValue>(
+        new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -998,7 +998,7 @@ public class TopNQueryRunnerTest
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
-        new Result<TopNResultValue>(
+        new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1065,7 +1065,7 @@ public class TopNQueryRunnerTest
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
-        new Result<TopNResultValue>(
+        new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1113,7 +1113,7 @@ public class TopNQueryRunnerTest
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
-        new Result<TopNResultValue>(
+        new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1154,7 +1154,7 @@ public class TopNQueryRunnerTest
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
-        new Result<TopNResultValue>(
+        new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1199,7 +1199,7 @@ public class TopNQueryRunnerTest
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
-        new Result<TopNResultValue>(
+        new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -1248,7 +1248,7 @@ public class TopNQueryRunnerTest
             .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
-        new Result<TopNResultValue>(
+        new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
