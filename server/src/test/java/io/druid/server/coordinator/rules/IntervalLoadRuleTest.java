@@ -17,35 +17,33 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.cli;
+package io.druid.server.coordinator.rules;
 
-import com.google.common.collect.ImmutableList;
-import com.metamx.common.logger.Logger;
-import io.airlift.command.Command;
-import io.druid.guice.RealtimeModule;
-
-import java.util.List;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import io.druid.client.DruidServer;
+import io.druid.jackson.DefaultObjectMapper;
+import junit.framework.Assert;
+import org.joda.time.Interval;
+import org.junit.Test;
 
 /**
  */
-@Command(
-    name = "realtime",
-    description = "Runs a realtime node, see http://druid.io/docs/0.6.61.1/Realtime.html for a description"
-)
-public class CliRealtime extends ServerRunnable
+public class IntervalLoadRuleTest
 {
-  private static final Logger log = new Logger(CliBroker.class);
-
-  public CliRealtime()
+  @Test
+  public void testSerde() throws Exception
   {
-    super(log);
-  }
-
-  @Override
-  protected List<Object> getModules()
-  {
-    return ImmutableList.<Object>of(
-        new RealtimeModule()
+    IntervalLoadRule rule = new IntervalLoadRule(
+        new Interval("0/3000"),
+        ImmutableMap.<String, Integer>of(DruidServer.DEFAULT_TIER, 2),
+        null,
+        null
     );
+
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+
+    Assert.assertEquals(rule, reread);
   }
 }
