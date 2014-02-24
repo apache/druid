@@ -40,26 +40,30 @@ public class DimensionCardinalityBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    HyperLogLogPlus hll = (HyperLogLogPlus) get(buf, position);
-    hll.offer(selector.get());
+    toHll(buf, position).offer(selector.get());
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    ByteBuffer duplicate = buf.duplicate().order(ByteOrder.nativeOrder());
-    duplicate.position(position);
-    return new HyperLogLogPlus(duplicate);
+    return toHll(buf, position).mutableCopy();
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return ((HyperLogLogPlus) get(buf, position)).cardinality();
+    return toHll(buf, position).cardinality();
   }
 
   @Override
   public void close()
   {
+  }
+
+  private HyperLogLogPlus toHll(ByteBuffer buf, int position)
+  {
+    ByteBuffer duplicate = buf.duplicate().order(ByteOrder.nativeOrder());
+    duplicate.position(position);
+    return new HyperLogLogPlus(duplicate);
   }
 }

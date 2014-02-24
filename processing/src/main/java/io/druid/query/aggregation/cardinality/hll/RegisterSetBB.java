@@ -89,17 +89,31 @@ public class RegisterSetBB
   {
     for (int bucket = 0; bucket < M.remaining(); bucket++)
     {
-      int word = 0;
-      for (int j = 0; j < LOG2_BITS_PER_WORD; j++)
-      {
-        int mask = 0x1f << (REGISTER_SIZE * j);
+      int thisM = this.M.get(bucket);
+      int thatM = that.M.get(bucket);
 
-        int thisVal = (this.M.get(bucket) & mask);
-        int thatVal = (that.M.get(bucket) & mask);
+      int this1 = thisM & 0x1f;
+      int this2 = thisM & 0x3e0;
+      int this3 = thisM & 0x7c00;
+      int this4 = thisM & 0xf8000;
+      int this5 = thisM & 0x1f00000;
+      int this6 = thisM & 0x3e000000;
 
-        word |= (thisVal < thatVal) ? thatVal : thisVal;
-      }
-      this.M.put(bucket, word);
+      int that1 = thatM & 0x1f;
+      int that2 = thatM & 0x3e0;
+      int that3 = thatM & 0x7c00;
+      int that4 = thatM & 0xf8000;
+      int that5 = thatM & 0x1f00000;
+      int that6 = thatM & 0x3e000000;
+
+      this.M.put(bucket,
+          (this1 < that1 ? that1 : this1)
+          | (this2 < that2 ? that2 : this2)
+          | (this3 < that3 ? that3 : this3)
+          | (this4 < that4 ? that4 : this4)
+          | (this5 < that5 ? that5 : this5)
+          | (this6 < that6 ? that6 : this6)
+      );
     }
   }
 }

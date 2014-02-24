@@ -197,7 +197,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       throw Throwables.propagate(e);
     }
 
-    Sequence<T> retVal = new BaseSequence<T, JsonParserIterator<T>>(
+    Sequence<T> retVal = new BaseSequence<>(
         new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
         {
           @Override
