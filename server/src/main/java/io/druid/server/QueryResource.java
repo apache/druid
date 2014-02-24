@@ -35,6 +35,8 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.Query;
+import io.druid.query.QueryHelper;
+import io.druid.query.QueryRunnerHelper;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
@@ -57,12 +59,12 @@ public class QueryResource
 {
   private static final Logger log = new Logger(QueryResource.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
-
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QuerySegmentWalker texasRanger;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
+  private final QueryIDProvider idProvider;
 
   @Inject
   public QueryResource(
@@ -70,7 +72,8 @@ public class QueryResource
       @Smile ObjectMapper smileMapper,
       QuerySegmentWalker texasRanger,
       ServiceEmitter emitter,
-      RequestLogger requestLogger
+      RequestLogger requestLogger,
+      QueryIDProvider idProvider
   )
   {
     this.jsonMapper = jsonMapper;
@@ -78,6 +81,7 @@ public class QueryResource
     this.texasRanger = texasRanger;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
+    this.idProvider = idProvider;
   }
 
   @POST
@@ -88,9 +92,9 @@ public class QueryResource
   ) throws ServletException, IOException
   {
     final long start = System.currentTimeMillis();
-
     Query query = null;
     byte[] requestQuery = null;
+    String queryID;
 
     final boolean isSmile = "application/smile".equals(req.getContentType());
 
@@ -103,6 +107,10 @@ public class QueryResource
     try {
       requestQuery = ByteStreams.toByteArray(req.getInputStream());
       query = objectMapper.readValue(requestQuery, Query.class);
+      queryID = QueryHelper.getQueryID(query);
+      if (queryID == null) {
+        query = QueryHelper.setQueryID(query, idProvider.next());
+      }
 
       requestLogger.log(
           new RequestLogLine(new DateTime(), req.getRemoteAddr(), query)
@@ -130,6 +138,7 @@ public class QueryResource
               .setUser6(String.valueOf(query.hasFilters()))
               .setUser7(req.getRemoteAddr())
               .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
+              .setUser10(queryID)
               .build("request/time", requestTime)
       );
     }
