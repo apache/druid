@@ -36,7 +36,6 @@ import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
 import io.druid.query.QueryHelper;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerHelper;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
@@ -122,7 +121,7 @@ public class TimeBoundaryQueryQueryToolChest
         .setUser2(query.getDataSource())
         .setUser4(query.getType())
         .setUser6("false")
-        .setUser10(QueryHelper.getQueryID(query));
+        .setUser10(QueryHelper.getQueryId(query));
   }
 
   @Override

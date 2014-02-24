@@ -39,7 +39,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryConfig;
 import io.druid.query.QueryHelper;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerHelper;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
@@ -133,7 +132,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser9(Minutes.minutes(numMinutes).toString())
-        .setUser10(QueryHelper.getQueryID(query));
+        .setUser10(QueryHelper.getQueryId(query));
   }
 
   @Override

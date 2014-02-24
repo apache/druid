@@ -23,14 +23,14 @@ import com.google.common.collect.ImmutableMap;
 
 public class QueryHelper
 {
-  public static String QUERYID = "queryID";
+  public static String QUERYID = "queryId";
 
-  public static String getQueryID(Query query)
+  public static String getQueryId(Query query)
   {
     return query.getContextValue(QUERYID);
   }
 
-  public static Query setQueryID(Query query, String id)
+  public static Query setQueryId(Query query, String id)
   {
     return query.withOverriddenContext(ImmutableMap.of(QUERYID, id));
   }

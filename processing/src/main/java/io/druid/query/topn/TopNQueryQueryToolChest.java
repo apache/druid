@@ -42,7 +42,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryHelper;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerHelper;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
@@ -136,7 +135,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
         .setUser9(Minutes.minutes(numMinutes).toString())
-        .setUser10(QueryHelper.getQueryID(query));
+        .setUser10(QueryHelper.getQueryId(query));
   }
 
   @Override

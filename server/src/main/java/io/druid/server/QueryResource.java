@@ -36,7 +36,6 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.Query;
 import io.druid.query.QueryHelper;
-import io.druid.query.QueryRunnerHelper;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
@@ -64,7 +63,7 @@ public class QueryResource
   private final QuerySegmentWalker texasRanger;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
-  private final QueryIDProvider idProvider;
+  private final QueryIdProvider idProvider;
 
   @Inject
   public QueryResource(
@@ -73,7 +72,7 @@ public class QueryResource
       QuerySegmentWalker texasRanger,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
-      QueryIDProvider idProvider
+      QueryIdProvider idProvider
   )
   {
     this.jsonMapper = jsonMapper;
@@ -107,9 +106,9 @@ public class QueryResource
     try {
       requestQuery = ByteStreams.toByteArray(req.getInputStream());
       query = objectMapper.readValue(requestQuery, Query.class);
-      queryID = QueryHelper.getQueryID(query);
+      queryID = QueryHelper.getQueryId(query);
       if (queryID == null) {
-        query = QueryHelper.setQueryID(query, idProvider.next());
+        query = QueryHelper.setQueryId(query, idProvider.next());
       }
 
       requestLogger.log(

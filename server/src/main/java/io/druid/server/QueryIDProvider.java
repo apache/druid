@@ -24,13 +24,13 @@ import io.druid.guice.annotations.Self;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-public class QueryIDProvider
+public class QueryIdProvider
 {
   private final String host;
   private final AtomicLong id = new AtomicLong();
 
   @Inject
-  public QueryIDProvider(@Self DruidNode node)
+  public QueryIdProvider(@Self DruidNode node)
   {
     host = node.getHost();
   }
