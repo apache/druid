@@ -69,7 +69,7 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
 
         final TopNQuery legacyQuery = (TopNQuery) input;
 
-        return new BaseSequence<Result<TopNResultValue>, Iterator<Result<TopNResultValue>>>(
+        return new BaseSequence<>(
             new BaseSequence.IteratorMaker<Result<TopNResultValue>, Iterator<Result<TopNResultValue>>>()
             {
               @Override
