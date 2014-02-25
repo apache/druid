@@ -29,6 +29,7 @@ import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -212,10 +213,15 @@ public class DbConnector
           @Override
           public Boolean withHandle(Handle handle) throws Exception
           {
-            return handle.getConnection().getMetaData().getDatabaseProductName().contains("PostgreSQL");
+            return isPostgreSQL(handle);
           }
         }
     );
+  }
+
+  public static Boolean isPostgreSQL(final Handle handle) throws SQLException
+  {
+    return handle.getConnection().getMetaData().getDatabaseProductName().contains("PostgreSQL");
   }
 
   private final Supplier<DbConnectorConfig> config;
