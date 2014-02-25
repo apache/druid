@@ -46,7 +46,7 @@ public class RestoreTask extends AbstractFixedIntervalTask
   )
   {
     super(
-        TaskUtils.makeId(id, "archive", dataSource, interval),
+        TaskUtils.makeId(id, "restore", dataSource, interval),
         dataSource,
         interval
     );
