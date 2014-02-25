@@ -47,6 +47,7 @@ import io.druid.query.QueryRunner;
     @JsonSubTypes.Type(name = "kill", value = KillTask.class),
     @JsonSubTypes.Type(name = "move", value = MoveTask.class),
     @JsonSubTypes.Type(name = "archive", value = ArchiveTask.class),
+    @JsonSubTypes.Type(name = "restore", value = RestoreTask.class),
     @JsonSubTypes.Type(name = "index", value = IndexTask.class),
     @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
     @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
