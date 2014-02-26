@@ -44,6 +44,7 @@ import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -416,24 +417,41 @@ public class DeterminePartitionsJob implements Jobby
   }
 
   public static class DeterminePartitionsDimSelectionPartitioner
-      extends Partitioner<BytesWritable, Text>
+      extends Partitioner<BytesWritable, Text> implements Configurable
   {
+    private Configuration config;
+
     @Override
     public int getPartition(BytesWritable bytesWritable, Text text, int numPartitions)
     {
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
       bytes.position(4); // Skip length added by SortableBytes
       final int index = bytes.getInt();
-
-      if (index >= numPartitions) {
-        throw new ISE(
-            "Not enough partitions, index[%,d] >= numPartitions[%,d]. Please increase the number of reducers to the index size or check your config & settings!",
-            index,
-            numPartitions
-        );
+      if (config.get("mapred.job.tracker").equals("local")) {
+        return index % numPartitions;
+      } else {
+        if (index >= numPartitions) {
+          throw new ISE(
+              "Not enough partitions, index[%,d] >= numPartitions[%,d]. Please increase the number of reducers to the index size or check your config & settings!",
+              index,
+              numPartitions
+          );
+        }
       }
 
       return index;
+    }
+
+    @Override
+    public Configuration getConf()
+    {
+      return config;
+    }
+
+    @Override
+    public void setConf(Configuration config)
+    {
+      this.config = config;
     }
   }
 
