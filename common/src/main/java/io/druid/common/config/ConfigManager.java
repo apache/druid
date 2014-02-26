@@ -28,6 +28,7 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import io.druid.db.DbConnector;
 import io.druid.db.DbTablesConfig;
 import org.joda.time.Duration;
 import org.skife.jdbi.v2.Handle;
@@ -79,7 +80,13 @@ public class ConfigManager
 
     this.selectStatement = String.format("SELECT payload FROM %s WHERE name = :name", configTable);
     this.insertStatement = String.format(
-        "INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload",
+        DbConnector.isPostgreSQL(dbi) ?
+          "BEGIN;\n" +
+          "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
+          "WITH upsert AS (UPDATE %1$s SET payload=:payload WHERE name=:name RETURNING *)\n" +
+          "    INSERT INTO %1$s (name, payload) SELECT :name, :payload WHERE NOT EXISTS (SELECT * FROM upsert)\n;" +
+          "COMMIT;" :
+          "INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload",
         configTable
     );
   }
