@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 import com.metamx.common.Granularity;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -55,7 +56,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
   @JacksonInject
   @NotNull
-  private volatile ServiceEmitter emitter;
+  private volatile ServiceEmitter emitter = null;
 
   @JacksonInject
   @NotNull
@@ -93,17 +94,44 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JsonProperty("segmentGranularity") Granularity segmentGranularity
   )
   {
-    this.windowPeriod = windowPeriod;
-    this.basePersistDirectory = basePersistDirectory;
-    this.segmentGranularity = segmentGranularity;
+    this.windowPeriod = windowPeriod == null ? new Period("PT10M") : windowPeriod;
+    this.basePersistDirectory = basePersistDirectory == null ? Files.createTempDir() : basePersistDirectory;
+    this.segmentGranularity = segmentGranularity == null ? Granularity.HOUR : segmentGranularity;
     this.versioningPolicy = new IntervalStartVersioningPolicy();
     this.rejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
     // Workaround for Jackson issue where if maxPendingPersists is null, all JacksonInjects fail
     this.maxPendingPersists = RealtimePlumberSchool.DEFAULT_MAX_PENDING_PERSISTS;
 
-    Preconditions.checkNotNull(windowPeriod, "RealtimePlumberSchool requires a windowPeriod.");
-    Preconditions.checkNotNull(basePersistDirectory, "RealtimePlumberSchool requires a basePersistDirectory.");
-    Preconditions.checkNotNull(segmentGranularity, "RealtimePlumberSchool requires a segmentGranularity.");
+    Preconditions.checkNotNull(this.windowPeriod, "RealtimePlumberSchool requires a windowPeriod.");
+    Preconditions.checkNotNull(this.basePersistDirectory, "RealtimePlumberSchool requires a basePersistDirectory.");
+    Preconditions.checkNotNull(this.segmentGranularity, "RealtimePlumberSchool requires a segmentGranularity.");
+  }
+
+  @JsonProperty
+  public Period getWindowPeriod()
+  {
+    return windowPeriod;
+  }
+
+  @JsonProperty
+  public File getBasePersistDirectory()
+  {
+    return basePersistDirectory;
+  }
+
+  public VersioningPolicy getVersioningPolicy()
+  {
+    return versioningPolicy;
+  }
+
+  public RejectionPolicyFactory getRejectionPolicyFactory()
+  {
+    return rejectionPolicyFactory;
+  }
+
+  public int getMaxPendingPersists()
+  {
+    return maxPendingPersists;
   }
 
   @JsonProperty("versioningPolicy")
@@ -153,12 +181,13 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.queryExecutorService = executorService;
   }
 
-  public void setDefaultMaxPendingPersists(int maxPendingPersists)
+  public void setMaxPendingPersists(int maxPendingPersists)
   {
     this.maxPendingPersists = maxPendingPersists;
   }
 
   @Override
+  @JsonProperty
   public Granularity getSegmentGranularity()
   {
     return segmentGranularity;
@@ -177,22 +206,16 @@ public class RealtimePlumberSchool implements PlumberSchool
     log.info("Creating plumber using rejectionPolicy[%s]", rejectionPolicy);
 
     return new RealtimePlumber(
-        windowPeriod,
-        basePersistDirectory,
-        segmentGranularity,
         schema,
         config,
         metrics,
-        rejectionPolicy,
         emitter,
         conglomerate,
         segmentAnnouncer,
         queryExecutorService,
-        versioningPolicy,
         dataSegmentPusher,
         segmentPublisher,
-        serverView,
-        maxPendingPersists
+        serverView
     );
   }
 

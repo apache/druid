@@ -48,6 +48,7 @@ import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -107,7 +108,16 @@ public class RealtimeManagerTest
           }
         }
     );
-    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(1, new Period("P1Y"), null);
+    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(
+        1,
+        new Period("P1Y"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
     plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, driverConfig, new DateTime().toString()));
 
     realtimeManager = new RealtimeManager(

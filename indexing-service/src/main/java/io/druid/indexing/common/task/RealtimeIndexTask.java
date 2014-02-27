@@ -79,25 +79,7 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @JsonIgnore
-  private final Schema schema;
-
-  @JsonIgnore
-  private final FirehoseFactory firehoseFactory;
-
-  @JsonIgnore
-  private final FireDepartmentConfig fireDepartmentConfig;
-
-  @JsonIgnore
-  private final Period windowPeriod;
-
-  @JsonIgnore
-  private final int maxPendingPersists;
-
-  @JsonIgnore
-  private final Granularity segmentGranularity;
-
-  @JsonIgnore
-  private final RejectionPolicyFactory rejectionPolicyFactory;
+  private final FireDepartment schema;
 
   @JsonIgnore
   private volatile Plumber plumber = null;
@@ -109,6 +91,8 @@ public class RealtimeIndexTask extends AbstractTask
   public RealtimeIndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
+      @JsonProperty("config") FireDepartment fireDepartment,
+      // To be deprecated
       @JsonProperty("schema") Schema schema,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
@@ -120,34 +104,67 @@ public class RealtimeIndexTask extends AbstractTask
   {
     super(
         id == null
-        ? makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString())
+        ? makeTaskId(
+            fireDepartment == null
+            ? schema.getDataSource()
+            : fireDepartment.getDataSchema().getDataSource(),
+            fireDepartment == null
+            ? schema.getShardSpec().getPartitionNum()
+            : fireDepartment.getDriverConfig().getShardSpec().getPartitionNum(),
+            new DateTime().toString()
+        )
         : id,
 
         String.format(
             "index_realtime_%s",
-            schema.getDataSource()
+            fireDepartment == null
+            ? schema.getDataSource()
+            : fireDepartment.getDataSchema().getDataSource()
         ),
         taskResource == null
         ? new TaskResource(
             makeTaskId(
-                schema.getDataSource(),
-                schema.getShardSpec().getPartitionNum(),
+                fireDepartment == null
+                ? schema.getDataSource()
+                : fireDepartment.getDataSchema().getDataSource(),
+                fireDepartment == null
+                ? schema.getShardSpec().getPartitionNum()
+                : fireDepartment.getDriverConfig().getShardSpec().getPartitionNum(),
                 new DateTime().toString()
             ), 1
         )
         : taskResource,
-        schema.getDataSource()
+        (fireDepartment != null)
+        ? fireDepartment.getDataSchema().getDataSource()
+        : schema.getDataSource()
     );
 
-    this.schema = schema;
-    this.firehoseFactory = firehoseFactory;
-    this.fireDepartmentConfig = fireDepartmentConfig;
-    this.windowPeriod = windowPeriod;
-    this.maxPendingPersists = (maxPendingPersists == 0)
-                              ? RealtimePlumberSchool.DEFAULT_MAX_PENDING_PERSISTS
-                              : maxPendingPersists;
-    this.segmentGranularity = segmentGranularity;
-    this.rejectionPolicyFactory = rejectionPolicyFactory;
+    if (fireDepartment != null) {
+      this.schema = fireDepartment;
+    } else {
+
+
+      this.schema = new FireDepartment(
+          new DataSchema(
+              schema.getDataSource(),
+              firehoseFactory == null ? null : firehoseFactory.getParser(),
+              schema.getAggregators(),
+              new UniformGranularitySpec(segmentGranularity, schema.getIndexGranularity(), null, segmentGranularity)
+          ),
+          new RealtimeIOConfig(firehoseFactory, null),
+          new RealtimeDriverConfig(
+              fireDepartmentConfig == null ? null : fireDepartmentConfig.getMaxRowsInMemory(),
+              fireDepartmentConfig == null ? null : fireDepartmentConfig.getIntermediatePersistPeriod(),
+              windowPeriod,
+              null,
+              null,
+              rejectionPolicyFactory,
+              maxPendingPersists,
+              schema.getShardSpec()
+          ),
+          null, null, null, null
+      );
+    }
   }
 
   @Override
@@ -197,18 +214,16 @@ public class RealtimeIndexTask extends AbstractTask
     boolean normalExit = true;
 
     // Set up firehose
-    final Period intermediatePersistPeriod = fireDepartmentConfig.getIntermediatePersistPeriod();
-    final Firehose firehose = firehoseFactory.connect(firehoseFactory.getParser());
+    final Period intermediatePersistPeriod = schema.getDriverConfig().getIntermediatePersistPeriod();
+    final Firehose firehose = schema.getIOConfig().getFirehoseFactory().connect(schema.getDataSchema().getParser());
 
     // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
     // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
-    final RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
-        windowPeriod,
+    final RealtimePlumberSchool plumberSchool = new RealtimePlumberSchool(
+        schema.getDriverConfig().getWindowPeriod(),
         new File(toolbox.getTaskWorkDir(), "persist"),
-        segmentGranularity
+        schema.getDataSchema().getGranularitySpec().getSegmentGranularity()
     );
-    realtimePlumberSchool.setDefaultMaxPendingPersists(maxPendingPersists);
-
     final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
 
     // NOTE: We talk to the coordinator in various places in the plumber and we could be more robust to issues
@@ -289,36 +304,17 @@ public class RealtimeIndexTask extends AbstractTask
     // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip and
     // NOTE: descriptor.json to mismatch, or it can cause historical nodes to load different instances of the
     // NOTE: "same" segment.
-    realtimePlumberSchool.setDataSegmentPusher(toolbox.getSegmentPusher());
-    realtimePlumberSchool.setConglomerate(toolbox.getQueryRunnerFactoryConglomerate());
-    realtimePlumberSchool.setQueryExecutorService(toolbox.getQueryExecutorService());
-    realtimePlumberSchool.setVersioningPolicy(versioningPolicy);
-    realtimePlumberSchool.setSegmentAnnouncer(lockingSegmentAnnouncer);
-    realtimePlumberSchool.setSegmentPublisher(segmentPublisher);
-    realtimePlumberSchool.setServerView(toolbox.getNewSegmentServerView());
-    realtimePlumberSchool.setEmitter(toolbox.getEmitter());
+    plumberSchool.setDataSegmentPusher(toolbox.getSegmentPusher());
+    plumberSchool.setConglomerate(toolbox.getQueryRunnerFactoryConglomerate());
+    plumberSchool.setQueryExecutorService(toolbox.getQueryExecutorService());
+    plumberSchool.setSegmentAnnouncer(lockingSegmentAnnouncer);
+    plumberSchool.setSegmentPublisher(segmentPublisher);
+    plumberSchool.setServerView(toolbox.getNewSegmentServerView());
+    plumberSchool.setEmitter(toolbox.getEmitter());
 
-    if (this.rejectionPolicyFactory != null) {
-      realtimePlumberSchool.setRejectionPolicyFactory(rejectionPolicyFactory);
-    }
-
-    DataSchema dataSchema = new DataSchema(
-        schema.getDataSource(),
-        firehoseFactory.getParser(),
-        schema.getAggregators(),
-        new UniformGranularitySpec(
-            realtimePlumberSchool.getSegmentGranularity(),
-            schema.getIndexGranularity(),
-            null,
-            realtimePlumberSchool.getSegmentGranularity()
-        )
-    );
-    RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(firehoseFactory, realtimePlumberSchool);
-    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(
-        fireDepartmentConfig.getMaxRowsInMemory(),
-        fireDepartmentConfig.getIntermediatePersistPeriod(),
-        schema.getShardSpec()
-    );
+    DataSchema dataSchema = schema.getDataSchema();
+    RealtimeIOConfig realtimeIOConfig = schema.getIOConfig();
+    RealtimeDriverConfig driverConfig = schema.getDriverConfig().withVersioningPolicy(versioningPolicy);
 
     final FireDepartment fireDepartment = new FireDepartment(
         dataSchema,
@@ -331,7 +327,7 @@ public class RealtimeIndexTask extends AbstractTask
     );
     final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
-    this.plumber = realtimePlumberSchool.findPlumber(dataSchema, driverConfig, fireDepartment.getMetrics());
+    this.plumber = plumberSchool.findPlumber(dataSchema, driverConfig, fireDepartment.getMetrics());
 
     try {
       plumber.startJob();
@@ -368,7 +364,7 @@ public class RealtimeIndexTask extends AbstractTask
 
           int currCount = sink.add(inputRow);
           fireDepartment.getMetrics().incrementProcessed();
-          if (currCount >= fireDepartmentConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
+          if (currCount >= driverConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
             plumber.persist(firehose.commit());
             nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }
@@ -381,7 +377,7 @@ public class RealtimeIndexTask extends AbstractTask
     }
     catch (Throwable e) {
       normalExit = false;
-      log.makeAlert(e, "Exception aborted realtime processing[%s]", schema.getDataSource())
+      log.makeAlert(e, "Exception aborted realtime processing[%s]", dataSchema.getDataSource())
          .emit();
       throw e;
     }
@@ -404,40 +400,10 @@ public class RealtimeIndexTask extends AbstractTask
     return TaskStatus.success(getId());
   }
 
-  @JsonProperty
-  public Schema getSchema()
+  @JsonProperty("config")
+  public FireDepartment getRealtimeIngestionSchema()
   {
     return schema;
-  }
-
-  @JsonProperty("firehose")
-  public FirehoseFactory getFirehoseFactory()
-  {
-    return firehoseFactory;
-  }
-
-  @JsonProperty
-  public FireDepartmentConfig getFireDepartmentConfig()
-  {
-    return fireDepartmentConfig;
-  }
-
-  @JsonProperty
-  public Period getWindowPeriod()
-  {
-    return windowPeriod;
-  }
-
-  @JsonProperty
-  public Granularity getSegmentGranularity()
-  {
-    return segmentGranularity;
-  }
-
-  @JsonProperty("rejectionPolicy")
-  public RejectionPolicyFactory getRejectionPolicyFactory()
-  {
-    return rejectionPolicyFactory;
   }
 
   public static class TaskActionSegmentPublisher implements SegmentPublisher

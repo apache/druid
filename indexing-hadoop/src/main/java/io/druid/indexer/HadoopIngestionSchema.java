@@ -48,7 +48,7 @@ import java.util.Map;
 
 /**
  */
-public class HadoopIngestionSchema implements IngestionSchema
+public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, HadoopDriverConfig>
 {
   public static HadoopIngestionSchema convertLegacy(
       String dataSource,
@@ -138,6 +138,8 @@ public class HadoopIngestionSchema implements IngestionSchema
       final @JsonProperty("targetPartitionSize") Long targetPartitionSize
   )
   {
+    super(dataSchema, ioConfig, driverConfig);
+
     if (dataSchema != null) {
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;

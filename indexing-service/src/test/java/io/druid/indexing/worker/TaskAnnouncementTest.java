@@ -42,6 +42,7 @@ public class TaskAnnouncementTest
     final Task task = new RealtimeIndexTask(
         "theid",
         new TaskResource("rofl", 2),
+        null,
         new Schema("foo", null, new AggregatorFactory[0], QueryGranularity.NONE, new NoneShardSpec()),
         null,
         null,

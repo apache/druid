@@ -43,15 +43,11 @@ import java.util.concurrent.ExecutorService;
  * This plumber just drops segments at the end of a flush duration instead of handing them off. It is only useful if you want to run
  * a real time node without the rest of the Druid cluster.
  */
-public class FlushingPlumberSchool implements PlumberSchool
+public class FlushingPlumberSchool extends RealtimePlumberSchool
 {
   private static final EmittingLogger log = new EmittingLogger(FlushingPlumberSchool.class);
 
   private final Duration flushDuration;
-  private final Period windowPeriod;
-  private final File basePersistDirectory;
-  private final Granularity segmentGranularity;
-  private final int maxPendingPersists;
 
   @JacksonInject
   @NotNull
@@ -70,9 +66,6 @@ public class FlushingPlumberSchool implements PlumberSchool
   @Processing
   private volatile ExecutorService queryExecutorService = null;
 
-  private volatile VersioningPolicy versioningPolicy = null;
-  private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
-
   @JsonCreator
   public FlushingPlumberSchool(
       @JsonProperty("flushDuration") Duration flushDuration,
@@ -81,19 +74,9 @@ public class FlushingPlumberSchool implements PlumberSchool
       @JsonProperty("segmentGranularity") Granularity segmentGranularity
   )
   {
-    this.flushDuration = flushDuration;
-    this.windowPeriod = windowPeriod;
-    this.basePersistDirectory = basePersistDirectory;
-    this.segmentGranularity = segmentGranularity;
-    this.versioningPolicy = new IntervalStartVersioningPolicy();
-    this.rejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
-    // Workaround for Jackson issue where if maxPendingPersists is null, all JacksonInjects fail
-    this.maxPendingPersists = RealtimePlumberSchool.DEFAULT_MAX_PENDING_PERSISTS;
+    super(windowPeriod, basePersistDirectory, segmentGranularity);
 
-    Preconditions.checkNotNull(flushDuration, "FlushingPlumberSchool requires a flushDuration.");
-    Preconditions.checkNotNull(windowPeriod, "FlushingPlumberSchool requires a windowPeriod.");
-    Preconditions.checkNotNull(basePersistDirectory, "FlushingPlumberSchool requires a basePersistDirectory.");
-    Preconditions.checkNotNull(segmentGranularity, "FlushingPlumberSchool requires a segmentGranularity.");
+    this.flushDuration = flushDuration;
   }
 
   @Override
@@ -105,31 +88,16 @@ public class FlushingPlumberSchool implements PlumberSchool
   {
     verifyState();
 
-    final RejectionPolicy rejectionPolicy = rejectionPolicyFactory.create(windowPeriod);
-    log.info("Creating plumber using rejectionPolicy[%s]", rejectionPolicy);
-
     return new FlushingPlumber(
         flushDuration,
-        windowPeriod,
-        basePersistDirectory,
-        segmentGranularity,
         schema,
         config,
         metrics,
-        rejectionPolicy,
         emitter,
         conglomerate,
         segmentAnnouncer,
-        queryExecutorService,
-        versioningPolicy,
-        maxPendingPersists
+        queryExecutorService
     );
-  }
-
-  @Override
-  public Granularity getSegmentGranularity()
-  {
-    return segmentGranularity;
   }
 
   private void verifyState()

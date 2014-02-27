@@ -28,7 +28,6 @@ public class RealtimeIOConfig implements IOConfig
     return firehoseFactory;
   }
 
-  @JsonProperty("plumber")
   public PlumberSchool getPlumberSchool()
   {
     return plumberSchool;

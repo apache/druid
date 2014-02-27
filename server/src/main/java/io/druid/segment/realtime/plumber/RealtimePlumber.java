@@ -70,22 +70,17 @@ public class RealtimePlumber implements Plumber
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumber.class);
 
-  private final Period windowPeriod;
-  private final File basePersistDirectory;
-  private final Granularity segmentGranularity;
   private final DataSchema schema;
   private final RealtimeDriverConfig config;
-  private final FireDepartmentMetrics metrics;
   private final RejectionPolicy rejectionPolicy;
+  private final FireDepartmentMetrics metrics;
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ExecutorService queryExecutorService;
-  private final VersioningPolicy versioningPolicy;
   private final DataSegmentPusher dataSegmentPusher;
   private final SegmentPublisher segmentPublisher;
   private final ServerView serverView;
-  private final int maxPendingPersists;
 
   private final Object handoffCondition = new Object();
   private final Map<Long, Sink> sinks = Maps.newConcurrentMap();
@@ -99,40 +94,31 @@ public class RealtimePlumber implements Plumber
   private volatile ScheduledExecutorService scheduledExecutor = null;
 
   public RealtimePlumber(
-      Period windowPeriod,
-      File basePersistDirectory,
-      Granularity segmentGranularity,
       DataSchema schema,
       RealtimeDriverConfig config,
       FireDepartmentMetrics metrics,
-      RejectionPolicy rejectionPolicy,
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
       ExecutorService queryExecutorService,
-      VersioningPolicy versioningPolicy,
       DataSegmentPusher dataSegmentPusher,
       SegmentPublisher segmentPublisher,
-      ServerView serverView,
-      int maxPendingPersists
+      ServerView serverView
   )
   {
-    this.windowPeriod = windowPeriod;
-    this.basePersistDirectory = basePersistDirectory;
-    this.segmentGranularity = segmentGranularity;
     this.schema = schema;
     this.config = config;
+    this.rejectionPolicy = config.getRejectionPolicyFactory().create(config.getWindowPeriod());
     this.metrics = metrics;
-    this.rejectionPolicy = rejectionPolicy;
     this.emitter = emitter;
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
     this.queryExecutorService = queryExecutorService;
-    this.versioningPolicy = versioningPolicy;
     this.dataSegmentPusher = dataSegmentPusher;
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
-    this.maxPendingPersists = maxPendingPersists;
+
+    log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
 
   public DataSchema getSchema()
@@ -143,21 +129,6 @@ public class RealtimePlumber implements Plumber
   public RealtimeDriverConfig getConfig()
   {
     return config;
-  }
-
-  public Period getWindowPeriod()
-  {
-    return windowPeriod;
-  }
-
-  public Granularity getSegmentGranularity()
-  {
-    return segmentGranularity;
-  }
-
-  public VersioningPolicy getVersioningPolicy()
-  {
-    return versioningPolicy;
   }
 
   public RejectionPolicy getRejectionPolicy()
@@ -186,6 +157,9 @@ public class RealtimePlumber implements Plumber
     if (!rejectionPolicy.accept(timestamp)) {
       return null;
     }
+
+    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
     final long truncatedTime = segmentGranularity.truncate(new DateTime(timestamp)).getMillis();
 
@@ -434,6 +408,8 @@ public class RealtimePlumber implements Plumber
 
   protected void initializeExecutors()
   {
+    final int maxPendingPersists = config.getMaxPendingPersists();
+
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = Execs.newBlockingSingleThreaded(
@@ -462,6 +438,8 @@ public class RealtimePlumber implements Plumber
 
   protected void bootstrapSinksFromDisk()
   {
+    final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
+
     File baseDir = computeBaseDir(schema);
     if (baseDir == null || !baseDir.exists()) {
       return;
@@ -554,6 +532,9 @@ public class RealtimePlumber implements Plumber
 
   protected void startPersistThread()
   {
+    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final Period windowPeriod = config.getWindowPeriod();
+
     final DateTime truncatedNow = segmentGranularity.truncate(new DateTime());
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
@@ -649,7 +630,7 @@ public class RealtimePlumber implements Plumber
 
   protected File computeBaseDir(DataSchema schema)
   {
-    return new File(basePersistDirectory, schema.getDataSource());
+    return new File(config.getBasePersistDirectory(), schema.getDataSource());
   }
 
   protected File computePersistDir(DataSchema schema, Interval interval)

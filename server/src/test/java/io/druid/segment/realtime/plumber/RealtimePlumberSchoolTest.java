@@ -135,14 +135,22 @@ public class RealtimePlumberSchoolTest
     realtimePlumberSchool.setConglomerate(new DefaultQueryRunnerFactoryConglomerate(Maps.<Class<? extends Query>, QueryRunnerFactory>newHashMap()));
     realtimePlumberSchool.setSegmentAnnouncer(announcer);
     realtimePlumberSchool.setSegmentPublisher(segmentPublisher);
-    realtimePlumberSchool.setRejectionPolicyFactory(new NoopRejectionPolicyFactory());
     realtimePlumberSchool.setVersioningPolicy(new IntervalStartVersioningPolicy());
     realtimePlumberSchool.setDataSegmentPusher(dataSegmentPusher);
     realtimePlumberSchool.setServerView(serverView);
     realtimePlumberSchool.setEmitter(emitter);
     realtimePlumberSchool.setQueryExecutorService(MoreExecutors.sameThreadExecutor());
 
-    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(1, new Period("P1Y"), null);
+    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(
+        1,
+        null,
+        null,
+        null,
+        new IntervalStartVersioningPolicy(),
+        new NoopRejectionPolicyFactory(),
+        null,
+        null
+    );
 
     plumber = realtimePlumberSchool.findPlumber(schema, driverConfig, new FireDepartmentMetrics());
   }

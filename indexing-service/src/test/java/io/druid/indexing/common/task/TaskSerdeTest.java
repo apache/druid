@@ -29,12 +29,12 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIngestionSchema;
-import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.timeline.DataSegment;
@@ -53,6 +53,7 @@ public class TaskSerdeTest
   {
     final IndexTask task = new IndexTask(
         null,
+        null,
         "foo",
         new UniformGranularitySpec(
             Granularity.DAY,
@@ -60,7 +61,6 @@ public class TaskSerdeTest
             ImmutableList.of(new Interval("2010-01-01/P2D")),
             Granularity.DAY
         ),
-        null,
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
         10000,
@@ -84,8 +84,8 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertTrue(task.getFirehoseFactory() instanceof LocalFirehoseFactory);
-    Assert.assertTrue(task2.getFirehoseFactory() instanceof LocalFirehoseFactory);
+    Assert.assertTrue(task.getIngestionSchema().getIOConfig().getFirehoseFactory() instanceof LocalFirehoseFactory);
+    Assert.assertTrue(task2.getIngestionSchema().getIOConfig().getFirehoseFactory() instanceof LocalFirehoseFactory);
   }
 
   @Test
@@ -198,6 +198,7 @@ public class TaskSerdeTest
     final RealtimeIndexTask task = new RealtimeIndexTask(
         null,
         new TaskResource("rofl", 2),
+        null,
         new Schema("foo", null, new AggregatorFactory[0], QueryGranularity.NONE, new NoneShardSpec()),
         null,
         null,
@@ -216,16 +217,29 @@ public class TaskSerdeTest
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals(2, task.getTaskResource().getRequiredCapacity());
     Assert.assertEquals("rofl", task.getTaskResource().getAvailabilityGroup());
-    Assert.assertEquals(new Period("PT10M"), task.getWindowPeriod());
-    Assert.assertEquals(Granularity.HOUR, task.getSegmentGranularity());
+    Assert.assertEquals(
+        new Period("PT10M"),
+        task.getRealtimeIngestionSchema()
+            .getDriverConfig().getWindowPeriod()
+    );
+    Assert.assertEquals(
+        Granularity.HOUR,
+        task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
+    );
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getTaskResource().getRequiredCapacity(), task2.getTaskResource().getRequiredCapacity());
     Assert.assertEquals(task.getTaskResource().getAvailabilityGroup(), task2.getTaskResource().getAvailabilityGroup());
-    Assert.assertEquals(task.getWindowPeriod(), task2.getWindowPeriod());
-    Assert.assertEquals(task.getSegmentGranularity(), task2.getSegmentGranularity());
+    Assert.assertEquals(
+        task.getRealtimeIngestionSchema().getDriverConfig().getWindowPeriod(),
+        task2.getRealtimeIngestionSchema().getDriverConfig().getWindowPeriod()
+    );
+    Assert.assertEquals(
+        task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),
+        task2.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
+    );
   }
 
   @Test

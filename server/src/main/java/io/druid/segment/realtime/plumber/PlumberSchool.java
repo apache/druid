@@ -26,9 +26,11 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 
+import java.io.File;
+
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RealtimePlumberSchool.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "realtime", value = RealtimePlumberSchool.class),
     @JsonSubTypes.Type(name = "flushing", value = FlushingPlumberSchool.class)
@@ -42,5 +44,6 @@ public interface PlumberSchool
    */
   public Plumber findPlumber(DataSchema schema, RealtimeDriverConfig config, FireDepartmentMetrics metrics);
 
+  @Deprecated
   public Granularity getSegmentGranularity();
 }

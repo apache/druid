@@ -32,6 +32,7 @@ import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
+import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -43,7 +44,7 @@ import java.io.IOException;
  * realtime stream of data.  The Plumber directs each drop of water from the firehose into the correct sink and makes
  * sure that the sinks don't overflow.
  */
-public class FireDepartment implements IngestionSchema
+public class FireDepartment extends IngestionSchema<RealtimeIOConfig, RealtimeDriverConfig>
 {
   private final DataSchema dataSchema;
   private final RealtimeIOConfig ioConfig;
@@ -63,6 +64,8 @@ public class FireDepartment implements IngestionSchema
       @JsonProperty("plumber") PlumberSchool plumberSchool
   )
   {
+    super(dataSchema, ioConfig, driverConfig);
+
     // Backwards compatibility
     if (dataSchema == null) {
       Preconditions.checkNotNull(schema, "schema");
@@ -88,6 +91,11 @@ public class FireDepartment implements IngestionSchema
       this.driverConfig = new RealtimeDriverConfig(
           config.getMaxRowsInMemory(),
           config.getIntermediatePersistPeriod(),
+          ((RealtimePlumberSchool) plumberSchool).getWindowPeriod(),
+          ((RealtimePlumberSchool) plumberSchool).getBasePersistDirectory(),
+          ((RealtimePlumberSchool) plumberSchool).getVersioningPolicy(),
+          ((RealtimePlumberSchool) plumberSchool).getRejectionPolicyFactory(),
+          ((RealtimePlumberSchool) plumberSchool).getMaxPendingPersists(),
           schema.getShardSpec()
       );
     } else {

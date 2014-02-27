@@ -30,7 +30,6 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireHydrant;
-import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -55,41 +54,52 @@ public class SinkTest
 
     final Interval interval = new Interval("2013-01-01/2013-01-02");
     final String version = new DateTime().toString();
-    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(1, new Period("P1Y"), null);
+    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(
+        1,
+        new Period("P1Y"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
     final Sink sink = new Sink(interval, schema, driverConfig, version);
 
-    sink.add(new InputRow()
-    {
-      @Override
-      public List<String> getDimensions()
-      {
-        return Lists.newArrayList();
-      }
+    sink.add(
+        new InputRow()
+        {
+          @Override
+          public List<String> getDimensions()
+          {
+            return Lists.newArrayList();
+          }
 
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return new DateTime("2013-01-01").getMillis();
-      }
+          @Override
+          public long getTimestampFromEpoch()
+          {
+            return new DateTime("2013-01-01").getMillis();
+          }
 
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return Lists.newArrayList();
-      }
+          @Override
+          public List<String> getDimension(String dimension)
+          {
+            return Lists.newArrayList();
+          }
 
-      @Override
-      public float getFloatMetric(String metric)
-      {
-        return 0;
-      }
+          @Override
+          public float getFloatMetric(String metric)
+          {
+            return 0;
+          }
 
-      @Override
-      public Object getRaw(String dimension)
-      {
-        return null;
-      }
-    });
+          @Override
+          public Object getRaw(String dimension)
+          {
+            return null;
+          }
+        }
+    );
 
     FireHydrant currHydrant = sink.getCurrIndex();
     Assert.assertEquals(new Interval("2013-01-01/PT1M"), currHydrant.getIndex().getInterval());
@@ -97,38 +107,40 @@ public class SinkTest
 
     FireHydrant swapHydrant = sink.swap();
 
-    sink.add(new InputRow()
-    {
-      @Override
-      public List<String> getDimensions()
-      {
-        return Lists.newArrayList();
-      }
+    sink.add(
+        new InputRow()
+        {
+          @Override
+          public List<String> getDimensions()
+          {
+            return Lists.newArrayList();
+          }
 
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return new DateTime("2013-01-01").getMillis();
-      }
+          @Override
+          public long getTimestampFromEpoch()
+          {
+            return new DateTime("2013-01-01").getMillis();
+          }
 
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return Lists.newArrayList();
-      }
+          @Override
+          public List<String> getDimension(String dimension)
+          {
+            return Lists.newArrayList();
+          }
 
-      @Override
-      public float getFloatMetric(String metric)
-      {
-        return 0;
-      }
+          @Override
+          public float getFloatMetric(String metric)
+          {
+            return 0;
+          }
 
-      @Override
-      public Object getRaw(String dimension)
-      {
-        return null;
-      }
-    });
+          @Override
+          public Object getRaw(String dimension)
+          {
+            return null;
+          }
+        }
+    );
 
     Assert.assertEquals(currHydrant, swapHydrant);
     Assert.assertNotSame(currHydrant, sink.getCurrIndex());
