@@ -50,59 +50,6 @@ import java.util.Map;
  */
 public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, HadoopDriverConfig>
 {
-  public static HadoopIngestionSchema convertLegacy(
-      String dataSource,
-      TimestampSpec timestampSpec,
-      DataSpec dataSpec,
-      GranularitySpec granularitySpec,
-      Map<String, Object> pathSpec,
-      String workingPath,
-      String segmentOutputPath,
-      String version,
-      PartitionsSpec partitionsSpec,
-      boolean leaveIntermediate,
-      Boolean cleanupOnFailure,
-      Map<DateTime, List<HadoopyShardSpec>> shardSpecs,
-      boolean overwriteFiles,
-      DataRollupSpec rollupSpec,
-      DbUpdaterJobSpec updaterJobSpec,
-      boolean ignoreInvalidRows,
-      // These fields are deprecated and will be removed in the future
-      String timestampColumn,
-      String timestampFormat,
-      List<Interval> intervals,
-      Granularity segmentGranularity,
-      String partitionDimension,
-      Long targetPartitionSize
-  )
-  {
-    return new HadoopIngestionSchema(
-        null, null, null,
-        dataSource,
-        timestampSpec,
-        dataSpec,
-        granularitySpec,
-        pathSpec,
-        workingPath,
-        segmentOutputPath,
-        version,
-        partitionsSpec,
-        leaveIntermediate,
-        cleanupOnFailure,
-        shardSpecs,
-        overwriteFiles,
-        rollupSpec,
-        updaterJobSpec,
-        ignoreInvalidRows,
-        timestampColumn,
-        timestampFormat,
-        intervals,
-        segmentGranularity,
-        partitionDimension,
-        targetPartitionSize
-    );
-  }
-
   private final DataSchema dataSchema;
   private final HadoopIOConfig ioConfig;
   private final HadoopDriverConfig driverConfig;
@@ -156,25 +103,6 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
           dimensionExclusions.add(aggregatorFactory.getName());
         }
       }
-      //
-      //if (dataSpec.hasCustomDimensions()) {
-      //  dimensionExclusions = null;
-      //} else {
-      //  dimensionExclusions = Lists.newArrayList();
-      //  dimensionExclusions.add(theTimestampSpec.getTimestampColumn());
-      //  dimensionExclusions.addAll(
-      //      Lists.transform(
-      //          rollupSpec.getAggs(), new Function<AggregatorFactory, String>()
-      //      {
-      //        @Override
-      //        public String apply(AggregatorFactory aggregatorFactory)
-      //        {
-      //          return aggregatorFactory.getName();
-      //        }
-      //      }
-      //      )
-      //  );
-      //}
 
       PartitionsSpec thePartitionSpec;
       if (partitionsSpec != null) {
