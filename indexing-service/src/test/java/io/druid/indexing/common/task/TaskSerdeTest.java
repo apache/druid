@@ -322,6 +322,31 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getInterval(), task2.getInterval());
   }
 
+
+  @Test
+  public void testRestoreTaskSerde() throws Exception
+  {
+    final RestoreTask task = new RestoreTask(
+        null,
+        "foo",
+        new Interval("2010-01-01/P1D")
+    );
+
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final String json = jsonMapper.writeValueAsString(task);
+
+    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
+    final RestoreTask task2 = (RestoreTask) jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getInterval(), task2.getInterval());
+  }
+
   @Test
   public void testMoveTaskSerde() throws Exception
   {
