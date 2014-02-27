@@ -131,7 +131,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         .setUser5(Joiner.on(",").join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+        .setUser9(Minutes.minutes(numMinutes).toString())
+        .setUser10(query.getId());
   }
 
   @Override
