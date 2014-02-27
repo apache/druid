@@ -36,7 +36,6 @@ import io.druid.collections.OrderedMergeSequence;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
-import io.druid.query.QueryHelper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ResultMergeQueryRunner;
@@ -153,7 +152,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         .setUser5(Joiner.on(",").join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser9(Minutes.minutes(numMinutes).toString())
-        .setUser10(QueryHelper.getQueryId(query));
+        .setUser10(query.getId());
   }
 
   @Override

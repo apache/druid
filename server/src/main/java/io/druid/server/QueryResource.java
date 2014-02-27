@@ -35,7 +35,6 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.Query;
-import io.druid.query.QueryHelper;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
@@ -106,9 +105,9 @@ public class QueryResource
     try {
       requestQuery = ByteStreams.toByteArray(req.getInputStream());
       query = objectMapper.readValue(requestQuery, Query.class);
-      queryID = QueryHelper.getQueryId(query);
+      queryID = query.getId();
       if (queryID == null) {
-        query = QueryHelper.setQueryId(query, idProvider.next());
+        query = query.withId(idProvider.next(query));
       }
 
       requestLogger.log(

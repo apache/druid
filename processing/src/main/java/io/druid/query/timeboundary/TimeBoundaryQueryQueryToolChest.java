@@ -34,7 +34,6 @@ import io.druid.collections.OrderedMergeSequence;
 import io.druid.query.BySegmentSkippingQueryRunner;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
-import io.druid.query.QueryHelper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -121,7 +120,7 @@ public class TimeBoundaryQueryQueryToolChest
         .setUser2(query.getDataSource())
         .setUser4(query.getType())
         .setUser6("false")
-        .setUser10(QueryHelper.getQueryId(query));
+        .setUser10(query.getId());
   }
 
   @Override

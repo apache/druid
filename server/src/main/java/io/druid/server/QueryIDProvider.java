@@ -21,6 +21,8 @@ package io.druid.server;
 
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Self;
+import io.druid.query.Query;
+import org.joda.time.DateTime;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -35,8 +37,15 @@ public class QueryIdProvider
     host = node.getHost();
   }
 
-  public String next()
+  public String next(Query query)
   {
-    return String.format("%s_%s", host, id.incrementAndGet());
+    return String.format(
+        "%s_%s_%s_%s_%s",
+        query.getDataSource(),
+        query.getDuration(),
+        host,
+        new DateTime(),
+        id.incrementAndGet()
+    );
   }
 }

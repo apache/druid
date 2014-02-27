@@ -37,7 +37,6 @@ import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryConfig;
-import io.druid.query.QueryHelper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -62,14 +61,15 @@ import java.util.Map;
 public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
   private static final byte TIMESERIES_QUERY = 0x0;
-
   private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
-      new TypeReference<Object>(){};
-
+      new TypeReference<Object>()
+      {
+      };
   private static final TypeReference<Result<TimeseriesResultValue>> TYPE_REFERENCE =
-      new TypeReference<Result<TimeseriesResultValue>>() {};
-
+      new TypeReference<Result<TimeseriesResultValue>>()
+      {
+      };
   private final QueryConfig config;
 
   @Inject
@@ -129,7 +129,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
         .setUser9(Minutes.minutes(numMinutes).toString())
-        .setUser10(QueryHelper.getQueryId(query));
+        .setUser10(query.getId());
   }
 
   @Override

@@ -37,7 +37,6 @@ import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryConfig;
-import io.druid.query.QueryHelper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -61,18 +60,15 @@ import java.util.Set;
 public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResultValue>, SelectQuery>
 {
   private static final byte SELECT_QUERY = 0x13;
-
   private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
       new TypeReference<Object>()
       {
       };
-
   private static final TypeReference<Result<SelectResultValue>> TYPE_REFERENCE =
       new TypeReference<Result<SelectResultValue>>()
       {
       };
-
   private final QueryConfig config;
   private final ObjectMapper jsonMapper;
 
@@ -132,7 +128,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser9(Minutes.minutes(numMinutes).toString())
-        .setUser10(QueryHelper.getQueryId(query));
+        .setUser10(query.getId());
   }
 
   @Override
