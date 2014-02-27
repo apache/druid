@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.db.DbConnectorConfig;
 import io.druid.indexer.granularity.UniformGranularitySpec;
+import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.RandomPartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
@@ -501,6 +502,7 @@ public class HadoopDruidIndexerConfigTest
     }
   }
 
+  @Test
   public void testRandomPartitionsSpec() throws Exception{
     {
       final HadoopDruidIndexerConfig cfg;
@@ -541,6 +543,50 @@ public class HadoopDruidIndexerConfigTest
       );
 
       Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof RandomPartitionsSpec);
+    }
+  }
+
+  @Test
+  public void testHashedPartitionsSpec() throws Exception{
+    {
+      final HadoopDruidIndexerConfig cfg;
+
+      try {
+        cfg = jsonReadWriteRead(
+            "{"
+            + "\"partitionsSpec\":{"
+            + "   \"targetPartitionSize\":100,"
+            + "   \"type\":\"hashed\""
+            + " }"
+            + "}",
+            HadoopDruidIndexerConfig.class
+        );
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+
+      final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
+
+      Assert.assertEquals(
+          "isDeterminingPartitions",
+          partitionsSpec.isDeterminingPartitions(),
+          true
+      );
+
+      Assert.assertEquals(
+          "getTargetPartitionSize",
+          partitionsSpec.getTargetPartitionSize(),
+          100
+      );
+
+      Assert.assertEquals(
+          "getMaxPartitionSize",
+          partitionsSpec.getMaxPartitionSize(),
+          150
+      );
+
+      Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof HashedPartitionsSpec);
     }
   }
 }

@@ -29,7 +29,8 @@ import io.druid.indexer.Jobby;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SingleDimensionPartitionsSpec.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "dimension", value = SingleDimensionPartitionsSpec.class),
-    @JsonSubTypes.Type(name = "random", value = RandomPartitionsSpec.class)
+    @JsonSubTypes.Type(name = "random", value = RandomPartitionsSpec.class),
+    @JsonSubTypes.Type(name = "hashed", value = HashedPartitionsSpec.class)
 })
 public interface PartitionsSpec
 {
