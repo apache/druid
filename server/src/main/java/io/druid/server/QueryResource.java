@@ -62,7 +62,7 @@ public class QueryResource
   private final QuerySegmentWalker texasRanger;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
-  private final QueryIdProvider idProvider;
+  private final QueryIDProvider idProvider;
 
   @Inject
   public QueryResource(
@@ -71,7 +71,7 @@ public class QueryResource
       QuerySegmentWalker texasRanger,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
-      QueryIdProvider idProvider
+      QueryIDProvider idProvider
   )
   {
     this.jsonMapper = jsonMapper;

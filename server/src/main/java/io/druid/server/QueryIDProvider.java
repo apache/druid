@@ -26,13 +26,13 @@ import org.joda.time.DateTime;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-public class QueryIdProvider
+public class QueryIDProvider
 {
   private final String host;
   private final AtomicLong id = new AtomicLong();
 
   @Inject
-  public QueryIdProvider(@Self DruidNode node)
+  public QueryIDProvider(@Self DruidNode node)
   {
     host = node.getHost();
   }
