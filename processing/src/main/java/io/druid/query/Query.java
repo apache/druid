@@ -77,4 +77,8 @@ public interface Query<T>
   public Query<T> withOverriddenContext(Map<String, String> contextOverride);
 
   public Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
+
+  public Query<T> withId(String id);
+
+  public String getId();
 }

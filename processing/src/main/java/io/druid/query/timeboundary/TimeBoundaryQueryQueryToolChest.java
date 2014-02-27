@@ -119,7 +119,8 @@ public class TimeBoundaryQueryQueryToolChest
     return new ServiceMetricEvent.Builder()
         .setUser2(query.getDataSource())
         .setUser4(query.getType())
-        .setUser6("false");
+        .setUser6("false")
+        .setUser10(query.getId());
   }
 
   @Override
