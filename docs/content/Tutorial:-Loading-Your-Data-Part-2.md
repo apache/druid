@@ -205,9 +205,9 @@ Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) to the real-time node shou
 
 Batch Ingestion
 ---------------
-Druid is designed for large data volumes, and most real-world data sets require batch indexing be done through a Hadoop job.
+Druid is designed for large data volumes, and most real-world data sets require batch indexing be done through a Hadoop job. 
 
-The setup for a single node, 'standalone' Hadoop cluster is available [here](http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html).
+For this tutorial, we used [Hadoop 1.0.3](https://archive.apache.org/dist/hadoop/core/hadoop-1.0.3/). There are many pages on the Internet showing how to set up a single-node (standalone) Hadoop cluster, which is all that's needed for this example. 
 
 For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Your-Data-Part-1.html), but we are going to use Hadoop here for demonstration purposes.
 
@@ -307,7 +307,7 @@ Examining the contents of the file, you should find:
   }
   ```
 
-If you are curious about what all this configuration means, see [here](Task.html).
+If you are curious about what all this configuration means, see [here](Tasks.html).
 
 To submit the task:
 
