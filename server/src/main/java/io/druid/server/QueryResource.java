@@ -92,7 +92,7 @@ public class QueryResource
     final long start = System.currentTimeMillis();
     Query query = null;
     byte[] requestQuery = null;
-    String queryID;
+    String queryId;
 
     final boolean isSmile = "application/smile".equals(req.getContentType());
 
@@ -105,9 +105,10 @@ public class QueryResource
     try {
       requestQuery = ByteStreams.toByteArray(req.getInputStream());
       query = objectMapper.readValue(requestQuery, Query.class);
-      queryID = query.getId();
-      if (queryID == null) {
-        query = query.withId(idProvider.next(query));
+      queryId = query.getId();
+      if (queryId == null) {
+        queryId = idProvider.next(query);
+        query = query.withId(queryId);
       }
 
       requestLogger.log(
@@ -136,7 +137,7 @@ public class QueryResource
               .setUser6(String.valueOf(query.hasFilters()))
               .setUser7(req.getRemoteAddr())
               .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
-              .setUser10(queryID)
+              .setUser10(queryId)
               .build("request/time", requestTime)
       );
     }
