@@ -20,12 +20,14 @@
 package io.druid.server;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.druid.guice.annotations.Self;
 import io.druid.query.Query;
 import org.joda.time.DateTime;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+@Singleton
 public class QueryIDProvider
 {
   private final String host;
