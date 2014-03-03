@@ -65,11 +65,13 @@ import java.util.Set;
 public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResultValue>, SearchQuery>
 {
   private static final byte SEARCH_QUERY = 0x2;
-
   private static final Joiner COMMA_JOIN = Joiner.on(",");
-  private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<Result<SearchResultValue>>(){};
-
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>(){};
+  private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<Result<SearchResultValue>>()
+  {
+  };
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
+  {
+  };
   private final SearchQueryConfig config;
 
   @Inject
@@ -123,7 +125,8 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         .setUser4("search")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+        .setUser9(Minutes.minutes(numMinutes).toString())
+        .setUser10(query.getId());
   }
 
   @Override
@@ -261,6 +264,11 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     );
   }
 
+  public Ordering<Result<SearchResultValue>> getOrdering()
+  {
+    return Ordering.natural();
+  }
+
   private static class SearchThresholdAdjustingQueryRunner implements QueryRunner<Result<SearchResultValue>>
   {
     private final QueryRunner<Result<SearchResultValue>> runner;
@@ -269,7 +277,8 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     public SearchThresholdAdjustingQueryRunner(
         QueryRunner<Result<SearchResultValue>> runner,
         SearchQueryConfig config
-    ) {
+    )
+    {
       this.runner = runner;
       this.config = config;
     }
@@ -340,10 +349,5 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           }
       );
     }
-  }
-
-  public Ordering<Result<SearchResultValue>> getOrdering()
-  {
-    return Ordering.natural();
   }
 }

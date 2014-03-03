@@ -21,6 +21,8 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import io.druid.indexer.partitions.PartitionsSpec;
+import io.druid.indexer.partitions.RandomPartitionsSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -78,10 +80,10 @@ public class HadoopDruidIndexerConfigTest
   @Test
   public void shouldMakeDefaultSegmentOutputPathIfNotHDFS()
   {
-    HadoopIngestionSchema schema;
+    final HadoopDruidIndexerConfig cfg;
 
     try {
-      schema = jsonReadWriteRead(
+      cfg = jsonReadWriteRead(
           "{"
           + "\"dataSource\": \"the:data:source\","
           + " \"granularitySpec\":{"
@@ -91,16 +93,15 @@ public class HadoopDruidIndexerConfigTest
           + " },"
           + "\"segmentOutputPath\": \"/tmp/dru:id/data:test\""
           + "}",
-          HadoopIngestionSchema.class
+          HadoopDruidIndexerConfig.class
       );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
-    HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        schema.withDriverConfig(schema.getDriverConfig().withVersion("some:brand:new:version"))
-    );
+    cfg.setVersion("some:brand:new:version");
+
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
     Path path = cfg.makeSegmentOutputPath(new LocalFileSystem(), bucket);
     Assert.assertEquals(
@@ -120,4 +121,46 @@ public class HadoopDruidIndexerConfigTest
     }
   }
 
+  public void testRandomPartitionsSpec() throws Exception{
+    {
+      final HadoopDruidIndexerConfig cfg;
+
+      try {
+        cfg = jsonReadWriteRead(
+            "{"
+            + "\"partitionsSpec\":{"
+            + "   \"targetPartitionSize\":100,"
+            + "   \"type\":\"random\""
+            + " }"
+            + "}",
+            HadoopDruidIndexerConfig.class
+        );
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+
+      final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
+
+      Assert.assertEquals(
+          "isDeterminingPartitions",
+          partitionsSpec.isDeterminingPartitions(),
+          true
+      );
+
+      Assert.assertEquals(
+          "getTargetPartitionSize",
+          partitionsSpec.getTargetPartitionSize(),
+          100
+      );
+
+      Assert.assertEquals(
+          "getMaxPartitionSize",
+          partitionsSpec.getMaxPartitionSize(),
+          150
+      );
+
+      Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof RandomPartitionsSpec);
+    }
+  }
 }

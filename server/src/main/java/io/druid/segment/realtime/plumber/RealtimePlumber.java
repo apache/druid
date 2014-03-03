@@ -240,7 +240,7 @@ public class RealtimePlumber implements Plumber
                                         }
                                     )
                                 )
-                            ),
+                            ).withWaitMeasuredFromNow(),
                             new SpecificSegmentSpec(
                                 new SegmentDescriptor(
                                     holder.getInterval(),

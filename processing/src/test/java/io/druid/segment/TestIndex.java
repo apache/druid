@@ -170,7 +170,7 @@ public class TestIndex
                     "\t",
                     Arrays.asList(COLUMNS)
                 ),
-                null, null, null, null
+                null, null, null
             );
             boolean runOnce = false;
             int lineCount = 0;

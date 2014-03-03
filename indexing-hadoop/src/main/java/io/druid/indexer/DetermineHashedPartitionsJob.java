@@ -99,7 +99,9 @@ public class DetermineHashedPartitionsJob implements Jobby
       groupByJob.setOutputKeyClass(NullWritable.class);
       groupByJob.setOutputValueClass(NullWritable.class);
       groupByJob.setOutputFormatClass(SequenceFileOutputFormat.class);
+      if(!config.getSegmentGranularIntervals().isPresent()){
       groupByJob.setNumReduceTasks(1);
+      }
       JobHelper.setupClasspath(config, groupByJob);
 
       config.addInputPaths(groupByJob);
@@ -303,7 +305,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     {
       HyperLogLog aggregate = new HyperLogLog(HYPER_LOG_LOG_BIT_SIZE);
       for (BytesWritable value : values) {
-        HyperLogLog logValue = HyperLogLog.Builder.build(value.getBytes());
+        HyperLogLog logValue = HyperLogLog.Builder.build(getDataBytes(value));
         try {
           aggregate.addAll(logValue);
         }
@@ -331,6 +333,13 @@ public class DetermineHashedPartitionsJob implements Jobby
       finally {
         Closeables.close(out, false);
       }
+    }
+
+    private byte[] getDataBytes(BytesWritable writable)
+    {
+      byte[] rv = new byte[writable.getLength()];
+      System.arraycopy(writable.getBytes(), 0, rv, 0, writable.getLength());
+      return rv;
     }
 
     @Override

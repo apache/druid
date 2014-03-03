@@ -31,6 +31,7 @@ import com.metamx.common.exception.FormattedException;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
@@ -66,12 +67,10 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
   {
     // Backwards Compatible
     if (parseSpec == null) {
-      this.parseSpec = new ParseSpec(
+      this.parseSpec = new JSONParseSpec(
           timestampSpec,
           new DimensionsSpec(dimensions, dimensionExclusions, spatialDimensions)
-      )
-      {
-      };
+      );
     } else {
       this.parseSpec = parseSpec;
     }

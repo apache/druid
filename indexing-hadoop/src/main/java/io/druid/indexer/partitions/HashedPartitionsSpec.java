@@ -27,17 +27,21 @@ import io.druid.indexer.Jobby;
 
 import javax.annotation.Nullable;
 
-// for backward compatibility
-@Deprecated
-public class RandomPartitionsSpec extends HashedPartitionsSpec
+public class HashedPartitionsSpec extends AbstractPartitionsSpec
 {
   @JsonCreator
-  public RandomPartitionsSpec(
+  public HashedPartitionsSpec(
       @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
       @JsonProperty("maxPartitionSize") @Nullable Long maxPartitionSize,
       @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
   )
   {
     super(targetPartitionSize, maxPartitionSize, assumeGrouped);
+  }
+
+  @Override
+  public Jobby getPartitionJob(HadoopDruidIndexerConfig config)
+  {
+    return new DetermineHashedPartitionsJob(config);
   }
 }

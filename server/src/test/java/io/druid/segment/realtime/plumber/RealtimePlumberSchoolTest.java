@@ -31,6 +31,7 @@ import io.druid.client.ServerView;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
@@ -93,9 +94,7 @@ public class RealtimePlumberSchoolTest
           @Override
           public ParseSpec getParseSpec()
           {
-            return new ParseSpec(new TimestampSpec("timestamp", "auto"), new DimensionsSpec(null, null, null))
-            {
-            };
+            return new JSONParseSpec(new TimestampSpec("timestamp", "auto"), new DimensionsSpec(null, null, null));
           }
 
           @Override
