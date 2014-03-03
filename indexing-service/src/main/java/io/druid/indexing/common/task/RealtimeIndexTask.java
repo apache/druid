@@ -70,12 +70,27 @@ public class RealtimeIndexTask extends AbstractTask
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
 
-  private static String makeTaskId(String dataSource, int partitionNum, String version)
+  private static String makeTaskId(FireDepartment fireDepartment, Schema schema)
   {
-    return String.format(
-        "index_realtime_%s_%d_%s",
-        dataSource, partitionNum, version
-    );
+    // Backwards compatible
+    if (fireDepartment == null) {
+      return String.format(
+          "index_realtime_%s_%d_%s",
+          schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString()
+      );
+    } else {
+      return String.format(
+          "index_realtime_%s_%d_%s",
+          fireDepartment.getDataSchema().getDataSource(),
+          fireDepartment.getDriverConfig().getShardSpec().getPartitionNum(),
+          new DateTime().toString()
+      );
+    }
+  }
+
+  private static String makeDatasource(FireDepartment fireDepartment, Schema schema)
+  {
+    return (fireDepartment != null) ? fireDepartment.getDataSchema().getDataSource() : schema.getDataSource();
   }
 
   @JsonIgnore
@@ -103,47 +118,15 @@ public class RealtimeIndexTask extends AbstractTask
   )
   {
     super(
-        id == null
-        ? makeTaskId(
-            fireDepartment == null
-            ? schema.getDataSource()
-            : fireDepartment.getDataSchema().getDataSource(),
-            fireDepartment == null
-            ? schema.getShardSpec().getPartitionNum()
-            : fireDepartment.getDriverConfig().getShardSpec().getPartitionNum(),
-            new DateTime().toString()
-        )
-        : id,
-
-        String.format(
-            "index_realtime_%s",
-            fireDepartment == null
-            ? schema.getDataSource()
-            : fireDepartment.getDataSchema().getDataSource()
-        ),
-        taskResource == null
-        ? new TaskResource(
-            makeTaskId(
-                fireDepartment == null
-                ? schema.getDataSource()
-                : fireDepartment.getDataSchema().getDataSource(),
-                fireDepartment == null
-                ? schema.getShardSpec().getPartitionNum()
-                : fireDepartment.getDriverConfig().getShardSpec().getPartitionNum(),
-                new DateTime().toString()
-            ), 1
-        )
-        : taskResource,
-        (fireDepartment != null)
-        ? fireDepartment.getDataSchema().getDataSource()
-        : schema.getDataSource()
+        id == null ? makeTaskId(fireDepartment, schema) : id,
+        String.format("index_realtime_%s", makeDatasource(fireDepartment, schema)),
+        taskResource == null ? new TaskResource(makeTaskId(fireDepartment, schema), 1) : taskResource,
+        makeDatasource(fireDepartment, schema)
     );
 
     if (fireDepartment != null) {
       this.schema = fireDepartment;
     } else {
-
-
       this.schema = new FireDepartment(
           new DataSchema(
               schema.getDataSource(),

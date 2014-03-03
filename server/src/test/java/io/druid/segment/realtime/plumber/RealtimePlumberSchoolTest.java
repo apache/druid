@@ -29,6 +29,7 @@ import com.metamx.common.exception.FormattedException;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.ServerView;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.AbstractParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;

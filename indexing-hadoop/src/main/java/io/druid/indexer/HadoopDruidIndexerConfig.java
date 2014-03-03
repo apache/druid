@@ -110,10 +110,7 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
-    return new HadoopDruidIndexerConfig(
-        HadoopDruidIndexerConfig.jsonMapper
-                                .convertValue(argSpec, HadoopIngestionSchema.class)
-    );
+    return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
   }
 
   @SuppressWarnings("unchecked")

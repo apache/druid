@@ -20,6 +20,7 @@
 package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.druid.indexer.updater.DbUpdaterJobSpec;
 import io.druid.segment.indexing.IOConfig;
 
@@ -27,6 +28,7 @@ import java.util.Map;
 
 /**
  */
+@JsonTypeName("hadoop")
 public class HadoopIOConfig implements IOConfig
 {
   private final Map<String, Object> pathSpec;

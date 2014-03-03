@@ -80,10 +80,10 @@ public class HadoopDruidIndexerConfigTest
   @Test
   public void shouldMakeDefaultSegmentOutputPathIfNotHDFS()
   {
-    final HadoopDruidIndexerConfig cfg;
+    final HadoopIngestionSchema schema;
 
     try {
-      cfg = jsonReadWriteRead(
+      schema = jsonReadWriteRead(
           "{"
           + "\"dataSource\": \"the:data:source\","
           + " \"granularitySpec\":{"
@@ -93,14 +93,21 @@ public class HadoopDruidIndexerConfigTest
           + " },"
           + "\"segmentOutputPath\": \"/tmp/dru:id/data:test\""
           + "}",
-          HadoopDruidIndexerConfig.class
+          HadoopIngestionSchema.class
       );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
-    cfg.setVersion("some:brand:new:version");
+    HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
+        schema.withDriverConfig(
+            schema.getDriverConfig()
+                  .withVersion(
+                      "some:brand:new:version"
+                  )
+        )
+    );
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
     Path path = cfg.makeSegmentOutputPath(new LocalFileSystem(), bucket);
@@ -121,7 +128,8 @@ public class HadoopDruidIndexerConfigTest
     }
   }
 
-  public void testRandomPartitionsSpec() throws Exception{
+  public void testRandomPartitionsSpec() throws Exception
+  {
     {
       final HadoopDruidIndexerConfig cfg;
 
@@ -160,7 +168,7 @@ public class HadoopDruidIndexerConfigTest
           150
       );
 
-      Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof RandomPartitionsSpec);
+      Assert.assertTrue("partitionsSpec", partitionsSpec instanceof RandomPartitionsSpec);
     }
   }
 }

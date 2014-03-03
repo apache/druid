@@ -21,6 +21,7 @@ package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
@@ -46,6 +47,7 @@ import static com.google.protobuf.DescriptorProtos.FileDescriptorSet;
 import static com.google.protobuf.Descriptors.Descriptor;
 import static com.google.protobuf.Descriptors.FileDescriptor;
 
+@JsonTypeName("protoBuf")
 public class ProtoBufInputRowParser implements ByteBufferInputRowParser
 {
   private static final Logger log = new Logger(ProtoBufInputRowParser.class);

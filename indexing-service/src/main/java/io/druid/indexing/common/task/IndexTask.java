@@ -22,6 +22,7 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -36,7 +37,6 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -111,7 +111,7 @@ public class IndexTask extends AbstractFixedIntervalTask
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") String id,
-      @JsonProperty("config") IndexIngestionSchema ingestionSchema,
+      @JsonProperty("schema") IndexIngestionSchema ingestionSchema,
       // Backwards Compatible
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("granularitySpec") final GranularitySpec granularitySpec,
@@ -137,7 +137,7 @@ public class IndexTask extends AbstractFixedIntervalTask
               dataSource,
               firehoseFactory.getParser(),
               aggregators,
-              granularitySpec.withQueryGranularity(indexGranularity)
+              granularitySpec.withQueryGranularity(indexGranularity == null ? QueryGranularity.NONE : indexGranularity)
           ),
           new IndexIOConfig(firehoseFactory),
           new IndexDriverConfig(targetPartitionSize, rowFlushBoundary)
@@ -151,7 +151,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     return "index";
   }
 
-  @JsonProperty("config")
+  @JsonProperty("schema")
   public IndexIngestionSchema getIngestionSchema()
   {
     return ingestionSchema;
@@ -199,7 +199,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
 
     SortedSet<Interval> retVal = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
-    try (Firehose firehose = firehoseFactory.connect(firehoseFactory.getParser())) {
+    try (Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
         Interval interval = granularitySpec.getSegmentGranularity()
@@ -227,7 +227,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     final Map<String, TreeMultiset<String>> dimensionValueMultisets = Maps.newHashMap();
 
     // Load data
-    try (Firehose firehose = firehoseFactory.connect(firehoseFactory.getParser())) {
+    try (Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
         if (interval.contains(inputRow.getTimestampFromEpoch())) {
@@ -378,7 +378,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 
     // Create firehose + plumber
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
-    final Firehose firehose = firehoseFactory.connect(firehoseFactory.getParser());
+    final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser());
     final Plumber plumber = new YeOldePlumberSchool(
         interval,
         version,
@@ -505,6 +505,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     }
   }
 
+  @JsonTypeName("index")
   public static class IndexIOConfig implements IOConfig
   {
     private final FirehoseFactory firehoseFactory;
@@ -524,6 +525,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     }
   }
 
+  @JsonTypeName("index")
   public static class IndexDriverConfig implements DriverConfig
   {
     private final int targetPartitionSize;

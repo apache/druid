@@ -90,6 +90,7 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @Override
+  @JsonProperty("queryGranularity")
   public QueryGranularity getQueryGranularity()
   {
     return queryGranularity;

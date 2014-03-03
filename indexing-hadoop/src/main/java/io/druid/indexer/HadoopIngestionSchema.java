@@ -21,12 +21,14 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
+import io.druid.data.input.impl.AbstractParseSpec;
 import io.druid.data.input.impl.DataSpec;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -141,17 +143,8 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
       this.dataSchema = new DataSchema(
           dataSource,
           new StringInputRowParser(
-              new ParseSpec(
-                  theTimestampSpec,
-                  new DimensionsSpec(
-                      dataSpec == null ? Lists.<String>newArrayList() : dataSpec.getDimensions(),
-                      dimensionExclusions,
-                      dataSpec == null ? Lists.<SpatialDimensionSchema>newArrayList() : dataSpec.getSpatialDimensions()
-                  )
-              )
-              {
-              },
-              null, null, null, null
+              dataSpec == null ? null : dataSpec.toParseSpec(timestampSpec, dimensionExclusions),
+              null, null, null
           ),
           rollupSpec == null
           ? new AggregatorFactory[]{}

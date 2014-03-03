@@ -20,8 +20,10 @@
 package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexer.partitions.PartitionsSpec;
+import io.druid.indexer.partitions.RandomPartitionsSpec;
 import io.druid.segment.indexing.DriverConfig;
 import org.joda.time.DateTime;
 
@@ -30,6 +32,7 @@ import java.util.Map;
 
 /**
  */
+@JsonTypeName("hadoop")
 public class HadoopDriverConfig implements DriverConfig
 {
   private final String workingPath;
@@ -56,7 +59,7 @@ public class HadoopDriverConfig implements DriverConfig
   {
     this.workingPath = workingPath;
     this.version = version == null ? new DateTime().toString() : version;
-    this.partitionsSpec = partitionsSpec;
+    this.partitionsSpec = partitionsSpec == null ? new RandomPartitionsSpec(null, null, null) : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? ImmutableMap.<DateTime, List<HadoopyShardSpec>>of() : shardSpecs;
     this.rowFlushBoundary = rowFlushBoundary;
     this.leaveIntermediate = leaveIntermediate;

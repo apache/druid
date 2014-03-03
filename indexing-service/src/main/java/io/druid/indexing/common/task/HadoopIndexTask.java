@@ -84,7 +84,7 @@ public class HadoopIndexTask extends AbstractTask
   @JsonCreator
   public HadoopIndexTask(
       @JsonProperty("id") String id,
-      @JsonProperty("config") HadoopIngestionSchema schema,
+      @JsonProperty("schema") HadoopIngestionSchema schema,
       @JsonProperty("hadoopCoordinates") String hadoopCoordinates
   )
   {
@@ -127,7 +127,7 @@ public class HadoopIndexTask extends AbstractTask
     }
   }
 
-  @JsonProperty("config")
+  @JsonProperty("schema")
   public HadoopIngestionSchema getSchema()
   {
     return schema;
