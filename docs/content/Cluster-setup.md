@@ -70,7 +70,7 @@ The effective utilization of cores by Zookeeper, MySQL, and Coordinator nodes is
 Storage
 -------
 
-Indexed segments should be kept in a permanent store accessible by all nodes like AWS S3 or HDFS or equivalent. Refer [Deep-Storage](deep-storage.html) for more details on supported storage types.
+Indexed segments should be kept in a permanent store accessible by all nodes like AWS S3 or HDFS or equivalent. Refer to [Deep-Storage](deep-storage.html) for more details on supported storage types.
 
 Local disk ("ephemeral" on AWS EC2) for caching is recommended over network mounted storage (example of mounted: AWS EBS, Elastic Block Store) in order to avoid network delays during times of heavy usage. If your data center is suitably provisioned for networked storage, perhaps with separate LAN/NICs just for storage, then mounted might work fine.
 
