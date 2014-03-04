@@ -152,14 +152,14 @@ public class IncrementalIndex implements Iterable<Row>
     }
 
     final List<String> rowDimensions = row.getDimensions();
-    String[][] dims = new String[dimensionOrder.size()][];
 
+    String[][] dims;
     List<String[]> overflow = null;
-    for (String dimension : rowDimensions) {
-      dimension = dimension.toLowerCase();
-      List<String> dimensionValues = row.getDimension(dimension);
-
-      synchronized (dimensionOrder) {
+    synchronized (dimensionOrder) {
+      dims = new String[dimensionOrder.size()][];
+      for (String dimension : rowDimensions) {
+        dimension = dimension.toLowerCase();
+        List<String> dimensionValues = row.getDimension(dimension);
         Integer index = dimensionOrder.get(dimension);
         if (index == null) {
           dimensionOrder.put(dimension, dimensionOrder.size());
@@ -174,6 +174,7 @@ public class IncrementalIndex implements Iterable<Row>
         }
       }
     }
+
 
     if (overflow != null) {
       // Merge overflow and non-overflow
@@ -287,8 +288,9 @@ public class IncrementalIndex implements Iterable<Row>
       Aggregator[] prev = facts.putIfAbsent(key, aggs);
       if (prev != null) {
         aggs = prev;
+      } else {
+        numEntries.incrementAndGet();
       }
-      numEntries.incrementAndGet();
     }
 
     synchronized (this) {
