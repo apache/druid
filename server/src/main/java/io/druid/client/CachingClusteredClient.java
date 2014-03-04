@@ -128,7 +128,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
 
 
-    ImmutableMap.Builder<String, String> contextBuilder = new ImmutableMap.Builder<String, String>();
+    ImmutableMap.Builder<String, String> contextBuilder = new ImmutableMap.Builder<>();
 
     final String priority = query.getContextValue("priority", "0");
     contextBuilder.put("priority", priority);
@@ -234,7 +234,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       }
     }
 
-    return new LazySequence<T>(
+    return new LazySequence<>(
         new Supplier<Sequence<T>>()
         {
           @Override
@@ -270,7 +270,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
             for (Pair<DateTime, byte[]> cachedResultPair : cachedResults) {
               final byte[] cachedResult = cachedResultPair.rhs;
-              Sequence<Object> cachedSequence = new BaseSequence<Object, Iterator<Object>>(
+              Sequence<Object> cachedSequence = new BaseSequence<>(
                   new BaseSequence.IteratorMaker<Object, Iterator<Object>>()
                   {
                     @Override
