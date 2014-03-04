@@ -19,6 +19,7 @@
 
 package io.druid.query.search;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.nary.BinaryFn;
@@ -32,18 +33,22 @@ import java.util.TreeSet;
 
 /**
  */
-public class SearchBinaryFn implements BinaryFn<Result<SearchResultValue>, Result<SearchResultValue>, Result<SearchResultValue>>
+public class SearchBinaryFn
+    implements BinaryFn<Result<SearchResultValue>, Result<SearchResultValue>, Result<SearchResultValue>>
 {
   private final SearchSortSpec searchSortSpec;
   private final QueryGranularity gran;
+  private final int limit;
 
   public SearchBinaryFn(
       SearchSortSpec searchSortSpec,
-      QueryGranularity granularity
+      QueryGranularity granularity,
+      int limit
   )
   {
     this.searchSortSpec = searchSortSpec;
     this.gran = granularity;
+    this.limit = limit;
   }
 
   @Override
@@ -65,7 +70,13 @@ public class SearchBinaryFn implements BinaryFn<Result<SearchResultValue>, Resul
     results.addAll(Lists.newArrayList(arg2Vals));
 
     return (gran instanceof AllGranularity)
-           ? new Result<SearchResultValue>(arg1.getTimestamp(), new SearchResultValue(Lists.newArrayList(results)))
+           ? new Result<SearchResultValue>(
+        arg1.getTimestamp(), new SearchResultValue(
+        Lists.newArrayList(
+            Iterables.limit(results, limit)
+        )
+    )
+    )
            : new Result<SearchResultValue>(
                gran.toDateTime(gran.truncate(arg1.getTimestamp().getMillis())),
                new SearchResultValue(Lists.newArrayList(results))

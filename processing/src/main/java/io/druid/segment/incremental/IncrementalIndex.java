@@ -159,24 +159,19 @@ public class IncrementalIndex implements Iterable<Row>
       dimension = dimension.toLowerCase();
       List<String> dimensionValues = row.getDimension(dimension);
 
-      Integer index = dimensionOrder.get(dimension);
-      if (index == null) {
-        synchronized (dimensionOrder) {
-          index = dimensionOrder.get(dimension);
-          if (index == null) {
-            dimensionOrder.put(dimension, dimensionOrder.size());
-            dimensions.add(dimension);
+      synchronized (dimensionOrder) {
+        Integer index = dimensionOrder.get(dimension);
+        if (index == null) {
+          dimensionOrder.put(dimension, dimensionOrder.size());
+          dimensions.add(dimension);
 
-            if (overflow == null) {
-              overflow = Lists.newArrayList();
-            }
-            overflow.add(getDimVals(dimValues.add(dimension), dimensionValues));
-          } else {
-            dims[index] = getDimVals(dimValues.get(dimension), dimensionValues);
+          if (overflow == null) {
+            overflow = Lists.newArrayList();
           }
+          overflow.add(getDimVals(dimValues.add(dimension), dimensionValues));
+        } else {
+          dims[index] = getDimVals(dimValues.get(dimension), dimensionValues);
         }
-      } else {
-        dims[index] = getDimVals(dimValues.get(dimension), dimensionValues);
       }
     }
 
