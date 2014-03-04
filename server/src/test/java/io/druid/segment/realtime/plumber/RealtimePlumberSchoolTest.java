@@ -29,7 +29,7 @@ import com.metamx.common.exception.FormattedException;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.ServerView;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.AbstractParseSpec;
+import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
@@ -108,12 +108,6 @@ public class RealtimePlumberSchoolTest
         new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null, Granularity.HOUR)
     );
 
-    RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
-        new Period("PT10m"),
-        tmpDir,
-        Granularity.HOUR
-    );
-
     announcer = EasyMock.createMock(DataSegmentAnnouncer.class);
     announcer.announceSegment(EasyMock.<DataSegment>anyObject());
     EasyMock.expectLastCall().anyTimes();
@@ -132,15 +126,6 @@ public class RealtimePlumberSchoolTest
 
     EasyMock.replay(announcer, segmentPublisher, dataSegmentPusher, serverView, emitter);
 
-    realtimePlumberSchool.setConglomerate(new DefaultQueryRunnerFactoryConglomerate(Maps.<Class<? extends Query>, QueryRunnerFactory>newHashMap()));
-    realtimePlumberSchool.setSegmentAnnouncer(announcer);
-    realtimePlumberSchool.setSegmentPublisher(segmentPublisher);
-    realtimePlumberSchool.setVersioningPolicy(new IntervalStartVersioningPolicy());
-    realtimePlumberSchool.setDataSegmentPusher(dataSegmentPusher);
-    realtimePlumberSchool.setServerView(serverView);
-    realtimePlumberSchool.setEmitter(emitter);
-    realtimePlumberSchool.setQueryExecutorService(MoreExecutors.sameThreadExecutor());
-
     RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(
         1,
         null,
@@ -150,6 +135,22 @@ public class RealtimePlumberSchoolTest
         new NoopRejectionPolicyFactory(),
         null,
         null
+    );
+
+    RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
+        emitter,
+        new DefaultQueryRunnerFactoryConglomerate(Maps.<Class<? extends Query>, QueryRunnerFactory>newHashMap()),
+        dataSegmentPusher,
+        announcer,
+        segmentPublisher,
+        serverView,
+        MoreExecutors.sameThreadExecutor(),
+        new Period("PT10m"),
+        tmpDir,
+        Granularity.HOUR,
+        new IntervalStartVersioningPolicy(),
+        new NoopRejectionPolicyFactory(),
+        0
     );
 
     plumber = realtimePlumberSchool.findPlumber(schema, driverConfig, new FireDepartmentMetrics());

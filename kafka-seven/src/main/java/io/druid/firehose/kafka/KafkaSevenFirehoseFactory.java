@@ -57,25 +57,13 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory<ByteBufferInpu
   public KafkaSevenFirehoseFactory(
       @JsonProperty("consumerProps") Properties consumerProps,
       @JsonProperty("feed") String feed,
+      // backwards compatible
       @JsonProperty("parser") ByteBufferInputRowParser parser
   )
   {
     this.consumerProps = consumerProps;
     this.feed = feed;
-    Set<String> newDimExclus = Sets.union(
-        parser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
-        Sets.newHashSet("feed")
-    );
-    this.parser = parser.withParseSpec(
-        parser.getParseSpec()
-              .withDimensionsSpec(
-                  parser.getParseSpec()
-                        .getDimensionsSpec()
-                        .withDimensionExclusions(
-                            newDimExclus
-                        )
-              )
-    );
+    this.parser = (parser == null) ? null : parser;
   }
 
   @JsonProperty
@@ -99,6 +87,21 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory<ByteBufferInpu
   @Override
   public Firehose connect(final ByteBufferInputRowParser firehoseParser) throws IOException
   {
+    Set<String> newDimExclus = Sets.union(
+        firehoseParser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
+        Sets.newHashSet("feed")
+    );
+    final ByteBufferInputRowParser theParser = firehoseParser.withParseSpec(
+        firehoseParser.getParseSpec()
+                      .withDimensionsSpec(
+                          firehoseParser.getParseSpec()
+                                        .getDimensionsSpec()
+                                        .withDimensionExclusions(
+                                            newDimExclus
+                                        )
+                      )
+    );
+
     final ConsumerConnector connector = Consumer.createJavaConsumerConnector(new ConsumerConfig(consumerProps));
 
     final Map<String, List<KafkaStream<Message>>> streams = connector.createMessageStreams(ImmutableMap.of(feed, 1));
@@ -134,7 +137,7 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory<ByteBufferInpu
       public InputRow parseMessage(Message message) throws FormattedException
       {
         try {
-          return firehoseParser.parse(message.payload());
+          return theParser.parse(message.payload());
         }
         catch (Exception e) {
           throw new FormattedException.Builder()

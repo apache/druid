@@ -30,7 +30,6 @@ import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.StringInputRowParser;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
@@ -63,30 +62,33 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
   public KafkaEightFirehoseFactory(
       @JsonProperty("consumerProps") Properties consumerProps,
       @JsonProperty("feed") String feed,
+      // backwards compatible
       @JsonProperty("parser") ByteBufferInputRowParser parser
   )
   {
     this.consumerProps = consumerProps;
     this.feed = feed;
-    Set<String> newDimExclus = Sets.union(
-        parser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
-        Sets.newHashSet("feed")
-    );
-    this.parser = parser.withParseSpec(
-        parser.getParseSpec()
-              .withDimensionsSpec(
-                  parser.getParseSpec()
-                        .getDimensionsSpec()
-                        .withDimensionExclusions(
-                            newDimExclus
-                        )
-              )
-    );
+    this.parser = (parser == null) ? null : parser;
   }
 
   @Override
   public Firehose connect(final ByteBufferInputRowParser firehoseParser) throws IOException
   {
+    Set<String> newDimExclus = Sets.union(
+        firehoseParser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
+        Sets.newHashSet("feed")
+    );
+    final ByteBufferInputRowParser theParser = firehoseParser.withParseSpec(
+        firehoseParser.getParseSpec()
+                      .withDimensionsSpec(
+                          firehoseParser.getParseSpec()
+                                        .getDimensionsSpec()
+                                        .withDimensionExclusions(
+                                            newDimExclus
+                                        )
+                      )
+    );
+
     final ConsumerConnector connector = Consumer.createJavaConsumerConnector(new ConsumerConfig(consumerProps));
 
     final Map<String, List<KafkaStream<byte[], byte[]>>> streams = connector.createMessageStreams(
@@ -122,7 +124,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
         }
 
         try {
-          return firehoseParser.parse(ByteBuffer.wrap(message));
+          return theParser.parse(ByteBuffer.wrap(message));
         }
         catch (Exception e) {
           throw new FormattedException.Builder()

@@ -21,16 +21,10 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
-import io.druid.data.input.impl.AbstractParseSpec;
 import io.druid.data.input.impl.DataSpec;
-import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.data.input.impl.ParseSpec;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
@@ -92,7 +86,7 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
     if (dataSchema != null) {
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.driverConfig = driverConfig;
+      this.driverConfig = driverConfig == null ? HadoopDriverConfig.makeDefaultDriverConfig() : driverConfig;
     } else { // Backwards compatibility
       TimestampSpec theTimestampSpec = (timestampSpec == null)
                                        ? new TimestampSpec(timestampColumn, timestampFormat)

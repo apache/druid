@@ -21,10 +21,10 @@ package io.druid.segment.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.granularity.GranularitySpec;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 
 /**
  */
@@ -41,12 +41,14 @@ public class DataSchema
       @JsonProperty("parser") InputRowParser parser,
       @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec
-      )
+  )
   {
     this.dataSource = dataSource;
     this.parser = parser;
     this.aggregators = aggregators;
-    this.granularitySpec = granularitySpec;
+    this.granularitySpec = granularitySpec == null
+                           ? new UniformGranularitySpec(null, null, null, null)
+                           : granularitySpec;
   }
 
   @JsonProperty

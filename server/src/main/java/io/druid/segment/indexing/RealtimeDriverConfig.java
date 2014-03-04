@@ -21,8 +21,8 @@ package io.druid.segment.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.io.Files;
 import io.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
-import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.RejectionPolicyFactory;
 import io.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
@@ -36,12 +36,36 @@ import java.io.File;
  */
 public class RealtimeDriverConfig implements DriverConfig
 {
+  private static final int defaultMaxRowsInMemory = 500000;
+  private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
+  private static final Period defaultWindowPeriod = new Period("PT10M");
+  private static final File defaultBasePersistDirectory = Files.createTempDir();
+  private static final VersioningPolicy defaultVersioningPolicy = new IntervalStartVersioningPolicy();
+  private static final RejectionPolicyFactory defaultRejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
+  private static final int defaultMaxPendingPersists = 2;
+  private static final ShardSpec defaultShardSpec = new NoneShardSpec();
+
+  // Might make sense for this to be a builder
+  public static RealtimeDriverConfig makeDefaultDriverConfig()
+  {
+    return new RealtimeDriverConfig(
+        defaultMaxRowsInMemory,
+        defaultIntermediatePersistPeriod,
+        defaultWindowPeriod,
+        defaultBasePersistDirectory,
+        defaultVersioningPolicy,
+        defaultRejectionPolicyFactory,
+        defaultMaxPendingPersists,
+        defaultShardSpec
+    );
+  }
+
   private final int maxRowsInMemory;
   private final Period intermediatePersistPeriod;
   private final Period windowPeriod;
   private final File basePersistDirectory;
   private final VersioningPolicy versioningPolicy;
-  private final RejectionPolicyFactory rejectionPolicy;
+  private final RejectionPolicyFactory rejectionPolicyFactory;
   private final int maxPendingPersists;
   private final ShardSpec shardSpec;
 
@@ -52,23 +76,23 @@ public class RealtimeDriverConfig implements DriverConfig
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicy,
+      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("shardSpec") ShardSpec shardSpec
   )
   {
-    this.maxRowsInMemory = maxRowsInMemory == null ? 500000 : maxRowsInMemory;
+    this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
-                                     ? new Period("PT10M")
+                                     ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
-    this.windowPeriod = windowPeriod == null ? this.intermediatePersistPeriod : windowPeriod;
-    this.basePersistDirectory = basePersistDirectory;
-    this.versioningPolicy = versioningPolicy == null ? new IntervalStartVersioningPolicy() : versioningPolicy;
-    this.rejectionPolicy = rejectionPolicy == null ? new ServerTimeRejectionPolicyFactory() : rejectionPolicy;
-    this.maxPendingPersists = maxPendingPersists == null
-                              ? RealtimePlumberSchool.DEFAULT_MAX_PENDING_PERSISTS
-                              : maxPendingPersists;
-    this.shardSpec = shardSpec == null ? new NoneShardSpec() : shardSpec;
+    this.windowPeriod = windowPeriod == null ? defaultWindowPeriod : windowPeriod;
+    this.basePersistDirectory = basePersistDirectory == null ? defaultBasePersistDirectory : basePersistDirectory;
+    this.versioningPolicy = versioningPolicy == null ? defaultVersioningPolicy : versioningPolicy;
+    this.rejectionPolicyFactory = rejectionPolicyFactory == null
+                                  ? defaultRejectionPolicyFactory
+                                  : rejectionPolicyFactory;
+    this.maxPendingPersists = maxPendingPersists == null ? defaultMaxPendingPersists : maxPendingPersists;
+    this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
   }
 
   @JsonProperty
@@ -104,7 +128,7 @@ public class RealtimeDriverConfig implements DriverConfig
   @JsonProperty
   public RejectionPolicyFactory getRejectionPolicyFactory()
   {
-    return rejectionPolicy;
+    return rejectionPolicyFactory;
   }
 
   @JsonProperty
@@ -127,7 +151,21 @@ public class RealtimeDriverConfig implements DriverConfig
         windowPeriod,
         basePersistDirectory,
         policy,
-        rejectionPolicy,
+        rejectionPolicyFactory,
+        maxPendingPersists,
+        shardSpec
+    );
+  }
+
+  public RealtimeDriverConfig withBasePersistDirectory(File dir)
+  {
+    return new RealtimeDriverConfig(
+        maxRowsInMemory,
+        intermediatePersistPeriod,
+        windowPeriod,
+        dir,
+        versioningPolicy,
+        rejectionPolicyFactory,
         maxPendingPersists,
         shardSpec
     );

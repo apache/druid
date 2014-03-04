@@ -101,11 +101,10 @@ public class FireDepartment extends IngestionSchema<RealtimeIOConfig, RealtimeDr
     } else {
       Preconditions.checkNotNull(dataSchema, "dataSchema");
       Preconditions.checkNotNull(ioConfig, "ioConfig");
-      Preconditions.checkNotNull(driverConfig, "driverConfig");
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.driverConfig = driverConfig;
+      this.driverConfig = driverConfig == null ? RealtimeDriverConfig.makeDefaultDriverConfig() : driverConfig;
     }
   }
 

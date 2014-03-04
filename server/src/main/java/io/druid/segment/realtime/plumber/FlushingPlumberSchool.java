@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.Granularity;
-import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -35,7 +34,6 @@ import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
-import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 
@@ -45,38 +43,52 @@ import java.util.concurrent.ExecutorService;
  */
 public class FlushingPlumberSchool extends RealtimePlumberSchool
 {
-  private static final EmittingLogger log = new EmittingLogger(FlushingPlumberSchool.class);
+  private static final Duration defaultFlushDuration = new Duration("PT1H");
 
   private final Duration flushDuration;
 
-  @JacksonInject
-  @NotNull
-  private volatile ServiceEmitter emitter;
-
-  @JacksonInject
-  @NotNull
-  private volatile QueryRunnerFactoryConglomerate conglomerate = null;
-
-  @JacksonInject
-  @NotNull
-  private volatile DataSegmentAnnouncer segmentAnnouncer = null;
-
-  @JacksonInject
-  @NotNull
-  @Processing
-  private volatile ExecutorService queryExecutorService = null;
+  private final ServiceEmitter emitter;
+  private final QueryRunnerFactoryConglomerate conglomerate;
+  private final DataSegmentAnnouncer segmentAnnouncer;
+  private final ExecutorService queryExecutorService;
 
   @JsonCreator
   public FlushingPlumberSchool(
       @JsonProperty("flushDuration") Duration flushDuration,
+      @JacksonInject ServiceEmitter emitter,
+      @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
+      @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
+      @JacksonInject @Processing ExecutorService queryExecutorService,
+      // Backwards compatible
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") Granularity segmentGranularity
+      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
+      @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
+      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory,
+      @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
-    super(windowPeriod, basePersistDirectory, segmentGranularity);
+    super(
+        emitter,
+        conglomerate,
+        null,
+        segmentAnnouncer,
+        null,
+        null,
+        queryExecutorService,
+        windowPeriod,
+        basePersistDirectory,
+        segmentGranularity,
+        versioningPolicy,
+        rejectionPolicyFactory,
+        maxPendingPersists
+    );
 
-    this.flushDuration = flushDuration;
+    this.flushDuration = flushDuration == null ? defaultFlushDuration : flushDuration;
+    this.emitter = emitter;
+    this.conglomerate = conglomerate;
+    this.segmentAnnouncer = segmentAnnouncer;
+    this.queryExecutorService = queryExecutorService;
   }
 
   @Override

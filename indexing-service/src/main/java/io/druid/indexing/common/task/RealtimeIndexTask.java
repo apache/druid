@@ -107,7 +107,7 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("config") FireDepartment fireDepartment,
-      // To be deprecated
+      // Backwards compatible, to be deprecated
       @JsonProperty("schema") Schema schema,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
@@ -202,11 +202,7 @@ public class RealtimeIndexTask extends AbstractTask
 
     // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
     // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
-    final RealtimePlumberSchool plumberSchool = new RealtimePlumberSchool(
-        schema.getDriverConfig().getWindowPeriod(),
-        new File(toolbox.getTaskWorkDir(), "persist"),
-        schema.getDataSchema().getGranularitySpec().getSegmentGranularity()
-    );
+
     final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
 
     // NOTE: We talk to the coordinator in various places in the plumber and we could be more robust to issues
@@ -283,21 +279,11 @@ public class RealtimeIndexTask extends AbstractTask
       }
     };
 
-    // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
-    // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip and
-    // NOTE: descriptor.json to mismatch, or it can cause historical nodes to load different instances of the
-    // NOTE: "same" segment.
-    plumberSchool.setDataSegmentPusher(toolbox.getSegmentPusher());
-    plumberSchool.setConglomerate(toolbox.getQueryRunnerFactoryConglomerate());
-    plumberSchool.setQueryExecutorService(toolbox.getQueryExecutorService());
-    plumberSchool.setSegmentAnnouncer(lockingSegmentAnnouncer);
-    plumberSchool.setSegmentPublisher(segmentPublisher);
-    plumberSchool.setServerView(toolbox.getNewSegmentServerView());
-    plumberSchool.setEmitter(toolbox.getEmitter());
-
     DataSchema dataSchema = schema.getDataSchema();
     RealtimeIOConfig realtimeIOConfig = schema.getIOConfig();
-    RealtimeDriverConfig driverConfig = schema.getDriverConfig().withVersioningPolicy(versioningPolicy);
+    RealtimeDriverConfig driverConfig = schema.getDriverConfig()
+                                              .withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+                                              .withVersioningPolicy(versioningPolicy);
 
     final FireDepartment fireDepartment = new FireDepartment(
         dataSchema,
@@ -310,6 +296,27 @@ public class RealtimeIndexTask extends AbstractTask
     );
     final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
+
+    // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
+    // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip and
+    // NOTE: descriptor.json to mismatch, or it can cause historical nodes to load different instances of the
+    // NOTE: "same" segment.
+    final RealtimePlumberSchool plumberSchool = new RealtimePlumberSchool(
+        toolbox.getEmitter(),
+        toolbox.getQueryRunnerFactoryConglomerate(),
+        toolbox.getSegmentPusher(),
+        lockingSegmentAnnouncer,
+        segmentPublisher,
+        toolbox.getNewSegmentServerView(),
+        toolbox.getQueryExecutorService(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        0
+    );
+
     this.plumber = plumberSchool.findPlumber(dataSchema, driverConfig, fireDepartment.getMetrics());
 
     try {

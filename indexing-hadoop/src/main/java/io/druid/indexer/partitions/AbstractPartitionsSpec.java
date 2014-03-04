@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public abstract class AbstractPartitionsSpec implements PartitionsSpec
 {
   private static final double DEFAULT_OVERSIZE_THRESHOLD = 1.5;
+  private static final long DEFAULT_TARGET_PARTITION_SIZE = -1;
+
   private final long targetPartitionSize;
   private final long maxPartitionSize;
   private final boolean assumeGrouped;
@@ -35,7 +37,7 @@ public abstract class AbstractPartitionsSpec implements PartitionsSpec
       Boolean assumeGrouped
   )
   {
-    this.targetPartitionSize = targetPartitionSize == null ? -1 : targetPartitionSize;
+    this.targetPartitionSize = targetPartitionSize == null ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
     this.maxPartitionSize = maxPartitionSize == null
                             ? (long) (this.targetPartitionSize * DEFAULT_OVERSIZE_THRESHOLD)
                             : maxPartitionSize;
