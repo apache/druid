@@ -152,33 +152,29 @@ public class IncrementalIndex implements Iterable<Row>
     }
 
     final List<String> rowDimensions = row.getDimensions();
-    String[][] dims = new String[dimensionOrder.size()][];
 
+    String[][] dims;
     List<String[]> overflow = null;
-    for (String dimension : rowDimensions) {
-      dimension = dimension.toLowerCase();
-      List<String> dimensionValues = row.getDimension(dimension);
+    synchronized (dimensionOrder) {
+      dims = new String[dimensionOrder.size()][];
+      for (String dimension : rowDimensions) {
+        dimension = dimension.toLowerCase();
+        List<String> dimensionValues = row.getDimension(dimension);
+        Integer index = dimensionOrder.get(dimension);
+        if (index == null) {
+          dimensionOrder.put(dimension, dimensionOrder.size());
+          dimensions.add(dimension);
 
-      Integer index = dimensionOrder.get(dimension);
-      if (index == null) {
-        synchronized (dimensionOrder) {
-          index = dimensionOrder.get(dimension);
-          if (index == null) {
-            dimensionOrder.put(dimension, dimensionOrder.size());
-            dimensions.add(dimension);
-
-            if (overflow == null) {
-              overflow = Lists.newArrayList();
-            }
-            overflow.add(getDimVals(dimValues.add(dimension), dimensionValues));
-          } else {
-            dims[index] = getDimVals(dimValues.get(dimension), dimensionValues);
+          if (overflow == null) {
+            overflow = Lists.newArrayList();
           }
+          overflow.add(getDimVals(dimValues.add(dimension), dimensionValues));
+        } else {
+          dims[index] = getDimVals(dimValues.get(dimension), dimensionValues);
         }
-      } else {
-        dims[index] = getDimVals(dimValues.get(dimension), dimensionValues);
       }
     }
+
 
     if (overflow != null) {
       // Merge overflow and non-overflow
@@ -292,8 +288,9 @@ public class IncrementalIndex implements Iterable<Row>
       Aggregator[] prev = facts.putIfAbsent(key, aggs);
       if (prev != null) {
         aggs = prev;
+      } else {
+        numEntries.incrementAndGet();
       }
-      numEntries.incrementAndGet();
     }
 
     synchronized (this) {

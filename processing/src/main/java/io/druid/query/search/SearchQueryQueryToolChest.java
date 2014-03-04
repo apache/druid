@@ -101,7 +101,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       )
       {
         SearchQuery query = (SearchQuery) input;
-        return new SearchBinaryFn(query.getSort(), query.getGranularity());
+        return new SearchBinaryFn(query.getSort(), query.getGranularity(), query.getLimit());
       }
     };
   }

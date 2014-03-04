@@ -4,7 +4,7 @@ layout: doc_page
 # Deep Storage
 Deep storage is where segments are stored.  It is a storage mechanism that Druid does not provide.  This deep storage infrastructure defines the level of durability of your data, as long as Druid nodes can see this storage infrastructure and get at the segments stored on it, you will not lose data no matter how many Druid nodes you lose.  If segments disappear from this storage layer, then you will lose whatever data those segments represented.
 
-The currently supported types of deep storage follow.
+The currently supported types of deep storage follow. Other deep-storage options, such as [Cassandra](http://planetcassandra.org/blog/post/cassandra-as-a-deep-storage-mechanism-for-druid-real-time-analytics-engine/), have been developed by members of the community.
 
 ## S3-compatible
 
