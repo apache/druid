@@ -70,7 +70,7 @@ The effective utilization of cores by Zookeeper, MySQL, and Master nodes is like
 Storage
 -------
 
-Indexed segments should be kept in a permanent store accessible by all nodes like AWS S3 or HDFS or equivalent. Currently Druid supports S3, but this will be extended soon.
+Indexed segments should be kept in a permanent store accessible by all nodes. Druid supports AWS S3, HDFS, and "local" mountpoints of nonlocal storage (e.g. NFS). Members of the Druid community are adding additional deep-storage options, such as [Cassandra](http://planetcassandra.org/blog/post/cassandra-as-a-deep-storage-mechanism-for-druid-real-time-analytics-engine/).
 
 Local disk ("ephemeral" on AWS EC2) for caching is recommended over network mounted storage (example of mounted: AWS EBS, Elastic Block Store) in order to avoid network delays during times of heavy usage. If your data center is suitably provisioned for networked storage, perhaps with separate LAN/NICs just for storage, then mounted might work fine.
 
