@@ -42,6 +42,7 @@ public class TmpFileIOPeon implements IOPeon
     File retFile = createdFiles.get(filename);
     if (retFile == null) {
       retFile = File.createTempFile("filePeon", filename);
+      retFile.deleteOnExit();
       createdFiles.put(filename, retFile);
     }
     return new BufferedOutputStream(new FileOutputStream(retFile));
