@@ -20,6 +20,8 @@
 package io.druid.concurrent;
 
 import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.metamx.common.logger.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,23 +32,46 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ExecsTest
 {
+  private static final Logger log = new Logger(ExecsTest.class);
+
   @Test
-  public void testBlockingExecutorService() throws Exception
+  public void testBlockingExecutorServiceZeroCapacity() throws Exception
   {
-    final int capacity = 3;
-    final ExecutorService blockingExecutor = Execs.newBlockingSingleThreaded("test%d", capacity);
-    final CountDownLatch queueFullSignal = new CountDownLatch(capacity + 1);
-    final CountDownLatch taskCompletedSignal = new CountDownLatch(2 * capacity);
+    runTest(0);
+  }
+
+  @Test
+  public void testBlockingExecutorServiceOneCapacity() throws Exception
+  {
+    runTest(1);
+  }
+
+  @Test
+  public void testBlockingExecutorServiceThreeCapacity() throws Exception
+  {
+    runTest(3);
+  }
+
+  private static void runTest(final int capacity) throws Exception
+  {
+    final int nTasks = (capacity + 1) * 3;
+    final ExecutorService blockingExecutor = Execs.newBlockingSingleThreaded("ExecsTest-Blocking-%d", capacity);
+    final CountDownLatch queueShouldBeFullSignal = new CountDownLatch(capacity + 1);
+    final CountDownLatch taskCompletedSignal = new CountDownLatch(nTasks);
     final CountDownLatch taskStartSignal = new CountDownLatch(1);
     final AtomicInteger producedCount = new AtomicInteger();
     final AtomicInteger consumedCount = new AtomicInteger();
-    ExecutorService producer = Executors.newSingleThreadExecutor();
+    final ExecutorService producer = Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setNameFormat(
+            "ExecsTest-Producer-%d"
+        ).build()
+    );
     producer.submit(
         new Runnable()
         {
           public void run()
           {
-            for (int i = 0; i < 2 * capacity; i++) {
+            for (int i = 0; i < nTasks; i++) {
               final int taskID = i;
               System.out.println("Produced task" + taskID);
               blockingExecutor.submit(
@@ -55,7 +80,7 @@ public class ExecsTest
                     @Override
                     public void run()
                     {
-                      System.out.println("Starting task" + taskID);
+                      log.info("Starting task: %s", taskID);
                       try {
                         taskStartSignal.await();
                         consumedCount.incrementAndGet();
@@ -64,29 +89,31 @@ public class ExecsTest
                       catch (Exception e) {
                         throw Throwables.propagate(e);
                       }
-                      System.out.println("Completed task" + taskID);
+                      log.info("Completed task: %s", taskID);
                     }
                   }
               );
               producedCount.incrementAndGet();
-              queueFullSignal.countDown();
+              queueShouldBeFullSignal.countDown();
             }
           }
         }
     );
 
-    queueFullSignal.await();
-    // verify that the producer blocks
+    queueShouldBeFullSignal.await();
+    // Verify that the producer blocks. I don't think it's possible to be sure that the producer is blocking (since
+    // it could be doing nothing for any reason). But waiting a short period of time and checking that it hasn't done
+    // anything should hopefully be sufficient.
+    Thread.sleep(500);
     Assert.assertEquals(capacity + 1, producedCount.get());
     // let the tasks run
     taskStartSignal.countDown();
     // wait until all tasks complete
     taskCompletedSignal.await();
     // verify all tasks consumed
-    Assert.assertEquals(2 * capacity, consumedCount.get());
+    Assert.assertEquals(nTasks, consumedCount.get());
     // cleanup
     blockingExecutor.shutdown();
     producer.shutdown();
-
   }
 }

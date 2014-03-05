@@ -198,7 +198,7 @@ public class TaskSerdeTest
         null,
         null,
         new Period("PT10M"),
-        1,
+        5,
         IndexGranularity.HOUR,
         null
     );
@@ -214,6 +214,7 @@ public class TaskSerdeTest
     Assert.assertEquals("rofl", task.getTaskResource().getAvailabilityGroup());
     Assert.assertEquals(new Period("PT10M"), task.getWindowPeriod());
     Assert.assertEquals(IndexGranularity.HOUR, task.getSegmentGranularity());
+    Assert.assertEquals(5, task.getMaxPendingPersists());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
@@ -222,6 +223,7 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getTaskResource().getAvailabilityGroup(), task2.getTaskResource().getAvailabilityGroup());
     Assert.assertEquals(task.getWindowPeriod(), task2.getWindowPeriod());
     Assert.assertEquals(task.getSegmentGranularity(), task2.getSegmentGranularity());
+    Assert.assertEquals(task.getMaxPendingPersists(), task2.getMaxPendingPersists());
   }
 
   @Test
