@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import com.google.common.hash.Hashing;
 import com.google.common.io.CharStreams;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.LineProcessor;
@@ -31,7 +32,10 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -52,13 +56,28 @@ public class TestIndex
   private static QueryableIndex mmappedIndex = null;
   private static QueryableIndex mergedRealtime = null;
 
-  public static final String[] COLUMNS = new String[]{"ts", "provider", "quALIty", "plAcEmEnT", "pLacementish", "iNdEx"};
+  public static final String[] COLUMNS = new String[]{
+      "ts",
+      "provider",
+      "quALIty",
+      "plAcEmEnT",
+      "pLacementish",
+      "iNdEx",
+      "qualiTy_Uniques"
+  };
   public static final String[] DIMENSIONS = new String[]{"provider", "quALIty", "plAcEmEnT", "pLacementish"};
   public static final String[] METRICS = new String[]{"iNdEx"};
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-04-16T00:00:00.000Z");
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
-      new DoubleSumAggregatorFactory(METRICS[0], METRICS[0])
+      new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),
+      new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
+
+  static {
+    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+    }
+  }
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
