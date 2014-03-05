@@ -109,7 +109,7 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
       @JsonProperty("windowPeriod") Period windowPeriod,
-      @JsonProperty("maxPendingPersists") int maxPendingPersists,
+      @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
       @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory
   )
@@ -139,7 +139,7 @@ public class RealtimeIndexTask extends AbstractTask
     this.firehoseFactory = firehoseFactory;
     this.fireDepartmentConfig = fireDepartmentConfig;
     this.windowPeriod = windowPeriod;
-    this.maxPendingPersists = (maxPendingPersists == 0)
+    this.maxPendingPersists = (maxPendingPersists == null)
                               ? RealtimePlumberSchool.DEFAULT_MAX_PENDING_PERSISTS
                               : maxPendingPersists;
     this.segmentGranularity = segmentGranularity;
@@ -396,6 +396,12 @@ public class RealtimeIndexTask extends AbstractTask
   public Period getWindowPeriod()
   {
     return windowPeriod;
+  }
+
+  @JsonProperty
+  public int getMaxPendingPersists()
+  {
+    return maxPendingPersists;
   }
 
   @JsonProperty
