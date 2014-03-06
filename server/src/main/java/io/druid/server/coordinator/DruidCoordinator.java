@@ -738,8 +738,6 @@ public class DruidCoordinator
           }
         }
 
-        ExecutorServices.create()
-
         BalancerStrategyFactory factory =
             new CostBalancerStrategyFactory(getDynamicConfigs().getBalancerComputeThreads());
 
