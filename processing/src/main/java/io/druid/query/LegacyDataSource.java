@@ -18,20 +18,16 @@
  * This file Copyright (C) 2014 N3TWORK, Inc. and contributed to the Druid project
  * under the Druid Corporate Contributor License Agreement.
  */
-
 package io.druid.query;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME,
-              include = JsonTypeInfo.As.PROPERTY,
-              property = "type",
-              defaultImpl = LegacyDataSource.class)
-@JsonSubTypes({
-    @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
-    @JsonSubTypes.Type(value = QueryDataSource.class, name = "query")
-})
-public interface DataSource
+public class LegacyDataSource extends TableDataSource
 {
+  @JsonCreator
+  public LegacyDataSource(String name)
+  {
+    super(name);
+  }
 }

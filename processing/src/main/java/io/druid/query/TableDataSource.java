@@ -31,7 +31,7 @@ public class TableDataSource implements DataSource
   @JsonCreator
   public TableDataSource(@JsonProperty("name") String name)
   {
-    this.name = name.toLowerCase();
+    this.name = (name == null ? null : name.toLowerCase());
   }
 
   public String getName()
@@ -45,7 +45,7 @@ public class TableDataSource implements DataSource
   public boolean equals(Object o)
   {
     if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (!(o instanceof TableDataSource)) return false;
 
     TableDataSource that = (TableDataSource) o;
 
