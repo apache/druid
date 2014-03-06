@@ -132,35 +132,6 @@ public abstract class BaseQuery<T> implements Query<T>
     return overridden;
   }
 
-  /**
-   * Compare the BaseQuery fields with another BaseQuery. For use in subclasses implementing equals()
-   * @param that
-   * @return
-   */
-  protected boolean partialEquals(BaseQuery that)
-  {
-    if (context != null ? !context.equals(that.context) : that.context != null) return false;
-    if (dataSource != null ? !dataSource.equals(that.dataSource) : that.dataSource != null) return false;
-    if (duration != null ? !duration.equals(that.duration) : that.duration != null) return false;
-    if (querySegmentSpec != null ? !querySegmentSpec.equals(that.querySegmentSpec) : that.querySegmentSpec != null)
-      return false;
-
-    return true;
-  }
-
-  /**
-   * Hash the fields within BaseQuery. For use in subclasses implementing hashCode()
-   * @return
-   */
-  protected int partialHashCode()
-  {
-    int result = dataSource != null ? dataSource.hashCode() : 0;
-    result = 31 * result + (context != null ? context.hashCode() : 0);
-    result = 31 * result + (querySegmentSpec != null ? querySegmentSpec.hashCode() : 0);
-    result = 31 * result + (duration != null ? duration.hashCode() : 0);
-    return result;
-  }
-
   @Override
   public String getId()
   {
@@ -171,5 +142,32 @@ public abstract class BaseQuery<T> implements Query<T>
   public Query withId(String id)
   {
     return withOverriddenContext(ImmutableMap.of(QUERYID, id));
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    BaseQuery baseQuery = (BaseQuery) o;
+
+    if (context != null ? !context.equals(baseQuery.context) : baseQuery.context != null) return false;
+    if (dataSource != null ? !dataSource.equals(baseQuery.dataSource) : baseQuery.dataSource != null) return false;
+    if (duration != null ? !duration.equals(baseQuery.duration) : baseQuery.duration != null) return false;
+    if (querySegmentSpec != null ? !querySegmentSpec.equals(baseQuery.querySegmentSpec) : baseQuery.querySegmentSpec != null)
+      return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dataSource != null ? dataSource.hashCode() : 0;
+    result = 31 * result + (context != null ? context.hashCode() : 0);
+    result = 31 * result + (querySegmentSpec != null ? querySegmentSpec.hashCode() : 0);
+    result = 31 * result + (duration != null ? duration.hashCode() : 0);
+    return result;
   }
 }

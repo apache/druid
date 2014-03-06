@@ -212,10 +212,9 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
 
     TopNQuery topNQuery = (TopNQuery) o;
-    if (!partialEquals(topNQuery))
-      return false;
 
     if (threshold != topNQuery.threshold) return false;
     if (aggregatorSpecs != null ? !aggregatorSpecs.equals(topNQuery.aggregatorSpecs) : topNQuery.aggregatorSpecs != null)
@@ -235,8 +234,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   @Override
   public int hashCode()
   {
-    int result = dimensionSpec != null ? dimensionSpec.hashCode() : 0;
-    result = 31 * result + partialHashCode();
+    int result = super.hashCode();
+    result = 31 * result + (dimensionSpec != null ? dimensionSpec.hashCode() : 0);
     result = 31 * result + (topNMetricSpec != null ? topNMetricSpec.hashCode() : 0);
     result = 31 * result + threshold;
     result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);

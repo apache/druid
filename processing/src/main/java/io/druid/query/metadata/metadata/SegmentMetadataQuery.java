@@ -95,10 +95,9 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
 
     SegmentMetadataQuery that = (SegmentMetadataQuery) o;
-    if (!partialEquals(that))
-      return false;
 
     if (merge != that.merge) return false;
     if (toInclude != null ? !toInclude.equals(that.toInclude) : that.toInclude != null) return false;
@@ -109,8 +108,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public int hashCode()
   {
-    int result = toInclude != null ? toInclude.hashCode() : 0;
-    result = 31 * result + partialHashCode();
+    int result = super.hashCode();
+    result = 31 * result + (toInclude != null ? toInclude.hashCode() : 0);
     result = 31 * result + (merge ? 1 : 0);
     return result;
   }

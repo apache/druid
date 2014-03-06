@@ -162,17 +162,4 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
         )
     );
   }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-
-    return partialEquals((TimeBoundaryQuery) o);
-  }
-
-  @Override
-  public int hashCode() {
-    return partialHashCode();
-  }
 }

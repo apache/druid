@@ -194,11 +194,9 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
 
     SearchQuery that = (SearchQuery) o;
-
-    if (!partialEquals(that))
-      return false;
 
     if (limit != that.limit) return false;
     if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
@@ -213,8 +211,8 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   @Override
   public int hashCode()
   {
-    int result = dimFilter != null ? dimFilter.hashCode() : 0;
-    result = 31 * result + partialHashCode();
+    int result = super.hashCode();
+    result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
     result = 31 * result + (sortSpec != null ? sortSpec.hashCode() : 0);
     result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);

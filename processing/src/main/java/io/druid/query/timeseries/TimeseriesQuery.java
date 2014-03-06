@@ -144,10 +144,9 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
 
     TimeseriesQuery that = (TimeseriesQuery) o;
-    if (!partialEquals(that))
-      return false;
 
     if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null)
       return false;
@@ -162,8 +161,8 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public int hashCode()
   {
-    int result = dimFilter != null ? dimFilter.hashCode() : 0;
-    result = 31 * result + partialHashCode();
+    int result = super.hashCode();
+    result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
     result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
     result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
     result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);

@@ -24,7 +24,6 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import java.io.Serializable;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME,
               include = JsonTypeInfo.As.PROPERTY,
               property = "type",
@@ -33,6 +32,6 @@ import java.io.Serializable;
     @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
     @JsonSubTypes.Type(value = QueryDataSource.class, name = "query")
 })
-public interface DataSource extends Serializable
+public interface DataSource
 {
 }

@@ -507,10 +507,9 @@ public class GroupByQuery extends BaseQuery<Row>
   {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
 
     GroupByQuery that = (GroupByQuery) o;
-    if (!partialEquals(that))
-      return false;
 
     if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null)
       return false;
@@ -519,6 +518,8 @@ public class GroupByQuery extends BaseQuery<Row>
     if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
     if (havingSpec != null ? !havingSpec.equals(that.havingSpec) : that.havingSpec != null) return false;
     if (limitSpec != null ? !limitSpec.equals(that.limitSpec) : that.limitSpec != null) return false;
+    if (orderByLimitFn != null ? !orderByLimitFn.equals(that.orderByLimitFn) : that.orderByLimitFn != null)
+      return false;
     if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(that.postAggregatorSpecs) : that.postAggregatorSpecs != null)
       return false;
 
@@ -528,8 +529,8 @@ public class GroupByQuery extends BaseQuery<Row>
   @Override
   public int hashCode()
   {
-    int result = limitSpec != null ? limitSpec.hashCode() : 0;
-    result = 31 * result + partialHashCode();
+    int result = super.hashCode();
+    result = 31 * result + (limitSpec != null ? limitSpec.hashCode() : 0);
     result = 31 * result + (havingSpec != null ? havingSpec.hashCode() : 0);
     result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
     result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
