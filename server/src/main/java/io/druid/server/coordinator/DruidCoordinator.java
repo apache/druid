@@ -31,10 +31,12 @@ import com.google.common.io.Closeables;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
+import com.metamx.common.concurrent.ExecutorServices;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
@@ -736,8 +738,10 @@ public class DruidCoordinator
           }
         }
 
+        ExecutorServices.create()
+
         BalancerStrategyFactory factory =
-            new CostBalancerMultithreadStrategyFactory(getDynamicConfigs().getBalancerComputeThreads());
+            new CostBalancerStrategyFactory(getDynamicConfigs().getBalancerComputeThreads());
 
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =

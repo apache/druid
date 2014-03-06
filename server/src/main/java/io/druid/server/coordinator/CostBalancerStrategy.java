@@ -19,6 +19,11 @@
 
 package io.druid.server.coordinator;
 
+import com.google.api.client.util.Lists;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
@@ -26,18 +31,22 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 
-public abstract class AbstractCostBalancerStrategy implements BalancerStrategy
+public class CostBalancerStrategy implements BalancerStrategy
 {
-  private static final EmittingLogger log = new EmittingLogger(AbstractCostBalancerStrategy.class);
+  private static final EmittingLogger log = new EmittingLogger(CostBalancerStrategy.class);
   private static final int DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
   private static final int SEVEN_DAYS_IN_MILLIS = 7 * DAY_IN_MILLIS;
   private static final int THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
   private final long referenceTimestamp;
+  private final int threadCount;
 
-  public AbstractCostBalancerStrategy(DateTime referenceTimestamp)
+  public CostBalancerStrategy(DateTime referenceTimestamp, int threadCount)
   {
     this.referenceTimestamp = referenceTimestamp.getMillis();
+    this.threadCount = threadCount;
   }
 
   @Override
@@ -60,22 +69,6 @@ public abstract class AbstractCostBalancerStrategy implements BalancerStrategy
   {
     return chooseBestServer(proposalSegment, serverHolders, true).rhs;
   }
-
-
-  /**
-   * For assignment, we want to move to the lowest cost server that isn't already serving the segment.
-   *
-   * @param proposalSegment A DataSegment that we are proposing to move.
-   * @param serverHolders   An iterable of ServerHolders for a particular tier.
-   *
-   * @return A ServerHolder with the new home for a segment.
-   */
-
-  protected abstract Pair<Double, ServerHolder> chooseBestServer(
-      final DataSegment proposalSegment,
-      final Iterable<ServerHolder> serverHolders,
-      boolean includeCurrentServer
-  );
 
   /**
    * This defines the unnormalized cost function between two segments.  There is a base cost given by
@@ -203,8 +196,9 @@ public abstract class AbstractCostBalancerStrategy implements BalancerStrategy
 
     if (includeCurrentServer || !server.isServingSegment(proposalSegment)) {
       /** Don't calculate cost if the server doesn't have enough space or is loading the segment */
-      if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment))
+      if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
         return Double.POSITIVE_INFINITY;
+      }
 
       /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
       double cost = 0f;
@@ -221,6 +215,57 @@ public abstract class AbstractCostBalancerStrategy implements BalancerStrategy
       return cost;
     }
     return Double.POSITIVE_INFINITY;
+  }
+
+  /**
+   * For assignment, we want to move to the lowest cost server that isn't already serving the segment.
+   *
+   * @param proposalSegment A DataSegment that we are proposing to move.
+   * @param serverHolders   An iterable of ServerHolders for a particular tier.
+   *
+   * @return A ServerHolder with the new home for a segment.
+   */
+
+  protected Pair<Double, ServerHolder> chooseBestServer(
+      final DataSegment proposalSegment,
+      final Iterable<ServerHolder> serverHolders,
+      final boolean includeCurrentServer
+  )
+  {
+    Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
+
+    ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(threadCount));
+    List<ListenableFuture<Pair<Double, ServerHolder>>> futures = Lists.newArrayList();
+
+    for (final ServerHolder server : serverHolders) {
+      futures.add(
+          service.submit(
+              new Callable<Pair<Double, ServerHolder>>()
+              {
+                @Override
+                public Pair<Double, ServerHolder> call() throws Exception
+                {
+                  return Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server);
+                }
+              }
+          )
+      );
+    }
+
+    final ListenableFuture<List<Pair<Double, ServerHolder>>> resultsFuture = Futures.allAsList(futures);
+
+    try {
+      for (Pair<Double, ServerHolder> server : resultsFuture.get()) {
+        if (server.lhs < bestServer.lhs) {
+          bestServer = server;
+        }
+      }
+    }
+    catch (Exception e) {
+      log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
+    }
+    service.shutdown();
+    return bestServer;
   }
 
 }

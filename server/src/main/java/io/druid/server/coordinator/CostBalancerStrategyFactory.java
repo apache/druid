@@ -20,11 +20,11 @@ package io.druid.server.coordinator;
 
 import org.joda.time.DateTime;
 
-public class CostBalancerMultithreadStrategyFactory implements BalancerStrategyFactory
+public class CostBalancerStrategyFactory implements BalancerStrategyFactory
 {
   private final int threadCount;
 
-  public CostBalancerMultithreadStrategyFactory(int costBalancerStrategyThreadCount)
+  public CostBalancerStrategyFactory(int costBalancerStrategyThreadCount)
   {
     this.threadCount = costBalancerStrategyThreadCount;
   }
@@ -32,6 +32,6 @@ public class CostBalancerMultithreadStrategyFactory implements BalancerStrategyF
   @Override
   public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
   {
-    return new CostBalancerMultithreadStrategy(referenceTimestamp, threadCount);
+    return new CostBalancerStrategy(referenceTimestamp, threadCount);
   }
 }

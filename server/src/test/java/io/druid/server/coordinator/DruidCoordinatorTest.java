@@ -95,13 +95,6 @@ public class DruidCoordinatorTest
           {
             return null;
           }
-
-          @Override
-          public String getCoordinatorBalancerStrategy()
-          {
-            return null;
-          }
-
         },
         new ZkPathsConfig(){
 

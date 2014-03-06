@@ -4,7 +4,7 @@ import com.google.api.client.util.Lists;
 import com.google.common.collect.Maps;
 import io.druid.client.DruidServer;
 import io.druid.server.coordinator.BalancerStrategy;
-import io.druid.server.coordinator.CostBalancerMultithreadStrategy;
+import io.druid.server.coordinator.CostBalancerStrategy;
 import io.druid.server.coordinator.LoadQueuePeonTester;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
@@ -78,7 +78,7 @@ public class CostBalancerStrategyTest
   public void testCostBalancerMultithreadStrategy() throws InterruptedException {
     DataSegment segment = getSegment(1000);
 
-    BalancerStrategy strategy = new CostBalancerMultithreadStrategy(DateTime.now(DateTimeZone.UTC), 8);
+    BalancerStrategy strategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC), 8);
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
