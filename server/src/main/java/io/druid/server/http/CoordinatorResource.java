@@ -20,6 +20,7 @@
 package io.druid.server.http;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -60,9 +61,14 @@ public class CoordinatorResource
   @Path("/loadstatus")
   @Produces("application/json")
   public Response getLoadStatus(
+      @QueryParam("simple") String simple,
       @QueryParam("full") String full
   )
   {
+    if (simple != null) {
+      return Response.ok(coordinator.getSegmentAvailability()).build();
+    }
+
     if (full != null) {
       return Response.ok(coordinator.getReplicationStatus()).build();
     }
@@ -73,7 +79,8 @@ public class CoordinatorResource
   @Path("/loadqueue")
   @Produces("application/json")
   public Response getLoadQueue(
-      @QueryParam("simple") String simple
+      @QueryParam("simple") String simple,
+      @QueryParam("simple") String full
   )
   {
     if (simple != null) {
@@ -106,6 +113,51 @@ public class CoordinatorResource
           )
       ).build();
     }
-    return Response.ok(coordinator.getLoadManagementPeons()).build();
+
+    if (full != null) {
+      return Response.ok(coordinator.getLoadManagementPeons()).build();
+    }
+
+    return Response.ok(
+        Maps.transformValues(
+            coordinator.getLoadManagementPeons(),
+            new Function<LoadQueuePeon, Object>()
+            {
+              @Override
+              public Object apply(LoadQueuePeon input)
+              {
+                return new ImmutableMap.Builder<>()
+                    .put(
+                        "segmentsToLoad",
+                        Collections2.transform(
+                            input.getSegmentsToLoad(),
+                            new Function<DataSegment, Object>()
+                            {
+                              @Override
+                              public String apply(DataSegment segment)
+                              {
+                                return segment.getIdentifier();
+                              }
+                            }
+                        )
+                    )
+                    .put(
+                        "segmentsToDrop", Collections2.transform(
+                        input.getSegmentsToDrop(),
+                        new Function<DataSegment, Object>()
+                        {
+                          @Override
+                          public String apply(DataSegment segment)
+                          {
+                            return segment.getIdentifier();
+                          }
+                        }
+                    )
+                    )
+                    .build();
+              }
+            }
+        )
+    ).build();
   }
 }

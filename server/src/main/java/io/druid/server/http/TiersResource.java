@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.inject.Inject;
+import com.metamx.common.MapUtils;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 
@@ -70,10 +71,10 @@ public class TiersResource
         }
 
         Long currSize = tierMetadata.get("currSize");
-        tierMetadata.put("currSize", (currSize == null) ? 0 : currSize + druidServer.getCurrSize());
+        tierMetadata.put("currSize", ((currSize == null) ? 0 : currSize) + druidServer.getCurrSize());
 
         Long maxSize = tierMetadata.get("maxSize");
-        tierMetadata.put("maxSize", (maxSize == null) ? 0 : maxSize + druidServer.getMaxSize());
+        tierMetadata.put("maxSize", ((maxSize == null) ? 0 : maxSize) + druidServer.getMaxSize());
       }
       return builder.entity(metadata).build();
     }

@@ -81,7 +81,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -94,10 +93,6 @@ public class DruidCoordinator
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinator.class);
 
   private final Object lock = new Object();
-
-  private volatile boolean started = false;
-  private volatile int leaderCounter = 0;
-  private volatile boolean leader = false;
 
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
@@ -114,6 +109,12 @@ public class DruidCoordinator
   private final AtomicReference<LeaderLatch> leaderLatch;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
+
+  private volatile boolean started = false;
+  private volatile int leaderCounter = 0;
+  private volatile boolean leader = false;
+  private volatile SegmentReplicantLookup segmentReplicantLookup = null;
+
 
   @Inject
   public DruidCoordinator(
@@ -197,39 +198,55 @@ public class DruidCoordinator
     return loadManagementPeons;
   }
 
-  public Map<String, Double> getReplicationStatus()
+  public Map<String, CountingMap<String>> getReplicationStatus()
   {
-    // find expected load per datasource
-    final CountingMap<String> expectedSegmentsInCluster = new CountingMap<>();
+    final Map<String, CountingMap<String>> retVal = Maps.newHashMap();
+
+    if (segmentReplicantLookup == null) {
+      return retVal;
+    }
+
     final DateTime now = new DateTime();
     for (DataSegment segment : getAvailableDataSegments()) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       for (Rule rule : rules) {
         if (rule instanceof LoadRule && rule.appliesTo(segment, now)) {
-          for (Integer numReplicants : ((LoadRule) rule).getTieredReplicants().values()) {
-            expectedSegmentsInCluster.add(segment.getDataSource(), numReplicants);
+          for (Map.Entry<String, Integer> entry : ((LoadRule) rule).getTieredReplicants().entrySet()) {
+            CountingMap<String> dataSourceMap = retVal.get(entry.getKey());
+            if (dataSourceMap == null) {
+              dataSourceMap = new CountingMap<>();
+              retVal.put(entry.getKey(), dataSourceMap);
+            }
+
+            int diff = Math.max(
+                entry.getValue() - segmentReplicantLookup.getTotalReplicants(segment.getIdentifier(), entry.getKey()),
+                0
+            );
+            dataSourceMap.add(segment.getDataSource(), diff);
           }
           break;
         }
       }
     }
 
-    // find segments currently loaded per datasource
-    CountingMap<String> segmentsInCluster = new CountingMap<>();
-    for (DruidServer druidServer : serverInventoryView.getInventory()) {
-      for (DataSegment segment : druidServer.getSegments().values()) {
-        segmentsInCluster.add(segment.getDataSource(), 1);
-      }
+    return retVal;
+  }
+
+
+  public CountingMap<String> getSegmentAvailability()
+  {
+    final CountingMap<String> retVal = new CountingMap<>();
+
+    if (segmentReplicantLookup == null) {
+      return retVal;
     }
 
-    // compare available segments with currently loaded
-    Map<String, Double> loadStatus = Maps.newHashMap();
-    for (Map.Entry<String, AtomicLong> entry : expectedSegmentsInCluster.entrySet()) {
-      Long actual = segmentsInCluster.get(entry.getKey()).get();
-      loadStatus.put(entry.getKey(), 100 * (actual == null ? 0.0D : (double) actual) / entry.getValue().get());
+    for (DataSegment segment : getAvailableDataSegments()) {
+      int available = (segmentReplicantLookup.getTotalReplicants(segment.getIdentifier()) == 0) ? 0 : 1;
+      retVal.add(segment.getDataSource(), 1 - available);
     }
 
-    return loadStatus;
+    return retVal;
   }
 
   public Map<String, Double> getLoadStatus()
@@ -808,7 +825,7 @@ public class DruidCoordinator
                     cluster.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
                   }
 
-                  SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
+                  segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
 
                   // Stop peons for servers that aren't there anymore.
                   final Set<String> disappeared = Sets.newHashSet(loadManagementPeons.keySet());
