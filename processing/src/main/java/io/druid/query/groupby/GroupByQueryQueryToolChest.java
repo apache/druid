@@ -24,10 +24,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.ConcatSequence;
 import com.metamx.common.guava.Sequence;
@@ -35,19 +34,14 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.data.input.Rows;
-import io.druid.granularity.QueryGranularity;
 import io.druid.query.*;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
-import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -59,7 +53,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   };
   private static final String GROUP_BY_MERGE_KEY = "groupByMerge";
   private static final Map<String, String> NO_MERGE_CONTEXT = ImmutableMap.of(GROUP_BY_MERGE_KEY, "false");
-
   private final Supplier<GroupByQueryConfig> configSupplier;
   private GroupByQueryEngine engine; // For running the outer query around a subquery
 
@@ -113,14 +106,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       result = runner.run(query);
     }
 
-    return postAggregate(query, result);
+    return postAggregate(query, makeIncrementalIndex(query, result));
   }
 
-  private Sequence<Row> postAggregate(final GroupByQuery query, Sequence<Row> result)
+
+  private Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
-    IncrementalIndex index = makeIncrementalIndex(query, result);
-    // convert millis back to timestamp according to granularity to preserve time zone information
-    Sequence<Row> retVal = Sequences.map(
+    Sequence<Row> sequence = Sequences.map(
         Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
         new Function<Row, Row>()
         {
@@ -128,71 +120,28 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           public Row apply(Row input)
           {
             final MapBasedRow row = (MapBasedRow) input;
-            return new MapBasedRow(query.getGranularity().toDateTime(row.getTimestampFromEpoch()), row.getEvent());
+            return new MapBasedRow(
+                query.getGranularity()
+                    .toDateTime(row.getTimestampFromEpoch()),
+                row.getEvent()
+            );
           }
         }
     );
-
-    return query.applyLimit(retVal);
+    return query.applyLimit(sequence);
   }
 
-  private IncrementalIndex makeIncrementalIndex(GroupByQuery query, Sequence<Row> result)
+  private IncrementalIndex makeIncrementalIndex(GroupByQuery query, Sequence<Row> rows)
   {
     final GroupByQueryConfig config = configSupplier.get();
-    final QueryGranularity gran = query.getGranularity();
-    final long timeStart = query.getIntervals().get(0).getStartMillis();
-
-    // use gran.iterable instead of gran.truncate so that
-    // AllGranularity returns timeStart instead of Long.MIN_VALUE
-    final long granTimeStart = gran.iterable(timeStart, timeStart + 1).iterator().next();
-
-    final List<AggregatorFactory> aggs = Lists.transform(
-        query.getAggregatorSpecs(),
-        new Function<AggregatorFactory, AggregatorFactory>()
-        {
-          @Override
-          public AggregatorFactory apply(@Nullable AggregatorFactory input)
-          {
-            return input.getCombiningFactory();
-          }
-        }
-    );
-    final List<String> dimensions = Lists.transform(
-        query.getDimensions(),
-        new Function<DimensionSpec, String>()
-        {
-          @Override
-          public String apply(@Nullable DimensionSpec input)
-          {
-            return input.getOutputName();
-          }
-        }
+    Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
+        query,
+        config
     );
 
-    final IncrementalIndex index = result.accumulate(
-        new IncrementalIndex(
-            // use granularity truncated min timestamp
-            // since incoming truncated timestamps may precede timeStart
-            granTimeStart,
-            gran,
-            aggs.toArray(new AggregatorFactory[aggs.size()])
-        ),
-        new Accumulator<IncrementalIndex, Row>()
-        {
-          @Override
-          public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
-          {
-            if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions)) > config.getMaxResults()) {
-              throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
-            }
-
-            return accumulated;
-          }
-        }
-    );
-
-    return index;
+    return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }
+
 
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
@@ -215,7 +164,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         .setUser5(Joiner.on(",").join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+        .setUser9(Minutes.minutes(numMinutes).toString())
+        .setUser10(query.getId());
   }
 
   @Override

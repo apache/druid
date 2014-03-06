@@ -53,7 +53,7 @@ public class BrokerServerView implements TimelineServerView
   private final Map<String, ServerSelector> selectors;
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines;
 
-  private final QueryToolChestWarehouse warehose;
+  private final QueryToolChestWarehouse warehouse;
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
   private final ServerView baseView;
@@ -61,14 +61,14 @@ public class BrokerServerView implements TimelineServerView
 
   @Inject
   public BrokerServerView(
-      QueryToolChestWarehouse warehose,
+      QueryToolChestWarehouse warehouse,
       ObjectMapper smileMapper,
       @Client HttpClient httpClient,
       ServerView baseView,
       ServerSelectorStrategy serverSelectorStrategy
   )
   {
-    this.warehose = warehose;
+    this.warehouse = warehouse;
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
     this.baseView = baseView;
@@ -148,7 +148,7 @@ public class BrokerServerView implements TimelineServerView
 
   private DirectDruidClient makeDirectClient(DruidServer server)
   {
-    return new DirectDruidClient(warehose, smileMapper, httpClient, server.getHost());
+    return new DirectDruidClient(warehouse, smileMapper, httpClient, server.getHost());
   }
 
   private QueryableDruidServer removeServer(DruidServer server)

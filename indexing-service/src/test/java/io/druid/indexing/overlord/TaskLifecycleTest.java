@@ -174,6 +174,12 @@ public class TaskLifecycleTest
           {
             return segment;
           }
+
+          @Override
+          public DataSegment restore(DataSegment segment) throws SegmentLoadingException
+          {
+            return segment;
+          }
         },
         null, // segment announcer
         null, // new segment server view

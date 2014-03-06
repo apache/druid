@@ -25,16 +25,13 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
-import io.druid.segment.IncrementalIndexSegment;
-import io.druid.segment.QueryableIndex;
-import io.druid.segment.QueryableIndexSegment;
-import io.druid.segment.Segment;
-import io.druid.segment.TestIndex;
+import io.druid.segment.*;
 import io.druid.segment.incremental.IncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -48,7 +45,7 @@ import java.util.List;
  */
 public class QueryRunnerTestHelper
 {
-  public static final String segmentId= "testSegment";
+  public static final String segmentId = "testSegment";
   public static final String dataSource = "testing";
   public static final QueryGranularity dayGran = QueryGranularity.DAY;
   public static final QueryGranularity allGran = QueryGranularity.ALL;
@@ -57,10 +54,15 @@ public class QueryRunnerTestHelper
   public static final String placementDimension = "placement";
   public static final String placementishDimension = "placementish";
   public static final String indexMetric = "index";
+  public static final String uniqueMetric = "uniques";
   public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
   public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
+  public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
+      "uniques",
+      "quality_uniques"
+  );
   public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
   public static final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   public static final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
@@ -68,7 +70,15 @@ public class QueryRunnerTestHelper
       new ArithmeticPostAggregator(
           "addRowsIndexConstant", "+", Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
       );
-  public static final List<AggregatorFactory> commonAggregators = Arrays.asList(rowsCount, indexDoubleSum);
+  public static final List<AggregatorFactory> commonAggregators = Arrays.asList(
+      rowsCount,
+      indexDoubleSum,
+      qualityUniques
+  );
+
+  public static final double UNIQUES_9 = 9.019833517963864;
+  public static final double UNIQUES_2 = 2.000977198748901d;
+  public static final double UNIQUES_1 = 1.0002442201269182d;
 
   public static final String[] expectedFullOnIndexValues = new String[]{
       "4500.0", "6077.949111938477", "4922.488838195801", "5726.140853881836", "4698.468170166016",

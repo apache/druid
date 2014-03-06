@@ -43,6 +43,12 @@ public class OmniDataSegmentArchiver implements DataSegmentArchiver
     return getArchiver(segment).archive(segment);
   }
 
+  @Override
+  public DataSegment restore(DataSegment segment) throws SegmentLoadingException
+  {
+    return getArchiver(segment).restore(segment);
+  }
+
   private DataSegmentArchiver getArchiver(DataSegment segment) throws SegmentLoadingException
   {
     String type = MapUtils.getString(segment.getLoadSpec(), "type");

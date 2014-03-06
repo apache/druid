@@ -44,6 +44,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -84,9 +85,7 @@ import java.util.zip.ZipOutputStream;
 public class IndexGeneratorJob implements Jobby
 {
   private static final Logger log = new Logger(IndexGeneratorJob.class);
-
   private final HadoopDruidIndexerConfig config;
-
   private IndexGeneratorStats jobStats;
 
   public IndexGeneratorJob(
@@ -95,65 +94,6 @@ public class IndexGeneratorJob implements Jobby
   {
     this.config = config;
     this.jobStats = new IndexGeneratorStats();
-  }
-
-  public IndexGeneratorStats getJobStats()
-  {
-    return jobStats;
-  }
-
-  public boolean run()
-  {
-    try {
-      Job job = new Job(
-          new Configuration(),
-          String.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
-      );
-
-      job.getConfiguration().set("io.sort.record.percent", "0.23");
-
-      for (String propName : System.getProperties().stringPropertyNames()) {
-        Configuration conf = job.getConfiguration();
-        if (propName.startsWith("hadoop.")) {
-          conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
-        }
-      }
-
-      job.setInputFormatClass(TextInputFormat.class);
-
-      job.setMapperClass(IndexGeneratorMapper.class);
-      job.setMapOutputValueClass(Text.class);
-
-      SortableBytes.useSortableBytesAsMapOutputKey(job);
-
-      job.setNumReduceTasks(Iterables.size(config.getAllBuckets()));
-      job.setPartitionerClass(IndexGeneratorPartitioner.class);
-
-      job.setReducerClass(IndexGeneratorReducer.class);
-      job.setOutputKeyClass(BytesWritable.class);
-      job.setOutputValueClass(Text.class);
-      job.setOutputFormatClass(IndexGeneratorOutputFormat.class);
-      FileOutputFormat.setOutputPath(job, config.makeIntermediatePath());
-
-      config.addInputPaths(job);
-      config.intoConfiguration(job);
-
-      JobHelper.setupClasspath(config, job);
-
-      job.submit();
-      log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
-
-      boolean success = job.waitForCompletion(true);
-
-      Counter invalidRowCount = job.getCounters()
-                                   .findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
-      jobStats.setInvalidRowCount(invalidRowCount.getValue());
-
-      return success;
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
@@ -189,6 +129,60 @@ public class IndexGeneratorJob implements Jobby
     return publishedSegments;
   }
 
+  public IndexGeneratorStats getJobStats()
+  {
+    return jobStats;
+  }
+
+  public boolean run()
+  {
+    try {
+      Job job = new Job(
+          new Configuration(),
+          String.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
+      );
+
+      job.getConfiguration().set("io.sort.record.percent", "0.23");
+
+      JobHelper.injectSystemProperties(job);
+
+      job.setInputFormatClass(TextInputFormat.class);
+
+      job.setMapperClass(IndexGeneratorMapper.class);
+      job.setMapOutputValueClass(Text.class);
+
+      SortableBytes.useSortableBytesAsMapOutputKey(job);
+
+      job.setNumReduceTasks(Iterables.size(config.getAllBuckets().get()));
+      job.setPartitionerClass(IndexGeneratorPartitioner.class);
+
+      job.setReducerClass(IndexGeneratorReducer.class);
+      job.setOutputKeyClass(BytesWritable.class);
+      job.setOutputValueClass(Text.class);
+      job.setOutputFormatClass(IndexGeneratorOutputFormat.class);
+      FileOutputFormat.setOutputPath(job, config.makeIntermediatePath());
+
+      config.addInputPaths(job);
+      config.intoConfiguration(job);
+
+      JobHelper.setupClasspath(config, job);
+
+      job.submit();
+      log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
+
+      boolean success = job.waitForCompletion(true);
+
+      Counter invalidRowCount = job.getCounters()
+                                   .findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
+      jobStats.setInvalidRowCount(invalidRowCount.getValue());
+
+      return success;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Text>
 
   {
@@ -216,8 +210,9 @@ public class IndexGeneratorJob implements Jobby
     }
   }
 
-  public static class IndexGeneratorPartitioner extends Partitioner<BytesWritable, Text>
+  public static class IndexGeneratorPartitioner extends Partitioner<BytesWritable, Text> implements Configurable
   {
+    private Configuration config;
 
     @Override
     public int getPartition(BytesWritable bytesWritable, Text text, int numPartitions)
@@ -225,12 +220,27 @@ public class IndexGeneratorJob implements Jobby
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
       bytes.position(4); // Skip length added by SortableBytes
       int shardNum = bytes.getInt();
+      if (config.get("mapred.job.tracker").equals("local")) {
+        return shardNum % numPartitions;
+      } else {
+        if (shardNum >= numPartitions) {
+          throw new ISE("Not enough partitions, shard[%,d] >= numPartitions[%,d]", shardNum, numPartitions);
+        }
+        return shardNum;
 
-      if (shardNum >= numPartitions) {
-        throw new ISE("Not enough partitions, shard[%,d] >= numPartitions[%,d]", shardNum, numPartitions);
       }
+    }
 
-      return shardNum;
+    @Override
+    public Configuration getConf()
+    {
+      return config;
+    }
+
+    @Override
+    public void setConf(Configuration config)
+    {
+      this.config = config;
     }
   }
 

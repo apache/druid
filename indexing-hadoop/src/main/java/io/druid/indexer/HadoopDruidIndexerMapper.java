@@ -22,6 +22,7 @@ package io.druid.indexer;
 import com.metamx.common.RE;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.indexer.granularity.GranularitySpec;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -70,8 +71,9 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
           throw e;
         }
       }
-
-      if(config.getGranularitySpec().bucketInterval(new DateTime(inputRow.getTimestampFromEpoch())).isPresent()) {
+      GranularitySpec spec = config.getGranularitySpec();
+      if (!spec.bucketIntervals().isPresent() || spec.bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()))
+                                                     .isPresent()) {
         innerMap(inputRow, value, context);
       }
     }

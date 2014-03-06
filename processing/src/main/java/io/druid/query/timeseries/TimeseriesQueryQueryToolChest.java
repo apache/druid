@@ -52,14 +52,15 @@ import java.util.Map;
 public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
   private static final byte TIMESERIES_QUERY = 0x0;
-
   private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
-      new TypeReference<Object>(){};
-
+      new TypeReference<Object>()
+      {
+      };
   private static final TypeReference<Result<TimeseriesResultValue>> TYPE_REFERENCE =
-      new TypeReference<Result<TimeseriesResultValue>>() {};
-
+      new TypeReference<Result<TimeseriesResultValue>>()
+      {
+      };
   private final QueryConfig config;
 
   @Inject
@@ -118,7 +119,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+        .setUser9(Minutes.minutes(numMinutes).toString())
+        .setUser10(query.getId());
   }
 
   @Override

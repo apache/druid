@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -34,10 +35,10 @@ import java.util.Map;
  */
 public abstract class BaseQuery<T> implements Query<T>
 {
+  public static String QUERYID = "queryId";
   private final DataSource dataSource;
   private final Map<String, String> context;
   private final QuerySegmentSpec querySegmentSpec;
-
   private volatile Duration duration;
 
   public BaseQuery(
@@ -160,4 +161,15 @@ public abstract class BaseQuery<T> implements Query<T>
     return result;
   }
 
+  @Override
+  public String getId()
+  {
+    return getContextValue(QUERYID);
+  }
+
+  @Override
+  public Query withId(String id)
+  {
+    return withOverriddenContext(ImmutableMap.of(QUERYID, id));
+  }
 }

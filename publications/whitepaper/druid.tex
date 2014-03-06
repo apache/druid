@@ -76,12 +76,13 @@ could be fully leveraged for our requirements.
 
 We ended up creating Druid, an open-source, distributed, column-oriented,
 realtime analytical data store.  In many ways, Druid shares similarities with
-other interactive query systems \cite{melnik2010dremel}, main-memory databases
-\cite{farber2012sap}, and widely-known distributed data stores such as BigTable
-\cite{chang2008bigtable}, Dynamo \cite{decandia2007dynamo}, and Cassandra
-\cite{lakshman2010cassandra}.  The distribution and query model also
-borrow ideas from current generation search infrastructure
-\cite{linkedin2013senseidb, apache2013solr, banon2013elasticsearch}.
+other OLAP systems \cite{oehler2012ibm, schrader2009oracle, lachev2005applied},
+interactive query systems \cite{melnik2010dremel}, main-memory databases
+\cite{farber2012sap}, and widely-known distributed data stores
+\cite{chang2008bigtable, decandia2007dynamo, lakshman2010cassandra}.  The
+distribution and query model also borrow ideas from current generation search
+infrastructure \cite{linkedin2013senseidb, apache2013solr,
+banon2013elasticsearch}.
 
 This paper describes the architecture of Druid, explores the various design
 decisions made in creating an always-on production system that powers a hosted
@@ -95,9 +96,10 @@ Section \ref{sec:problem-definition}.  Next, we detail system architecture from
 the point of view of how data flows through the system in Section
 \ref{sec:architecture}.  We then discuss how and why data gets converted into a
 binary format in Section \ref{sec:storage-format}.  We briefly describe the
-query API in Section \ref{sec:query-api}. Lastly, we leave off with some
-benchmarks in Section \ref{sec:benchmarks}, related work in Section
-\ref{sec:related} and conclusions are Section \ref{sec:conclusions}.
+query API in Section \ref{sec:query-api} and present our experimental results
+in Section \ref{sec:benchmarks}. Lastly, we leave off with our learnings from
+running Druid in production in Section \ref{sec:production}, related work
+in Section \ref{sec:related}, and conclusions in Section \ref{sec:conclusions}.
 
 \section{Problem Definition}
 \label{sec:problem-definition}
@@ -138,13 +140,14 @@ want queries over any arbitrary combination of dimensions to return with
 sub-second latencies.
 
 The need for Druid was facilitated by the fact that existing open source
-Relational Database Management Systems and NoSQL key/value stores were unable
-to provide a low latency data ingestion and query platform for interactive
-applications \cite{tschetter2011druid}. In the early days of Metamarkets, we
-were focused on building a hosted dashboard that would allow users to arbitrary
-explore and visualize event streams.  The data store powering the dashboard
-needed to return queries fast enough that the data visualizations built on top
-of it could provide users with an interactive experience. 
+Relational Database Management Systems (RDBMS) and NoSQL key/value stores were
+unable to provide a low latency data ingestion and query platform for
+interactive applications \cite{tschetter2011druid}. In the early days of
+Metamarkets, we were focused on building a hosted dashboard that would allow
+users to arbitrary explore and visualize event streams.  The data store
+powering the dashboard needed to return queries fast enough that the data
+visualizations built on top of it could provide users with an interactive
+experience. 
 
 In addition to the query latency needs, the system had to be multi-tenant and
 highly available. The Metamarkets product is used in a highly concurrent
@@ -187,6 +190,7 @@ Figure~\ref{fig:cluster}.
 \label{fig:cluster}
 \end{figure*}
 
+\newpage
 \subsection{Real-time Nodes}
 \label{sec:realtime}
 Real-time nodes encapsulate the functionality to ingest and query event
@@ -202,13 +206,14 @@ Zookeeper.
 Real-time nodes maintain an in-memory index buffer for all incoming events.
 These indexes are incrementally populated as new events are ingested and the
 indexes are also directly queryable.  Druid virtually behaves as a row store
-for queries on events that exist in this JVM heap-based buffer. To avoid heap overflow
-problems, real-time nodes persist their in-memory indexes to disk either
-periodically or after some maximum row limit is reached. This persist process
-converts data stored in the in-memory buffer to a column oriented storage
-format described in \ref{sec:storage-format}. Each persisted index is immutable and
-real-time nodes load persisted indexes into off-heap memory such that they can
-still be queried. Figure~\ref{fig:realtime_flow} illustrates the process.
+for queries on events that exist in this JVM heap-based buffer. To avoid heap
+overflow problems, real-time nodes persist their in-memory indexes to disk
+either periodically or after some maximum row limit is reached. This persist
+process converts data stored in the in-memory buffer to a column oriented
+storage format described in Section \ref{sec:storage-format}. Each persisted
+index is immutable and real-time nodes load persisted indexes into off-heap
+memory such that they can still be queried. This process is described in detail
+in \cite{o1996log} and is illustrated in Figure~\ref{fig:realtime_flow}.
 
 \begin{figure} 
 \centering 
@@ -533,7 +538,7 @@ contain strings. Storing strings directly is unnecessarily costly and string
 columns can be dictionary encoded instead. Dictionary encoding is a common
 method to compress data and has been used in other data stores such as
 PowerDrill \cite{hall2012processing}. In the example in
-Table~\ref{tab:sample_data}, we can map each publisher to an unique integer
+Table~\ref{tab:sample_data}, we can map each page to an unique integer
 identifier.
 \begin{verbatim}
 Justin Bieber   -> 0
@@ -602,20 +607,22 @@ the two arrays.
 \end{figure}
 
 This approach of performing Boolean operations on large bitmap sets is commonly
-used in search engines. Bitmap compression algorithms are a well-defined area
-of research and often utilize run-length encoding. Popular algorithms include
-Byte-aligned Bitmap Code \cite{antoshenkov1995byte}, Word-Aligned Hybrid (WAH)
-code \cite{wu2006optimizing}, and Partitioned Word-Aligned Hybrid (PWAH)
-compression \cite{van2011memory}. Druid opted to use the Concise algorithm
-\cite{colantonio2010concise} as it can outperform WAH by reducing the size of
-the compressed bitmaps by up to 50\%.  Figure~\ref{fig:concise_plot}
-illustrates the number of bytes using Concise compression versus using an
-integer array. The results were generated on a cc2.8xlarge system with a single
-thread, 2G heap, 512m young gen, and a forced GC between each run. The data set
-is a single day’s worth of data collected from the Twitter garden hose
-\cite{twitter2013} data stream. The data set contains 2,272,295 rows and 12
-dimensions of varying cardinality. As an additional comparison, we also
-resorted the data set rows to maximize compression.
+used in search engines. Bitmap indices for OLAP workloads is described in
+detail in \cite{o1997improved}. Bitmap compression algorithms are a
+well-defined area of research and often utilize run-length encoding. Popular
+algorithms include Byte-aligned Bitmap Code \cite{antoshenkov1995byte},
+Word-Aligned Hybrid (WAH) code \cite{wu2006optimizing}, and Partitioned
+Word-Aligned Hybrid (PWAH) compression \cite{van2011memory}. Druid opted to use
+the Concise algorithm \cite{colantonio2010concise} as it can outperform WAH by
+reducing the size of the compressed bitmaps by up to 50\%.
+Figure~\ref{fig:concise_plot} illustrates the number of bytes using Concise
+compression versus using an integer array. The results were generated on a
+cc2.8xlarge system with a single thread, 2G heap, 512m young gen, and a forced
+GC between each run. The data set is a single day’s worth of data collected
+from the Twitter garden hose \cite{twitter2013} data stream. The data set
+contains 2,272,295 rows and 12 dimensions of varying cardinality. As an
+additional comparison, we also resorted the data set rows to maximize
+compression.
 
 In the unsorted case, the total Concise size was 53,451,144 bytes and the total
 integer array size was 127,248,520 bytes. Overall, Concise compressed sets are
@@ -666,7 +673,8 @@ ability to handle complex nested filter sets is what enables Druid to drill
 into data at any depth.
 
 The exact query syntax depends on the query type and the information requested.
-A sample count query over a week of data is shown below:
+A sample count query over a week of data is as follows:
+\newpage
 \begin{verbatim}
 {
   "queryType"     : "timeseries",
@@ -684,7 +692,6 @@ A sample count query over a week of data is shown below:
    } ]
 }
 \end{verbatim}
-
 The query shown above will return a count of the number of rows in the Wikipedia datasource
 from 2013-01-01 to 2013-01-08, filtered for only those rows where the value of the "page" dimension is 
 equal to "Ke\$ha". The results will be bucketed by day and will be a JSON array of the following form:
@@ -709,7 +716,6 @@ equal to "Ke\$ha". The results will be bucketed by day and will be a JSON array 
     }
 } ]
 \end{verbatim}
-
 Druid supports many types of aggregations including double sums, long sums,
 minimums, maximums, and several others. Druid also supports complex aggregations
 such as cardinality estimation and approximate quantile estimation.  The
@@ -719,9 +725,15 @@ filter and group results based on almost any arbitrary condition.  It is beyond
 the scope of this paper to fully describe the query API but more information
 can be found
 online\footnote{\href{http://druid.io/docs/latest/Querying.html}{http://druid.io/docs/latest/Querying.html}}.
-We are also in the process of extending the Druid API to understand SQL.
+At the time of writing, the query language does not support joins. Although the
+storage format is able to support joins, we've targeted Druid at user-facing
+workloads that must return in a matter of seconds, and as such, we've chosen to
+not spend the time to implement joins as it has been our experience that
+requiring joins on your queries often limits the performance you can achieve.
+Implemting joins and extending the Druid API to understand SQL is something
+we'd like to do in future work.
 
-\section{Performance Benchmarks}
+\section{Experimental Results}
 \label{sec:benchmarks}
 To illustrate Druid's performance, we conducted a series of experiments that
 focused on measuring Druid's query and data ingestion capabilities.
@@ -764,11 +776,15 @@ Please note:
     1 & \texttt{SELECT count(*) FROM \_table\_ WHERE timestamp $\geq$ ? AND timestamp < ?} \\ \hline
     2 & \texttt{SELECT count(*), sum(metric1) FROM \_table\_ WHERE timestamp $\geq$ ? AND timestamp < ?} \\ \hline
     3 & \texttt{SELECT count(*), sum(metric1), sum(metric2), sum(metric3), sum(metric4) FROM \_table\_ WHERE timestamp $\geq$ ? AND timestamp < ?} \\ \hline
-    4 & \texttt{SELECT high\_card\_dimension, count(*) AS cnt FROM \_table\_ WHERE timestamp $\geq$ ? AND timestamp < ? GROUP BY high\_card\_dimension ORDER BY cnt limit 100} \\ \hline
-    5 & \texttt{SELECT high\_card\_dimension, count(*) AS cnt, sum(metric1) FROM \_table\_ WHERE timestamp $\geq$ ? AND timestamp < ? GROUP BY high\_card\_dimension ORDER BY cnt limit 100} \\ \hline
-    6 & \texttt{SELECT high\_card\_dimension, count(*) AS cnt, sum(metric1), sum(metric2), sum(metric3), sum(metric4) FROM \_table\_ WHERE timestamp $\geq$ ? AND timestamp < ? GROUP BY high\_card\_dimension ORDER BY cnt limit 100} \\ \hline
-  \end{tabular}
-\end{table*}
+    4 & \texttt{SELECT high\_card\_dimension, count(*) AS cnt FROM \_table\_
+WHERE timestamp $\geq$ ? AND timestamp < ? GROUP BY high\_card\_dimension ORDER
+BY cnt limit 100} \\ \hline 5 & \texttt{SELECT high\_card\_dimension, count(*)
+AS cnt, sum(metric1) FROM \_table\_ WHERE timestamp $\geq$ ? AND timestamp < ?
+GROUP BY high\_card\_dimension ORDER BY cnt limit 100} \\ \hline 6 &
+\texttt{SELECT high\_card\_dimension, count(*) AS cnt, sum(metric1),
+sum(metric2), sum(metric3), sum(metric4) FROM \_table\_ WHERE timestamp $\geq$
+? AND timestamp < ? GROUP BY high\_card\_dimension ORDER BY cnt limit 100} \\
+\hline \end{tabular} \end{table*}
 
 Figure~\ref{fig:cluster_scan_rate} shows the cluster scan rate and
 Figure~\ref{fig:core_scan_rate} shows the core scan rate.  In
@@ -783,20 +799,12 @@ remain nearly constant.  The increase in speed of a parallel computing system
 is often limited by the time needed for the sequential operations of the
 system, in accordance with Amdahl's law \cite{amdahl1967validity}.
 
-\begin{figure}
-\centering
-\includegraphics[width = 2.8in]{cluster_scan_rate}
-\caption{Druid cluster scan rate with lines indicating linear scaling
-  from 25 nodes.}
-\label{fig:cluster_scan_rate}
-\end{figure}
+\begin{figure} \centering \includegraphics[width = 2.8in]{cluster_scan_rate}
+\caption{Druid cluster scan rate with lines indicating linear scaling from 25
+nodes.} \label{fig:cluster_scan_rate} \end{figure}
 
-\begin{figure}
-\centering
-\includegraphics[width = 2.8in]{core_scan_rate}
-\caption{Druid core scan rate.}
-\label{fig:core_scan_rate}
-\end{figure}
+\begin{figure} \centering \includegraphics[width = 2.8in]{core_scan_rate}
+\caption{Druid core scan rate.} \label{fig:core_scan_rate} \end{figure}
 
 The first query listed in Table~\ref{tab:sql_queries} is a simple
 count, achieving scan rates of 33M rows/second/core. We believe
@@ -874,6 +882,87 @@ than the number of dimensions.}
 \label{fig:throughput_vs_num_metrics}
 \end{figure}
 
+\section{Druid in Production}
+\label{sec:production}
+Over the last few years of using Druid, we've gained tremendous
+knowledge about handling production workloads, setting up correct operational
+monitoring, integrating Druid with other products as part of a more
+sophisticated data analytics stack, and distributing data to handle entire data
+center outages. One of the most important lessons we've learned is that no
+amount of testing can accurately simulate a production environment, and failures
+will occur for every imaginable and unimaginable reason. Interestingly, most of
+our most severe crashes were due to misunderstanding the impacts a
+seemingly small feature would have on the overall system. 
+
+Some of our more interesting observations include:
+\begin{itemize}
+\item Druid is most often used in production to power exploratory dashboards.
+Interestingly, because many users of explatory dashboards are not from
+technical backgrounds, they often issue queries without understanding the
+impacts to the underlying system. For example, some users become impatient that
+their queries for terabytes of data do not return in milliseconds and
+continously refresh their dashboard view, generating heavy load to Druid. This
+type of usage forced Druid to better defend itself against expensive repetitive
+queries.
+
+\item Cluster query performance benefits from multitenancy. Hosting every
+production datasource in the same cluster leads to better data parallelization
+as additional nodes are added.
+
+\item Even if you provide users with the ability to arbitrarily explore data, they
+often only have a few questions in mind. Caching is extremely important, and in
+fact we see a very high percentage of our query results come from the broker cache.
+
+\item When using a memory mapped storage engine, even a small amount of paging
+data from disk can severely impact query performance. SSDs can greatly solve
+this problem.
+
+\item Leveraging approximate algorithms can greatly reduce data storage costs and
+improve query performance. Many users do not care about exact answers to their
+questions and are comfortable with a few percentage points of error. 
+\end{itemize}
+
+\subsection{Operational Monitoring}
+Proper monitoring is critical to run a large scale distributed cluster.
+Each Druid node is designed to periodically emit a set of operational metrics.
+These metrics may include system level data such as CPU usage, available
+memory, and disk capacity, JVM statistics such as garbage collection time, and
+heap usage, or node specific metrics such as segment scan time, cache
+hit rates, and data ingestion latencies. For each query, Druid nodes can also
+emit metrics about the details of the query such as the number of filters
+applied, or the interval of data requested.
+
+Metrics can be emitted from a production Druid cluster into a dedicated metrics
+Druid cluster. Queries can be made to the metrics Druid cluster to explore
+production cluster performance and stability. Leveraging a dedicated metrics
+cluster has allowed us to find numerous production problems, such as gradual
+query speed degregations, less than optimally tuned hardware, and various other
+system bottlenecks. We also use a metrics cluster to analyze what queries are
+made in production. This analysis allows us to determine what our users are
+most often doing and we use this information to drive our road map.
+
+\subsection{Pairing Druid with a Stream Processor}
+At the time of writing, Druid can only understand fully denormalized data
+streams. In order to provide full business logic in production, Druid can be
+paired with a stream processor such as Apache Storm \cite{marz2013storm}. A
+Storm topology consumes events from a data stream, retains only those that are
+“on-time”, and applies any relevant business logic. This could range from
+simple transformations, such as id to name lookups, up to complex operations
+such as multi-stream joins. The Storm topology forwards the processed event
+stream to Druid in real-time. Storm handles the streaming data processing work,
+and Druid is used for responding to queries on top of both real-time and
+historical data. 
+
+\subsection{Multiple Data Center Distribution}
+Large scale production outages may not only affect single nodes, but entire
+data centers as well. The tier configuration in Druid coordinator nodes allow
+for segments to be replicated across multiple tiers. Hence, segments can be
+exactly replicated across historical nodes in multiple data centers.
+Similarily, query preference can be assigned to different tiers. It is possible
+to have nodes in one data center act as a primary cluster (and recieve all
+queries) and have a redundant cluster in another data center. Such a setup may
+be desired if one data center is situated much closer to users. 
+
 \section{Related Work}
 \label{sec:related}
 Cattell \cite{cattell2011scalable} maintains a great summary about existing
@@ -887,7 +976,7 @@ algorithms mentioned in PowerDrill.
 
 Although Druid builds on many of the same principles as other distributed
 columnar data stores \cite{fink2012distributed}, many of these data stores are
-designed to be more generic key-value stores \cite{stonebraker2005c} and do not
+designed to be more generic key-value stores \cite{lakshman2010cassandra} and do not
 support computation directly in the storage layer.  There are also other data
 stores designed for some of the same of the data warehousing issues that Druid
 is meant to solve. These systems include include in-memory databases such as
@@ -895,6 +984,13 @@ SAP’s HANA \cite{farber2012sap} and VoltDB \cite{voltdb2010voltdb}. These data
 stores lack Druid's low latency ingestion characteristics. Druid also has
 native analytical features baked in, similar to \cite{paraccel2013}, however,
 Druid allows system wide rolling software updates with no downtime.  
+
+Druid is similiar to \cite{stonebraker2005c, cipar2012lazybase} in that it has
+two subsystems, a read-optimized subsystem in the historical nodes and a
+write-optimized subsystem in real-time nodes. Real-time nodes are designed to
+ingest a high volume of append heavy data, and do not support data updates.
+Unlike the two aforementioned systems, Druid is meant for OLAP transactions and
+not OLTP transactions.
 
 Druid's low latency data ingestion features share some similarities with
 Trident/Storm \cite{marz2013storm} and Streaming Spark
@@ -921,11 +1017,9 @@ stores \cite{macnicol2004sybase}.
 In this paper, we presented Druid, a distributed, column-oriented, real-time
 analytical data store. Druid is designed to power high performance applications
 and is optimized for low query latencies. Druid supports streaming data
-ingestion and is fault-tolerant. We discussed how Druid was able to
-scan 27 billion rows in a second. We summarized key architecture aspects such
-as the storage format, query language, and general execution. In the future, we
-plan to cover the different algorithms we’ve developed for Druid and how other
-systems may plug into Druid in greater detail.
+ingestion and is fault-tolerant. We discussed how Druid benchmarks and
+summarized key architecture aspects such
+as the storage format, query language, and general execution.
 
 \balance
 

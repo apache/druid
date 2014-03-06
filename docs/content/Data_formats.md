@@ -63,7 +63,7 @@ If you use the [indexing service](Indexing-Service.html) for ingesting the data,
 
 Specified here are the location of the datafile, the timestamp column, the format of the data, and the columns that will become dimensions in Druid.
 
-Since the CSV data does not contain the column names, they will have to be added before that data can be processed:
+Since the CSV data cannot contain the column names (no header is allowed), these must be added before that data can be processed:
 
 ```json
     "firehose" : {
