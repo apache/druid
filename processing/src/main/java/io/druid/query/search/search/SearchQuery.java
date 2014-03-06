@@ -25,7 +25,10 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.*;
+import io.druid.query.BaseQuery;
+import io.druid.query.DataSource;
+import io.druid.query.Query;
+import io.druid.query.Result;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -179,14 +182,14 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   public String toString()
   {
     return "SearchQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", dimFilter=" + dimFilter +
-           ", granularity='" + granularity + '\'' +
-           ", dimensions=" + dimensions +
-           ", querySpec=" + querySpec +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", limit=" + limit +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", dimFilter=" + dimFilter +
+        ", granularity='" + granularity + '\'' +
+        ", dimensions=" + dimensions +
+        ", querySpec=" + querySpec +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", limit=" + limit +
+        '}';
   }
 
   @Override

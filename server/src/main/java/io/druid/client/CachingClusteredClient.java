@@ -40,8 +40,8 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.cache.Cache;
-import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.QueryableDruidServer;
+import io.druid.client.selector.ServerSelector;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
@@ -124,7 +124,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final boolean useCache = Boolean.parseBoolean(query.getContextValue("useCache", "true")) && strategy != null;
     final boolean populateCache = Boolean.parseBoolean(query.getContextValue("populateCache", "true"))
-                                  && strategy != null;
+        && strategy != null;
     final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
 
 
@@ -286,8 +286,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                             objectMapper.getFactory().createParser(cachedResult),
                             cacheObjectClazz
                         );
-                      }
-                      catch (IOException e) {
+                      } catch (IOException e) {
                         throw Throwables.propagate(e);
                       }
                     }
@@ -340,7 +339,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                             CachePopulator cachePopulator = cachePopulatorMap.get(
                                 String.format("%s_%s", segmentIdentifier, value.getInterval())
                             );
-                            if(cachePopulator != null) {
+                            if (cachePopulator != null) {
                               cachePopulator.populate(Iterables.transform(segmentResults, prepareForCache));
                             }
 
@@ -425,8 +424,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         }
 
         cache.put(key, valueBytes);
-      }
-      catch (IOException e) {
+      } catch (IOException e) {
         throw Throwables.propagate(e);
       }
     }

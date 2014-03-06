@@ -30,11 +30,19 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
-import io.druid.query.*;
-import io.druid.segment.ReferenceCountingSegment;
+import io.druid.query.DataSource;
+import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.NoopQueryRunner;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.query.QuerySegmentWalker;
+import io.druid.query.QueryToolChest;
+import io.druid.query.SegmentDescriptor;
+import io.druid.query.TableDataSource;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Sink;
-import io.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -90,6 +98,7 @@ public class RealtimeManager implements QuerySegmentWalker
       Closeables.closeQuietly(chief);
     }
   }
+
   public FireDepartmentMetrics getMetrics(String datasource)
   {
     FireChief chief = chiefs.get(datasource);
@@ -124,9 +133,8 @@ public class RealtimeManager implements QuerySegmentWalker
 
     String dataSourceName;
     try {
-      dataSourceName = ((TableDataSource)query.getDataSource()).getName();
-    }
-    catch (ClassCastException e) {
+      dataSourceName = ((TableDataSource) query.getDataSource()).getName();
+    } catch (ClassCastException e) {
       throw new UnsupportedOperationException("Subqueries are only supported in the broker");
     }
     return dataSourceName;
@@ -164,8 +172,7 @@ public class RealtimeManager implements QuerySegmentWalker
           log.info("Someone get us a plumber!");
           plumber = fireDepartment.findPlumber();
           log.info("We have our plumber!");
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
           throw Throwables.propagate(e);
         }
       }
@@ -192,8 +199,7 @@ public class RealtimeManager implements QuerySegmentWalker
           try {
             try {
               inputRow = firehose.nextRow();
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
               log.debug(e, "thrown away line due to exception, considering unparseable");
               metrics.incrementUnparseable();
               continue;
@@ -218,8 +224,7 @@ public class RealtimeManager implements QuerySegmentWalker
               nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
             }
             metrics.incrementProcessed();
-          }
-          catch (FormattedException e) {
+          } catch (FormattedException e) {
             log.info(e, "unparseable line: %s", e.getDetails());
             metrics.incrementUnparseable();
             continue;
@@ -227,16 +232,15 @@ public class RealtimeManager implements QuerySegmentWalker
         }
       } catch (RuntimeException e) {
         log.makeAlert(e, "RuntimeException aborted realtime processing[%s]", fireDepartment.getSchema().getDataSource())
-           .emit();
+            .emit();
         normalExit = false;
         throw e;
       } catch (Error e) {
         log.makeAlert(e, "Exception aborted realtime processing[%s]", fireDepartment.getSchema().getDataSource())
-           .emit();
+            .emit();
         normalExit = false;
         throw e;
-      }
-      finally {
+      } finally {
         Closeables.closeQuietly(firehose);
         if (normalExit) {
           plumber.finishJob();

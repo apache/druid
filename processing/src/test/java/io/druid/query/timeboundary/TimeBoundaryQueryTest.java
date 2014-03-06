@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
-import io.druid.query.QueryRunnerTestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,8 +38,8 @@ public class TimeBoundaryQueryTest
   public void testQuerySerialization() throws IOException
   {
     Query query = Druids.newTimeBoundaryQueryBuilder()
-      .dataSource("testing")
-      .build();
+        .dataSource("testing")
+        .build();
 
     String json = jsonMapper.writeValueAsString(query);
     Query serdeQuery = jsonMapper.readValue(json, Query.class);

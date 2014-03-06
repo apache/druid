@@ -26,28 +26,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class TableDataSource implements DataSource
 {
   @JsonProperty
-  private String name;
+  private final String name;
 
   @JsonCreator
-  public TableDataSource()
+  public TableDataSource(@JsonProperty("name") String name)
   {
-
-  }
-
-  @JsonCreator
-  public TableDataSource(String name)
-  {
-    this.name = name==null? name : name.toLowerCase();
+    this.name = name.toLowerCase();
   }
 
   public String getName()
   {
     return name;
-  }
-
-  public void setName(String name)
-  {
-    this.name = name;
   }
 
   public String toString() { return name; }

@@ -24,7 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.*;
+import io.druid.query.BaseQuery;
+import io.druid.query.DataSource;
+import io.druid.query.Queries;
+import io.druid.query.Query;
+import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
@@ -129,14 +133,14 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public String toString()
   {
     return "TimeseriesQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", dimFilter=" + dimFilter +
-           ", granularity='" + granularity + '\'' +
-           ", aggregatorSpecs=" + aggregatorSpecs +
-           ", postAggregatorSpecs=" + postAggregatorSpecs +
-           ", context=" + getContext() +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", dimFilter=" + dimFilter +
+        ", granularity='" + granularity + '\'' +
+        ", aggregatorSpecs=" + aggregatorSpecs +
+        ", postAggregatorSpecs=" + postAggregatorSpecs +
+        ", context=" + getContext() +
+        '}';
   }
 
   @Override

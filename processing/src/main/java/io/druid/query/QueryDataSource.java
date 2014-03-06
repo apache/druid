@@ -23,25 +23,14 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.query.groupby.GroupByQuery;
-import io.druid.query.metadata.metadata.SegmentMetadataQuery;
-import io.druid.query.search.search.SearchQuery;
-import io.druid.query.timeboundary.TimeBoundaryQuery;
-import io.druid.query.timeseries.TimeseriesQuery;
-import io.druid.query.topn.TopNQuery;
 
 public class QueryDataSource implements DataSource
 {
   @JsonProperty
-  private Query query;
+  private final Query query;
 
-  public QueryDataSource()
-  {
-  }
-
-  public QueryDataSource(Query query)
+  @JsonCreator
+  public QueryDataSource(@JsonProperty("query") Query query)
   {
     this.query = query;
   }
@@ -49,11 +38,6 @@ public class QueryDataSource implements DataSource
   public Query getQuery()
   {
     return query;
-  }
-
-  public void setQuery(Query query)
-  {
-    this.query = query;
   }
 
   public String toString() { return query.toString(); }

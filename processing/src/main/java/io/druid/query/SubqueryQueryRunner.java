@@ -22,7 +22,6 @@
 package io.druid.query;
 
 import com.metamx.common.guava.Sequence;
-import org.joda.time.Period;
 
 /**
  * If there's a subquery, run it instead of the outer query
@@ -41,9 +40,8 @@ public class SubqueryQueryRunner<T> implements QueryRunner<T>
   {
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof QueryDataSource) {
-      return run((Query<T>) ((QueryDataSource)dataSource).getQuery());
-    }
-    else {
+      return run((Query<T>) ((QueryDataSource) dataSource).getQuery());
+    } else {
       return baseRunner.run(query);
     }
   }

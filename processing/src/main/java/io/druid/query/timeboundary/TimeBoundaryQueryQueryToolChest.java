@@ -31,7 +31,12 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
-import io.druid.query.*;
+import io.druid.query.BySegmentSkippingQueryRunner;
+import io.druid.query.CacheStrategy;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryToolChest;
+import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
@@ -73,7 +78,7 @@ public class TimeBoundaryQueryQueryToolChest
               public boolean apply(T input)
               {
                 return input.getInterval().overlaps(first.getInterval()) || input.getInterval()
-                                                                                 .overlaps(second.getInterval());
+                    .overlaps(second.getInterval());
               }
             }
         )
@@ -141,9 +146,9 @@ public class TimeBoundaryQueryQueryToolChest
       public byte[] computeCacheKey(TimeBoundaryQuery query)
       {
         return ByteBuffer.allocate(2)
-                         .put(TIMEBOUNDARY_QUERY)
-                         .put(query.getCacheKey())
-                         .array();
+            .put(TIMEBOUNDARY_QUERY)
+            .put(query.getCacheKey())
+            .array();
       }
 
       @Override

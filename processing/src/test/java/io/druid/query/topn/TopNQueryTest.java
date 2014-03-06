@@ -36,7 +36,13 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static io.druid.query.QueryRunnerTestHelper.*;
+import static io.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
+import static io.druid.query.QueryRunnerTestHelper.allGran;
+import static io.druid.query.QueryRunnerTestHelper.commonAggregators;
+import static io.druid.query.QueryRunnerTestHelper.dataSource;
+import static io.druid.query.QueryRunnerTestHelper.fullOnInterval;
+import static io.druid.query.QueryRunnerTestHelper.indexMetric;
+import static io.druid.query.QueryRunnerTestHelper.providerDimension;
 
 public class TopNQueryTest
 {

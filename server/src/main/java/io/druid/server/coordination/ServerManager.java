@@ -30,7 +30,20 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.CountingMap;
 import io.druid.guice.annotations.Processing;
-import io.druid.query.*;
+import io.druid.query.BySegmentQueryRunner;
+import io.druid.query.DataSource;
+import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.MetricsEmittingQueryRunner;
+import io.druid.query.NoopQueryRunner;
+import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.query.QuerySegmentWalker;
+import io.druid.query.QueryToolChest;
+import io.druid.query.ReferenceCountingSegmentQueryRunner;
+import io.druid.query.SegmentDescriptor;
+import io.druid.query.TableDataSource;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
@@ -227,9 +240,8 @@ public class ServerManager implements QuerySegmentWalker
 
     String dataSourceName;
     try {
-      dataSourceName = ((TableDataSource)query.getDataSource()).getName();
-    }
-    catch (ClassCastException e) {
+      dataSourceName = ((TableDataSource) query.getDataSource()).getName();
+    } catch (ClassCastException e) {
       throw new UnsupportedOperationException("Subqueries are only supported in the broker");
     }
 
@@ -313,9 +325,8 @@ public class ServerManager implements QuerySegmentWalker
 
     String dataSourceName;
     try {
-      dataSourceName = ((TableDataSource)query.getDataSource()).getName();
-    }
-    catch (ClassCastException e) {
+      dataSourceName = ((TableDataSource) query.getDataSource()).getName();
+    } catch (ClassCastException e) {
       throw new UnsupportedOperationException("Subqueries are only supported in the broker");
     }
 

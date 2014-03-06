@@ -34,7 +34,13 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.query.*;
+import io.druid.query.DataSource;
+import io.druid.query.IntervalChunkingQueryRunner;
+import io.druid.query.Query;
+import io.druid.query.QueryDataSource;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryToolChest;
+import io.druid.query.SubqueryQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -93,7 +99,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
-        subquery = (GroupByQuery) ((QueryDataSource)dataSource).getQuery();
+        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery();
       } catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
@@ -101,8 +107,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       IncrementalIndexStorageAdapter adapter
           = new IncrementalIndexStorageAdapter(makeIncrementalIndex(subquery, subqueryResult));
       result = engine.process(query, adapter);
-    }
-    else {
+    } else {
       result = runner.run(query);
     }
 
