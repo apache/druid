@@ -24,8 +24,15 @@ public class CostBalancerStrategyTest
   private final List<ServerHolder> serverHolderList = Lists.newArrayList();
   private final Interval day = DateTime.now().toDateMidnight().toInterval();
 
+  /**
+   * Create Druid cluster with 10 servers having 100 segments each, and 1 server with 98 segment
+   * Cost Balancer Strategy should assign the next segment to the server with less segments.
+   */
   @Before
   public void setup(){
+
+    // Create 10 servers with current size being 3K & max size being 10K
+    // Each having having 100 segments
     for (int i = 0 ; i < 10; i++){
       LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
       DruidServer druidServer = EasyMock.createMock(DruidServer.class);
@@ -45,6 +52,8 @@ public class CostBalancerStrategyTest
       EasyMock.replay(druidServer);
       serverHolderList.add(new ServerHolder(druidServer, fromPeon));
     }
+
+    // The best server to be available for next segment assignment has only 98 Segments
     LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
     DruidServer druidServer = EasyMock.createMock(DruidServer.class);
     EasyMock.expect(druidServer.getName()).andReturn("BEST_SERVER").anyTimes();
@@ -64,6 +73,12 @@ public class CostBalancerStrategyTest
     serverHolderList.add(new ServerHolder(druidServer, fromPeon));
   }
 
+  /**
+   * Returns segment with dummy id and size 100
+   *
+   * @param index
+   * @return segment
+   */
   private DataSegment getSegment(int index){
     DataSegment segment = EasyMock.createMock(DataSegment.class);
     EasyMock.expect(segment.getInterval()).andReturn(day).anyTimes();
