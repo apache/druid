@@ -23,15 +23,17 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import io.druid.segment.loading.DataSegmentPusher;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.loading.LocalDataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
+import io.druid.segment.loading.LocalDataSegmentKiller;
 import io.druid.segment.loading.OmniSegmentLoader;
 import io.druid.segment.loading.SegmentLoader;
 
 /**
  */
-public class DataSegmentPusherPullerModule implements Module
+public class LocalDataStorageDruidModule implements Module
 {
   @Override
   public void configure(Binder binder)
@@ -51,6 +53,11 @@ public class DataSegmentPusherPullerModule implements Module
                 .addBinding("local")
                 .to(LocalDataSegmentPuller.class)
                 .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(DataSegmentKiller.class))
+        .addBinding("local")
+        .to(LocalDataSegmentKiller.class)
+        .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class))
             .addBinding("local")
