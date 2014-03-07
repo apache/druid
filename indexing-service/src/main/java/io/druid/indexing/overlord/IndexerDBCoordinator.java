@@ -90,7 +90,7 @@ public class IndexerDBCoordinator
             final ResultIterator<Map<String, Object>> dbSegments =
                 handle.createQuery(
                     String.format(
-                        "SELECT payload FROM %s WHERE used = 1 AND dataSource = :dataSource",
+                        "SELECT payload FROM %s WHERE used = true AND dataSource = :dataSource",
                         dbTables.getSegmentsTable()
                     )
                 )
@@ -304,8 +304,8 @@ public class IndexerDBCoordinator
             return handle.createQuery(
                 String.format(
                     DbConnector.isPostgreSQL(handle)?
-                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = 0":
-                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and end <= :end and used = 0",
+                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false":
+                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and end <= :end and used = false",
                     dbTables.getSegmentsTable()
                 )
             )
