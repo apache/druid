@@ -179,4 +179,30 @@ public class HistogramAggregatorFactory implements AggregatorFactory
            ", breaks=" + Arrays.toString(breaks) +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    HistogramAggregatorFactory that = (HistogramAggregatorFactory) o;
+
+    if (!Arrays.equals(breaks, that.breaks)) return false;
+    if (breaksList != null ? !breaksList.equals(that.breaksList) : that.breaksList != null) return false;
+    if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) return false;
+    if (name != null ? !name.equals(that.name) : that.name != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = name != null ? name.hashCode() : 0;
+    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    result = 31 * result + (breaksList != null ? breaksList.hashCode() : 0);
+    result = 31 * result + (breaks != null ? Arrays.hashCode(breaks) : 0);
+    return result;
+  }
 }

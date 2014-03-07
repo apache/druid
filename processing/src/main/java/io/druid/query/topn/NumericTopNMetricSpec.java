@@ -157,4 +157,23 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
            "metric='" + metric + '\'' +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    NumericTopNMetricSpec that = (NumericTopNMetricSpec) o;
+
+    if (metric != null ? !metric.equals(that.metric) : that.metric != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return metric != null ? metric.hashCode() : 0;
+  }
 }

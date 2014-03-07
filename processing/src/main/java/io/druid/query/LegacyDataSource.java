@@ -1,6 +1,5 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -15,19 +14,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ * This file Copyright (C) 2014 N3TWORK, Inc. and contributed to the Druid project
+ * under the Druid Corporate Contributor License Agreement.
  */
+package io.druid.query;
 
-package io.druid.client;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 
-import io.druid.client.selector.ServerSelector;
-import io.druid.query.DataSource;
-import io.druid.query.QueryRunner;
-import io.druid.timeline.VersionedIntervalTimeline;
-
-/**
- */
-public interface TimelineServerView extends ServerView
+@JsonTypeName("table")
+public class LegacyDataSource extends TableDataSource
 {
-  VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource);
-  <T> QueryRunner<T> getQueryRunner(DruidServer server);
+  @JsonCreator
+  public LegacyDataSource(String name)
+  {
+    super(name);
+  }
 }

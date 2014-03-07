@@ -91,4 +91,26 @@ public class MultipleSpecificSegmentSpec implements QuerySegmentSpec
            "descriptors=" + descriptors +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    MultipleSpecificSegmentSpec that = (MultipleSpecificSegmentSpec) o;
+
+    if (descriptors != null ? !descriptors.equals(that.descriptors) : that.descriptors != null) return false;
+    if (intervals != null ? !intervals.equals(that.intervals) : that.intervals != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = descriptors != null ? descriptors.hashCode() : 0;
+    result = 31 * result + (intervals != null ? intervals.hashCode() : 0);
+    return result;
+  }
 }

@@ -112,4 +112,24 @@ public class ToLowerCaseAggregatorFactory implements AggregatorFactory
   {
     return baseAggregatorFactory.getAggregatorStartValue();
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    ToLowerCaseAggregatorFactory that = (ToLowerCaseAggregatorFactory) o;
+
+    if (baseAggregatorFactory != null ? !baseAggregatorFactory.equals(that.baseAggregatorFactory) : that.baseAggregatorFactory != null)
+      return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return baseAggregatorFactory != null ? baseAggregatorFactory.hashCode() : 0;
+  }
 }

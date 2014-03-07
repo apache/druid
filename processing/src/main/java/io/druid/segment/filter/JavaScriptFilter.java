@@ -26,6 +26,7 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.data.Indexed;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
@@ -49,27 +50,33 @@ public class JavaScriptFilter implements Filter
   {
     final Context cx = Context.enter();
     try {
-      ImmutableConciseSet conciseSet = ImmutableConciseSet.union(
-              FunctionalIterable.create(selector.getDimensionValues(dimension))
-                                .filter(new Predicate<String>()
-                                {
-                                  @Override
-                                  public boolean apply(@Nullable String input)
-                                  {
-                                    return predicate.applyInContext(cx, input);
-                                  }
-                                })
-                                .transform(
-                                    new com.google.common.base.Function<String, ImmutableConciseSet>()
-                                    {
-                                      @Override
-                                      public ImmutableConciseSet apply(@Nullable String input)
-                                      {
-                                        return selector.getConciseInvertedIndex(dimension, input);
-                                      }
-                                    }
-                                )
-          );
+      final Indexed<String> dimValues = selector.getDimensionValues(dimension);
+      ImmutableConciseSet conciseSet;
+      if (dimValues == null) {
+        conciseSet = new ImmutableConciseSet();
+      } else {
+        conciseSet = ImmutableConciseSet.union(
+            FunctionalIterable.create(dimValues)
+                .filter(new Predicate<String>()
+                {
+                  @Override
+                  public boolean apply(@Nullable String input)
+                  {
+                    return predicate.applyInContext(cx, input);
+                  }
+                })
+                .transform(
+                    new com.google.common.base.Function<String, ImmutableConciseSet>()
+                    {
+                      @Override
+                      public ImmutableConciseSet apply(@Nullable String input)
+                      {
+                        return selector.getConciseInvertedIndex(dimension, input);
+                      }
+                    }
+                )
+        );
+      }
       return conciseSet;
     } finally {
       Context.exit();
@@ -83,12 +90,14 @@ public class JavaScriptFilter implements Filter
     return factory.makeValueMatcher(dimension, predicate);
   }
 
-  static class JavaScriptPredicate implements Predicate<String> {
+  static class JavaScriptPredicate implements Predicate<String>
+  {
     final ScriptableObject scope;
     final Function fnApply;
     final String script;
 
-    public JavaScriptPredicate(final String script) {
+    public JavaScriptPredicate(final String script)
+    {
       Preconditions.checkNotNull(script, "script must not be null");
       this.script = script;
 
