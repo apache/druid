@@ -118,4 +118,23 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
            "previousStop='" + previousStop + '\'' +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    LexicographicTopNMetricSpec that = (LexicographicTopNMetricSpec) o;
+
+    if (previousStop != null ? !previousStop.equals(that.previousStop) : that.previousStop != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return previousStop != null ? previousStop.hashCode() : 0;
+  }
 }

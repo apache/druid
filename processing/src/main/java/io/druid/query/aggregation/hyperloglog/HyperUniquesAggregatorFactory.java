@@ -207,4 +207,26 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
            ", fieldName='" + fieldName + '\'' +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    HyperUniquesAggregatorFactory that = (HyperUniquesAggregatorFactory) o;
+
+    if (!fieldName.equals(that.fieldName)) return false;
+    if (!name.equals(that.name)) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = name.hashCode();
+    result = 31 * result + fieldName.hashCode();
+    return result;
+  }
 }

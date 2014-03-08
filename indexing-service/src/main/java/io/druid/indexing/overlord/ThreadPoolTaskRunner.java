@@ -38,6 +38,7 @@ import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.TableDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
@@ -152,10 +153,17 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   private <T> QueryRunner<T> getQueryRunnerImpl(Query<T> query)
   {
     QueryRunner<T> queryRunner = null;
+    String queryDataSource;
+    try {
+        queryDataSource = ((TableDataSource)query.getDataSource()).getName();
+    }
+    catch (ClassCastException e) {
+        throw new IllegalArgumentException("Subqueries are not welcome here");
+    }
 
     for (final ThreadPoolTaskRunnerWorkItem taskRunnerWorkItem : ImmutableList.copyOf(runningItems)) {
       final Task task = taskRunnerWorkItem.getTask();
-      if (task.getDataSource().equals(query.getDataSource())) {
+      if (task.getDataSource().equals(queryDataSource)) {
         final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
 
         if (taskQueryRunner != null) {
@@ -163,7 +171,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
             queryRunner = taskQueryRunner;
           } else {
             log.makeAlert("Found too many query runners for datasource")
-               .addData("dataSource", query.getDataSource())
+               .addData("dataSource", queryDataSource)
                .emit();
           }
         }

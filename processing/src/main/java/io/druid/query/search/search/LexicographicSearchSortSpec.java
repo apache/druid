@@ -50,4 +50,9 @@ public class LexicographicSearchSortSpec implements SearchSortSpec
   {
     return "lexicographicSort";
   }
+
+  @Override
+  public boolean equals(Object other) {
+    return (other instanceof LexicographicSearchSortSpec);
+  }
 }

@@ -133,32 +133,32 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "total_market")
-                                .put("rows", 186L)
-                                .put("index", 215679.82879638672D)
-                                .put("addRowsIndexConstant", 215866.82879638672D)
-                                .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                                .put("maxIndex", 1743.9217529296875D)
-                                .put("minIndex", 792.3260498046875D)
-                                .build(),
+                        .put(providerDimension, "total_market")
+                        .put("rows", 186L)
+                        .put("index", 215679.82879638672D)
+                        .put("addRowsIndexConstant", 215866.82879638672D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 1743.9217529296875D)
+                        .put("minIndex", 792.3260498046875D)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "upfront")
-                                .put("rows", 186L)
-                                .put("index", 192046.1060180664D)
-                                .put("addRowsIndexConstant", 192233.1060180664D)
-                                .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                                .put("maxIndex", 1870.06103515625D)
-                                .put("minIndex", 545.9906005859375D)
-                                .build(),
+                        .put(providerDimension, "upfront")
+                        .put("rows", 186L)
+                        .put("index", 192046.1060180664D)
+                        .put("addRowsIndexConstant", 192233.1060180664D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 545.9906005859375D)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
-                                .put("rows", 837L)
-                                .put("index", 95606.57232284546D)
-                                .put("addRowsIndexConstant", 96444.57232284546D)
-                                .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
-                                .put("maxIndex", 277.2735290527344D)
-                                .put("minIndex", 59.02102279663086D)
-                                .build()
+                        .put(providerDimension, "spot")
+                        .put("rows", 837L)
+                        .put("index", 95606.57232284546D)
+                        .put("addRowsIndexConstant", 96444.57232284546D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 59.02102279663086D)
+                        .build()
                 )
             )
         )
@@ -197,32 +197,32 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "total_market")
-                                .put("rows", 186L)
-                                .put("index", 215679.82879638672D)
-                                .put("addRowsIndexConstant", 215866.82879638672D)
-                                .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                                .put("maxIndex", 1743.9217529296875D)
-                                .put("minIndex", 792.3260498046875D)
-                                .build(),
+                        .put(providerDimension, "total_market")
+                        .put("rows", 186L)
+                        .put("index", 215679.82879638672D)
+                        .put("addRowsIndexConstant", 215866.82879638672D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 1743.9217529296875D)
+                        .put("minIndex", 792.3260498046875D)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "upfront")
-                                .put("rows", 186L)
-                                .put("index", 192046.1060180664D)
-                                .put("addRowsIndexConstant", 192233.1060180664D)
-                                .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                                .put("maxIndex", 1870.06103515625D)
-                                .put("minIndex", 545.9906005859375D)
-                                .build(),
+                        .put(providerDimension, "upfront")
+                        .put("rows", 186L)
+                        .put("index", 192046.1060180664D)
+                        .put("addRowsIndexConstant", 192233.1060180664D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 545.9906005859375D)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
-                                .put("rows", 837L)
-                                .put("index", 95606.57232284546D)
-                                .put("addRowsIndexConstant", 96444.57232284546D)
-                                .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
-                                .put("maxIndex", 277.2735290527344D)
-                                .put("minIndex", 59.02102279663086D)
-                                .build()
+                        .put(providerDimension, "spot")
+                        .put("rows", 837L)
+                        .put("index", 95606.57232284546D)
+                        .put("addRowsIndexConstant", 96444.57232284546D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 59.02102279663086D)
+                        .build()
                 )
             )
         )
@@ -262,32 +262,32 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
-                                .put("rows", 837L)
-                                .put("index", 95606.57232284546D)
-                                .put("addRowsIndexConstant", 96444.57232284546D)
-                                .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
-                                .put("maxIndex", 277.2735290527344D)
-                                .put("minIndex", 59.02102279663086D)
-                                .build(),
+                        .put("provider", "spot")
+                        .put("rows", 837L)
+                        .put("index", 95606.57232284546D)
+                        .put("addRowsIndexConstant", 96444.57232284546D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                        .put("maxIndex", 277.2735290527344D)
+                        .put("minIndex", 59.02102279663086D)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "total_market")
-                                .put("rows", 186L)
-                                .put("index", 215679.82879638672D)
-                                .put("addRowsIndexConstant", 215866.82879638672D)
-                                .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                                .put("maxIndex", 1743.9217529296875D)
-                                .put("minIndex", 792.3260498046875D)
-                                .build(),
+                        .put("provider", "total_market")
+                        .put("rows", 186L)
+                        .put("index", 215679.82879638672D)
+                        .put("addRowsIndexConstant", 215866.82879638672D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 1743.9217529296875D)
+                        .put("minIndex", 792.3260498046875D)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "upfront")
-                                .put("rows", 186L)
-                                .put("index", 192046.1060180664D)
-                                .put("addRowsIndexConstant", 192233.1060180664D)
-                                .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                                .put("maxIndex", 1870.06103515625D)
-                                .put("minIndex", 545.9906005859375D)
-                                .build()
+                        .put("provider", "upfront")
+                        .put("rows", 186L)
+                        .put("index", 192046.1060180664D)
+                        .put("addRowsIndexConstant", 192233.1060180664D)
+                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                        .put("maxIndex", 1870.06103515625D)
+                        .put("minIndex", 545.9906005859375D)
+                        .build()
                 )
             )
         )
@@ -318,21 +318,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "total_market",
+                        providerDimension, "total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "spot",
+                        providerDimension, "spot",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
@@ -416,21 +416,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "total_market",
+                        providerDimension, "total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "spot",
+                        providerDimension, "spot",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
@@ -465,14 +465,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "total_market",
+                        providerDimension, "total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -507,7 +507,7 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -542,21 +542,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 2L,
                         "index", 2591.68359375D,
                         "addRowsIndexConstant", 2594.68359375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "total_market",
+                        providerDimension, "total_market",
                         "rows", 2L,
                         "index", 2508.39599609375D,
                         "addRowsIndexConstant", 2511.39599609375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "spot",
+                        providerDimension, "spot",
                         "rows", 2L,
                         "index", 220.63774871826172D,
                         "addRowsIndexConstant", 223.63774871826172D,
@@ -595,21 +595,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 1L,
                         "index", new Float(1447.341160).doubleValue(),
                         "addRowsIndexConstant", new Float(1449.341160).doubleValue(),
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "total_market",
+                        providerDimension, "total_market",
                         "rows", 1L,
                         "index", new Float(1314.839715).doubleValue(),
                         "addRowsIndexConstant", new Float(1316.839715).doubleValue(),
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "spot",
+                        providerDimension, "spot",
                         "rows", 1L,
                         "index", new Float(109.705815).doubleValue(),
                         "addRowsIndexConstant", new Float(111.705815).doubleValue(),
@@ -644,14 +644,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "total_market",
+                        providerDimension, "total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -695,18 +695,18 @@ public class TopNQueryRunnerTest
   public void testTopNWithNonExistentFilterMultiDim()
   {
     AndDimFilter andDimFilter = Druids.newAndDimFilterBuilder()
-                                      .fields(
-                                          Lists.<DimFilter>newArrayList(
-                                              Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(providerDimension)
-                                                    .value("billyblank")
-                                                    .build(),
-                                              Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.qualityDimension)
-                                                    .value("mezzanine")
-                                                    .build()
-                                          )
-                                      ).build();
+        .fields(
+            Lists.<DimFilter>newArrayList(
+                Druids.newSelectorDimFilterBuilder()
+                    .dimension(providerDimension)
+                    .value("billyblank")
+                    .build(),
+                Druids.newSelectorDimFilterBuilder()
+                    .dimension(QueryRunnerTestHelper.qualityDimension)
+                    .value("mezzanine")
+                    .build()
+            )
+        ).build();
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
@@ -966,21 +966,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "spot",
+                        providerDimension, "spot",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "total_market",
+                        providerDimension, "total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1014,14 +1014,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "total_market",
+                        providerDimension, "total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1055,14 +1055,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "total_market",
+                        providerDimension, "total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1100,21 +1100,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "s",
+                        providerDimension, "s",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "t",
+                        providerDimension, "t",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "u",
+                        providerDimension, "u",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1149,21 +1149,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "provider", "spot",
+                        providerDimension, "spot",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "upfront",
+                        providerDimension, "upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "provider", "total_market",
+                        providerDimension, "total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,

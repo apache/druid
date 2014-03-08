@@ -196,6 +196,25 @@ public class DefaultLimitSpec implements LimitSpec
     {
       return Sequences.limit(input, limit);
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      LimitingFn that = (LimitingFn) o;
+
+      if (limit != that.limit) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return limit;
+    }
   }
 
   private static class SortingFn implements Function<Sequence<Row>, Sequence<Row>>
@@ -208,6 +227,25 @@ public class DefaultLimitSpec implements LimitSpec
     public Sequence<Row> apply(@Nullable Sequence<Row> input)
     {
       return Sequences.sort(input, ordering);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      SortingFn sortingFn = (SortingFn) o;
+
+      if (ordering != null ? !ordering.equals(sortingFn.ordering) : sortingFn.ordering != null) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return ordering != null ? ordering.hashCode() : 0;
     }
   }
 
@@ -231,5 +269,49 @@ public class DefaultLimitSpec implements LimitSpec
       final ArrayList<Row> materializedList = Sequences.toList(input, Lists.<Row>newArrayList());
       return Sequences.simple(sorter.toTopN(materializedList, limit));
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      TopNFunction that = (TopNFunction) o;
+
+      if (limit != that.limit) return false;
+      if (sorter != null ? !sorter.equals(that.sorter) : that.sorter != null) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      int result = sorter != null ? sorter.hashCode() : 0;
+      result = 31 * result + limit;
+      return result;
+    }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    DefaultLimitSpec that = (DefaultLimitSpec) o;
+
+    if (limit != that.limit) return false;
+    if (columns != null ? !columns.equals(that.columns) : that.columns != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = columns != null ? columns.hashCode() : 0;
+    result = 31 * result + limit;
+    return result;
   }
 }
