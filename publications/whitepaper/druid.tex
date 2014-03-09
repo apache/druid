@@ -810,16 +810,20 @@ to do so because infrastructure cost is still a consideration.
 \label{fig:query_percentiles}
 \end{figure}
 
-We also present Druid benchmarks with TPC-H data. Most TPC-H queries do not
-directly apply to Druid, so we selected similiar queries to demonstrate Druid's
-query performance. As a comparison, we also provide the results of the same
-queries using MySQL with MyISAM (InnoDB was slower in our experiments). We
-selected MySQL to benchmark against because of its universal popularity. We
-choose not to select another open source column store because we were not
-confident we could correctly tune it for optimal performance. The results for
-the 1 GB TPC-H data set are shown in Figure~\ref{fig:tpch_1gb} and the results
-of the 100 GB data set are shown in Figure~\ref{fig:tpch_100gb}. We benchmarked
-Druid's scan rate at 50.6 million rows/second/core.
+We also present Druid benchmarks with TPC-H data. Our setup used Amazon EC2
+m3.2xlarge (CPU: Intel(R) Xeon(R) CPU E5-2680 v2 @ 2.80GHz) instances for
+historical nodes. Most TPC-H queries do not directly apply to Druid, so we
+selected similiar queries to demonstrate Druid's query performance. As a
+comparison, we also provide the results of the same queries using MySQL with
+MyISAM (InnoDB was slower in our experiments). Our MySQL setup was an Amazon
+RDS instance that also ran on an m3.2xlarge node.We selected MySQL to benchmark
+against because of its universal popularity. We choose not to select another
+open source column store because we were not confident we could correctly tune
+it for optimal performance. The results for the 1 GB TPC-H data set are shown
+in Figure~\ref{fig:tpch_1gb} and the results of the 100 GB data set are shown
+in Figure~\ref{fig:tpch_100gb}. We benchmarked Druid's scan rate at
+53,539,211.1 rows/second/core for count(*) over a given interval and 36,246,530
+rows/second/core for an aggregation involving floats.
 
 \begin{figure}
 \centering
@@ -836,12 +840,14 @@ Druid's scan rate at 50.6 million rows/second/core.
 \end{figure}
 
 Finally, we present our results of scaling Druid to meet increasing data
-volumes with the TPC-H 100 GB data set. We observe that when we increased the
-number of cores from 8 to 48, we do not always display linear scaling.
-The increase in speed of a parallel computing system is often limited by the
-time needed for the sequential operations of the system, in accordance with
-Amdahl's law \cite{amdahl1967validity}. Our query results and query speedup are
-shown in Figure~\ref{fig:tpch_scaling}.
+volumes with the TPC-H 100 GB data set. Our distributed cluster used Amazon EC2
+c3.2xlarge (Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz) instances for broker
+nodes. We observe that when we increased the number of cores from 8 to 48, we
+do not always display linear scaling.  The increase in speed of a parallel
+computing system is often limited by the time needed for the sequential
+operations of the system, in accordance with Amdahl's law
+\cite{amdahl1967validity}. Our query results and query speedup are shown in
+Figure~\ref{fig:tpch_scaling}.
 
 \begin{figure}
 \centering
