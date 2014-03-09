@@ -42,10 +42,10 @@ created a surge in machine-generated events.  Individually, these
 events contain minimal useful information and are of low value.  Given the
 time and resources required to extract meaning from large collections of
 events, many companies were willing to discard this data instead.  Although
-infrastructure has been built handle event based data (e.g. IBM's
+infrastructure has been built to handle event based data (e.g. IBM's
 Netezza\cite{singh2011introduction}, HP's Vertica\cite{bear2012vertica}, and EMC's
 Greenplum\cite{miner2012unified}), they are largely sold at high price points
-and are only targeted towards those companies who can afford the offerings.
+and are only targeted towards those companies who can afford the offering.
 
 A few years ago, Google introduced MapReduce \cite{dean2008mapreduce} as their
 mechanism of leveraging commodity hardware to index the internet and analyze
@@ -97,7 +97,7 @@ the point of view of how data flows through the system in Section
 \ref{sec:architecture}.  We then discuss how and why data gets converted into a
 binary format in Section \ref{sec:storage-format}.  We briefly describe the
 query API in Section \ref{sec:query-api} and present our experimental results
-in Section \ref{sec:benchmarks}. Lastly, we leave off with our learnings from
+in Section \ref{sec:benchmarks}. Lastly, we leave off with what we've learned from
 running Druid in production in Section \ref{sec:production}, related work
 in Section \ref{sec:related}, and conclusions in Section \ref{sec:conclusions}.
 
@@ -105,9 +105,9 @@ in Section \ref{sec:related}, and conclusions in Section \ref{sec:conclusions}.
 \label{sec:problem-definition}
 
 Druid was originally designed to solve problems around ingesting and exploring
-large quantities of transactional events (log data). This form of timeseries data is
-commonly found in OLAP workflows and the nature of the data tends to be very
-append heavy. For example, consider the data shown in
+large quantities of transactional events (log data). This form of timeseries
+data is commonly found in OLAP workflows and the nature of the data tends to be
+very append heavy. For example, consider the data shown in
 Table~\ref{tab:sample_data}.  Table~\ref{tab:sample_data} contains data for
 edits that have occurred on Wikipedia. Each time a user edits a page in
 Wikipedia, an event is generated that contains metadata about the edit. This
@@ -115,8 +115,9 @@ metadata is comprised of 3 distinct components. First, there is a timestamp
 column indicating when the edit was made. Next, there are a set dimension
 columns indicating various attributes about the edit such as the page that was
 edited, the user who made the edit, and the location of the user. Finally,
-there are a set of metric columns that contain values (usually numeric) to
-aggregate over, such as the number of characters added or removed in an edit. 
+there are a set of metric columns that contain values (usually numeric) that
+can be aggregated, such as the number of characters added or removed in an
+edit. 
 
 \begin{table*}
   \centering
@@ -373,7 +374,7 @@ a final consolidated result to the caller.
 \label{sec:caching}
 Broker nodes contain a cache with a LRU \cite{o1993lru, kim2001lrfu}
 invalidation strategy. The cache can use local heap memory or an external
-distributed key/value store such as memcached
+distributed key/value store such as Memcached
 \cite{fitzpatrick2004distributed}. Each time a broker node receives a query, it
 first maps the query to a set of segments. Results for certain segments may
 already exist in the cache and there is no need to recompute them. For any
@@ -489,7 +490,7 @@ information and segment metadata information about what segments should exist
 in the cluster.  If MySQL goes down, this information becomes unavailable to
 coordinator nodes. However, this does not mean data itself is unavailable. If
 coordinator nodes cannot communicate to MySQL, they will cease to assign new
-segments and drop outdated ones. Broker, historical and real-time nodes are still
+segments and drop outdated ones. Broker, historical, and real-time nodes are still
 queryable during MySQL outages.
 
 \section{Storage Format}
@@ -571,7 +572,7 @@ representations.
 \subsection{Indices for Filtering Data}
 In many real world OLAP workflows, queries are issued for the aggregated
 results of some set of metrics where some set of dimension specifications are
-met. An example query may be asked is: "How many Wikipedia edits were done by users in
+met. An example query is: "How many Wikipedia edits were done by users in
 San Francisco who are also male?". This query is filtering the Wikipedia data
 set in Table~\ref{tab:sample_data} based on a Boolean expression of dimension
 values. In many real world data sets, dimension columns contain strings and
@@ -725,16 +726,19 @@ filter and group results based on almost any arbitrary condition.  It is beyond
 the scope of this paper to fully describe the query API but more information
 can be found
 online\footnote{\href{http://druid.io/docs/latest/Querying.html}{http://druid.io/docs/latest/Querying.html}}.
+
 At the time of writing, the query language does not support joins. Although the
 storage format is able to support joins, we've targeted Druid at user-facing
 workloads that must return in a matter of seconds, and as such, we've chosen to
 not spend the time to implement joins as it has been our experience that
-requiring joins on
+requiring joins on your queries often limits the performance you can achieve.
 
+\newpage
 \section{Performance}
-As Druid is a production system, we've chosen to share some of our performance
-measurements from our production cluster. The date range of the data is one
-month.
+\label{sec:benchmarks}
+Druid runs in production at several organizations, and to demonstrate its
+performance, we've chosen to share some real world numbers of the production
+cluster at Metamarkets. The date range of the data is for Feburary 2014.
 
 \subsection{Query Performance}
 Druid query performance can vary signficantly depending on the actual query
@@ -744,33 +748,32 @@ column. Similarily, sorting the values of a high cardinality dimension based on
 a given metric is much more expensive than a simple count over a time range.
 Furthermore, the time range of a query and the number of metric aggregators in
 the query will contribute to query latency. Instead of going into full detail
-about every possible query a user can issue, we've instead chosen to showcase a
-higher level view of average latencies we see in our production cluster. We
-selected 8 of our most queried data sources, described in
-Table~\ref{tab:datasources}. 
+about every query issued in our production cluster, we've instead chosen to
+showcase a higher level view of average latencies in our cluster. We selected 8
+of our most queried data sources, described in Table~\ref{tab:datasources}. 
 
 \begin{table}
   \centering
-  \caption{Druid Query Datasources}
+  \caption{Dimensions and metrics of the 8 most queried Druid data sources in production.}
   \label{tab:datasources}
   \begin{tabular}{| l | l | l |}
     \hline
     \textbf{Data Source} & \textbf{Dimensions} & \textbf{Metrics} \\ \hline
-    \texttt{a} & 10 & 10 \\ \hline
-    \texttt{b} & 10 & 10 \\ \hline
-    \texttt{c} & 10 & 10 \\ \hline
-    \texttt{d} & 10 & 10 \\ \hline
-    \texttt{e} & 10 & 10 \\ \hline
-    \texttt{f} & 10 & 10 \\ \hline
-    \texttt{g} & 10 & 10 \\ \hline
-    \texttt{h} & 10 & 10 \\ \hline
+    \texttt{a} & 25 & 21 \\ \hline
+    \texttt{b} & 30 & 26 \\ \hline
+    \texttt{c} & 71 & 35 \\ \hline
+    \texttt{d} & 60 & 19 \\ \hline
+    \texttt{e} & 29 & 8 \\ \hline
+    \texttt{f} & 30 & 16 \\ \hline
+    \texttt{g} & 26 & 18 \\ \hline
+    \texttt{h} & 78 & 14 \\ \hline
   \end{tabular}
 \end{table}
 
-Some more details of the cluster:
+Some more details of our results:
 
 \begin{itemize}
-\item The results are from a "hot" tier in our production cluster.
+\item The results are from a "hot" tier in our production cluster. We run several tiers of varying performance in production.
 \item There is approximately 10.5TB of RAM available in the "hot" tier and approximately 10TB of segments loaded (including replication). Collectively, there are about 50 billion Druid rows in this tier. Results for every data source are not shown.
 \item The hot tier uses Xeon E5-2670 processors and consists of 1302 processing threads and 672 total cores (hyperthreaded).
 \item A memory-mapped storage engine was used (the machine was configured to memory map the data
@@ -779,7 +782,7 @@ Some more details of the cluster:
 
 The average query latency is shown in Figure~\ref{fig:avg_query_latency} and
 the queries per minute is shown in Figure~\ref{fig:queries_per_min}. We can see
-that across the various datasources, the average query latency is approximately
+that across the various data sources, the average query latency is approximately
 540ms. The 90th percentile query latency across these data sources is < 1s, the
 95th percentile is < 2s, and the 99th percentile is < 10s. The percentiles are
 shown in Figure~\ref{fig:query_percentiles}. It is very possible to possible to
@@ -789,73 +792,73 @@ to do so because infrastructure cost is still a consideration.
 \begin{figure}
 \centering 
 \includegraphics[width = 2.8in]{avg_query_latency}
-\caption{Druid production cluster average query latency across multiple data sources.} 
+\caption{Druid production cluster average query latencies for multiple data sources.} 
 \label{fig:avg_query_latency}
 \end{figure}
 
 \begin{figure}
 \centering 
 \includegraphics[width = 2.8in]{queries_per_min}
-\caption{Druid production cluster queries per minute across multiple data sources.} 
+\caption{Druid production cluster queries per minute for multiple data sources.} 
 \label{fig:queries_per_min}
 \end{figure}
 
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{query_percentiles}
-\caption{Druid production cluster 90th, 95th, and 99th query latency percentiles for 8 most queried data sources.}
+\caption{Druid production cluster 90th, 95th, and 99th query latency percentiles for the 8 most queried data sources.}
 \label{fig:query_percentiles}
 \end{figure}
 
-We also present our Druid benchmarks with TPC-H data. Although most of the
-TPC-H queries do not directly apply to Druid, we've selected similiar queries
-to demonstrate Druid's query performance. For a comparison, we also provide the
-results of the same queries using MySQL with MyISAM (InnoDB was slower in our
-tests). We selected MySQL as the base comparison because it its universal
-popularity. We choose not to select another open source column store because we
-were not confident we could correctly tune it to optimize performance. The
-results for the 1 GB data set are shown in Figure~\ref{fig:tpch_1gb} and the
-results of the 100 GB data set are in Figure~\ref{fig:tpch_100gb}.
+We also present Druid benchmarks with TPC-H data. Most TPC-H queries do not
+directly apply to Druid, so we selected similiar queries to demonstrate Druid's
+query performance. As a comparison, we also provide the results of the same
+queries using MySQL with MyISAM (InnoDB was slower in our experiments). We
+selected MySQL to benchmark against because of its universal popularity. We
+choose not to select another open source column store because we were not
+confident we could correctly tune it for optimal performance. The results for
+the 1 GB TPC-H data set are shown in Figure~\ref{fig:tpch_1gb} and the results
+of the 100 GB data set are shown in Figure~\ref{fig:tpch_100gb}. We benchmarked
+Druid's scan rate at 50.6 million rows/second/core.
 
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{tpch_1gb}
-\caption{Druid production cluster 90th, 95th, and 99th query latency percentiles for 8 most queried data sources.}
+\caption{Druid and MySQL (MyISAM) benchmarks with the TPC-H 1 GB data set.}
 \label{fig:tpch_1gb}
 \end{figure}
 
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{tpch_100gb}
-\caption{Druid production cluster 90th, 95th, and 99th query latency percentiles for 8 most queried data sources.}
+\caption{Druid and MySQL (MyISAM) benchmarks with the TPC-H 100 GB data set.}
 \label{fig:tpch_100gb}
 \end{figure}
 
-Finally, we present our results of scaling Druid to meet increasing data load
-with the TPC-H 100 GB data set. We observe that when we increased the number of
-cores from 8 to 48, we do not display linear scaling and we see diminishing
-marginal returns to performance in the size of the cluster. The increase in
-speed of a parallel computing system is often limited by the time needed for
-the sequential operations of the system, in accordance with Amdahl's law
-\cite{amdahl1967validity}. Our query results and query speedup are shown in
-Figure~\ref{tpch_scaling}.
+Finally, we present our results of scaling Druid to meet increasing data
+volumes with the TPC-H 100 GB data set. We observe that when we increased the
+number of cores from 8 to 48, we do not always display linear scaling.
+The increase in speed of a parallel computing system is often limited by the
+time needed for the sequential operations of the system, in accordance with
+Amdahl's law \cite{amdahl1967validity}. Our query results and query speedup are
+shown in Figure~\ref{fig:tpch_scaling}.
 
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{tpch_scaling}
-\caption{Druid production cluster 90th, 95th, and 99th query latency percentiles for 8 most queried data sources.}
+\caption{Scaling a Druid cluster with the TPC-H 100 GB data set.}
 \label{fig:tpch_scaling}
 \end{figure}
 
 \subsection{Data Ingestion Performance}
-To showcase Druid's data latency latency, we selected several production
-datasources of varying dimensions, metrics, and event volume. Our production
+To showcase Druid's data ingestion latency, we selected several production
+datasources of varying dimensions, metrics, and event volumes. Our production
 ingestion setup is as follows:
 
 \begin{itemize}
 \item Total RAM: 360 GB 
 \item Total CPU: 12 x Intel Xeon E5-2670 (96 cores)
-\item Note: Using this setup, several other data sources are being ingested and many other Druid related ingestion tasks are running across these machines.
+\item Note: In this setup, several other data sources were being ingested and many other Druid related ingestion tasks were running across these machines.
 \end{itemize}
 
 Druid's data ingestion latency is heavily dependent on the complexity of the
@@ -863,13 +866,13 @@ data set being ingested. The data complexity is determined by the number of
 dimensions in each event, the number of metrics in each event, and the types of
 aggregations we want to perform on those metrics. With the most basic data set
 (one that only has a timestamp column), our setup can ingest data at a rate of
-800k events/sec/node, which is really just a measurement of how fast we can
+800,000 events/sec/core, which is really just a measurement of how fast we can
 deserialize events. Real world data sets are never this simple. A description
 of the data sources we selected is shown in Table~\ref{tab:ingest_datasources}. 
 
 \begin{table}
   \centering
-  \caption{Druid Ingestion Datasources}
+  \caption{Dimensions, metrics, and peak throughputs of various ingested data sources.}
   \label{tab:ingest_datasources}
   \begin{tabular}{| l | l | l | l |}
     \hline
@@ -888,21 +891,22 @@ of the data sources we selected is shown in Table~\ref{tab:ingest_datasources}.
 We can see that based on the descriptions in
 Table~\ref{tab:ingest_datasources}, latencies vary significantly and the
 ingestion latency is not always a factor of the number of dimensions and
-metrics. Some of the lower latencies on simple data sets are simply because the
-event producer was not sending a tremendous amount of data. A graphical
-representation of the ingestion latencies of these data sources over a span of
-time is shown in Figure~\ref{fig:ingestion_rate}.
+metrics. We see some lower latencies on simple data sets because that was the rate that the
+data producer was delivering data. The results are shown in Figure~\ref{fig:ingestion_rate}.
 
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{ingestion_rate}
-\caption{Druid production cluster ingestion rate for multiple data sources.}
+\caption{Druid production cluster ingestion rates for multiple data sources.}
 \label{fig:ingestion_rate}
 \end{figure}
 
+The peak ingestion latency we measured in production was 23,000 events/sec/core
+on an Amazon EC2 cc2.8xlarge. The data source had 30 dimensions and 19 metrics.
+
 \section{Druid in Production}
 \label{sec:production}
-Over the last few years of using Druid, we've gained tremendous
+Over the last few years, we've gained tremendous
 knowledge about handling production workloads, setting up correct operational
 monitoring, integrating Druid with other products as part of a more
 sophisticated data analytics stack, and distributing data to handle entire data
@@ -914,25 +918,24 @@ seemingly small feature would have on the overall system.
 
 Some of our more interesting observations include:
 \begin{itemize}
-\item Druid is most often used in production to power exploratory dashboards.
-Interestingly, because many users of explatory dashboards are not from
-technical backgrounds, they often issue queries without understanding the
-impacts to the underlying system. For example, some users become impatient that
-their queries for terabytes of data do not return in milliseconds and
-continously refresh their dashboard view, generating heavy load to Druid. This
-type of usage forced Druid to better defend itself against expensive repetitive
-queries.
+\item Druid is often used in production to power exploratory dashboards.  Many
+users of exploratory dashboards are not from technical backgrounds, and they
+often issue queries without understanding the impacts to the underlying system.
+For example, some users become impatient that their queries for terabytes of
+data do not return in milliseconds and continously refresh their dashboard
+view, generating heavy load to Druid. This type of usage forced Druid to defend
+itself against expensive repetitive queries.
 
 \item Cluster query performance benefits from multitenancy. Hosting every
 production datasource in the same cluster leads to better data parallelization
 as additional nodes are added.
 
-\item Even if you provide users with the ability to arbitrarily explore data, they
-often only have a few questions in mind. Caching is extremely important, and in
-fact we see a very high percentage of our query results come from the broker cache.
+\item Even if you provide users with the ability to arbitrarily explore data,
+they often only have a few questions in mind. Caching is extremely important in
+this case, and we see a very high cache hit rates.
 
 \item When using a memory mapped storage engine, even a small amount of paging
-data from disk can severely impact query performance. SSDs can greatly solve
+data from disk can severely impact query performance. SSDs greatly mitigate
 this problem.
 
 \item Leveraging approximate algorithms can greatly reduce data storage costs and
@@ -968,7 +971,7 @@ Storm topology consumes events from a data stream, retains only those that are
 simple transformations, such as id to name lookups, up to complex operations
 such as multi-stream joins. The Storm topology forwards the processed event
 stream to Druid in real-time. Storm handles the streaming data processing work,
-and Druid is used for responding to queries on top of both real-time and
+and Druid is used for responding to queries for both real-time and
 historical data. 
 
 \subsection{Multiple Data Center Distribution}
