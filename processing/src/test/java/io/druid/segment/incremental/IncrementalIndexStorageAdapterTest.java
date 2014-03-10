@@ -37,9 +37,12 @@ import io.druid.query.filter.DimFilters;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
-import junit.framework.Assert;
+import io.druid.segment.Cursor;
+import io.druid.segment.DimensionSelector;
+import io.druid.segment.filter.SelectorFilter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -113,6 +116,56 @@ public class IncrementalIndexStorageAdapterTest
 
     row = (MapBasedRow) results.get(1);
     Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1l), row.getEvent());
+  }
+
+  @Test
+  public void testResetSanity() {
+    IncrementalIndex index = new IncrementalIndex(
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
+    );
+
+
+    DateTime t = DateTime.now();
+    Interval interval = new Interval(t.minusMinutes(1), t.plusMinutes(1));
+
+    index.add(
+        new MapBasedInputRow(
+            t.minus(1).getMillis(),
+            Lists.newArrayList("billy"),
+            ImmutableMap.<String, Object>of("billy", "hi")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            t.minus(1).getMillis(),
+            Lists.newArrayList("sally"),
+            ImmutableMap.<String, Object>of("sally", "bo")
+        )
+    );
+
+    IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+    Iterable<Cursor> cursorIterable = adapter.makeCursors(new SelectorFilter("sally", "bo"),
+                                                          interval,
+                                                          QueryGranularity.NONE);
+    Cursor cursor = cursorIterable.iterator().next();
+    DimensionSelector dimSelector;
+
+    dimSelector = cursor.makeDimensionSelector("sally");
+    Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+
+    index.add(
+        new MapBasedInputRow(
+            t.minus(1).getMillis(),
+            Lists.newArrayList("sally"),
+            ImmutableMap.<String, Object>of("sally", "ah")
+        )
+    );
+
+    // Cursor reset should not be affected by out of order values
+    cursor.reset();
+
+    dimSelector = cursor.makeDimensionSelector("sally");
+    Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
   }
 
   @Test
