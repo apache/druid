@@ -241,27 +241,22 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                         if (numAdvanced == -1) {
                           numAdvanced = 0;
-                          while (baseIter.hasNext()) {
-                            currEntry.set(baseIter.next());
-                            if (filterMatcher.matches()) {
-                              return;
-                            }
-
-                            numAdvanced++;
-                          }
                         } else {
                           Iterators.advance(baseIter, numAdvanced);
-                          while (baseIter.hasNext()) {
-                            currEntry.set(baseIter.next());
-                            if (filterMatcher.matches()) {
-                              break;
-                            }
-
-                            numAdvanced++;
-                          }
                         }
 
-                        done = cursorMap.size() == 0 || !baseIter.hasNext();
+                        boolean foundMatched = false;
+                        while (baseIter.hasNext()) {
+                          currEntry.set(baseIter.next());
+                          if (filterMatcher.matches()) {
+                            foundMatched = true;
+                            break;
+                          }
+
+                          numAdvanced++;
+                        }
+
+                        done = !foundMatched && (cursorMap.size() == 0 || !baseIter.hasNext());
                       }
 
                       @Override
