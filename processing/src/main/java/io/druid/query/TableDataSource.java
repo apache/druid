@@ -36,6 +36,7 @@ public class TableDataSource implements DataSource
     this.name = (name == null ? null : name.toLowerCase());
   }
 
+  @JsonProperty
   public String getName()
   {
     return name;
