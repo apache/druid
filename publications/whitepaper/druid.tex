@@ -897,8 +897,12 @@ of the data sources we selected is shown in Table~\ref{tab:ingest_datasources}.
 We can see that based on the descriptions in
 Table~\ref{tab:ingest_datasources}, latencies vary significantly and the
 ingestion latency is not always a factor of the number of dimensions and
-metrics. We see some lower latencies on simple data sets because that was the rate that the
-data producer was delivering data. The results are shown in Figure~\ref{fig:ingestion_rate}.
+metrics. We see some lower latencies on simple data sets because that was the
+rate that the data producer was delivering data. The results are shown in
+Figure~\ref{fig:ingestion_rate}. We define throughput as the number of events a
+real-time node can ingest and also make queryable. If too many events are sent
+to the real-time node, those events are blocked until the real-time node has
+capacity to accept them.
 
 \begin{figure}
 \centering
@@ -1039,7 +1043,6 @@ of functionality as Druid, some of Druid’s optimization techniques such as usi
 inverted indices to perform fast filters are also used in other data
 stores \cite{macnicol2004sybase}.
 
-\newpage
 \section{Conclusions}
 \label{sec:conclusions}
 In this paper, we presented Druid, a distributed, column-oriented, real-time
