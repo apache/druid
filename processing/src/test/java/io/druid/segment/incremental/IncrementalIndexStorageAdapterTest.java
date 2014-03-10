@@ -22,6 +22,7 @@ package io.druid.segment.incremental;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -30,6 +31,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -37,6 +39,9 @@ import io.druid.query.filter.DimFilters;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
+import io.druid.query.topn.TopNQueryBuilder;
+import io.druid.query.topn.TopNQueryEngine;
+import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.filter.SelectorFilter;
@@ -169,9 +174,61 @@ public class IncrementalIndexStorageAdapterTest
   }
 
   @Test
-   public void testFilterByNull() throws Exception
-   {
-     IncrementalIndex index = new IncrementalIndex(
+  public void testSingleValueTopN()
+  {
+    IncrementalIndex index = new IncrementalIndex(
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
+    );
+
+    DateTime t = DateTime.now();
+    index.add(
+        new MapBasedInputRow(
+            t.minus(1).getMillis(),
+            Lists.newArrayList("sally"),
+            ImmutableMap.<String, Object>of("sally", "bo")
+        )
+    );
+
+    TopNQueryEngine engine = new TopNQueryEngine(
+        new StupidPool<ByteBuffer>(
+            new Supplier<ByteBuffer>()
+            {
+              @Override
+              public ByteBuffer get()
+              {
+                return ByteBuffer.allocate(50000);
+              }
+            }
+        )
+    );
+
+    final Iterable<Result<TopNResultValue>> results = engine.query(
+        new TopNQueryBuilder().dataSource("test")
+                              .granularity(QueryGranularity.ALL)
+                              .intervals(Lists.newArrayList(new Interval(0, new DateTime().getMillis())))
+                              .dimension("sally")
+                              .metric("cnt")
+                              .threshold(10)
+                              .aggregators(
+                                  Lists.<AggregatorFactory>newArrayList(
+                                      new LongSumAggregatorFactory(
+                                          "cnt",
+                                          "cnt"
+                                      )
+                                  )
+                              )
+                              .build(),
+        new IncrementalIndexStorageAdapter(index)
+    );
+
+    Assert.assertEquals(1, Iterables.size(results));
+    Assert.assertEquals(1, results.iterator().next().getValue().getValue().size());
+  }
+
+  @Test
+  public void testFilterByNull() throws Exception
+  {
+    IncrementalIndex index = new IncrementalIndex(
          0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
      );
 
