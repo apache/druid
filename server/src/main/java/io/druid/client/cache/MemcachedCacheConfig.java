@@ -20,6 +20,7 @@
 package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import net.spy.memcached.DefaultConnectionFactory;
 
 import javax.validation.constraints.NotNull;
 
@@ -43,7 +44,7 @@ public class MemcachedCacheConfig
 
   // memcached client read buffer size, -1 uses the spymemcached library default
   @JsonProperty
-  private int readBufferSize = -1;
+  private int readBufferSize = DefaultConnectionFactory.DEFAULT_READ_BUFFER_SIZE;
 
   @JsonProperty
   private String memcachedPrefix = "druid";
