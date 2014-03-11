@@ -281,7 +281,7 @@ public class HadoopIndexTask extends AbstractTask
 
       Jobby job = new HadoopDruidDetermineConfigurationJob(config);
 
-      log.info("Starting a hadoop index generator job...");
+      log.info("Starting a hadoop determine configuration job...");
       if (job.run()) {
         return HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(HadoopDruidIndexerConfigBuilder.toSchema(config));
       }
