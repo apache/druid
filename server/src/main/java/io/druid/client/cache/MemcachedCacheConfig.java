@@ -41,10 +41,14 @@ public class MemcachedCacheConfig
   @JsonProperty
   private int maxObjectSize = 50 * 1024 * 1024;
 
+  // memcached client read buffer size, -1 uses the spymemcached library default
+  @JsonProperty
+  private int readBufferSize = -1;
+
   @JsonProperty
   private String memcachedPrefix = "druid";
 
-  // maximum size in bytes of memcached client operation queue. 0 means unlimited
+  // maximum size in bytes of memcached client operation queue. 0 means unbounded
   @JsonProperty
   private long maxOperationQueueSize = 0;
 
@@ -76,5 +80,10 @@ public class MemcachedCacheConfig
   public long getMaxOperationQueueSize()
   {
     return maxOperationQueueSize;
+  }
+
+  public int getReadBufferSize()
+  {
+    return readBufferSize;
   }
 }
