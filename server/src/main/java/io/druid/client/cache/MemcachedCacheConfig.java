@@ -25,15 +25,22 @@ import javax.validation.constraints.NotNull;
 
 public class MemcachedCacheConfig
 {
+  // default to 30 day expiration for cache entries
+  // values greater than 30 days are interpreted by memcached as absolute POSIX timestamps instead of duration
   @JsonProperty
-  private int expiration = 2592000; // What is this number?
+  private int expiration = 30 * 24 * 3600;
+
   @JsonProperty
   private int timeout = 500;
+
+  // comma delimited list of memcached servers, given as host:port combination
   @JsonProperty
   @NotNull
   private String hosts;
+
   @JsonProperty
   private int maxObjectSize = 50 * 1024 * 1024;
+
   @JsonProperty
   private String memcachedPrefix = "druid";
 
