@@ -36,8 +36,10 @@ public class MemcachedCacheConfig
   private int maxObjectSize = 50 * 1024 * 1024;
   @JsonProperty
   private String memcachedPrefix = "druid";
+
+  // maximum size in bytes of memcached client operation queue. 0 means unlimited
   @JsonProperty
-  private long maxOperationQueueSize = 256 * 1024 * 1024L; // 256 MB
+  private long maxOperationQueueSize = 0;
 
   public int getExpiration()
   {
