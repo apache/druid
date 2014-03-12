@@ -21,6 +21,7 @@ package io.druid.query.aggregation.post;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.PostAggregator;
 
@@ -41,6 +42,8 @@ public class ConstantPostAggregator implements PostAggregator
       @JsonProperty("value") Number constantValue
   )
   {
+    Preconditions.checkNotNull(constantValue, "constantValue cannot be null!");
+
     this.name = name;
     this.constantValue = constantValue;
   }
