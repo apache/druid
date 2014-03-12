@@ -42,6 +42,7 @@ public class ConstantPostAggregator implements PostAggregator
       @JsonProperty("value") Number constantValue
   )
   {
+    // only value should be required for constants
     Preconditions.checkNotNull(constantValue, "Constant value must not be null");
     this.name = name;
     this.constantValue = constantValue;
