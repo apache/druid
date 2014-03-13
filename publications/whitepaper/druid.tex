@@ -787,8 +787,9 @@ that across the various data sources, the average query latency is approximately
 \end{figure}
 
 We also present Druid benchmarks on TPC-H data. Our setup used Amazon EC2
-\texttt{m3.2xlarge} (CPU: Intel(R) Xeon(R) CPU E5-2680 v2 @ 2.80GHz) instances for
-historical nodes. Most TPC-H queries do not directly apply to Druid, so we
+\texttt{m3.2xlarge} (Intel(R) Xeon(R) CPU E5-2680 v2 @ 2.80GHz) instances for
+historical nodes and \texttt{c3.2xlarge} (Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz) instances for broker
+nodes. Most TPC-H queries do not directly apply to Druid, so we
 selected queries more typical of Druid's workload to demonstrate query performance. As a
 comparison, we also provide the results of the same queries using MySQL using the
 MyISAM engine (InnoDB was slower in our experiments). Our MySQL setup was an Amazon
@@ -818,13 +819,15 @@ and 36,246,530 rows/second/core for a \texttt{select sum(float)} type query.
 \end{figure}
 
 Finally, we present our results of scaling Druid to meet increasing data
-volumes with the TPC-H 100 GB data set. Our distributed cluster used Amazon EC2
-c3.2xlarge (Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz) instances for broker
-nodes. We observe that when we increased the number of cores from 8 to 48, we
-do not always display linear scaling as the increase in speed of a parallel
-computing system is often limited by the time needed for the sequential
-operations of the system. Our query results and query speedup are shown in
-Figure~\ref{fig:tpch_scaling}.
+volumes with the TPC-H 100 GB data set. We observe that when we
+increased the number of cores from 8 to 48, not all types of queries
+achieve linear scaling, but the simpler aggregation queries do,
+as shown in Figure~\ref{fig:tpch_scaling}.
+
+The increase in speed of a parallel computing system is often limited by the
+time needed for the sequential operations of the system. In this case, queries
+requiring a substantial amount of work at the broker level do not parallelize as
+well.
 
 \begin{figure}
 \centering
@@ -836,13 +839,11 @@ Figure~\ref{fig:tpch_scaling}.
 \subsection{Data Ingestion Performance}
 To showcase Druid's data ingestion latency, we selected several production
 datasources of varying dimensions, metrics, and event volumes. Our production
-ingestion setup is as follows:
+ingestion setup consists of 6 nodes, totalling 360GB of RAM and 96 cores
+(12 x Intel Xeon E5-2670).
 
-\begin{itemize}
-\item Total RAM: 360 GB 
-\item Total CPU: 12 x Intel Xeon E5-2670 (96 cores)
-\item Note: In this setup, several other data sources were being ingested and many other Druid related ingestion tasks were running across these machines.
-\end{itemize}
+Note that in this setup, several other data sources were being ingested and
+many other Druid related ingestion tasks were running concurrently on those machines.
 
 Druid's data ingestion latency is heavily dependent on the complexity of the
 data set being ingested. The data complexity is determined by the number of
