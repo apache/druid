@@ -666,16 +666,16 @@ The exact query syntax depends on the query type and the information requested.
 A sample count query over a week of data is as follows:
 \begin{verbatim}
 {
-  "queryType"     : "timeseries",
-  "dataSource"    : "wikipedia",
-  "intervals"     : "2013-01-01/2013-01-08",
-  "filter"        : {
-                      "type":"selector",
-                      "dimension":"page",
-                      "value":"Ke$ha"
-                    },
-  "granularity"   : "day",
-  "aggregations"  : [ {"type":"count", "name":"rows"} ]
+  "queryType"    : "timeseries",
+  "dataSource"   : "wikipedia",
+  "intervals"    : "2013-01-01/2013-01-08",
+  "filter"       : {
+                     "type" : "selector",
+                     "dimension" : "page",
+                     "value" : "Ke$ha"
+                   },
+  "granularity"  : "day",
+  "aggregations" : [{"type":"count", "name":"rows"}]
 }
 \end{verbatim}
 The query shown above will return a count of the number of rows in the Wikipedia datasource
@@ -697,13 +697,10 @@ equal to "Ke\$ha". The results will be bucketed by day and will be a JSON array 
 } ]
 \end{verbatim}
 Druid supports many types of aggregations including double sums, long sums,
-minimums, maximums, and several others. Druid also supports complex aggregations
-such as cardinality estimation and approximate quantile estimation.  The
-results of aggregations can be combined in mathematical expressions to form
-other aggregations. The query API is highly customizable and can be extended to
-filter and group results based on almost any arbitrary condition.  It is beyond
-the scope of this paper to fully describe the query API but more information
-can be found
+minimums, maximums, and complex aggregations such as cardinality estimation and
+approximate quantile estimation.  The results of aggregations can be combined
+in mathematical expressions to form other aggregations. It is beyond the scope
+of this paper to fully describe the query API but more information can be found
 online\footnote{\href{http://druid.io/docs/latest/Querying.html}{http://druid.io/docs/latest/Querying.html}}.
 
 At the time of writing, the query language does not support joins. Although the
@@ -720,15 +717,17 @@ cluster at Metamarkets. The date range of the data is for Feburary 2014.
 
 \subsection{Query Performance}
 Druid query performance can vary signficantly depending on the actual query
-being issued. For example, determining the approximate cardinality of a given
-dimension is a much more expensive operation than a simple sum of a metric
-column. Similarily, sorting the values of a high cardinality dimension based on
-a given metric is much more expensive than a simple count over a time range.
-Furthermore, the time range of a query and the number of metric aggregators in
-the query will contribute to query latency. Instead of going into full detail
-about every query issued in our production cluster, we've instead chosen to
-showcase a higher level view of average latencies in our cluster. We selected 8
-of our most queried data sources, described in Table~\ref{tab:datasources}. 
+being issued. For example, sorting the values of a high cardinality dimension
+based on a given metric is much more expensive than a simple count over a time
+range. To showcase the average query latencies in a production Druid cluster,
+we selected 8 of our most queried data sources, described in
+Table~\ref{tab:datasources}. Approximately 30\% of the queries are standard
+aggregates involving different types of metrics and filters, 60\% of queries
+are ordered group bys over one or more dimensions with aggregates, and 10\% of
+queries are search queries and metadata retrieval queries. The number of
+columns scanned in aggregate queries roughly follows an exponential
+distribution. Queries involving a single column are very frequent, and queries
+involving all columns are very rare.
 
 \begin{table}
   \centering
@@ -763,10 +762,7 @@ the queries per minute is shown in Figure~\ref{fig:queries_per_min}. We can see
 that across the various data sources, the average query latency is approximately
 540ms. The 90th percentile query latency across these data sources is < 1s, the
 95th percentile is < 2s, and the 99th percentile is < 10s. The percentiles are
-shown in Figure~\ref{fig:query_percentiles}. It is very possible to possible to
-decrease query latencies by adding additional hardware, but we have not chosen
-to do so because infrastructure cost is still a consideration.
-
+shown in Figure~\ref{fig:query_percentiles}. 
 \begin{figure}
 \centering 
 \includegraphics[width = 2.8in]{avg_query_latency}
@@ -821,10 +817,9 @@ Finally, we present our results of scaling Druid to meet increasing data
 volumes with the TPC-H 100 GB data set. Our distributed cluster used Amazon EC2
 c3.2xlarge (Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz) instances for broker
 nodes. We observe that when we increased the number of cores from 8 to 48, we
-do not always display linear scaling.  The increase in speed of a parallel
+do not always display linear scaling as the increase in speed of a parallel
 computing system is often limited by the time needed for the sequential
-operations of the system, in accordance with Amdahl's law
-\cite{amdahl1967validity}. Our query results and query speedup are shown in
+operations of the system. Our query results and query speedup are shown in
 Figure~\ref{fig:tpch_scaling}.
 
 \begin{figure}
@@ -880,7 +875,9 @@ rate that the data producer was delivering data. The results are shown in
 Figure~\ref{fig:ingestion_rate}. We define throughput as the number of events a
 real-time node can ingest and also make queryable. If too many events are sent
 to the real-time node, those events are blocked until the real-time node has
-capacity to accept them.
+capacity to accept them.The peak ingestion latency we measured in production
+was 22914.43 events/sec/core on an Amazon EC2 cc2.8xlarge. The data source had
+30 dimensions and 19 metrics.
 
 \begin{figure}
 \centering
@@ -889,8 +886,11 @@ capacity to accept them.
 \label{fig:ingestion_rate}
 \end{figure}
 
-The peak ingestion latency we measured in production was 22914.43 events/sec/core
-on an Amazon EC2 cc2.8xlarge. The data source had 30 dimensions and 19 metrics.
+The latency measurements we presented are sufficient to address the our stated
+problems of interactivity. We would prefer the variability in the latencies to
+be less. It is still very possible to possible to decrease latencies by adding
+additional hardware, but we have not chosen to do so because infrastructure
+cost is still a consideration to us.
 
 \section{Druid in Production}
 \label{sec:production}
