@@ -797,11 +797,14 @@ threads and 672 total cores (hyperthreaded).
     memory map the data instead of loading it into the Java heap.)
 \end{itemize}
 
-Query latencies are shown in Figure~\ref{fig:query_latency} and
-the queries per minute is shown in Figure~\ref{fig:queries_per_min}.
-Across all the various data sources, average query latency is approximately 550 milliseconds,
-with 90\% of queries returning in less than 1 second,
-95\% in under 2 seconds, and 99\% of queries taking less than 10 seconds to complete.
+Query latencies are shown in Figure~\ref{fig:query_latency} and the queries per
+minute is shown in Figure~\ref{fig:queries_per_min}.  Across all the various
+data sources, average query latency is approximately 550 milliseconds, with
+90\% of queries returning in less than 1 second, 95\% in under 2 seconds, and
+99\% of queries taking less than 10 seconds to complete.
+Occasionally we observe spikes in latency, as observed on February 19,
+in which case network issues on the cache nodes were compounded by very high
+query load on one of our largest datasources.
 
 \begin{figure}
 \centering 
