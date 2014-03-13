@@ -715,7 +715,7 @@ that the implementation cost is not worth the investment for our organization.
 The reasons for this decision are generally two-fold.
 
 \begin{enumerate}
-\item Scaling join queries has been, in our professional experience, a constant bottleneck of working with distributed databases
+\item Scaling join queries has been, in our professional experience, a constant bottleneck of working with distributed databases.
 \item The incremental gains in functionality are perceived to be of less value than the anticipated problems with managing highly concurrent, join-heavy workloads.
 \end{enumerate}
 
@@ -733,7 +733,7 @@ order or in a hash table form.
 When all sides of the join are significantly large tables (> 1 billion records),
 materializing the pre-join streams requires complex distributed memory
 management.  The complexity of the memory management is only amplified by
-the fact that we are targeting highly concurrent, multi-tenant workloads.
+the fact that we are targeting highly concurrent, multitenant workloads.
 This is, as far as the authors are aware, an active academic research
 problem that we would be more than willing to engage with the academic
 community to help resolving in a scalable manner.
@@ -949,11 +949,11 @@ Druid is often used to explore data and generate reports on data. In the
 explore use case, the number of queries issued by a single user is much higher
 than in the reporting use case. Exploratory queries often involve progressively
 adding filters for the same time range to narrow down results. Users tend to
-explore short time intervals of recent data. In the reporting use case, users
-query for a much larger data interval, but already have a set of queries in
-mind.
+explore short time intervals of recent data. In the generate report use case,
+users query for much longer data intervals, but users also already have the
+queries they want to issue in mind.
 
-\paragraph{Multitenant Workload}
+\paragraph{Multitenancy}
 Expensive concurrent queries can be problematic in a multitenant
 environment. Queries for large datasources may end up hitting every historical
 node in a cluster and consume all cluster resources. Smaller, cheaper queries
@@ -965,22 +965,23 @@ reporting use cases, and users are not expecting the same level of
 interactivity as when they are querying to explore data. 
 
 \paragraph{Node failures}
-Node failures are common in a distributed environment, but many nodes at
-once failing are not. If historical nodes fail and do not recover, their
-segments need to reassigned, which means we need excess cluster capacity to
-load this data. The amount of additional capacity to have at any time is a
-factor of cost. It is extremely rare to see more than 2 nodes fail at once and
-never recover and hence, we leave enough capacity to completely reassign the
-data from 2 historical nodes. 
+Single node failures are common in distributed environments, but many nodes
+failing at once are not. If historical nodes completely fail and do not
+recover, their segments need to reassigned, which means we need excess cluster
+capacity to load this data. The amount of additional capacity to have at any
+time contributes to the cost of running a cluster. From our experiences, it is
+extremely rare to see more than 2 nodes completely fail at once and hence, we
+leave enough capacity in our cluster to completely reassign the data from 2
+historical nodes. 
 
 \paragraph{Data Center Outages}
-Complete cluster failures are possible, but extremely rare. When running
-in a single data center, it is possible for the entire data center to fail. In
-such a case, a new cluster needs to be created. As long as deep storage is
-available, cluster recovery time is network bound. Historical nodes need to
-reload every segment from deep storage. We have experienced such a failure in
-the past, and it took several hours for our entire Druid cluster to recover on
-several TBs of data.
+Complete cluster failures are possible, but extremely rare. If Druid is
+deployed only in a single data center, it is possible for the entire data
+center to fail. In such cases, new machines need to be provisioned. As long as
+deep storage is still available, cluster recovery time is network bound as
+historical nodes simply need to redownload every segment from deep storage. We
+have experienced such failures in the past, and the recovery time was around
+several hours in the AWS ecosystem on several TBs of data.
 
 \subsection{Operational Monitoring}
 Proper monitoring is critical to run a large scale distributed cluster.

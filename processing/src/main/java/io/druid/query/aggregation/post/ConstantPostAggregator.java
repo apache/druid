@@ -80,7 +80,7 @@ public class ConstantPostAggregator implements PostAggregator
     return name;
   }
 
-  @JsonProperty
+  @JsonProperty("value")
   public Number getConstantValue()
   {
     return constantValue;

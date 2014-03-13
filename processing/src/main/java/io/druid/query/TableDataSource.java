@@ -37,6 +37,7 @@ public class TableDataSource implements DataSource
   }
 
   @JsonProperty
+  @Override
   public String getName()
   {
     return name;
@@ -47,12 +48,18 @@ public class TableDataSource implements DataSource
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (!(o instanceof TableDataSource)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof TableDataSource)) {
+      return false;
+    }
 
     TableDataSource that = (TableDataSource) o;
 
-    if (!name.equals(that.name)) return false;
+    if (!name.equals(that.name)) {
+      return false;
+    }
 
     return true;
   }
