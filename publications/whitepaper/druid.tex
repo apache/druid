@@ -611,7 +611,7 @@ van2011memory} and often utilize run-length encoding. Druid opted to use the
 Concise algorithm \cite{colantonio2010concise} as it can outperform WAH by
 reducing compressed bitmap size by up to 50\%.  Figure~\ref{fig:concise_plot}
 illustrates the number of bytes using Concise compression versus using an
-integer array. The results were generated on a cc2.8xlarge system with a single
+integer array. The results were generated on a \texttt{cc2.8xlarge} system with a single
 thread, 2G heap, 512m young gen, and a forced GC between each run. The data set
 is a single day’s worth of data collected from the Twitter garden hose
 \cite{twitter2013} data stream. The data set contains 2,272,295 rows and 12
@@ -713,15 +713,18 @@ requiring joins on your queries often limits the performance you can achieve.
 \label{sec:benchmarks}
 Druid runs in production at several organizations, and to demonstrate its
 performance, we have chosen to share some real world numbers for the main production
-cluster running at Metamarkets in early 2014.
+cluster running at Metamarkets in early 2014. For comparison with other databases
+we also include results from synthetic workloads on TPC-H data.
 
-\subsection{Query Performance}
+\subsection{Query Performance in Production}
 Druid query performance can vary signficantly depending on the query
 being issued. For example, sorting the values of a high cardinality dimension
 based on a given metric is much more expensive than a simple count over a time
 range. To showcase the average query latencies in a production Druid cluster,
 we selected 8 of our most queried data sources, described in
-Table~\ref{tab:datasources}. Approximately 30\% of the queries are standard
+Table~\ref{tab:datasources}.
+
+Approximately 30\% of the queries are standard
 aggregates involving different types of metrics and filters, 60\% of queries
 are ordered group bys over one or more dimensions with aggregates, and 10\% of
 queries are search queries and metadata retrieval queries. The number of
@@ -786,10 +789,13 @@ that across the various data sources, the average query latency is approximately
 \label{fig:queries_per_min}
 \end{figure}
 
+\subsection{Query Benchmarks on TPC-H Data}
 We also present Druid benchmarks on TPC-H data. Our setup used Amazon EC2
 \texttt{m3.2xlarge} (Intel(R) Xeon(R) CPU E5-2680 v2 @ 2.80GHz) instances for
 historical nodes and \texttt{c3.2xlarge} (Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz) instances for broker
-nodes. Most TPC-H queries do not directly apply to Druid, so we
+nodes.
+
+Most TPC-H queries do not directly apply to Druid, so we
 selected queries more typical of Druid's workload to demonstrate query performance. As a
 comparison, we also provide the results of the same queries using MySQL using the
 MyISAM engine (InnoDB was slower in our experiments). Our MySQL setup was an Amazon
@@ -807,14 +813,14 @@ and 36,246,530 rows/second/core for a \texttt{select sum(float)} type query.
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{tpch_1gb}
-\caption{Druid and MySQL (MyISAM) benchmarks with the TPC-H 1 GB data set.}
+\caption{Druid \& MySQL benchmarks -- 1GB TPC-H data.}
 \label{fig:tpch_1gb}
 \end{figure}
 
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{tpch_100gb}
-\caption{Druid and MySQL (MyISAM) benchmarks with the TPC-H 100 GB data set.}
+\caption{Druid \& MySQL benchmarks -- 100GB TPC-H data.}
 \label{fig:tpch_100gb}
 \end{figure}
 
@@ -832,7 +838,7 @@ well.
 \begin{figure}
 \centering
 \includegraphics[width = 2.8in]{tpch_scaling}
-\caption{Scaling a Druid cluster with the TPC-H 100 GB data set.}
+\caption{Druid scaling benchmarks -- 100GB TPC-H data.}
 \label{fig:tpch_scaling}
 \end{figure}
 
@@ -860,7 +866,7 @@ chracteristics.
   \label{tab:ingest_datasources}
   \begin{tabular}{| l | l | l | l |}
     \hline
-    \scriptsize\textbf{Data Source} & \scriptsize\textbf{Dimensions} & \scriptsize\textbf{Metrics} & \scriptsize\textbf{Peak Throughput (events/sec)} \\ \hline
+    \scriptsize\textbf{Data Source} & \scriptsize\textbf{Dimensions} & \scriptsize\textbf{Metrics} & \scriptsize\textbf{Peak events/s} \\ \hline
     \texttt{s} & 7 & 2 & 28334.60 \\ \hline
     \texttt{t} & 10 & 7 & 68808.70 \\ \hline
     \texttt{u} & 5 & 1 & 49933.93 \\ \hline
@@ -882,7 +888,7 @@ Figure~\ref{fig:ingestion_rate}. We define throughput as the number of events a
 real-time node can ingest and also make queryable. If too many events are sent
 to the real-time node, those events are blocked until the real-time node has
 capacity to accept them. The peak ingestion latency we measured in production
-was 22914.43 events/sec/core on a datasource with 30 dimensions and 19 metrics,
+was 22914.43 events/s/core on a datasource with 30 dimensions and 19 metrics,
 running an Amazon \texttt{cc2.8xlarge} instance.
 
 \begin{figure}
@@ -932,7 +938,7 @@ factor of cost. It is extremely rare to see more than 2 nodes fail at once and
 never recover and hence, we leave enough capacity to completely reassign the
 data from 2 historical nodes. 
 
-\paragraph{Outages}
+\paragraph{Data Center Outages}
 Complete cluster failures are possible, but extremely rare. When running
 in a single data center, it is possible for the entire data center to fail. In
 such a case, a new cluster needs to be created. As long as deep storage is
@@ -960,8 +966,9 @@ made in production and what users are most interested in.
 \subsection{Pairing Druid with a Stream Processor}
 At the time of writing, Druid can only understand fully denormalized data
 streams. In order to provide full business logic in production, Druid can be
-paired with a stream processor such as Apache Storm \cite{marz2013storm}. A
-Storm topology consumes events from a data stream, retains only those that are
+paired with a stream processor such as Apache Storm \cite{marz2013storm}.
+
+A Storm topology consumes events from a data stream, retains only those that are
 “on-time”, and applies any relevant business logic. This could range from
 simple transformations, such as id to name lookups, up to complex operations
 such as multi-stream joins. The Storm topology forwards the processed event
