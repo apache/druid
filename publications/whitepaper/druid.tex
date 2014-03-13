@@ -696,6 +696,7 @@ equal to "Ke\$ha". The results will be bucketed by day and will be a JSON array 
     "result": {"rows": 1337}
 } ]
 \end{verbatim}}
+
 Druid supports many types of aggregations including double sums, long sums,
 minimums, maximums, and complex aggregations such as cardinality estimation and
 approximate quantile estimation.  The results of aggregations can be combined
@@ -703,11 +704,39 @@ in mathematical expressions to form other aggregations. It is beyond the scope
 of this paper to fully describe the query API but more information can be found
 online\footnote{\href{http://druid.io/docs/latest/Querying.html}{http://druid.io/docs/latest/Querying.html}}.
 
-At the time of writing, the query language does not support joins. Although the
-storage format is able to support joins, we've targeted Druid at user-facing
-workloads that must return in a matter of seconds, and as such, we've chosen to
-not spend the time to implement joins as it has been our experience that
-requiring joins on your queries often limits the performance you can achieve.
+As of this writing, a join query for Druid is not yet implemented.  This has
+been a function of engineering resource allocation decisions and use case more
+than a decision driven by technical merit.  Indeed, Druid's storage format
+would allow for the implementation of joins (there is no loss of fidelity for
+columns included as dimensions) and the implementation of them has been a
+conversation that we have every few months.  To date, we have made the choice
+that the implementation cost is not worth the investment for our organization.
+The reasons for this decision are generally two-fold.
+
+\begin{enumerate}
+\item Scaling join queries has been, in our professional experience, a constant bottleneck of working with distributed databases
+\item The incremental gains in functionality are perceived to be of less value than the anticipated problems with managing highly concurrent, join-heavy workloads.
+\end{enumerate}
+
+A join query is essentially the merging of two or more streams of data based on
+a shared set of keys.  The primary high-level strategies for join queries the
+authors are aware of are a hash-based strategy or a sorted-merge strategy.  The
+hash-based strategy requires that all but one data set be available as
+something that looks like a hash table, a lookup operation is then performed on
+this hash table for every row in the "primary" stream.  The sorted-merge
+strategy assumes that each stream is sorted by the join key and thus allows for
+the incremental joining of the streams.  Each of these strategies, however,
+requires the materialization of some number of the streams either in sorted
+order or in a hash table form.  
+
+When all sides of the join are significantly large tables (> 1 billion records),
+materializing the pre-join streams requires complex distributed memory
+management.  The complexity of the memory management is only amplified by
+the fact that we are targeting highly concurrent, multi-tenant workloads.
+This is, as far as the authors are aware, an active academic research
+problem that we would be more than willing to engage with the academic
+community to help resolving in a scalable manner.
+
 
 \section{Performance}
 \label{sec:benchmarks}
@@ -908,10 +937,9 @@ be less. It is still very possible to possible to decrease latencies by adding
 additional hardware, but we have not chosen to do so because infrastructure
 cost is still a consideration to us.
 
-\section{Druid in Production}
-\label{sec:production}
-Over the last few years, we've gained tremendous knowledge about handling
-production workloads with Druid. Some of our more interesting observations include:
+\section{Druid in Production}\label{sec:production}
+Over the last few years, we have gained tremendous knowledge about handling
+production workloads with Druid and have made a couple of interesting observations.
 
 \paragraph{Query Patterns}
 Druid is often used to explore data and generate reports on data. In the
