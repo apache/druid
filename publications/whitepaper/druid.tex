@@ -598,7 +598,7 @@ the two arrays.
 
 \begin{figure}
 \centering
-\includegraphics[width = 3in]{concise_plot}
+\includegraphics[width = 2.8in]{concise_plot}
 \caption{Integer array size versus Concise set size.}
 \label{fig:concise_plot}
 \end{figure}
@@ -768,11 +768,11 @@ threads and 672 total cores (hyperthreaded).
     memory map the data instead of loading it into the Java heap.)
 \end{itemize}
 
-The average query latency is shown in Figure~\ref{fig:query_latency} and
-the queries per minute is shown in Figure~\ref{fig:queries_per_min}. We can see
-that across the various data sources, the average query latency is approximately
-540ms. The 90th percentile query latency across these data sources is < 1s, the
-95th percentile is < 2s, and the 99th percentile is < 10s.
+Query latencies are shown in Figure~\ref{fig:query_latency} and
+the queries per minute is shown in Figure~\ref{fig:queries_per_min}.
+Across all the various data sources, average query latency is approximately 550 milliseconds,
+with 90\% of queries returning in less than 1 second,
+95\% in under 2 seconds, and 99\% of queries taking less than 10 seconds to complete.
 
 \begin{figure}
 \centering 
@@ -790,19 +790,21 @@ that across the various data sources, the average query latency is approximately
 \end{figure}
 
 \subsection{Query Benchmarks on TPC-H Data}
-We also present Druid benchmarks on TPC-H data. Our setup used Amazon EC2
-\texttt{m3.2xlarge} (Intel(R) Xeon(R) CPU E5-2680 v2 @ 2.80GHz) instances for
-historical nodes and \texttt{c3.2xlarge} (Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz) instances for broker
-nodes.
-
+We also present Druid benchmarks on TPC-H data. 
 Most TPC-H queries do not directly apply to Druid, so we
 selected queries more typical of Druid's workload to demonstrate query performance. As a
 comparison, we also provide the results of the same queries using MySQL using the
-MyISAM engine (InnoDB was slower in our experiments). Our MySQL setup was an Amazon
-RDS instance that ran on the same instance type. We selected MySQL to benchmark
+MyISAM engine (InnoDB was slower in our experiments).
+
+We selected MySQL to benchmark
 against because of its universal popularity. We choose not to select another
 open source column store because we were not confident we could correctly tune
 it for optimal performance.
+
+Our Druid setup used Amazon EC2
+\texttt{m3.2xlarge} (Intel(R) Xeon(R) CPU E5-2680 v2 @ 2.80GHz) instances for
+historical nodes and \texttt{c3.2xlarge} (Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz) instances for broker
+nodes. Our MySQL setup was an Amazon RDS instance that ran on the same \texttt{m3.2xlarge} instance type.
 
 The results for the 1 GB TPC-H data set are shown
 in Figure~\ref{fig:tpch_1gb} and the results of the 100 GB data set are shown
@@ -812,14 +814,14 @@ and 36,246,530 rows/second/core for a \texttt{select sum(float)} type query.
 
 \begin{figure}
 \centering
-\includegraphics[width = 2.8in]{tpch_1gb}
+\includegraphics[width = 2.3in]{tpch_1gb}
 \caption{Druid \& MySQL benchmarks -- 1GB TPC-H data.}
 \label{fig:tpch_1gb}
 \end{figure}
 
 \begin{figure}
 \centering
-\includegraphics[width = 2.8in]{tpch_100gb}
+\includegraphics[width = 2.3in]{tpch_100gb}
 \caption{Druid \& MySQL benchmarks -- 100GB TPC-H data.}
 \label{fig:tpch_100gb}
 \end{figure}
@@ -837,7 +839,7 @@ well.
 
 \begin{figure}
 \centering
-\includegraphics[width = 2.8in]{tpch_scaling}
+\includegraphics[width = 2.3in]{tpch_scaling}
 \caption{Druid scaling benchmarks -- 100GB TPC-H data.}
 \label{fig:tpch_scaling}
 \end{figure}
@@ -856,7 +858,7 @@ data set being ingested. The data complexity is determined by the number of
 dimensions in each event, the number of metrics in each event, and the types of
 aggregations we want to perform on those metrics. With the most basic data set
 (one that only has a timestamp column), our setup can ingest data at a rate of
-800,000 events/sec/core, which is really just a measurement of how fast we can
+800,000 events/second/core, which is really just a measurement of how fast we can
 deserialize events. Real world data sets are never this simple.
 Table~\ref{tab:ingest_datasources} shows a selection of data sources and their
 chracteristics. 
@@ -879,16 +881,18 @@ chracteristics.
   \caption{Ingestion characteristics of various data sources.}
 \end{table}
 
-We can see that based on the descriptions in
+We can see that, based on the descriptions in
 Table~\ref{tab:ingest_datasources}, latencies vary significantly and the
 ingestion latency is not always a factor of the number of dimensions and
 metrics. We see some lower latencies on simple data sets because that was the
 rate that the data producer was delivering data. The results are shown in
-Figure~\ref{fig:ingestion_rate}. We define throughput as the number of events a
+Figure~\ref{fig:ingestion_rate}.
+
+We define throughput as the number of events a
 real-time node can ingest and also make queryable. If too many events are sent
 to the real-time node, those events are blocked until the real-time node has
 capacity to accept them. The peak ingestion latency we measured in production
-was 22914.43 events/s/core on a datasource with 30 dimensions and 19 metrics,
+was 22914.43 events/second/core on a datasource with 30 dimensions and 19 metrics,
 running an Amazon \texttt{cc2.8xlarge} instance.
 
 \begin{figure}
