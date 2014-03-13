@@ -5,6 +5,7 @@
 \setmainfont[Ligatures={TeX}]{Times}
 \usepackage{hyperref}
 \graphicspath{{figures/}}
+\usepackage{enumitem}
 
 \hyphenation{metamarkets nelson}
 
@@ -779,9 +780,8 @@ involving all columns are very rare.
   \caption{Characteristics of production data sources.}
 \end{table}
 
-Some more details of our results:
-
-\begin{itemize}
+A few notes about our results:
+\begin{itemize}[leftmargin=*,beginpenalty=5000,topsep=0pt]
 \item The results are from a "hot" tier in our production cluster. We run
 several tiers of varying performance in production.
 
@@ -808,8 +808,8 @@ query load on one of our largest datasources.
 
 \begin{figure}
 \centering 
-\includegraphics[width = 2.8in]{avg_query_latency}
-\includegraphics[width = 2.8in]{query_percentiles}
+\includegraphics[width = 2.3in]{avg_query_latency}
+\includegraphics[width = 2.3in]{query_percentiles}
 \caption{Query latencies of production data sources.} 
 \label{fig:query_latency}
 \end{figure}
