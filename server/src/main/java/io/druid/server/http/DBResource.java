@@ -52,7 +52,6 @@ public class DBResource
     this.databaseSegmentManager = databaseSegmentManager;
   }
 
-
   @GET
   @Path("/datasources")
   @Produces("application/json")

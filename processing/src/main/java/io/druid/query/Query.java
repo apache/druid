@@ -56,7 +56,7 @@ public interface Query<T>
   public static final String SELECT = "select";
   public static final String TOPN = "topN";
 
-  public String getDataSource();
+  public DataSource getDataSource();
 
   public boolean hasFilters();
 

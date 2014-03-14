@@ -22,9 +22,11 @@ package io.druid.client.cache;
 import java.util.AbstractQueue;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -36,17 +38,18 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implements BlockingQueue<E>
 {
-  private final LinkedList<E> delegate;
+  private final Queue<E> delegate;
   private final AtomicLong currentSize = new AtomicLong(0);
   private final Lock putLock = new ReentrantLock();
   private final Condition notFull = putLock.newCondition();
   private final Lock takeLock = new ReentrantLock();
   private final Condition notEmpty = takeLock.newCondition();
+  private final AtomicInteger elementCount = new AtomicInteger(0);
   private long capacity;
 
   public BytesBoundedLinkedQueue(long capacity)
   {
-    delegate = new LinkedList<>();
+    delegate = new ConcurrentLinkedQueue<>();
     this.capacity = capacity;
   }
 
@@ -71,11 +74,13 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   public void elementAdded(E e)
   {
     currentSize.addAndGet(getBytesSize(e));
+    elementCount.getAndIncrement();
   }
 
   public void elementRemoved(E e)
   {
     currentSize.addAndGet(-1 * getBytesSize(e));
+    elementCount.getAndDecrement();
   }
 
   private void fullyUnlock()
@@ -115,7 +120,7 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   @Override
   public int size()
   {
-    return delegate.size();
+    return elementCount.get();
   }
 
   @Override
@@ -163,7 +168,7 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
     E e;
     takeLock.lockInterruptibly();
     try {
-      while (delegate.size() == 0) {
+      while (elementCount.get() == 0) {
         notEmpty.await();
       }
       e = delegate.remove();
@@ -181,8 +186,16 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   @Override
   public int remainingCapacity()
   {
-    int delegateSize = delegate.size();
-    long currentByteSize = currentSize.get();
+    int delegateSize;
+    long currentByteSize;
+    fullyLock();
+    try {
+      delegateSize = elementCount.get();
+      currentByteSize = currentSize.get();
+    }
+    finally {
+      fullyUnlock();
+    }
     // return approximate remaining capacity based on current data
     if (delegateSize == 0) {
       return (int) Math.min(capacity, Integer.MAX_VALUE);
@@ -214,13 +227,13 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
     int n = 0;
     takeLock.lock();
     try {
-      n = Math.min(maxElements, delegate.size());
+      // elementCount.get provides visibility to first n Nodes
+      n = Math.min(maxElements, elementCount.get());
       if (n < 0) {
         return 0;
       }
-      // count.get provides visibility to first n Nodes
       for (int i = 0; i < n; i++) {
-        E e = delegate.remove(0);
+        E e = delegate.remove();
         elementRemoved(e);
         c.add(e);
       }
@@ -287,7 +300,7 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
     E e = null;
     takeLock.lockInterruptibly();
     try {
-      while (delegate.size() == 0) {
+      while (elementCount.get() == 0) {
         if (nanos <= 0) {
           return null;
         }

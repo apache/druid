@@ -28,6 +28,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.TableDataSource;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.LegacySegmentSpec;
 import org.joda.time.DateTime;
@@ -72,7 +73,7 @@ public class SelectQueryRunnerTest
   public void testFullOnSelect()
   {
     SelectQuery query = new SelectQuery(
-        QueryRunnerTestHelper.dataSource,
+        new TableDataSource(QueryRunnerTestHelper.dataSource),
         QueryRunnerTestHelper.fullOnInterval,
         null,
         QueryRunnerTestHelper.allGran,
@@ -141,7 +142,7 @@ public class SelectQueryRunnerTest
   public void testSelectWithDimsAndMets()
   {
     SelectQuery query = new SelectQuery(
-        QueryRunnerTestHelper.dataSource,
+        new TableDataSource(QueryRunnerTestHelper.dataSource),
         QueryRunnerTestHelper.fullOnInterval,
         null,
         QueryRunnerTestHelper.allGran,
@@ -201,7 +202,7 @@ public class SelectQueryRunnerTest
   public void testSelectPagination()
   {
     SelectQuery query = new SelectQuery(
-        QueryRunnerTestHelper.dataSource,
+        new TableDataSource(QueryRunnerTestHelper.dataSource),
         QueryRunnerTestHelper.fullOnInterval,
         null,
         QueryRunnerTestHelper.allGran,
@@ -261,7 +262,7 @@ public class SelectQueryRunnerTest
   public void testFullOnSelectWithFilter()
   {
     SelectQuery query = new SelectQuery(
-        QueryRunnerTestHelper.dataSource,
+        new TableDataSource(QueryRunnerTestHelper.dataSource),
         new LegacySegmentSpec(new Interval("2011-01-12/2011-01-14")),
         new SelectorDimFilter(QueryRunnerTestHelper.providerDimension, "spot"),
         QueryRunnerTestHelper.dayGran,

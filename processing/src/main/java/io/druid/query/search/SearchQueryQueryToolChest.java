@@ -121,7 +121,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource())
+        .setUser2(query.getDataSource().toString())
         .setUser4("search")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
@@ -173,7 +173,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
                 1 + 4 + granularityBytes.length + filterBytes.length +
-                querySpecBytes.length + dimensionsBytesSize
+                    querySpecBytes.length + dimensionsBytesSize
             )
             .put(SEARCH_QUERY)
             .put(Ints.toByteArray(query.getLimit()))

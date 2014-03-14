@@ -298,7 +298,7 @@ public class Druids
    */
   public static class TimeseriesQueryBuilder
   {
-    private String dataSource;
+    private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private DimFilter dimFilter;
     private QueryGranularity granularity;
@@ -308,7 +308,7 @@ public class Druids
 
     private TimeseriesQueryBuilder()
     {
-      dataSource = "";
+      dataSource = null;
       querySegmentSpec = null;
       dimFilter = null;
       granularity = QueryGranularity.ALL;
@@ -354,7 +354,7 @@ public class Druids
           .context(builder.context);
     }
 
-    public String getDataSource()
+    public DataSource getDataSource()
     {
       return dataSource;
     }
@@ -390,6 +390,12 @@ public class Druids
     }
 
     public TimeseriesQueryBuilder dataSource(String ds)
+    {
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public TimeseriesQueryBuilder dataSource(DataSource ds)
     {
       dataSource = ds;
       return this;
@@ -492,7 +498,7 @@ public class Druids
    */
   public static class SearchQueryBuilder
   {
-    private String dataSource;
+    private DataSource dataSource;
     private DimFilter dimFilter;
     private QueryGranularity granularity;
     private int limit;
@@ -503,7 +509,7 @@ public class Druids
 
     public SearchQueryBuilder()
     {
-      dataSource = "";
+      dataSource = null;
       dimFilter = null;
       granularity = QueryGranularity.ALL;
       limit = 0;
@@ -531,7 +537,7 @@ public class Druids
     public SearchQueryBuilder copy(SearchQuery query)
     {
       return new SearchQueryBuilder()
-          .dataSource(query.getDataSource())
+          .dataSource(((TableDataSource)query.getDataSource()).getName())
           .intervals(query.getQuerySegmentSpec())
           .filters(query.getDimensionsFilter())
           .granularity(query.getGranularity())
@@ -555,6 +561,12 @@ public class Druids
     }
 
     public SearchQueryBuilder dataSource(String d)
+    {
+      dataSource = new TableDataSource(d);
+      return this;
+    }
+
+    public SearchQueryBuilder dataSource(DataSource d)
     {
       dataSource = d;
       return this;
@@ -676,13 +688,13 @@ public class Druids
    */
   public static class TimeBoundaryQueryBuilder
   {
-    private String dataSource;
+    private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private Map<String, String> context;
 
     public TimeBoundaryQueryBuilder()
     {
-      dataSource = "";
+      dataSource = null;
       querySegmentSpec = null;
       context = null;
     }
@@ -704,9 +716,15 @@ public class Druids
           .context(builder.context);
     }
 
-    public TimeBoundaryQueryBuilder dataSource(String d)
+    public TimeBoundaryQueryBuilder dataSource(String ds)
     {
-      dataSource = d;
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder dataSource(DataSource ds)
+    {
+      dataSource = ds;
       return this;
     }
 

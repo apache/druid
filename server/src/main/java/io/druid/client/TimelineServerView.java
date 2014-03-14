@@ -20,6 +20,7 @@
 package io.druid.client;
 
 import io.druid.client.selector.ServerSelector;
+import io.druid.query.DataSource;
 import io.druid.query.QueryRunner;
 import io.druid.timeline.VersionedIntervalTimeline;
 
@@ -27,6 +28,6 @@ import io.druid.timeline.VersionedIntervalTimeline;
  */
 public interface TimelineServerView extends ServerView
 {
-  VersionedIntervalTimeline<String, ServerSelector> getTimeline(String dataSource);
+  VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource);
   <T> QueryRunner<T> getQueryRunner(DruidServer server);
 }

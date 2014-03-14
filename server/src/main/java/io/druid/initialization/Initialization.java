@@ -36,7 +36,7 @@ import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
-import io.druid.guice.DataSegmentPusherPullerModule;
+import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.DbConnectorModule;
 import io.druid.guice.DruidGuiceExtensions;
 import io.druid.guice.DruidProcessingModule;
@@ -316,7 +316,7 @@ public class Initialization
         new DbConnectorModule(),
         new JacksonConfigManagerModule(),
         new IndexingServiceDiscoveryModule(),
-        new DataSegmentPusherPullerModule(),
+        new LocalDataStorageDruidModule(),
         new FirehoseModule()
     );
 

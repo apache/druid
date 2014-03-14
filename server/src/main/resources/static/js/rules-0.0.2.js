@@ -140,6 +140,10 @@ function makeJSON() {
 function makeTiersDropdown(selTier) {
   var retVal = "<span class='rule_label'>tier</span><select class='tiers' name='tier'>"
 
+  if ($.inArray(selTier, tiers) == -1) {
+    tiers.push(selTier);
+  }
+
   $.each(tiers, function(index, tier) {
     if (selTier === tier) {
       retVal += "<option selected='selected' value='" + tier + "'>" + tier + "</option>";

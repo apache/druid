@@ -142,4 +142,30 @@ public class JavaScriptPostAggregator implements PostAggregator
   {
     return function;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    JavaScriptPostAggregator that = (JavaScriptPostAggregator) o;
+
+    if (fieldNames != null ? !fieldNames.equals(that.fieldNames) : that.fieldNames != null) return false;
+    if (fn != null ? !fn.equals(that.fn) : that.fn != null) return false;
+    if (function != null ? !function.equals(that.function) : that.function != null) return false;
+    if (name != null ? !name.equals(that.name) : that.name != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = name != null ? name.hashCode() : 0;
+    result = 31 * result + (fieldNames != null ? fieldNames.hashCode() : 0);
+    result = 31 * result + (function != null ? function.hashCode() : 0);
+    result = 31 * result + (fn != null ? fn.hashCode() : 0);
+    return result;
+  }
 }

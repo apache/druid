@@ -126,7 +126,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Iterable<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran)
   {
+    if (index.isEmpty()) {
+      return ImmutableList.of();
+    }
+
     Interval actualIntervalTmp = interval;
+
 
     final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
     if (!actualIntervalTmp.overlaps(dataInterval)) {
@@ -236,23 +241,22 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                         if (numAdvanced == -1) {
                           numAdvanced = 0;
-                          while (baseIter.hasNext()) {
-                            currEntry.set(baseIter.next());
-                            if (filterMatcher.matches()) {
-                              return;
-                            }
-
-                            numAdvanced++;
-                          }
                         } else {
                           Iterators.advance(baseIter, numAdvanced);
-                          if (baseIter.hasNext()) {
-                            currEntry.set(baseIter.next());
-                          }
                         }
 
-                        done = cursorMap.size() == 0 || !baseIter.hasNext();
+                        boolean foundMatched = false;
+                        while (baseIter.hasNext()) {
+                          currEntry.set(baseIter.next());
+                          if (filterMatcher.matches()) {
+                            foundMatched = true;
+                            break;
+                          }
 
+                          numAdvanced++;
+                        }
+
+                        done = !foundMatched && (cursorMap.size() == 0 || !baseIter.hasNext());
                       }
 
                       @Override
