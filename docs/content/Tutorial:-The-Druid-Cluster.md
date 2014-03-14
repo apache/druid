@@ -251,6 +251,9 @@ druid.publish.type=noop
 # druid.db.connector.password=diurd
 
 druid.processing.buffer.sizeBytes=100000000
+druid.processing.numThreads=1
+
+druid.monitoring.monitors=["io.druid.segment.realtime.RealtimeMetricsMonitor"]
 ```
 
 Next Steps
