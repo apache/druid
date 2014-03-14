@@ -21,7 +21,6 @@ package io.druid.query.aggregation.post;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.PostAggregator;
 
@@ -39,15 +38,11 @@ public class ConstantPostAggregator implements PostAggregator
   @JsonCreator
   public ConstantPostAggregator(
       @JsonProperty("name") String name,
-      @JsonProperty("value") Number constantValue,
-      @JsonProperty("constantValue") Number backwardsCompatibleValue
+      @JsonProperty("value") Number constantValue
   )
   {
     this.name = name;
-    this.constantValue = constantValue == null ? backwardsCompatibleValue : constantValue;
-
-    // only value should be required for constants
-    Preconditions.checkNotNull(this.constantValue, "Constant value must not be null");
+    this.constantValue = constantValue;
   }
 
   @Override
