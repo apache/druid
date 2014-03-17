@@ -24,7 +24,10 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheProvider;
 import io.druid.guice.Jerseys;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
@@ -73,6 +76,8 @@ public class CliHistorical extends ServerRunnable
 
             LifecycleModule.register(binder, ZkCoordinator.class);
             LifecycleModule.register(binder, Server.class);
+            binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
+            JsonConfigProvider.bind(binder, "druid.historical.cache", CacheProvider.class);
           }
         }
     );

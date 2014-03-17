@@ -39,6 +39,8 @@ public interface Cache
 
   public CacheStats getStats();
 
+  public CacheConfig getCacheConfig();
+
   public class NamedKey
   {
     final public String namespace;

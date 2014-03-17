@@ -21,25 +21,24 @@ package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 
-/**
- */
-public class LocalCacheProvider extends CacheConfig implements CacheProvider
+public class CacheConfig
 {
   @JsonProperty
-  @Min(0)
-  private long sizeInBytes = 0;
-  @JsonProperty
-  @Min(0)
-  private int initialSize = 500000;
-  @JsonProperty
-  @Min(0)
-  private int logEvictionCount = 0;
+  private boolean useCache = true;
 
-  @Override
-  public Cache get()
+  @JsonProperty
+  private boolean populateCache = true;
+
+
+  public boolean isPopulateCache()
   {
-    return new MapCache(new ByteCountingLRUMap(initialSize, logEvictionCount, sizeInBytes), this);
+    return populateCache;
+  }
+
+  public boolean isUseCache()
+  {
+    return useCache;
   }
 }

@@ -37,7 +37,7 @@ public class MapCacheTest
   public void setUp() throws Exception
   {
     baseMap = new ByteCountingLRUMap(1024 * 1024);
-    cache = new MapCache(baseMap);
+    cache = new MapCache(baseMap, new CacheConfig());
   }
 
   @Test

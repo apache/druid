@@ -36,6 +36,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.nary.TrinaryFn;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.RandomServerSelectorStrategy;
@@ -195,7 +196,7 @@ public class CachingClusteredClientTest
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
     serverView = EasyMock.createStrictMock(TimelineServerView.class);
-    cache = MapCache.create(100000);
+    cache = MapCache.create(100000, new CacheConfig());
 
     client = makeClient();
 

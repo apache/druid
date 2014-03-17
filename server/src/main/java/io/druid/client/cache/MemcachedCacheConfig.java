@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
 
-public class MemcachedCacheConfig
+public class MemcachedCacheConfig extends CacheConfig
 {
   @JsonProperty
   private int expiration = 2592000; // What is this number?
